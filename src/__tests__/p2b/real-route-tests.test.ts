@@ -60,13 +60,10 @@ describe("P2B: REAL Operator Route Integration", () => {
     // Required by canonical-route-enforcement.ts line 304-312 membership lookup
     await db.workspaceMembership.create({
       data: {
-        id: randomUUID(),
         userId: "test-actor",
         workspaceId: testWorkspaceId,
         role: "admin",
         isActive: true,
-        joinedAt: new Date(),
-        updatedAt: new Date(),
       },
     });
 
@@ -333,13 +330,10 @@ describe("P2B: REAL Decision Lifecycle Integration", () => {
     // Required by canonical-route-enforcement.ts line 304-312 membership lookup
     await db.workspaceMembership.create({
       data: {
-        id: randomUUID(),
         userId: "test-actor",
         workspaceId: testWorkspaceId,
         role: "admin",
         isActive: true,
-        joinedAt: new Date(),
-        updatedAt: new Date(),
       },
     });
 
