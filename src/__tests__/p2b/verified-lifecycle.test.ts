@@ -32,6 +32,7 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
       data: {
         id: testAdminId,
         email: `admin-${testAdminId}@test.example.com`,
+        updatedAt: new Date(),
       },
     });
     const item = await db.operatorItem.create({
