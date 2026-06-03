@@ -83,7 +83,7 @@ export function checkFraudRisk(
   // Indicator 3: Extreme variance from expected
   if (impactExpected > 0) {
     const variance = Math.abs(actualOutcome - impactExpected) / impactExpected;
-    if (variance > 5) {
+    if (variance >= 5) {
       indicators.push("Extreme variance from expected (>500%)");
       riskScore += 1;
     }
@@ -92,7 +92,7 @@ export function checkFraudRisk(
   // Indicator 4: Retroactive modification (changing an already-verified outcome)
   if (previousActualOutcomeValue !== null && previousActualOutcomeValue !== actualOutcome) {
     indicators.push("Retroactive modification of outcome value");
-    riskScore += 2;
+    riskScore += 2.5;
   }
 
   // Indicator 5: Very high impact with very high confidence
