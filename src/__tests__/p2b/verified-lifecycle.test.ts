@@ -24,15 +24,14 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
   let testWorkspaceId: string;
   let testActorId: string;
   let testAdminId: string;
+  let admin1Id: string;
+  let admin2Id: string;
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
     testAdminId = randomUUID();
-
-    // Create User records required by audit_events_actor_id_fkey
-    // Use workspace-scoped IDs for additional test users to avoid conflicts
-    const admin1Id = `admin-1-${testWorkspaceId.slice(0, 8)}`;
-    const admin2Id = `admin-2-${testWorkspaceId.slice(0, 8)}`;
+    admin1Id = randomUUID();
+    admin2Id = randomUUID();
 
     await db.user.createMany({
       data: [
@@ -76,10 +75,6 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
   });
 
   afterEach(async () => {
-    // Use same IDs as created in beforeEach
-    const admin1Id = `admin-1-${testWorkspaceId.slice(0, 8)}`;
-    const admin2Id = `admin-2-${testWorkspaceId.slice(0, 8)}`;
-
     // Delete in FK dependency order: audit events first, then operatorItems, then Users
     // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
     // OperatorItem.verifiedBy → User.id (FK constraint: operator_items_verified_by_fkey)
