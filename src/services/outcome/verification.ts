@@ -83,8 +83,8 @@ export function checkFraudRisk(
   // Indicator 3: Extreme variance from expected
   if (impactExpected > 0) {
     const variance = Math.abs(actualOutcome - impactExpected) / impactExpected;
-    if (variance > 5) {
-      indicators.push("Extreme variance from expected (>500%)");
+    if (variance >= 2) {
+      indicators.push("Extreme variance from expected (>=200%)");
       riskScore += 1;
     }
   }
@@ -102,7 +102,7 @@ export function checkFraudRisk(
   }
 
   const riskLevel: "low" | "medium" | "high" =
-    riskScore >= 2.5 ? "high" : riskScore >= 1.5 ? "medium" : "low";
+    riskScore >= 1.5 ? "high" : riskScore >= 1.0 ? "medium" : "low";
 
   return {
     riskLevel,
