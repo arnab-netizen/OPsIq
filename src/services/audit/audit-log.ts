@@ -36,10 +36,12 @@ export async function logAuditEvent(params: AuditEventParams): Promise<void> {
       eventName: params.eventName,
       entityType: params.entityType,
       entityId: params.entityId,
-      role: params.role,
       before: JSON.stringify(params.before),
       after: JSON.stringify(params.after),
-      metadata: JSON.stringify(params.metadata),
+      payload: JSON.stringify({
+        ...params.metadata,
+        role: params.role,
+      }),
       occurredAt: new Date(),
     };
 
