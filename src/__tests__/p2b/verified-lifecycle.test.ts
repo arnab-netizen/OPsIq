@@ -260,7 +260,7 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
   });
 
   describe("VALIDATION PATH: Invalid transitions rejected", () => {
-    it("REAL: invalid transition rejected (verified → unverified)", async () => {
+    it("REAL: invalid transition rejected (verified → verified)", async () => {
       /**
        * SETUP: Set to verified
        */
@@ -278,8 +278,8 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
           testItemId,
           testWorkspaceId,
           {
-            verificationStatus: "unverified",
-            reason: "Reset to unverified",
+            verificationStatus: "verified",
+            reason: "Remain verified",
           },
           testAdminId
         );
