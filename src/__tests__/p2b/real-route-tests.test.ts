@@ -16,13 +16,50 @@
  * Classification: REAL_ROUTE_TEST (actual invocation, not scaffold)
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { randomUUID } from "crypto";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { POST as operatorPost } from "@/app/api/operator/route";
 import { recordDecisionOutcome } from "@/services/decisions/decision-lifecycle.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+
+/**
+ * Mock authentication facts to allow wrapped route handler to execute.
+ * The canonical wrapper validates session and policy before calling the handler.
+ * These mocks provide valid facts so the wrapper allows execution.
+ */
+vi.mock("@/services/auth", () => ({
+  getSessionFact: vi.fn(async () => ({
+    valid: true,
+    session: {
+      user: {
+        id: "test-actor",
+        email: "test@example.com",
+        name: "Test User",
+        isActive: true,
+      },
+      sessionId: "test-session",
+      expiresAt: new Date(Date.now() + 86400000),
+    },
+    invalidReason: undefined,
+  })),
+  getPolicyContextFact: vi.fn(async () => ({
+    valid: true,
+    policy: {
+      userId: "test-actor",
+      roles: [
+        {
+          role: "admin",
+          scope: "workspace",
+          scopeId: "test-workspace",
+        },
+      ],
+      engagementMemberships: [],
+    },
+    invalidReason: undefined,
+  })),
+}));
 
 /**
  * REAL INTEGRATION TEST: Operator Route
@@ -41,17 +78,16 @@ describe("P2B: REAL Operator Route Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
   const testActorId = "test-actor";
-  const testActorEmail = "test@example.com";
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
 
-    // Create User record for mocked "test-actor" actor
-    // Required by WorkspaceMembership.userId FK constraint
+    // Create User record for mocked actor
+    // Required by WorkspaceMembership.userId FK constraint and route auth wrapper
     await db.user.create({
       data: {
-        id: "test-actor",
-        email: testActorEmail,
+        id: testActorId,
+        email: "test@example.com",
         updatedAt: new Date(),
       },
     });
@@ -60,7 +96,7 @@ describe("P2B: REAL Operator Route Integration", () => {
     // Required by canonical-route-enforcement.ts line 304-312 membership lookup
     await db.workspaceMembership.create({
       data: {
-        userId: "test-actor",
+        userId: testActorId,
         workspaceId: testWorkspaceId,
         role: "admin",
         isActive: true,
@@ -97,7 +133,7 @@ describe("P2B: REAL Operator Route Integration", () => {
     });
     await db.workspaceMembership.deleteMany({
       where: {
-        userId: "test-actor",
+        userId: testActorId,
         workspaceId: testWorkspaceId,
       },
     });
@@ -105,7 +141,7 @@ describe("P2B: REAL Operator Route Integration", () => {
       where: { workspaceId: testWorkspaceId },
     });
     await db.user.delete({
-      where: { id: "test-actor" },
+      where: { id: testActorId },
     });
   });
 
@@ -318,17 +354,16 @@ describe("P2B: REAL Decision Lifecycle Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
   const testActorId = "test-actor";
-  const testActorEmail = "test@example.com";
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
 
-    // Create User record for mocked "test-actor" actor
+    // Create User record for mocked actor
     // Required by WorkspaceMembership.userId FK constraint
     await db.user.create({
       data: {
-        id: "test-actor",
-        email: testActorEmail,
+        id: testActorId,
+        email: "test@example.com",
         updatedAt: new Date(),
       },
     });
@@ -337,7 +372,7 @@ describe("P2B: REAL Decision Lifecycle Integration", () => {
     // Required by canonical-route-enforcement.ts line 304-312 membership lookup
     await db.workspaceMembership.create({
       data: {
-        userId: "test-actor",
+        userId: testActorId,
         workspaceId: testWorkspaceId,
         role: "admin",
         isActive: true,
@@ -374,7 +409,7 @@ describe("P2B: REAL Decision Lifecycle Integration", () => {
     });
     await db.workspaceMembership.deleteMany({
       where: {
-        userId: "test-actor",
+        userId: testActorId,
         workspaceId: testWorkspaceId,
       },
     });
@@ -382,7 +417,7 @@ describe("P2B: REAL Decision Lifecycle Integration", () => {
       where: { workspaceId: testWorkspaceId },
     });
     await db.user.delete({
-      where: { id: "test-actor" },
+      where: { id: testActorId },
     });
   });
 
