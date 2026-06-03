@@ -102,17 +102,34 @@ jobs:
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
 
-      # Step 7: Run the exact 42-test command
+      # Step 7: Run the exact 42-test command with full output capture
       - name: Run P2B Database Tests (42 tests)
         run: |
+          mkdir -p artifacts/p2b-db
+
+          set +e
           npm test -- --run \
             src/__tests__/p2b/verified-lifecycle.test.ts \
             src/__tests__/p2b/real-route-tests.test.ts \
             src/__tests__/p2b/operator-outcome-path.test.ts \
-            src/__tests__/p2b/decision-outcome-path.test.ts
+            src/__tests__/p2b/decision-outcome-path.test.ts \
+            2>&1 | tee artifacts/p2b-db/vitest-output.log
+          TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          echo "P2B test exit code: $TEST_EXIT"
+          exit $TEST_EXIT
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
           TEST_WITH_DB: "true"
+
+      # Step 7.5: Upload full test logs for diagnosis
+      - name: Upload P2B DB test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2b-db-test-logs
+          path: artifacts/p2b-db/
 
       # Result classification comment
       - name: P2B DB Verification Complete
