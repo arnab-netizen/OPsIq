@@ -29,12 +29,15 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
  * The canonical wrapper validates session and policy before calling the handler.
  * These mocks provide valid facts so the wrapper allows execution.
  */
+let testActorIdForMock = randomUUID();
+let testWorkspaceIdForMock = randomUUID();
+
 vi.mock("@/services/auth", () => ({
   getSessionFact: vi.fn(async () => ({
     valid: true,
     session: {
       user: {
-        id: "test-actor",
+        id: testActorIdForMock,
         email: "test@example.com",
         name: "Test User",
         isActive: true,
@@ -47,12 +50,12 @@ vi.mock("@/services/auth", () => ({
   getPolicyContextFact: vi.fn(async () => ({
     valid: true,
     policy: {
-      userId: "test-actor",
+      userId: testActorIdForMock,
       roles: [
         {
           role: "admin",
           scope: "workspace",
-          scopeId: "test-workspace",
+          scopeId: testWorkspaceIdForMock,
         },
       ],
       engagementMemberships: [],
@@ -77,10 +80,15 @@ vi.mock("@/services/auth", () => ({
 describe("P2B: REAL Operator Route Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
-  const testActorId = "test-actor";
+  let testActorId: string;
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
+    testActorId = randomUUID();
+
+    // Update module-level mocks to use generated IDs for this test
+    testActorIdForMock = testActorId;
+    testWorkspaceIdForMock = testWorkspaceId;
 
     // Create User record for mocked actor
     // Required by WorkspaceMembership.userId FK constraint and route auth wrapper
@@ -353,10 +361,15 @@ describe("P2B: REAL Operator Route Integration", () => {
 describe("P2B: REAL Decision Lifecycle Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
-  const testActorId = "test-actor";
+  let testActorId: string;
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
+    testActorId = randomUUID();
+
+    // Update module-level mocks to use generated IDs for this test
+    testActorIdForMock = testActorId;
+    testWorkspaceIdForMock = testWorkspaceId;
 
     // Create User record for mocked actor
     // Required by WorkspaceMembership.userId FK constraint
