@@ -112,6 +112,7 @@ jobs:
             src/__tests__/p2b/decision-outcome-path.test.ts
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
+          TEST_WITH_DB: "true"
 
       # Result classification comment
       - name: P2B DB Verification Complete
