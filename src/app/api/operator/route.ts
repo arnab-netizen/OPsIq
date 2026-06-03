@@ -119,8 +119,12 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     const item = items.find((i) => i.id === id);
 
     if (item) {
-      // Validate completion policy
-      const completionPolicy = validateCompletion(item, approvalRequired);
+      // Validate completion policy with incoming request actualOutcome
+      const completionValidationCandidate = {
+        ...item,
+        actualOutcomeValue: actualOutcome,
+      };
+      const completionPolicy = validateCompletion(completionValidationCandidate, approvalRequired);
       if (!completionPolicy.allowed) {
         throw new Error(completionPolicy.reason);
       }
