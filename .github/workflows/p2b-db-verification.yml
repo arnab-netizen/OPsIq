@@ -15,6 +15,7 @@ on:
       - .github/workflows/p2b-db-verification.yml
       - src/__tests__/p2b/**
       - src/services/audit/**
+      - src/services/entitlement.service.ts
       - src/services/outcome/**
       - src/services/decisions/**
       - src/services/operator/**
