@@ -14,6 +14,7 @@ on:
     paths:
       - .github/workflows/p2b-db-verification.yml
       - src/__tests__/p2b/**
+      - src/services/audit/**
       - src/services/outcome/**
       - src/services/decisions/**
       - src/services/operator/**
