@@ -68,7 +68,7 @@ export async function requestOutcomeModification(
     data: {
       status: mapStateToStatus("PENDING_MODIFICATION"),
       updatedAt: new Date(),
-      lastUpdatedBy: requestorId,
+      lastUpdatedByUserId: requestorId,
       verificationEvidence: {
         ...(decision.verificationEvidence as Record<string, any>),
         modificationRequest: {
@@ -145,7 +145,7 @@ export async function approveOutcomeModification(
       data: {
         status: mapStateToStatus("OUTCOME_RECORDED"),
         updatedAt: new Date(),
-        lastUpdatedBy: approverUserId,
+        lastUpdatedByUserId: approverUserId,
         verificationEvidence: {
           ...(currentDecision.verificationEvidence as Record<string, any>),
           modificationRejected: {
@@ -192,7 +192,7 @@ export async function approveOutcomeModification(
       status: mapStateToStatus("OUTCOME_RECORDED"),
       verificationStatus,
       updatedAt: new Date(),
-      lastUpdatedBy: approverUserId,
+      lastUpdatedByUserId: approverUserId,
       verificationEvidence: {
         ...(currentDecision.verificationEvidence as Record<string, any>),
         modificationApproved: {

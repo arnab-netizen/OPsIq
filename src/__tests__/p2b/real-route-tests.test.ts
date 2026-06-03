@@ -100,6 +100,16 @@ describe("P2B: REAL Operator Route Integration", () => {
       },
     });
 
+    // Create Workspace record
+    // Required by WorkspaceMembership.workspaceId FK constraint
+    await db.workspace.create({
+      data: {
+        id: testWorkspaceId,
+        name: "Test Workspace",
+        slug: `test-ws-${testWorkspaceId.substring(0, 8)}`,
+      },
+    });
+
     // Create WorkspaceMembership linking actor to workspace
     // Required by canonical-route-enforcement.ts line 304-312 membership lookup
     await db.workspaceMembership.create({
@@ -131,7 +141,7 @@ describe("P2B: REAL Operator Route Integration", () => {
   });
 
   afterEach(async () => {
-    // Delete in dependency order: AuditEvent → WorkspaceMembership → OperatorItem → User
+    // Delete in dependency order: AuditEvent → WorkspaceMembership → OperatorItem → Workspace → User
     // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
     await db.auditEvent.deleteMany({
       where: {
@@ -147,6 +157,9 @@ describe("P2B: REAL Operator Route Integration", () => {
     });
     await db.operatorItem.deleteMany({
       where: { workspaceId: testWorkspaceId },
+    });
+    await db.workspace.delete({
+      where: { id: testWorkspaceId },
     });
     await db.user.delete({
       where: { id: testActorId },
