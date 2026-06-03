@@ -40,7 +40,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 describe("P2B: REAL Operator Route Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
-  const testActorId = randomUUID();
+  const testActorId = "test-actor";
   const testActorEmail = "test@example.com";
 
   beforeEach(async () => {
@@ -87,7 +87,14 @@ describe("P2B: REAL Operator Route Integration", () => {
   });
 
   afterEach(async () => {
-    // Delete in dependency order: WorkspaceMembership before User
+    // Delete in dependency order: AuditEvent → WorkspaceMembership → OperatorItem → User
+    // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
+    await db.auditEvent.deleteMany({
+      where: {
+        actorId: testActorId,
+        workspaceId: testWorkspaceId,
+      },
+    });
     await db.workspaceMembership.deleteMany({
       where: {
         userId: "test-actor",
@@ -310,7 +317,7 @@ describe("P2B: REAL Operator Route Integration", () => {
 describe("P2B: REAL Decision Lifecycle Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
-  const testActorId = randomUUID();
+  const testActorId = "test-actor";
   const testActorEmail = "test@example.com";
 
   beforeEach(async () => {
@@ -357,7 +364,14 @@ describe("P2B: REAL Decision Lifecycle Integration", () => {
   });
 
   afterEach(async () => {
-    // Delete in dependency order: WorkspaceMembership before User
+    // Delete in dependency order: AuditEvent → WorkspaceMembership → OperatorItem → User
+    // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
+    await db.auditEvent.deleteMany({
+      where: {
+        actorId: testActorId,
+        workspaceId: testWorkspaceId,
+      },
+    });
     await db.workspaceMembership.deleteMany({
       where: {
         userId: "test-actor",
