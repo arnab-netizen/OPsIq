@@ -184,7 +184,7 @@ export async function resolveEntitlements(
           name: true,
           priceMonthly: true,
           priceYearly: true,
-          capabilities: {
+          planCapabilities: {
             select: {
               key: true,
               limit: true,
@@ -225,7 +225,7 @@ export async function resolveEntitlements(
       priceMonthly: subscription.plan.priceMonthly,
       priceYearly: subscription.plan.priceYearly,
     },
-    capabilities: subscription.plan.capabilities,
+    capabilities: subscription.plan.planCapabilities,
     usage,
     status: subscription.status,
     currentPeriodStart: subscription.currentPeriodStart,
