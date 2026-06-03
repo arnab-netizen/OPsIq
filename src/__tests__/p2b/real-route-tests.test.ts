@@ -151,14 +151,93 @@ describe("P2B: REAL Operator Route Integration", () => {
     });
     testItemId = item.id;
 
-    // Set subscription tier to enable decision_engine capability
-    // Required by route handler assertCapability(workspaceId, "decision_engine") check
-    const { setSubscriptionTier, SubscriptionTier } = await import("@/services/entitlement");
-    await setSubscriptionTier(testWorkspaceId, SubscriptionTier.PRO);
+    // Create DB-backed entitlement records required by assertCapability()
+    // assertCapability() queries database, not in-memory store
+    const planId = randomUUID();
+    const billingAccountId = randomUUID();
+    const subscriptionId = randomUUID();
+    const planCapabilityId = randomUUID();
+
+    // Create Plan with decision_engine capability (required by assertCapability lookup)
+    await db.plan.create({
+      data: {
+        id: planId,
+        name: `test-plan-${testWorkspaceId.substring(0, 8)}`,
+        priceMonthly: 99,
+        priceYearly: 990,
+        active: true,
+        planCapabilities: {
+          create: {
+            id: planCapabilityId,
+            key: "decision_engine",
+            limit: null, // null = unlimited
+          },
+        },
+      },
+    });
+
+    // Create BillingAccount for workspace (required for subscription lookup)
+    await db.billingAccount.create({
+      data: {
+        id: billingAccountId,
+        workspaceId: testWorkspaceId,
+        provider: "stripe",
+        providerCustomerId: `test_${testWorkspaceId.substring(0, 8)}`,
+        status: "active",
+      },
+    });
+
+    // Create active Subscription (required by assertCapability → resolveEntitlements)
+    await db.subscription.create({
+      data: {
+        id: subscriptionId,
+        billingAccountId,
+        planId,
+        status: "active",
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
   });
 
   afterEach(async () => {
-    // Delete in dependency order: AuditEvent → WorkspaceMembership → OperatorItem → Workspace → User
+    // Delete in dependency order: Subscription → PlanCapability → Plan → BillingAccount → AuditEvent → WorkspaceMembership → OperatorItem → Workspace → User
+    // Subscription.billingAccountId → BillingAccount.id (FK with Cascade)
+    // Subscription.planId → Plan.id (FK)
+    // PlanCapability.planId → Plan.id (FK with Cascade)
+    // BillingAccount.workspaceId → Workspace.id (unique, one-to-one)
+
+    // Delete Subscription (depends on BillingAccount and Plan)
+    await db.subscription.deleteMany({
+      where: {
+        billingAccount: {
+          workspaceId: testWorkspaceId,
+        },
+      },
+    });
+
+    // Delete PlanCapability (will be cascade deleted when Plan is deleted, but delete explicitly)
+    await db.planCapability.deleteMany({
+      where: {
+        plan: {
+          name: { contains: testWorkspaceId.substring(0, 8) },
+        },
+      },
+    });
+
+    // Delete Plan (created for this test, identified by name pattern)
+    await db.plan.deleteMany({
+      where: {
+        name: { contains: testWorkspaceId.substring(0, 8) },
+      },
+    });
+
+    // Delete BillingAccount (linked to this workspace)
+    await db.billingAccount.deleteMany({
+      where: { workspaceId: testWorkspaceId },
+    });
+
+    // Delete AuditEvent records
     // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
     await db.auditEvent.deleteMany({
       where: {
@@ -166,18 +245,26 @@ describe("P2B: REAL Operator Route Integration", () => {
         workspaceId: testWorkspaceId,
       },
     });
+
+    // Delete WorkspaceMembership
     await db.workspaceMembership.deleteMany({
       where: {
         userId: testActorId,
         workspaceId: testWorkspaceId,
       },
     });
+
+    // Delete OperatorItem
     await db.operatorItem.deleteMany({
       where: { workspaceId: testWorkspaceId },
     });
+
+    // Delete Workspace
     await db.workspace.delete({
       where: { id: testWorkspaceId },
     });
+
+    // Delete User
     await db.user.delete({
       where: { id: testActorId },
     });
