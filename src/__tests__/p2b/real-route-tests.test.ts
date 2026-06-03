@@ -77,10 +77,32 @@ vi.mock("@/services/auth", () => ({
 describe("P2B: REAL Operator Route Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
-  const testActorId = randomUUID();
+  const testActorId = "test-actor";
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
+
+    // Create User record for mocked actor
+    // Required by WorkspaceMembership.userId FK constraint and route auth wrapper
+    await db.user.create({
+      data: {
+        id: testActorId,
+        email: "test@example.com",
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create WorkspaceMembership linking actor to workspace
+    // Required by canonical-route-enforcement.ts line 304-312 membership lookup
+    await db.workspaceMembership.create({
+      data: {
+        userId: testActorId,
+        workspaceId: testWorkspaceId,
+        role: "admin",
+        isActive: true,
+      },
+    });
+
     const item = await db.operatorItem.create({
       data: {
         id: randomUUID(),
@@ -101,8 +123,25 @@ describe("P2B: REAL Operator Route Integration", () => {
   });
 
   afterEach(async () => {
+    // Delete in dependency order: AuditEvent → WorkspaceMembership → OperatorItem → User
+    // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
+    await db.auditEvent.deleteMany({
+      where: {
+        actorId: testActorId,
+        workspaceId: testWorkspaceId,
+      },
+    });
+    await db.workspaceMembership.deleteMany({
+      where: {
+        userId: testActorId,
+        workspaceId: testWorkspaceId,
+      },
+    });
     await db.operatorItem.deleteMany({
       where: { workspaceId: testWorkspaceId },
+    });
+    await db.user.delete({
+      where: { id: testActorId },
     });
   });
 
@@ -314,10 +353,32 @@ describe("P2B: REAL Operator Route Integration", () => {
 describe("P2B: REAL Decision Lifecycle Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
-  const testActorId = randomUUID();
+  const testActorId = "test-actor";
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
+
+    // Create User record for mocked actor
+    // Required by WorkspaceMembership.userId FK constraint
+    await db.user.create({
+      data: {
+        id: testActorId,
+        email: "test@example.com",
+        updatedAt: new Date(),
+      },
+    });
+
+    // Create WorkspaceMembership linking actor to workspace
+    // Required by canonical-route-enforcement.ts line 304-312 membership lookup
+    await db.workspaceMembership.create({
+      data: {
+        userId: testActorId,
+        workspaceId: testWorkspaceId,
+        role: "admin",
+        isActive: true,
+      },
+    });
+
     const decision = await db.operatorItem.create({
       data: {
         id: randomUUID(),
@@ -338,8 +399,25 @@ describe("P2B: REAL Decision Lifecycle Integration", () => {
   });
 
   afterEach(async () => {
+    // Delete in dependency order: AuditEvent → WorkspaceMembership → OperatorItem → User
+    // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
+    await db.auditEvent.deleteMany({
+      where: {
+        actorId: testActorId,
+        workspaceId: testWorkspaceId,
+      },
+    });
+    await db.workspaceMembership.deleteMany({
+      where: {
+        userId: testActorId,
+        workspaceId: testWorkspaceId,
+      },
+    });
     await db.operatorItem.deleteMany({
       where: { workspaceId: testWorkspaceId },
+    });
+    await db.user.delete({
+      where: { id: testActorId },
     });
   });
 
