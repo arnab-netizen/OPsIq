@@ -16,6 +16,7 @@ export const DECISION_STATES = [
   "APPROVED",
   "EXECUTED",
   "OUTCOME_RECORDED",
+  "PENDING_MODIFICATION",
   "CLOSED",
   "REJECTED",
   "CANCELLED",
@@ -54,7 +55,8 @@ export const ALLOWED_TRANSITIONS: Record<DecisionState, DecisionState[]> = {
   SUBMITTED: ["APPROVED", "REJECTED"],
   APPROVED: ["EXECUTED", "CANCELLED"],
   EXECUTED: ["OUTCOME_RECORDED", "FAILED"],
-  OUTCOME_RECORDED: ["CLOSED"],
+  OUTCOME_RECORDED: ["CLOSED", "PENDING_MODIFICATION"],
+  PENDING_MODIFICATION: ["OUTCOME_RECORDED", "CLOSED"],
   CLOSED: [], // Terminal
 
   // Alternative paths
@@ -121,11 +123,11 @@ export function requireExecutable(state: DecisionState): void {
  * @throws {Error} If state does not allow outcome recording
  */
 export function requireOutcomeRecordable(state: DecisionState): void {
-  const outcomeRecordableStates: DecisionState[] = ["EXECUTED"];
+  const outcomeRecordableStates: DecisionState[] = ["EXECUTED", "PENDING_MODIFICATION"];
 
   if (!outcomeRecordableStates.includes(state)) {
     throw new Error(
-      `Decision must be EXECUTED before recording outcome, current state: ${state}`
+      `Decision must be EXECUTED or PENDING_MODIFICATION before recording outcome, current state: ${state}`
     );
   }
 }
