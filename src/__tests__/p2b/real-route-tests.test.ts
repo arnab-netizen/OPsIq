@@ -465,7 +465,7 @@ describe("P2B: REAL Operator Route Integration", () => {
       expect(dbRecord?.verificationEvidence).toBeDefined(); // ← Contains fraud risk assessment
       const evidence = dbRecord?.verificationEvidence as any;
       expect(evidence?.fraudRiskAssessment?.riskLevel).toBe("high"); // ← Fraud risk found
-      expect(evidence?.fraudRiskAssessment?.indicators).toContain("Retroactive modification");
+      expect(evidence?.fraudRiskAssessment?.indicators).toContain("Retroactive modification of outcome value");
     });
   });
 });
