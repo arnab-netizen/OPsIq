@@ -16,6 +16,11 @@ import {
   type PressureLevel,
   type MaturityLevel,
 } from "@/domain/constants/statuses";
+import {
+  deriveHardeningContextFromConditionProfile,
+  type ConditionProfileLike,
+  type ProfileHardeningContext,
+} from "@/domain/business-condition/business-condition";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -243,4 +248,52 @@ export async function getCurrentCondition(engagementId: string, workspaceId: str
   });
 
   return profile;
+}
+
+// ─── Read-only hardening exposure (P2C) ──────────────────────────────────────
+
+/**
+ * Read-only pairing of a persisted condition profile with its derived
+ * recommendation hardening context.
+ */
+export interface ConditionHardeningSummary<
+  P extends ConditionProfileLike = ConditionProfileLike,
+> {
+  /** The persisted profile passed in (or null when none is available). */
+  profile: P | null;
+  /** Deterministic hardening context derived from the profile. */
+  hardeningContext: ProfileHardeningContext;
+}
+
+/**
+ * Pure, deterministic composer: pair a persisted condition profile (or null)
+ * with its derived hardening context.
+ *
+ * No DB access, no route dependency, no workspace lookup, no AI, no side
+ * effects, and no mutation of the input. When the profile is absent the
+ * hardening context is the caution-preserving default from the adapter, so
+ * missing data never reads as confidence.
+ */
+export function summarizeConditionHardening<P extends ConditionProfileLike>(
+  profile: P | null | undefined
+): ConditionHardeningSummary<P> {
+  return {
+    profile: profile ?? null,
+    hardeningContext: deriveHardeningContextFromConditionProfile(profile ?? null),
+  };
+}
+
+/**
+ * Read-only service surface: fetch the current persisted condition profile for
+ * an engagement and pair it with its derived hardening context.
+ *
+ * Delegates the DB read and workspace enforcement to the unchanged
+ * getCurrentCondition; performs no writes of its own.
+ */
+export async function getCurrentConditionWithHardening(
+  engagementId: string,
+  workspaceId: string
+) {
+  const profile = await getCurrentCondition(engagementId, workspaceId);
+  return summarizeConditionHardening(profile);
 }
