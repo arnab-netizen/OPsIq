@@ -105,7 +105,7 @@ jobs:
           NODE_ENV: test
 
       - name: Run Phase D admin operability tests
-        run: npm test -- --run src/__tests__/api/admin/workspaces.test.ts src/__tests__/api/admin/audit-log.test.ts src/__tests__/api/admin/workspace-members.test.ts src/__tests__/phase-d/admin-operability-db.test.ts src/__tests__/phase-d/admin-billing-db.test.ts
+        run: npm test -- --run src/__tests__/api/admin/workspaces.test.ts src/__tests__/api/admin/audit-log.test.ts src/__tests__/api/admin/workspace-members.test.ts src/__tests__/api/admin/workspace-disable.test.ts src/__tests__/phase-d/admin-operability-db.test.ts src/__tests__/phase-d/admin-billing-db.test.ts src/__tests__/phase-d/admin-disable-db.test.ts
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
           DATABASE_URL_TEST: ${{ env.DATABASE_URL_TEST }}

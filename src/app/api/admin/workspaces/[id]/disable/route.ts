@@ -1,64 +1,81 @@
 /**
  * POST /api/admin/workspaces/[id]/disable
  *
- * Soft-delete a workspace (disable it without removing data).
- * Admin-only endpoint (enforces ADMIN_SETTINGS capability).
- * Soft delete: marks workspace as inactive, no hard deletion.
+ * Soft-disable a workspace (set isActive=false; no hard deletion).
+ * Admin-only endpoint (enforces SYSTEM_ADMIN capability via canonical
+ * enforcement). Idempotent (requires an idempotency-key header) and audited
+ * (emits WORKSPACE_DISABLED on an actual state change).
+ *
+ * Phase D1-D: replaces the prior stub with a real, governed write.
  */
 
-import { NextRequest } from "next/server";
-import { UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { z } from "zod";
+import { disableWorkspaceForAdmin } from "@/services/admin/admin-operability.service";
+import { parseOrThrow, uuidSchema, parseRequestBody } from "@/lib/validation";
+import {
+  checkIdempotencyKey,
+  recordIdempotencyResponse,
+  recordIdempotencyError,
+} from "@/services/idempotency";
+import { z } from "zod/v4";
 
-const DisableWorkspaceSchema = z.object({
+const disableWorkspaceSchema = z.object({
   reason: z.string().optional(),
   notifyMembers: z.boolean().optional().default(true),
 });
 
-export const POST = withEnforcementFull(
-  async (request: NextRequest, ctx, params) => {
-    // Auth enforcement (ADMIN_SETTINGS capability)
-    const { session, policy } = await withAuth({
-      capability: CAPABILITIES.SYSTEM_ADMIN,
-    });
-    if (!session || !policy) {
-      throw new UnauthorizedError("Unauthorized");
-    }
-
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const workspaceId = params.id;
-    if (!workspaceId) {
-      throw new Error("Workspace ID required");
+    parseOrThrow(uuidSchema, workspaceId);
+
+    const idempotencyKey = ctx.request!.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return canonicalJson(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
     }
 
-    let body: any = {};
+    const body = await parseRequestBody(ctx.request!, disableWorkspaceSchema);
+    const reason = body.reason ?? null;
+    const notifyMembers = body.notifyMembers;
+
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "disableWorkspace",
+      actorId: ctx.verifiedActorId,
+      payload: { workspaceId, reason, notifyMembers },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return canonicalJson(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
+
     try {
-      body = await request.json();
-    } catch {
-      // Empty body is OK
+      const result = await disableWorkspaceForAdmin({
+        workspaceId,
+        actorId: ctx.verifiedActorId,
+        reason,
+        notifyMembers,
+      });
+      await recordIdempotencyResponse(
+        idempotencyKey,
+        201,
+        result as unknown as Record<string, unknown>
+      );
+      return canonicalJson(result, { status: 201 });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
     }
-
-    // Validate request body
-    const validationResult = DisableWorkspaceSchema.safeParse(body);
-    if (!validationResult.success) {
-      throw new Error(`Invalid request body: ${validationResult.error.issues.map(i => i.message).join(', ')}`);
-    }
-
-    const { reason, notifyMembers } = validationResult.data;
-
-    // TODO: Update database via Prisma
-    // UPDATE Workspace SET disabled = true WHERE id = ?
-    // Optionally: emit audit event for workspace disable
-    // Optionally: notify members if notifyMembers = true
-
-    return {
-      workspaceId,
-      status: "disabled",
-      reason,
-      notifyMembers,
-      disabledAt: new Date().toISOString(),
-    };
+  },
+  {
+    requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN],
   }
 );
