@@ -17,14 +17,21 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "..");
 
+// Reconciled to the env contract the application code actually reads.
+// Authentication is session/cookie based (no NextAuth) and requires no secret,
+// so the previously-listed NEXTAUTH_SECRET / NEXTAUTH_URL were phantom blockers
+// and have been removed. Stripe is optional (lazy clients; no customer-journey
+// dependency): canonical STRIPE_SECRET_KEY, with STRIPE_API_KEY as a legacy alias.
 const envRequirements = [
   { name: "NODE_ENV", category: "REQUIRED" },
   { name: "DATABASE_URL", category: "EXTERNAL_RUNTIME_REQUIRED" },
-  { name: "NEXTAUTH_SECRET", category: "REQUIRED" },
-  { name: "NEXTAUTH_URL", category: "EXTERNAL_RUNTIME_REQUIRED" },
+  { name: "NEXT_PUBLIC_APP_URL", category: "EXTERNAL_RUNTIME_REQUIRED" },
   { name: "SKIP_ENV_VALIDATION", category: "LOCAL_ONLY" },
-  { name: "STRIPE_SECRET_KEY", category: "OPTIONAL" },
-  { name: "STRIPE_PUBLISHABLE_KEY", category: "OPTIONAL" },
+  { name: "STRIPE_SECRET_KEY", category: "OPTIONAL" }, // STRIPE_API_KEY = legacy alias
+  { name: "STRIPE_WEBHOOK_SECRET", category: "OPTIONAL" },
+  { name: "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", category: "OPTIONAL" },
+  { name: "OPSIQ_DIAGNOSTIC_KEY", category: "OPTIONAL" },
+  { name: "SENTRY_DSN", category: "OPTIONAL" },
 ];
 
 const report = {

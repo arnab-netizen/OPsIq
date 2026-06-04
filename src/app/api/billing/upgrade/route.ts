@@ -5,9 +5,13 @@ import { db } from "@/lib/db";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 async function getStripe() {
-  const apiKey = process.env.STRIPE_API_KEY;
+  // Canonical STRIPE_SECRET_KEY with STRIPE_API_KEY accepted as a legacy alias.
+  // Lazy: only invoked when a paid upgrade is actually requested, never at boot.
+  const apiKey = process.env.STRIPE_SECRET_KEY ?? process.env.STRIPE_API_KEY;
   if (!apiKey) {
-    throw new Error("STRIPE_API_KEY environment variable is not set");
+    throw new Error(
+      "Stripe secret key is not set (STRIPE_SECRET_KEY or legacy STRIPE_API_KEY)"
+    );
   }
   const Stripe = (await import("stripe")).default;
   return new Stripe(apiKey);

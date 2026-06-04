@@ -153,13 +153,27 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
  * Verify critical configuration is present
  */
 function checkConfiguration(logger: any): boolean {
-  const requiredEnvVars = ["DATABASE_URL", "STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"];
+  // Only DATABASE_URL is required to boot. Stripe is optional: its clients are
+  // lazily initialized and the customer journey has no Stripe dependency, so a
+  // missing Stripe configuration is a non-blocking warning ("billing disabled"),
+  // never a startup failure. Kept consistent with
+  // src/infra/startup-orchestrator.ts (the active startup path).
+  const requiredEnvVars = ["DATABASE_URL"];
 
   for (const envVar of requiredEnvVars) {
     if (!process.env[envVar]) {
       logger.error(`Missing required environment variable: ${envVar}`);
       return false;
     }
+  }
+
+  const billingEnabled = Boolean(
+    process.env.STRIPE_SECRET_KEY || process.env.STRIPE_API_KEY
+  );
+  if (!billingEnabled) {
+    logger.warn(
+      "Stripe not configured (STRIPE_SECRET_KEY/STRIPE_API_KEY absent) - billing disabled"
+    );
   }
 
   return true;

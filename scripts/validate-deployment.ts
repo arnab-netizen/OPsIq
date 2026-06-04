@@ -54,12 +54,21 @@ function checkEnvironmentVariables(): void {
   const required = [
     "NODE_ENV",
     "DATABASE_URL",
-    "NEXT_PUBLIC_API_URL",
+    "NEXT_PUBLIC_APP_URL",
   ];
+
+  // NEXT_PUBLIC_API_URL is a legacy alias for NEXT_PUBLIC_APP_URL. It is NOT a
+  // hard requirement: if the canonical NEXT_PUBLIC_APP_URL is absent but the
+  // legacy NEXT_PUBLIC_API_URL is present, treat the URL requirement as met.
+  const legacyUrlAlias: Record<string, string> = {
+    NEXT_PUBLIC_APP_URL: "NEXT_PUBLIC_API_URL",
+  };
 
   const optional = [
     "SENTRY_DSN",
-    "STRIPE_SECRET_KEY",
+    "STRIPE_SECRET_KEY", // canonical; STRIPE_API_KEY accepted as legacy alias
+    "STRIPE_WEBHOOK_SECRET",
+    "OPSIQ_DIAGNOSTIC_KEY",
     "SLACK_WEBHOOK_URL",
   ];
 
@@ -67,7 +76,10 @@ function checkEnvironmentVariables(): void {
   const optionalMissing: string[] = [];
 
   required.forEach((envVar) => {
-    if (!process.env[envVar]) {
+    const alias = legacyUrlAlias[envVar];
+    const satisfied =
+      Boolean(process.env[envVar]) || (alias ? Boolean(process.env[alias]) : false);
+    if (!satisfied) {
       missing.push(envVar);
     }
   });
