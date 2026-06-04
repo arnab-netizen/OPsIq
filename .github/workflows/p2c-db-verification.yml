@@ -29,6 +29,9 @@ jobs:
 
     env:
       TEST_WITH_DB: "true"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      NODE_ENV: test
 
     services:
       postgres:
@@ -66,18 +69,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Configure CI PostgreSQL environment
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          NODE_ENV=test
+          EOF
+          echo "✓ .env.local configured for CI PostgreSQL service"
+
       - name: Prisma generate
         run: npx prisma generate
 
       - name: Prisma schema validation
         run: npx prisma validate
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: Prisma database migration
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
 
       - name: TypeScript type checking
         run: npx tsc --noEmit
@@ -85,21 +97,21 @@ jobs:
       - name: Build project
         run: npm run build
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
           NODE_ENV: test
 
       - name: Run P2C contract tests
         run: npm test -- --run src/__tests__/p2c/business-condition-hardening-contract.test.ts
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          DATABASE_URL_TEST: ${{ env.DATABASE_URL_TEST }}
           TEST_WITH_DB: "true"
           NODE_ENV: test
 
       - name: Run P2B regression tests (verify baseline not broken)
         run: npm test -- --run src/__tests__/p2b/verified-lifecycle.test.ts src/__tests__/p2b/real-route-tests.test.ts src/__tests__/p2b/operator-outcome-path.test.ts src/__tests__/p2b/decision-outcome-path.test.ts
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          DATABASE_URL_TEST: ${{ env.DATABASE_URL_TEST }}
           TEST_WITH_DB: "true"
           NODE_ENV: test
