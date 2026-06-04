@@ -18,6 +18,9 @@
  */
 
 import { db } from "@/lib/db";
+import { NotFoundError } from "@/infra/errors";
+import { emitAuditEvent } from "@/infra/audit";
+import type { AuditEventName } from "@/domain/constants/audit-events";
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 200;
@@ -361,5 +364,95 @@ export async function listWorkspaceMembersForAdmin(
       nextCursor,
       hasMore,
     },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Phase D1-D: Admin workspace soft-disable (governed write)
+// Backs POST /api/admin/workspaces/[id]/disable
+// ---------------------------------------------------------------------------
+
+export interface DisableWorkspaceInput {
+  workspaceId: string;
+  actorId: string;
+  reason?: string | null;
+  notifyMembers?: boolean;
+}
+
+export interface DisableWorkspaceResult {
+  workspaceId: string;
+  status: "disabled";
+  isActive: false;
+  reason: string | null;
+  disabledAt: string;
+}
+
+/**
+ * Soft-disable a workspace (set Workspace.isActive=false). Never hard-deletes.
+ *
+ * Governance:
+ *   - Throws NotFoundError if the workspace does not exist.
+ *   - Concurrency-safe, emit-once: the state transition is performed with a
+ *     conditional update (only when currently active). A WORKSPACE_DISABLED
+ *     audit event is emitted ONLY when an actual active→disabled transition
+ *     occurs; an already-disabled workspace is an idempotent no-op with no new
+ *     audit event.
+ *   - Audit is emitted via the centralized, hash-chained `emitAuditEvent`
+ *     helper using only schema-real columns (the event name string is bridged
+ *     to AuditEventName; adding the constant is out of this slice's scope).
+ *   - No member mutation, no notification side effects, no schema change.
+ */
+export async function disableWorkspaceForAdmin(
+  input: DisableWorkspaceInput
+): Promise<DisableWorkspaceResult> {
+  const { workspaceId, actorId } = input;
+  const reason = input.reason ?? null;
+  const notifyMembers = input.notifyMembers ?? true;
+
+  if (!workspaceId) {
+    throw new Error("disableWorkspaceForAdmin requires a workspaceId");
+  }
+
+  const existing = await db.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { id: true, isActive: true },
+  });
+  if (!existing) {
+    throw new NotFoundError("Workspace", workspaceId);
+  }
+
+  const disabledAt = new Date().toISOString();
+
+  // Atomic, concurrency-safe transition: only active → disabled flips a row.
+  const updated = await db.workspace.updateMany({
+    where: { id: workspaceId, isActive: true },
+    data: { isActive: false },
+  });
+
+  // Emit the governed audit event exactly once, only on a real state change.
+  if (updated.count === 1) {
+    await emitAuditEvent({
+      eventName: "WORKSPACE_DISABLED" as AuditEventName,
+      workspaceId,
+      actorId,
+      actorType: "user",
+      entityType: "workspace",
+      entityId: workspaceId,
+      visibility: "internal",
+      payload: {
+        reason,
+        notifyMembers,
+        before: { isActive: true },
+        after: { isActive: false },
+      },
+    });
+  }
+
+  return {
+    workspaceId,
+    status: "disabled",
+    isActive: false,
+    reason,
+    disabledAt,
   };
 }
