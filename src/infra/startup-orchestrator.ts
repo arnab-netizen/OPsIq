@@ -24,16 +24,25 @@ const STARTUP_TIMEOUT_MS = 30000;
 export async function ensureStartupComplete(): Promise<void> {
   const status = await getStartupStatus();
 
-  // Terminal states - no retry
+  // Terminal success - no retry needed.
   if (status.status === "READY") {
     return; // Already ready
   }
 
+  // Previously FAILED: re-evaluate rather than poisoning the instance forever.
+  //
+  // A FAILED state is most often caused by a since-corrected configuration
+  // problem (e.g. a missing env var that has now been supplied). Re-running the
+  // checks lets the instance recover to READY WITHOUT manual database deletion.
+  // This does NOT mask real failures: the re-run still performs the live
+  // database connectivity check, so a genuinely unhealthy instance fails again
+  // and is re-persisted as FAILED.
   if (status.status === "FAILED") {
-    throw new Error(`Startup previously failed: ${status.error || "unknown error"}`);
+    await runStartupChecksAndPersist();
+    return;
   }
 
-  // Already starting - wait for in-flight promise
+  // Already starting - wait for in-flight promise.
   if (startupPromise) {
     await Promise.race([
       startupPromise,
@@ -44,9 +53,17 @@ export async function ensureStartupComplete(): Promise<void> {
     return; // startupPromise completed, now check status
   }
 
-  // Not started yet - initiate startup
+  // Not started yet - initiate startup.
   await setStartupStatus("STARTING");
+  await runStartupChecksAndPersist();
+}
 
+/**
+ * Run the startup checks once and persist the resulting durable status.
+ * Clears the in-flight promise on completion so a subsequent call (e.g. a later
+ * readiness probe after a config fix) can re-evaluate.
+ */
+async function runStartupChecksAndPersist(): Promise<void> {
   startupPromise = performStartupChecks();
   try {
     await Promise.race([
@@ -55,14 +72,17 @@ export async function ensureStartupComplete(): Promise<void> {
         setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
       ),
     ]);
-    // Success - persist to DB
+    // Success - persist to DB.
     await setStartupStatus("READY", { completedAt: new Date() });
   } catch (error) {
     const errorObj = error instanceof Error ? error : new Error(String(error));
     const errorMsg = errorObj.message;
-    // Persist failure to DB
+    // Persist failure to DB.
     await setStartupStatus("FAILED", { error: errorMsg });
     throw errorObj;
+  } finally {
+    // Allow future re-evaluation (recovery) on the next call.
+    startupPromise = null;
   }
 }
 
@@ -163,15 +183,59 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
   }
 }
 
-function checkConfiguration(logger: any): boolean {
-  const requiredEnvVars = ["DATABASE_URL", "STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"];
+export interface StartupConfigCheck {
+  /** False only when a truly-required boot variable is missing. */
+  valid: boolean;
+  /** Required boot variables that are missing (currently only DATABASE_URL). */
+  missing: string[];
+  /** Whether payment/billing is configured (Stripe present). */
+  billingEnabled: boolean;
+  /** Non-blocking advisories (e.g. Stripe absent → billing disabled). */
+  warnings: string[];
+}
 
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
-      logger.error(`Missing required environment variable: ${envVar}`);
-      return false;
-    }
+/**
+ * Evaluate startup configuration.
+ *
+ * Only DATABASE_URL is required to boot and serve the application — the
+ * stranger-safe customer journey (signup / login / diagnosis) has no Stripe
+ * dependency, and the Stripe clients are lazily initialized. A missing Stripe
+ * configuration is therefore a non-blocking warning ("billing disabled"), never
+ * a startup failure. This mirrors the per-request critical-readiness contract
+ * (src/infra/critical-readiness.ts), which also treats only DATABASE_URL as
+ * critical.
+ */
+export function checkStartupConfiguration(): StartupConfigCheck {
+  const requiredEnvVars = ["DATABASE_URL"];
+  const missing = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+
+  const billingEnabled = Boolean(
+    process.env.STRIPE_SECRET_KEY || process.env.STRIPE_API_KEY
+  );
+  const warnings: string[] = [];
+  if (!billingEnabled) {
+    warnings.push(
+      "Stripe not configured (STRIPE_SECRET_KEY/STRIPE_API_KEY absent) - billing disabled"
+    );
   }
 
-  return true;
+  return {
+    valid: missing.length === 0,
+    missing,
+    billingEnabled,
+    warnings,
+  };
+}
+
+function checkConfiguration(logger: any): boolean {
+  const result = checkStartupConfiguration();
+
+  for (const envVar of result.missing) {
+    logger.error(`Missing required environment variable: ${envVar}`);
+  }
+  for (const warning of result.warnings) {
+    logger.warn(warning);
+  }
+
+  return result.valid;
 }

@@ -29,10 +29,24 @@ export interface StripeCheckoutSessionEvent {
   mode: "payment" | "subscription";
 }
 
+/**
+ * Resolve the Stripe secret key from the environment.
+ *
+ * Canonical name: STRIPE_SECRET_KEY (matches Stripe's own convention and the
+ * documented env contract). STRIPE_API_KEY is accepted as a legacy alias for
+ * backward compatibility. Returns null when neither is configured so that paid
+ * Stripe operations fail lazily at call time — never at startup/import.
+ */
+export function resolveStripeSecretKey(): string | null {
+  return process.env.STRIPE_SECRET_KEY ?? process.env.STRIPE_API_KEY ?? null;
+}
+
 async function getStripe() {
-  const apiKey = process.env.STRIPE_API_KEY;
+  const apiKey = resolveStripeSecretKey();
   if (!apiKey) {
-    throw new Error("STRIPE_API_KEY environment variable is not set");
+    throw new Error(
+      "Stripe secret key is not set (STRIPE_SECRET_KEY or legacy STRIPE_API_KEY)"
+    );
   }
   const Stripe = (await import("stripe")).default;
   return new Stripe(apiKey);
