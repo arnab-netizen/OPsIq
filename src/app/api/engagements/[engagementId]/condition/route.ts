@@ -4,6 +4,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   assessCondition,
   getConditionHistory,
+  getCurrentConditionWithHardening,
 } from "@/services/business-condition";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -41,7 +42,13 @@ export const GET = withCanonicalEnforcement(
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, ctx.verifiedWorkspaceId);
 
     const history = await getConditionHistory(engagementId, ctx.verifiedWorkspaceId);
-    return { profiles: history };
+    // Additive, read-only: pair the response with the current condition's
+    // hardening context (caution-preserving when no current profile exists).
+    const { hardeningContext } = await getCurrentConditionWithHardening(
+      engagementId,
+      ctx.verifiedWorkspaceId
+    );
+    return { profiles: history, hardeningContext };
   },
   {
     requireCapabilities: [CAPABILITIES.CONDITION_VIEW],

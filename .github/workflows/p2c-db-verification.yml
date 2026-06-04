@@ -8,6 +8,7 @@ on:
       - src/__tests__/p2c/**
       - src/services/business-condition.ts
       - src/domain/business-condition/**
+      - src/app/api/engagements/[engagementId]/condition/route.ts
       - prisma/**
       - package.json
       - package-lock.json
@@ -18,6 +19,7 @@ on:
       - src/__tests__/p2c/**
       - src/services/business-condition.ts
       - src/domain/business-condition/**
+      - src/app/api/engagements/[engagementId]/condition/route.ts
       - prisma/**
       - package.json
       - package-lock.json
@@ -101,7 +103,7 @@ jobs:
           NODE_ENV: test
 
       - name: Run P2C contract tests
-        run: npm test -- --run src/__tests__/p2c/business-condition-hardening-contract.test.ts
+        run: npm test -- --run src/__tests__/p2c/business-condition-hardening-contract.test.ts src/__tests__/p2c/condition-route-hardening.test.ts
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
           DATABASE_URL_TEST: ${{ env.DATABASE_URL_TEST }}
