@@ -31,6 +31,7 @@ import {
   deriveHardeningContextFromConditionProfile,
   type ConditionProfileLike,
 } from "@/domain/business-condition/business-condition";
+import { summarizeConditionHardening } from "@/services/business-condition";
 
 // Ordering helper (test-only) for caution-level comparisons in the adapter contract.
 const CAUTION_ORDER = [
@@ -1037,5 +1038,79 @@ describe("P2C-BATCH-4A: Profile -> Hardening Adapter", () => {
     expect(typeof ctx.conditionScore).toBe("number");
     expect(ctx.conditionScore).toBeGreaterThanOrEqual(20);
     expect(ctx.conditionScore).toBeLessThan(40);
+  });
+});
+
+/**
+ * P2C-BATCH-4B: READ-ONLY CONDITION HARDENING SERVICE SURFACE
+ *
+ * Contract for summarizeConditionHardening — the pure composer that pairs a
+ * persisted condition profile (or null) with its derived hardening context.
+ * No DB, no routes, no mutation. (The DB wrapper getCurrentConditionWithHardening
+ * simply delegates to the unchanged getCurrentCondition and this composer; its
+ * DB read is exercised by the P2B-style DB suite, not this DB-free P2C file.)
+ */
+describe("P2C-BATCH-4B: summarizeConditionHardening (read-only service surface)", () => {
+  const sampleProfile: ConditionProfileLike = {
+    engagementId: "eng-4b",
+    businessStatus: "distressed",
+    severityScore: 7,
+    urgencyLevel: "high",
+    cashPressureLevel: "high",
+    marginPressureLevel: "medium",
+    clientConcentrationRisk: "medium",
+    ownerDependencyRisk: "high",
+    keyPersonDependencyRisk: "medium",
+    processMaturityLevel: "medium",
+    managementMaturityLevel: "medium",
+    executionCapacityLevel: "medium",
+    moralFragilityLevel: "medium",
+    resilienceLevel: "medium",
+    growthReadinessLevel: "medium",
+  };
+
+  // 1. Valid profile → profile unchanged + hardeningContext from the adapter + sufficientData true.
+  it("returns the profile unchanged with adapter-derived hardening context", () => {
+    const summary = summarizeConditionHardening(sampleProfile);
+    expect(summary.profile).toBe(sampleProfile);
+    expect(summary.hardeningContext).toEqual(
+      deriveHardeningContextFromConditionProfile(sampleProfile)
+    );
+    expect(summary.hardeningContext.sufficientData).toBe(true);
+  });
+
+  // 2. Null profile → profile null, caution-preserving, no false confidence.
+  it("returns a caution-preserving summary for a null profile", () => {
+    const summary = summarizeConditionHardening(null);
+    expect(summary.profile).toBeNull();
+    expect(summary.hardeningContext.sufficientData).toBe(false);
+    expect(summary.hardeningContext.hardeningPressure).not.toBe("low");
+    expect(summary.hardeningContext.hardeningPressure).not.toBe("minimal");
+    expect(summary.hardeningContext.confidenceAdjustment).not.toBe("maintain_or_increase");
+    expect(summary.hardeningContext.cautionLevel).not.toBe("low");
+  });
+
+  // 3. Deterministic: same input → identical output.
+  it("produces identical output for identical input", () => {
+    expect(summarizeConditionHardening(sampleProfile)).toEqual(
+      summarizeConditionHardening(sampleProfile)
+    );
+    expect(summarizeConditionHardening(null)).toEqual(
+      summarizeConditionHardening(null)
+    );
+  });
+
+  // 4. engagementId preserved through the hardening context.
+  it("preserves engagementId through the hardening context", () => {
+    const summary = summarizeConditionHardening(sampleProfile);
+    expect(summary.hardeningContext.engagementId).toBe("eng-4b");
+    expect(summarizeConditionHardening(null).hardeningContext.engagementId ?? null).toBeNull();
+  });
+
+  // 5. No mutation of the input profile.
+  it("does not mutate the input profile", () => {
+    const snapshot = JSON.parse(JSON.stringify(sampleProfile));
+    summarizeConditionHardening(sampleProfile);
+    expect(sampleProfile).toEqual(snapshot);
   });
 });
