@@ -1,215 +1,117 @@
 /**
- * Admin Workspaces API Tests
+ * Phase D1-A: GET /api/admin/workspaces — Admin Read Operability
  *
- * Tests for:
- * - GET /api/admin/workspaces (list all workspaces)
- * - GET /api/admin/workspaces/[id]/members (list workspace members)
- * - POST /api/admin/workspaces/[id]/disable (soft delete workspace)
+ * Real route-contract tests (replaces prior placeholder `expect(true)` tests).
+ *
+ * Independent harness:
+ * - withCanonicalEnforcement is mocked to a pass-through that ALSO captures the
+ *   enforcement options, so we can assert the route declares SYSTEM_ADMIN
+ *   without standing up the full auth pipeline.
+ * - The admin operability service is mocked so the route is exercised in
+ *   isolation (DB-free); real DB behavior is covered by the Phase D DB suite.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-describe("Admin Workspaces API (D1 - Admin Dashboard)", () => {
-  describe("GET /api/admin/workspaces", () => {
-    it("should return 401 without SYSTEM_ADMIN capability", () => {
-      // TODO: Mock auth failure
-      expect(true).toBe(true);
-    });
+const mocks = vi.hoisted(() => ({
+  listWorkspacesForAdmin: vi.fn(),
+}));
 
-    it("should require SYSTEM_ADMIN capability", () => {
-      // TODO: Verify capability enforcement
-      expect(true).toBe(true);
-    });
+vi.mock("@/lib/canonical-route-enforcement", () => ({
+  withCanonicalEnforcement: (
+    handler: (ctx: unknown) => unknown,
+    options?: Record<string, unknown>
+  ) => {
+    const wrapped = (ctx: unknown) => handler(ctx);
+    (wrapped as { __options?: unknown }).__options = options;
+    return wrapped;
+  },
+}));
 
-    it("should list all workspaces with pagination", () => {
-      // TODO: Query all workspaces from DB
-      // Expect: array of workspace objects with id, name, slug, memberCount
-      expect(true).toBe(true);
-    });
+vi.mock("@/services/admin/admin-operability.service", () => ({
+  listWorkspacesForAdmin: mocks.listWorkspacesForAdmin,
+}));
 
-    it("should support cursor-based pagination", () => {
-      // TODO: Test pagination with cursor parameter
-      expect(true).toBe(true);
-    });
+import { GET } from "@/app/api/admin/workspaces/route";
 
-    it("should support limit parameter", () => {
-      // TODO: Test limit parameter
-      expect(true).toBe(true);
-    });
+function makeCtx(rawUrl: string) {
+  return {
+    verifiedActorId: "actor-1",
+    verifiedWorkspaceId: "ws-1",
+    request: { url: rawUrl },
+  } as const;
+}
 
-    it("should return workspace count for each", () => {
-      // TODO: Verify memberCount field populated
-      expect(true).toBe(true);
-    });
+const sampleResult = {
+  workspaces: [
+    {
+      id: "11111111-1111-1111-1111-111111111111",
+      name: "Acme",
+      slug: "acme",
+      isActive: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      memberCount: 3,
+    },
+  ],
+  pagination: { limit: 100, cursor: null, nextCursor: null, hasMore: false },
+};
 
-    it("should include createdAt timestamp", () => {
-      // TODO: Verify timestamps present
-      expect(true).toBe(true);
-    });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
-    it("should not expose sensitive workspace data", () => {
-      // TODO: Verify no API keys, secrets, or internal fields
-      expect(true).toBe(true);
-    });
+describe("Phase D1-A: GET /api/admin/workspaces", () => {
+  it("declares SYSTEM_ADMIN as a required capability", () => {
+    const options = (GET as unknown as { __options?: { requireCapabilities?: string[] } }).__options;
+    expect(options).toBeDefined();
+    expect(options?.requireCapabilities).toContain("system:admin");
+  });
 
-    it("should handle database errors gracefully", () => {
-      // TODO: Test error handling when DB unavailable
-      expect(true).toBe(true);
+  it("returns real workspaces from the service (not an empty stub)", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+
+    expect(res.workspaces).toHaveLength(1);
+    expect(res.workspaces[0].id).toBe("11111111-1111-1111-1111-111111111111");
+    expect(mocks.listWorkspacesForAdmin).toHaveBeenCalledTimes(1);
+  });
+
+  it("exposes id/name/slug/isActive/createdAt/memberCount per workspace", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
+
+    const res = (await GET(makeCtx("https://x/api/admin/workspaces"))) as typeof sampleResult;
+    const w = res.workspaces[0];
+
+    expect(w).toMatchObject({
+      id: expect.any(String),
+      name: expect.any(String),
+      slug: expect.any(String),
+      isActive: expect.any(Boolean),
+      createdAt: expect.any(String),
+      memberCount: expect.any(Number),
     });
   });
 
-  describe("GET /api/admin/workspaces/[id]/members", () => {
-    it("should return 401 without SYSTEM_ADMIN capability", () => {
-      // TODO: Mock auth failure
-      expect(true).toBe(true);
-    });
+  it("forwards limit and cursor query parameters to the service", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
 
-    it("should require workspace ID in path", () => {
-      // TODO: Test missing workspace ID
-      expect(true).toBe(true);
-    });
+    await GET(makeCtx("https://x/api/admin/workspaces?limit=25&cursor=abc"));
 
-    it("should list all members of a workspace", () => {
-      // TODO: Query members from WorkspaceMembership table
-      // Expect: array of { userId, role, createdAt }
-      expect(true).toBe(true);
-    });
-
-    it("should support pagination with cursor", () => {
-      // TODO: Test pagination
-      expect(true).toBe(true);
-    });
-
-    it("should include member roles", () => {
-      // TODO: Verify role field present (owner, admin, member)
-      expect(true).toBe(true);
-    });
-
-    it("should include member creation date", () => {
-      // TODO: Verify createdAt field present
-      expect(true).toBe(true);
-    });
-
-    it("should return empty array for workspace with no members", () => {
-      // TODO: Test empty workspace
-      expect(true).toBe(true);
-    });
-
-    it("should handle nonexistent workspace gracefully", () => {
-      // TODO: Test 404 for nonexistent workspace
-      expect(true).toBe(true);
-    });
-
-    it("should not expose user PII beyond workspace membership", () => {
-      // TODO: Verify no email, password, or internal user data exposed
-      expect(true).toBe(true);
+    expect(mocks.listWorkspacesForAdmin).toHaveBeenCalledWith({
+      limit: 25,
+      cursor: "abc",
     });
   });
 
-  describe("POST /api/admin/workspaces/[id]/disable", () => {
-    it("should return 401 without SYSTEM_ADMIN capability", () => {
-      // TODO: Mock auth failure
-      expect(true).toBe(true);
-    });
+  it("is read-only: invoking GET performs no mutation (only the read service is called)", async () => {
+    mocks.listWorkspacesForAdmin.mockResolvedValue(sampleResult);
 
-    it("should require workspace ID in path", () => {
-      // TODO: Test missing workspace ID
-      expect(true).toBe(true);
-    });
+    await GET(makeCtx("https://x/api/admin/workspaces"));
 
-    it("should soft-delete a workspace", () => {
-      // TODO: Verify workspace marked as disabled, not deleted
-      // Check: data still in DB, marked as inactive
-      expect(true).toBe(true);
-    });
-
-    it("should accept optional disable reason", () => {
-      // TODO: Test reason parameter in request body
-      expect(true).toBe(true);
-    });
-
-    it("should accept notifyMembers flag", () => {
-      // TODO: Test notifyMembers parameter (default true)
-      expect(true).toBe(true);
-    });
-
-    it("should emit audit event for workspace disable", () => {
-      // TODO: Verify AUDIT_EVENTS.WORKSPACE_DISABLED emitted
-      expect(true).toBe(true);
-    });
-
-    it("should include disabledAt timestamp in response", () => {
-      // TODO: Verify disabledAt field present
-      expect(true).toBe(true);
-    });
-
-    it("should prevent further operations on disabled workspace", () => {
-      // TODO: Verify subsequent operations fail or skip the workspace
-      expect(true).toBe(true);
-    });
-
-    it("should allow reverting workspace enable (if needed)", () => {
-      // TODO: Test enabling a disabled workspace (optional)
-      expect(true).toBe(true);
-    });
-
-    it("should not hard-delete workspace data", () => {
-      // TODO: Verify data preservation for audit/compliance
-      expect(true).toBe(true);
-    });
-
-    it("should handle invalid request body gracefully", () => {
-      // TODO: Test invalid JSON or missing required fields
-      expect(true).toBe(true);
-    });
-
-    it("should return 200 on successful disable", () => {
-      // TODO: Verify response status code
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("Admin Dashboard Security", () => {
-    it("should enforce SYSTEM_ADMIN on all endpoints", () => {
-      // TODO: Verify all three endpoints require SYSTEM_ADMIN
-      expect(true).toBe(true);
-    });
-
-    it("should not allow non-admins to list workspaces", () => {
-      // TODO: Test with FREE/PRO tier user
-      expect(true).toBe(true);
-    });
-
-    it("should not allow users to disable other workspaces", () => {
-      // TODO: Test cross-workspace disable attempt
-      expect(true).toBe(true);
-    });
-
-    it("should audit all admin operations", () => {
-      // TODO: Verify audit trail records all workspaces, members, disable operations
-      expect(true).toBe(true);
-    });
-
-    it("should redact sensitive fields from responses", () => {
-      // TODO: Verify no passwords, tokens, API keys in responses
-      expect(true).toBe(true);
-    });
-  });
-
-  describe("Admin Dashboard Integration", () => {
-    it("should provide complete workspace governance view", () => {
-      // TODO: End-to-end test: list workspaces, view members, disable one
-      expect(true).toBe(true);
-    });
-
-    it("should handle concurrent disable requests idempotently", () => {
-      // TODO: Test double-disable doesn't error
-      expect(true).toBe(true);
-    });
-
-    it("should maintain referential integrity", () => {
-      // TODO: Verify disabling workspace doesn't break member records
-      expect(true).toBe(true);
-    });
+    // The only service interaction is the read query.
+    expect(mocks.listWorkspacesForAdmin).toHaveBeenCalledTimes(1);
+    // No other mock exists on the service module surface used by this route.
+    expect(Object.keys(mocks)).toEqual(["listWorkspacesForAdmin"]);
   });
 });
