@@ -20,6 +20,7 @@ import { db } from "@/lib/db";
 import {
   listWorkspacesForAdmin,
   queryAuditLogForAdmin,
+  listWorkspaceMembersForAdmin,
 } from "@/services/admin/admin-operability.service";
 
 const HAS_DB = Boolean(process.env.DATABASE_URL || process.env.TEST_DATABASE_URL);
@@ -163,6 +164,75 @@ describe.skipIf(!HAS_DB)("Phase D1-A: admin operability service (DB-backed)", ()
     await listWorkspacesForAdmin({ limit: 200 });
     await queryAuditLogForAdmin({ workspaceId: wsA, limit: 100 });
     const after = await db.auditEvent.count({ where: { workspaceId: wsA } });
+    expect(after).toBe(before);
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase D1-B: listWorkspaceMembersForAdmin
+  // Seed recap: wsA has userA1 (admin, active), userA2 (member, active),
+  // userB1 (member, INACTIVE in wsA). wsB has userB1 (admin, active).
+  // -------------------------------------------------------------------------
+
+  it("returns only active members for the requested workspace", async () => {
+    const result = await listWorkspaceMembersForAdmin(wsA, { limit: 100 });
+
+    const ids = result.members.map((m) => m.userId).sort();
+    expect(ids).toEqual([userA1, userA2].sort());
+    // Inactive membership (userB1 in wsA) is excluded.
+    expect(result.members.some((m) => m.userId === userB1)).toBe(false);
+    // All returned rows are active.
+    expect(result.members.every((m) => m.isActive === true)).toBe(true);
+  });
+
+  it("exposes safe identity fields (userId, name, email, role, isActive, addedAt)", async () => {
+    const result = await listWorkspaceMembersForAdmin(wsA, { limit: 100 });
+    const admin = result.members.find((m) => m.userId === userA1);
+
+    expect(admin).toBeDefined();
+    expect(admin!.role).toBe("admin");
+    expect(typeof admin!.addedAt).toBe("string");
+    expect(admin!.email).toContain("@");
+    const asRecord = admin as unknown as Record<string, unknown>;
+    expect(asRecord).not.toHaveProperty("password");
+    expect(asRecord).not.toHaveProperty("passwordHash");
+    expect(asRecord).not.toHaveProperty("token");
+  });
+
+  it("does not leak members from another workspace", async () => {
+    const resultA = await listWorkspaceMembersForAdmin(wsA, { limit: 100 });
+    const resultB = await listWorkspaceMembersForAdmin(wsB, { limit: 100 });
+
+    // wsB's only active member is userB1; it must not appear in wsA's list.
+    expect(resultB.members.map((m) => m.userId)).toContain(userB1);
+    expect(resultA.members.map((m) => m.userId)).not.toContain(userB1);
+  });
+
+  it("orders members deterministically by addedAt then id (ascending)", async () => {
+    const result = await listWorkspaceMembersForAdmin(wsA, { limit: 100 });
+    const addedAts = result.members.map((m) => new Date(m.addedAt).getTime());
+    const sorted = [...addedAts].sort((a, b) => a - b);
+    expect(addedAts).toEqual(sorted);
+  });
+
+  it("supports limit/cursor pagination over members", async () => {
+    const firstPage = await listWorkspaceMembersForAdmin(wsA, { limit: 1 });
+    expect(firstPage.members).toHaveLength(1);
+    expect(firstPage.pagination.hasMore).toBe(true);
+    expect(firstPage.pagination.nextCursor).toBeTruthy();
+
+    const secondPage = await listWorkspaceMembersForAdmin(wsA, {
+      limit: 1,
+      cursor: firstPage.pagination.nextCursor,
+    });
+    expect(secondPage.members).toHaveLength(1);
+    // The two pages return distinct members (no overlap, no skips beyond active set).
+    expect(secondPage.members[0].userId).not.toBe(firstPage.members[0].userId);
+  });
+
+  it("performs no mutation on member read (membership row count unchanged)", async () => {
+    const before = await db.workspaceMembership.count({ where: { workspaceId: wsA } });
+    await listWorkspaceMembersForAdmin(wsA, { limit: 100 });
+    const after = await db.workspaceMembership.count({ where: { workspaceId: wsA } });
     expect(after).toBe(before);
   });
 });

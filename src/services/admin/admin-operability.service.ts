@@ -259,3 +259,107 @@ export async function queryAuditLogForAdmin(opts: {
 
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// Phase D1-B: Admin member listing (read-only)
+// Backs GET /api/admin/workspaces/[id]/members
+// ---------------------------------------------------------------------------
+
+const MEMBER_DEFAULT_LIMIT = 50;
+const MEMBER_MAX_LIMIT = 100;
+
+/** Clamp a requested member-listing limit into [MIN_LIMIT, MEMBER_MAX_LIMIT]. */
+function clampMemberLimit(limit: number | undefined): number {
+  if (limit === undefined || Number.isNaN(limit)) return MEMBER_DEFAULT_LIMIT;
+  return Math.max(MIN_LIMIT, Math.min(MEMBER_MAX_LIMIT, Math.floor(limit)));
+}
+
+export interface AdminWorkspaceMemberSummary {
+  userId: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+  isActive: boolean;
+  addedAt: string;
+}
+
+export interface AdminWorkspaceMemberListResult {
+  workspaceId: string;
+  members: AdminWorkspaceMemberSummary[];
+  pagination: AdminPagination;
+}
+
+/**
+ * List the active members of a single workspace for the admin operability view
+ * (read-only).
+ *
+ * workspaceId is MANDATORY and is the only tenant scope: members of other
+ * workspaces are never returned. Only active, non-removed memberships are
+ * included. Ordering is (addedAt asc, id asc) for stable cursor pagination.
+ *
+ * Only safe identity fields are exposed (userId, name, email, role, isActive,
+ * addedAt). Email is included because this surface is SYSTEM_ADMIN-gated and
+ * needed for operator support; no secrets/tokens/password material is read.
+ */
+export async function listWorkspaceMembersForAdmin(
+  workspaceId: string,
+  opts: { limit?: number; cursor?: string | null } = {}
+): Promise<AdminWorkspaceMemberListResult> {
+  if (!workspaceId) {
+    throw new Error("listWorkspaceMembersForAdmin requires a workspaceId for tenant isolation");
+  }
+
+  const limit = clampMemberLimit(opts.limit);
+  const cursorId = decodeCursor(opts.cursor);
+
+  const rows = await db.workspaceMembership.findMany({
+    where: { workspaceId, isActive: true, removedAt: null },
+    orderBy: [{ addedAt: "asc" }, { id: "asc" }],
+    take: limit + 1,
+    ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+    select: {
+      id: true,
+      userId: true,
+      role: true,
+      isActive: true,
+      addedAt: true,
+      user: { select: { name: true, email: true } },
+    },
+  });
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+
+  const members: AdminWorkspaceMemberSummary[] = page.map(
+    (m: {
+      id: string;
+      userId: string;
+      role: string;
+      isActive: boolean;
+      addedAt: Date;
+      user: { name: string | null; email: string | null } | null;
+    }) => ({
+      userId: m.userId,
+      name: m.user?.name ?? null,
+      email: m.user?.email ?? null,
+      role: m.role,
+      isActive: m.isActive,
+      addedAt: m.addedAt.toISOString(),
+    })
+  );
+
+  // Cursor uses membership id; the last page row's membership id is encoded.
+  const lastRowId = hasMore ? page[page.length - 1]?.id : undefined;
+  const nextCursor = hasMore && lastRowId ? encodeCursor(lastRowId) : null;
+
+  return {
+    workspaceId,
+    members,
+    pagination: {
+      limit,
+      cursor: opts.cursor ?? null,
+      nextCursor,
+      hasMore,
+    },
+  };
+}
