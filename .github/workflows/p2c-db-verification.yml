@@ -1,0 +1,117 @@
+name: P2C Database Verification
+
+on:
+  push:
+    branches: [main, "p2c-**", "claude/**"]
+    paths:
+      - .github/workflows/p2c-db-verification.yml
+      - src/__tests__/p2c/**
+      - src/services/business-condition.ts
+      - src/domain/business-condition/**
+      - prisma/**
+      - package.json
+      - package-lock.json
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/p2c-db-verification.yml
+      - src/__tests__/p2c/**
+      - src/services/business-condition.ts
+      - src/domain/business-condition/**
+      - prisma/**
+      - package.json
+      - package-lock.json
+
+jobs:
+  p2c-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      TEST_WITH_DB: "true"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      NODE_ENV: test
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+          POSTGRES_INITDB_ARGS: "-c log_min_messages=warning"
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure CI PostgreSQL environment
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          NODE_ENV=test
+          EOF
+          echo "✓ .env.local configured for CI PostgreSQL service"
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Prisma schema validation
+        run: npx prisma validate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Prisma database migration
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: TypeScript type checking
+        run: npx tsc --noEmit
+
+      - name: Build project
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          NODE_ENV: test
+
+      - name: Run P2C contract tests
+        run: npm test -- --run src/__tests__/p2c/business-condition-hardening-contract.test.ts
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          DATABASE_URL_TEST: ${{ env.DATABASE_URL_TEST }}
+          TEST_WITH_DB: "true"
+          NODE_ENV: test
+
+      - name: Run P2B regression tests (verify baseline not broken)
+        run: npm test -- --run src/__tests__/p2b/verified-lifecycle.test.ts src/__tests__/p2b/real-route-tests.test.ts src/__tests__/p2b/operator-outcome-path.test.ts src/__tests__/p2b/decision-outcome-path.test.ts
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          DATABASE_URL_TEST: ${{ env.DATABASE_URL_TEST }}
+          TEST_WITH_DB: "true"
+          NODE_ENV: test
