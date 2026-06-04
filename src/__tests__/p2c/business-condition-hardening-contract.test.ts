@@ -27,7 +27,42 @@ import {
   healthScoreToStatus,
   identifyRiskFactors,
   identifyStrengths,
+  evaluateBusinessConditionHardeningContext,
 } from "@/domain/business-condition/business-condition";
+
+// Ordering helpers (test-only) used to assert that one hardening signal is
+// stronger/weaker than another. These rank the production enum values; they do
+// NOT reimplement the production status→hardening mapping.
+const RISK_ADJUSTMENT_ORDER = [
+  "minimal",
+  "low",
+  "neutral",
+  "medium_high",
+  "high",
+] as const;
+
+// Higher index = more confidence retained. "reduces confidence" means a lower index.
+const CONFIDENCE_ORDER = [
+  "strongly_reduce",
+  "reduce",
+  "neutral",
+  "maintain",
+  "maintain_or_increase",
+] as const;
+
+const exceptionalCapacity = {
+  teamSize: 25,
+  capabilityLevel: TeamCapability.EXCEPTIONAL,
+  engineeringCapability: "strong" as const,
+  productCapability: "strong" as const,
+  salesCapability: "strong" as const,
+  operationsCapability: "strong" as const,
+  keyPersonDependency: [],
+  turnoverRate: 5,
+  recentHires: 2,
+  recentDepartures: 0,
+  culturHealth: "excellent" as const,
+};
 
 // Test fixtures for full condition objects
 const healthyOwner = {
@@ -596,6 +631,185 @@ describe("P2C: Business Condition Hardening Contract", () => {
     it("should map THRIVING (score 80+) → high confidence", () => {
       // Recommendation service can present with high confidence
       expect(healthScoreToStatus(85)).toBe("thriving");
+    });
+  });
+
+  /**
+   * CONTRACT 9: Production service-layer hardening context
+   *
+   * Exercises the production aggregator
+   * evaluateBusinessConditionHardeningContext, which converts an existing
+   * business-condition assessment into deterministic recommendation safety
+   * context. No DB, no routes, no AI — pure derivation from existing primitives.
+   */
+  describe("Contract 9: Production hardening context (evaluateBusinessConditionHardeningContext)", () => {
+    const baseMeta = {
+      workspaceId: "test-ws",
+      engagementId: "test-eng",
+      assessedAt: new Date("2025-01-01T00:00:00Z"),
+      assessedByUserId: "test-user",
+    };
+
+    const healthyConditionInput = {
+      ...baseMeta,
+      financials: healthyFinancials,
+      owner: healthyOwner,
+      capacity: strongCapacity,
+      customer: healthyCustomer,
+      riskFactors: [],
+      strengths: [],
+    };
+
+    const thrivingConditionInput = {
+      ...baseMeta,
+      financials: healthyFinancials,
+      owner: healthyOwner,
+      capacity: exceptionalCapacity,
+      customer: healthyCustomer,
+      riskFactors: [],
+      strengths: [],
+    };
+
+    const criticalConditionInput = {
+      ...baseMeta,
+      financials: criticalFinancials,
+      owner: weakOwner,
+      capacity: weakCapacity,
+      customer: weakCustomer,
+      riskFactors: [],
+      strengths: [],
+    };
+
+    // Weak non-financial dimensions; only financials vary between the two.
+    const weakDimsHealthyFinancials = {
+      ...baseMeta,
+      financials: healthyFinancials,
+      owner: weakOwner,
+      capacity: weakCapacity,
+      customer: weakCustomer,
+      riskFactors: [],
+      strengths: [],
+    };
+
+    const weakDimsCriticalFinancials = {
+      ...baseMeta,
+      financials: criticalFinancials,
+      owner: weakOwner,
+      capacity: weakCapacity,
+      customer: weakCustomer,
+      riskFactors: [],
+      strengths: [],
+    };
+
+    // 1. Healthy/thriving condition → low/minimal hardening pressure.
+    it("should return low hardening pressure for a healthy condition", () => {
+      const ctx = evaluateBusinessConditionHardeningContext(healthyConditionInput);
+      expect(ctx.conditionStatus).toBe("healthy");
+      expect(["low", "minimal"]).toContain(ctx.hardeningPressure);
+      expect(ctx.cautionLevel).toBe("standard");
+    });
+
+    it("should return minimal hardening pressure for a thriving condition", () => {
+      const ctx = evaluateBusinessConditionHardeningContext(thrivingConditionInput);
+      expect(ctx.conditionStatus).toBe("thriving");
+      expect(ctx.hardeningPressure).toBe("minimal");
+      expect(ctx.confidenceAdjustment).toBe("maintain_or_increase");
+      expect(ctx.cautionLevel).toBe("low");
+    });
+
+    // 2. Critical condition → maximum hardening pressure + manual-review caution.
+    it("should return maximum hardening and manual-review caution for a critical condition", () => {
+      const ctx = evaluateBusinessConditionHardeningContext(criticalConditionInput);
+      expect(ctx.conditionStatus).toBe("critical");
+      expect(ctx.hardeningPressure).toBe("maximum");
+      expect(ctx.recommendationRiskAdjustment).toBe("high");
+      expect(ctx.cautionLevel).toBe("manual_review_required");
+    });
+
+    // 3. Financial distress raises recommendation risk adjustment.
+    it("should raise recommendation risk adjustment under financial distress", () => {
+      const healthyFin = evaluateBusinessConditionHardeningContext(
+        weakDimsHealthyFinancials
+      );
+      const distressedFin = evaluateBusinessConditionHardeningContext(
+        weakDimsCriticalFinancials
+      );
+
+      const healthyRank = RISK_ADJUSTMENT_ORDER.indexOf(
+        healthyFin.recommendationRiskAdjustment
+      );
+      const distressedRank = RISK_ADJUSTMENT_ORDER.indexOf(
+        distressedFin.recommendationRiskAdjustment
+      );
+
+      expect(distressedRank).toBeGreaterThan(healthyRank);
+    });
+
+    // 4. Owner/team weakness reduces confidence or increases caution.
+    it("should reduce confidence when owner/team are weak versus strong", () => {
+      const strong = evaluateBusinessConditionHardeningContext(healthyConditionInput);
+
+      const weakOwnerTeam = evaluateBusinessConditionHardeningContext({
+        ...baseMeta,
+        financials: healthyFinancials,
+        owner: weakOwner,
+        capacity: weakCapacity,
+        customer: healthyCustomer,
+        riskFactors: [],
+        strengths: [],
+      });
+
+      const strongConfidence = CONFIDENCE_ORDER.indexOf(strong.confidenceAdjustment);
+      const weakConfidence = CONFIDENCE_ORDER.indexOf(
+        weakOwnerTeam.confidenceAdjustment
+      );
+
+      // Either confidence is reduced (lower index) or caution rose above standard.
+      const cautionRose =
+        weakOwnerTeam.cautionLevel === "elevated_caution" ||
+        weakOwnerTeam.cautionLevel === "manual_review_required";
+
+      expect(weakConfidence < strongConfidence || cautionRose).toBe(true);
+    });
+
+    // 5. Missing/insufficient/weak condition must not produce false confidence.
+    it("should not produce false confidence for a fully weak condition", () => {
+      const ctx = evaluateBusinessConditionHardeningContext(criticalConditionInput);
+      expect(["maintain", "maintain_or_increase"]).not.toContain(
+        ctx.confidenceAdjustment
+      );
+      expect(["minimal", "low"]).not.toContain(ctx.hardeningPressure);
+      expect(ctx.cautionLevel).not.toBe("low");
+    });
+
+    // 6. Output includes reasons from risk factors.
+    it("should include reasons derived from identified risk factors", () => {
+      const ctx = evaluateBusinessConditionHardeningContext(criticalConditionInput);
+      const expectedRisks = identifyRiskFactors({
+        ...criticalConditionInput,
+        overallHealth: "critical" as const,
+      });
+      expect(ctx.reasons.length).toBeGreaterThan(0);
+      expect(ctx.reasons).toEqual(expectedRisks);
+    });
+
+    // 7. Output includes strengths when present.
+    it("should include strengths when the condition is healthy", () => {
+      const ctx = evaluateBusinessConditionHardeningContext(healthyConditionInput);
+      expect(ctx.strengths.length).toBeGreaterThan(0);
+    });
+
+    // 8. Same input produces identical output (determinism).
+    it("should produce identical output for identical input", () => {
+      const a = evaluateBusinessConditionHardeningContext(healthyConditionInput);
+      const b = evaluateBusinessConditionHardeningContext(healthyConditionInput);
+      expect(a).toEqual(b);
+    });
+
+    it("should expose a numeric conditionScore consistent with healthScoreToStatus", () => {
+      const ctx = evaluateBusinessConditionHardeningContext(criticalConditionInput);
+      expect(typeof ctx.conditionScore).toBe("number");
+      expect(healthScoreToStatus(ctx.conditionScore)).toBe(ctx.conditionStatus);
     });
   });
 });
