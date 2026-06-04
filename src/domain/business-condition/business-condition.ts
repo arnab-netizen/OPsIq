@@ -635,3 +635,262 @@ export function evaluateBusinessConditionHardeningContext(
     strengths,
   };
 }
+
+/**
+ * Persisted business-condition profile, expressed structurally.
+ *
+ * This mirrors the categorical shape persisted by the business-condition
+ * service (and the BusinessConditionProfile Prisma model) WITHOUT importing
+ * Prisma/service types, so the domain layer stays infrastructure-free. All
+ * fields are optional/nullable because the adapter must tolerate partial or
+ * absent records. Note: the persisted profile carries engagementId but NOT a
+ * workspaceId (workspace is reached via the engagement relation).
+ */
+export interface ConditionProfileLike {
+  engagementId?: string | null;
+  businessStatus?: string | null;
+  severityScore?: number | null;
+  urgencyLevel?: string | null;
+  cashPressureLevel?: string | null;
+  marginPressureLevel?: string | null;
+  clientConcentrationRisk?: string | null;
+  ownerDependencyRisk?: string | null;
+  keyPersonDependencyRisk?: string | null;
+  processMaturityLevel?: string | null;
+  managementMaturityLevel?: string | null;
+  executionCapacityLevel?: string | null;
+  moralFragilityLevel?: string | null;
+  resilienceLevel?: string | null;
+  growthReadinessLevel?: string | null;
+}
+
+/**
+ * Hardening context derived from a persisted profile. Superset of
+ * BusinessConditionHardeningContext (so it is assignable wherever the base
+ * context is consumed) plus provenance/quality metadata.
+ */
+export interface ProfileHardeningContext extends BusinessConditionHardeningContext {
+  /**
+   * Whether a usable persisted profile was supplied. When false, the context
+   * is a deliberate caution-preserving default rather than a real assessment.
+   */
+  sufficientData: boolean;
+  /** Surfaced from the persisted profile when present (no workspaceId is stored on the profile). */
+  engagementId?: string | null;
+}
+
+/** Severity ordering of condition statuses, worst → best. */
+const CONDITION_STATUS_SEVERITY_ORDER: ConditionStatus[] = [
+  "critical",
+  "stressed",
+  "stable",
+  "healthy",
+  "thriving",
+];
+
+/**
+ * Explicit mapping from the persisted businessStatus vocabulary
+ * (BUSINESS_CONDITION_RATINGS: critical | distressed | challenged | stable |
+ * improving | strong) onto the domain ConditionStatus
+ * (critical | stressed | stable | healthy | thriving).
+ */
+const BUSINESS_STATUS_TO_CONDITION_STATUS: Record<string, ConditionStatus> = {
+  critical: "critical",
+  distressed: "stressed",
+  challenged: "stressed",
+  stable: "stable",
+  improving: "healthy",
+  strong: "thriving",
+};
+
+/**
+ * Representative score for each status band, used only so the derived
+ * conditionScore stays consistent with healthScoreToStatus(conditionScore).
+ * This is a band midpoint, NOT a fabricated precise health score.
+ */
+const CONDITION_STATUS_BAND_SCORE: Record<ConditionStatus, number> = {
+  critical: 10,
+  stressed: 30,
+  stable: 50,
+  healthy: 70,
+  thriving: 90,
+};
+
+/** Return the worse (more severe) of two statuses; never softens. */
+function worseConditionStatus(a: ConditionStatus, b: ConditionStatus): ConditionStatus {
+  return CONDITION_STATUS_SEVERITY_ORDER.indexOf(a) <=
+    CONDITION_STATUS_SEVERITY_ORDER.indexOf(b)
+    ? a
+    : b;
+}
+
+function isHighPressure(value?: string | null): boolean {
+  return value === "high" || value === "critical";
+}
+
+/**
+ * Derive recommendation hardening context from a PERSISTED categorical
+ * business-condition profile (or null/undefined).
+ *
+ * This bridges the persisted profile shape — which is all production currently
+ * stores — onto the existing status→hardening mapping, reusing the single
+ * source of truth (HARDENING_BY_STATUS). It does NOT fabricate the rich domain
+ * BusinessCondition; it derives a ConditionStatus directly from the stored
+ * categorical signals.
+ *
+ * Deterministic. No DB reads/writes, no route/workspace lookups, no AI, no
+ * side effects. When the profile is missing/insufficient it returns a
+ * caution-preserving default so absence of data never reads as confidence.
+ */
+export function deriveHardeningContextFromConditionProfile(
+  profile: ConditionProfileLike | null | undefined
+): ProfileHardeningContext {
+  const hasStatus =
+    typeof profile?.businessStatus === "string" &&
+    profile.businessStatus.trim().length > 0;
+  const hasSeverity =
+    typeof profile?.severityScore === "number" &&
+    Number.isFinite(profile.severityScore);
+
+  // Insufficient data → caution-preserving default (no false confidence).
+  if (!profile || (!hasStatus && !hasSeverity)) {
+    const fallback = HARDENING_BY_STATUS.stressed;
+    return {
+      conditionStatus: "stressed",
+      conditionScore: CONDITION_STATUS_BAND_SCORE.stressed,
+      hardeningPressure: fallback.hardeningPressure,
+      recommendationRiskAdjustment: fallback.recommendationRiskAdjustment,
+      confidenceAdjustment: fallback.confidenceAdjustment,
+      cautionLevel: fallback.cautionLevel,
+      reasons: [
+        "Insufficient condition data: no current business condition profile available; defaulting to elevated caution",
+      ],
+      strengths: [],
+      sufficientData: false,
+      engagementId: profile?.engagementId ?? null,
+    };
+  }
+
+  // Base status from the persisted businessStatus (default to stressed when the
+  // status is absent or unrecognised — caution over confidence).
+  let status: ConditionStatus = hasStatus
+    ? BUSINESS_STATUS_TO_CONDITION_STATUS[
+        profile.businessStatus!.trim().toLowerCase()
+      ] ?? "stressed"
+    : "stressed";
+
+  // Escalate (never soften) on severity and pressure/dependency/maturity signals.
+  const severity = hasSeverity ? (profile.severityScore as number) : undefined;
+  if (severity !== undefined) {
+    if (severity >= 9) status = worseConditionStatus(status, "critical");
+    else if (severity >= 7) status = worseConditionStatus(status, "stressed");
+    else if (severity >= 5) status = worseConditionStatus(status, "stable");
+  }
+
+  if (profile.cashPressureLevel === "critical")
+    status = worseConditionStatus(status, "critical");
+  else if (isHighPressure(profile.cashPressureLevel))
+    status = worseConditionStatus(status, "stressed");
+
+  if (isHighPressure(profile.marginPressureLevel))
+    status = worseConditionStatus(status, "stressed");
+  if (profile.urgencyLevel === "critical")
+    status = worseConditionStatus(status, "stressed");
+
+  if (profile.ownerDependencyRisk === "critical")
+    status = worseConditionStatus(status, "stressed");
+  else if (isHighPressure(profile.ownerDependencyRisk))
+    status = worseConditionStatus(status, "stable");
+
+  if (profile.keyPersonDependencyRisk === "critical")
+    status = worseConditionStatus(status, "stressed");
+  else if (isHighPressure(profile.keyPersonDependencyRisk))
+    status = worseConditionStatus(status, "stable");
+
+  if (isHighPressure(profile.clientConcentrationRisk))
+    status = worseConditionStatus(status, "stable");
+
+  const lowMaturity =
+    profile.processMaturityLevel === "low" ||
+    profile.managementMaturityLevel === "low" ||
+    profile.executionCapacityLevel === "low" ||
+    profile.resilienceLevel === "low" ||
+    profile.growthReadinessLevel === "low";
+  if (lowMaturity) status = worseConditionStatus(status, "stable");
+  if (profile.moralFragilityLevel === "high")
+    status = worseConditionStatus(status, "stable");
+
+  // Reasons (risk-side signals).
+  const reasons: string[] = [];
+  if (hasStatus && ["critical", "distressed", "challenged"].includes(
+    profile.businessStatus!.trim().toLowerCase()
+  )) {
+    reasons.push(`Business status: ${profile.businessStatus!.trim().toLowerCase()}`);
+  }
+  if (severity !== undefined && severity >= 7) {
+    reasons.push(`Elevated severity score (${severity}/10)`);
+  }
+  if (isHighPressure(profile.cashPressureLevel)) {
+    reasons.push(`Cash pressure: ${profile.cashPressureLevel}`);
+  }
+  if (isHighPressure(profile.marginPressureLevel)) {
+    reasons.push(`Margin pressure: ${profile.marginPressureLevel}`);
+  }
+  if (profile.urgencyLevel === "critical") {
+    reasons.push("Critical urgency");
+  }
+  if (isHighPressure(profile.ownerDependencyRisk)) {
+    reasons.push(`Owner dependency risk: ${profile.ownerDependencyRisk}`);
+  }
+  if (isHighPressure(profile.keyPersonDependencyRisk)) {
+    reasons.push(`Key-person dependency risk: ${profile.keyPersonDependencyRisk}`);
+  }
+  if (isHighPressure(profile.clientConcentrationRisk)) {
+    reasons.push(`Client concentration risk: ${profile.clientConcentrationRisk}`);
+  }
+  if (profile.processMaturityLevel === "low") reasons.push("Weak process maturity");
+  if (profile.managementMaturityLevel === "low")
+    reasons.push("Weak management maturity");
+  if (profile.executionCapacityLevel === "low")
+    reasons.push("Weak execution capacity");
+  if (profile.resilienceLevel === "low") reasons.push("Weak resilience");
+  if (profile.growthReadinessLevel === "low") reasons.push("Weak growth readiness");
+  if (profile.moralFragilityLevel === "high") reasons.push("High morale fragility");
+
+  // Strengths (confidence-side signals).
+  const strengths: string[] = [];
+  if (hasStatus && ["improving", "strong"].includes(
+    profile.businessStatus!.trim().toLowerCase()
+  )) {
+    strengths.push(`Business status: ${profile.businessStatus!.trim().toLowerCase()}`);
+  }
+  if (severity !== undefined && severity <= 3) {
+    strengths.push(`Low severity score (${severity}/10)`);
+  }
+  if (profile.cashPressureLevel === "low") strengths.push("Low cash pressure");
+  if (profile.ownerDependencyRisk === "low") strengths.push("Low owner dependency risk");
+  if (profile.keyPersonDependencyRisk === "low")
+    strengths.push("Low key-person dependency risk");
+  if (profile.processMaturityLevel === "high") strengths.push("Strong process maturity");
+  if (profile.managementMaturityLevel === "high")
+    strengths.push("Strong management maturity");
+  if (profile.executionCapacityLevel === "high")
+    strengths.push("Strong execution capacity");
+  if (profile.resilienceLevel === "high") strengths.push("Strong resilience");
+  if (profile.growthReadinessLevel === "high") strengths.push("Growth ready");
+
+  const mapping = HARDENING_BY_STATUS[status];
+
+  return {
+    conditionStatus: status,
+    conditionScore: CONDITION_STATUS_BAND_SCORE[status],
+    hardeningPressure: mapping.hardeningPressure,
+    recommendationRiskAdjustment: mapping.recommendationRiskAdjustment,
+    confidenceAdjustment: mapping.confidenceAdjustment,
+    cautionLevel: mapping.cautionLevel,
+    reasons,
+    strengths,
+    sufficientData: true,
+    engagementId: profile.engagementId ?? null,
+  };
+}
