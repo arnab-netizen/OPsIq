@@ -497,3 +497,141 @@ export function identifyStrengths(condition: BusinessCondition): string[] {
 
   return strengths;
 }
+
+/**
+ * Recommendation hardening context derived from business condition.
+ *
+ * This is the service/domain-level safety contract that recommendation
+ * surfaces consume: it converts an existing business-condition assessment
+ * into deterministic recommendation safety pressure. Weaker conditions
+ * produce stronger hardening (more caution, reduced confidence); stronger
+ * conditions produce lighter hardening (the business can absorb more
+ * implementation risk).
+ *
+ * It performs no DB writes, no route/workspace lookups, no AI calls, and has
+ * no side effects. Same input always produces the same output.
+ */
+export type HardeningPressure = "minimal" | "low" | "normal" | "high" | "maximum";
+
+export type RecommendationRiskAdjustment =
+  | "minimal"
+  | "low"
+  | "neutral"
+  | "medium_high"
+  | "high";
+
+export type ConfidenceAdjustment =
+  | "maintain_or_increase"
+  | "maintain"
+  | "neutral"
+  | "reduce"
+  | "strongly_reduce";
+
+export type CautionLevel =
+  | "low"
+  | "standard"
+  | "elevated_caution"
+  | "manual_review_required";
+
+export type ConditionStatus =
+  | "critical"
+  | "stressed"
+  | "stable"
+  | "healthy"
+  | "thriving";
+
+export interface BusinessConditionHardeningContext {
+  conditionStatus: ConditionStatus;
+  conditionScore: number;
+  hardeningPressure: HardeningPressure;
+  recommendationRiskAdjustment: RecommendationRiskAdjustment;
+  confidenceAdjustment: ConfidenceAdjustment;
+  cautionLevel: CautionLevel;
+  reasons: string[];
+  strengths: string[];
+}
+
+/**
+ * Explicit, deterministic mapping from condition status to hardening signals.
+ * Keyed by every member of ConditionStatus so the mapping is total.
+ */
+const HARDENING_BY_STATUS: Record<
+  ConditionStatus,
+  Pick<
+    BusinessConditionHardeningContext,
+    | "hardeningPressure"
+    | "recommendationRiskAdjustment"
+    | "confidenceAdjustment"
+    | "cautionLevel"
+  >
+> = {
+  critical: {
+    hardeningPressure: "maximum",
+    recommendationRiskAdjustment: "high",
+    confidenceAdjustment: "strongly_reduce",
+    cautionLevel: "manual_review_required",
+  },
+  stressed: {
+    hardeningPressure: "high",
+    recommendationRiskAdjustment: "medium_high",
+    confidenceAdjustment: "reduce",
+    cautionLevel: "elevated_caution",
+  },
+  stable: {
+    hardeningPressure: "normal",
+    recommendationRiskAdjustment: "neutral",
+    confidenceAdjustment: "neutral",
+    cautionLevel: "standard",
+  },
+  healthy: {
+    hardeningPressure: "low",
+    recommendationRiskAdjustment: "low",
+    confidenceAdjustment: "maintain",
+    cautionLevel: "standard",
+  },
+  thriving: {
+    hardeningPressure: "minimal",
+    recommendationRiskAdjustment: "minimal",
+    confidenceAdjustment: "maintain_or_increase",
+    cautionLevel: "low",
+  },
+};
+
+/**
+ * Convert an existing business-condition assessment into recommendation
+ * hardening context.
+ *
+ * Reuses the existing scoring/status/risk/strength primitives so there is a
+ * single source of truth for condition severity. The status-driven mapping
+ * means financial distress and owner/team weakness raise hardening indirectly
+ * by lowering the overall condition score, while strong conditions lighten it.
+ */
+export function evaluateBusinessConditionHardeningContext(
+  condition: Omit<BusinessCondition, "overallHealth">
+): BusinessConditionHardeningContext {
+  const conditionScore = calculateOverallHealth(condition);
+  const conditionStatus = healthScoreToStatus(conditionScore);
+
+  // identifyRiskFactors/identifyStrengths read the four dimensions only; the
+  // overallHealth field is supplied for type completeness, not branched on.
+  const fullCondition: BusinessCondition = {
+    ...condition,
+    overallHealth: conditionStatus,
+  };
+
+  const reasons = identifyRiskFactors(fullCondition);
+  const strengths = identifyStrengths(fullCondition);
+
+  const mapping = HARDENING_BY_STATUS[conditionStatus];
+
+  return {
+    conditionStatus,
+    conditionScore,
+    hardeningPressure: mapping.hardeningPressure,
+    recommendationRiskAdjustment: mapping.recommendationRiskAdjustment,
+    confidenceAdjustment: mapping.confidenceAdjustment,
+    cautionLevel: mapping.cautionLevel,
+    reasons,
+    strengths,
+  };
+}
