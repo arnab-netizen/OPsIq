@@ -76,7 +76,8 @@ export async function getBillingDiagnostic(
             priceMonthly: true,
             priceYearly: true,
             description: true,
-            capabilities: {
+            // Prisma relation on Plan is `planCapabilities` (see schema).
+            planCapabilities: {
               select: {
                 key: true,
                 limit: true,
@@ -124,7 +125,8 @@ export async function getBillingDiagnostic(
       priceMonthly: subscription.plan.priceMonthly,
       priceYearly: subscription.plan.priceYearly,
       description: subscription.plan.description || undefined,
-      capabilities: subscription.plan.capabilities.map((cap: { key: string; limit: number | null; description: string | null }) => ({
+      // Public DTO field stays `capabilities`; source relation is `planCapabilities`.
+      capabilities: subscription.plan.planCapabilities.map((cap: { key: string; limit: number | null; description: string | null }) => ({
         key: cap.key,
         limit: cap.limit,
         description: cap.description || undefined,
