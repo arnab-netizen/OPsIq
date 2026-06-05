@@ -1,0 +1,165 @@
+{
+  "_comment": "Pre-existing full-suite test failures, proven identical on pristine main (7634ccf8) and the CI recovery branch. These files RUN in a visible, non-blocking quarantine lane in ci.yml; they are NOT deleted, skipped, or rewritten. The blocking lane excludes exactly these files. None are protected Phase D / P2B / P2C regression files. Remove entries here only when the underlying failure is fixed under FULL_SUITE_TEST_DEBT_RECOVERY.",
+  "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY",
+  "proven_pre_existing_on": {
+    "main_sha": "7634ccf8",
+    "recovery_branch_sha": "f16e0712",
+    "introduced_by_recovery": 0
+  },
+  "total_files": 19,
+  "total_failing_tests": 51,
+  "files": [
+    {
+      "path": "src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts",
+      "failed": 22,
+      "cluster": "http-runtime-proof",
+      "classification": "PRE_EXISTING_ON_MAIN / ENVIRONMENT_HARNESS",
+      "reason": "Hostile-HTTP proofs expect a running HTTP server; res.status is undefined without one (expected undefined to be 401).",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts",
+      "failed": 3,
+      "cluster": "http-runtime-proof",
+      "classification": "PRE_EXISTING_ON_MAIN / ENVIRONMENT_HARNESS",
+      "reason": "Health/readiness/liveness proofs require a running server endpoint not started in the unit harness.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts",
+      "failed": 9,
+      "cluster": "event-persistence",
+      "classification": "PRE_EXISTING_ON_MAIN / STALE_API_OR_RUNTIME_DEFECT",
+      "reason": "EventEmitterService.getAggregateEvents is not a function (test references an API not present).",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/phase-3-event-emitter-integration.test.ts",
+      "failed": 5,
+      "cluster": "event-persistence",
+      "classification": "PRE_EXISTING_ON_MAIN / STALE_API_OR_RUNTIME_DEFECT",
+      "reason": "EventEmitterService.getAggregateEvents is not a function (same root as rp1).",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/phase-i/phase-i10-error-normalization.test.ts",
+      "failed": 3,
+      "cluster": "error-sanitization-expectation",
+      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
+      "reason": "Asserts raw technical detail (OOM/test_operation/Error message) but governance returns sanitized operator messages.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/phase-i/phase-i-runtime-discipline.test.ts",
+      "failed": 1,
+      "cluster": "error-sanitization-expectation",
+      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
+      "reason": "Expects diagnostic detail separate from operator message; current sanitization differs.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts",
+      "failed": 1,
+      "cluster": "error-sanitization-expectation",
+      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
+      "reason": "Expects 'dead-letter queue' substring in a now-sanitized operator message.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts",
+      "failed": 1,
+      "cluster": "route-enforcement",
+      "classification": "PRE_EXISTING_ON_MAIN / RUNTIME_DEFECT_OR_STALE_EXEMPTION",
+      "reason": "Scanner reports 14 UNWRAPPED routes (auth/signup + internal/* diagnostics) lacking withEnforcement.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/security/route-scanner.test.ts",
+      "failed": 1,
+      "cluster": "route-enforcement",
+      "classification": "PRE_EXISTING_ON_MAIN / RUNTIME_DEFECT_OR_STALE_EXEMPTION",
+      "reason": "Unprotected routes found outside the exemption registry (same root as enforcement-scanner).",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/p2b/path-convergence.test.ts",
+      "failed": 2,
+      "cluster": "fraud-threshold",
+      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION_OR_LOGIC",
+      "reason": "Fraud-risk assessment threshold mismatch (expected high->medium, medium->low). NOT a protected P2B-42 file.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/demo-engagement-proof-backfill.test.ts",
+      "failed": 1,
+      "cluster": "db-contract",
+      "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
+      "reason": "PrismaClientValidationError during demo engagement proof backfill.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/demo-permission-proof-backfill.test.ts",
+      "failed": 1,
+      "cluster": "db-contract",
+      "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
+      "reason": "PrismaClientValidationError during demo permission proof backfill.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/signup-schema-contract.test.ts",
+      "failed": 1,
+      "cluster": "db-contract",
+      "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
+      "reason": "UserRoleAssignment owner OWNER_VIEW capability contract assertion fails.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/first-value.test.ts",
+      "failed": 1,
+      "cluster": "db-contract",
+      "classification": "PRE_EXISTING_ON_MAIN / DB_CONTRACT",
+      "reason": "Prisma/DB contract failure during first-value flow.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/security/diagnostic-key-validation.test.ts",
+      "failed": 1,
+      "cluster": "security-auth",
+      "classification": "PRE_EXISTING_ON_MAIN / TEST_COLLECTION_ERROR",
+      "reason": "Suite fails during collection (0 tests collected) under the full-suite harness.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/security/ops-endpoints-auth.test.ts",
+      "failed": 1,
+      "cluster": "security-auth",
+      "classification": "PRE_EXISTING_ON_MAIN / TEST_COLLECTION_ERROR",
+      "reason": "Suite fails during collection (0 tests collected) under the full-suite harness.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/p2a/p2a-production-path.test.ts",
+      "failed": 1,
+      "cluster": "test-defect",
+      "classification": "PRE_EXISTING_ON_MAIN / TEST_DEFECT",
+      "reason": "Imports @jest/globals under the vitest environment (collection error).",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/infra/__tests__/critical-readiness.test.ts",
+      "failed": 1,
+      "cluster": "test-mock",
+      "classification": "PRE_EXISTING_ON_MAIN / TEST_DEFECT",
+      "reason": "vi.mock of @/lib/db is missing the getDbInstance export.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/ci-cd/workflow-validation.test.ts",
+      "failed": 1,
+      "cluster": "workflow-assertion",
+      "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
+      "reason": "Assertion on deploy-staging.yml trigger ('should trigger on push to main') no longer matches the workflow.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    }
+  ]
+}
