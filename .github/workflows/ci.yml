@@ -50,6 +50,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Configure .env.local for CI
+        # prisma.config.ts loads .env.local with override: true, so the tracked
+        # placeholder .env.local would otherwise replace the workflow DATABASE_URL
+        # (REPLACE_POOLED_HOST). Write the CI PostgreSQL service URL before Prisma
+        # runs, mirroring the phase-d/p2b/p2c verification workflows.
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          TEST_WITH_DB=true
+          EOF
+          echo "✓ .env.local configured for CI PostgreSQL service"
+
       - name: Governance compliance scan
         run: npm run governance:scan:strict
         continue-on-error: false
