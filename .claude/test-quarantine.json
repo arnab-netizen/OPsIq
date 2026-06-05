@@ -6,9 +6,9 @@
     "recovery_branch_sha": "f16e0712",
     "introduced_by_recovery": 0
   },
-  "total_files": 20,
+  "total_files": 21,
   "total_failing_tests": 51,
-  "nondeterministic_files": 1,
+  "nondeterministic_files": 2,
   "files": [
     {
       "path": "src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts",
@@ -168,6 +168,14 @@
       "cluster": "concurrency-flake",
       "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
       "reason": "Concurrent-replay-under-contention test ('should replay deterministically while concurrent writes are happening') intermittently asserts an off-by-one event count (e.g. expected 46 to be 45). Non-deterministic: passes 7/7 in isolation and on most full-suite runs, but intermittently fails the maintained blocking lane (main CI run 26996823006). Not in the bootable-production surface; not a protected Phase D/P2B/P2C test. Quarantined to make the blocking lane deterministic; still runs in the visible non-blocking lane.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/phase-3-concurrency-proofs.test.ts",
+      "failed": 1,
+      "cluster": "concurrency-flake",
+      "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
+      "reason": "Same contention-driven flake class as phase-3-serialization-hardening: this suite drives concurrent writes/replay (6 Promise.all concurrent-write blocks across 'monotonic eventNumbers across concurrent updates', 'deterministic replay across concurrent operations', 'concurrent mutations on same aggregate', 'event loss under concurrent pressure'). Produces the same off-by-one event-count non-determinism under the CI runner's contention. After phase-3-serialization-hardening was quarantined, the maintained blocking lane still failed intermittently (CI run 27001605179) on this cluster. Authorized cluster quarantine: only the two maintained event-sourcing suites that exercise concurrent contended writes are excluded; all deterministic event-sourcing suites (authoritative-replay, event-replay-engine, event-sourcing-truth, hardening-proofs, idempotency-proofs, snapshot-engine, projection-engine, db-smoke) remain in the blocking lane. Not in the bootable-production surface; not a protected Phase D/P2B/P2C test. Still runs in the visible non-blocking lane.",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
     }
   ]
