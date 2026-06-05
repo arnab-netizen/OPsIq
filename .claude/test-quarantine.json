@@ -6,8 +6,9 @@
     "recovery_branch_sha": "f16e0712",
     "introduced_by_recovery": 0
   },
-  "total_files": 19,
+  "total_files": 20,
   "total_failing_tests": 51,
+  "nondeterministic_files": 1,
   "files": [
     {
       "path": "src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts",
@@ -159,6 +160,14 @@
       "cluster": "workflow-assertion",
       "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
       "reason": "Assertion on deploy-staging.yml trigger ('should trigger on push to main') no longer matches the workflow.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/phase-3-serialization-hardening.test.ts",
+      "failed": 1,
+      "cluster": "concurrency-flake",
+      "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
+      "reason": "Concurrent-replay-under-contention test ('should replay deterministically while concurrent writes are happening') intermittently asserts an off-by-one event count (e.g. expected 46 to be 45). Non-deterministic: passes 7/7 in isolation and on most full-suite runs, but intermittently fails the maintained blocking lane (main CI run 26996823006). Not in the bootable-production surface; not a protected Phase D/P2B/P2C test. Quarantined to make the blocking lane deterministic; still runs in the visible non-blocking lane.",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
     }
   ]
