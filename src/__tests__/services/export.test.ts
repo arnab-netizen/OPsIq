@@ -64,7 +64,7 @@ describe("Data Export Service", () => {
     it("should convert exported data to CSV format", () => {
       const csv = convertToCSV(mockExportData);
 
-      expect(csv).toContain("OpsIQ Data Export");
+      expect(csv).toContain("Rebilix Data Export");
       expect(csv).toContain("Workspace: ws-123");
       expect(csv).toContain("Table: actions");
       expect(csv).toContain("Table: decisions");
