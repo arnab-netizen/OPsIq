@@ -1,4 +1,4 @@
-# OpsIQ — Screenshot & Demo Plan
+# Rebilix — Screenshot & Demo Plan
 
 > Planning only — **do not generate images/video here.** This is the exact shot list and script to
 > capture against the live production app (`https://o-ps-iq.vercel.app`). Use a throwaway demo account
@@ -39,11 +39,11 @@ work), but a short VO is fine.
 
 | Time | On screen | Caption / VO |
 |---|---|---|
-| 0:00–0:08 | Landing page (`/`) | "This is OpsIQ. You describe your business — it tells you what's actually wrong and what to do next." |
+| 0:00–0:08 | Landing page (`/`) | "This is Rebilix. You describe your business — it tells you what's actually wrong and what to do next." |
 | 0:08–0:14 | Zoom the free-beta badge + CTAs | "Free beta. No credit card. No AI key. Let's run a real diagnosis." |
 | 0:14–0:24 | Click **Start free** → signup form fills | "Sign up takes about thirty seconds — email, password, workspace name. No payment, ever, during beta." |
 | 0:24–0:40 | Diagnosis form filling in | "Now I describe the business: type, the main issue, a short problem statement, and a couple of numbers. That's it." |
-| 0:40–0:55 | Submit → result view (severity + phase + findings) | "OpsIQ returns a governed diagnosis — a severity read, the intervention phase you're really in, and the specific findings behind it. It's deterministic: same inputs, same answer. No chatbot guesswork." |
+| 0:40–0:55 | Submit → result view (severity + phase + findings) | "Rebilix returns a governed diagnosis — a severity read, the intervention phase you're really in, and the specific findings behind it. It's deterministic: same inputs, same answer. No chatbot guesswork." |
 | 0:55–1:08 | Scroll to action plan | "And it ends where advice usually doesn't — a prioritized action plan. Every action has an owner, a due window, and the metric it should move." |
 | 1:08–1:15 | Back to landing / badge | "Free beta, live today. Diagnose your business, know your next move. We'd love your feedback." |
 

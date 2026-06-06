@@ -36,7 +36,7 @@ export default function LandingPage() {
   return (
     <main className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
-        <span className="text-xl font-bold text-primary">OpsIQ</span>
+        <span className="text-xl font-bold text-primary">Rebilix</span>
         <nav aria-label="Primary" className="flex items-center gap-3">
           <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
             Sign in
@@ -55,7 +55,7 @@ export default function LandingPage() {
           Diagnose your business. Know your next move.
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-          OpsIQ runs an algorithmic business diagnosis built for operators &mdash; it identifies your
+          Rebilix runs an algorithmic business diagnosis built for operators &mdash; it identifies your
           biggest risks, prioritizes the next actions, and supports the decisions that follow. No
           payment is required, and no paid AI provider is needed to run a diagnosis.
         </p>

@@ -1,4 +1,4 @@
-# OpsIQ — Product Hunt Launch Checklist
+# Rebilix — Product Hunt Launch Checklist
 
 Production baseline at time of writing: main `dad83b67` deployed; production migration succeeded;
 all four production smoke workflows passed; public landing live; signup → diagnosis → dashboard

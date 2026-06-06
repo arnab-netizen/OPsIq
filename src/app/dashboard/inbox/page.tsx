@@ -5,7 +5,7 @@ import { InboxClient } from "./inbox-client";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Decision Inbox | OpsIQ",
+  title: "Decision Inbox | Rebilix",
   description: "View and manage pending decisions",
 };
 

@@ -209,7 +209,7 @@ export function TrustVerificationPanel({
         <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
           <p className="text-xs text-muted-foreground leading-relaxed">
             Click "Verify Decision Integrity" to cryptographically verify that this decision
-            has not been tampered with and was issued by the OpsIQ engine.
+            has not been tampered with and was issued by the Rebilix engine.
           </p>
         </div>
       )}

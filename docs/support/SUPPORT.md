@@ -1,9 +1,10 @@
-# OpsIQ Support (Free Beta)
+# Rebilix Support (Free Beta)
 
-We're in **free beta**. There is **no billing and no payment** — you never need a credit card, and
-there is nothing to pay for. If something goes wrong, this page tells you exactly what to do.
+Rebilix is currently live in beta at https://o-ps-iq.vercel.app. We're in **free beta**. There is
+**no billing and no payment** — you never need a credit card, and there is nothing to pay for. If
+something goes wrong, this page tells you exactly what to do.
 
-**Contact:** support@opsiq.com
+**Contact:** support@opsiq.com (during beta)
 
 When you email us, please include the details listed in
 [What to include in a support request](#what-to-include-in-a-support-request) so we can help fast.
@@ -52,6 +53,6 @@ Please paste the following so we can resolve it on the first reply:
 Please do **not** send passwords or any sensitive financial details — we never need them.
 
 ## Billing / payment support
-**Not applicable during beta.** OpsIQ has no payment provider configured: no credit card, no
+**Not applicable during beta.** Rebilix has no payment provider configured: no credit card, no
 subscription, no charges. If you ever see a message implying payment is required to sign up, log in, or
 run a diagnosis, that's a bug — please report it to **support@opsiq.com**.

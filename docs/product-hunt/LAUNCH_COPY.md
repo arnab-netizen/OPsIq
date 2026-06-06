@@ -1,5 +1,8 @@
-# OpsIQ — Product Hunt Launch Copy
+# Rebilix — Product Hunt Launch Copy
 
+> Rebilix is currently live in beta at https://o-ps-iq.vercel.app. Contact support@opsiq.com during
+> beta. (A dedicated Rebilix domain and email are not acquired yet — do not imply they exist.)
+>
 > Status: free beta. No payment provider, no credit card, no paid AI key required to get value.
 > Every claim below must match the live product (signup → algorithmic diagnosis → findings,
 > recommendations, and an action plan on the dashboard). Do not add capabilities that are not live.
@@ -7,7 +10,7 @@
 ---
 
 ## Product name
-**OpsIQ**
+**Rebilix**
 
 ## Tagline (under 60 characters)
 **Diagnose your business. Know your next move.** *(44 chars)*
@@ -18,12 +21,12 @@ Alternates (all < 60 chars):
 - Find the real risk. Get the next action. *(41)*
 
 ## Short description (≈ 1 sentence)
-OpsIQ runs a structured, algorithmic diagnosis of your business and returns the real risks, a
+Rebilix runs a structured, algorithmic diagnosis of your business and returns the real risks, a
 prioritized action plan, and the decision context behind each call — free beta, no payment, no AI key.
 
 ## Long description
 Most owners and operators don't lack advice — they lack a clear, honest read on *where the pressure
-actually is* and *what to do next*. OpsIQ is a governed business-intervention system that turns a few
+actually is* and *what to do next*. Rebilix is a governed business-intervention system that turns a few
 inputs about your business into a structured diagnosis: a severity read, the recommended intervention
 phase, the specific findings driving it, and a prioritized action plan where every action has an owner
 role, a due window, and the metric it is meant to move.
@@ -34,19 +37,19 @@ The customer journey (sign up → diagnose → see findings, recommendations, an
 dashboard) works end-to-end with no payment provider configured. We're launching as a **free beta** to
 learn from real operators before adding anything else.
 
-OpsIQ models four dimensions at once — consulting lifecycle stage, business condition, intervention
+Rebilix models four dimensions at once — consulting lifecycle stage, business condition, intervention
 mode/phase, and the human execution reality (owner bottlenecking, follow-through risk, accountability)
 — so the recommendation is grounded in how the business actually runs, not a generic template.
 
 ## First comment by maker
 Hey Product Hunt 👋
 
-I built OpsIQ because I kept watching capable operators drown in advice while still not knowing the
+I built Rebilix because I kept watching capable operators drown in advice while still not knowing the
 *one* thing to fix next. Generic AI "consultants" are happy to generate ten pages of confident
 strategy — but it's non-deterministic, unaccountable, and it never tells you what's actually wrong
 with *your* numbers.
 
-OpsIQ takes a different path. You give it a short, honest picture of your business and it runs a
+Rebilix takes a different path. You give it a short, honest picture of your business and it runs a
 **governed, deterministic diagnosis**: severity, the intervention phase you're really in, the specific
 findings behind that read, and a prioritized action plan where every action has an owner, a due
 window, and the metric it should move. Same inputs → same governed answer. No paid AI key. No
@@ -55,7 +58,7 @@ anything else.
 
 What it does today: sign up → run a diagnosis → get findings, recommendations, and an action plan on
 your dashboard. What it doesn't do yet: payments, email/password recovery automation, integrations.
-I'll be in the comments all day — tell me where your business hurts and I'll show you what OpsIQ says.
+I'll be in the comments all day — tell me where your business hurts and I'll show you what Rebilix says.
 
 — the maker
 
@@ -75,7 +78,7 @@ I'll be in the comments all day — tell me where your business hurts and I'll s
    logic. Tell us where it missed — beta feedback directly shapes the rules.
 
 ## 10 FAQs
-1. **What is OpsIQ?** A governed business-diagnosis tool: you describe your business, it returns
+1. **What is Rebilix?** A governed business-diagnosis tool: you describe your business, it returns
    severity, intervention phase, findings, recommendations, and a prioritized action plan.
 2. **Do I need to pay?** No. Free beta — no credit card, no payment provider required.
 3. **Do I need an OpenAI/Anthropic key?** No. The diagnosis is algorithmic/deterministic; no paid AI
@@ -100,7 +103,7 @@ fast, honest, structured read on what's actually wrong and what to do next — w
 consultant or wading through generic AI output.
 
 ## Positioning against generic AI consultants
-| | Generic AI "consultant" | OpsIQ |
+| | Generic AI "consultant" | Rebilix |
 |---|---|---|
 | Output | Non-deterministic prose; varies every run | **Deterministic, governed** diagnosis; same inputs → same answer |
 | Accountability | None; can't show its reasoning | **Findings + severity + phase** behind every recommendation |
@@ -109,7 +112,7 @@ consultant or wading through generic AI output.
 | Human reality | Ignored | Models owner bottlenecking, follow-through, accountability |
 
 ## Free beta explanation
-OpsIQ is free during beta. There is **no payment provider configured** — signup, diagnosis, and the
+Rebilix is free during beta. There is **no payment provider configured** — signup, diagnosis, and the
 dashboard all work with no credit card and no billing of any kind. We're prioritizing real operator
 feedback over monetization right now; if/when paid plans arrive, beta users will get clear notice.
 
