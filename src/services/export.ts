@@ -47,7 +47,7 @@ export function convertToCSV(exportedData: ExportedData): string {
   const lines: string[] = [];
 
   // Header with metadata
-  lines.push(`# OpsIQ Data Export`);
+  lines.push(`# Rebilix Data Export`);
   lines.push(`# Workspace: ${exportedData.workspaceId}`);
   lines.push(`# Exported: ${exportedData.exportedAt.toISOString()}`);
   lines.push(``);

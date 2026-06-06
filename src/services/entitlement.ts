@@ -87,7 +87,7 @@ export const TIER_CONFIGS: Record<SubscriptionTier, SubscriptionTierConfig> = {
   [SubscriptionTier.FREE]: {
     tier: SubscriptionTier.FREE,
     name: "Free",
-    description: "Get started with OpsIQ",
+    description: "Get started with Rebilix",
     workspaceLimit: 1,
     actionsPerMonth: 5,
     decisionsPerMonth: 10,

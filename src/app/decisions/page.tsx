@@ -1,7 +1,7 @@
 import { DecisionInboxTable } from "@/components/decisions/DecisionInboxTable";
 
 export const metadata = {
-  title: "Decision Inbox | OPsIQ",
+  title: "Decision Inbox | Rebilix",
   description: "Govern and approve business decisions",
 };
 
