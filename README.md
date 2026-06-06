@@ -1,6 +1,8 @@
-# OpsIQ
+# Rebilix
 
-OpsIQ is a governed business intervention and consulting operating system. It models consulting lifecycle, business condition, intervention mode/phase, and human execution reality.
+Rebilix is a governed business intervention and consulting operating system. It models consulting lifecycle, business condition, intervention mode/phase, and human execution reality.
+
+> Public product brand: **Rebilix**. "OpsIQ" remains as the internal/legacy codebase, environment-variable (`OPSIQ_DIAGNOSTIC_KEY`), and package/repository identifier and is intentionally not renamed.
 
 ## Prerequisites
 

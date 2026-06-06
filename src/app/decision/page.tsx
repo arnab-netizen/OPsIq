@@ -274,7 +274,7 @@ export default function DecisionPage() {
         {/* Header */}
         <div className="mb-6 md:mb-8">
           <h1 className="text-2xl font-bold text-foreground md:text-4xl">
-            OPSIQ Decision Check
+            Rebilix Decision Check
           </h1>
           <p className="mt-2 text-sm text-muted-foreground md:text-base">
             Enter current business numbers to generate a traceable decision.

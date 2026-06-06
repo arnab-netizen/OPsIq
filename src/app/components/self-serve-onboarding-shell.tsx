@@ -77,7 +77,7 @@ export function generateOnboardingSteps(): OnboardingStep[] {
   return [
     {
       stepId: 'step_welcome',
-      title: 'Welcome to OpsIQ',
+      title: 'Welcome to Rebilix',
       description: 'Let\'s get your workspace set up in just a few minutes',
       completed: false,
       order: 1,
@@ -110,7 +110,7 @@ export function generateOnboardingSteps(): OnboardingStep[] {
     {
       stepId: 'step_complete',
       title: 'You\'re Ready!',
-      description: 'Start using OpsIQ to manage your business decisions',
+      description: 'Start using Rebilix to manage your business decisions',
       completed: false,
       order: 5,
       requiredFields: [],
@@ -249,7 +249,7 @@ export function SelfServeOnboardingShell({
     <div className="w-full max-w-2xl mx-auto p-8 bg-white rounded-lg shadow-lg">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Get Started with OpsIQ</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Get Started with Rebilix</h1>
         <p className="text-gray-600">Step {currentStep} of {steps.length}</p>
       </div>
 
@@ -285,7 +285,7 @@ export function SelfServeOnboardingShell({
         {currentStep === 1 && (
           <div className="bg-blue-50 p-6 rounded-lg">
             <p className="text-gray-700">
-              Welcome! OpsIQ helps your business make better decisions through guided analysis and intervention tracking.
+              Welcome! Rebilix helps your business make better decisions through guided analysis and intervention tracking.
             </p>
             <ul className="mt-4 space-y-2 text-gray-700">
               <li className="flex items-center">

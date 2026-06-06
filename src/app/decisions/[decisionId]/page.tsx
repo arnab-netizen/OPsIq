@@ -9,7 +9,7 @@ interface DecisionDetailPageProps {
 }
 
 export const metadata = {
-  title: "Decision Detail | OPsIQ",
+  title: "Decision Detail | Rebilix",
   description: "Review decision details and make approval decision",
 };
 

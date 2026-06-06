@@ -8,7 +8,7 @@ export function AppHeader({ userName }: AppHeaderProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
       <div className="flex items-center gap-3">
-        <h1 className="text-lg font-bold text-primary">OpsIQ</h1>
+        <h1 className="text-lg font-bold text-primary">Rebilix</h1>
         <span className="text-xs text-muted-foreground">
           Governed Business Intervention OS
         </span>
