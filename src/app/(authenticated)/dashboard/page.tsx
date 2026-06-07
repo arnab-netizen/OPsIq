@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/ui/primitives";
+import FirstDiagnosisCta from "@/components/dashboard/FirstDiagnosisCta";
 
 const HEALTH_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   healthy: "success",
@@ -158,9 +159,12 @@ export default async function DashboardPage() {
             )}
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted-foreground">
-            No active engagements. <Link href="/engagements/new" className="text-primary hover:underline">Create one</Link>
-          </p>
+          <>
+            <p className="mt-4 text-sm text-muted-foreground">
+              No active engagements. <Link href="/engagements/new" className="text-primary hover:underline">Create one</Link>
+            </p>
+            <FirstDiagnosisCta />
+          </>
         )}
       </div>
 

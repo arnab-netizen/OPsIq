@@ -81,12 +81,18 @@ export default function LandingPage() {
       </section>
 
       <footer className="mx-auto w-full max-w-5xl px-6 py-8 text-center text-sm text-muted-foreground">
-        <p>
-          Free beta &mdash; no credit card required. Questions?{" "}
+        <p>Free beta &mdash; no credit card required.</p>
+        <nav aria-label="Legal and support" className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          <Link href="/privacy" className="text-primary hover:underline">
+            Privacy
+          </Link>
+          <Link href="/terms" className="text-primary hover:underline">
+            Terms
+          </Link>
           <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">
-            {SUPPORT_EMAIL}
+            Support
           </a>
-        </p>
+        </nav>
       </footer>
     </main>
   );
