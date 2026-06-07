@@ -1,15 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { captureError } from "@/infra/observability";
 
 /**
  * App Router route-level error boundary.
  *
  * Presentational only. Shows a branded, user-safe message — it never renders
  * error.message, error.stack, or any internal detail. Offers a retry and a
- * link back into the app, plus beta support contact.
+ * link back into the app, plus beta support contact. The error is captured to
+ * observability (never rendered).
  */
-export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    captureError(error, {
+      category: "UNEXPECTED_ERROR",
+      route: typeof window !== "undefined" ? window.location.pathname : undefined,
+    });
+  }, [error]);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
       <div className="w-full max-w-md space-y-4">
