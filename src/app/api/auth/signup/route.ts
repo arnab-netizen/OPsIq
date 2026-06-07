@@ -21,7 +21,7 @@ const signupSchema = z.object({
   workspaceName: z.string().min(1, "Workspace name is required"),
 });
 
-export const POST = async (request: NextRequest) => {
+const handleSignup = async (request: NextRequest) => {
   let currentStage = "unknown";
   try {
     // Parse and validate request
@@ -207,4 +207,33 @@ export const POST = async (request: NextRequest) => {
 
     throw new BadRequestError("Signup failed");
   }
+};
+
+/**
+ * Public signup handler. Throttles by client IP to protect signup from
+ * bot/spam floods during high traffic, then delegates to the unchanged signup
+ * logic. The limiter is skipped when there is no edge-provided client IP
+ * (e.g. server-side tests), so it only engages for real inbound traffic.
+ * Rate-limit helpers are imported lazily to keep request-handling concerns
+ * separate from the core signup flow.
+ */
+export const POST = async (request: NextRequest) => {
+  const clientIp = request.headers.get("x-forwarded-for") ?? "unknown";
+  if (clientIp !== "unknown") {
+    const { requireRateLimit, RateLimitError, LOGIN_RATE_LIMIT } = await import(
+      "@/infra/rate-limit"
+    );
+    try {
+      requireRateLimit(`signup:${clientIp}`, LOGIN_RATE_LIMIT);
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        return Response.json(
+          { success: false, error: "Too many signup attempts. Please wait and try again." },
+          { status: 429 }
+        );
+      }
+      throw error;
+    }
+  }
+  return handleSignup(request);
 };
