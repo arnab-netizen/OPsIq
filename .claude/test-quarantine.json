@@ -6,9 +6,9 @@
     "recovery_branch_sha": "f16e0712",
     "introduced_by_recovery": 0
   },
-  "total_files": 21,
+  "total_files": 22,
   "total_failing_tests": 51,
-  "nondeterministic_files": 2,
+  "nondeterministic_files": 3,
   "files": [
     {
       "path": "src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts",
@@ -176,6 +176,14 @@
       "cluster": "concurrency-flake",
       "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
       "reason": "Same contention-driven flake class as phase-3-serialization-hardening: this suite drives concurrent writes/replay (6 Promise.all concurrent-write blocks across 'monotonic eventNumbers across concurrent updates', 'deterministic replay across concurrent operations', 'concurrent mutations on same aggregate', 'event loss under concurrent pressure'). Produces the same off-by-one event-count non-determinism under the CI runner's contention. After phase-3-serialization-hardening was quarantined, the maintained blocking lane still failed intermittently (CI run 27001605179) on this cluster. Authorized cluster quarantine: only the two maintained event-sourcing suites that exercise concurrent contended writes are excluded; all deterministic event-sourcing suites (authoritative-replay, event-replay-engine, event-sourcing-truth, hardening-proofs, idempotency-proofs, snapshot-engine, projection-engine, db-smoke) remain in the blocking lane. Not in the bootable-production surface; not a protected Phase D/P2B/P2C test. Still runs in the visible non-blocking lane.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/phase-e/e2-replay-determinism-proof.test.ts",
+      "failed": 1,
+      "cluster": "concurrency-flake",
+      "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
+      "reason": "Replay-determinism proof with a wall-clock PERFORMANCE assertion: 'should replay 1000 events with consistent performance' asserts expect(duration2).toBeLessThan(duration1 * 2) on two in-process Date.now() replay timings. This is machine-timing nondeterministic (GC/JIT/CI contention) and intermittently fails (e.g. 'expected 7 to be less than 4') -- CI run 27076172614 and reproduced locally -- while the deterministic assertions in the same test (replay1.hash === replay2.hash, eventCount === 1000) pass. Same nondeterministic replay class as phase-3-serialization-hardening and phase-3-concurrency-proofs. Not in the bootable-production surface; touches no production/launch user journey; not a protected Phase D/P2B/P2C test. Quarantined to keep the maintained blocking lane deterministic during launch week; still runs in the visible non-blocking lane.",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
     }
   ]
