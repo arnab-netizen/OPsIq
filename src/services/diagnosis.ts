@@ -15,6 +15,15 @@ import type { BusinessAssessment, OrchestratedDiagnosis } from "@/engines/contra
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import { generatePersonalizedRecommendations } from "@/services/recommendation/engine";
+import {
+  extractProblemSignals,
+  findingEvidence,
+  deriveWhyThisMattersNow,
+  deriveWhyFirst,
+  deriveBottleneck,
+  enrichFirstActionDescription,
+  deriveWhatNotToDoYet,
+} from "@/services/diagnosis-signals";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -43,6 +52,7 @@ export interface ActionPlanItem {
   dueInDays: number;
   successMetric: string;
   urgency?: "immediate" | "next";
+  bottleneck?: string;
 }
 
 export interface ExecutiveBrief {
@@ -58,14 +68,16 @@ export interface DiagnosisResult {
   primaryProblemCategory: string;
   severity: "low" | "medium" | "high" | "critical";
   interventionPhase: InterventionPhase;
-  findings: Array<{ id: string; title: string; severity: string; description: string }>;
-  recommendations: Array<{ id: string; title: string; priority: string; description: string }>;
+  findings: Array<{ id: string; title: string; severity: string; description: string; evidence?: string }>;
+  recommendations: Array<{ id: string; title: string; priority: string; description: string; whyFirst?: string }>;
   actionPlan: ActionPlanItem[];
   engagementId: string;
   createdAt: string;
   executiveBrief: ExecutiveBrief;
   confidence: "low" | "medium" | "high";
   dataWarnings: string[];
+  whyThisMattersNow?: string;
+  whatNotToDoYet?: string[];
   _engineMetadata?: {
     orchestratedDiagnosis: OrchestratedDiagnosis;
     enginesUsed: string[];
@@ -596,6 +608,20 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   const recommendationsData = generateRecommendations(input);
   const actionPlanData = generateActionPlan(category, severity);
 
+  // Deterministic specificity layer: extract signals from the user's own
+  // problem statement and numbers so reasoning reflects THIS business.
+  const signals = extractProblemSignals(input);
+  const whyThisMattersNow = deriveWhyThisMattersNow(signals, category, severity);
+  const whatNotToDoYet = deriveWhatNotToDoYet(signals);
+  const bottleneck = deriveBottleneck(signals, category);
+  if (actionPlanData.length > 0) {
+    actionPlanData[0] = {
+      ...actionPlanData[0],
+      description: enrichFirstActionDescription(actionPlanData[0].description, signals),
+      bottleneck,
+    };
+  }
+
   // V2 enhancements - merge with engine findings
   const dataWarnings = engineDiagnosis.issues.length > 0
     ? engineDiagnosis.issues
@@ -875,12 +901,15 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
       title: findingsData[i]?.title || "",
       severity: findingsData[i]?.severity || "medium",
       description: findingsData[i]?.description || "",
+      // Top finding carries the strongest concrete evidence; never fabricated.
+      evidence: i === 0 ? findingEvidence(input, signals) : undefined,
     })),
     recommendations: createdRecommendations.map((r, i) => ({
       id: r.id,
       title: recommendationsData[i]?.title || "",
       priority: recommendationsData[i]?.priority || "medium",
       description: recommendationsData[i]?.description || "",
+      whyFirst: i === 0 ? deriveWhyFirst(signals, category, severity) : undefined,
     })),
     actionPlan: actionPlanWithUrgency,
     engagementId: engagement.id,
@@ -888,6 +917,8 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     executiveBrief,
     confidence,
     dataWarnings,
+    whyThisMattersNow,
+    whatNotToDoYet,
     _engineMetadata: {
       orchestratedDiagnosis: engineDiagnosis,
       enginesUsed: engineDiagnosis.allEngineResults.map((r) => r.engine),

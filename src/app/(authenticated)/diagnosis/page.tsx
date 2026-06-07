@@ -12,8 +12,8 @@ interface DiagnosisResult {
   primaryProblemCategory: string;
   severity: string;
   interventionPhase: string;
-  findings: Array<{ id: string; title: string; severity: string; description: string }>;
-  recommendations: Array<{ id: string; title: string; priority: string; description: string }>;
+  findings: Array<{ id: string; title: string; severity: string; description: string; evidence?: string }>;
+  recommendations: Array<{ id: string; title: string; priority: string; description: string; whyFirst?: string }>;
   actionPlan: Array<{
     title: string;
     description: string;
@@ -22,12 +22,15 @@ interface DiagnosisResult {
     dueInDays: number;
     successMetric: string;
     urgency?: "immediate" | "next";
+    bottleneck?: string;
   }>;
   engagementId: string;
   createdAt: string;
   executiveBrief?: { title: string; summary: string; warnings: string[] };
   confidence?: "low" | "medium" | "high";
   dataWarnings?: string[];
+  whyThisMattersNow?: string;
+  whatNotToDoYet?: string[];
 }
 
 const SEVERITY_COLORS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
@@ -196,9 +199,20 @@ export default function DiagnosisPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{finding.description}</p>
+                  {finding.evidence && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      <strong className="text-foreground">Evidence:</strong> {finding.evidence}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
+            {result.whyThisMattersNow && (
+              <div className="mt-4 rounded-md border border-border bg-muted/40 p-3 text-sm">
+                <strong className="text-foreground">Why this matters now:</strong>{" "}
+                <span className="text-muted-foreground">{result.whyThisMattersNow}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -217,6 +231,11 @@ export default function DiagnosisPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">{rec.description}</p>
+                  {rec.whyFirst && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      <strong className="text-foreground">Why this is first:</strong> {rec.whyFirst}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -247,6 +266,11 @@ export default function DiagnosisPage() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">{action.description}</p>
+                        {action.bottleneck && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            <strong className="text-foreground">Bottleneck:</strong> {action.bottleneck}
+                          </p>
+                        )}
                         <div className="text-xs bg-white border rounded p-2">
                           <strong>Success metric:</strong> {action.successMetric}
                         </div>
@@ -276,6 +300,11 @@ export default function DiagnosisPage() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mb-2">{action.description}</p>
+                        {action.bottleneck && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            <strong className="text-foreground">Bottleneck:</strong> {action.bottleneck}
+                          </p>
+                        )}
                         <div className="text-xs bg-white border rounded p-2">
                           <strong>Success metric:</strong> {action.successMetric}
                         </div>
@@ -284,6 +313,19 @@ export default function DiagnosisPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {result.whatNotToDoYet && result.whatNotToDoYet.length > 0 && (
+          <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
+            <h2 className="text-xl font-bold text-foreground mb-3">What not to do yet</h2>
+            <ul className="space-y-2">
+              {result.whatNotToDoYet.map((item, idx) => (
+                <li key={idx} className="text-sm text-muted-foreground">
+                  &bull; {item}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
