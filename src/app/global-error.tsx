@@ -1,12 +1,20 @@
 "use client";
 
+import { useEffect } from "react";
+import { captureError } from "@/infra/observability";
+
 /**
  * Global (root) error boundary. Must render its own <html>/<body>.
  *
  * Presentational only and user-safe: it never renders error.message,
  * error.stack, or any internal detail. Offers a retry and beta support contact.
+ * The error is captured to observability (never rendered).
  */
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    captureError(error, { category: "UNEXPECTED_ERROR" });
+  }, [error]);
+
   return (
     <html lang="en">
       <body

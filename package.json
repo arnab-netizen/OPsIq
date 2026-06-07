@@ -47,6 +47,7 @@
     "@prisma/adapter-neon": "^7.7.0",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.7.0",
+    "@sentry/nextjs": "^10.56.0",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "next": "16.2.3",
