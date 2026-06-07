@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Textarea, Select, Badge } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import DiagnosisBetaNotice from "@/components/diagnosis/DiagnosisBetaNotice";
 
 interface DiagnosisResult {
   id: string;
@@ -310,6 +311,8 @@ export default function DiagnosisPage() {
       <p className="text-muted-foreground mb-6">
         Describe your business challenge and receive a diagnosis with a recommended action plan.
       </p>
+
+      <DiagnosisBetaNotice />
 
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">

@@ -81,6 +81,18 @@ export default function SettingsPage() {
       </p>
 
       <div className="mt-8 space-y-6">
+        {/* Data and account help */}
+        <div className="rounded-lg border border-border p-6">
+          <h2 className="text-lg font-semibold text-foreground">Data and account help</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            To request data or account deletion during beta, contact{" "}
+            <a href="mailto:support@opsiq.com" className="text-primary hover:underline">
+              support@opsiq.com
+            </a>
+            .
+          </p>
+        </div>
+
         {/* Profile Section */}
         <div className="rounded-lg border border-border p-6">
           <h2 className="text-lg font-semibold text-foreground">Profile</h2>
