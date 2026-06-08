@@ -113,13 +113,6 @@ describe("Diagnosis Page Browser Contract", () => {
   it("generates unique idempotency key for each request", async () => {
     const { createClientIdempotencyKey } = await import("@/lib/client-idempotency");
 
-    const body = {
-      businessName: "Test",
-      businessType: "SaaS",
-      problemStatement: "Test",
-      mainIssue: "cash_flow",
-    };
-
     const key1 = createClientIdempotencyKey("diagnosis");
     const key2 = createClientIdempotencyKey("diagnosis");
 
