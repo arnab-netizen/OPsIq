@@ -23,6 +23,7 @@ import { db } from "@/lib/db";
 import { POST as operatorPost } from "@/app/api/operator/route";
 import { recordDecisionOutcome } from "@/services/decisions/decision-lifecycle.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 /**
  * Mock authentication facts to allow wrapped route handler to execute.
@@ -87,7 +88,7 @@ vi.mock("@/services/auth", () => ({
  * 7. Test reads database
  * 8. Test asserts all fields
  */
-describe("P2B: REAL Operator Route Integration", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Operator Route Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
   let testActorId: string;
@@ -481,7 +482,7 @@ describe("P2B: REAL Operator Route Integration", () => {
  * 5. Test reads database
  * 6. Test asserts all fields
  */
-describe("P2B: REAL Decision Lifecycle Integration", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Decision Lifecycle Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
   let testActorId: string;

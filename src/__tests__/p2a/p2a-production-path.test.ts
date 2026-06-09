@@ -3,8 +3,9 @@ import { createRecommendation, updateRecommendation, getRecommendation } from "@
 import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-describe("P2A Production Path - Real Service Functions", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2A Production Path - Real Service Functions", () => {
   const testWorkspaceId = uuidv4();
   const testClientId = uuidv4();
   const testEngagementId = uuidv4();

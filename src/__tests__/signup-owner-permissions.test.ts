@@ -4,8 +4,9 @@ import { randomUUID } from "crypto";
 import { hasCapability, getCapabilitiesForRole } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ROLES } from "@/domain/constants/roles";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-describe("Signup Owner Permissions", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("Signup Owner Permissions", () => {
   it("ADMIN_OR_PORTFOLIO_MANAGER role must have OWNER_VIEW", () => {
     const caps = getCapabilitiesForRole(ROLES.ADMIN_OR_PORTFOLIO_MANAGER);
     expect(Array.from(caps)).toContain(CAPABILITIES.OWNER_VIEW);

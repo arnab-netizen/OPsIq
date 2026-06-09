@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Textarea, Select, Badge } from "@/ui/primitives";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { createClientIdempotencyKey } from "@/lib/client-idempotency";
 import DiagnosisBetaNotice from "@/components/diagnosis/DiagnosisBetaNotice";
 
 interface DiagnosisResult {
@@ -89,9 +90,13 @@ export default function DiagnosisPage() {
     }
 
     try {
+      const idempotencyKey = createClientIdempotencyKey("diagnosis");
       const res = await fetch("/api/diagnosis", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "idempotency-key": idempotencyKey,
+        },
         body: JSON.stringify(body),
       });
 

@@ -3,8 +3,9 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { POST as operatorPost } from "@/app/api/operator/route";
 import { classifyOutcome } from "@/services/operator/outcome-classifier";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-describe("P2B: Operator Outcome Path Integration", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: Operator Outcome Path Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
 
