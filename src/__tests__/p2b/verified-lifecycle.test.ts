@@ -18,8 +18,9 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { approveOutcomeVerification } from "@/services/outcome/verification-approval.service";
 import { ValidationError } from "@/infra/errors";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-describe("P2B: REAL Verified Lifecycle Integration", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: REAL Verified Lifecycle Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
   let testActorId: string;

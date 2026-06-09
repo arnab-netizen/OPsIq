@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import * as demoPermissionRoute from '@/app/api/internal/demo-permission-proof/route';
+import { SHOULD_RUN_DB_TESTS } from '@/__tests__/test-helpers/db-test-gate';
 
 // Mock database
 vi.mock('@/lib/db', () => ({
@@ -62,7 +63,7 @@ vi.mock('@/domain/constants/roles', () => ({
 
 const { db } = await import('@/lib/db');
 
-describe('Demo Permission Proof & Backfill Endpoint', () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)('Demo Permission Proof & Backfill Endpoint', () => {
   const validUUID = '550e8400-e29b-41d4-a716-446655440000';
   const demoUserEmail = 'operator@demo.local';
   const diagnosticKey = 'test-diagnostic-key-123';

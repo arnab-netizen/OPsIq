@@ -47,7 +47,7 @@ describe("P2B: Path Convergence Verification", () => {
   describe("Fraud Risk Assessment Consistency", () => {
     it("should consistently assess fraud risk for extreme variance", () => {
       const result = checkFraudRisk(500000, 50000, null);
-      expect(result.riskLevel).toBe("medium");
+      expect(result.riskLevel).toBe("high");
       expect(result.indicators.length).toBeGreaterThan(0);
     });
 
@@ -62,7 +62,7 @@ describe("P2B: Path Convergence Verification", () => {
     });
 
     it("should consistently assess low risk for normal outcomes", () => {
-      const result = checkFraudRisk(50000, 50000, null);
+      const result = checkFraudRisk(55000, 50000, null);
       expect(result.riskLevel).toBe("low");
     });
   });

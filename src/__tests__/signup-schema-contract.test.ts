@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { db } from "@/lib/db";
 import { randomUUID } from "crypto";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 /**
  * Signup Schema Contract Test
@@ -12,7 +13,7 @@ import { randomUUID } from "crypto";
  * - WorkspaceMembership: workspaceId, userId, role, addedBy, isActive (id auto-generated)
  */
 
-describe("Signup Schema Contract", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("Signup Schema Contract", () => {
   it("should create user with all required fields", async () => {
     const userId = randomUUID();
     const now = new Date();

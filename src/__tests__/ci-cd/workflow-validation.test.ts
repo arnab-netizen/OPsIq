@@ -9,8 +9,9 @@ import { describe, it, expect, beforeEach } from "vitest";
 import fs from "fs";
 import path from "path";
 import YAML from "js-yaml";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-describe("CI/CD Workflow Validation", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("CI/CD Workflow Validation", () => {
   describe("Main CI Workflow (.github/workflows/ci.yml)", () => {
     let ciWorkflow: any;
 

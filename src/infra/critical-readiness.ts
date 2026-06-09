@@ -57,7 +57,7 @@ export async function ensureCriticalReadiness(): Promise<CriticalReadinessResult
 
       if (!dbReachable) {
         result.status = "FAILED_CRITICAL";
-        result.errors.push("Database is not reachable");
+        result.errors.push("Database connectivity check failed");
       }
     } catch (error) {
       result.status = "FAILED_CRITICAL";

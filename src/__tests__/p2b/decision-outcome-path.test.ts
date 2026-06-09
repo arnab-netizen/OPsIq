@@ -4,8 +4,9 @@ import { db } from "@/lib/db";
 import { recordDecisionOutcome } from "@/services/decisions/decision-lifecycle.service";
 import { classifyOutcome } from "@/services/operator/outcome-classifier";
 import { requestOutcomeModification, approveOutcomeModification } from "@/services/outcome/outcome-modification.service";
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
-describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("P2B: Decision Lifecycle Outcome Path Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
   let testActorId: string;
