@@ -13,12 +13,12 @@ interface BadgeProps {
 }
 
 const variantClasses: Record<BadgeVariant, string> = {
-  default: "bg-primary/10 text-primary border-primary/20",
-  success: "bg-success/10 text-success border-success/20",
-  warning: "bg-warning/10 text-warning border-warning/20",
-  destructive: "bg-destructive/10 text-destructive border-destructive/20",
+  default: "bg-blue-600 text-white border-blue-700",
+  success: "bg-green-600 text-white border-green-700",
+  warning: "bg-amber-600 text-white border-amber-700",
+  destructive: "bg-red-600 text-white border-red-700",
   outline: "bg-transparent text-foreground border-border",
-  muted: "bg-muted text-muted-foreground border-border",
+  muted: "bg-slate-500 text-white border-slate-600",
 };
 
 export function Badge({

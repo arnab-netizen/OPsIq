@@ -675,6 +675,16 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     },
   });
 
+  // Add engagement creator as an active member (enables them to view the engagement)
+  await db.engagementMembership.create({
+    data: {
+      userId: actorId,
+      engagementId: engagement.id,
+      role: "owner",
+      isActive: true,
+    },
+  });
+
   // Create business condition profile based on diagnosis
   const conditionInput = {
     engagementId: engagement.id,
