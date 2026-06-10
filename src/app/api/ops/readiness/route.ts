@@ -22,17 +22,17 @@ export async function GET(request: NextRequest) {
   }
   try {
     // Get current readiness status
-    const startupStatus = await db.startup_status.findFirst({
-      orderBy: { updated_at: "desc" },
+    const startupStatus = await db.startupStatus.findFirst({
+      orderBy: { updatedAt: "desc" },
     });
 
     const currentStatus = startupStatus?.status || "UNKNOWN";
-    const lastUpdate = startupStatus?.updated_at || new Date();
+    const lastUpdate = startupStatus?.updatedAt || new Date();
 
     // Get audit events related to readiness transitions
-    const readinessAuditEvents = await db.audit_events.findMany({
+    const readinessAuditEvents = await db.auditEvent.findMany({
       where: {
-        event_name: {
+        eventName: {
           in: [
             "readiness_check_started",
             "readiness_check_passed",
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
           ],
         },
       },
-      orderBy: { occurred_at: "desc" },
+      orderBy: { occurredAt: "desc" },
       take: 20,
     });
 
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
             : undefined,
       },
       history: readinessAuditEvents.map((event: any) => ({
-        event_name: event.event_name,
-        occurred_at: event.occurred_at.toISOString(),
+        event_name: event.eventName,
+        occurred_at: event.occurredAt.toISOString(),
         payload: event.payload,
       })),
       protected_routes_operational:
