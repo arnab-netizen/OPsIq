@@ -224,6 +224,14 @@ export const AUDIT_EVENTS = {
   OWNER_DASHBOARD_VIEWED: "owner.dashboard_viewed",
   OWNER_CONFIG_UPDATED: "owner.config_updated",
 
+  // Owner-Only Recovery Mode
+  OWNER_BUSINESS_CREATED: "owner.business_created",
+  OWNER_BUSINESS_UPDATED: "owner.business_updated",
+  OWNER_METRIC_SNAPSHOT_RECORDED: "owner.metric_snapshot_recorded",
+  RECOVERY_CYCLE_RUN: "owner.recovery_cycle_run",
+  RECOVERY_ACTION_UPDATED: "owner.recovery_action_updated",
+  RECOVERY_OUTCOME_VERIFIED: "owner.recovery_outcome_verified",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
