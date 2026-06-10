@@ -69,10 +69,10 @@ describe("Diagnosis Mobile UX Fixes", () => {
   });
 
   describe("Engagement Access (Fix 2)", () => {
-    it("user who creates engagement via diagnosis should be added as engagement member with 'owner' role", () => {
+    it("user who creates engagement via diagnosis should be added as engagement member with 'admin_or_portfolio_manager' role", () => {
       // When diagnoseBusiness() creates an engagement, it now:
       // 1. Creates the Engagement record with createdBy: actorId
-      // 2. Creates EngagementMembership with userId: actorId, role: "owner", isActive: true
+      // 2. Creates EngagementMembership with userId: actorId, role: "admin_or_portfolio_manager", isActive: true
       // This allows assertEngagementAccess() to find the membership and permit viewing
 
       const actorId = "user-123";
@@ -82,13 +82,13 @@ describe("Diagnosis Mobile UX Fixes", () => {
       const membership = {
         userId: actorId,
         engagementId: engagementId,
-        role: "owner",
+        role: "admin_or_portfolio_manager",
         isActive: true,
       };
 
       expect(membership.userId).toBe(actorId);
       expect(membership.isActive).toBe(true);
-      expect(membership.role).toBe("owner");
+      expect(membership.role).toBe("admin_or_portfolio_manager");
     });
 
     it("engagement membership should have isActive=true so page doesn't call notFound()", () => {

@@ -675,16 +675,6 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     },
   });
 
-  // Add engagement creator as an active member (enables them to view the engagement)
-  await db.engagementMembership.create({
-    data: {
-      userId: actorId,
-      engagementId: engagement.id,
-      role: "owner",
-      isActive: true,
-    },
-  });
-
   // Create business condition profile based on diagnosis
   const conditionInput = {
     engagementId: engagement.id,
@@ -722,6 +712,16 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   // Atomic transaction: create all value-path records together
   // All IDs and timestamps prepared before entering transaction
   const transactionResult = await db.$transaction(async (tx: any): Promise<DiagnosisTransactionResult> => {
+    // Create engagement membership atomically (enables creator to view engagement)
+    await tx.engagementMembership.create({
+      data: {
+        userId: actorId,
+        engagementId: engagement.id,
+        role: "admin_or_portfolio_manager",
+        isActive: true,
+      },
+    });
+
     // Create Evidence records first (required for Finding.primaryEvidenceId)
     const createdEvidenceItems = await Promise.all(
       findingsData.map((f) =>
