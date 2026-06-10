@@ -5,7 +5,7 @@
  * and handles edge cases correctly.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   verifyDiagnosticKey,
   extractDiagnosticKeyFromRequest,

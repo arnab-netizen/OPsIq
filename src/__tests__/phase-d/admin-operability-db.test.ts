@@ -22,8 +22,7 @@ import {
   queryAuditLogForAdmin,
   listWorkspaceMembersForAdmin,
 } from "@/services/admin/admin-operability.service";
-
-const HAS_DB = Boolean(process.env.DATABASE_URL || process.env.TEST_DATABASE_URL);
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 // Isolated identifiers for this test run.
 const wsA = randomUUID();
@@ -33,7 +32,7 @@ const userA2 = randomUUID();
 const userB1 = randomUUID();
 const auditIds: string[] = [];
 
-describe.skipIf(!HAS_DB)("Phase D1-A: admin operability service (DB-backed)", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("Phase D1-A: admin operability service (DB-backed)", () => {
   beforeAll(async () => {
     await db.user.createMany({
       data: [
@@ -99,7 +98,7 @@ describe.skipIf(!HAS_DB)("Phase D1-A: admin operability service (DB-backed)", ()
   });
 
   afterAll(async () => {
-    if (!HAS_DB) return;
+    if (!SHOULD_RUN_DB_TESTS) return;
     await db.auditEvent.deleteMany({ where: { id: { in: auditIds } } });
     await db.workspaceMembership.deleteMany({ where: { workspaceId: { in: [wsA, wsB] } } });
     await db.workspace.deleteMany({ where: { id: { in: [wsA, wsB] } } });

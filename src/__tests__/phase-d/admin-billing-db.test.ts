@@ -22,8 +22,7 @@ import {
   getBillingExportPacket,
 } from "@/services/admin-billing-diagnostics.service";
 import { BILLING_STATES } from "@/lib/billing/admin-billing-diagnostics.dto";
-
-const HAS_DB = Boolean(process.env.DATABASE_URL || process.env.TEST_DATABASE_URL);
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 // Isolated identifiers for this test run.
 const wsFull = randomUUID(); // has account + active subscription + plan + caps + usage
@@ -47,7 +46,7 @@ const createdPlanIds = [planA, planB];
 const createdBaIds = [baFull, baB, baNoSub];
 const createdWorkspaceIds = [wsFull, wsB, wsNoAccount, wsNoSub];
 
-describe.skipIf(!HAS_DB)("Phase D1-C: admin billing diagnostics (DB-backed)", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("Phase D1-C: admin billing diagnostics (DB-backed)", () => {
   beforeAll(async () => {
     // Plans (Plan.name is unique → suffix with id fragment).
     await db.plan.createMany({
@@ -151,7 +150,7 @@ describe.skipIf(!HAS_DB)("Phase D1-C: admin billing diagnostics (DB-backed)", ()
   });
 
   afterAll(async () => {
-    if (!HAS_DB) return;
+    if (!SHOULD_RUN_DB_TESTS) return;
     await db.usageEvent.deleteMany({ where: { workspaceId: { in: createdWorkspaceIds } } });
     await db.subscription.deleteMany({ where: { id: { in: [subFull, subB] } } });
     await db.planCapability.deleteMany({ where: { planId: { in: createdPlanIds } } });

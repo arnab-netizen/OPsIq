@@ -21,8 +21,7 @@ import {
   checkIdempotencyKey,
   recordIdempotencyResponse,
 } from "@/services/idempotency";
-
-const HAS_DB = Boolean(process.env.DATABASE_URL || process.env.TEST_DATABASE_URL);
+import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 
 const admin = randomUUID();
 const wsActive = randomUUID();
@@ -33,7 +32,7 @@ const allWs = [wsActive, wsB, wsAlready, wsIdem];
 const unknownWs = randomUUID();
 const idemKey = `disable-${randomUUID()}`;
 
-describe.skipIf(!HAS_DB)("Phase D1-D: workspace disable (DB-backed)", () => {
+describe.skipIf(!SHOULD_RUN_DB_TESTS)("Phase D1-D: workspace disable (DB-backed)", () => {
   beforeAll(async () => {
     await db.user.create({
       data: { id: admin, email: `admin-${admin}@example.com`, updatedAt: new Date() },
@@ -49,7 +48,7 @@ describe.skipIf(!HAS_DB)("Phase D1-D: workspace disable (DB-backed)", () => {
   });
 
   afterAll(async () => {
-    if (!HAS_DB) return;
+    if (!SHOULD_RUN_DB_TESTS) return;
     await db.auditEvent.deleteMany({ where: { workspaceId: { in: allWs } } });
     await db.idempotencyRecord.deleteMany({ where: { idempotencyKey: idemKey } });
     await db.workspace.deleteMany({ where: { id: { in: allWs } } });

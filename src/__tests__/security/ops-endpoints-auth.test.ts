@@ -5,7 +5,7 @@
  * and do not expose sensitive information to unauthorized requesters.
  */
 
-import { describe, it, expect, beforeAll } from "@jest/globals";
+import { describe, it, expect, beforeAll } from "vitest";
 
 describe("GET /api/ops/* endpoints - Auth requirements", () => {
   const endpoints = [
