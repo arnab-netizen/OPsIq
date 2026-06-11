@@ -1,32 +1,65 @@
 /**
  * Security Regression Tests: /api/ops/* Endpoints
  *
- * Verifies that operational metrics endpoints require OPSIQ_DIAGNOSTIC_KEY
- * and do not expose sensitive information to unauthorized requesters.
+ * Verifies that operational metrics endpoints require OPSIQ_DIAGNOSTIC_KEY and
+ * do not expose internals to unauthorized requesters.
+ *
+ * These tests run IN-PROCESS: they import the real route handlers and invoke
+ * them with constructed NextRequests. This keeps the full security contract
+ * (missing key -> 404, valid key -> served, invalid key -> 404) deterministic
+ * under plain `npm test` with no live localhost:3000 server and no real DB.
+ * (Previously this file used fetch("http://localhost:3000/...") and failed with
+ * ECONNREFUSED whenever a server was not running.)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { NextRequest } from "next/server";
+import { GET as errorsGET } from "@/app/api/ops/errors/route";
+import { GET as metricsGET } from "@/app/api/ops/metrics/route";
+import { GET as readinessGET } from "@/app/api/ops/readiness/route";
+import { GET as runtimeGET } from "@/app/api/ops/runtime/route";
 
-describe("GET /api/ops/* endpoints - Auth requirements", () => {
-  const endpoints = [
-    "/api/ops/errors",
-    "/api/ops/metrics",
-    "/api/ops/readiness",
-    "/api/ops/runtime",
-  ];
+type Handler = (req: NextRequest) => Promise<Response>;
 
-  const validDiagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY || "test-key";
+const HANDLERS: Record<string, Handler> = {
+  "/api/ops/errors": errorsGET as Handler,
+  "/api/ops/metrics": metricsGET as Handler,
+  "/api/ops/readiness": readinessGET as Handler,
+  "/api/ops/runtime": runtimeGET as Handler,
+};
 
+const endpoints = Object.keys(HANDLERS);
+
+// Force a known diagnostic key so the "valid key" path is deterministic.
+const TEST_KEY = "test-key";
+let previousKey: string | undefined;
+
+beforeAll(() => {
+  previousKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
+  process.env.OPSIQ_DIAGNOSTIC_KEY = TEST_KEY;
+});
+
+afterAll(() => {
+  if (previousKey === undefined) delete process.env.OPSIQ_DIAGNOSTIC_KEY;
+  else process.env.OPSIQ_DIAGNOSTIC_KEY = previousKey;
+});
+
+function makeRequest(
+  endpoint: string,
+  opts: { headerKey?: string; queryKey?: string } = {}
+): NextRequest {
+  const url = new URL(`http://localhost${endpoint}`);
+  if (opts.queryKey !== undefined) url.searchParams.set("key", opts.queryKey);
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (opts.headerKey !== undefined) headers.set("x-opsiq-diagnostic-key", opts.headerKey);
+  return new NextRequest(url, { method: "GET", headers });
+}
+
+describe("GET /api/ops/* endpoints - Auth requirements (in-process)", () => {
   describe("Without diagnostic key", () => {
     endpoints.forEach((endpoint) => {
       it(`${endpoint} should return 404 without key`, async () => {
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
+        const response = await HANDLERS[endpoint](makeRequest(endpoint));
         expect(response.status).toBe(404);
         const body = await response.json();
         expect(body.error).toBe("Unauthorized");
@@ -37,15 +70,10 @@ describe("GET /api/ops/* endpoints - Auth requirements", () => {
   describe("With valid diagnostic key (header)", () => {
     endpoints.forEach((endpoint) => {
       it(`${endpoint} should accept valid key in header`, async () => {
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "x-opsiq-diagnostic-key": validDiagnosticKey,
-          },
-        });
-
-        // Should not be 404 (Unauthorized)
+        const response = await HANDLERS[endpoint](
+          makeRequest(endpoint, { headerKey: TEST_KEY })
+        );
+        // Auth gate must let the request through (anything but the 404 reject).
         expect(response.status).not.toBe(404);
       });
     });
@@ -54,33 +82,38 @@ describe("GET /api/ops/* endpoints - Auth requirements", () => {
   describe("With valid diagnostic key (query param)", () => {
     endpoints.forEach((endpoint) => {
       it(`${endpoint} should accept valid key in query param`, async () => {
-        const url = new URL(`http://localhost:3000${endpoint}`);
-        url.searchParams.set("key", validDiagnosticKey);
-
-        const response = await fetch(url.toString(), {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        // Should not be 404 (Unauthorized)
+        const response = await HANDLERS[endpoint](
+          makeRequest(endpoint, { queryKey: TEST_KEY })
+        );
         expect(response.status).not.toBe(404);
       });
     });
   });
 
-  describe("With invalid diagnostic key", () => {
+  describe("With invalid diagnostic key (different length)", () => {
     endpoints.forEach((endpoint) => {
       it(`${endpoint} should reject invalid key`, async () => {
-        const response = await fetch(`http://localhost:3000${endpoint}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "x-opsiq-diagnostic-key": "wrong-key-123",
-          },
-        });
+        const response = await HANDLERS[endpoint](
+          makeRequest(endpoint, { headerKey: "wrong-key-123" })
+        );
+        expect(response.status).toBe(404);
+        const body = await response.json();
+        expect(body.error).toBe("Unauthorized");
+      });
+    });
+  });
 
+  describe("With wrong diagnostic key of the SAME length (regression)", () => {
+    // TEST_KEY is "test-key" (length 8). A fully wrong key of the same length
+    // must still be rejected — guards the timing-safe comparison bug where the
+    // equal-length branch ignored timingSafeEqual's result.
+    const sameLengthWrong = "bad-key!"; // length 8, fully wrong
+    endpoints.forEach((endpoint) => {
+      it(`${endpoint} should reject a same-length wrong key with 404`, async () => {
+        expect(sameLengthWrong.length).toBe(TEST_KEY.length);
+        const response = await HANDLERS[endpoint](
+          makeRequest(endpoint, { headerKey: sameLengthWrong })
+        );
         expect(response.status).toBe(404);
         const body = await response.json();
         expect(body.error).toBe("Unauthorized");

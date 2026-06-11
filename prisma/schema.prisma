@@ -1270,3 +1270,198 @@ model StartupStatus {
   @@index([instanceId, updatedAt(sort: Desc)])
   @@map("startup_status")
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Founder / Owner-Only Real-Business Recovery Mode
+// Self-contained models (relations only among themselves). Workspace isolation
+// is enforced at the service layer via the workspace_id scalar. These models
+// intentionally do NOT reuse the broken Action/verification primitives.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model OwnerBusiness {
+  id             String                @id @db.Uuid
+  workspaceId    String                @db.Uuid @map("workspace_id")
+  name           String
+  businessType   String                @map("business_type")
+  location       String?
+  currency       String                @default("INR")
+  operatingModel String?               @map("operating_model")
+  b2cSupported   Boolean               @default(true) @map("b2c_supported")
+  b2bSupported   Boolean               @default(false) @map("b2b_supported")
+  isActive       Boolean               @default(true) @map("is_active")
+  createdBy      String?               @db.Uuid @map("created_by")
+  version        Int                   @default(1)
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  snapshots      OwnerMetricSnapshot[]
+  cycles         RecoveryCycle[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, isActive])
+  @@map("owner_businesses")
+}
+
+model OwnerMetricSnapshot {
+  id                     String          @id @db.Uuid
+  businessId             String          @db.Uuid @map("business_id")
+  workspaceId            String          @db.Uuid @map("workspace_id")
+  periodStart            DateTime        @map("period_start")
+  periodEnd              DateTime        @map("period_end")
+  currency               String
+  revenue                Float?
+  totalCosts             Float?          @map("total_costs")
+  grossProfit            Float?          @map("gross_profit")
+  netProfit              Float?          @map("net_profit")
+  orderCount             Float?          @map("order_count")
+  kgProcessed            Float?          @map("kg_processed")
+  piecesProcessed        Float?          @map("pieces_processed")
+  b2cRevenue             Float?          @map("b2c_revenue")
+  b2bRevenue             Float?          @map("b2b_revenue")
+  newCustomers           Float?          @map("new_customers")
+  repeatCustomers        Float?          @map("repeat_customers")
+  dormantContacted       Float?          @map("dormant_contacted")
+  averageOrderValue      Float?          @map("average_order_value")
+  discountAmount         Float?          @map("discount_amount")
+  refundAmount           Float?          @map("refund_amount")
+  rewashCount            Float?          @map("rewash_count")
+  complaintCount         Float?          @map("complaint_count")
+  receivables            Float?
+  staffCost              Float?          @map("staff_cost")
+  rentCost               Float?          @map("rent_cost")
+  utilitiesCost          Float?          @map("utilities_cost")
+  materialCost           Float?          @map("material_cost")
+  deliveryCost           Float?          @map("delivery_cost")
+  marketingSpend         Float?          @map("marketing_spend")
+  campaignConversions    Float?          @map("campaign_conversions")
+  averageTurnaroundHours Float?          @map("average_turnaround_hours")
+  staffProductivity      Float?          @map("staff_productivity")
+  notes                  String?
+  createdBy              String?         @db.Uuid @map("created_by")
+  createdAt              DateTime        @default(now()) @map("created_at")
+  updatedAt              DateTime        @updatedAt @map("updated_at")
+  business               OwnerBusiness   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cycles                 RecoveryCycle[]
+
+  @@unique([businessId, periodStart, periodEnd])
+  @@index([businessId])
+  @@index([workspaceId])
+  @@map("owner_metric_snapshots")
+}
+
+model RecoveryCycle {
+  id              String              @id @db.Uuid
+  businessId      String              @db.Uuid @map("business_id")
+  workspaceId     String              @db.Uuid @map("workspace_id")
+  snapshotId      String              @db.Uuid @map("snapshot_id")
+  previousCycleId String?             @db.Uuid @map("previous_cycle_id")
+  cycleNumber     Int                 @map("cycle_number")
+  status          String              @default("open")
+  healthStatus    String              @map("health_status")
+  healthScore     Float               @map("health_score")
+  summary         String?
+  createdBy       String?             @db.Uuid @map("created_by")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  business        OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  snapshot        OwnerMetricSnapshot @relation(fields: [snapshotId], references: [id])
+  previousCycle   RecoveryCycle?      @relation("CycleHistory", fields: [previousCycleId], references: [id])
+  nextCycles      RecoveryCycle[]     @relation("CycleHistory")
+  findings        RecoveryFinding[]
+  actions         RecoveryAction[]
+
+  @@index([businessId])
+  @@index([workspaceId])
+  @@map("recovery_cycles")
+}
+
+model RecoveryFinding {
+  id                 String           @id @db.Uuid
+  cycleId            String           @db.Uuid @map("cycle_id")
+  businessId         String           @db.Uuid @map("business_id")
+  workspaceId        String           @db.Uuid @map("workspace_id")
+  code               String
+  title              String
+  sourceMetric       String           @map("source_metric")
+  currentValue       Float?           @map("current_value")
+  comparisonValue    Float?           @map("comparison_value")
+  threshold          Float?
+  severity           String
+  evidence           String
+  whyItMatters       String           @map("why_it_matters")
+  impactEstimate     Float?           @map("impact_estimate")
+  impactCurrency     String?          @map("impact_currency")
+  confidence         Float
+  recommendedAction  String           @map("recommended_action")
+  verificationMetric String           @map("verification_metric")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  cycle              RecoveryCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  actions            RecoveryAction[]
+
+  @@index([cycleId])
+  @@index([workspaceId])
+  @@map("recovery_findings")
+}
+
+model RecoveryAction {
+  id                     String                 @id @db.Uuid
+  cycleId                String                 @db.Uuid @map("cycle_id")
+  findingId              String?                @db.Uuid @map("finding_id")
+  businessId             String                 @db.Uuid @map("business_id")
+  workspaceId            String                 @db.Uuid @map("workspace_id")
+  title                  String
+  description            String
+  assignedToRole         String                 @map("assigned_to_role")
+  assignedToUserId       String?                @db.Uuid @map("assigned_to_user_id")
+  priority               String
+  status                 String                 @default("proposed")
+  dueAt                  DateTime?              @map("due_at")
+  expectedOutcome        String                 @map("expected_outcome")
+  metricToMove           String                 @map("metric_to_move")
+  baselineValue          Float?                 @map("baseline_value")
+  targetValue            Float?                 @map("target_value")
+  verificationWindowDays Int                    @map("verification_window_days")
+  effort                 String
+  confidence             Float
+  completionCriteria     String                 @map("completion_criteria")
+  direction              String                 @default("up")
+  startedAt              DateTime?              @map("started_at")
+  completedAt            DateTime?              @map("completed_at")
+  completionNotes        String?                @map("completion_notes")
+  actualOutcome          String?                @map("actual_outcome")
+  version                Int                    @default(1)
+  createdAt              DateTime               @default(now()) @map("created_at")
+  updatedAt              DateTime               @updatedAt @map("updated_at")
+  cycle                  RecoveryCycle          @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  finding                RecoveryFinding?       @relation(fields: [findingId], references: [id])
+  verifications          RecoveryVerification[]
+
+  @@index([cycleId])
+  @@index([workspaceId])
+  @@index([status])
+  @@map("recovery_actions")
+}
+
+model RecoveryVerification {
+  id                     String         @id @db.Uuid
+  actionId               String         @db.Uuid @map("action_id")
+  cycleId                String         @db.Uuid @map("cycle_id")
+  workspaceId            String         @db.Uuid @map("workspace_id")
+  metric                 String
+  baselineValue          Float          @map("baseline_value")
+  targetValue            Float          @map("target_value")
+  afterValue             Float?         @map("after_value")
+  direction              String         @default("up")
+  verificationWindowDays Int            @map("verification_window_days")
+  actualMovement         Float?         @map("actual_movement")
+  status                 String         @default("unverified")
+  evidence               String?
+  verifiedBy             String?        @db.Uuid @map("verified_by")
+  verifiedAt             DateTime?      @map("verified_at")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+  action                 RecoveryAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([actionId])
+  @@index([workspaceId])
+  @@map("recovery_verifications")
+}

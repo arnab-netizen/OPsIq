@@ -2001,3 +2001,57 @@ whether it worked
 what to do next
 
 Until that is true, do not resume public/SaaS launch work.
+---
+
+# PHASE 3 SLICE 2 — EVENT SOURCING TRUTH CLASSIFICATION
+
+Honest runtime classification of the Phase 3 Slice 2 event-sourcing systems,
+verified by grepping `src/services` and `src/app` (non-test, excluding each
+engine's own definition file) and by the DB-backed integration test in CI. This
+section is enforced by the `Phase 3 Slice 2 - Truth Pass Verification` workflow
+(Gate 10). It deliberately does NOT mark this slice COMPLETE: only the emission
+path is runtime-proven. It does not replace the Owner Mode Roadmap above; it is a
+truth-classification addendum required by the Gate 10 honesty check.
+
+### Phase 3 — Event Sourcing (Emission + Forward Projection)
+**Status: PARTIAL**
+
+PARTIAL means only the event-emission path and its forward projection are live
+and proven; the replay, rebuild, and snapshot systems exist as code only and are
+NOT runtime-wired.
+
+Live (proven by runtime wiring + DB-backed integration test in CI Gate 6):
+- `EventEmitterService.emit()` is invoked from `recommendation.ts`, `action.ts`,
+  and `evidence.ts` (multiple call sites) and appends to the append-only
+  `canonical_events` store. The forward-projection `ProjectionEngine` is ACTIVE,
+  invoked synchronously by `EventEmitterService.emit()` (`event-emitter.ts:242`,
+  confirmed by Gate 8 and Gate 9).
+
+Not live (code only, zero runtime wiring — intentionally parked):
+- `EventReplayEngine` — historical event replay; defined but never imported or
+  called by any non-test runtime file. Remains PARKED.
+- `ProjectionRebuildEngine` — full projection rebuild; defined but never imported
+  or called by any non-test runtime file. Remains PARKED.
+- `SnapshotEngine` — aggregate snapshotting; defined but never imported or called
+  by any non-test runtime file. Remains PARKED.
+
+| System | Role | Classification |
+|---|---|---|
+| EventEmitterService | append-only event emission | ACTIVE |
+| EventReplayEngine | historical event replay | PARKED |
+| ProjectionRebuildEngine | full projection rebuild | PARKED |
+| SnapshotEngine | aggregate snapshotting | PARKED |
+
+The forward-projection `ProjectionEngine` is intentionally not listed as a table
+row above; its genuine ACTIVE status is stated in prose so that no PARKED system
+(replay/rebuild/snapshot) is implied to be live. Gate 9 verifies the parked
+engines stay unwired; Gate 8 verifies the emission path is wired.
+
+### Phase 4 — Replay / Rebuild / Snapshot Consumers
+**Status: SCAFFOLD**
+
+SCAFFOLD means the Phase 4 systems (replay-driven read models, projection rebuild
+orchestration, snapshot lifecycle) exist only as un-wired scaffolding. None is
+imported or invoked by any runtime path; there is no runtime proof and no
+DB-backed integration coverage. They remain SCAFFOLD until explicitly wired and
+proven in a future slice.
