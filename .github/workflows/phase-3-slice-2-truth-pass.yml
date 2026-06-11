@@ -250,14 +250,27 @@ jobs:
       # === GATE 9: Verify PARKED Systems Unchanged ===
       - name: 'Gate 9: Verify PARKED systems remain unwired'
         run: |
-          echo "Checking EventReplayEngine not wired in runtime..."
-          grep -r "EventReplayEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ EventReplayEngine remains PARKED" || (echo "✗ EventReplayEngine unexpectedly wired"; exit 1)'
+          # Detect REAL runtime wiring of parked engines. Exclude tests and the
+          # parked engines' OWN definition files (and sibling parked-engine
+          # definitions), so the check flags only imports/calls from OTHER runtime
+          # files — not an engine's own definition. Still fails if a parked engine
+          # is wired into any non-parked, non-test runtime file.
+          #
+          # NOTE: the projection forward-path engine `ProjectionEngine`
+          # (src/services/projection-engine.ts) is intentionally ACTIVE — it is
+          # called by EventEmitterService.emit() (verified active by Gate 8). The
+          # PARKED projection engine is `ProjectionRebuildEngine`
+          # (src/services/projection-rebuild-engine.ts), which this gate checks.
+          PARKED_DEFS="event-replay-engine.ts|projection-rebuild-engine.ts|snapshot-engine.ts"
 
-          echo "Checking ProjectionEngine not wired in runtime..."
-          grep -r "ProjectionEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ ProjectionEngine remains PARKED" || (echo "✗ ProjectionEngine unexpectedly wired"; exit 1)'
+          echo "Checking EventReplayEngine not wired in runtime..."
+          grep -r "EventReplayEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | grep -vE "$PARKED_DEFS" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ EventReplayEngine remains PARKED" || (echo "✗ EventReplayEngine unexpectedly wired"; exit 1)'
+
+          echo "Checking ProjectionRebuildEngine not wired in runtime..."
+          grep -r "ProjectionRebuildEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | grep -vE "$PARKED_DEFS" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ ProjectionRebuildEngine remains PARKED" || (echo "✗ ProjectionRebuildEngine unexpectedly wired"; exit 1)'
 
           echo "Checking SnapshotEngine not wired in runtime..."
-          grep -r "SnapshotEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ SnapshotEngine remains PARKED" || (echo "✗ SnapshotEngine unexpectedly wired"; exit 1)'
+          grep -r "SnapshotEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | grep -vE "$PARKED_DEFS" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ SnapshotEngine remains PARKED" || (echo "✗ SnapshotEngine unexpectedly wired"; exit 1)'
 
       # === GATE 10: Verify Honest Classification ===
       - name: 'Gate 10: Verify execution.md honesty'
