@@ -81,8 +81,20 @@ jobs:
       - name: Validate Prisma schema
         run: npx prisma validate
 
-      - name: Migration status (before)
-        run: npx prisma migrate status
+      - name: Migration status (before, informational)
+        # Informational only. `prisma migrate status` exits non-zero when pending
+        # migrations exist — which is EXPECTED here, because the whole point of
+        # this job is to apply the pending Owner Recovery migration. We capture
+        # and report the exit code but never fail the job on it, so the deploy
+        # step below can run. The post-deploy status step remains strict.
+        run: |
+          set +e
+          npx prisma migrate status
+          STATUS_CODE=$?
+          set -e
+          echo "Pre-deploy migrate status exit code: $STATUS_CODE"
+          echo "Non-zero before deploy is expected when pending migrations exist."
+          exit 0
 
       - name: Apply migration (prisma migrate deploy)
         run: npx prisma migrate deploy
