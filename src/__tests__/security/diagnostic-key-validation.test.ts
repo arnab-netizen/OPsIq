@@ -40,6 +40,19 @@ describe("Diagnostic Key Validation", () => {
       expect(verifyDiagnosticKey("")).toBe(false);
     });
 
+    it("should return false for a WRONG key of the SAME length (regression)", () => {
+      // expected = "test-diagnostic-key-123" (length 23)
+      const expected = "test-diagnostic-key-123";
+      const sameLengthWrong = "XXXX-XXXXXXXXXX-XXX-XXX"; // also length 23, fully wrong
+      expect(sameLengthWrong.length).toBe(expected.length);
+      expect(verifyDiagnosticKey(sameLengthWrong)).toBe(false);
+    });
+
+    it("should return false for a same-length key differing by one byte", () => {
+      // "test-diagnostic-key-124" differs from "...-123" by one character, same length.
+      expect(verifyDiagnosticKey("test-diagnostic-key-124")).toBe(false);
+    });
+
     it("should return false for null", () => {
       expect(verifyDiagnosticKey(null)).toBe(false);
     });

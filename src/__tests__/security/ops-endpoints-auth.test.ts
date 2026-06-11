@@ -90,11 +90,29 @@ describe("GET /api/ops/* endpoints - Auth requirements (in-process)", () => {
     });
   });
 
-  describe("With invalid diagnostic key", () => {
+  describe("With invalid diagnostic key (different length)", () => {
     endpoints.forEach((endpoint) => {
       it(`${endpoint} should reject invalid key`, async () => {
         const response = await HANDLERS[endpoint](
           makeRequest(endpoint, { headerKey: "wrong-key-123" })
+        );
+        expect(response.status).toBe(404);
+        const body = await response.json();
+        expect(body.error).toBe("Unauthorized");
+      });
+    });
+  });
+
+  describe("With wrong diagnostic key of the SAME length (regression)", () => {
+    // TEST_KEY is "test-key" (length 8). A fully wrong key of the same length
+    // must still be rejected — guards the timing-safe comparison bug where the
+    // equal-length branch ignored timingSafeEqual's result.
+    const sameLengthWrong = "bad-key!"; // length 8, fully wrong
+    endpoints.forEach((endpoint) => {
+      it(`${endpoint} should reject a same-length wrong key with 404`, async () => {
+        expect(sameLengthWrong.length).toBe(TEST_KEY.length);
+        const response = await HANDLERS[endpoint](
+          makeRequest(endpoint, { headerKey: sameLengthWrong })
         );
         expect(response.status).toBe(404);
         const body = await response.json();

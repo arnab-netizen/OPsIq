@@ -64,13 +64,11 @@ export function verifyDiagnosticKey(providedKey: string | null | undefined): boo
       }
     }
 
-    // Same length: use standard timing-safe comparison
-    try {
-      timingSafeEqual(expectedBuffer, providedBuffer);
-      return true; // Buffers are equal
-    } catch {
-      return false; // Buffers are not equal
-    }
+    // Same length: use standard timing-safe comparison and HONOR its result.
+    // timingSafeEqual returns true only when the buffers are byte-equal; it does
+    // not throw for equal-length inputs. (Previously this branch ignored the
+    // return value and always returned true, accepting any same-length key.)
+    return timingSafeEqual(expectedBuffer, providedBuffer);
   } catch {
     // If buffer operations fail, fail closed
     return false;
