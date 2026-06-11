@@ -108,6 +108,13 @@ jobs:
 
       # === GATE 6: Unit Tests ===
       - name: 'Gate 6: Unit tests'
+        # TEST_WITH_DB=true makes Vitest INCLUDE this DB-backed phase integration
+        # test (vitest.config.ts otherwise excludes **/phase-*.test.ts and filters
+        # out [db] tests). The CI Postgres service is already migrated by Gate 2,
+        # so the test runs against a real database instead of being silently
+        # skipped ("No test files found"). Scoped to this step only.
+        env:
+          TEST_WITH_DB: 'true'
         run: npm test -- --run src/__tests__/phase-3-event-emitter-integration.test.ts
         continue-on-error: false
 
