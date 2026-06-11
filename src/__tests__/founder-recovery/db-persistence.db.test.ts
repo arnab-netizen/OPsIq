@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- Prisma `db` proxy returns untyped rows; explicit any is pragmatic here */
 /**
  * DB-backed persistence proof for Owner Recovery Mode.
  *
@@ -143,7 +144,7 @@ describe("[db] Owner Recovery persistence", () => {
     expect(repeatAction.direction).toBe("up");
 
     // proposed -> assigned -> in_progress -> completed (with evidence)
-    let v = repeatAction.version;
+    const v = repeatAction.version;
     const a1 = await updateRecoveryAction(repeatAction.id, { status: "assigned", version: v }, actor, workspaceId);
     const a2 = await updateRecoveryAction(repeatAction.id, { status: "in_progress", version: a1.version }, actor, workspaceId);
     const a3 = await updateRecoveryAction(
