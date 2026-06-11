@@ -1,0 +1,99 @@
+name: Module 1 Owner Recovery Migration
+
+# Manual only. Applies the Owner Recovery V1 migration
+# (prisma/migrations/20260610120000_owner_recovery_mode) to a network-enabled
+# Neon target using the DIRECT (non-pooler) URL from the MIGRATION_DATABASE_URL
+# secret. It does NOT deploy the app and does NOT run any destructive command.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Database target label'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      confirm:
+        description: 'Must equal APPLY_OWNER_RECOVERY_MIGRATION'
+        required: true
+
+concurrency:
+  group: module-1-owner-recovery-migrate-${{ github.event.inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply Owner Recovery V1 migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Use a GitHub Environment matching the target so environment protection
+    # rules and environment-scoped secrets apply (e.g. required reviewers).
+    environment: ${{ github.event.inputs.target }}
+    env:
+      # prisma.config.ts prioritizes MIGRATION_DATABASE_URL; DATABASE_URL is set
+      # to the same secret as a fallback for tooling that still reads it.
+      # Secrets are automatically masked in logs by GitHub Actions.
+      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
+    steps:
+      - name: Confirmation phrase guard (fail closed)
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "APPLY_OWNER_RECOVERY_MIGRATION" ]; then
+            echo "::error::Confirmation phrase mismatch. Type APPLY_OWNER_RECOVERY_MIGRATION to proceed."
+            exit 1
+          fi
+          echo "✓ Confirmation accepted. Target: ${{ github.event.inputs.target }}"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Owner Recovery migration file exists
+        run: |
+          test -f prisma/migrations/20260610120000_owner_recovery_mode/migration.sql
+          echo "✓ Migration file present: 20260610120000_owner_recovery_mode"
+
+      - name: Preflight - MIGRATION_DATABASE_URL secret present (fail closed, no print)
+        run: |
+          if [ -z "${{ secrets.MIGRATION_DATABASE_URL }}" ]; then
+            echo "::error::MIGRATION_DATABASE_URL secret is missing or empty. Aborting."
+            exit 1
+          fi
+          echo "✓ MIGRATION_DATABASE_URL secret is configured (value not printed)"
+
+      - name: Remove local env files (prevent placeholder/pooler contamination)
+        run: |
+          rm -f .env .env.local .env.local.bak .env.production .env.staging .env.postgres .env.test
+          echo "✓ Removed local .env files so the secret is the sole datasource"
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Migration status (before)
+        run: npx prisma migrate status
+
+      - name: Apply migration (prisma migrate deploy)
+        run: npx prisma migrate deploy
+
+      - name: Migration status (after)
+        run: npx prisma migrate status
+
+      - name: Summary (no secrets)
+        run: |
+          echo "Target label        : ${{ github.event.inputs.target }}"
+          echo "Migration command   : npx prisma migrate deploy (20260610120000_owner_recovery_mode)"
+          echo "Status              : completed"
+          echo "Next                : verify /owner/recovery loads for an authorized owner"
+          echo "                      (role admin_or_portfolio_manager -> OWNER_VIEW/OWNER_MANAGE)"

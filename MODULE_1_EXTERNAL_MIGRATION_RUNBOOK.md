@@ -119,3 +119,49 @@ Read-only checks after `migrate deploy` (or via Neon SQL editor):
 
 Until one of the above is reached, **Module 2 remains blocked** and public/SaaS
 work stays frozen.
+
+## 10. GitHub Actions path (recommended automated runner)
+
+A manual-only workflow runs the migration from a GitHub-hosted runner (which has
+egress to Neon on 5432), so no local 5432 access is needed.
+
+- **Workflow file**: `.github/workflows/module-1-owner-recovery-migrate.yml`
+- **Workflow name**: `Module 1 Owner Recovery Migration`
+- **Trigger**: `workflow_dispatch` (manual only — never runs automatically).
+
+**Required GitHub secret**
+
+- Name: **`MIGRATION_DATABASE_URL`**
+- Value: the Neon **direct (non-pooler)** URL — host **must NOT contain `-pooler`**.
+- Add it at: repo **Settings → Secrets and variables → Actions** (or scope it to the
+  `staging` / `production` GitHub **Environment** for reviewer protection).
+- Use the **rotated** credential (the previously pasted one is exposed). Never print it.
+
+**How to run it manually**
+
+1. GitHub → **Actions** → "Module 1 Owner Recovery Migration" → **Run workflow**.
+2. Inputs:
+   - `target`: `staging` (or `production`, only when explicitly confirmed safe).
+   - `confirm`: must equal **`APPLY_OWNER_RECOVERY_MIGRATION`** (the job aborts otherwise).
+3. Run.
+
+**What the workflow does** (fail-closed; no app deploy; no destructive command):
+checkout → setup Node 20 → `npm ci` → verify migration file exists → preflight that
+`MIGRATION_DATABASE_URL` is set (no print) → remove local `.env*` files → `npx prisma
+validate` → `npx prisma migrate status` → `npx prisma migrate deploy` → `npx prisma
+migrate status` → non-secret summary.
+
+**Expected result**: the second `migrate status` reports "Database schema is up to
+date!" and `20260610120000_owner_recovery_mode` is applied.
+
+**After success**
+
+1. Verify the deployed app commit is **`5fc46a0`** or later.
+2. Open **`/owner/recovery`** as an authorized owner (role `admin_or_portfolio_manager`).
+3. Complete one **staging owner recovery cycle** (business → snapshot → diagnosis →
+   findings → actions → status → after snapshot → before/after verification → dashboard
+   → second linked cycle), then run the §8 verification checklist.
+
+**Module 2 remains blocked** until the migration is applied AND at least one staging
+owner recovery cycle is proven (`MODULE_1_DEPLOYED_AND_STAGING_PROVEN` or better).
+Public/SaaS work stays frozen.
