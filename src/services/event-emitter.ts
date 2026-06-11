@@ -274,4 +274,66 @@ export class EventEmitterService {
       recordedAt: event.recordedAt,
     };
   }
+
+  /**
+   * Read all canonical events for a single aggregate, scoped to a workspace.
+   *
+   * Read-only and tenant-safe: filters by aggregateId + aggregateType +
+   * workspaceId, ordered by eventNumber ascending (event sequence order).
+   * Returns the same EmittedEvent shape that emit() produces.
+   */
+  static async getAggregateEvents(
+    aggregateId: string,
+    aggregateType: string,
+    workspaceId: string
+  ): Promise<EmittedEvent[]> {
+    // Row shape read from the canonical_events table (typed locally to avoid the
+    // untyped `db` proxy producing an implicit-any callback parameter).
+    interface CanonicalEventRow {
+      id: string;
+      aggregateId: string;
+      aggregateType: string;
+      eventType: string;
+      eventVersion: number;
+      eventNumber: number;
+      payload: unknown;
+      actorId: string;
+      workspaceId: string;
+      causationId: string;
+      correlationId: string;
+      idempotencyKey: string | null;
+      visibilityScope: string;
+      sensitivityClassification: string;
+      occurredAt: Date;
+      recordedAt: Date;
+    }
+
+    const events = (await db.canonicalEvent.findMany({
+      where: { aggregateId, aggregateType, workspaceId },
+      orderBy: { eventNumber: "asc" },
+    })) as CanonicalEventRow[];
+
+    return events.map((event): EmittedEvent => {
+      const rawPayload = event.payload as unknown;
+      const payload: EventPayload = isEventPayload(rawPayload) ? rawPayload : {};
+      return {
+        id: event.id,
+        aggregateId: event.aggregateId,
+        aggregateType: event.aggregateType,
+        eventType: event.eventType,
+        eventVersion: event.eventVersion,
+        eventNumber: event.eventNumber,
+        payload,
+        actorId: event.actorId,
+        workspaceId: event.workspaceId,
+        causationId: event.causationId,
+        correlationId: event.correlationId,
+        idempotencyKey: event.idempotencyKey || undefined,
+        visibilityScope: event.visibilityScope,
+        sensitivityClassification: event.sensitivityClassification,
+        occurredAt: event.occurredAt,
+        recordedAt: event.recordedAt,
+      };
+    });
+  }
 }
