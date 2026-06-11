@@ -64,6 +64,18 @@ jobs:
             sleep 1
           done
 
+      # Remove committed/local .env override files so the CI-provided DATABASE_URL
+      # (the postgres service above) is authoritative. prisma.config.ts loads
+      # .env.local with override:true, and that file ships a placeholder
+      # (REPLACE_POOLED_HOST/REPLACE_DB) which otherwise overrides CI and makes
+      # `prisma migrate deploy` target an unreachable host. Same safe pattern as
+      # migrate-staging.yml and module-1-owner-recovery-migrate.yml. This deletes
+      # local files only; it does not touch CI env vars/secrets and prints none.
+      - name: Remove local env files (prevent placeholder override of CI database env)
+        run: |
+          rm -f .env .env.local .env.local.bak .env.development.local .env.test.local .env.production.local
+          echo "Removed local .env override files; CI-provided DATABASE_URL is authoritative"
+
       # === GATE 1: Prisma Schema Validation ===
       - name: 'Gate 1: Prisma schema validation'
         run: npx prisma validate
