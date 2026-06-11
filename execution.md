@@ -1,962 +1,2006 @@
-# OPSIQ EXECUTION CONTRACT v4.0
-# FORENSIC AUDIT INTEGRATED — BLOCKER-DRIVEN ROADMAP — NO FALSE GREEN
+OpsIQ Owner Mode Execution Roadmap
 
-**Date Updated:** 2026-05-12 (Post-Forensic Audit)  
-**Audit Source:** AUDIT_MASTER_REPORT.md + NEXT_EXECUTION_QUEUE.md  
-**Enforcement:** Absolute proof-only completion, no mocks, no test-only success  
+Purpose
 
----
+OpsIQ Owner Mode must become a full-capacity owner command system for real business operators.
 
-# CRITICAL PREAMBLE
+The end product must help an owner:
 
-This execution contract is built from a forensic audit that found:
-- **CRITICAL BUG:** Growth engines leak data between workspaces (tenant isolation broken)
-- **CRITICAL:** 96 tests failing in growth engines (pricing, retention, acquisition, unit economics)
-- **CRITICAL:** 21 test files contain fake placeholder tests `expect(true).toBe(true)`
-- **CRITICAL:** Database schema not deployed (DATABASE_URL missing)
-- **CRITICAL:** Rate limiting/entitlement middleware not integrated into protected routes
+1. understand the real condition of the business,
+2. identify survival risks,
+3. identify profit leaks,
+4. identify growth opportunities,
+5. choose the safest highest-impact next action,
+6. assign and execute work,
+7. verify whether the action improved the business,
+8. learn only from verified outcomes,
+9. repeat the cycle across money, sales, operations, marketing, staff, customers, SOPs, strategy, and multiple businesses.
 
-**Repo Status:** See "Operational Readiness Status" section for categorical assessment. This contract defines the exact path to production-ready.
+The system must not become a collection of disconnected pages. Every module must plug into the same owner operating loop:
 
-**No phase is green unless all 10 proof criteria below are satisfied.**
+Input Data
+→ Diagnosis
+→ Severity Ranking
+→ Recommendation
+→ Action Plan
+→ Execution Tracking
+→ Verification
+→ Dashboard Update
+→ Next Cycle
 
----
+The goal is not to create a demo. The goal is to create a reliable owner operating system that can be used on real businesses without hand-holding.
 
-# DATABASE_URL STRATEGY: CI-FIRST VERIFICATION
+⸻
 
-## Local Environment: LOCAL_RUNTIME_UNAVAILABLE_CI_VERIFIED
-- No DATABASE_URL configured on local machine
-- No PostgreSQL running locally
-- Non-DB tests (358 growth tests) PASS locally
-- DB-dependent tests (81 phase-3 event sourcing) BLOCKED_LOCALLY but CI-VERIFIED
-- **Local PostgreSQL is OPTIONAL for developer convenience; CI verification is canonical**
+0. Current Strategic Rule
 
-## CI Environment: PostgreSQL 16 + Migrations Ready ✓
-- `.github/workflows/ci.yml` configured with postgres:16 service
-- DATABASE_URL set: `postgresql://postgres:postgres@localhost:5432/opsiq_test`
-- `npx prisma migrate deploy` runs before tests
-- All 3845 tests expected to PASS in CI
+Owner Mode First
 
-## Verification Strategy
-1. **Local:** Run non-DB tests only → `npm test -- growth` → 358 PASS ✓
-2. **CI (GitHub Actions):** Full suite with PostgreSQL → 3845 PASS (expected)
-3. **Before Merge:** CI must pass all tests including database migrations
-4. **Definition of Done:** CI proves both `npx prisma migrate deploy` + `npm test` succeed
+Public SaaS, Product Hunt, billing, pricing, marketing, and Module 2+ public launch work are frozen until Owner Mode is proven.
 
-## Key Rules
-- ✓ **GitHub Actions CI is canonical DB verification environment**
-- ✓ CI PostgreSQL 16 verification is accepted proof for: migrations, DB-backed stores, persistence, event sourcing tests, replay tests, DB integration tests
-- ✓ CI migration deploy (npx prisma migrate deploy) is proof of schema validity and deployability
-- ✓ CI test passage (npm test with DATABASE_URL) is proof of DB correctness
-- ❌ Do NOT mark DB work complete without CI verification
-- ❌ Do NOT use SQLite for testing
-- ❌ Do NOT mock event sourcing persistence
-- ✓ DO use PostgreSQL 16 in CI
-- ✓ DO run migrations before tests
-- ✓ DO require CI passage for DB-work PRs
-- **Local PostgreSQL is OPTIONAL for developer convenience; not a blocking requirement**
+Current priority:
 
-See `docs/DATABASE_URL_STRATEGY.md` for local Docker Compose setup (optional for developer convenience).
+Finish Owner Mode foundation
+→ prove it on real/staging runtime
+→ build full owner capacity module by module
+→ only then resume public/SaaS launch work
 
----
+Tumbledry Mukundapur may be used as the first real validation business, but the product must remain generic and reusable for any owner-operated business.
 
-# CI-FIRST VERIFICATION STRATEGY (Canonical DB Environment)
+Do not hardcode Tumbledry logic into core product code.
 
-**GitHub Actions CI PostgreSQL is the canonical verification environment for all database work.**
+⸻
 
-Local PostgreSQL is optional. DB-dependent work is verified complete when:
+1. Non-Negotiable Build Principles
 
-1. **Code compiles locally:** `npm run build`, `npx tsc --noEmit`, `npx prisma validate` all pass (non-DB gates)
-2. **Code is pushed to branch** (triggers CI workflow)
-3. **CI PostgreSQL executes migrations:** `npx prisma migrate deploy` succeeds in GitHub Actions (proves schema deployability)
-4. **CI full test suite passes:** `npm test` runs with DATABASE_URL and all tests pass (proves DB correctness)
-5. **CI proof is documented:** Capture CI run number, job name, duration, completion time
+1.1 No False Green
 
-Once CI green, DB work is COMPLETE_VERIFIED_CI_GREEN (not awaiting local testing).
+Claude must never mark a phase complete unless all required gates pass.
 
-**Execution flow for DB work:**
-- Implement code locally (use mocks/stubs for DB calls if needed)
-- Run non-DB gates locally: build, typecheck, schema validate
-- Push branch → GitHub Actions starts
-- Wait for "Run Tests" job to complete
-- Inspect CI job results: migration success, test passage
-- Accept CI proof as canonical verification
-- Proceed to next task (do not wait for local PostgreSQL)
+A phase is not complete if:
 
-**Local PostgreSQL setup is OPTIONAL for:**
-- Developer convenience during coding
-- Faster iteration (avoiding CI wait)
-- Educational purposes (understanding database behavior)
+* code compiles but tests fail,
+* tests pass locally but CI is red,
+* CI passes but runtime is unverified,
+* runtime works only with mock data,
+* data is written but not visible in UI,
+* UI displays data but verification loop is incomplete,
+* migration exists but has not been applied to real/staging DB,
+* feature works only for one hardcoded business,
+* security/auth/tenant isolation is untested,
+* errors are hidden, skipped, or renamed instead of fixed.
 
-**Local PostgreSQL is NOT REQUIRED for:**
-- Marking DB work complete (CI proof sufficient)
-- Deploying code (CI proves it works)
-- Advancing to next task (CI verification is canonical)
+1.2 Backbone First
 
----
+Always fix root/backbone issues before add-on branch issues.
 
-# ABSOLUTE RULES: NO FALSE GREEN
+Backbone issues include:
 
-## Rule 1: Compilation Is Not Completion
-`npm run build` passing does not mean phase is complete.
-`npx tsc --noEmit` passing does not mean phase is complete.
-Tests passing does not mean phase is complete.
+* database schema,
+* migrations,
+* auth and authorization,
+* tenant/workspace isolation,
+* owner role gating,
+* API contracts,
+* persistence correctness,
+* deterministic diagnosis pipeline,
+* action/verification loop,
+* CI gates,
+* deployment proof,
+* real/staging runtime proof.
 
-A phase is COMPLETE_VERIFIED only when ALL criteria below are true:
+Add-on branch issues include:
 
-1. **Implementation Exists**
-   - Code files created/modified
-   - Service/handler/route implemented
-   - Domain contracts defined
+* UI polish,
+* labels,
+* copy,
+* chart formatting,
+* extra filters,
+* additional templates,
+* optional exports,
+* Product Hunt polish,
+* billing,
+* marketing pages.
 
-2. **Runtime Wiring Exists**
-   - Routes are called by real requests (not mocks)
-   - Services are called from routes (not test-only)
-   - Middleware is applied to routes (not optional)
-   - API responses follow DTO contracts (not raw models)
+Do not work on add-on branches while a backbone gate is red.
 
-3. **Persistence Exists (Where Required)**
-   - Data lives in database, not memory
-   - Migrations deployed and verified (CI proof acceptable: npx prisma migrate deploy succeeds)
-   - Schema validated with `npx prisma validate` (can be local or CI)
-   - Replayability tested (fresh migration → same state; CI environment is canonical)
+1.3 Evidence Over Claims
 
-4. **Authorization Is Enforced**
-   - All protected routes use `withAuth()` middleware
-   - Capability checks on privileged operations
-   - Workspace context is validated before data access
-   - Fail-closed on missing auth/capability/workspace
+Every completion report must include evidence:
 
-5. **Tenant Isolation Is Enforced**
-   - Cross-workspace tests exist and pass
-   - Data leak tests exist and pass
-   - No fetch-then-filter patterns
-   - Query parameter validation prevents cross-workspace access
+* files changed,
+* commands run,
+* exact results,
+* tests passed/failed,
+* CI status if available,
+* screenshots/logs only when needed,
+* migration status if DB touched,
+* runtime proof if feature is runtime-facing.
 
-6. **Idempotency Is Enforced (Where Required)**
-   - POST/PATCH endpoints use Idempotency-Key
-   - Duplicate requests return cached response
-   - Idempotency store persists across restarts
-   - Tests prove idempotency works under replay
+Never say “complete” without proof.
 
-7. **Audit/Event Behavior Exists (Where Required)**
-   - Material operations emit audit events
-   - Events include workspace context
-   - Audit trail queryable (except BLOCKED on DB)
-   - Event ordering enforced
+1.4 Fail Closed
 
-8. **Failure Paths Are Tested**
-   - Missing auth → 401
-   - Missing capability → 403
-   - Missing workspace → 400
-   - Missing data → 404
-   - Invalid input → 400 with validation errors
-   - Quota exceeded → 429
-   - Rate limit exceeded → 429
+If a required condition is missing, the system must fail safely.
 
-9. **Cross-Workspace Leakage Test Exists And Passes**
-   - Test creates workspace A, workspace B
-   - Workspace A operation uses B's data
-   - System blocks or returns empty/error
-   - Test verifies no data exposure
+Examples:
 
-10. **Integration Test Exists And Passes**
-    - Full path from route → service → persistence → DTO
-    - Real HTTP requests (not mocked)
-    - Real database (not in-memory)
-    - Verification command proves it
+* missing auth → reject,
+* missing workspace → reject,
+* wrong role → reject,
+* missing capability → reject,
+* bad diagnostic key → reject,
+* missing DB env → fail clearly,
+* invalid state transition → reject,
+* cross-tenant access → 404/403 as appropriate,
+* unverified action → never mark successful,
+* failed verification → mark disputed/unverified, not complete.
 
-## Rule 2: Fake Tests Are Blockers
-Any test file containing `expect(true).toBe(true)` is FAKE.
-Fake tests must be replaced with real tests before claiming completion.
-Counting fake tests in "tests passing" is forbidden.
+1.5 No Broad Refactors During Gate Fixes
 
-## Rule 3: Stateless Services Are Unsafe
-Services that accept `workspaceId` but don't verify workspace owns the data are UNSAFE.
-Example: `RetentionEngine.getRetentionCurve(ws2, ws1_metrics)` returns data (WRONG).
-Service must fail-closed: return empty, null, or error if workspace doesn't own data.
+When fixing a gate:
 
-## Rule 4: In-Memory Is Not Production
-In-memory stores are not production-deployable unless explicitly documented as intentional local-only.
-Production persistence requires database with migrations deployed.
-Mock-backed features must be documented as MOCK_BACKED, not COMPLETE.
+* fix the direct root cause,
+* avoid unrelated cleanup,
+* avoid module expansion,
+* avoid design changes,
+* avoid changing tests to fit broken code,
+* avoid reducing coverage.
 
-## Rule 5: No Mocks For Enterprise Safety
-Stripe webhook handling cannot be mocked.
-Subscription enforcement cannot be mocked.
-Rate limiting cannot be in-memory only.
-Audit trail cannot be in-memory only.
-Entitlement cannot be in-memory only.
+⸻
 
-These must work with real database, real async, real persistence.
+2. Global Claude Execution Loop
 
----
+Claude must use this loop for every build cycle.
 
-# BLOCKER INVENTORY (From Forensic Audit)
+2.1 Single Build Loop Command
 
-All items below are BLOCKERS. None may be skipped. Order is mandatory.
+When instructed with:
 
-## PHASE A: SAFETY BACKBONE (Must fix before feature work)
+/continue-owner-mode-build
 
-### A1: Fix Growth Engine Workspace Isolation Bug
-**Status:** BLOCKER  
-**Root Cause:** RetentionEngine, AcquisitionEngine, PricingEngine, SalesPipelineEngine, UnitEconomicsEngine accept workspaceId parameter but don't verify workspace owns queried data. Stateless services process input without validation.  
-**Symptom:** Any workspace can query any other's metrics (data leakage).  
-**Test Failure:** 96 tests failing in growth/*/test.ts (workspace isolation checks)  
-**Files Affected:**
-- `src/services/growth/retention-engine.ts`
-- `src/services/growth/acquisition-engine.ts`
-- `src/services/growth/pricing-engine.ts`
-- `src/services/growth/sales-pipeline-engine.ts`
-- `src/services/growth/unit-economics-engine.ts`
+Claude must do the following:
 
-**Implementation Steps:**
-1. Add workspace-scoped data store to each engine (Map<workspaceId, Data[]>)
-2. Validate workspace ownership before returning data
-3. Return empty/null/error if workspace doesn't own data
-4. Add tenant isolation tests for each engine
-5. Run `npm test -- growth` until 96 tests PASS
+1. read this EXECUTION.md,
+2. identify the current phase and first incomplete gate,
+3. inspect current repo status,
+4. refuse to jump ahead if a prior gate is incomplete,
+5. implement only the next allowed slice,
+6. run all required verification,
+7. create/update the relevant proof report,
+8. commit and push only if explicitly authorized by the current task or if this file says the phase requires auto-commit after green gates,
+9. report status using the required format.
 
-**Verification Commands:**
-```bash
-npm test -- growth
-# Output: Tests 96 passed (96)
+Claude must not ask “what next?” if the next incomplete gate is clear from this file.
 
-npm test -- workspace-isolation
-# Output: All cross-workspace checks pass
-```
+2.2 Required Start-of-Loop Checks
 
-**Required Tests:**
-- RetentionEngine cross-workspace test: PASS
-- AcquisitionEngine cross-workspace test: PASS
-- PricingEngine cross-workspace test: PASS
-- SalesPipelineEngine cross-workspace test: PASS
-- UnitEconomicsEngine cross-workspace test: PASS
+Every loop begins with:
 
-**Tenant Isolation:** ENFORCED per engine
-**Authorization:** N/A (data-level isolation)
-**Persistence:** In-memory stores (pre-Database upgrade)
-**Audit:** N/A
-**Rollback Risk:** LOW (bug fix only)
-**Deployment Risk:** LOW (fixes broken behavior)
-**Monetization Impact:** CRITICAL (revenue calculations currently broken)
-**Enterprise Impact:** CRITICAL (data security)
-**Definition of Done:** All 96 growth-engine tests pass for the correct reason (workspace isolation enforced)
+git status --short
+git branch --show-current
+git log --oneline -8
 
----
+Then Claude must identify:
 
-### A2: Replace Fake Placeholder Tests
-**Status:** COMPLETE_CRITICAL_INVARIANT_COVERAGE  
-**Root Cause:** 21 test files contain `expect(true).toBe(true)` placeholder assertions instead of real tests.  
-**Symptom:** Test coverage inflated by ~20%. Hidden bugs masked by shallow tests.  
-**Files Affected:** 21 test files (src/__tests__/services/action.test.ts, api/decisions.test.ts, api/notifications.test.ts, ... 18 more)  
+Current branch:
+Current HEAD:
+Working tree clean:
+Current phase:
+Current incomplete gate:
+Next allowed task:
+Forbidden tasks:
 
-**Implementation Complete:**
-1. ✓ All `expect(true).toBe(true)` assertions replaced with real tests
-2. ✓ Service logic tests: verify inputs/outputs
-3. ✓ Route tests: verify status codes, response structure
-4. ✓ Permission tests: verify auth enforcement
-5. ✓ All 21 files converted to real tests
+2.3 Required End-of-Loop Report
 
-**CRITICAL NOTE - Quarantined Fake Tests:**
-- 614 fake placeholder tests remain inventoried in `src/__ignored_tests__/` directory
-- These tests are EXCLUDED from active compilation (tsconfig.json + vitest.config.ts)
-- Quarantine is NOT a replacement for real test coverage
-- Quarantined fakes must eventually be implemented or formally deprecated
-- Active test count (206 critical tests) reflects ONLY non-fake, real assertions
-- Deployment readiness credit given ONLY for the 206 real tests, NOT the 614 quarantined fakes
+Every loop ends with:
 
-**Verification Commands:**
-```bash
+Status:
+Phase:
+Gate:
+Files changed:
+Commands run:
+Results:
+CI status:
+Runtime status:
+Migration status:
+Owner Recovery status:
+Module 2 status:
+Public/SaaS status:
+Next single action:
+
+⸻
+
+3. Universal Verification Gates
+
+Unless a task explicitly states a narrower verification set, Claude must run:
+
+git diff --check
+npm run lint:ratchet
 npm test
-# Output: Tests 3942 passed (3942) with 206 critical real tests active
-
-# Verify quarantine in place:
-grep "__ignored_tests__" tsconfig.json && grep "__ignored_tests__" vitest.config.ts
-# Output: Both configuration files exclude __ignored_tests__ from compilation
-```
-
-**Definition of Done:** 
-- ✓ All 21 test files have real assertions
-- ✓ 206 critical tests actively evaluated (non-quarantined)
-- ✓ 614 fake tests quarantined and excluded from active scope
-- ✓ Quarantine status documented in code
-- ✓ Clear inventory of what remains unimplemented
-
----
-
-### A3: Run Full Test Suite Until All 3845 Tests Pass
-**Status:** BLOCKED_EXTERNAL_CI_NOT_AVAILABLE
-
-**Local Environment:** BLOCKED_DB_REQUIRED
-- 358/358 growth tests PASS (non-DB tests verified)
-- 81 Phase-3 event sourcing tests BLOCKED (require PostgreSQL + migrations)
-- Local DATABASE_URL not configured
-- See docs/DATABASE_URL_STRATEGY.md for Docker Compose setup
-
-**CI Environment:** READY ✓
-- PostgreSQL 16 service configured in .github/workflows/ci.yml
-- DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test
-- Prisma migrate deploy runs before tests
-- All 3845 tests expected to PASS when CI runs
-
-**Local Verification (non-DB only):**
-```bash
-npm test -- src/__tests__/services/growth
-# Output: Test Files 14 passed | Tests 358 passed
-```
-
-**CI Verification (full suite with database):**
-```bash
-# Runs in GitHub Actions automatically on push/PR
-# Steps: tsc → prisma validate → prisma migrate deploy → npm run build → npm test
-# Expected: All 3845 tests PASS
-```
-
-**Definition of Done for A3:**
-1. ✓ Local non-DB tests pass (358 growth tests)
-2. ✓ CI workflow configured with PostgreSQL 16
-3. ✓ CI performs npx prisma migrate deploy (VERIFIED in CI Run #25760432401)
-4. ✓ CI runs npm test and PASSES with full suite including DB tests (VERIFIED in CI Run #25760432401)
-5. ✓ Integration tests (Phase 3) verify event sourcing persistence (VERIFIED in CI)
-
-**Dependency Chain:**
-- A1 (workspace isolation) → Complete ✓
-- A2 (fake test replacement) → Complete ✓
-- B1 (growth engine logic) → Complete ✓
-- A3 (full suite) → Awaiting CI with DB
-
----
-
-## ⚠️ CI GATE FOR PHASE A3 AND B2 COMPLETION
-
-**CRITICAL:** Phase A3 and B2 cannot be marked COMPLETE_VERIFIED until GitHub Actions proves:
-
-1. **Database Migration Success:** `npx prisma migrate deploy` exits code 0
-2. **Full Test Suite Pass:** `npm test` reports all tests PASS (not just local subset)
-3. **Build Success:** `npm run build` compiles successfully with DATABASE_URL
-4. **Schema Validation:** `npx prisma validate` passes
-
-**CI Workflow Configuration:** `.github/workflows/ci.yml`
-- PostgreSQL 16 service provisioned
-- DATABASE_URL set: `postgresql://postgres:postgres@localhost:5432/opsiq_test`
-- Execution sequence: npm ci → tsc → prisma validate → **prisma migrate deploy** → npm run build → npm test
-- All steps run with continue-on-error: false (strict validation)
-
-**Current Status:**
-- Local non-DB tests: 358/358 PASS ✓ (growth engines only)
-- CI workflow: READY ✓ (PostgreSQL configured)
-- CI test run: **NOT YET EXECUTED** (will run on next push/PR)
-- Expected CI result: 3845/3845 PASS (not claimed until CI proves it)
-
-**Definition of Done (Not Yet Met):**
-- [ ] GitHub Actions runs CI workflow on branch push
-- [ ] `npx prisma migrate deploy` succeeds (modifies database)
-- [ ] All 3845 tests PASS in CI (including Phase 3 event sourcing)
-- [ ] CI logs show: "Tests 0 failed | 3845 passed"
-- [ ] No database errors in test output
-
-**Do NOT Mark A3/B2 Complete Until Above Proven in CI**
-
----
-
-## PHASE B: DETERMINISTIC EXECUTION CORE
-
-### B1: Fix Growth Engine Logic Bugs
-**Status:** COMPLETE_CODE_VERIFIED_PRE_PRODUCTION ✓
-
-**Root Cause:** Growth engine thresholds miscalibrated. Strategy selection broken. Health classification off-by-one.
-
-**Fixed Issues:**
-- PricingEngine.recommendStrategy(): Reordered conditions (PENETRATION → SKIMMING → VALUE_BASED → COMPETITIVE)
-- PricingEngine.optimizePrice(): Added high elasticity handling (|elasticity| > 0.8)
-- UnitEconomicsEngine: Fixed LTV/CAC/payback thresholds (>= instead of >)
-- SalesPipelineEngine: Made stage optional, fixed health recommendations
-- domain/growth-engines.ts: Updated SalesDeal validation to allow optional stage
-
-**Files Modified:**
-- `src/services/growth/pricing-engine.ts`
-- `src/services/growth/sales-pipeline-engine.ts`
-- `src/services/growth/unit-economics-engine.ts`
-- `src/domain/growth/growth-engines.ts`
-
-**Verification Commands (Local):**
-```bash
-npm test -- growth
-# Output: Test Files 14 passed | Tests 358 passed (358)
-```
-
-**Definition of Done:** ✓ All 358 growth tests pass with correct business logic thresholds
-
----
-
-### B2: Add Database-Backed Stores for Growth Engines
-**Status:** COMPLETE_VERIFIED_CI_GREEN ✓
-
-**Root Cause:** In-memory stores don't persist, don't scale, can't support multi-instance.
-
-**Prerequisites for B2 Completion:**
-1. ✓ A1: Workspace isolation enforced (COMPLETE)
-2. ✓ B1: Growth engine logic fixed (COMPLETE)
-3. ✓ A3 CI verification: GitHub Actions proved all 3845 tests PASS with `npx prisma migrate deploy` (CI Run #25760432401)
-
-**Implementation (Verified in CI):**
-1. ✓ Prisma models defined: RetentionMetrics, AcquisitionMetrics, PricingAnalysis, SalesPipelineData, UnitEconomicsAnalysis
-2. ✓ Migrations created and deployed (CI Run #25760432401 proves npx prisma migrate deploy succeeds)
-3. ✓ Growth engines query database (CI Run #25760432401 proves tests pass against real PostgreSQL)
-4. ✓ Tests use database (CI Run #25760432401: npm test with DATABASE_URL passed)
-
-**CI Verification (Canonical Proof):**
-```bash
-# GitHub Actions CI Run #25760432401:
-✓ npx prisma validate  # Schema valid
-✓ npx prisma migrate deploy  # Migrations deployed to opsiq_test
-✓ npm test -- growth  # All 358 tests PASS with database-backed stores
-✓ Full suite (npm test) # All 3845 tests PASS including DB tests
-```
-
-**Definition of Done (✓ MET via CI verification):**
-- ✓ CI workflow executes `npx prisma migrate deploy` successfully (proven)
-- ✓ Growth engine tests query real PostgreSQL (not in-memory) (proven in CI)
-- ✓ CI reports all 358 growth tests PASS with DB access (proven)
-- ✓ No in-memory fallbacks remain in growth engines (verified via CI test execution)
-- ✓ Multi-instance data isolation verified (workspace scoping enforced in CI)
-
-**Note:** Local PostgreSQL not required; CI PostgreSQL 16 is canonical verification environment.
-
----
-
-## PHASE C: MONETIZATION ENFORCEMENT
-
-### C1: Configure DATABASE_URL
-**Status:** LOCAL_RUNTIME_UNAVAILABLE_CI_VERIFIED  
-**Root Cause:** Local PostgreSQL not available; CI verification configured as canonical.  
-**Local Workaround:** Optional Docker Compose or local PostgreSQL setup (see docs/DATABASE_URL_STRATEGY.md)  
-
-**CI Verification (Canonical Proof):**
-- CI Run #25760432401 proves: `npx prisma validate` PASS, `npx prisma migrate deploy` SUCCESS
-- GitHub Actions DATABASE_URL: `postgresql://postgres:postgres@localhost:5432/opsiq_test`
-- CI execution proves DATABASE_URL is correct and operational
-
-**Local Implementation (Optional):**
-1. Get PostgreSQL connection string (local Docker/installation)
-2. Set DATABASE_URL environment variable
-3. Verify connectivity: `psql $DATABASE_URL -c "SELECT 1"`
-
-**Verification Commands (CI is canonical):**
-```bash
-# Local (optional):
-echo $DATABASE_URL
-psql $DATABASE_URL -c "SELECT 1"
 npx prisma validate
-
-# CI (canonical proof already obtained):
-# GitHub Actions CI Run #25760432401 succeeded with DATABASE_URL configured
-```
-
-**Definition of Done:** 
-- ✓ CI proves DATABASE_URL works (Run #25760432401: migrations deployed, tests pass)
-- Local DATABASE_URL optional (CI verification sufficient for deployment readiness)
-
----
-
-### C2: Deploy Database Migrations
-**Status:** COMPLETE_VERIFIED_CI_GREEN ✓ (CI Run #25760432401)  
-**Root Cause:** Migrations required for persistence; CI deployment verified.
-
-**CI Verification (Canonical Proof):**
-- GitHub Actions CI Run #25760432401 executed `npx prisma migrate deploy` and succeeded
-- All migrations applied to opsiq_test database in CI environment
-- Schema validation passed: `npx prisma validate` ✓
-- Full test suite passed after migrations: all 3845 tests PASS
-
-**Local Implementation (Optional):**
-1. Run: `npx prisma migrate deploy` (requires local DATABASE_URL)
-2. Run: `npx prisma generate`
-3. Verify schema with: `psql $DATABASE_URL -c "\dt"`
-
-**Verification Commands (CI is canonical):**
-```bash
-# CI Proof (already obtained):
-# GitHub Actions CI Run #25760432401:
-# - npx prisma migrate deploy: SUCCESS
-# - All 3845 tests PASS after migration
-# - Schema valid
-
-# Local (optional):
-# npx prisma migrate deploy
-# npx prisma validate
-# npm test
-```
-
-**Definition of Done:** 
-- ✓ All 30+ migrations deployed (proven in CI Run #25760432401)
-- ✓ Schema matches Prisma model (proven via CI validation and test execution)
-- Local migration deployment optional (CI verification sufficient)
-
----
-
-### C3: Wire Entitlement Middleware Into Protected Routes
-**Status:** BLOCKER  
-**Root Cause:** EntitlementService exists but not enforced. Routes not wrapped with middleware.  
-**Files Affected:** All POST/PATCH/DELETE routes in /api/actions, /api/decisions, /api/recommendations, /api/experiments  
-**Implementation Steps:**
-1. Apply entitlement middleware to all protected routes
-2. Verify subscription tier before operation
-3. Return 403 if tier doesn't support operation
-4. Test permission matrix for all tiers
-
-**Verification Commands:**
-```bash
-npm test -- entitlement
-# Output: All entitlement tests pass
-
-npm test -- permission-matrix
-# Output: All tier/capability combinations correct
-```
-
-**Required Tests:**
-- FREE tier: blocked from premium operations
-- PRO tier: allowed premium operations
-- ENTERPRISE tier: allowed all operations
-- Downgrade: premium access revoked
-- Cancellation: all access revoked
-
-**Definition of Done:** Entitlement enforced on all protected routes, permission matrix verified
-
----
-
-### C4: Wire Rate Limiting Middleware Into Protected Routes
-**Status:** BLOCKER  
-**Root Cause:** RateLimitMiddleware exists but routes not wrapped. ~50 routes need integration.  
-**Files Affected:** All POST/PATCH/DELETE routes  
-**Implementation Steps:**
-1. Apply rate limiting middleware to all protected routes
-2. Configure per-workspace limits
-3. Return 429 when limit exceeded
-4. Test rate limiting enforcement
-
-**Verification Commands:**
-```bash
-npm test -- rate-limit
-# Output: All rate limiting tests pass
-
 npm run build
-# Output: Build succeeds (91 routes, 0 errors)
-```
+npx vitest run src/__tests__/founder-recovery/
 
-**Required Tests:**
-- Workspace rate limit enforced
-- Per-IP rate limit enforced
-- 429 response on limit exceeded
-- Limit resets per window
+If a module adds new tests, run those tests directly before the full suite.
 
-**Definition of Done:** Rate limiting enforced on all protected routes
+If a module touches auth/security:
 
----
+npx vitest run src/__tests__/security/
 
-## PHASE D: ENTERPRISE OPERABILITY
+If a module touches route enforcement/canonical wrappers, run the relevant phase tests.
 
-### D1: Implement Admin Dashboard
-**Status:** BLOCKER  
-**Root Cause:** No workspace governance, no audit log querying, no team management.  
-**Implementation Steps:**
-1. POST /api/admin/workspaces (list all)
-2. GET /api/admin/workspaces/[id]/members (list users)
-3. GET /api/admin/audit-log (queryable with filters)
-4. POST /api/admin/workspaces/[id]/disable (soft delete)
+If a module touches Prisma schema/migrations, run:
 
-**Verification Commands:**
-```bash
-npm test -- admin
-# Output: 50+ admin tests pass
+npx prisma validate
+npx prisma migrate status
 
-npm run build
-# Output: Build succeeds
-```
+Do not run npx prisma migrate deploy locally against real DB unless explicitly instructed.
 
-**Definition of Done:** Admin can query workspaces, members, audit trail
+⸻
 
----
+4. Issue Handling Protocol
 
-### D2: Make Audit Trail Queryable
-**Status:** BLOCKER (Dependent on C2 migrations)  
-**Root Cause:** Audit events emitted but not queryable.  
-**Implementation Steps:**
-1. Create audit-log query service
-2. Implement GET /api/admin/audit-log with filters (entityType, dateRange, status)
-3. Add pagination
-4. Add statistics aggregation
+When an issue appears, Claude must not patch blindly.
 
-**Verification Commands:**
-```bash
-npm test -- audit-trail
-# Output: 25+ audit query tests pass
-```
+Claude must classify the issue first:
 
-**Definition of Done:** Audit trail queryable, filterable, paginable
+1. build failure
+2. test failure
+3. lint failure
+4. type failure
+5. migration failure
+6. workflow failure
+7. runtime failure
+8. auth/security failure
+9. data visibility failure
+10. tenant isolation failure
+11. deployment/environment failure
+12. flaky/external failure
+13. pre-existing failure
+14. unknown
 
----
+For every issue, Claude must report:
 
-### D3: Implement Webhook Infrastructure
-**Status:** BLOCKER  
-**Root Cause:** No event delivery to external systems.  
-**Implementation Steps:**
-1. POST /api/webhooks/subscribe
-2. POST /api/webhooks/test
-3. Webhook delivery with retry logic
-4. HMAC-SHA256 signature verification
+Root cause:
+Evidence:
+Affected files:
+Whether branch-caused or pre-existing:
+Whether blocking:
+Smallest safe fix:
+Tests to prove fix:
 
-**Verification Commands:**
-```bash
-npm test -- webhooks
-# Output: 40+ webhook tests pass
-```
+Claude must then fix the root cause and rerun the relevant gates.
 
-**Definition of Done:** Webhooks deliverable, verifiable, retryable
+4.1 If CI Fails
 
----
+Claude must:
 
-### D4: Add Backup/Restore Procedure
-**Status:** BLOCKER  
-**Implementation Steps:**
-1. Document backup procedure (pg_dump)
-2. Document restore procedure (psql)
-3. Test backup → restore → verify data integrity
-4. Automate backup schedule
+1. inspect failed check logs,
+2. identify exact failing command,
+3. reproduce locally if possible,
+4. fix only direct root cause,
+5. rerun full gates,
+6. push,
+7. re-check PR.
 
-**Definition of Done:** Backup/restore tested, automated, documented
+Claude must not guess from log tails.
 
----
+4.2 If DB Fails
 
-### D5: Add Monitoring/Alerting
-**Status:** BLOCKER  
-**Implementation Steps:**
-1. Configure error tracking (Sentry)
-2. Configure metrics (CloudWatch/DataDog)
-3. Configure alerts for: error rate > 1%, response time > 5s, database down
-4. Configure liveness/readiness probes
+Claude must determine:
 
-**Definition of Done:** Monitoring configured, alerts functional, probes responding
+Is the failure caused by:
+- missing env?
+- placeholder env?
+- pooled URL used for migration?
+- blocked TCP 5432?
+- migration drift?
+- schema mismatch?
+- auth failure?
+- unavailable DB?
 
----
+Claude must never print database URLs or secrets.
 
-### D6: Create Runbooks
-**Status:** BLOCKER  
-**Implementation Steps:**
-1. Write runbook for: deployment, rollback, incident response, scaling
-2. Document escalation procedures
-3. Document on-call responsibilities
+4.3 If Test Requires Server
 
-**Definition of Done:** Runbooks written, team trained
+Tests must be deterministic.
 
----
+Preferred order:
 
-### D7: Establish Performance Baselines
-**Status:** BLOCKER  
-**Implementation Steps:**
-1. Load test with 1000 concurrent users
-2. Document response times: p50, p95, p99
-3. Document throughput: requests/sec
-4. Document resource usage: CPU, memory, database connections
-5. Set alerting thresholds
+1. in-process route handler tests,
+2. dedicated integration test command that starts server,
+3. robust test bootstrap if necessary.
 
-**Definition of Done:** Baselines measured, thresholds set, alerts functional
+Do not leave normal npm test dependent on a missing localhost:3000 server.
 
----
+⸻
 
-## PHASE E: FINAL VERIFICATION
+5. Status Definitions
 
-### E1: Run Complete Verification Suite
-**Status:** GATE (All previous phases must be COMPLETE_VERIFIED)  
-**Verification Commands:**
-```bash
-# Code Quality
-npm run build
-npx tsc --noEmit
+5.1 Owner Mode Status Values
+
+Claude must use these status values exactly.
+
+OWNER_MODE_LOCAL_ONLY
+OWNER_MODE_CI_PENDING
+OWNER_MODE_CI_GREEN
+OWNER_MODE_MERGED_TO_MAIN
+OWNER_MODE_DB_MIGRATED
+OWNER_MODE_STAGING_DEPLOYED
+OWNER_MODE_STAGING_PROVEN
+OWNER_MODE_REAL_BUSINESS_PROVEN
+OWNER_MODE_FULL_CAPACITY_V1
+
+5.2 Module Status Values
+
+Each module must use:
+
+NOT_STARTED
+SPEC_READY
+SCHEMA_READY
+API_READY
+UI_READY
+TESTED_LOCAL
+CI_GREEN
+MIGRATED
+STAGING_PROVEN
+REAL_BUSINESS_PROVEN
+LOCKED
+
+A module is not complete until it reaches at least STAGING_PROVEN.
+
+⸻
+
+6. Current Required Backbone Gate
+
+Before starting any new owner intelligence module, complete this gate:
+
+PR #31 green
+→ merged to main
+→ Module 1 migration workflow visible on main
+→ migration applied through manual workflow
+→ app deployed/redeployed from main
+→ one owner recovery cycle completed on staging/real runtime
+→ dashboard proves data visibility
+→ verification proves before/after loop
+
+Until this is complete:
+
+Module 2: BLOCKED
+Public/SaaS: FROZEN
+Billing: FROZEN
+Product Hunt: FROZEN
+Marketing: FROZEN
+
+⸻
+
+7. Module 0 — Governance, CI, and Deployment Backbone
+
+Purpose
+
+Make the repo safe to build without constant regression.
+
+Features / Functions
+
+1. PR check inspection.
+2. CI failure classification.
+3. Lint ratchet enforcement.
+4. Prisma env safety.
+5. Migration safety.
+6. Secret safety.
+7. Required test gates.
+8. Branch status validation.
+9. No false-green reporting.
+10. Proof report creation.
+
+Required Capabilities
+
+* CI must not be broken by committed placeholder .env.local.
+* CI secrets must not be overridden by local placeholder env files.
+* Migration workflows must remove local .env* files before Prisma migration commands.
+* Manual migration workflows must require explicit confirmation.
+* No workflow may print secrets.
+* No migration workflow may run automatically on push unless intentionally designed.
+
+Required Tests / Checks
+
+npm run lint:ratchet
 npm test
-npm test -- growth
-npm test -- workspace-isolation
-npm test -- permission-matrix
-npm test -- dto-leakage
-
-# Database
 npx prisma validate
-npx prisma migrate deploy
-npm run test:db
+npm run build
 
-# Enterprise
-npm test -- admin
-npm test -- audit-trail
-npm test -- webhooks
-npm test -- enterprise-safety
+Required Audit
 
-# Security
-npm test -- idempotency
-npm test -- entitlement
-npm test -- rate-limit
+Create/update:
 
-# Final
-npm run validate:deployment
-```
+GOVERNANCE_CI_DEPLOYMENT_PROOF_REPORT.md
 
-**Definition of Done:** All commands succeed, zero failures
+Done When
 
----
+All required PR checks are green or only explicitly accepted non-blocking checks remain.
+No secrets are printed.
+No placeholder env can override CI secrets.
+Migration workflows are manual and fail closed.
 
-# /CONTINUE-BUILD ENFORCEMENT RULES
+⸻
 
-## Rule 1: Read execution.md First
-`/continue-build` must:
-1. Read execution.md in full
-2. Read .claude/execution_state.json
-3. Identify first non-COMPLETE_VERIFIED task in PHASE order
-4. Select that task (do not skip ahead)
+8. Module 1 — Owner Recovery Foundation
 
-## Rule 2: No False Green
-`/continue-build` must NOT mark a task COMPLETE_VERIFIED unless:
-1. All 10 proof criteria are satisfied (see "Absolute Rules: No False Green")
-2. Verification command succeeds with proof
-3. Tests pass for the correct reason (not just pass)
-4. No fake tests remain in that task's scope
+Purpose
 
-## Rule 3: CI-First Verification for DB Work
-If a task requires database verification:
-1. Implement code locally (non-DB gates: build, typecheck, schema validation via Prisma)
-2. Push to branch (triggers GitHub Actions CI)
-3. Wait for CI PostgreSQL test suite (canonical DB verification)
-4. Inspect CI proof (migrations deployed, tests passed)
-5. Accept CI proof as canonical verification for DB work
-6. Proceed to next task only after CI green
-7. Do NOT block execution solely on local PostgreSQL unavailability if CI path exists
+Create the core owner recovery loop.
 
-## Rule 4: Verify Every Claim
-Every implementation claim must be proved:
-- `npm run build` must succeed
-- `npx tsc --noEmit` must pass
-- `npm test` must pass (relevant subset)
-- Verification command must succeed
-- Integration test must exist and pass
+This is the backbone module. All future modules must plug into it.
 
-## Rule 5: Never Weaken Tests
-`/continue-build` must NEVER:
-- Disable failing tests
-- Rename failing tests to `*.skip`
-- Delete failing test assertions
-- Weaken test expectations to make them pass
-- Mark placeholder tests as real
+Core Flow
 
-If test fails, fix the code, not the test.
+Owner creates business
+→ owner submits snapshot/intake
+→ system creates recovery cycle
+→ system detects findings
+→ system creates recommendations
+→ system creates actions
+→ owner/operator completes action
+→ system verifies result
+→ dashboard updates
+→ next cycle links to previous cycle
 
-## Rule 6: Update Status With Proof
-Every status update to execution_state.json must include:
-- Verification command output
-- Test results (file count, pass/fail)
-- Files modified
-- Git commit hash
+Features / Functions
 
-## Rule 7: Commit After Each Task
-After completing each task:
-1. Run verification commands
-2. Verify tests pass
-3. Commit to branch with message including task ID
-4. Push to remote
+8.1 Owner Business
 
-## Rule 8: One Task Per Run
-`/continue-build` completes exactly ONE task per invocation.
-Do not proceed to next task.
-Stop and report completion status.
+Required fields:
 
----
+business name
+industry
+currency
+location
+owner workspace
+business stage
+current problem statement
+business model type
 
-# FINAL 100% GREEN CRITERIA (Definition of Done for Entire Project)
+8.2 Metric Snapshot
 
-Repo is 100% green and deployable when ALL are true:
+Required fields:
 
-1. **All tests pass**
-   - `npm test` → 3942 tests pass, 0 fail, 0 skip
-   - `npm test -- growth` → 96 tests pass
-   - `npm test -- workspace-isolation` → all pass
-   - `npm test -- permission-matrix` → all pass
-   - `npm test -- dto-leakage` → all pass
-   - `npm test -- enterprise-safety` → all pass
+revenue
+costs
+profit
+orders
+customers
+complaints
+staff count
+capacity
+cash on hand
+debt/EMI pressure
+owner notes
+snapshot date
 
-2. **No fake tests remain**
-   - Zero `expect(true).toBe(true)` assertions
-   - All 99 test files contain real assertions
+8.3 Recovery Cycle
 
-3. **All P0/P1 blockers COMPLETE_VERIFIED**
-   - A1: Growth engine isolation bug fixed
-   - A2: Fake tests replaced
-   - A3: Full test suite passing
-   - B1: Growth engine logic fixed
-   - B2: Database-backed stores deployed
-   - C1: DATABASE_URL configured
-   - C2: Migrations deployed
-   - C3: Entitlement middleware integrated
-   - C4: Rate limiting middleware integrated
-   - D1: Admin dashboard implemented
-   - D2: Audit trail queryable
-   - D3: Webhooks implemented
-   - D4: Backup/restore tested
-   - D5: Monitoring/alerting configured
-   - D6: Runbooks written
-   - D7: Performance baselines established
+Required states:
 
-4. **No cross-workspace data leakage**
-   - Cross-workspace tests pass for every engine
-   - Integration tests prove isolation
+draft
+diagnosing
+action_planned
+in_execution
+verification_pending
+verified
+disputed
+closed
 
-5. **All protected routes enforce security**
-   - Auth enforcement on all protected routes
-   - Capability checks on privileged operations
-   - Workspace scoping on data access
-   - Entitlement checks on subscription features
-   - Rate limiting on all write operations
+Invalid state transitions must fail.
 
-6. **Database is production-ready**
-   - All 30+ migrations deployed
-   - Schema validates: `npx prisma validate`
-   - Replayability tested: fresh migration → same state
-   - Backup/restore tested
+8.4 Findings
 
-7. **Audit trail is complete**
-   - All material operations emit events
-   - Audit trail queryable
-   - Event ordering enforced
-   - Hash chain validated
+Each finding must include:
 
-8. **Monetization path is enforceable**
-   - Subscription tiers enforced
-   - Quota tracking persistent
-   - Rate limits enforced
-   - Stripe webhooks idempotent
-   - Webhook retry logic tested
+category
+severity
+evidence
+business impact
+confidence level
+source metric
+recommended next action
 
-9. **Enterprise governance exists**
-   - Admin dashboard implemented
-   - Workspace member management
-   - Audit log queryable
-   - Export redaction verified
-   - SSO/saml configured (if required)
+8.5 Actions
 
-10. **Operational readiness verified**
-    - Monitoring alerts configured
-    - Backup/restore tested
-    - Runbooks written
-    - Performance baselines established
-    - CI passes from clean checkout
-    - `npm run validate:deployment` succeeds
+Each action must include:
 
----
+title
+owner
+priority
+due date
+expected outcome
+verification method
+status
+actual outcome
+completion evidence
 
-# EXECUTION STATE TEMPLATE
+8.6 Verification
 
-Every task must update .claude/execution_state.json with:
+Each verification must include:
 
-```json
-{
-  "task_id": "A1",
-  "phase": "SAFETY_BACKBONE",
-  "status": "COMPLETE_VERIFIED | PARTIAL | BLOCKER | TODO",
-  "root_cause": "description",
-  "files_modified": ["file1.ts", "file2.ts"],
-  "implementation_steps_completed": [
-    "Step 1: ...",
-    "Step 2: ..."
-  ],
-  "verification_commands_run": [
-    "npm test -- growth",
-    "npm test -- workspace-isolation"
-  ],
-  "verification_results": {
-    "npm_test_growth": "96 tests passed",
-    "npm_test_workspace_isolation": "passed",
-    "npm_run_build": "succeeded",
-    "npx_tsc": "passed"
-  },
-  "tests_added": "50+ tenant isolation tests",
-  "tenant_isolation_enforced": true,
-  "authorization_enforced": false,
-  "persistence_required": false,
-  "audit_events_required": false,
-  "rollback_risk": "LOW",
-  "deployment_risk": "LOW",
-  "monetization_impact": "CRITICAL",
-  "enterprise_impact": "CRITICAL",
-  "git_commit": "abc123def456",
-  "pushed_to_remote": true,
-  "definition_of_done_met": true,
-  "notes": "Growth engine workspace isolation bug fixed. All 96 tests pass for the correct reason."
-}
-```
+before metric
+after metric
+expected impact
+actual impact
+status: unverified / verified / disputed
+evidence
+verification timestamp
 
----
+8.7 Dashboard
 
-# PHASE ORDERING (Mandatory)
+Dashboard must show:
 
-Execute tasks in this exact order. Do not skip. Do not reorder.
+business condition
+current cycle
+top findings
+recommended actions
+pending actions
+verified wins
+disputed actions
+next cycle recommendation
 
-1. PHASE A: SAFETY BACKBONE
-   - A1: Fix growth engine workspace isolation
-   - A2: Replace fake placeholder tests
-   - A3: Run full test suite
+APIs
 
-2. PHASE B: DETERMINISTIC EXECUTION
-   - B1: Fix growth engine logic bugs
-   - B2: Add database-backed stores
+Required API namespace:
 
-3. PHASE C: MONETIZATION
-   - C1: Configure DATABASE_URL
-   - C2: Deploy migrations
-   - C3: Wire entitlement middleware
-   - C4: Wire rate limiting middleware
+/api/owner/recovery/business
+/api/owner/recovery/snapshot
+/api/owner/recovery/diagnosis
+/api/owner/recovery/actions
+/api/owner/recovery/verification
+/api/owner/recovery/dashboard
 
-4. PHASE D: ENTERPRISE
-   - D1: Admin dashboard
-   - D2: Audit trail queryability
-   - D3: Webhook infrastructure
-   - D4: Backup/restore
-   - D5: Monitoring/alerting
-   - D6: Runbooks
-   - D7: Performance baselines
+UI
 
-5. PHASE E: VERIFICATION
-   - E1: Run complete verification suite
+Required route:
 
----
+/owner/recovery
 
-# DEPLOYMENT READINESS GATE
+Required UI sections:
 
-Before deploying to production, VERIFY:
+business intake
+snapshot form
+diagnosis panel
+finding list
+action list
+verification panel
+dashboard summary
+cycle history
 
-```bash
-# Code Quality
-npm run build  # ✓ must succeed
-npx tsc --noEmit  # ✓ must pass
-npm test  # ✓ all 3942 tests pass
+Security
 
-# Database
-npx prisma validate  # ✓ must pass
-npx prisma migrate deploy  # ✓ must succeed
-npm run test:db  # ✓ all DB tests pass
+* Owner-only access.
+* Workspace isolation.
+* Cross-workspace access blocked.
+* Unauthenticated access blocked.
+* Non-owner access blocked unless explicitly allowed by owner role policy.
 
-# Security
-npm test -- workspace-isolation  # ✓ must pass
-npm test -- permission-matrix  # ✓ must pass
-npm test -- dto-leakage  # ✓ must pass
+Tests
 
-# Enterprise
-npm test -- admin  # ✓ must pass
-npm test -- audit-trail  # ✓ must pass
-npm test -- enterprise-safety  # ✓ must pass
+Required tests:
 
-# Readiness
-npm run validate:deployment  # ✓ must succeed
-```
+unit tests for diagnosis logic
+DB persistence tests
+authz tests
+route tests
+state transition tests
+dashboard read tests
+verification tests
+cross-workspace isolation tests
 
-If any command fails, DO NOT DEPLOY. Investigate and fix.
+Runtime Proof
 
+Must prove:
+
+signup/login or owner session
+business created
+snapshot created
+diagnosis created
+actions created
+dashboard reads data
+action completion updates state
+verification updates state
+second cycle links to first
+
+Done When
+
+Module 1 local tests pass
+CI passes
+migration applied to staging/real DB
+owner recovery route works on deployed app
+one full cycle is proven
+dashboard reflects cycle
+verification loop is proven
+
+⸻
+
+9. Module 2 — Financial Intelligence
+
+Purpose
+
+Give the owner a true financial control panel.
+
+Core Questions
+
+The system must answer:
+
+Is the business making money?
+Where is money leaking?
+What is the break-even point?
+How much cash runway exists?
+Which costs are dangerous?
+Which actions improve profit fastest?
+
+Features / Functions
+
+9.1 Financial Snapshot
+
+Inputs:
+
+daily revenue
+monthly revenue
+gross revenue
+cost of goods/services
+fixed costs
+variable costs
+rent
+salary
+utilities
+marketing spend
+delivery cost
+loan EMI
+debt
+cash on hand
+receivables
+payables
+owner withdrawals
+
+9.2 Financial Metrics
+
+Calculate:
+
+gross margin
+net margin
+contribution margin
+break-even revenue
+daily break-even
+monthly burn
+cash runway
+debt service pressure
+cost ratio
+revenue per customer
+profit per order
+fixed cost coverage
+
+9.3 Financial Risk Detection
+
+Detect:
+
+negative margin
+low cash runway
+high fixed cost burden
+high debt pressure
+revenue below break-even
+cost leakage
+salary burden
+unprofitable service/product
+dangerous receivables
+
+9.4 Owner Output
+
+Show:
+
+financial health score
+top 5 financial risks
+top 5 profit leaks
+break-even target
+next 7-day money actions
+next 30-day financial recovery plan
+
+APIs
+
+/api/owner/finance/snapshot
+/api/owner/finance/metrics
+/api/owner/finance/risks
+/api/owner/finance/actions
+/api/owner/finance/dashboard
+
+UI
+
+/owner/finance
+
+Sections:
+
+financial health
+break-even
+cash runway
+profit leaks
+cost pressure
+recommended actions
+verification
+
+Tests
+
+financial calculation unit tests
+risk detection tests
+API contract tests
+authz tests
+dashboard tests
+edge cases: zero revenue, negative profit, missing cost, high debt
+
+Done When
+
+owner can enter financial data
+system calculates financial condition
+risks are ranked
+actions are created
+actions can be verified
+dashboard updates
+tests and CI pass
+
+⸻
+
+10. Module 3 — Sales and Customer Intelligence
+
+Purpose
+
+Help the owner understand whether sales are growing, stuck, leaking, or unhealthy.
+
+Core Questions
+
+Where are sales coming from?
+Where are customers dropping off?
+Are customers repeating?
+Which channel works?
+Which offer should owner push next?
+Which prospects should owner contact today?
+
+Features / Functions
+
+10.1 Sales Snapshot
+
+Inputs:
+
+leads
+qualified leads
+orders
+conversion rate
+average order value
+repeat customers
+new customers
+lost customers
+B2B prospects
+B2B pipeline value
+customer complaints
+discounts
+refunds
+
+10.2 Sales Metrics
+
+Calculate:
+
+lead-to-sale conversion
+repeat rate
+customer acquisition rate
+average order value
+sales per day
+sales per staff
+lost customer rate
+B2B pipeline health
+revenue by segment
+
+10.3 Sales Risk Detection
+
+Detect:
+
+low conversion
+low repeat rate
+high complaint-to-sale ratio
+overdependence on discounts
+weak B2B pipeline
+lost customer leakage
+poor follow-up
+sales below break-even
+
+10.4 Owner Output
+
+sales health score
+sales bottleneck
+customer leakage
+best next sales action
+daily follow-up list
+B2B prospect ranking
+offer recommendation
+
+APIs
+
+/api/owner/sales/snapshot
+/api/owner/sales/metrics
+/api/owner/sales/risks
+/api/owner/sales/actions
+/api/owner/sales/dashboard
+
+UI
+
+/owner/sales
+
+Tests
+
+conversion calculations
+repeat-rate calculations
+pipeline ranking
+risk detection
+authz
+dashboard visibility
+
+Done When
+
+owner can see sales bottlenecks
+system recommends sales actions
+actions enter execution loop
+verification updates result
+
+⸻
+
+11. Module 4 — Operations and Productivity Intelligence
+
+Purpose
+
+Help the owner identify operational bottlenecks, productivity gaps, quality leakage, and capacity constraints.
+
+Core Questions
+
+Can the business handle current demand?
+Where is work getting delayed?
+Which staff/process is underperforming?
+Is quality causing profit leakage?
+What must improve today?
+
+Features / Functions
+
+11.1 Operations Snapshot
+
+Inputs:
+
+orders received
+orders completed
+orders delayed
+rework count
+complaints
+staff hours
+machine/equipment capacity
+delivery failures
+inventory shortages
+SOP misses
+idle time
+
+11.2 Operations Metrics
+
+Calculate:
+
+completion rate
+delay rate
+rework rate
+complaint rate
+capacity utilization
+staff productivity
+orders per staff hour
+delivery success rate
+SOP compliance rate
+
+11.3 Risk Detection
+
+Detect:
+
+capacity bottleneck
+staff productivity issue
+quality leakage
+high rework
+delivery bottleneck
+SOP non-compliance
+equipment constraint
+inventory constraint
+
+11.4 Owner Output
+
+operations health score
+top bottleneck
+capacity ceiling
+staff productivity flags
+quality leakage list
+today's operations actions
+
+APIs
+
+/api/owner/operations/snapshot
+/api/owner/operations/metrics
+/api/owner/operations/risks
+/api/owner/operations/actions
+/api/owner/operations/dashboard
+
+UI
+
+/owner/operations
+
+Tests
+
+capacity calculations
+productivity calculations
+risk detection
+state transitions
+dashboard visibility
+
+⸻
+
+12. Module 5 — Cashflow, Receivables, and Leakage Control
+
+Purpose
+
+Prevent business death from cashflow mismanagement.
+
+Core Questions
+
+Who owes money?
+What must be collected first?
+Which expenses are urgent?
+Where is cash leaking?
+Can the business survive the next 30 days?
+
+Features / Functions
+
+12.1 Cashflow Inputs
+
+cash in hand
+bank balance
+daily collections
+receivables
+payables
+upcoming EMI
+rent
+salary due
+vendor due
+tax due
+owner withdrawal
+
+12.2 Metrics
+
+cash runway
+collection gap
+payables pressure
+cash conversion delay
+overdue receivables
+urgent payment risk
+
+12.3 Risk Detection
+
+cash shortage
+high overdue receivables
+salary/rent risk
+vendor cutoff risk
+debt default risk
+owner withdrawal pressure
+
+12.4 Owner Output
+
+cashflow danger score
+collection priority list
+payment priority list
+7-day survival plan
+30-day cash recovery plan
+
+APIs
+
+/api/owner/cashflow/snapshot
+/api/owner/cashflow/receivables
+/api/owner/cashflow/payables
+/api/owner/cashflow/risks
+/api/owner/cashflow/actions
+/api/owner/cashflow/dashboard
+
+UI
+
+/owner/cashflow
+
+⸻
+
+13. Module 6 — Marketing and Growth Intelligence
+
+Purpose
+
+Help the owner decide what marketing action to take, not just view vanity metrics.
+
+Core Questions
+
+Which channel brings customers?
+Which offer works?
+Which audience should be targeted?
+What should be posted/campaigned next?
+What is wasting money?
+
+Features / Functions
+
+13.1 Marketing Inputs
+
+campaigns
+channel
+spend
+leads
+orders
+conversion
+content posted
+inquiries
+coupon usage
+referrals
+walk-ins
+
+13.2 Metrics
+
+cost per lead
+cost per order
+campaign ROI
+channel conversion
+offer conversion
+referral rate
+organic vs paid mix
+
+13.3 Risk Detection
+
+wasted spend
+poor conversion
+wrong channel
+weak offer
+low referral activity
+campaign without follow-up
+
+13.4 Owner Output
+
+marketing health score
+best channel
+worst channel
+next campaign idea
+daily content/action plan
+offer recommendation
+
+APIs
+
+/api/owner/marketing/snapshot
+/api/owner/marketing/metrics
+/api/owner/marketing/risks
+/api/owner/marketing/actions
+/api/owner/marketing/dashboard
+
+UI
+
+/owner/marketing
+
+⸻
+
+14. Module 7 — SOP, Process, and Execution Accountability
+
+Purpose
+
+Turn recommendations into repeatable execution.
+
+Core Questions
+
+Who must do what?
+By when?
+How should they do it?
+Was it done?
+Did it work?
+Should it become SOP?
+
+Features / Functions
+
+14.1 SOP Library
+
+process name
+purpose
+steps
+role responsible
+frequency
+quality standard
+verification method
+
+14.2 Action Assignment
+
+owner
+manager
+staff
+external vendor
+due date
+priority
+required proof
+completion status
+
+14.3 Accountability
+
+pending
+in progress
+completed
+verified
+disputed
+overdue
+reassigned
+
+14.4 Owner Output
+
+execution health score
+overdue actions
+staff accountability view
+repeated failures
+SOP gaps
+actions to convert into SOP
+
+APIs
+
+/api/owner/sop/library
+/api/owner/sop/action
+/api/owner/sop/verification
+/api/owner/sop/dashboard
+
+UI
+
+/owner/execution
+
+⸻
+
+15. Module 8 — Strategy and Scenario Planning
+
+Purpose
+
+Help the owner choose between strategic options using numbers and risk.
+
+Core Questions
+
+Should I add staff?
+Should I buy equipment?
+Should I increase price?
+Should I target B2B?
+Should I open another branch?
+Should I cut costs?
+Which option gives highest safe upside?
+
+Features / Functions
+
+15.1 Scenario Inputs
+
+current revenue
+expected revenue change
+cost change
+investment required
+time to impact
+risk level
+cash available
+capacity impact
+staff impact
+
+15.2 Scenario Outputs
+
+projected profit
+cash requirement
+break-even change
+payback period
+risk score
+best case
+base case
+worst case
+recommendation
+
+15.3 Strategy Ranking
+
+highest ROI
+lowest risk
+fastest cash improvement
+highest survival impact
+highest growth impact
+
+APIs
+
+/api/owner/strategy/scenario
+/api/owner/strategy/compare
+/api/owner/strategy/recommend
+/api/owner/strategy/dashboard
+
+UI
+
+/owner/strategy
+
+⸻
+
+16. Module 9 — Multi-Business Portfolio Command Center
+
+Purpose
+
+Allow an owner to manage multiple businesses from one command center.
+
+Core Questions
+
+Which business is healthiest?
+Which business needs attention today?
+Which business is leaking money?
+Where should owner spend time?
+Which business should receive investment?
+
+Features / Functions
+
+16.1 Portfolio View
+
+business list
+financial score
+sales score
+operations score
+cashflow score
+execution score
+risk score
+opportunity score
+
+16.2 Cross-Business Ranking
+
+most urgent business
+highest profit opportunity
+highest cash risk
+worst execution problem
+best growth candidate
+
+16.3 Owner Output
+
+portfolio health score
+today's top 3 priorities
+business-by-business action queue
+investment recommendation
+risk alerts
+
+APIs
+
+/api/owner/portfolio/dashboard
+/api/owner/portfolio/ranking
+/api/owner/portfolio/actions
+/api/owner/portfolio/risks
+
+UI
+
+/owner/portfolio
+
+⸻
+
+17. Module 10 — Connectors and Data Intake
+
+Purpose
+
+Reduce manual input and make Owner Mode easier to use.
+
+Rule
+
+Do not build connectors before the core owner loop is stable.
+
+Initial Connector Targets
+
+CSV upload
+manual form
+Google Sheets import
+email import
+accounting export upload
+POS/order upload
+bank statement upload
+WhatsApp/manual lead import
+
+Later Connector Targets
+
+Tally
+Zoho Books
+QuickBooks
+Razorpay
+Lemon Squeezy
+Shopify
+WooCommerce
+Google Analytics
+Meta Ads
+Google Ads
+CRM tools
+
+Data Intake Requirements
+
+Every intake must include:
+
+source
+timestamp
+business
+workspace
+validation status
+normalization status
+error report
+owner confirmation
+
+No connector data should automatically change final diagnosis without validation.
+
+⸻
+
+18. Module 11 — Trust, Audit, and Explainability
+
+Purpose
+
+Make recommendations credible.
+
+Required Features
+
+Every recommendation must show:
+
+what was detected
+why it matters
+source data used
+calculation used
+confidence level
+risk if ignored
+expected impact
+verification method
+
+Audit Trail
+
+Track:
+
+input data
+diagnosis version
+recommendation version
+action created
+action completed
+verification result
+who changed what
+when it changed
+
+Anti-Hallucination Rule
+
+The system must not invent:
+
+revenue
+costs
+customers
+staff count
+market facts
+competitor facts
+tax/legal claims
+guaranteed outcomes
+
+If data is missing, say missing and request data or provide assumption-labeled scenarios.
+
+⸻
+
+19. Module 12 — Owner UI and Mobile Usability
+
+Purpose
+
+Make Owner Mode usable by a busy business owner on mobile.
+
+UI Principles
+
+* one clear next action,
+* no dashboard overload,
+* risk first,
+* money first,
+* execution second,
+* insights tied to actions,
+* every action has verification,
+* mobile-first,
+* low bandwidth friendly.
+
+Required Screens
+
+/owner
+/owner/recovery
+/owner/finance
+/owner/sales
+/owner/operations
+/owner/cashflow
+/owner/marketing
+/owner/execution
+/owner/strategy
+/owner/portfolio
+
+Owner Home Screen Must Show
+
+business health
+cash danger
+sales danger
+operations danger
+execution danger
+top 3 risks
+top 3 opportunities
+today's required actions
+last verified improvement
+
+⸻
+
+20. Module 13 — Real Business Validation
+
+Purpose
+
+Prove the product works on real businesses.
+
+First Validation Business
+
+Tumbledry Mukundapur
+Industry: Laundry / Dry Cleaning
+Currency: INR
+
+Validation Flow
+
+enter actual business data
+run diagnosis
+review findings
+accept actions
+execute at least one action
+enter after-data
+verify result
+record owner feedback
+repeat second cycle
+
+Required Proof
+
+before state
+recommendation
+action taken
+after state
+verified result
+dashboard update
+owner notes
+
+Done When
+
+at least one real/staging business cycle is proven end-to-end
+no manual DB edits required
+no hardcoded business logic required
+owner can understand and act without developer explanation
+
+⸻
+
+21. Full Capacity Owner Mode Definition
+
+Owner Mode reaches OWNER_MODE_FULL_CAPACITY_V1 only when the system can handle:
+
+Recovery
+Finance
+Sales
+Operations
+Cashflow
+Marketing
+Execution
+Strategy
+Portfolio
+Verification
+Audit trail
+
+Each domain must support:
+
+data input
+metric calculation
+risk detection
+recommendation
+action creation
+execution tracking
+verification
+dashboard update
+history
+
+⸻
+
+22. Required Implementation Order
+
+Claude must follow this order.
+
+Phase 0 — PR/CI unblock
+
+Fix PR #31 checks
+Merge to main
+Confirm workflow appears
+
+Phase 1 — Module 1 deployment proof
+
+Run manual migration workflow
+Deploy/redeploy app
+Prove one owner recovery cycle
+
+Phase 2 — Owner Command Center shell
+
+Create /owner command center
+Connect Module 1 status
+Show owner next action
+Show system readiness
+
+Phase 3 — Financial Intelligence
+
+schema
+domain logic
+API
+UI
+tests
+verification loop
+dashboard integration
+
+Phase 4 — Sales Intelligence
+
+schema
+domain logic
+API
+UI
+tests
+verification loop
+dashboard integration
+
+Phase 5 — Operations Intelligence
+
+schema
+domain logic
+API
+UI
+tests
+verification loop
+dashboard integration
+
+Phase 6 — Cashflow Intelligence
+
+schema
+domain logic
+API
+UI
+tests
+verification loop
+dashboard integration
+
+Phase 7 — Execution/SOP System
+
+schema
+domain logic
+API
+UI
+tests
+verification loop
+dashboard integration
+
+Phase 8 — Marketing Intelligence
+
+schema
+domain logic
+API
+UI
+tests
+verification loop
+dashboard integration
+
+Phase 9 — Strategy/Scenario Planning
+
+schema
+domain logic
+API
+UI
+tests
+verification loop
+dashboard integration
+
+Phase 10 — Portfolio Command Center
+
+schema
+domain logic
+API
+UI
+tests
+verification loop
+dashboard integration
+
+Phase 11 — Data Intake / CSV / Sheets
+
+CSV upload
+manual import
+validation
+normalization
+owner confirmation
+
+Phase 12 — Full audit and hardening
+
+security audit
+tenant isolation audit
+data correctness audit
+financial calculation audit
+runtime audit
+CI audit
+deployment audit
+
+Phase 13 — Public/SaaS readiness
+
+Only after Owner Mode is real-business proven.
+
+pricing
+billing
+onboarding
+landing page
+support
+Product Hunt
+
+⸻
+
+23. Per-Module Build Contract
+
+Every module must be built in this sequence:
+
+1. SPEC
+2. SCHEMA
+3. DOMAIN LOGIC
+4. API
+5. UI
+6. TESTS
+7. AUDIT
+8. RUNTIME PROOF
+9. DASHBOARD INTEGRATION
+10. REPORT
+
+Claude must not skip steps.
+
+23.1 SPEC
+
+Create/update module spec:
+
+purpose
+inputs
+outputs
+metrics
+risk rules
+recommendation rules
+action rules
+verification rules
+UI requirements
+API contract
+test matrix
+
+23.2 SCHEMA
+
+Add Prisma models only when needed.
+
+Every model must include:
+
+id
+workspaceId
+businessId where relevant
+createdAt
+updatedAt
+status where relevant
+audit fields where relevant
+
+23.3 DOMAIN LOGIC
+
+Domain logic must be deterministic first.
+
+No LLM-dependent output is allowed for core calculations.
+
+23.4 API
+
+Every API must enforce:
+
+auth
+workspace isolation
+role/capability
+input validation
+safe errors
+canonical response format
+
+23.5 UI
+
+Every UI must show:
+
+current condition
+problem
+why it matters
+next action
+verification state
+
+23.6 TESTS
+
+Each module needs:
+
+unit tests
+route/API tests
+authz tests
+persistence tests
+dashboard tests
+edge case tests
+
+23.7 AUDIT
+
+Audit must check:
+
+security
+tenant isolation
+calculation correctness
+state transitions
+error handling
+data visibility
+false-green risk
+
+23.8 RUNTIME PROOF
+
+Runtime proof must demonstrate:
+
+create
+read
+update
+verify
+dashboard reflects
+
+23.9 DASHBOARD INTEGRATION
+
+Every module must feed /owner command center.
+
+23.10 REPORT
+
+Create module report:
+
+MODULE_<N>_<NAME>_IMPLEMENTATION_REPORT.md
+
+⸻
+
+24. Testing Matrix
+
+Required Test Categories
+
+unit
+integration
+route handler
+database persistence
+authz
+tenant isolation
+state transition
+calculation correctness
+dashboard read
+runtime smoke
+CI workflow
+migration
+
+Required Edge Cases
+
+Every module must test:
+
+missing input
+zero values
+negative values where relevant
+extreme values
+invalid status
+unauthorized user
+wrong workspace
+non-owner user
+duplicate submission
+partial failure
+stale data
+
+⸻
+
+25. Audit Matrix
+
+Claude must perform audits at these levels:
+
+25.1 Code Audit
+
+type safety
+no any unless justified and scoped
+no unsafe error rendering
+no raw secret logging
+no hardcoded business
+no hardcoded workspace
+no hardcoded user
+
+25.2 Security Audit
+
+auth required
+role enforced
+workspace isolation
+diagnostic key correct
+no same-length bypass
+safe errors
+no sensitive logs
+
+25.3 Data Audit
+
+writes are transactional where needed
+reads are workspace-scoped
+dashboard reads actual persisted data
+no fake demo data presented as real
+
+25.4 Business Logic Audit
+
+calculations correct
+recommendations traceable
+risk scoring explainable
+actions tied to findings
+verification tied to metrics
+
+25.5 Runtime Audit
+
+route accessible
+forms submit
+data persists
+dashboard updates
+errors handled
+cycle can be repeated
+
+⸻
+
+26. Commit Rules
+
+Claude may commit only when:
+
+working tree is reviewed
+diff is scoped
+verification gates pass
+secret scan is clean
+report is created/updated
+
+Before every commit:
+
+git status --short
+git diff --stat
+git diff --check
+git diff --cached --name-only
+
+Commit message format:
+
+MODULE_<N>_<SHORT_REASON>
+FIX_<GATE>_<SHORT_REASON>
+AUDIT_<AREA>_<SHORT_REASON>
+
+No commit may include:
+
+.env*
+node_modules
+generated DB files
+real secrets
+logs with secrets
+unrelated product code
+unapproved module work
+
+⸻
+
+27. Reports Required
+
+Reports must be concise and evidence-based.
+
+Required report types:
+
+PR_CHECK_FIX_REPORT.md
+MODULE_<N>_<NAME>_SPEC.md
+MODULE_<N>_<NAME>_IMPLEMENTATION_REPORT.md
+MODULE_<N>_<NAME>_RUNTIME_PROOF.md
+MODULE_<N>_<NAME>_AUDIT_REPORT.md
+OWNER_MODE_STATUS_REPORT.md
+
+Every report must include:
+
+status
+files changed
+commands run
+results
+known limitations
+next gate
+
+⸻
+
+28. Stop Conditions
+
+Claude must stop and report if:
+
+secret is required but missing
+migration would run against unknown DB
+real DB URL would be printed
+destructive command is requested
+CI failure cannot be reproduced
+test requires external service not available
+scope would enter Module 2 before Module 1 proven
+public/SaaS work is requested before Owner Mode proof
+
+⸻
+
+29. Fast-Track Rule
+
+Fast-track does not mean skipping gates.
+
+Fast-track means:
+
+small slices
+clear gates
+no broad refactors
+proof immediately
+commit cleanly
+move to next module only after lock
+
+The fastest safe route is:
+
+Finish backbone
+→ prove runtime
+→ build next smallest owner module
+→ integrate into common loop
+→ verify
+→ repeat
+
+⸻
+
+30. Current Next Action
+
+The current next action is:
+
+Fix remaining PR #31 Phase 3 Slice 2 env override
+→ get PR #31 fully green
+→ merge to main
+→ run Module 1 migration workflow manually
+→ prove one owner recovery cycle
+
+Do not start Module 2 until Module 1 reaches:
+
+OWNER_MODE_STAGING_PROVEN
+
+⸻
+
+31. Claude Final Output Format
+
+Every Claude execution must end with:
+
+FINAL STATUS
+Current phase:
+Current gate:
+Status:
+Branch:
+Commit:
+Files changed:
+Commands run:
+Results:
+CI status:
+Runtime status:
+Migration status:
+Security status:
+Owner Recovery status:
+Module 2 status:
+Public/SaaS status:
+Known blockers:
+Next single action:
+
+Allowed status values:
+
+GREEN_AND_LOCKED
+GREEN_PENDING_CI
+CI_FAILED_FIXED_AND_PUSHED
+BLOCKED_NEEDS_SECRET
+BLOCKED_NEEDS_DB
+BLOCKED_NEEDS_USER_DECISION
+FAILED_ROOT_CAUSE_FOUND
+FAILED_ROOT_CAUSE_UNKNOWN
+
+Claude must not use vague statuses such as:
+
+mostly done
+should work
+probably fixed
+seems okay
+ready maybe
+
+⸻
+
+32. End Goal
+
+The end goal is:
+
+OpsIQ Owner Mode becomes a full-capacity owner command center that can diagnose, prioritize, execute, and verify business improvement across finance, sales, operations, cashflow, marketing, SOPs, strategy, and multiple businesses.
+
+The product is successful only when an owner can open OpsIQ and know:
+
+what is wrong
+why it matters
+what to do today
+who should do it
+how to verify it
+whether it worked
+what to do next
+
+Until that is true, do not resume public/SaaS launch work.
 ---
 
 # PHASE 3 SLICE 2 — EVENT SOURCING TRUTH CLASSIFICATION
@@ -966,7 +2010,8 @@ verified by grepping `src/services` and `src/app` (non-test, excluding each
 engine's own definition file) and by the DB-backed integration test in CI. This
 section is enforced by the `Phase 3 Slice 2 - Truth Pass Verification` workflow
 (Gate 10). It deliberately does NOT mark this slice COMPLETE: only the emission
-path is runtime-proven.
+path is runtime-proven. It does not replace the Owner Mode Roadmap above; it is a
+truth-classification addendum required by the Gate 10 honesty check.
 
 ### Phase 3 — Event Sourcing (Emission + Forward Projection)
 **Status: PARTIAL**
@@ -1010,71 +2055,3 @@ orchestration, snapshot lifecycle) exist only as un-wired scaffolding. None is
 imported or invoked by any runtime path; there is no runtime proof and no
 DB-backed integration coverage. They remain SCAFFOLD until explicitly wired and
 proven in a future slice.
-
----
-
-# TRACKING & STATUS
-
-## Progress Summary
-- **PHASE A: SAFETY BACKBONE** — COMPLETE ✓ (3/3 slices)
-  - A1: Growth Engine Workspace Isolation → COMPLETE_VERIFIED_PRE_PRODUCTION ✓
-  - A2: Replace Fake Tests → COMPLETE_CRITICAL_INVARIANT_COVERAGE ✓ (206 real tests, 614 quarantined)
-  - A3: Full Test Suite → COMPLETE_VERIFIED_CI_GREEN ✓ (CI Run #25760432401 migrations + tests pass)
-
-- **PHASE B: DETERMINISTIC EXECUTION** — COMPLETE ✓ (2/2 slices)
-  - B1: Fix Growth Engine Logic Bugs → COMPLETE_CODE_VERIFIED_PRE_PRODUCTION ✓ (358/358 growth tests pass locally)
-  - B2: Database-Backed Stores → COMPLETE_VERIFIED_CI_GREEN ✓ (CI migrations deployed, tests pass)
-
-- **PHASE C: MONETIZATION ENFORCEMENT** — COMPLETE ✓ (4/4 slices)
-  - C1: Configure DATABASE_URL → LOCAL_RUNTIME_UNAVAILABLE_CI_VERIFIED ✓ (CI Run #25760432401 proves DATABASE_URL works)
-  - C2: Deploy Migrations → COMPLETE_VERIFIED_CI_GREEN ✓ (CI migrations deployed, schema valid)
-  - C3: Wire Entitlement Middleware → COMPLETE_CODE_VERIFIED_PRE_PRODUCTION ✓ (33 permission matrix tests)
-  - C4: Wire Rate Limiting Middleware → COMPLETE_CODE_VERIFIED_PRE_PRODUCTION ✓ (28 token bucket tests)
-
-- **PHASE G: DECISION CREDIBILITY + OPERATOR VALUE** — GOVERNANCE BACKBONE COMPLETE ✓ (5/5 slices)
-  - G-B1: Lifecycle State Machine → DECISION_SYSTEM_STATE_GOVERNED ✓ (14-state FSM, fail-closed transitions, 7 tests)
-  - G-B2: Precondition Engine → DECISION_SYSTEM_PRECONDITION_ENFORCED ✓ (blocking/warning classification, 6 tests)
-  - G-B3: Scope Enforcement Engine → DECISION_SYSTEM_SCOPE_ENFORCED ✓ (multi-dimensional validation, 4 tests)
-  - G-B4: Constraint Precedence Engine → DECISION_SYSTEM_CONSTRAINT_HIERARCHICAL ✓ (deterministic hierarchy SURVIVAL>COMPLIANCE>CASHFLOW>OPERATIONAL_STABILITY>GROWTH, 5 tests)
-  - G-B5: Recommendation Change Ledger → DECISION_SYSTEM_EXPLAINABILITY_AUDITABLE ✓ (append-only immutable ledger, 5 tests)
-
-- **Non-DB Tests:** 358/358 PASS (growth engines) + 27/27 PASS (governance backbone)
-- **DB-Dependent Tests:** 81 BLOCKED (Phase-3 event sourcing, require PostgreSQL)
-- **Total Expected (CI):** 3872/3872 PASS (with PostgreSQL in GitHub Actions, including governance backbone)
-
-## Operational Readiness Status
-
-| Category | Status | Proof |
-|----------|--------|-------|
-| **Safety Backbone (Phase A)** | COMPLETE | A1 ✓ A2 ✓ A3-CI ✓ (migrations + tests verified in GitHub Actions Run #25760432401) |
-| **Execution Core (Phase B)** | COMPLETE | B1 ✓ (358 growth tests pass locally) B2-CI ✓ (migrations deployed + tests pass in CI Run #25760432401) |
-| **Monetization (Phase C)** | COMPLETE | C1-CI ✓ (DATABASE_URL verified in CI) C2-CI ✓ (migrations deployed in CI) C3 ✓ (entitlement 33 tests) C4 ✓ (rate limiting 28 tests) |
-| **Governance Backbone (Phase G)** | COMPLETE | G-B1-B5 ✓ (27 tests pass, npm run build ✓, fail-closed state machine, immutable ledger, deterministic constraint precedence) |
-| **Enterprise (Phase D)** | NOT_STARTED | D1-D7 admin/audit/webhooks/monitoring/backups/runbooks/baselines not yet implemented |
-| **Verification (Phase E)** | READY | All Phase A-C-G complete; E1 can proceed once Phase D completes |
-
-**Local Environment:** DATABASE_URL not configured (BLOCKED_DB_REQUIRED)  
-**CI Environment:** PostgreSQL 16 verified in GitHub Actions (CI Run #25760432401 SUCCESS ✓)
-
-**Non-DB Test Suite:** 358/358 PASS (growth engines, workspace isolation verified)  
-**DB-Dependent Test Suite:** Verified in CI with 5m54s test duration (migrations deployed, all tests pass)  
-**Fake Test Inventory:** 614 quarantined, excluded from active scope, documented as unimplemented
-
-**Next Action:** 
-1. Continue PHASE D: ENTERPRISE OPERABILITY (D1-D7 slices)
-   - D1: Implement Admin Dashboard (requires DB, proceed via CI verification)
-   - D2: Make Audit Trail Queryable (requires DB, proceed via CI verification)
-   - D3: Implement Webhook Infrastructure (requires DB for persistence)
-   - D4: Add Backup/Restore Procedure (operational documentation)
-   - D5: Add Monitoring/Alerting (operational setup)
-   - D6: Create Runbooks (documentation)
-   - D7: Establish Performance Baselines (operational testing)
-2. For DB-affecting work: push → wait for CI → inspect CI proof → proceed
-3. Do not block on local PostgreSQL; use CI verification as canonical proof
-
----
-
-**Version:** v4.0-FORENSIC-AUDIT-INTEGRATED  
-**Last Updated:** 2026-05-12  
-**Audit Source:** AUDIT_MASTER_REPORT.md + NEXT_EXECUTION_QUEUE.md  
-**Enforcement:** Absolute proof-only, zero false green, zero mocks for enterprise safety
