@@ -19,6 +19,8 @@ export interface CashflowThresholds {
   // Payables vs cash (% of total cash)
   highPayablesPressurePct: number;
   criticalPayablesPressurePct: number;
+  // Debt / EMI payment vs cash (% of total cash)
+  highDebtPaymentPressurePct: number;
   // Overdue receivables (% of receivables)
   highOverdueReceivablesPct: number;
   // Collection lag (days of sales outstanding)
@@ -37,6 +39,7 @@ export const GENERIC_CASHFLOW_THRESHOLDS: CashflowThresholds = {
   criticalUrgentPaymentRiskPct: 100,
   highPayablesPressurePct: 75,
   criticalPayablesPressurePct: 100,
+  highDebtPaymentPressurePct: 40,
   highOverdueReceivablesPct: 30,
   highCollectionGapDays: 45,
   highOwnerWithdrawalPressurePct: 30,
