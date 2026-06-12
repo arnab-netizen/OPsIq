@@ -12,6 +12,8 @@ export interface SalesThresholds {
   lowConversionPct: number;
   criticalConversionPct: number;
   healthyConversionPct: number;
+  // Follow-up: qualified-lead → order conversion (% )
+  lowQualifiedConversionPct: number;
   // Retention (% repeat of active customers)
   weakRepeatRatePct: number;
   criticalRepeatRatePct: number;
@@ -33,6 +35,7 @@ export const GENERIC_SALES_THRESHOLDS: SalesThresholds = {
   lowConversionPct: 15,
   criticalConversionPct: 5,
   healthyConversionPct: 30,
+  lowQualifiedConversionPct: 40,
   weakRepeatRatePct: 25,
   criticalRepeatRatePct: 10,
   healthyRepeatRatePct: 50,

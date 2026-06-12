@@ -8,3 +8,6 @@ export * from "./types";
 export * from "./thresholds";
 export * from "./data-confidence";
 export * from "./metrics";
+export * from "./risk-rules";
+export * from "./opportunity-rules";
+export * from "./diagnosis";
