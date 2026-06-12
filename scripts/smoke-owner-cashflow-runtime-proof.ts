@@ -87,7 +87,8 @@ function planLines(): string[] {
     `synthetic email       : ${testEmail}`,
     `synthetic business    : ${businessName} (INR)`,
     "steps:",
-    "  0  GET  /api/internal/build-info",
+    "  0  GET  /api/internal/build-info                                (deployment present)",
+    "  0b GET  /api/owner/cashflow/dashboard (unauth)                  (cashflow feature deployed: JSON 401, not HTML)",
     "  1  POST /api/auth/signup                                         (owner session)",
     "  2  POST /api/owner/recovery/businesses                           (create business)",
     "  3  POST /api/owner/cashflow/businesses/{id}/snapshots            (cashflow snapshot)",
@@ -134,10 +135,38 @@ async function main(): Promise<void> {
   }
   const deployedCommit: string = bi.json.commit;
   console.log(`  ℹ deployed commit: ${deployedCommit.slice(0, 7)} (env: ${bi.json.environment ?? "unknown"})`);
+  // EXPECTED_COMMIT is an OPTIONAL manual override (off by default). The default
+  // deploy-freshness check is the capability probe in step 0b — proving the
+  // cashflow FEATURE is deployed is what matters, not matching an exact commit
+  // SHA (which races with the deploy and fails for reasons unrelated to the
+  // feature working).
   if (expectedCommit && !deployedCommit.startsWith(expectedCommit.slice(0, 7))) {
-    fail("/api/internal/build-info", `commit ${deployedCommit.slice(0, 7)} != expected ${expectedCommit.slice(0, 7)}`, "deployment may be stale");
+    fail("/api/internal/build-info", `commit ${deployedCommit.slice(0, 7)} != expected ${expectedCommit.slice(0, 7)}`, "deployment may be stale (EXPECTED_COMMIT override set)");
   }
   ok(step);
+
+  // 0b) the cashflow feature itself is deployed (deterministic capability probe).
+  // Robust to deploy-timing: a deployed cashflow route returns a JSON 401/403 to
+  // an unauthenticated request; a build that lacks the route returns the Next.js
+  // HTML app shell. This proves the routes are live without coupling to a SHA.
+  step = "0b. cashflow API deployed (capability probe)";
+  const probe = await call("GET", "/api/owner/cashflow/dashboard");
+  const looksHtml = probe.json === null && /^\s*<(?:!doctype|html)/i.test(probe.text.trim());
+  if (looksHtml) {
+    fail(
+      "/api/owner/cashflow/dashboard",
+      probe.status,
+      "cashflow API returned the HTML app shell, not JSON — the Module 5 cashflow routes are NOT deployed at this base URL (stale deploy). Redeploy main, then re-run."
+    );
+  }
+  if (probe.status !== 401 && probe.status !== 403) {
+    fail(
+      "/api/owner/cashflow/dashboard",
+      probe.status,
+      `expected 401/403 JSON from the unauthenticated cashflow API, got ${probe.status} — the cashflow API may not be deployed`
+    );
+  }
+  ok(`${step} (unauth → ${probe.status} JSON; cashflow routes are live)`);
 
   // 1) owner session
   step = "1. POST /api/auth/signup";

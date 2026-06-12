@@ -124,13 +124,38 @@ FK holds) inside `db.$transaction(..., { maxWait: 10000, timeout: 20000 })`. The
 governed write stays atomic but is now ~3 statements instead of ~20, well within
 the limit. Local: build ✓, eslint ✓, cashflow tests 57 ✓, ratchet ✓, full suite ✓.
 
+## Runs #5/#6 — FAILED on a brittle deploy check (root-caused + properly fixed)
+
+Runs #5/#6 (dispatched from `main`@`b13ce58`) failed at step 0 with
+`commit 362934e != expected b13ce58 — deployment may be stale`. **Root cause: the
+`EXPECTED_COMMIT = github.sha` guard I added was the wrong mechanism** — it
+requires the deployed commit to byte-match the workflow commit, which **races with
+the Vercel deploy** (the run fired ~1 min before `b13ce58` finished building, so
+production was momentarily still `362934e`) and fails for reasons unrelated to
+whether the cashflow feature works. That was patch-work, not a proper check.
+
+### Proper fix (no SHA coupling)
+
+- **Removed `EXPECTED_COMMIT` wiring** from `module-5-cashflow-runtime-proof.yml`
+  (kept only as an optional manual override in the script).
+- **Added a deterministic capability probe (step 0b):** an unauthenticated
+  `GET /api/owner/cashflow/dashboard` must return a **JSON `401/403`** (route
+  deployed); a build lacking the route returns the Next.js **HTML app shell**,
+  which fails fast with "cashflow routes are NOT deployed (stale deploy)". This
+  proves the *feature* is live — the thing that actually matters — independent of
+  deploy timing or exact SHA. `build-info` commit is now informational only.
+
+This removes the repeated stale-deploy false-failures while keeping the proof
+honest: it still refuses to run against a deploy that lacks the cashflow API.
+
 ## Re-run requirement
 
-1. Merge the fix to `main` and let **Vercel redeploy** (new `main` commit);
-   confirm `/api/internal/build-info` matches the new commit.
-2. Re-dispatch **Module 5 Cashflow Runtime Proof** **from `main`**
-   (`confirm = RUN_MODULE5_CASHFLOW_RUNTIME_PROOF`) — `EXPECTED_COMMIT` requires
-   the deployed commit to equal the commit under test.
+1. Production already carries the cashflow API + the P2028 fix (`b13ce58`). Merge
+   this proof-check fix to `main`; no exact-SHA wait is needed anymore.
+2. Re-dispatch **Module 5 Cashflow Runtime Proof** from `main`
+   (`confirm = RUN_MODULE5_CASHFLOW_RUNTIME_PROOF`). Step 0b now confirms the
+   cashflow API is deployed, then the full loop runs (the P2028 fix lets the
+   diagnosis persist).
 
 ## Results (filled in after a PASSING run)
 
