@@ -97,6 +97,7 @@ function planLines(): string[] {
     "  9  PATCH/api/owner/finance/actions/{id}  proposed->assigned->in_progress->completed",
     "  10 POST /api/owner/finance/actions/{id}/verify",
     "  11 GET  /api/owner/finance/dashboard?businessId={id}           (reflects all)",
+    "  12 GET  /owner/finance                                         (UI page renders)",
     "  security: unauth blocked; foreign business blocked; invalid payload rejected; invalid transition rejected",
   ];
 }
@@ -245,6 +246,12 @@ async function main(): Promise<void> {
   if (!Array.isArray(dashAction.verifications) || dashAction.verifications.length === 0) fail(dashPath, dash.status, "dashboard verification not reflected");
   if (!dash.json?.recommendedNextAction) fail(dashPath, dash.status, "dashboard recommendedNextAction missing");
   ok(`${step} (business + snapshot + cycle + findings + actions + verification reflected)`);
+
+  // 12) finance dashboard UI page renders for the authenticated owner
+  step = "12. GET /owner/finance (page renders)";
+  const page = await call("GET", "/owner/finance", { cookie });
+  if (page.status >= 400) fail("/owner/finance", page.status, safeBodySummary(page.text));
+  ok(`${step} (status ${page.status})`);
 
   // --- SECURITY CHECKS ---
   step = "S1. unauthenticated finance endpoint blocked";
