@@ -56,9 +56,28 @@ rejected (400). See `MODULE1_OWNER_RECOVERY_STAGING_PROVEN_REPORT.md`.
 | Module 2 (Finance) status | ✅ **STAGING_PROVEN + AUDITED** (not REAL_BUSINESS_PROVEN, not FULL_CAPACITY) |
 | Owner Command Center home (`/owner`, §22 Phase 2) | ✅ built + **deployed-runtime-proven** (run #4 https://github.com/arnab-netizen/OPsIq/actions/runs/27411312442, incl. `GET /owner`) — `MODULE2_OWNER_COMMAND_CENTER_SHELL_REPORT.md` |
 | Cross-domain condition (finance + recovery) | ✅ built + **deployed-runtime-proven** (run #5 https://github.com/arnab-netizen/OPsIq/actions/runs/27412646582, command center reflects finance + recovery) — `MODULE2_CROSS_DOMAIN_CONDITION_REPORT.md` |
-| Real-business validation (M13, §0 "prove on real business before more modules") | ⏳ next — **manual execution required** (`MODULE13_REAL_BUSINESS_VALIDATION_RUNBOOK.md`) |
-| Module 3+ | ⛔ not started (per execution.md §0: real-business validation precedes more modules) |
+| Real-business validation (M13) | ⏳ release gate — **manual** (`MODULE13_REAL_BUSINESS_VALIDATION_RUNBOOK.md`); per the policy override, M13 is a RELEASE gate, not a BUILD gate |
 | Public/SaaS/billing/marketing | ❄️ frozen |
+
+## Module 5 — Cashflow Intelligence (in progress)
+
+Per execution.md §12 / §22 Phase 6 (survival cluster after finance). All on `main`
+(merge `362934e`). Liquidity lens, distinct from the Module 2 profit lens; reuses
+the Owner Intelligence Spine + Module 1 status machine / verification.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Engine (deterministic metrics) | ✅ | `MODULE5_SLICE1_CASHFLOW_ENGINE_REPORT.md` |
+| 2 Detector (risk/opportunity findings) | ✅ | `MODULE5_SLICE2_CASHFLOW_DETECTOR_REPORT.md` |
+| 3 Action planner | ✅ | `MODULE5_SLICE3_CASHFLOW_PLANNER_REPORT.md` |
+| 4 Persistence schema + migration | ✅ MIGRATED | `MODULE5_SLICE4_CASHFLOW_PERSISTENCE_REPORT.md`; migrate run #1 27437421587 + #2 (no-op on `362934e`) |
+| 5 API + services | ✅ | `MODULE5_SLICE5_CASHFLOW_API_REPORT.md` |
+| 6 UI + command-center integration | ✅ (command center now finance+recovery+cashflow) | `MODULE5_SLICE6_CASHFLOW_UI_CONDITION_REPORT.md` |
+| 7 Deployed runtime proof | ⏳ **GATE — workflow/script ready, awaiting manual run** | `MODULE5_SLICE7_CASHFLOW_RUNTIME_PROOF_REPORT.md` |
+| 8 Audit + proof | ⛔ after runtime proof (mirrors Module 2 Slice 10 ordering) | — |
+
+Module 5 status: **built + locally proven; migration applied; NOT yet
+deployed-runtime-proven** (No False Green — claimed only after Slice 7 runs green).
 
 The Module 2 finance loop is deployed-runtime-proven end to end
 (engine → diagnosis → planner → schema/migration → API → UI → Business Condition
@@ -67,7 +86,8 @@ audited (security / isolation / calc-correctness / state / data-visibility / fal
 
 ## Next single action
 
-Either (a) **real-business validation** of the finance loop (M13 — drive a real business
-on staging and record `REAL_BUSINESS_PROVEN`), or (b) **wire a second domain into the
-Business Condition Profile** (e.g. upgrade recovery to emit a spine `DomainScore` in a
-Module-1-safe, additive way). Keep public/SaaS frozen.
+**Run the "Module 5 Cashflow Runtime Proof" workflow** (`workflow_dispatch`,
+`confirm = RUN_MODULE5_CASHFLOW_RUNTIME_PROOF`, `base_url =
+https://o-ps-iq.vercel.app`) once the deploy is live from `main`@`362934e`
+(verify `/api/internal/build-info`). On green, record the run + set Module 5
+Slice 7 ✅ and proceed to the Module 5 audit (Slice 8). Keep public/SaaS frozen.

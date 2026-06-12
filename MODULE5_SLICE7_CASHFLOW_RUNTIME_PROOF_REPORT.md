@@ -17,11 +17,19 @@ manual gate.
 ## 2. Pre-conditions (met / required)
 
 - Cashflow migration **applied** to the target DB — ✅ "Module 5 Cashflow
-  Migration" #1 succeeded on `main`@`31eaa6f`.
-- Deployed app must include the cashflow API + UI + command-center wiring — i.e.,
-  the deploy must be from a commit at/after this slice (Slices 5–6 merged to
-  `main` and redeployed). Confirm via `/api/internal/build-info`.
+  Migration" #1 on `main`@`31eaa6f` (run 27437421587) and re-confirmed idempotent
+  on the post-merge `main`@`362934e` ("Module 5 Cashflow Migration" #2 — Success,
+  no-op deploy).
+- Slices 5–7 (cashflow API + UI + command-center wiring + runtime-proof
+  script/workflow) **merged to `main`** — ✅ merge `362934e`.
+- Deployed app must include `main`@`362934e` (the cashflow routes + `/owner/cashflow`
+  + command-center cashflow wiring). Vercel redeploys from `main`; **confirm the
+  deploy is live via `/api/internal/build-info` (commit `362934e` or later) before
+  running** — the script also fails closed if `EXPECTED_COMMIT` is set and stale.
 - An owner can sign up (the script creates a synthetic owner per run).
+
+All code/migration preconditions are now met; the only remaining step is the
+Vercel redeploy of `main`@`362934e` and the manual workflow dispatch below.
 
 ## 3. Files created
 
