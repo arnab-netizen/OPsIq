@@ -83,6 +83,41 @@ export function recoveryCycleToDomainScore(cycle: any, snapshot: any): DomainSco
   };
 }
 
+/** Map a persisted cashflow cycle row to a spine DomainScore (pure). */
+export function cashflowCycleToDomainScore(cycle: any): DomainScore {
+  return {
+    domain: "cashflow",
+    healthScore: clampScore(cycle.healthScore),
+    riskScore: clampScore(cycle.dangerScore),
+    opportunityScore: clampScore(cycle.opportunityScore),
+    dataConfidenceScore: clampScore(cycle.dataConfidenceScore),
+    topFindingCodes: (cycle.findings ?? []).slice(0, 3).map((f: any) => f.code),
+    topActionCodes: (cycle.actions ?? []).slice(0, 3).map((a: any) => a.findingCode),
+    generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt : new Date(cycle.generatedAt),
+  };
+}
+
+/** Map a persisted cashflow action row to a spine OwnerAction (pure). */
+export function cashflowActionRowToOwnerAction(a: any): OwnerAction {
+  return {
+    id: a.id,
+    domain: "cashflow",
+    findingCode: a.findingCode,
+    title: a.title,
+    description: a.description,
+    ownerRole: a.ownerRole,
+    priorityScore: clampScore(a.priorityScore),
+    effortScore: clampScore(a.effortScore),
+    expectedImpactScore: clampScore(a.expectedImpactScore),
+    urgencyScore: 0, // not separately persisted; priorityScore already encodes urgency
+    confidence: typeof a.confidence === "number" ? a.confidence : 0,
+    status: a.status,
+    verificationMetric: a.verificationMetric,
+    verificationMethod: a.verificationMethod,
+    expectedTimeframeDays: a.expectedTimeframeDays,
+  };
+}
+
 /** Map a persisted recovery action to a spine OwnerAction (pure). */
 export function recoveryActionRowToOwnerAction(a: any): OwnerAction {
   return {
@@ -139,7 +174,7 @@ export async function getBusinessCondition(
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
 
-  const [financeCycle, latestFinanceSnapshot, recoveryCycle] = await Promise.all([
+  const [financeCycle, latestFinanceSnapshot, recoveryCycle, cashflowCycle] = await Promise.all([
     db.ownerFinanceCycle.findFirst({
       where: { businessId: selectedBusinessId, workspaceId },
       orderBy: { sequenceNumber: "desc" },
@@ -162,6 +197,14 @@ export async function getBusinessCondition(
         actions: { include: { finding: { select: { code: true } } }, orderBy: { createdAt: "asc" } },
       },
     }),
+    db.ownerCashflowCycle.findFirst({
+      where: { businessId: selectedBusinessId, workspaceId },
+      orderBy: { sequenceNumber: "desc" },
+      include: {
+        findings: { orderBy: { severity: "asc" } },
+        actions: { orderBy: { priorityScore: "desc" } },
+      },
+    }),
   ]);
 
   const domainScores: DomainScore[] = [];
@@ -173,6 +216,10 @@ export async function getBusinessCondition(
   if (recoveryCycle) {
     domainScores.push(recoveryCycleToDomainScore(recoveryCycle, recoveryCycle.snapshot));
     for (const a of recoveryCycle.actions) topActions.push(recoveryActionRowToOwnerAction(a));
+  }
+  if (cashflowCycle) {
+    domainScores.push(cashflowCycleToDomainScore(cashflowCycle));
+    for (const a of cashflowCycle.actions) topActions.push(cashflowActionRowToOwnerAction(a));
   }
 
   const missingCriticalData =

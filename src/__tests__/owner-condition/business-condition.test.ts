@@ -11,6 +11,8 @@ import {
   financeActionRowToOwnerAction,
   recoveryCycleToDomainScore,
   recoveryActionRowToOwnerAction,
+  cashflowCycleToDomainScore,
+  cashflowActionRowToOwnerAction,
 } from "@/services/owner-condition/business-condition.service";
 import {
   buildBusinessConditionProfile,
@@ -146,6 +148,65 @@ describe("Owner condition — recovery→spine mappers (Module-1-safe, read-only
     const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "recovery"]);
     expect(profile.recommendedNextAction?.domain).toBe("recovery"); // critical (90) > finance (80)
+  });
+});
+
+describe("Owner condition — cashflow→spine mappers", () => {
+  const cfCycle = {
+    healthScore: 35,
+    dangerScore: 78,
+    opportunityScore: 40,
+    dataConfidenceScore: 70,
+    cashflowState: "CRITICAL",
+    generatedAt: NOW,
+    findings: [{ code: "CF_URGENT_PAYMENT_RISK" }, { code: "CF_HIGH_OVERDUE_RECEIVABLES" }],
+    actions: [{ findingCode: "CF_URGENT_PAYMENT_RISK" }],
+  };
+  const cfAction = {
+    id: "33333333-3333-4333-8333-333333333333",
+    findingCode: "CF_URGENT_PAYMENT_RISK",
+    title: "Sequence and fund near-term dues",
+    description: "Rank and fund essential dues first.",
+    ownerRole: "owner",
+    priorityScore: 92,
+    effortScore: 45,
+    expectedImpactScore: 95,
+    confidence: 0.7,
+    status: "proposed",
+    verificationMetric: "urgentPaymentRiskPct",
+    verificationMethod: "before/after",
+    expectedTimeframeDays: 7,
+  };
+
+  it("maps a cashflow cycle row to a valid DomainScore (clamped, danger→risk)", () => {
+    const ds = cashflowCycleToDomainScore({ ...cfCycle, healthScore: 140, dangerScore: -5 });
+    expect(ds.domain).toBe("cashflow");
+    expect(ds.healthScore).toBe(100); // clamped
+    expect(ds.riskScore).toBe(0); // danger clamped
+    expect(ds.dataConfidenceScore).toBe(70);
+    expect(ds.topFindingCodes).toContain("CF_URGENT_PAYMENT_RISK");
+    expect(domainScoreSchema.safeParse(ds).success).toBe(true);
+  });
+
+  it("maps a cashflow action row to a schema-valid OwnerAction", () => {
+    const a = cashflowActionRowToOwnerAction(cfAction);
+    expect(a.domain).toBe("cashflow");
+    expect(ownerActionSchema.safeParse(a).success).toBe(true);
+  });
+
+  it("a critical cashflow action can be the cross-domain next action over finance + recovery", () => {
+    const domainScores = [
+      financeCycleToDomainScore(cycleRow()),
+      cashflowCycleToDomainScore(cfCycle),
+    ];
+    const topActions = [
+      financeActionRowToOwnerAction(actionRow({ id: "fin", priorityScore: 80 })),
+      cashflowActionRowToOwnerAction(cfAction), // 92
+    ];
+    const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
+    expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["cashflow", "finance"]);
+    expect(profile.survivalRiskScore).toBe(80); // max survival-domain risk (finance 80 vs cashflow 78)
+    expect(profile.recommendedNextAction?.domain).toBe("cashflow"); // 92 > 80
   });
 });
 
