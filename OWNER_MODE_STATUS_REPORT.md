@@ -73,11 +73,13 @@ the Owner Intelligence Spine + Module 1 status machine / verification.
 | 4 Persistence schema + migration | ✅ MIGRATED | `MODULE5_SLICE4_CASHFLOW_PERSISTENCE_REPORT.md`; migrate run #1 27437421587 + #2 (no-op on `362934e`) |
 | 5 API + services | ✅ | `MODULE5_SLICE5_CASHFLOW_API_REPORT.md` |
 | 6 UI + command-center integration | ✅ (command center now finance+recovery+cashflow) | `MODULE5_SLICE6_CASHFLOW_UI_CONDITION_REPORT.md` |
-| 7 Deployed runtime proof | ⏳ **GATE — workflow/script ready, awaiting manual run** | `MODULE5_SLICE7_CASHFLOW_RUNTIME_PROOF_REPORT.md` |
-| 8 Audit + proof | ⛔ after runtime proof (mirrors Module 2 Slice 10 ordering) | — |
+| 7 Deployed runtime proof | ✅ **PROVEN** | run #8 https://github.com/arnab-netizen/OPsIq/actions/runs/27444050144 (`main`@`9ebc6ec`) — `MODULE5_SLICE7_CASHFLOW_RUNTIME_PROOF_REPORT.md` |
+| 8 Audit + proof | ✅ **AUDITED** | `MODULE5_CASHFLOW_INTELLIGENCE_AUDIT_REPORT.md` |
 
-Module 5 status: **built + locally proven; migration applied; NOT yet
-deployed-runtime-proven** (No False Green — claimed only after Slice 7 runs green).
+Module 5 status: **STAGING_PROVEN + AUDITED** (cashflow loop deployed-runtime-proven
+end to end — engine → detector → planner → schema/migration → API → UI → command
+center; runtime proof caught + fixed a real P2028 tx-timeout and a brittle deploy
+check before green). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
 
 The Module 2 finance loop is deployed-runtime-proven end to end
 (engine → diagnosis → planner → schema/migration → API → UI → Business Condition
@@ -86,8 +88,7 @@ audited (security / isolation / calc-correctness / state / data-visibility / fal
 
 ## Next single action
 
-**Run the "Module 5 Cashflow Runtime Proof" workflow** (`workflow_dispatch`,
-`confirm = RUN_MODULE5_CASHFLOW_RUNTIME_PROOF`, `base_url =
-https://o-ps-iq.vercel.app`) once the deploy is live from `main`@`362934e`
-(verify `/api/internal/build-info`). On green, record the run + set Module 5
-Slice 7 ✅ and proceed to the Module 5 audit (Slice 8). Keep public/SaaS frozen.
+Module 5 Cashflow is **STAGING_PROVEN + AUDITED** (all slices proven). Next per
+execution.md §0/§20: **M13 real-business validation** (release gate — does not
+block building further owner modules), or the next survival/owner module per the
+roadmap. Keep public/SaaS/billing/marketing frozen.
