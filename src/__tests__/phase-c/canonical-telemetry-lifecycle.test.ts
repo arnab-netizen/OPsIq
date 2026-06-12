@@ -8,7 +8,7 @@
  * 4. Validates emission order
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   CanonicalTelemetryLifecycle,
   type AuthTelemetryEvent,
@@ -385,25 +385,37 @@ describe("PHASE C STEP 4: Telemetry Duplicate Detection", () => {
   });
 
   describe("Timing Information", () => {
-    it("Start time and end time track request duration", async () => {
-      const lifecycle = new CanonicalTelemetryLifecycle({
-        correlationId: "corr1",
-        requestId: "req1",
-        method: "GET",
-        pathname: "/api/test",
-      });
+    it("Start time and end time track request duration", () => {
+      // Deterministic clock: the lifecycle records start/end via Date.now().
+      // Use fake timers so the measured duration is exact and not coupled to OS
+      // timer precision under parallel load (the previous `setTimeout(10)` +
+      // `>= 10` assertion was flaky). Intent preserved and strengthened: start
+      // and end are tracked and the duration equals the elapsed time exactly.
+      vi.useFakeTimers();
+      try {
+        const lifecycle = new CanonicalTelemetryLifecycle({
+          correlationId: "corr1",
+          requestId: "req1",
+          method: "GET",
+          pathname: "/api/test",
+        });
 
-      const ctx1 = lifecycle.getContext();
-      expect(ctx1.startTime).toBeDefined();
-      expect(ctx1.endTime).toBeUndefined();
+        const ctx1 = lifecycle.getContext();
+        expect(ctx1.startTime).toBeDefined();
+        expect(ctx1.endTime).toBeUndefined();
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+        // Advance the (mocked) wall clock by exactly 10ms.
+        vi.advanceTimersByTime(10);
 
-      lifecycle.emitRequestCompleted();
+        lifecycle.emitRequestCompleted();
 
-      const ctx2 = lifecycle.getContext();
-      expect(ctx2.endTime).toBeDefined();
-      expect(ctx2.endTime! - ctx2.startTime).toBeGreaterThanOrEqual(10);
+        const ctx2 = lifecycle.getContext();
+        expect(ctx2.endTime).toBeDefined();
+        // Non-negative and exact: end - start === advanced time.
+        expect(ctx2.endTime! - ctx2.startTime).toBe(10);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

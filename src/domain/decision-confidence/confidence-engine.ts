@@ -163,7 +163,11 @@ export function calculateExecutionCertaintyScore(factors: ExecutionFactor): numb
   // Apply resource availability boost
   score += (factors.resourceAvailability / 100) * 10;
 
-  return Math.max(0, Math.round(score));
+  // Clamp to [0, 100]: ownerCapability (<=100) plus the resource-availability
+  // boost (<=+10) can push the raw score above 100, which violates this score's
+  // own schema (executionCertaintyScore <= 100). Mirror calculateOverallConfidence,
+  // which already clamps both ends.
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 /**
