@@ -5,7 +5,7 @@
  * and configuration management.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   checkRateLimit,
   isExempted,
@@ -257,25 +257,42 @@ describe("Rate Limiter", () => {
     it("should return bucket state with tokens and timestamp", () => {
       const config = { windowMs: 1000, maxRequests: 5 };
 
-      checkRateLimit("workspace-1", config);
-      const state = getBucketState("workspace-1", config);
+      // Freeze the clock: token buckets refill by wall-clock elapsed time, so any
+      // real time passing between consume and read (parallel-load jitter) would
+      // refill tokens and make the exact-count assertion flaky. With a frozen
+      // clock, elapsed = 0 → no refill → the consumed count is exact.
+      vi.useFakeTimers();
+      try {
+        checkRateLimit("workspace-1", config);
+        const state = getBucketState("workspace-1", config);
 
-      expect(state).not.toBe(null);
-      expect(state?.tokens).toBeDefined();
-      expect(state?.lastRefill).toBeDefined();
-      expect(state?.tokens).toBeLessThan(5);
-      expect(state?.tokens).toBeGreaterThanOrEqual(4);
+        expect(state).not.toBe(null);
+        expect(state?.tokens).toBeDefined();
+        expect(state?.lastRefill).toBeDefined();
+        expect(state?.tokens).toBeLessThan(5);
+        expect(state?.tokens).toBeGreaterThanOrEqual(4);
+        expect(state?.tokens).toBe(4); // exactly one token consumed under a frozen clock
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("should reflect token consumption in state", () => {
       const config = { windowMs: 1000, maxRequests: 5 };
 
-      checkRateLimit("workspace-1", config);
-      checkRateLimit("workspace-1", config);
-      checkRateLimit("workspace-1", config);
+      // Frozen clock so wall-clock refill cannot inflate the count (see above).
+      vi.useFakeTimers();
+      try {
+        checkRateLimit("workspace-1", config);
+        checkRateLimit("workspace-1", config);
+        checkRateLimit("workspace-1", config);
 
-      const state = getBucketState("workspace-1", config);
-      expect(state?.tokens).toBeLessThanOrEqual(2);
+        const state = getBucketState("workspace-1", config);
+        expect(state?.tokens).toBeLessThanOrEqual(2);
+        expect(state?.tokens).toBe(2); // exactly three tokens consumed under a frozen clock
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

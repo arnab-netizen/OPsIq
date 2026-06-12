@@ -464,25 +464,29 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
 
   describe("Replay Performance & Scale", () => {
     it("should replay 1000 events with consistent performance", async () => {
-      // HOSTILE TEST: Large replay should be fast and deterministic
+      // HOSTILE TEST: Large replay should be bounded and deterministic.
       const events = createDeterministicEvents(42, 1000);
 
-      const start1 = Date.now();
+      const start = Date.now();
       const replay1 = replayEvents(events);
-      const duration1 = Date.now() - start1;
-
-      const start2 = Date.now();
       const replay2 = replayEvents(events);
-      const duration2 = Date.now() - start2;
+      const replay3 = replayEvents(events);
+      const totalDuration = Date.now() - start;
 
-      // ASSERTION: Both replays produce identical hash
+      // DETERMINISM (strengthened): three replays produce the identical hash.
       expect(replay1.hash).toBe(replay2.hash);
+      expect(replay2.hash).toBe(replay3.hash);
 
-      // ASSERTION: Performance is consistent (within 2x)
-      expect(duration2).toBeLessThan(duration1 * 2);
-
-      // ASSERTION: Event count correct
+      // EVENT COUNT correct.
       expect(replay1.eventCount).toBe(1000);
+      expect(replay3.eventCount).toBe(1000);
+
+      // PERFORMANCE/SCALE (robust): bound by a generous absolute ceiling rather
+      // than comparing two tiny wall-clock durations (the previous
+      // `duration2 < duration1 * 2` flaked under parallel load, e.g. when
+      // duration1 rounded to 0ms). Three in-memory replays of 1000 events must
+      // complete well under 2s; exceeding that signals a real complexity blowup.
+      expect(totalDuration).toBeLessThan(2000);
     });
   });
 });
