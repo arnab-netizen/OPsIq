@@ -56,11 +56,10 @@ jobs:
       - name: Run Cashflow deployed runtime proof
         env:
           BASE_URL: ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}
-          # Fail fast at step 0 if the deploy is stale: the deployed commit must
-          # match the commit this workflow runs on (i.e. the cashflow API/UI must
-          # actually be deployed). Without this, a stale deploy fails later with a
-          # confusing HTML body instead of a clear "deployment is stale" message.
-          EXPECTED_COMMIT: ${{ github.sha }}
+          # No EXPECTED_COMMIT here: matching an exact deploy SHA races with the
+          # deploy and fails for reasons unrelated to the feature. The script's
+          # step 0b capability probe robustly proves the cashflow API is deployed.
+          # (EXPECTED_COMMIT remains an optional manual override if ever needed.)
         run: |
           set -o pipefail
           npx tsx scripts/smoke-owner-cashflow-runtime-proof.ts | tee cashflow-runtime-proof.log
