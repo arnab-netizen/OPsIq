@@ -232,6 +232,12 @@ export const AUDIT_EVENTS = {
   RECOVERY_ACTION_UPDATED: "owner.recovery_action_updated",
   RECOVERY_OUTCOME_VERIFIED: "owner.recovery_outcome_verified",
 
+  // Owner Finance (Module 2)
+  OWNER_FINANCE_SNAPSHOT_RECORDED: "owner.finance_snapshot_recorded",
+  OWNER_FINANCE_DIAGNOSIS_RUN: "owner.finance_diagnosis_run",
+  OWNER_FINANCE_ACTION_UPDATED: "owner.finance_action_updated",
+  OWNER_FINANCE_OUTCOME_VERIFIED: "owner.finance_outcome_verified",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
