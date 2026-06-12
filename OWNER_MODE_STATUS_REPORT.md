@@ -54,6 +54,8 @@ rejected (400). See `MODULE1_OWNER_RECOVERY_STAGING_PROVEN_REPORT.md`.
 | Module 2 (Finance) — API + UI + command-center | ✅ built + deployed-runtime-proven |
 | Module 2 (Finance) — audit + proof (Slice 10) | ✅ **AUDITED** (`MODULE2_FINANCIAL_INTELLIGENCE_AUDIT_REPORT.md`) |
 | Module 2 (Finance) status | ✅ **STAGING_PROVEN + AUDITED** (not REAL_BUSINESS_PROVEN, not FULL_CAPACITY) |
+| Owner Command Center home (`/owner`, §22 Phase 2) | ✅ built + **deployed-runtime-proven** (run #4 https://github.com/arnab-netizen/OPsIq/actions/runs/27411312442, incl. `GET /owner`) — `MODULE2_OWNER_COMMAND_CENTER_SHELL_REPORT.md` |
+| Cross-domain condition (recovery → spine DomainScore) | ✅ built + locally proven; **deployed cross-domain proof pending re-run** — `MODULE2_CROSS_DOMAIN_CONDITION_REPORT.md` |
 | Module 3+ | ⛔ not started |
 | Public/SaaS/billing/marketing | ❄️ frozen |
 

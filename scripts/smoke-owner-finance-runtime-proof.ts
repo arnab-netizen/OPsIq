@@ -99,6 +99,7 @@ function planLines(): string[] {
     "  11 GET  /api/owner/finance/dashboard?businessId={id}           (reflects all)",
     "  12 GET  /owner/finance                                         (UI page renders)",
     "  13 GET  /api/owner/command-center?businessId={id}             (business condition + next action)",
+    "  13b seed recovery cycle (Module 1) → 13c command center reflects finance + recovery",
     "  14 GET  /owner                                                (command center home renders)",
     "  security: unauth blocked; foreign business blocked; invalid payload rejected; invalid transition rejected",
   ];
@@ -265,6 +266,29 @@ async function main(): Promise<void> {
   }
   if (!cc.json?.profile?.recommendedNextAction) fail(ccPath, cc.status, "command center missing recommendedNextAction");
   ok(`${step} (domains: ${cc.json.domainsWired.join(",")}; condition health ${Math.round(cc.json.profile.overallHealthScore)})`);
+
+  // 13b) seed a recovery cycle on the same business (Module 1 routes) to prove the
+  // command center is genuinely cross-domain (recovery contributes a spine DomainScore).
+  step = "13b. seed recovery snapshot + cycle (Module 1 routes)";
+  const recSnapPath = `/api/owner/recovery/businesses/${businessId}/snapshots`;
+  const recSnap = await call("POST", recSnapPath, {
+    cookie,
+    body: { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR", revenue: 100000, totalCosts: 95000, orderCount: 1000, newCustomers: 70, repeatCustomers: 30, deliveryCost: 12000 },
+  });
+  if (recSnap.status !== 201 || !recSnap.json?.snapshot?.id) fail(recSnapPath, recSnap.status, safeBodySummary(recSnap.text));
+  const recCyclePath = `/api/owner/recovery/businesses/${businessId}/cycles`;
+  const recCycle = await call("POST", recCyclePath, { cookie, body: { snapshotId: recSnap.json.snapshot.id } });
+  if (recCycle.status !== 201 || !recCycle.json?.id) fail(recCyclePath, recCycle.status, safeBodySummary(recCycle.text));
+  ok(`${step} (recovery cycle ${maskId(recCycle.json.id)})`);
+
+  step = "13c. command center reflects BOTH finance and recovery";
+  const cc2 = await call("GET", ccPath, { cookie });
+  if (cc2.status !== 200) fail(ccPath, cc2.status, safeBodySummary(cc2.text));
+  const wired: string[] = Array.isArray(cc2.json?.domainsWired) ? cc2.json.domainsWired : [];
+  if (!wired.includes("finance") || !wired.includes("recovery")) {
+    fail(ccPath, cc2.status, `expected finance+recovery, got [${wired.join(",")}]`);
+  }
+  ok(`${step} (domains: ${wired.join(",")})`);
 
   // 14) owner command-center home page renders for the authenticated owner
   step = "14. GET /owner (command center page renders)";

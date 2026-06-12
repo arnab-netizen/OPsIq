@@ -10,6 +10,8 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { createBusiness } from "@/services/founder-recovery/business.service";
+import { createSnapshot } from "@/services/founder-recovery/snapshot.service";
+import { runCycle } from "@/services/founder-recovery/cycle.service";
 import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { getBusinessCondition } from "@/services/owner-condition/business-condition.service";
@@ -54,6 +56,29 @@ describe("[db] Owner Business Condition", () => {
     expect(res.profile!.recommendedNextAction).toBeTruthy();
     expect(res.profile!.overallHealthScore).toBeGreaterThanOrEqual(0);
     expect(res.profile!.overallHealthScore).toBeLessThanOrEqual(100);
+
+    await db.ownerBusiness.delete({ where: { id: businessId } });
+  });
+
+  it("[db] rolls up BOTH finance and recovery domains for one business", async () => {
+    const workspaceId = ws();
+    const businessId = await seeded(workspaceId); // finance snapshot + diagnosis
+
+    // Seed a recovery cycle for the same business (Module 1 services).
+    const recSnap = await createSnapshot(
+      businessId,
+      { periodStart: "2026-04-01", periodEnd: "2026-04-30", currency: "INR", revenue: 100000, totalCosts: 95000, orderCount: 1000, newCustomers: 70, repeatCustomers: 30, deliveryCost: 12000 },
+      actor,
+      workspaceId
+    );
+    await runCycle(businessId, recSnap.id, actor, workspaceId);
+
+    const res = await getBusinessCondition(workspaceId, businessId);
+    expect(res.hasData).toBe(true);
+    expect(res.domainsWired).toContain("finance");
+    expect(res.domainsWired).toContain("recovery");
+    expect(res.profile!.domainScores.length).toBeGreaterThanOrEqual(2);
+    expect(res.profile!.recommendedNextAction).toBeTruthy();
 
     await db.ownerBusiness.delete({ where: { id: businessId } });
   });

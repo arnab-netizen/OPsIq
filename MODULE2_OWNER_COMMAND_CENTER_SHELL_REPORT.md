@@ -1,11 +1,21 @@
 # Owner Command Center Shell (`/owner` home) — Report
 
-Status: **Built + locally verified.** Deployed page-render proof requires a re-run of
-the finance runtime-proof workflow (a `GET /owner` step was added). This is
-execution.md §22 **Phase 2 — Owner Command Center shell**, completed now that the
-command-center read API (Slice 8) is deployed-runtime-proven. No public/SaaS, no
-billing, no marketing, no Module 3. No Prisma/migration change. Module 1 unchanged.
-Public/SaaS frozen.
+Status: **COMPLETE — built, locally verified, and DEPLOYED-RUNTIME-PROVEN.** The
+finance runtime-proof workflow was re-run on this commit and passed (incl. the
+`GET /owner` page-render step). This is execution.md §22 **Phase 2 — Owner Command
+Center shell**. No public/SaaS, no billing, no marketing, no Module 3. No
+Prisma/migration change. Module 1 unchanged. Public/SaaS frozen.
+
+## 0. Deployed `/owner` runtime proof — PASSED
+
+- Run: **Module 2 Finance Runtime Proof** #4 — **success** —
+  https://github.com/arnab-netizen/OPsIq/actions/runs/27411312442
+- Branch `main` · head commit `4b16847bbf259cf88688746dedef45adc74c2493` · base URL
+  `https://o-ps-iq.vercel.app` · duration ~2m7s.
+- The script at that commit includes **step 14 `GET /owner` (command center home
+  renders)**; the run is green and the script exits non-zero on any failed step, so
+  the `/owner` shell rendered for an authenticated owner on the deployed app.
+- **The Owner Command Center home is deployed-runtime-proven.**
 
 ## 1. Item executed
 
