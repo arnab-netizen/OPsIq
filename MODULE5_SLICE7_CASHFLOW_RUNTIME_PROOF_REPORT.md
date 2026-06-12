@@ -72,12 +72,41 @@ remains `built + locally proven`; it is **not** claimed deployed-runtime-proven
 until this workflow runs green (No False Green). Public/SaaS stays frozen;
 real-business validation (M13) remains a separate release gate.
 
-## Results (filled in after the manual run)
+## Run #1 — FAILED (deployment stale, not a code defect)
+
+- Result: **Failure** (57s), `main`@`362934e`, `base_url=https://o-ps-iq.vercel.app`.
+- **Root cause (execution.md §4 class #11 — deployment/environment):** the run
+  reported `deployed commit: 31eaa6f (env: production)` — production was still on
+  the **Slices 1–4 merge (`31eaa6f`)**, which has the cashflow *tables* but **not**
+  the cashflow *API routes* (those landed in `362934e`). Steps 0–2 (build-info /
+  signup / create business) passed; **step 3 (`POST /api/owner/cashflow/.../snapshots`)
+  returned `status 200` with an HTML body** (`<!DOCTYPE html>…`) — i.e. Next.js
+  served the app shell because the route does not exist on that build. The script
+  **correctly fail-closed** (expected `201` + JSON `id`).
+- **Not a code bug:** the cashflow API is CI-green and locally proven; it simply
+  was not deployed yet. No false green — the gate stays open.
+
+### Fix applied (gate tooling hardening)
+
+`module-5-cashflow-runtime-proof.yml` now passes `EXPECTED_COMMIT: ${{ github.sha }}`
+so the proof **fails fast at step 0** with an explicit "deployment is stale"
+message (deployed commit ≠ the commit under test) instead of a confusing mid-flow
+HTML failure. No change to the proof's substance.
+
+### Re-run requirement
+
+1. Ensure **production is redeployed to `main`@`362934e` or later** — confirm
+   `/api/internal/build-info` reports `362934e` (Vercel auto-deploys from `main`;
+   the earlier run hit a deploy that had not advanced past `31eaa6f`).
+2. Re-dispatch **Module 5 Cashflow Runtime Proof**
+   (`confirm = RUN_MODULE5_CASHFLOW_RUNTIME_PROOF`).
+
+## Results (filled in after a PASSING run)
 
 | Field | Value |
 |---|---|
-| Run URL | _pending_ |
-| Deployed commit | _pending_ |
+| Run URL | _pending (run #1 = FAIL: stale deploy 31eaa6f)_ |
+| Deployed commit | _must be `362934e`+ (run #1 saw stale `31eaa6f`)_ |
 | Findings / actions | _pending_ |
 | Verification status | _pending_ |
 | Command center domains wired | _pending (expect …,cashflow)_ |
