@@ -1,0 +1,298 @@
+/**
+ * Owner Finance (Module 2 Slice 4) — deterministic recommendations.
+ *
+ * Pure: maps Slice 3 finance `OwnerFinding`s → traceable `FinanceRecommendation`s.
+ * Every recommendation carries its source metric/value/threshold, severity,
+ * expected impact, confidence, the required owner action, and how to verify it.
+ * A finding with no template produces no recommendation (it is reported as a
+ * missing action input by the planner) — nothing is invented.
+ */
+import type { OwnerFinding, OwnerSeverity } from "@/domain/owner-spine/contracts";
+import { clampScore, clampConfidence } from "@/domain/owner-spine/contracts";
+
+export interface FinanceRecommendation {
+  recommendationCode: string;
+  findingCode: string;
+  category: string;
+  sourceMetric: string;
+  sourceValue: number | null;
+  threshold: number | null;
+  severity: OwnerSeverity;
+  expectedFinancialImpactScore: number; // 0..100
+  urgencyScore: number; // 0..100 (carried from the finding)
+  confidence: number; // 0..1
+  requiredOwnerAction: string;
+  verificationMetric: string;
+  verificationMethod: string;
+  expectedTimeframeDays: number;
+  effortScore: number; // 0..100
+  ownerRole: string;
+  title: string;
+  evidence: string[];
+}
+
+interface FinanceRecTemplate {
+  recommendationCode: string;
+  category: string;
+  title: string;
+  requiredOwnerAction: string;
+  verificationMethod: string;
+  expectedTimeframeDays: number;
+  effortScore: number;
+  ownerRole: string;
+}
+
+/**
+ * Finding code → recommendation template. Categories include the required set:
+ * stop/reduce leakage, collect receivables, reduce debt pressure, reduce fixed
+ * cost burden, reduce payroll burden, reach break-even, improve margin, improve
+ * data quality, improve revenue quality (plus preserve-cash + manage-payables).
+ */
+export const FINANCE_REC_TEMPLATES: Record<string, FinanceRecTemplate> = {
+  FIN_NEGATIVE_GROSS_MARGIN: {
+    recommendationCode: "FINREC_IMPROVE_MARGIN",
+    category: "improve_margin",
+    title: "Make each sale profitable",
+    requiredOwnerAction: "Reprice or cut direct (COGS) costs so gross margin is positive.",
+    verificationMethod: "Re-measure grossMarginPct next period; target > 0%.",
+    expectedTimeframeDays: 30,
+    effortScore: 60,
+    ownerRole: "owner",
+  },
+  FIN_NEGATIVE_NET_MARGIN: {
+    recommendationCode: "FINREC_IMPROVE_MARGIN",
+    category: "improve_margin",
+    title: "Return the business to net profit",
+    requiredOwnerAction: "Cut total costs and/or raise revenue to make net margin positive.",
+    verificationMethod: "Re-measure netMarginPct next period; target > 0%.",
+    expectedTimeframeDays: 30,
+    effortScore: 70,
+    ownerRole: "owner",
+  },
+  FIN_BELOW_BREAK_EVEN: {
+    recommendationCode: "FINREC_REACH_BREAK_EVEN",
+    category: "reach_break_even",
+    title: "Reach break-even",
+    requiredOwnerAction: "Increase revenue or reduce fixed costs to reach the break-even revenue.",
+    verificationMethod: "Compare next-period revenue against breakEvenRevenue.",
+    expectedTimeframeDays: 30,
+    effortScore: 60,
+    ownerRole: "owner",
+  },
+  FIN_INSOLVENT_RUNWAY: {
+    recommendationCode: "FINREC_PRESERVE_CASH_NOW",
+    category: "preserve_cash",
+    title: "Preserve cash immediately",
+    requiredOwnerAction: "Defer non-critical spend, accelerate collections, and raise cash now.",
+    verificationMethod: "Re-measure cashRunwayDays; target above the insolvency threshold.",
+    expectedTimeframeDays: 7,
+    effortScore: 50,
+    ownerRole: "owner",
+  },
+  FIN_LOW_RUNWAY: {
+    recommendationCode: "FINREC_EXTEND_RUNWAY",
+    category: "preserve_cash",
+    title: "Extend cash runway",
+    requiredOwnerAction: "Reduce burn and accelerate collections to extend runway.",
+    verificationMethod: "Re-measure cashRunwayDays; target above the low-runway threshold.",
+    expectedTimeframeDays: 14,
+    effortScore: 50,
+    ownerRole: "owner",
+  },
+  FIN_HIGH_FIXED_COST_BURDEN: {
+    recommendationCode: "FINREC_REDUCE_FIXED_COST",
+    category: "reduce_fixed_cost_burden",
+    title: "Right-size fixed costs",
+    requiredOwnerAction: "Renegotiate rent/contracts or reduce fixed overheads.",
+    verificationMethod: "Re-measure fixedCostBurdenPct next period; target below threshold.",
+    expectedTimeframeDays: 45,
+    effortScore: 60,
+    ownerRole: "owner",
+  },
+  FIN_HIGH_PAYROLL_BURDEN: {
+    recommendationCode: "FINREC_REDUCE_PAYROLL_BURDEN",
+    category: "reduce_payroll_burden",
+    title: "Align payroll to output",
+    requiredOwnerAction: "Match staffing to demand and raise productivity per wage.",
+    verificationMethod: "Re-measure payrollBurdenPct next period; target below threshold.",
+    expectedTimeframeDays: 45,
+    effortScore: 60,
+    ownerRole: "owner",
+  },
+  FIN_HIGH_DEBT_PRESSURE: {
+    recommendationCode: "FINREC_REDUCE_DEBT_PRESSURE",
+    category: "reduce_debt_pressure",
+    title: "Reduce debt-service pressure",
+    requiredOwnerAction: "Restructure or prepay high-cost debt to lower EMI outflow.",
+    verificationMethod: "Re-measure debtServicePressurePct next period; target below threshold.",
+    expectedTimeframeDays: 45,
+    effortScore: 55,
+    ownerRole: "owner",
+  },
+  FIN_HIGH_RECEIVABLES: {
+    recommendationCode: "FINREC_COLLECT_RECEIVABLES",
+    category: "collect_receivables",
+    title: "Collect overdue receivables",
+    requiredOwnerAction: "Run a focused collection drive on overdue accounts.",
+    verificationMethod: "Re-measure receivablesPressurePct next period; target below threshold.",
+    expectedTimeframeDays: 14,
+    effortScore: 30,
+    ownerRole: "owner",
+  },
+  FIN_HIGH_PAYABLES: {
+    recommendationCode: "FINREC_MANAGE_PAYABLES",
+    category: "manage_payables",
+    title: "Sequence and renegotiate payables",
+    requiredOwnerAction: "Negotiate vendor terms and sequence payments by criticality.",
+    verificationMethod: "Re-measure payablesPressurePct next period; target below threshold.",
+    expectedTimeframeDays: 21,
+    effortScore: 35,
+    ownerRole: "owner",
+  },
+  FIN_DISCOUNT_LEAKAGE: {
+    recommendationCode: "FINREC_REDUCE_LEAKAGE",
+    category: "stop_reduce_leakage",
+    title: "Tighten discounting",
+    requiredOwnerAction: "Tighten discount policy and require approval above a cap.",
+    verificationMethod: "Re-measure discountLeakagePct next period; target below threshold.",
+    expectedTimeframeDays: 21,
+    effortScore: 30,
+    ownerRole: "owner",
+  },
+  FIN_REFUND_REWORK_LEAKAGE: {
+    recommendationCode: "FINREC_REDUCE_LEAKAGE",
+    category: "stop_reduce_leakage",
+    title: "Cut refunds and rework",
+    requiredOwnerAction: "Fix the root causes of refunds/rework to recover margin.",
+    verificationMethod: "Re-measure refundReworkLeakagePct next period; target lower.",
+    expectedTimeframeDays: 30,
+    effortScore: 45,
+    ownerRole: "owner",
+  },
+  FIN_INVALID_CURRENCY: {
+    recommendationCode: "FINREC_FIX_CURRENCY",
+    category: "improve_data_quality",
+    title: "Set a valid reporting currency",
+    requiredOwnerAction: "Set a valid 3–8 letter currency code on the snapshot.",
+    verificationMethod: "Confirm currencyValid is true on the next snapshot.",
+    expectedTimeframeDays: 3,
+    effortScore: 10,
+    ownerRole: "owner",
+  },
+  FIN_MISSING_CRITICAL_DATA: {
+    recommendationCode: "FINREC_IMPROVE_DATA_QUALITY",
+    category: "improve_data_quality",
+    title: "Provide missing financial inputs",
+    requiredOwnerAction: "Enter the listed missing inputs to raise diagnosis confidence.",
+    verificationMethod: "Re-measure dataConfidenceScore next snapshot; target higher.",
+    expectedTimeframeDays: 7,
+    effortScore: 20,
+    ownerRole: "owner",
+  },
+  FIN_OPP_MARGIN_IMPROVEMENT: {
+    recommendationCode: "FINREC_IMPROVE_MARGIN",
+    category: "improve_margin",
+    title: "Lift net margin toward the healthy bar",
+    requiredOwnerAction: "Apply targeted pricing/cost actions to raise net margin.",
+    verificationMethod: "Re-measure netMarginPct next period; target the healthy bar.",
+    expectedTimeframeDays: 45,
+    effortScore: 55,
+    ownerRole: "owner",
+  },
+  FIN_OPP_BREAK_EVEN_RECOVERY: {
+    recommendationCode: "FINREC_REACH_BREAK_EVEN",
+    category: "reach_break_even",
+    title: "Close the gap to break-even",
+    requiredOwnerAction: "Increase revenue or cut fixed costs to close the break-even gap.",
+    verificationMethod: "Compare next-period revenue against breakEvenRevenue.",
+    expectedTimeframeDays: 30,
+    effortScore: 55,
+    ownerRole: "owner",
+  },
+  FIN_OPP_RECEIVABLES_COLLECTION: {
+    recommendationCode: "FINREC_COLLECT_RECEIVABLES",
+    category: "collect_receivables",
+    title: "Convert receivables to cash",
+    requiredOwnerAction: "Run a collection push on outstanding receivables.",
+    verificationMethod: "Re-measure receivablesPressurePct next period; target lower.",
+    expectedTimeframeDays: 14,
+    effortScore: 30,
+    ownerRole: "owner",
+  },
+  FIN_OPP_DEBT_REDUCTION: {
+    recommendationCode: "FINREC_REDUCE_DEBT_PRESSURE",
+    category: "reduce_debt_pressure",
+    title: "Lower debt-service pressure",
+    requiredOwnerAction: "Restructure or prepay high-cost debt.",
+    verificationMethod: "Re-measure debtServicePressurePct next period; target lower.",
+    expectedTimeframeDays: 45,
+    effortScore: 55,
+    ownerRole: "owner",
+  },
+  FIN_OPP_LEAKAGE_REDUCTION: {
+    recommendationCode: "FINREC_REDUCE_LEAKAGE",
+    category: "stop_reduce_leakage",
+    title: "Recover margin from cost leakage",
+    requiredOwnerAction: "Tighten discounts and reduce refunds/rework to recover margin.",
+    verificationMethod: "Re-measure costLeakageRatioPct next period; target lower.",
+    expectedTimeframeDays: 30,
+    effortScore: 35,
+    ownerRole: "owner",
+  },
+  FIN_OPP_REVENUE_QUALITY: {
+    recommendationCode: "FINREC_IMPROVE_REVENUE_QUALITY",
+    category: "improve_revenue_quality",
+    title: "Improve revenue quality",
+    requiredOwnerAction: "Diversify revenue and reduce discount dependence/concentration.",
+    verificationMethod: "Re-measure revenueQualityScore next period; target higher.",
+    expectedTimeframeDays: 60,
+    effortScore: 50,
+    ownerRole: "owner",
+  },
+  FIN_OPP_DATA_QUALITY: {
+    recommendationCode: "FINREC_IMPROVE_DATA_QUALITY",
+    category: "improve_data_quality",
+    title: "Improve data completeness",
+    requiredOwnerAction: "Supply the missing/stale inputs to sharpen the diagnosis.",
+    verificationMethod: "Re-measure dataConfidenceScore next snapshot; target higher.",
+    expectedTimeframeDays: 7,
+    effortScore: 20,
+    ownerRole: "owner",
+  },
+};
+
+/** Build a traceable recommendation from a finding, or null if no template. */
+export function buildFinanceRecommendation(finding: OwnerFinding): FinanceRecommendation | null {
+  const tpl = FINANCE_REC_TEMPLATES[finding.code];
+  if (!tpl) return null;
+  return {
+    recommendationCode: tpl.recommendationCode,
+    findingCode: finding.code,
+    category: tpl.category,
+    sourceMetric: finding.sourceMetric,
+    sourceValue: finding.sourceValue ?? null, // never invented
+    threshold: finding.threshold ?? null,
+    severity: finding.severity,
+    expectedFinancialImpactScore: clampScore(finding.impactScore),
+    urgencyScore: clampScore(finding.urgencyScore),
+    confidence: clampConfidence(finding.confidence),
+    requiredOwnerAction: tpl.requiredOwnerAction,
+    verificationMetric: finding.verificationMetric ?? finding.sourceMetric,
+    verificationMethod: tpl.verificationMethod,
+    expectedTimeframeDays: tpl.expectedTimeframeDays,
+    effortScore: clampScore(tpl.effortScore),
+    ownerRole: tpl.ownerRole,
+    title: tpl.title,
+    evidence: finding.evidence,
+  };
+}
+
+/** Build recommendations for every finding that has a template (in input order). */
+export function buildFinanceRecommendations(findings: OwnerFinding[]): FinanceRecommendation[] {
+  const recs: FinanceRecommendation[] = [];
+  for (const f of findings) {
+    const r = buildFinanceRecommendation(f);
+    if (r) recs.push(r);
+  }
+  return recs;
+}
