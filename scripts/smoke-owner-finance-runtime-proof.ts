@@ -99,6 +99,7 @@ function planLines(): string[] {
     "  11 GET  /api/owner/finance/dashboard?businessId={id}           (reflects all)",
     "  12 GET  /owner/finance                                         (UI page renders)",
     "  13 GET  /api/owner/command-center?businessId={id}             (business condition + next action)",
+    "  14 GET  /owner                                                (command center home renders)",
     "  security: unauth blocked; foreign business blocked; invalid payload rejected; invalid transition rejected",
   ];
 }
@@ -264,6 +265,12 @@ async function main(): Promise<void> {
   }
   if (!cc.json?.profile?.recommendedNextAction) fail(ccPath, cc.status, "command center missing recommendedNextAction");
   ok(`${step} (domains: ${cc.json.domainsWired.join(",")}; condition health ${Math.round(cc.json.profile.overallHealthScore)})`);
+
+  // 14) owner command-center home page renders for the authenticated owner
+  step = "14. GET /owner (command center page renders)";
+  const home = await call("GET", "/owner", { cookie });
+  if (home.status >= 400) fail("/owner", home.status, safeBodySummary(home.text));
+  ok(`${step} (status ${home.status})`);
 
   // --- SECURITY CHECKS ---
   step = "S1. unauthenticated finance endpoint blocked";
