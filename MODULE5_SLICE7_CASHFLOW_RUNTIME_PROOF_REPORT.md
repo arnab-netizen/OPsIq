@@ -93,13 +93,44 @@ so the proof **fails fast at step 0** with an explicit "deployment is stale"
 message (deployed commit ≠ the commit under test) instead of a confusing mid-flow
 HTML failure. No change to the proof's substance.
 
-### Re-run requirement
+## Run #2 — FAILED fast (guard working; deploy still stale)
 
-1. Ensure **production is redeployed to `main`@`362934e` or later** — confirm
-   `/api/internal/build-info` reports `362934e` (Vercel auto-deploys from `main`;
-   the earlier run hit a deploy that had not advanced past `31eaa6f`).
-2. Re-dispatch **Module 5 Cashflow Runtime Proof**
-   (`confirm = RUN_MODULE5_CASHFLOW_RUNTIME_PROOF`).
+`EXPECTED_COMMIT` guard fired correctly: failed at **step 0** with
+`commit 31eaa6f != expected 39c5fca — deployment may be stale`. Confirmed
+production had not advanced. Fix: merged the latest `main` (`757b709`) to
+re-trigger the Vercel production deploy.
+
+## Run #3 — FAILED at diagnosis (real bug found → fixed)
+
+- Production correctly advanced to **`757b709`** (Vercel: Production / Current /
+  Ready). Steps 0–4 **passed**: build-info `757b709`, signup, create business,
+  **cashflow snapshot persisted** (`dataConfidence 85`), read snapshot — proving
+  the deploy + cashflow API + tables work end-to-end.
+- **FAIL at step 5 (`POST .../diagnoses`): HTTP 500**, body
+  `{"errorName":"PrismaClientKnownRequestError","prismaCode":"P2028",...}`.
+- **Root cause (real defect, first real-DB exercise of the cashflow transaction —
+  the `[db]` test is gated, so CI never hit it):** the diagnosis persisted the
+  cycle + findings + actions as **~20+ sequential `create` round-trips inside one
+  interactive transaction**. The cashflow *crisis* snapshot emits ~11 findings +
+  ~11 actions — far more than the finance test — so the transaction exceeded the
+  **default 5s interactive-transaction limit** on the pooled Neon connection
+  (Prisma **P2028**). The runtime proof correctly caught it (no false green).
+
+### Fix applied (`src/services/owner-cashflow/diagnosis.service.ts`)
+
+Build all rows (with stable pre-generated IDs) **outside** the transaction, then
+write them with **`createMany`** (findings before actions, so the action→finding
+FK holds) inside `db.$transaction(..., { maxWait: 10000, timeout: 20000 })`. The
+governed write stays atomic but is now ~3 statements instead of ~20, well within
+the limit. Local: build ✓, eslint ✓, cashflow tests 57 ✓, ratchet ✓, full suite ✓.
+
+## Re-run requirement
+
+1. Merge the fix to `main` and let **Vercel redeploy** (new `main` commit);
+   confirm `/api/internal/build-info` matches the new commit.
+2. Re-dispatch **Module 5 Cashflow Runtime Proof** **from `main`**
+   (`confirm = RUN_MODULE5_CASHFLOW_RUNTIME_PROOF`) — `EXPECTED_COMMIT` requires
+   the deployed commit to equal the commit under test.
 
 ## Results (filled in after a PASSING run)
 

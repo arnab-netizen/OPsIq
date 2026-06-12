@@ -43,77 +43,86 @@ export async function runCashflowDiagnosis(
   const recByFinding: Record<string, string> = {};
   for (const r of plan.recommendations) recByFinding[r.findingCode] = r.recommendationCode;
 
-  await db.$transaction(async (tx: any) => {
-    await tx.ownerCashflowCycle.create({
-      data: {
-        id: cycleId,
-        workspaceId,
-        businessId,
-        snapshotId,
-        sequenceNumber,
-        status: "open",
-        healthScore: diagnosis.domainScore.healthScore,
-        dangerScore: diagnosis.domainScore.riskScore,
-        opportunityScore: diagnosis.domainScore.opportunityScore,
-        dataConfidenceScore: diagnosis.domainScore.dataConfidenceScore,
-        cashflowState: diagnosis.metrics.cashflowState,
-        generatedAt: diagnosis.generatedAt,
-      },
-    });
-
-    const findingIdByCode: Record<string, string> = {};
-    for (const f of diagnosis.findings) {
-      const id = randomUUID();
-      findingIdByCode[f.code] = id;
-      await tx.ownerCashflowFinding.create({
-        data: {
-          id,
-          workspaceId,
-          businessId,
-          cycleId,
-          findingType: f.findingType,
-          code: f.code,
-          title: f.title,
-          summary: f.summary,
-          sourceMetric: f.sourceMetric,
-          sourceValue: f.sourceValue ?? null,
-          threshold: f.threshold ?? null,
-          severity: f.severity,
-          confidence: f.confidence,
-          impactScore: f.impactScore,
-          urgencyScore: f.urgencyScore,
-          evidence: f.evidence,
-          missingData: f.missingData,
-          verificationMetric: f.verificationMetric ?? null,
-        },
-      });
-    }
-
-    for (const a of plan.actions) {
-      await tx.ownerCashflowAction.create({
-        data: {
-          id: randomUUID(),
-          workspaceId,
-          businessId,
-          cycleId,
-          findingId: findingIdByCode[a.findingCode] ?? null,
-          recommendationCode: recByFinding[a.findingCode] ?? a.findingCode,
-          findingCode: a.findingCode,
-          title: a.title,
-          description: a.description,
-          ownerRole: a.ownerRole,
-          status: "proposed",
-          priorityScore: a.priorityScore,
-          effortScore: a.effortScore,
-          expectedImpactScore: a.expectedImpactScore,
-          confidence: a.confidence,
-          verificationMetric: a.verificationMetric,
-          verificationMethod: a.verificationMethod,
-          expectedTimeframeDays: a.expectedTimeframeDays,
-        },
-      });
-    }
+  // Pre-build all rows (with stable pre-generated IDs) OUTSIDE the transaction so
+  // the governed write is a few bulk statements, not one network round-trip per
+  // row. The cashflow crisis path emits ~10+ findings + ~10+ actions; doing that
+  // as sequential per-row creates inside an interactive transaction exceeds the
+  // default 5s limit on the pooled Neon connection and fails with Prisma P2028.
+  // `createMany` (findings before actions, so the action→finding FK is satisfied)
+  // plus an explicit timeout keeps cycle+findings+actions atomic and fast.
+  const findingIdByCode: Record<string, string> = {};
+  const findingRows = diagnosis.findings.map((f) => {
+    const id = randomUUID();
+    findingIdByCode[f.code] = id;
+    return {
+      id,
+      workspaceId,
+      businessId,
+      cycleId,
+      findingType: f.findingType,
+      code: f.code,
+      title: f.title,
+      summary: f.summary,
+      sourceMetric: f.sourceMetric,
+      sourceValue: f.sourceValue ?? null,
+      threshold: f.threshold ?? null,
+      severity: f.severity,
+      confidence: f.confidence,
+      impactScore: f.impactScore,
+      urgencyScore: f.urgencyScore,
+      evidence: f.evidence,
+      missingData: f.missingData,
+      verificationMetric: f.verificationMetric ?? null,
+    };
   });
+  const actionRows = plan.actions.map((a) => ({
+    id: randomUUID(),
+    workspaceId,
+    businessId,
+    cycleId,
+    findingId: findingIdByCode[a.findingCode] ?? null,
+    recommendationCode: recByFinding[a.findingCode] ?? a.findingCode,
+    findingCode: a.findingCode,
+    title: a.title,
+    description: a.description,
+    ownerRole: a.ownerRole,
+    status: "proposed",
+    priorityScore: a.priorityScore,
+    effortScore: a.effortScore,
+    expectedImpactScore: a.expectedImpactScore,
+    confidence: a.confidence,
+    verificationMetric: a.verificationMetric,
+    verificationMethod: a.verificationMethod,
+    expectedTimeframeDays: a.expectedTimeframeDays,
+  }));
+
+  await db.$transaction(
+    async (tx: any) => {
+      await tx.ownerCashflowCycle.create({
+        data: {
+          id: cycleId,
+          workspaceId,
+          businessId,
+          snapshotId,
+          sequenceNumber,
+          status: "open",
+          healthScore: diagnosis.domainScore.healthScore,
+          dangerScore: diagnosis.domainScore.riskScore,
+          opportunityScore: diagnosis.domainScore.opportunityScore,
+          dataConfidenceScore: diagnosis.domainScore.dataConfidenceScore,
+          cashflowState: diagnosis.metrics.cashflowState,
+          generatedAt: diagnosis.generatedAt,
+        },
+      });
+      if (findingRows.length > 0) {
+        await tx.ownerCashflowFinding.createMany({ data: findingRows });
+      }
+      if (actionRows.length > 0) {
+        await tx.ownerCashflowAction.createMany({ data: actionRows });
+      }
+    },
+    { maxWait: 10000, timeout: 20000 }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_CASHFLOW_DIAGNOSIS_RUN,
