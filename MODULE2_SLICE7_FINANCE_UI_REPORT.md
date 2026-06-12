@@ -1,9 +1,22 @@
 # Module 2 — Slice 7 — Finance Dashboard UI — Report
 
-Status: **Slice 7 built + locally verified.** Deployed UI page-render proof requires a
-re-run of the finance runtime-proof workflow (a `/owner/finance` step was added).
-No public/SaaS, no billing, no marketing, no Module 3. No Prisma/migration change.
-Module 1 unchanged. Public/SaaS frozen.
+Status: **Slice 7 COMPLETE — built, locally verified, and DEPLOYED-RUNTIME-PROVEN.**
+The finance runtime-proof workflow was re-run on the UI commit and passed (incl. the
+`GET /owner/finance` page-render step). No public/SaaS, no billing, no marketing, no
+Module 3. No Prisma/migration change. Module 1 unchanged. Public/SaaS frozen.
+
+## 0. Deployed UI runtime proof — PASSED
+
+- Run: **Module 2 Finance Runtime Proof** #2 — **success** —
+  https://github.com/arnab-netizen/OPsIq/actions/runs/27406156168
+- Branch `main` · head commit `e2fc3640d285909f4c8acf3daa799d773928ff45` (the Slice 7
+  UI commit) · base URL `https://o-ps-iq.vercel.app`.
+- The smoke script at that commit includes **step 12 `GET /owner/finance` (page
+  renders)**; the run is green and the script exits non-zero on any failed step, so
+  the UI page-render (plus the full finance API loop + 4 security checks) passed on the
+  deployed app. Artifact `module-2-finance-runtime-proof-log` (981 bytes, masked IDs).
+- **Module 2 Finance UI is deployed-runtime-proven.**
+
 
 ## 1. Slice executed
 

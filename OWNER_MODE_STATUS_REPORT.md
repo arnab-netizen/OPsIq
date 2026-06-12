@@ -35,8 +35,8 @@ rejected (400). See `MODULE1_OWNER_RECOVERY_STAGING_PROVEN_REPORT.md`.
 | 5 Persistence schema + manual migration | ✅ MIGRATED to staging | `MODULE2_SLICE5_FINANCE_PERSISTENCE_REPORT.md` |
 | 6 Finance API + service layer | ✅ | `MODULE2_SLICE6_FINANCE_API_REPORT.md` |
 | Finance API deployed runtime proof | ✅ **PROVEN** | run https://github.com/arnab-netizen/OPsIq/actions/runs/27404358424 — `MODULE2_FINANCE_RUNTIME_PROVEN_REPORT.md` |
-| 7 Finance dashboard UI | ⏳ next (now unblocked) | — |
-| 8 Business Condition Profile / owner-command-center integration | ⏳ | — |
+| 7 Finance dashboard UI | ✅ built + **deployed-runtime-proven** | run #2 https://github.com/arnab-netizen/OPsIq/actions/runs/27406156168 (incl. `GET /owner/finance`) — `MODULE2_SLICE7_FINANCE_UI_REPORT.md` |
+| 8 Business Condition Profile / owner-command-center integration | ⏳ next (unblocked) | — |
 
 ## What is NOT yet proven / out of scope
 
@@ -50,12 +50,14 @@ rejected (400). See `MODULE1_OWNER_RECOVERY_STAGING_PROVEN_REPORT.md`.
 |---|---|
 | Module 1 (Owner Recovery) | ✅ STAGING-PROVEN |
 | Module 2 (Finance) — engine/diagnosis/planner/schema/API | ✅ built; APIs deployed-runtime-proven |
-| Module 2 (Finance) — UI + integration | ⏳ in progress (Slice 7 next) |
+| Module 2 (Finance) — API + UI | ✅ built + deployed-runtime-proven |
+| Module 2 (Finance) — cross-domain integration (Slice 8) | ⏳ next (unblocked) |
 | Module 3+ | ⛔ not started |
 | Public/SaaS/billing/marketing | ❄️ frozen |
 
 ## Next single action
 
-Build **Module 2 Slice 7 — Finance dashboard UI** (`/owner/finance`), consuming the
-now-runtime-proven finance APIs, mirroring Module 1's `/owner/recovery` page. Keep
-public/SaaS frozen.
+Build **Module 2 Slice 8 — Business Condition Profile / owner command-center
+integration**: a deterministic cross-domain rollup that emits the finance `DomainScore`
+into a persisted/derived Business Condition Profile and surfaces the single prioritized
+next owner action (per the Owner Intelligence Spine). Keep public/SaaS frozen.
