@@ -98,6 +98,7 @@ function planLines(): string[] {
     "  10 POST /api/owner/finance/actions/{id}/verify",
     "  11 GET  /api/owner/finance/dashboard?businessId={id}           (reflects all)",
     "  12 GET  /owner/finance                                         (UI page renders)",
+    "  13 GET  /api/owner/command-center?businessId={id}             (business condition + next action)",
     "  security: unauth blocked; foreign business blocked; invalid payload rejected; invalid transition rejected",
   ];
 }
@@ -252,6 +253,17 @@ async function main(): Promise<void> {
   const page = await call("GET", "/owner/finance", { cookie });
   if (page.status >= 400) fail("/owner/finance", page.status, safeBodySummary(page.text));
   ok(`${step} (status ${page.status})`);
+
+  // 13) owner command center reflects the finance domain + a prioritized next action
+  step = "13. GET /api/owner/command-center";
+  const ccPath = `/api/owner/command-center?businessId=${businessId}`;
+  const cc = await call("GET", ccPath, { cookie });
+  if (cc.status !== 200 || cc.json?.hasData !== true) fail(ccPath, cc.status, safeBodySummary(cc.text));
+  if (!Array.isArray(cc.json?.domainsWired) || !cc.json.domainsWired.includes("finance")) {
+    fail(ccPath, cc.status, "command center missing finance domain");
+  }
+  if (!cc.json?.profile?.recommendedNextAction) fail(ccPath, cc.status, "command center missing recommendedNextAction");
+  ok(`${step} (domains: ${cc.json.domainsWired.join(",")}; condition health ${Math.round(cc.json.profile.overallHealthScore)})`);
 
   // --- SECURITY CHECKS ---
   step = "S1. unauthenticated finance endpoint blocked";
