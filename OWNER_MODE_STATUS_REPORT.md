@@ -37,7 +37,7 @@ rejected (400). See `MODULE1_OWNER_RECOVERY_STAGING_PROVEN_REPORT.md`.
 | Finance API deployed runtime proof | ✅ **PROVEN** | run https://github.com/arnab-netizen/OPsIq/actions/runs/27404358424 — `MODULE2_FINANCE_RUNTIME_PROVEN_REPORT.md` |
 | 7 Finance dashboard UI | ✅ built + **deployed-runtime-proven** | run #2 https://github.com/arnab-netizen/OPsIq/actions/runs/27406156168 (incl. `GET /owner/finance`) — `MODULE2_SLICE7_FINANCE_UI_REPORT.md` |
 | 8 Business Condition Profile / owner-command-center read | ✅ built + **deployed-runtime-proven** | run #3 https://github.com/arnab-netizen/OPsIq/actions/runs/27407345728 (incl. `GET /api/owner/command-center`) — `MODULE2_SLICE8_BUSINESS_CONDITION_REPORT.md` |
-| 10 Module 2 audit + proof report | ⏳ next (unblocked) | — |
+| 10 Module 2 audit + proof report | ✅ **AUDITED** | `MODULE2_FINANCIAL_INTELLIGENCE_AUDIT_REPORT.md` |
 
 ## What is NOT yet proven / out of scope
 
@@ -52,19 +52,19 @@ rejected (400). See `MODULE1_OWNER_RECOVERY_STAGING_PROVEN_REPORT.md`.
 | Module 1 (Owner Recovery) | ✅ STAGING-PROVEN |
 | Module 2 (Finance) — engine/diagnosis/planner/schema/API | ✅ built; APIs deployed-runtime-proven |
 | Module 2 (Finance) — API + UI + command-center | ✅ built + deployed-runtime-proven |
-| Module 2 (Finance) — audit + proof (Slice 10) | ⏳ next (unblocked) |
+| Module 2 (Finance) — audit + proof (Slice 10) | ✅ **AUDITED** (`MODULE2_FINANCIAL_INTELLIGENCE_AUDIT_REPORT.md`) |
+| Module 2 (Finance) status | ✅ **STAGING_PROVEN + AUDITED** (not REAL_BUSINESS_PROVEN, not FULL_CAPACITY) |
 | Module 3+ | ⛔ not started |
 | Public/SaaS/billing/marketing | ❄️ frozen |
 
-The Module 2 finance loop is now deployed-runtime-proven end to end
+The Module 2 finance loop is deployed-runtime-proven end to end
 (engine → diagnosis → planner → schema/migration → API → UI → Business Condition
-Profile / command center), proven across runs 27404358424 / 27406156168 / 27407345728.
+Profile / command center) across runs 27404358424 / 27406156168 / 27407345728, and now
+audited (security / isolation / calc-correctness / state / data-visibility / false-green).
 
 ## Next single action
 
-Run **Module 2 Slice 10 — audit + proof report**: a security / workspace-isolation /
-calculation-correctness / state-transition / data-visibility / false-green audit of
-the finance module, recording the end-to-end deployed runtime proof and setting the
-Module 2 status. (Recovery and other domains integrate into the Business Condition
-Profile as they adopt the spine `DomainScore` — a later slice that must not modify
-Module 1.) Keep public/SaaS frozen.
+Either (a) **real-business validation** of the finance loop (M13 — drive a real business
+on staging and record `REAL_BUSINESS_PROVEN`), or (b) **wire a second domain into the
+Business Condition Profile** (e.g. upgrade recovery to emit a spine `DomainScore` in a
+Module-1-safe, additive way). Keep public/SaaS frozen.
