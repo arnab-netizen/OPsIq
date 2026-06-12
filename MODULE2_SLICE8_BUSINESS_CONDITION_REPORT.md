@@ -1,10 +1,23 @@
 # Module 2 — Slice 8 — Business Condition Profile / Owner Command Center — Report
 
-Status: **Slice 8 built + locally verified.** Deployed runtime proof for the new
-command-center read requires a re-run of the finance runtime-proof workflow (a
-`GET /api/owner/command-center` step was added). No public/SaaS, no billing, no
-marketing, no Module 3. **No Prisma/migration change. Module 1 unchanged.**
-Public/SaaS frozen.
+Status: **Slice 8 COMPLETE — built, locally verified, and DEPLOYED-RUNTIME-PROVEN.**
+The finance runtime-proof workflow was re-run on the Slice 8 commit and passed (incl.
+the `GET /api/owner/command-center` step). No public/SaaS, no billing, no marketing, no
+Module 3. **No Prisma/migration change. Module 1 unchanged.** Public/SaaS frozen.
+
+## 0. Deployed command-center runtime proof — PASSED
+
+- Run: **Module 2 Finance Runtime Proof** #3 — **success** —
+  https://github.com/arnab-netizen/OPsIq/actions/runs/27407345728
+- Branch `main` · head commit `ba05579104df0e651a3b552c07e167933962c9e2` (the Slice 8
+  commit) · base URL `https://o-ps-iq.vercel.app`.
+- The smoke script at that commit includes **step 13 `GET /api/owner/command-center`**
+  (asserts the command center reflects the finance domain + a `recommendedNextAction`);
+  the run is green and the script exits non-zero on any failed step, so the
+  command-center read passed on the deployed app. Artifact
+  `module-2-finance-runtime-proof-log` (1020 bytes, masked IDs).
+- **The owner Business Condition / command-center read is deployed-runtime-proven.**
+
 
 ## 1. Slice executed
 
