@@ -1,10 +1,23 @@
 # Owner Command Center — Cross-Domain Condition (recovery wired) — Report
 
-Status: **Built + locally verified.** Deployed cross-domain proof requires a re-run of
-the finance runtime-proof workflow (it now seeds a recovery cycle and asserts the
-command center reflects **both** finance and recovery). No public/SaaS, no billing, no
-marketing, no Module 3. **No Prisma/migration change. Module 1 not modified (read-only
-recovery reads).** Public/SaaS frozen.
+Status: **COMPLETE — built, locally verified, and DEPLOYED-RUNTIME-PROVEN.** The finance
+runtime-proof workflow was re-run on this commit and passed, including the recovery
+seed + the assertion that the command center reflects **both** finance and recovery. No
+public/SaaS, no billing, no marketing, no Module 3. **No Prisma/migration change.
+Module 1 not modified (read-only recovery reads).** Public/SaaS frozen.
+
+## 0. Deployed cross-domain runtime proof — PASSED
+
+- Run: **Module 2 Finance Runtime Proof** #5 — **success** —
+  https://github.com/arnab-netizen/OPsIq/actions/runs/27412646582
+- Branch `main` · head commit `c1fe6463fa2d0907ce988a52072608a4330f93e0` · base URL
+  `https://o-ps-iq.vercel.app` · duration ~2m10s.
+- The script at that commit seeds a recovery cycle (steps 13b) and asserts the command
+  center `domainsWired` includes **both `finance` and `recovery`** (step 13c); the run
+  is green and the script exits non-zero on any failed step, so the cross-domain rollup
+  passed on the deployed app.
+- **The owner command center is deployed-runtime-proven as cross-domain
+  (finance + recovery).**
 
 ## 1. Item executed
 
