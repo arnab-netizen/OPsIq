@@ -205,11 +205,31 @@ end to end — engine → detector → planner → schema/migration → API → 
 center; decision-support rollup proven so strategy risk scores the option, not
 survival). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
 
+## Module 9 — Multi-Business Portfolio Command Center (complete)
+
+Per execution.md §16 / §22 Phase 10 (portfolio command center, built after
+strategy). All on `main` (merge `c8e40fe` + `38c0775`). **Read-only cross-business
+aggregation** over each business's Owner Intelligence Spine `BusinessConditionProfile`
+— owns no entity, runs no migration, mutates nothing.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Portfolio engine (deterministic ranking) | ✅ | `MODULE9_SLICE1_PORTFOLIO_ENGINE_REPORT.md` (`b487091`) |
+| 2 API + service (read-only) | ✅ | `MODULE9_SLICE2_PORTFOLIO_API_REPORT.md` (`dd889b0`) |
+| 3 UI + command-center link | ✅ | `MODULE9_SLICE3_PORTFOLIO_UI_REPORT.md` (`c8e40fe`) |
+| 4 Deployed runtime proof | ✅ **PROVEN** | Module 9 Portfolio Runtime Proof #1 — Success (1m 56s, `main`@`38c0775`) — `MODULE9_SLICE4_PORTFOLIO_RUNTIME_PROOF_REPORT.md` |
+| 5 Audit + proof | ✅ **AUDITED** | `MODULE9_PORTFOLIO_COMMAND_CENTER_AUDIT_REPORT.md` |
+
+Module 9 status: **STAGING_PROVEN + AUDITED** (portfolio loop deployed-runtime-proven
+end to end — engine → read-only API → UI → cross-business ranking, priorities,
+alerts, investment recommendation; no migration — read-only module). Not
+REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
+
 ## Next single action
 
-Module 8 Strategy/Scenario is **STAGING_PROVEN + AUDITED** (all slices proven). Proven
-owner domains: recovery + finance + cashflow + sales + operations + sop + marketing
-+ strategy (command center is cross-domain over all eight). Next per execution.md
-§22: the next owner module / capability slice (e.g. Module 9 Portfolio Command
-Center or Module 10 Connectors), or M13 real-business validation (release gate, not
-a build blocker). Keep public/SaaS/billing/marketing frozen.
+Module 9 Portfolio is **STAGING_PROVEN + AUDITED** (all slices proven). Proven owner
+domains: recovery + finance + cashflow + sales + operations + sop + marketing +
+strategy, plus the cross-business portfolio command center over all of them. Next
+per execution.md §22: Module 10 (Connectors / Data Intake) or Module 11
+(Trust/Audit/Explainability), or M13 real-business validation (release gate, not a
+build blocker). Keep public/SaaS/billing/marketing frozen.
