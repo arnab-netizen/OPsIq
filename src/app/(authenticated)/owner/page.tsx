@@ -20,6 +20,9 @@ async function api(path: string) {
 
 const DOMAIN_LINK: Record<string, string> = {
   finance: "/owner/finance",
+  cashflow: "/owner/cashflow",
+  sales: "/owner/sales",
+  operations: "/owner/operations",
   recovery: "/owner/recovery",
 };
 
@@ -68,6 +71,7 @@ export default function OwnerCommandCenterPage() {
           <Link href="/owner/finance"><Button>Finance</Button></Link>
           <Link href="/owner/cashflow"><Button>Cashflow</Button></Link>
           <Link href="/owner/sales"><Button>Sales</Button></Link>
+          <Link href="/owner/operations"><Button>Operations</Button></Link>
           <Link href="/owner/recovery"><Button>Recovery</Button></Link>
         </div>
       </div>
