@@ -15,6 +15,8 @@ import {
   cashflowActionRowToOwnerAction,
   salesCycleToDomainScore,
   salesActionRowToOwnerAction,
+  operationsCycleToDomainScore,
+  operationsActionRowToOwnerAction,
 } from "@/services/owner-condition/business-condition.service";
 import {
   buildBusinessConditionProfile,
@@ -266,6 +268,64 @@ describe("Owner condition — sales→spine mappers (growth domain)", () => {
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "sales"]);
     expect(profile.survivalRiskScore).toBe(80); // only the survival domain (finance) drives this, not sales 70
     expect(profile.recommendedNextAction?.domain).toBe("sales"); // 78 > 60 across domains
+  });
+});
+
+describe("Owner condition — operations→spine mappers (execution domain)", () => {
+  const opsCycle = {
+    healthScore: 38,
+    riskScore: 72,
+    opportunityScore: 30,
+    dataConfidenceScore: 75,
+    operationsState: "BOTTLENECKED",
+    generatedAt: NOW,
+    findings: [{ code: "OPS_LOW_COMPLETION_RATE" }, { code: "OPS_HIGH_DELAY_RATE" }],
+    actions: [{ findingCode: "OPS_LOW_COMPLETION_RATE" }],
+  };
+  const opsAction = {
+    id: "55555555-5555-4555-8555-555555555555",
+    findingCode: "OPS_LOW_COMPLETION_RATE",
+    title: "Clear the throughput bottleneck",
+    description: "Rebalance capacity to lift completion rate.",
+    ownerRole: "owner",
+    priorityScore: 82,
+    effortScore: 55,
+    expectedImpactScore: 88,
+    confidence: 0.7,
+    status: "proposed",
+    verificationMetric: "completionRatePct",
+    verificationMethod: "before/after",
+    expectedTimeframeDays: 21,
+  };
+
+  it("maps an operations cycle row to a valid DomainScore (clamped)", () => {
+    const ds = operationsCycleToDomainScore({ ...opsCycle, healthScore: 140, riskScore: -5 });
+    expect(ds.domain).toBe("operations");
+    expect(ds.healthScore).toBe(100); // clamped
+    expect(ds.riskScore).toBe(0); // clamped
+    expect(ds.dataConfidenceScore).toBe(75);
+    expect(ds.topFindingCodes).toContain("OPS_LOW_COMPLETION_RATE");
+    expect(domainScoreSchema.safeParse(ds).success).toBe(true);
+  });
+
+  it("maps an operations action row to a schema-valid OwnerAction", () => {
+    const a = operationsActionRowToOwnerAction(opsAction);
+    expect(a.domain).toBe("operations");
+    expect(ownerActionSchema.safeParse(a).success).toBe(true);
+  });
+
+  it("operations is an execution domain: its risk drives executionRiskScore, not survivalRiskScore", () => {
+    // finance (survival) risk 80 drives survival; operations (execution) risk 72 drives execution.
+    const domainScores = [financeCycleToDomainScore(cycleRow()), operationsCycleToDomainScore(opsCycle)];
+    const topActions = [
+      financeActionRowToOwnerAction(actionRow({ id: "fin", priorityScore: 60 })),
+      operationsActionRowToOwnerAction(opsAction), // 82
+    ];
+    const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
+    expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "operations"]);
+    expect(profile.survivalRiskScore).toBe(80); // operations risk 72 must NOT raise survival
+    expect(profile.executionRiskScore).toBe(72); // operations drives execution risk
+    expect(profile.recommendedNextAction?.domain).toBe("operations"); // 82 > 60 across domains
   });
 });
 
