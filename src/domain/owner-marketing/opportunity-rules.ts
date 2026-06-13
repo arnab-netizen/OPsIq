@@ -94,7 +94,8 @@ export function buildMarketingOpportunityFindings(
         threshold: t.lowLeadConversionPct,
         severity: m.leadConversionPct < t.lowLeadConversionPct ? "medium" : "low",
         confidence: conf,
-        impactScore: clampScore(100 - m.leadConversionPct),
+        // Upside play (capped at 50) — must not outrank a paired critical risk.
+        impactScore: clampScore((100 - m.leadConversionPct) / 2),
         urgencyScore: 40,
         evidence: [`leadConversionPct = ${pct(m.leadConversionPct)}`],
         verificationMetric: "leadConversionPct",
