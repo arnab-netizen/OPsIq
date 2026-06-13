@@ -81,6 +81,27 @@ end to end — engine → detector → planner → schema/migration → API → 
 center; runtime proof caught + fixed a real P2028 tx-timeout and a brittle deploy
 check before green). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
 
+## Module 3 — Sales & Customer Intelligence (complete)
+
+Per execution.md §10 / §22 Phase 4 (the skipped growth phase, built after the
+survival cluster). All on `main`. Growth lens (sales ∉ `SURVIVAL_DOMAINS`); reuses
+the Owner Intelligence Spine + Module 1 status machine / verification.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Engine (deterministic metrics) | ✅ | `MODULE3_SLICE1_SALES_ENGINE_REPORT.md` |
+| 2 Detector (risk/opportunity findings) | ✅ | `MODULE3_SLICE2_SALES_DETECTOR_REPORT.md` |
+| 3 Action planner | ✅ | `MODULE3_SLICE3_SALES_PLANNER_REPORT.md` |
+| 4 Persistence schema + migration | ✅ MIGRATED | `MODULE3_SLICE4_SALES_PERSISTENCE_REPORT.md`; Module 3 Sales Migration #1 (target staging) |
+| 5 API + services | ✅ | `MODULE3_SLICE5_SALES_API_REPORT.md` |
+| 6 UI + command-center integration | ✅ (command center now finance+recovery+cashflow+sales) | `MODULE3_SLICE6_SALES_UI_CONDITION_REPORT.md` |
+| 7 Deployed runtime proof | ✅ **PROVEN** | run #1 https://github.com/arnab-netizen/OPsIq/actions/runs/27461052375 (`main`@`94ff6b4`) — `MODULE3_SLICE7_SALES_RUNTIME_PROOF_REPORT.md` |
+| 8 Audit + proof | ✅ **AUDITED** | `MODULE3_SALES_INTELLIGENCE_AUDIT_REPORT.md` |
+
+Module 3 status: **STAGING_PROVEN + AUDITED** (sales loop deployed-runtime-proven
+end to end; command-center read held off main until the migration applied, keeping
+the proven command center green). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
+
 The Module 2 finance loop is deployed-runtime-proven end to end
 (engine → diagnosis → planner → schema/migration → API → UI → Business Condition
 Profile / command center) across runs 27404358424 / 27406156168 / 27407345728, and now
@@ -88,7 +109,9 @@ audited (security / isolation / calc-correctness / state / data-visibility / fal
 
 ## Next single action
 
-Module 5 Cashflow is **STAGING_PROVEN + AUDITED** (all slices proven). Next per
-execution.md §0/§20: **M13 real-business validation** (release gate — does not
-block building further owner modules), or the next survival/owner module per the
-roadmap. Keep public/SaaS/billing/marketing frozen.
+Module 3 Sales is **STAGING_PROVEN + AUDITED** (all slices proven). Proven owner
+domains: recovery + finance + cashflow + sales (command center is cross-domain over
+all four). Next per execution.md §22: the next owner module — **Operations &
+Productivity Intelligence** (the other skipped phase) — or M13 real-business
+validation (release gate, not a build blocker). Keep public/SaaS/billing/marketing
+frozen.
