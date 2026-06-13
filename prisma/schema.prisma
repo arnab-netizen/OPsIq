@@ -1330,6 +1330,7 @@ model OwnerBusiness {
   strategyFindings      OwnerStrategyFinding[]
   strategyActions       OwnerStrategyAction[]
   strategyVerifications OwnerStrategyVerification[]
+  dataIntakes           OwnerDataIntake[]
 
   @@index([workspaceId])
   @@index([workspaceId, isActive])
@@ -2679,4 +2680,39 @@ model OwnerStrategyVerification {
   @@index([actionId])
   @@index([status])
   @@map("owner_strategy_verifications")
+}
+
+// --- Module 10: Connectors & Data Intake ------------------------------------
+// One uploaded/imported intake record per business. Additive only. Stores the
+// deterministic intake candidate (source, statuses, normalized records, error
+// report) and the owner-confirmation flag — connector data never feeds a diagnosis
+// until the owner confirms (execution.md §17).
+
+model OwnerDataIntake {
+  id                  String        @id @db.Uuid
+  workspaceId         String        @db.Uuid @map("workspace_id")
+  businessId          String        @db.Uuid @map("business_id")
+  source              String
+  targetDomain        String?       @map("target_domain")
+  rowCount            Int           @map("row_count")
+  validationStatus    String        @map("validation_status")
+  normalizationStatus String        @map("normalization_status")
+  mappedFields        Json          @map("mapped_fields")
+  unmappedColumns     Json          @map("unmapped_columns")
+  records             Json
+  errorReport         Json          @map("error_report")
+  ownerConfirmed      Boolean       @default(false) @map("owner_confirmed")
+  confirmedAt         DateTime?     @map("confirmed_at")
+  confirmedBy         String?       @db.Uuid @map("confirmed_by")
+  notes               String?
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  business            OwnerBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([source])
+  @@index([validationStatus])
+  @@index([ownerConfirmed])
+  @@map("owner_data_intakes")
 }
