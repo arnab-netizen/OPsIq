@@ -1,0 +1,80 @@
+name: Module 9 Portfolio Runtime Proof
+
+# Manual only. Proves the deployed Module 9 Multi-Business Portfolio Command Center
+# (read-only) against a network-reachable deployment over HTTP (no direct DB
+# access). Seeds a business condition via the deployed finance loop, then exercises
+# /api/owner/portfolio/* end to end plus the UI, then auth-gating checks. It does
+# NOT run migrations and does NOT print secrets.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Deployed base URL to prove'
+        required: false
+        default: 'https://o-ps-iq.vercel.app'
+      confirm:
+        description: 'Must equal RUN_MODULE9_PORTFOLIO_RUNTIME_PROOF'
+        required: true
+
+concurrency:
+  group: module-9-portfolio-runtime-proof
+  cancel-in-progress: false
+
+jobs:
+  runtime-proof:
+    name: Portfolio API deployed runtime proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Confirmation phrase guard (fail closed)
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "RUN_MODULE9_PORTFOLIO_RUNTIME_PROOF" ]; then
+            echo "::error::Confirmation phrase mismatch. Type RUN_MODULE9_PORTFOLIO_RUNTIME_PROOF to proceed."
+            exit 1
+          fi
+          echo "✓ Confirmation accepted. Target: ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Full install (NOT --omit=dev): the smoke script runs via `tsx`, a devDependency.
+      - name: Install dependencies
+        run: npm ci
+
+      # The smoke script imports no server code, but `npm ci` runs `prisma generate`
+      # via postinstall; this is a harmless explicit refresh and never connects to a DB.
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run Portfolio deployed runtime proof
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}
+          # No EXPECTED_COMMIT: the script's step 0b capability probe robustly proves
+          # the portfolio API is deployed without racing an exact deploy SHA.
+        run: |
+          set -o pipefail
+          npx tsx scripts/smoke-owner-portfolio-runtime-proof.ts | tee portfolio-runtime-proof.log
+
+      - name: Upload runtime-proof summary (safe — masked IDs only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-9-portfolio-runtime-proof-log
+          path: portfolio-runtime-proof.log
+          if-no-files-found: ignore
+
+      - name: Result
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Module 9 Portfolio deployed runtime proof PASSED against ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}"
+          else
+            echo "❌ Module 9 Portfolio deployed runtime proof FAILED — see log/artifact for the exact failing step, endpoint, and status."
+          fi
