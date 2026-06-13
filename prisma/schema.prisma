@@ -1315,6 +1315,11 @@ model OwnerBusiness {
   operationsFindings      OwnerOperationsFinding[]
   operationsActions       OwnerOperationsAction[]
   operationsVerifications OwnerOperationsVerification[]
+  sopSnapshots            OwnerSopSnapshot[]
+  sopCycles               OwnerSopCycle[]
+  sopFindings             OwnerSopFinding[]
+  sopActions              OwnerSopAction[]
+  sopVerifications        OwnerSopVerification[]
 
   @@index([workspaceId])
   @@index([workspaceId, isActive])
@@ -2169,4 +2174,168 @@ model OwnerOperationsVerification {
   @@index([actionId])
   @@index([status])
   @@map("owner_operations_verifications")
+}
+
+// --- Module 7: SOP, Process & Execution Accountability ----------------------
+// The "sop" execution domain. Mirrors the proven operations persistence shape so
+// services/policies reuse the same patterns. Additive only.
+
+model OwnerSopSnapshot {
+  id                  String          @id @db.Uuid
+  workspaceId         String          @db.Uuid @map("workspace_id")
+  businessId          String          @db.Uuid @map("business_id")
+  periodStart         DateTime        @map("period_start")
+  periodEnd           DateTime        @map("period_end")
+  currency            String
+  businessModelType   String?         @map("business_model_type")
+  industryTemplate    String?         @map("industry_template")
+  actionsAssigned     Float?          @map("actions_assigned")
+  actionsCompleted    Float?          @map("actions_completed")
+  actionsVerified     Float?          @map("actions_verified")
+  actionsOverdue      Float?          @map("actions_overdue")
+  actionsDisputed     Float?          @map("actions_disputed")
+  actionsReassigned   Float?          @map("actions_reassigned")
+  repeatedFailures    Float?          @map("repeated_failures")
+  proofRequired       Float?          @map("proof_required")
+  proofProvided       Float?          @map("proof_provided")
+  recurringProcesses  Float?          @map("recurring_processes")
+  documentedSops      Float?          @map("documented_sops")
+  notes               String?
+  dataConfidenceScore Float           @map("data_confidence_score")
+  missingCriticalData Json            @map("missing_critical_data")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+  business            OwnerBusiness   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cycles              OwnerSopCycle[]
+
+  @@unique([businessId, periodStart, periodEnd])
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([periodEnd])
+  @@map("owner_sop_snapshots")
+}
+
+model OwnerSopCycle {
+  id                  String            @id @db.Uuid
+  workspaceId         String            @db.Uuid @map("workspace_id")
+  businessId          String            @db.Uuid @map("business_id")
+  snapshotId          String            @db.Uuid @map("snapshot_id")
+  sequenceNumber      Int               @map("sequence_number")
+  status              String            @default("open")
+  healthScore         Float             @map("health_score")
+  riskScore           Float             @map("risk_score")
+  opportunityScore    Float             @map("opportunity_score")
+  dataConfidenceScore Float             @map("data_confidence_score")
+  executionState      String            @map("execution_state")
+  generatedAt         DateTime          @map("generated_at")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  business            OwnerBusiness     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  snapshot            OwnerSopSnapshot  @relation(fields: [snapshotId], references: [id])
+  findings            OwnerSopFinding[]
+  actions             OwnerSopAction[]
+
+  @@unique([businessId, sequenceNumber])
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([snapshotId])
+  @@map("owner_sop_cycles")
+}
+
+model OwnerSopFinding {
+  id                 String           @id @db.Uuid
+  workspaceId        String           @db.Uuid @map("workspace_id")
+  businessId         String           @db.Uuid @map("business_id")
+  cycleId            String           @db.Uuid @map("cycle_id")
+  findingType        String           @map("finding_type")
+  code               String
+  title              String
+  summary            String
+  sourceMetric       String           @map("source_metric")
+  sourceValue        Float?           @map("source_value")
+  threshold          Float?
+  severity           String
+  confidence         Float
+  impactScore        Float            @map("impact_score")
+  urgencyScore       Float            @map("urgency_score")
+  evidence           Json
+  missingData        Json             @map("missing_data")
+  verificationMetric String?          @map("verification_metric")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+  business           OwnerBusiness    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cycle              OwnerSopCycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  actions            OwnerSopAction[]
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([cycleId])
+  @@index([code])
+  @@index([severity])
+  @@map("owner_sop_findings")
+}
+
+model OwnerSopAction {
+  id                    String                 @id @db.Uuid
+  workspaceId           String                 @db.Uuid @map("workspace_id")
+  businessId            String                 @db.Uuid @map("business_id")
+  cycleId               String                 @db.Uuid @map("cycle_id")
+  findingId             String?                @db.Uuid @map("finding_id")
+  recommendationCode    String                 @map("recommendation_code")
+  findingCode           String                 @map("finding_code")
+  title                 String
+  description           String
+  ownerRole             String                 @map("owner_role")
+  status                String                 @default("proposed")
+  priorityScore         Float                  @map("priority_score")
+  effortScore           Float                  @map("effort_score")
+  expectedImpactScore   Float                  @map("expected_impact_score")
+  confidence            Float
+  verificationMetric    String                 @map("verification_metric")
+  verificationMethod    String                 @map("verification_method")
+  expectedTimeframeDays Int                    @map("expected_timeframe_days")
+  dueAt                 DateTime?              @map("due_at")
+  assignedTo            String?                @db.Uuid @map("assigned_to")
+  completedAt           DateTime?              @map("completed_at")
+  completionNotes       String?                @map("completion_notes")
+  completionEvidence    Json?                  @map("completion_evidence")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  business              OwnerBusiness          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  cycle                 OwnerSopCycle          @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  finding               OwnerSopFinding?       @relation(fields: [findingId], references: [id], onDelete: SetNull)
+  verifications         OwnerSopVerification[]
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([cycleId])
+  @@index([status])
+  @@index([priorityScore])
+  @@map("owner_sop_actions")
+}
+
+model OwnerSopVerification {
+  id                 String         @id @db.Uuid
+  workspaceId        String         @db.Uuid @map("workspace_id")
+  businessId         String         @db.Uuid @map("business_id")
+  actionId           String         @db.Uuid @map("action_id")
+  verificationMetric String         @map("verification_metric")
+  beforeValue        Float?         @map("before_value")
+  afterValue         Float?         @map("after_value")
+  targetDirection    String         @map("target_direction")
+  targetValue        Float?         @map("target_value")
+  status             String         @default("unverified")
+  confidence         Float
+  evidence           Json
+  verifiedAt         DateTime?      @map("verified_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  business           OwnerBusiness  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  action             OwnerSopAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([actionId])
+  @@index([status])
+  @@map("owner_sop_verifications")
 }
