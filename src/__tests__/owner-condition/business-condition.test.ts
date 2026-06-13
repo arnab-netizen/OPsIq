@@ -17,6 +17,8 @@ import {
   salesActionRowToOwnerAction,
   operationsCycleToDomainScore,
   operationsActionRowToOwnerAction,
+  sopCycleToDomainScore,
+  sopActionRowToOwnerAction,
 } from "@/services/owner-condition/business-condition.service";
 import {
   buildBusinessConditionProfile,
@@ -326,6 +328,64 @@ describe("Owner condition — operations→spine mappers (execution domain)", ()
     expect(profile.survivalRiskScore).toBe(80); // operations risk 72 must NOT raise survival
     expect(profile.executionRiskScore).toBe(72); // operations drives execution risk
     expect(profile.recommendedNextAction?.domain).toBe("operations"); // 82 > 60 across domains
+  });
+});
+
+describe("Owner condition — sop→spine mappers (execution domain)", () => {
+  const sopCycle = {
+    healthScore: 36,
+    riskScore: 74,
+    opportunityScore: 32,
+    dataConfidenceScore: 78,
+    executionState: "BREAKDOWN",
+    generatedAt: NOW,
+    findings: [{ code: "SOP_LOW_COMPLETION" }, { code: "SOP_HIGH_OVERDUE" }],
+    actions: [{ findingCode: "SOP_LOW_COMPLETION" }],
+  };
+  const sopAction = {
+    id: "66666666-6666-4666-8666-666666666666",
+    findingCode: "SOP_LOW_COMPLETION",
+    title: "Restore follow-through on assigned work",
+    description: "Re-anchor open actions to one owner + due date.",
+    ownerRole: "owner",
+    priorityScore: 84,
+    effortScore: 45,
+    expectedImpactScore: 80,
+    confidence: 0.7,
+    status: "proposed",
+    verificationMetric: "completionRatePct",
+    verificationMethod: "before/after",
+    expectedTimeframeDays: 21,
+  };
+
+  it("maps a sop cycle row to a valid DomainScore (clamped)", () => {
+    const ds = sopCycleToDomainScore({ ...sopCycle, healthScore: 140, riskScore: -5 });
+    expect(ds.domain).toBe("sop");
+    expect(ds.healthScore).toBe(100); // clamped
+    expect(ds.riskScore).toBe(0); // clamped
+    expect(ds.dataConfidenceScore).toBe(78);
+    expect(ds.topFindingCodes).toContain("SOP_LOW_COMPLETION");
+    expect(domainScoreSchema.safeParse(ds).success).toBe(true);
+  });
+
+  it("maps a sop action row to a schema-valid OwnerAction", () => {
+    const a = sopActionRowToOwnerAction(sopAction);
+    expect(a.domain).toBe("sop");
+    expect(ownerActionSchema.safeParse(a).success).toBe(true);
+  });
+
+  it("sop is an execution domain: its risk drives executionRiskScore, not survivalRiskScore", () => {
+    // finance (survival) risk 80 drives survival; sop (execution) risk 74 drives execution.
+    const domainScores = [financeCycleToDomainScore(cycleRow()), sopCycleToDomainScore(sopCycle)];
+    const topActions = [
+      financeActionRowToOwnerAction(actionRow({ id: "fin", priorityScore: 60 })),
+      sopActionRowToOwnerAction(sopAction), // 84
+    ];
+    const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
+    expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "sop"]);
+    expect(profile.survivalRiskScore).toBe(80); // sop risk 74 must NOT raise survival
+    expect(profile.executionRiskScore).toBe(74); // sop drives execution risk
+    expect(profile.recommendedNextAction?.domain).toBe("sop"); // 84 > 60 across domains
   });
 });
 
