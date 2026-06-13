@@ -271,6 +271,9 @@ export const AUDIT_EVENTS = {
   OWNER_STRATEGY_ACTION_UPDATED: "owner.strategy_action_updated",
   OWNER_STRATEGY_OUTCOME_VERIFIED: "owner.strategy_outcome_verified",
 
+  OWNER_DATA_INTAKE_RECORDED: "owner.data_intake_recorded",
+  OWNER_DATA_INTAKE_CONFIRMED: "owner.data_intake_confirmed",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
