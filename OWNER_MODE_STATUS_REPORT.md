@@ -181,10 +181,35 @@ center; growth-domain rollup proven so marketing opportunity feeds
 growthOpportunityScore and its risk does not raise survival). Not
 REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
 
+## Module 8 — Strategy & Scenario Planning (complete)
+
+Per execution.md §15 / §22 Phase 9 (strategy/scenario planning, built after
+marketing). All on `main` (merge `a758daf` + `15d03e9`). Decision-support lens
+(strategy ∉ `SURVIVAL_DOMAINS`/`EXECUTION_DOMAINS` → it scores one option's safe
+upside; its risk scores the option, not the business); reuses the Owner
+Intelligence Spine + Module 1 status machine / verification.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Engine (deterministic scenario economics) | ✅ | engine in `ad77273` |
+| 2 Detector (risk/opportunity findings) | ✅ | `MODULE8_SLICE2_STRATEGY_DETECTOR_REPORT.md` (`ad77273`) |
+| 3 Action planner | ✅ | planner in `ee406a9` |
+| 4 Persistence schema + migration | ✅ MIGRATED | Module 8 Strategy Migration #1 (target staging, `main`@`ee406a9`) — `MODULE8_SLICE4_STRATEGY_PERSISTENCE_REPORT.md` |
+| 5 API + services | ✅ | `MODULE8_SLICE5_STRATEGY_API_REPORT.md` (`1736afe`) |
+| 6 UI + command-center integration | ✅ (command center now finance+recovery+cashflow+sales+operations+sop+marketing+strategy) | `MODULE8_SLICE6_STRATEGY_UI_CONDITION_REPORT.md` (`a758daf`) |
+| 7 Deployed runtime proof | ✅ **PROVEN** | Module 8 Strategy Runtime Proof #1 — Success (2m 0s, `main`@`15d03e9`) — `MODULE8_SLICE7_STRATEGY_RUNTIME_PROOF_REPORT.md` |
+| 8 Audit + proof | ✅ **AUDITED** | `MODULE8_STRATEGY_SCENARIO_INTELLIGENCE_AUDIT_REPORT.md` |
+
+Module 8 status: **STAGING_PROVEN + AUDITED** (scenario loop deployed-runtime-proven
+end to end — engine → detector → planner → schema/migration → API → UI → command
+center; decision-support rollup proven so strategy risk scores the option, not
+survival). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
+
 ## Next single action
 
-Module 6 Marketing/Growth is **STAGING_PROVEN + AUDITED** (all slices proven). Proven
+Module 8 Strategy/Scenario is **STAGING_PROVEN + AUDITED** (all slices proven). Proven
 owner domains: recovery + finance + cashflow + sales + operations + sop + marketing
-(command center is cross-domain over all seven). Next per execution.md §22: the next
-owner module / capability slice, or M13 real-business validation (release gate, not
++ strategy (command center is cross-domain over all eight). Next per execution.md
+§22: the next owner module / capability slice (e.g. Module 9 Portfolio Command
+Center or Module 10 Connectors), or M13 real-business validation (release gate, not
 a build blocker). Keep public/SaaS/billing/marketing frozen.
