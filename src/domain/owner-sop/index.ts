@@ -11,3 +11,5 @@ export * from "./metrics";
 export * from "./risk-rules";
 export * from "./opportunity-rules";
 export * from "./diagnosis";
+export * from "./recommendations";
+export * from "./actions";
