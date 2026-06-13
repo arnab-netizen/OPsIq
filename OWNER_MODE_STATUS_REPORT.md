@@ -156,10 +156,35 @@ end to end — engine → detector → planner → schema/migration → API → 
 center; execution-domain rollup proven so sop risk drives executionRiskScore, not
 survival). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
 
+## Module 6 — Marketing & Growth Intelligence (complete)
+
+Per execution.md §13 / §22 Phase 8 (marketing intelligence, built after sop). All
+on `main` (merge `76020b0` + `e3001cf`). Growth lens (marketing ∉ `SURVIVAL_DOMAINS`
+/`EXECUTION_DOMAINS` → its opportunity feeds growthOpportunityScore, its risk does
+not raise survival); reuses the Owner Intelligence Spine + Module 1 status machine
+/ verification.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Engine (deterministic metrics) | ✅ | engine in `230c39b` |
+| 2 Detector (risk/opportunity findings) | ✅ | detector in `230c39b` |
+| 3 Action planner | ✅ | planner in `230c39b` |
+| 4 Persistence schema + migration | ✅ MIGRATED | Module 6 Marketing Migration #1 (target staging, `main`@`1ef5530`) — `MODULE6_SLICE4_MARKETING_PERSISTENCE_REPORT.md` |
+| 5 API + services | ✅ | `MODULE6_SLICE5_MARKETING_API_REPORT.md` (`4829da2`) |
+| 6 UI + command-center integration | ✅ (command center now finance+recovery+cashflow+sales+operations+sop+marketing) | `MODULE6_SLICE6_MARKETING_UI_CONDITION_REPORT.md` (`76020b0`) |
+| 7 Deployed runtime proof | ✅ **PROVEN** | Module 6 Marketing Runtime Proof #1 — Success (2m 4s, `main`@`e3001cf`) — `MODULE6_SLICE7_MARKETING_RUNTIME_PROOF_REPORT.md` |
+| 8 Audit + proof | ✅ **AUDITED** | `MODULE6_MARKETING_GROWTH_INTELLIGENCE_AUDIT_REPORT.md` |
+
+Module 6 status: **STAGING_PROVEN + AUDITED** (marketing loop deployed-runtime-proven
+end to end — engine → detector → planner → schema/migration → API → UI → command
+center; growth-domain rollup proven so marketing opportunity feeds
+growthOpportunityScore and its risk does not raise survival). Not
+REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
+
 ## Next single action
 
-Module 7 SOP/Execution is **STAGING_PROVEN + AUDITED** (all slices proven). Proven
-owner domains: recovery + finance + cashflow + sales + operations + sop (command
-center is cross-domain over all six). Next per execution.md §22: the next owner
-module / capability slice, or M13 real-business validation (release gate, not a
-build blocker). Keep public/SaaS/billing/marketing frozen.
+Module 6 Marketing/Growth is **STAGING_PROVEN + AUDITED** (all slices proven). Proven
+owner domains: recovery + finance + cashflow + sales + operations + sop + marketing
+(command center is cross-domain over all seven). Next per execution.md §22: the next
+owner module / capability slice, or M13 real-business validation (release gate, not
+a build blocker). Keep public/SaaS/billing/marketing frozen.
