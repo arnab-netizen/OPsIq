@@ -247,11 +247,37 @@ end to end — engine → schema/migration → API → UI; the §17 owner-confir
 guardrail proven negatively: an invalid intake cannot be confirmed). Not
 REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
 
+## Module 11 — Trust, Audit & Explainability (complete)
+
+Per execution.md §18 / §22 Phase 12 (credibility layer, built after connectors). All
+on `main` (merge `bd033ea`). **Read-only explanation + audit layer** over the proven
+per-domain diagnoses and the existing governed audit log — owns no entity, runs no
+migration, mutates nothing. Per §18 every recommendation exposes what was detected,
+why it matters, the source data used, the calculation used, the confidence level, the
+risk if ignored, the expected impact, and the verification method; the
+anti-hallucination rule is enforced structurally (`hasInventedValues: false`; a
+missing value is labeled "missing" + surfaced as a data gap, never fabricated).
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Explainability engine (deterministic §18 cards) | ✅ | `MODULE11_SLICE1_*` (engine `e35046f`) |
+| 2 API + service (explanations / audit-trail, read-only) | ✅ | `MODULE11_SLICE2_TRUST_API_REPORT.md` (`40cf621`) |
+| 3 UI + command-center link | ✅ | `MODULE11_SLICE3_TRUST_UI_REPORT.md` (`e06deda`) |
+| 4 Deployed runtime proof | ✅ **PROVEN** | Module 11 Trust Runtime Proof #1 — Success (1m 34s, `main`@`bd033ea`) — `MODULE11_SLICE4_TRUST_RUNTIME_PROOF_REPORT.md` |
+| 5 Audit + proof | ✅ **AUDITED** | `MODULE11_TRUST_AUDIT_EXPLAINABILITY_AUDIT_REPORT.md` |
+
+Module 11 status: **STAGING_PROVEN + AUDITED** (trust layer deployed-runtime-proven
+end to end — engine → read-only API → UI → cross-domain explanations + governed audit
+trail; the §18 anti-hallucination invariant proven on the deployment: every live card
+asserts `hasInventedValues=false` and the diagnosis-run audit event is present + entity
+-scoped; no migration — read-only module). Not REAL_BUSINESS_PROVEN (M13), not
+FULL_CAPACITY.
+
 ## Next single action
 
-Module 10 Connectors/Intake is **STAGING_PROVEN + AUDITED** (all slices proven).
-Proven owner domains: recovery + finance + cashflow + sales + operations + sop +
-marketing + strategy + portfolio + data intake. Next per execution.md §22: Module 11
-(Trust/Audit/Explainability) or Module 12 (Owner UI & Mobile Usability), or M13
-real-business validation (release gate, not a build blocker). Keep
-public/SaaS/billing/marketing frozen.
+Module 11 Trust/Audit/Explainability is **STAGING_PROVEN + AUDITED** (all slices
+proven). Proven owner domains: recovery + finance + cashflow + sales + operations +
+sop + marketing + strategy + portfolio + data intake + trust/explainability. Next per
+execution.md §22: Module 12 (Owner UI & Mobile Usability), or M13 real-business
+validation (release gate, not a build blocker). Keep public/SaaS/billing/marketing
+frozen.
