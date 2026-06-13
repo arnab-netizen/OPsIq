@@ -25,6 +25,7 @@ const DOMAIN_LINK: Record<string, string> = {
   operations: "/owner/operations",
   sop: "/owner/execution",
   marketing: "/owner/marketing",
+  strategy: "/owner/strategy",
   recovery: "/owner/recovery",
 };
 
@@ -76,6 +77,7 @@ export default function OwnerCommandCenterPage() {
           <Link href="/owner/operations"><Button>Operations</Button></Link>
           <Link href="/owner/execution"><Button>Execution</Button></Link>
           <Link href="/owner/marketing"><Button>Marketing</Button></Link>
+          <Link href="/owner/strategy"><Button>Strategy</Button></Link>
           <Link href="/owner/recovery"><Button>Recovery</Button></Link>
         </div>
       </div>

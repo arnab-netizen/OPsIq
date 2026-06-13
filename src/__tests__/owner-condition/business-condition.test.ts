@@ -21,6 +21,8 @@ import {
   sopActionRowToOwnerAction,
   marketingCycleToDomainScore,
   marketingActionRowToOwnerAction,
+  strategyCycleToDomainScore,
+  strategyActionRowToOwnerAction,
 } from "@/services/owner-condition/business-condition.service";
 import {
   buildBusinessConditionProfile,
@@ -445,6 +447,63 @@ describe("Owner condition — marketing→spine mappers (growth domain)", () => 
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "marketing"]);
     expect(profile.survivalRiskScore).toBe(80); // marketing risk 72 must NOT raise survival
     expect(profile.recommendedNextAction?.domain).toBe("marketing"); // 88 > 60 across domains
+  });
+});
+
+describe("Owner condition — strategy→spine mappers (decision-support domain)", () => {
+  const stratCycle = {
+    healthScore: 82,
+    riskScore: 20,
+    opportunityScore: 70,
+    dataConfidenceScore: 90,
+    strategyState: "STRONG_GO",
+    generatedAt: NOW,
+    findings: [{ code: "STR_OPP_STRONG_RETURN" }, { code: "STR_OPP_FAST_PAYBACK" }],
+    actions: [{ findingCode: "STR_OPP_STRONG_RETURN" }],
+  };
+  const stratAction = {
+    id: "88888888-8888-4888-8888-888888888888",
+    findingCode: "STR_OPP_STRONG_RETURN",
+    title: "Pursue this high-return option",
+    description: "Commit in a staged way while the numbers hold.",
+    ownerRole: "owner",
+    priorityScore: 76,
+    effortScore: 45,
+    expectedImpactScore: 60,
+    confidence: 0.7,
+    status: "proposed",
+    verificationMetric: "roiAnnualPct",
+    verificationMethod: "before/after",
+    expectedTimeframeDays: 30,
+  };
+
+  it("maps a strategy cycle row to a valid DomainScore (clamped)", () => {
+    const ds = strategyCycleToDomainScore({ ...stratCycle, healthScore: 140, riskScore: -5 });
+    expect(ds.domain).toBe("strategy");
+    expect(ds.healthScore).toBe(100); // clamped
+    expect(ds.riskScore).toBe(0); // clamped
+    expect(ds.dataConfidenceScore).toBe(90);
+    expect(ds.topFindingCodes).toContain("STR_OPP_STRONG_RETURN");
+    expect(domainScoreSchema.safeParse(ds).success).toBe(true);
+  });
+
+  it("maps a strategy action row to a schema-valid OwnerAction", () => {
+    const a = strategyActionRowToOwnerAction(stratAction);
+    expect(a.domain).toBe("strategy");
+    expect(ownerActionSchema.safeParse(a).success).toBe(true);
+  });
+
+  it("strategy is decision-support: its risk does NOT raise survivalRiskScore", () => {
+    // finance (survival) risk 80 drives survival; strategy (decision-support) does not.
+    const domainScores = [financeCycleToDomainScore(cycleRow()), strategyCycleToDomainScore(stratCycle)];
+    const topActions = [
+      financeActionRowToOwnerAction(actionRow({ id: "fin", priorityScore: 60 })),
+      strategyActionRowToOwnerAction({ ...stratAction, priorityScore: 88 }),
+    ];
+    const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
+    expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "strategy"]);
+    expect(profile.survivalRiskScore).toBe(80); // finance only — strategy is not a survival domain
+    expect(profile.recommendedNextAction?.domain).toBe("strategy"); // 88 > 60 across domains
   });
 });
 
