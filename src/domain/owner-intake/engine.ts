@@ -1,0 +1,149 @@
+/**
+ * Owner Connectors & Data Intake (Module 10) — deterministic intake engine.
+ *
+ * Pure functions only (no DB/I/O/LLM). Maps a raw upload to a normalized, validated
+ * candidate against a target field spec, with an explicit owner-readable error
+ * report. Nothing is invented: an unparseable value becomes `null` + an error, not
+ * a guessed number. The result is a CANDIDATE — `ownerConfirmed` is always false;
+ * connector data must be confirmed before it can feed a diagnosis (execution.md §17).
+ */
+import { parseCsv } from "./csv";
+import type {
+  IntakeSource,
+  IntakeFieldSpec,
+  IntakeFieldError,
+  IntakeResult,
+  IntakeValidationStatus,
+  NormalizedRecord,
+} from "./types";
+
+/** Canonical key for matching a header to a field name (case/space/punct-insensitive). */
+function canon(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** Parse a numeric cell: strip thousands separators, currency symbols, and spaces. */
+export function parseNumber(raw: string): number | null {
+  if (raw === undefined || raw === null) return null;
+  const cleaned = raw.replace(/[,\s]/g, "").replace(/^[^0-9+\-.]+/, "").replace(/[^0-9+\-.eE]+$/, "");
+  if (cleaned === "" || cleaned === "+" || cleaned === "-" || cleaned === ".") return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Parse a date cell to an ISO `YYYY-MM-DD` string, or null when invalid. */
+export function parseDate(raw: string): string | null {
+  if (!raw || raw.trim() === "") return null;
+  const t = new Date(raw.trim());
+  if (Number.isNaN(t.getTime())) return null;
+  return t.toISOString().slice(0, 10);
+}
+
+/**
+ * Build a deterministic intake candidate from CSV text against a field spec.
+ * - `mappedFields`: canonical fields matched to an upload column.
+ * - `unmappedColumns`: upload columns not in the spec (reported, not used).
+ * - `records`: one normalized record per data row (missing/invalid → null).
+ * - `errorReport`: field-level errors (missing required, invalid number/date,
+ *   negative where non-negative is required).
+ * - `validationStatus`: invalid if any row breaks a required field; partial if any
+ *   non-required field is present-but-invalid; else valid.
+ */
+export function buildCsvIntake(
+  source: IntakeSource,
+  csvText: string,
+  fieldSpecs: IntakeFieldSpec[],
+  opts: { now?: Date } = {}
+): IntakeResult {
+  const now = opts.now ?? new Date();
+  const { headers, rows } = parseCsv(csvText);
+
+  // Map each spec field to a column index by canonical header name.
+  const headerCanon = headers.map(canon);
+  const fieldToCol = new Map<string, number>();
+  for (const f of fieldSpecs) {
+    const idx = headerCanon.indexOf(canon(f.name));
+    if (idx >= 0) fieldToCol.set(f.name, idx);
+  }
+  const mappedFields = fieldSpecs.filter((f) => fieldToCol.has(f.name)).map((f) => f.name);
+  const specCanon = new Set(fieldSpecs.map((f) => canon(f.name)));
+  const unmappedColumns = headers.filter((h) => !specCanon.has(canon(h)));
+
+  const errorReport: IntakeFieldError[] = [];
+  const records: NormalizedRecord[] = [];
+  let anyRequiredBroken = false;
+  let anyOptionalInvalid = false;
+
+  rows.forEach((cells, r) => {
+    const rowNum = r + 1; // 1-based data row
+    const record: NormalizedRecord = {};
+    for (const f of fieldSpecs) {
+      const col = fieldToCol.get(f.name);
+      const raw = col !== undefined ? (cells[col] ?? "") : "";
+      const present = raw.trim() !== "";
+
+      if (!present) {
+        record[f.name] = null;
+        if (f.required) {
+          anyRequiredBroken = true;
+          errorReport.push({ row: rowNum, field: f.name, code: "missing_required", message: `Required field "${f.name}" is missing.` });
+        }
+        continue;
+      }
+
+      if (f.type === "number" || f.type === "currency") {
+        const n = parseNumber(raw);
+        if (n === null) {
+          record[f.name] = null;
+          if (f.required) anyRequiredBroken = true; else anyOptionalInvalid = true;
+          errorReport.push({ row: rowNum, field: f.name, code: "invalid_number", message: `"${raw}" is not a valid number for "${f.name}".` });
+        } else if (f.nonNegative && n < 0) {
+          record[f.name] = null;
+          if (f.required) anyRequiredBroken = true; else anyOptionalInvalid = true;
+          errorReport.push({ row: rowNum, field: f.name, code: "negative_value", message: `"${f.name}" cannot be negative (got ${n}).` });
+        } else {
+          record[f.name] = n;
+        }
+      } else if (f.type === "date") {
+        const d = parseDate(raw);
+        if (d === null) {
+          record[f.name] = null;
+          if (f.required) anyRequiredBroken = true; else anyOptionalInvalid = true;
+          errorReport.push({ row: rowNum, field: f.name, code: "invalid_date", message: `"${raw}" is not a valid date for "${f.name}".` });
+        } else {
+          record[f.name] = d;
+        }
+      } else {
+        record[f.name] = raw;
+      }
+    }
+    records.push(record);
+  });
+
+  // Required fields whose column is entirely absent from the upload break every row.
+  for (const f of fieldSpecs) {
+    if (f.required && !fieldToCol.has(f.name) && rows.length > 0) {
+      anyRequiredBroken = true;
+    }
+  }
+
+  const validationStatus: IntakeValidationStatus =
+    rows.length === 0 ? "invalid" : anyRequiredBroken ? "invalid" : anyOptionalInvalid ? "partial" : "valid";
+
+  // A candidate is "normalized" when at least one row produced usable records and
+  // required fields held (valid or partial); a fully invalid upload is not normalized.
+  const normalizationStatus = validationStatus === "invalid" ? "not_normalized" : "normalized";
+
+  return {
+    source,
+    generatedAt: now,
+    rowCount: rows.length,
+    mappedFields,
+    unmappedColumns,
+    records,
+    validationStatus,
+    normalizationStatus,
+    errorReport,
+    ownerConfirmed: false,
+  };
+}
