@@ -13,6 +13,8 @@ import {
   recoveryActionRowToOwnerAction,
   cashflowCycleToDomainScore,
   cashflowActionRowToOwnerAction,
+  salesCycleToDomainScore,
+  salesActionRowToOwnerAction,
 } from "@/services/owner-condition/business-condition.service";
 import {
   buildBusinessConditionProfile,
@@ -207,6 +209,63 @@ describe("Owner condition — cashflow→spine mappers", () => {
     expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["cashflow", "finance"]);
     expect(profile.survivalRiskScore).toBe(80); // max survival-domain risk (finance 80 vs cashflow 78)
     expect(profile.recommendedNextAction?.domain).toBe("cashflow"); // 92 > 80
+  });
+});
+
+describe("Owner condition — sales→spine mappers (growth domain)", () => {
+  const salesCycle = {
+    healthScore: 45,
+    riskScore: 70,
+    opportunityScore: 55,
+    dataConfidenceScore: 80,
+    salesState: "WEAK",
+    generatedAt: NOW,
+    findings: [{ code: "SALES_LOW_CONVERSION" }, { code: "SALES_WEAK_REPEAT" }],
+    actions: [{ findingCode: "SALES_LOW_CONVERSION" }],
+  };
+  const salesAction = {
+    id: "44444444-4444-4444-8444-444444444444",
+    findingCode: "SALES_LOW_CONVERSION",
+    title: "Raise lead-to-sale conversion",
+    description: "Tighten qualification + follow-up.",
+    ownerRole: "owner",
+    priorityScore: 78,
+    effortScore: 50,
+    expectedImpactScore: 85,
+    confidence: 0.7,
+    status: "proposed",
+    verificationMetric: "leadToSaleConversionPct",
+    verificationMethod: "before/after",
+    expectedTimeframeDays: 30,
+  };
+
+  it("maps a sales cycle row to a valid DomainScore (clamped)", () => {
+    const ds = salesCycleToDomainScore({ ...salesCycle, healthScore: 140, riskScore: -5 });
+    expect(ds.domain).toBe("sales");
+    expect(ds.healthScore).toBe(100); // clamped
+    expect(ds.riskScore).toBe(0); // clamped
+    expect(ds.dataConfidenceScore).toBe(80);
+    expect(ds.topFindingCodes).toContain("SALES_LOW_CONVERSION");
+    expect(domainScoreSchema.safeParse(ds).success).toBe(true);
+  });
+
+  it("maps a sales action row to a schema-valid OwnerAction", () => {
+    const a = salesActionRowToOwnerAction(salesAction);
+    expect(a.domain).toBe("sales");
+    expect(ownerActionSchema.safeParse(a).success).toBe(true);
+  });
+
+  it("sales is a growth domain: its risk does NOT raise survivalRiskScore", () => {
+    // finance (survival) risk 80 dominates survival; sales (growth) risk 70 must not.
+    const domainScores = [financeCycleToDomainScore(cycleRow()), salesCycleToDomainScore(salesCycle)];
+    const topActions = [
+      financeActionRowToOwnerAction(actionRow({ id: "fin", priorityScore: 60 })),
+      salesActionRowToOwnerAction(salesAction), // 78
+    ];
+    const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
+    expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "sales"]);
+    expect(profile.survivalRiskScore).toBe(80); // only the survival domain (finance) drives this, not sales 70
+    expect(profile.recommendedNextAction?.domain).toBe("sales"); // 78 > 60 across domains
   });
 });
 
