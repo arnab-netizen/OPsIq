@@ -107,11 +107,33 @@ The Module 2 finance loop is deployed-runtime-proven end to end
 Profile / command center) across runs 27404358424 / 27406156168 / 27407345728, and now
 audited (security / isolation / calc-correctness / state / data-visibility / false-green).
 
+## Module 4 — Operations & Productivity Intelligence (complete)
+
+Per execution.md §22 (the other skipped phase, built after sales). All on `main`
+(merge `7482357`). Execution lens (operations ∈ `EXECUTION_DOMAINS` → its risk drives
+`executionRiskScore`, not survival risk); reuses the Owner Intelligence Spine +
+Module 1 status machine / verification.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Engine (deterministic metrics) | ✅ | `febe95a` |
+| 2 Detector (risk/opportunity findings) | ✅ | `83dd2ff` |
+| 3 Action planner | ✅ | `077f4e6` |
+| 4 Persistence schema + migration | ✅ MIGRATED | Module 4 Operations Migration #1 (target staging, `main`@`3cd4b4a`) |
+| 5 API + services | ✅ | `MODULE4_SLICE5_OPERATIONS_API_REPORT.md` (`6e642db`) |
+| 6 UI + command-center integration | ✅ (command center now finance+recovery+cashflow+sales+operations) | `MODULE4_SLICE6_OPERATIONS_UI_CONDITION_REPORT.md` (`b4ea463`) |
+| 7 Deployed runtime proof | ✅ **PROVEN** | Module 4 Operations Runtime Proof #1 — Success (2m 3s, `main`@`7482357`) — `MODULE4_SLICE7_OPERATIONS_RUNTIME_PROOF_REPORT.md` |
+| 8 Audit + proof | ✅ **AUDITED** | `MODULE4_OPERATIONS_INTELLIGENCE_AUDIT_REPORT.md` |
+
+Module 4 status: **STAGING_PROVEN + AUDITED** (operations loop deployed-runtime-proven
+end to end — engine → detector → planner → schema/migration → API → UI → command
+center; execution-domain rollup proven so operations risk drives executionRiskScore,
+not survival). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
+
 ## Next single action
 
-Module 3 Sales is **STAGING_PROVEN + AUDITED** (all slices proven). Proven owner
-domains: recovery + finance + cashflow + sales (command center is cross-domain over
-all four). Next per execution.md §22: the next owner module — **Operations &
-Productivity Intelligence** (the other skipped phase) — or M13 real-business
-validation (release gate, not a build blocker). Keep public/SaaS/billing/marketing
-frozen.
+Module 4 Operations is **STAGING_PROVEN + AUDITED** (all slices proven). Proven owner
+domains: recovery + finance + cashflow + sales + operations (command center is
+cross-domain over all five). Next per execution.md §22: the next owner module /
+capability slice, or M13 real-business validation (release gate, not a build
+blocker). Keep public/SaaS/billing/marketing frozen.
