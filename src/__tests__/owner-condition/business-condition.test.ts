@@ -19,6 +19,8 @@ import {
   operationsActionRowToOwnerAction,
   sopCycleToDomainScore,
   sopActionRowToOwnerAction,
+  marketingCycleToDomainScore,
+  marketingActionRowToOwnerAction,
 } from "@/services/owner-condition/business-condition.service";
 import {
   buildBusinessConditionProfile,
@@ -386,6 +388,63 @@ describe("Owner condition — sop→spine mappers (execution domain)", () => {
     expect(profile.survivalRiskScore).toBe(80); // sop risk 74 must NOT raise survival
     expect(profile.executionRiskScore).toBe(74); // sop drives execution risk
     expect(profile.recommendedNextAction?.domain).toBe("sop"); // 84 > 60 across domains
+  });
+});
+
+describe("Owner condition — marketing→spine mappers (growth domain)", () => {
+  const mktCycle = {
+    healthScore: 30,
+    riskScore: 72,
+    opportunityScore: 55,
+    dataConfidenceScore: 82,
+    marketingState: "WASTING",
+    generatedAt: NOW,
+    findings: [{ code: "MKT_WASTED_SPEND" }, { code: "MKT_POOR_CONVERSION" }],
+    actions: [{ findingCode: "MKT_WASTED_SPEND" }],
+  };
+  const mktAction = {
+    id: "77777777-7777-4777-8777-777777777777",
+    findingCode: "MKT_WASTED_SPEND",
+    title: "Stop the loss-making spend",
+    description: "Pause the worst-ROI channel and reallocate.",
+    ownerRole: "owner",
+    priorityScore: 88,
+    effortScore: 35,
+    expectedImpactScore: 85,
+    confidence: 0.7,
+    status: "proposed",
+    verificationMetric: "campaignRoiPct",
+    verificationMethod: "before/after",
+    expectedTimeframeDays: 14,
+  };
+
+  it("maps a marketing cycle row to a valid DomainScore (clamped)", () => {
+    const ds = marketingCycleToDomainScore({ ...mktCycle, healthScore: 140, riskScore: -5 });
+    expect(ds.domain).toBe("marketing");
+    expect(ds.healthScore).toBe(100); // clamped
+    expect(ds.riskScore).toBe(0); // clamped
+    expect(ds.dataConfidenceScore).toBe(82);
+    expect(ds.topFindingCodes).toContain("MKT_WASTED_SPEND");
+    expect(domainScoreSchema.safeParse(ds).success).toBe(true);
+  });
+
+  it("maps a marketing action row to a schema-valid OwnerAction", () => {
+    const a = marketingActionRowToOwnerAction(mktAction);
+    expect(a.domain).toBe("marketing");
+    expect(ownerActionSchema.safeParse(a).success).toBe(true);
+  });
+
+  it("marketing is a growth domain: its risk does NOT raise survivalRiskScore", () => {
+    // finance (survival) risk 80 drives survival; marketing (growth) risk 72 must not.
+    const domainScores = [financeCycleToDomainScore(cycleRow()), marketingCycleToDomainScore(mktCycle)];
+    const topActions = [
+      financeActionRowToOwnerAction(actionRow({ id: "fin", priorityScore: 60 })),
+      marketingActionRowToOwnerAction(mktAction), // 88
+    ];
+    const profile = buildBusinessConditionProfile({ businessId: "b", workspaceId: "w", domainScores, topActions, now: NOW });
+    expect(profile.domainScores.map((d) => d.domain).sort()).toEqual(["finance", "marketing"]);
+    expect(profile.survivalRiskScore).toBe(80); // marketing risk 72 must NOT raise survival
+    expect(profile.recommendedNextAction?.domain).toBe("marketing"); // 88 > 60 across domains
   });
 });
 

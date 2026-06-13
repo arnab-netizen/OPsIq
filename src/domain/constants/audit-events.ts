@@ -261,6 +261,11 @@ export const AUDIT_EVENTS = {
   OWNER_SOP_ACTION_UPDATED: "owner.sop_action_updated",
   OWNER_SOP_OUTCOME_VERIFIED: "owner.sop_outcome_verified",
 
+  OWNER_MARKETING_SNAPSHOT_RECORDED: "owner.marketing_snapshot_recorded",
+  OWNER_MARKETING_DIAGNOSIS_RUN: "owner.marketing_diagnosis_run",
+  OWNER_MARKETING_ACTION_UPDATED: "owner.marketing_action_updated",
+  OWNER_MARKETING_OUTCOME_VERIFIED: "owner.marketing_outcome_verified",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
