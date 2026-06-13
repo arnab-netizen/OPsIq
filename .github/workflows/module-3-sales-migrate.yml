@@ -1,0 +1,110 @@
+name: Module 3 Sales Migration
+
+# Manual only. Applies the Module 3 Sales & Customer Intelligence migration
+# (prisma/migrations/20260613120000_module3_sales) to a network-enabled Neon
+# target using the DIRECT (non-pooler) URL from the MIGRATION_DATABASE_URL
+# secret. Additive only (creates 5 sales tables). It does NOT deploy the app and
+# does NOT run any destructive command (no reset / no db push).
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Database target label'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      confirm:
+        description: 'Must equal APPLY_MODULE3_SALES_MIGRATION'
+        required: true
+
+concurrency:
+  group: module-3-sales-migrate-${{ github.event.inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply Module 3 Sales migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ github.event.inputs.target }}
+    env:
+      # prisma.config.ts prioritizes MIGRATION_DATABASE_URL; DATABASE_URL is set
+      # to the same secret as a fallback. Secrets are masked in logs by Actions.
+      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
+    steps:
+      - name: Confirmation phrase guard (fail closed)
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "APPLY_MODULE3_SALES_MIGRATION" ]; then
+            echo "::error::Confirmation phrase mismatch. Type APPLY_MODULE3_SALES_MIGRATION to proceed."
+            exit 1
+          fi
+          echo "✓ Confirmation accepted. Target: ${{ github.event.inputs.target }}"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Module 3 sales migration file exists
+        run: |
+          test -f prisma/migrations/20260613120000_module3_sales/migration.sql
+          echo "✓ Migration file present: 20260613120000_module3_sales"
+
+      - name: Preflight - MIGRATION_DATABASE_URL secret present (fail closed, no print)
+        run: |
+          if [ -z "${{ secrets.MIGRATION_DATABASE_URL }}" ]; then
+            echo "::error::MIGRATION_DATABASE_URL secret is missing or empty. Aborting."
+            exit 1
+          fi
+          echo "✓ MIGRATION_DATABASE_URL secret is configured (value not printed)"
+
+      - name: Remove local env files (prevent placeholder/pooler contamination)
+        run: |
+          rm -f .env .env.local .env.local.bak .env.production .env.staging .env.postgres .env.test
+          echo "✓ Removed local .env files so the secret is the sole datasource"
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Migration status (before, informational)
+        # Informational only. `prisma migrate status` exits non-zero when pending
+        # migrations exist — EXPECTED here (the Module 3 sales migration is
+        # pending). Capture and report the exit code but never fail the job on it,
+        # so the deploy step can run. The post-deploy status step remains strict.
+        run: |
+          set +e
+          npx prisma migrate status
+          STATUS_CODE=$?
+          set -e
+          echo "Pre-deploy migrate status exit code: $STATUS_CODE"
+          echo "Non-zero before deploy is expected when pending migrations exist."
+          exit 0
+
+      - name: Apply migration (prisma migrate deploy)
+        run: npx prisma migrate deploy
+
+      - name: Migration status (after)
+        run: npx prisma migrate status
+
+      - name: Summary (no secrets)
+        run: |
+          echo "Target label        : ${{ github.event.inputs.target }}"
+          echo "Migration command   : npx prisma migrate deploy (20260613120000_module3_sales)"
+          echo "Tables created      : owner_sales_snapshots, owner_sales_cycles,"
+          echo "                      owner_sales_findings, owner_sales_actions,"
+          echo "                      owner_sales_verifications (additive only)"
+          echo "Status              : completed"
+          echo "Next                : Module 3 API + services slice once migration is applied"
