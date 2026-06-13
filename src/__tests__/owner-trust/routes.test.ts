@@ -9,7 +9,7 @@ import * as path from "path";
 
 const base = path.resolve(__dirname, "../../app/api/owner/trust");
 const read = (rel: string) => fs.readFileSync(path.join(base, rel), "utf8");
-const ROUTES = ["explanations/route.ts", "audit-trail/route.ts"];
+const ROUTES = ["explanations/route.ts", "audit-trail/route.ts", "cycles/route.ts"];
 
 describe("Owner Trust route enforcement", () => {
   it("every trust route is canonical, workspace-required, OWNER_VIEW", () => {

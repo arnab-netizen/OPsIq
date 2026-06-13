@@ -80,6 +80,7 @@ export default function OwnerCommandCenterPage() {
           <Link href="/owner/strategy"><Button>Strategy</Button></Link>
           <Link href="/owner/portfolio"><Button>Portfolio</Button></Link>
           <Link href="/owner/intake"><Button>Data Intake</Button></Link>
+          <Link href="/owner/trust"><Button>Trust</Button></Link>
           <Link href="/owner/recovery"><Button>Recovery</Button></Link>
         </div>
       </div>

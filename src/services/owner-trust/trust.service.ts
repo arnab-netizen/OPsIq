@@ -8,9 +8,11 @@
  * Owns no table and mutates nothing — workspace ownership is enforced by the
  * underlying domain reads and the audit query is workspace-scoped.
  */
-import { buildExplanations, type ExplanationCard } from "@/domain/owner-trust";
+import { buildExplanations, TRUST_DOMAINS, type ExplanationCard } from "@/domain/owner-trust";
 import type { TrustDomain } from "@/domain/owner-trust";
 import type { OwnerAction, OwnerFinding, OwnerDomain } from "@/domain/owner-spine/contracts";
+import { db } from "@/lib/db";
+import { listBusinesses, getBusiness } from "@/services/founder-recovery/business.service";
 import { queryAuditEvents } from "@/infra/audit";
 import { getFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
 import { getSalesDiagnosis } from "@/services/owner-sales/diagnosis.service";
@@ -96,6 +98,70 @@ export async function getCycleExplanations(
     generatedAt: cycle.generatedAt instanceof Date ? cycle.generatedAt.toISOString() : String(cycle.generatedAt),
     explanations,
   };
+}
+
+/** Prisma delegate (per trust domain) holding that domain's diagnosis cycles. */
+const CYCLE_DELEGATES: Record<TrustDomain, string> = {
+  finance: "ownerFinanceCycle",
+  sales: "ownerSalesCycle",
+  cashflow: "ownerCashflowCycle",
+  operations: "ownerOperationsCycle",
+  sop: "ownerSopCycle",
+  marketing: "ownerMarketingCycle",
+  strategy: "ownerStrategyCycle",
+};
+
+export interface TrustCycleRef {
+  domain: TrustDomain;
+  cycleId: string;
+  sequenceNumber: number;
+  generatedAt: string;
+}
+
+export interface BusinessTrustOverview {
+  businesses: Array<{ id: string; name: string; currency: string }>;
+  selectedBusinessId: string | null;
+  cycles: TrustCycleRef[];
+}
+
+/**
+ * Read-only: for a business, the latest diagnosis cycle in every trust domain
+ * that has one. Lets the owner pick a real cycle to explain without typing UUIDs.
+ */
+export async function getBusinessTrustOverview(
+  workspaceId: string,
+  requestedBusinessId?: string | null
+): Promise<BusinessTrustOverview> {
+  const businesses = await listBusinesses(workspaceId);
+  const businessList = businesses.map((b: any) => ({ id: b.id, name: b.name, currency: b.currency }));
+
+  let selectedBusinessId: string | null = null;
+  if (requestedBusinessId && businesses.find((b: any) => b.id === requestedBusinessId)) {
+    selectedBusinessId = requestedBusinessId;
+  }
+  if (!selectedBusinessId && businesses.length > 0) selectedBusinessId = businesses[0].id;
+  if (!selectedBusinessId) return { businesses: businessList, selectedBusinessId: null, cycles: [] };
+
+  await getBusiness(selectedBusinessId, workspaceId); // ownership guard
+
+  const cycles: TrustCycleRef[] = [];
+  for (const domain of TRUST_DOMAINS) {
+    const delegate = (db as any)[CYCLE_DELEGATES[domain]];
+    const row = await delegate.findFirst({
+      where: { businessId: selectedBusinessId, workspaceId },
+      orderBy: { sequenceNumber: "desc" },
+      select: { id: true, sequenceNumber: true, generatedAt: true },
+    });
+    if (row) {
+      cycles.push({
+        domain,
+        cycleId: row.id,
+        sequenceNumber: row.sequenceNumber,
+        generatedAt: row.generatedAt instanceof Date ? row.generatedAt.toISOString() : String(row.generatedAt),
+      });
+    }
+  }
+  return { businesses: businessList, selectedBusinessId, cycles };
 }
 
 /** Read the governed audit trail for an entity (who changed what, when). */
