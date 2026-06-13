@@ -9,9 +9,12 @@
  * value (the anti-hallucination rule): a missing source value is labeled "missing"
  * and surfaced as a data gap, never fabricated.
  */
-import type { OwnerDomain, OwnerSeverity, OwnerFindingType } from "@/domain/owner-spine/contracts";
+import type { OwnerDomain, OwnerSeverity, OwnerFinding } from "@/domain/owner-spine/contracts";
 
 export type TrustLabel = "low" | "moderate" | "high";
+
+/** Finding classification carried through to an explanation card. */
+export type OwnerFindingType = OwnerFinding["findingType"];
 
 /** The source data an explanation was built from (real values only, or "missing"). */
 export interface ExplanationSource {
