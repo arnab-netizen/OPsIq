@@ -225,11 +225,33 @@ end to end — engine → read-only API → UI → cross-business ranking, prior
 alerts, investment recommendation; no migration — read-only module). Not
 REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
 
+## Module 10 — Connectors & Data Intake (complete)
+
+Per execution.md §17 / §22 Phase 11 (connectors, built after the core owner loop is
+stable). All on `main` (merge `8b54868` + `7f3a42d`). A deterministic CSV/manual
+intake engine + persisted `OwnerDataIntake` record. Per §17 every intake carries
+source/timestamp/validation/normalization/error-report/owner-confirmation, and
+connector data NEVER feeds a diagnosis without owner confirmation.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Intake engine (CSV parse + validate/normalize) | ✅ | `MODULE10_SLICE1_INTAKE_ENGINE_REPORT.md` (`5bc5677`) |
+| 2 Persistence + migration | ✅ MIGRATED | Module 10 Data Intake Migration #1 (target staging, `main`@`4257c0c`) — `MODULE10_SLICE2_INTAKE_PERSISTENCE_REPORT.md` |
+| 3 API + services (upload → candidate → confirm) | ✅ | `MODULE10_SLICE3_INTAKE_API_REPORT.md` (`225036e`) |
+| 4 UI + command-center link | ✅ | `MODULE10_SLICE4_INTAKE_UI_REPORT.md` (`8b54868`) |
+| 5 Deployed runtime proof | ✅ **PROVEN** | Module 10 Data Intake Runtime Proof #2 — Success (1m 33s, `main`@`7f3a42d`; #1 caught a proof test-data bug, fixed) — `MODULE10_SLICE5_INTAKE_RUNTIME_PROOF_REPORT.md` |
+| 6 Audit + proof | ✅ **AUDITED** | `MODULE10_CONNECTORS_DATA_INTAKE_AUDIT_REPORT.md` |
+
+Module 10 status: **STAGING_PROVEN + AUDITED** (intake loop deployed-runtime-proven
+end to end — engine → schema/migration → API → UI; the §17 owner-confirmation
+guardrail proven negatively: an invalid intake cannot be confirmed). Not
+REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
+
 ## Next single action
 
-Module 9 Portfolio is **STAGING_PROVEN + AUDITED** (all slices proven). Proven owner
-domains: recovery + finance + cashflow + sales + operations + sop + marketing +
-strategy, plus the cross-business portfolio command center over all of them. Next
-per execution.md §22: Module 10 (Connectors / Data Intake) or Module 11
-(Trust/Audit/Explainability), or M13 real-business validation (release gate, not a
-build blocker). Keep public/SaaS/billing/marketing frozen.
+Module 10 Connectors/Intake is **STAGING_PROVEN + AUDITED** (all slices proven).
+Proven owner domains: recovery + finance + cashflow + sales + operations + sop +
+marketing + strategy + portfolio + data intake. Next per execution.md §22: Module 11
+(Trust/Audit/Explainability) or Module 12 (Owner UI & Mobile Usability), or M13
+real-business validation (release gate, not a build blocker). Keep
+public/SaaS/billing/marketing frozen.
