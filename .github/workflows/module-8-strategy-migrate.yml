@@ -1,0 +1,104 @@
+name: Module 8 Strategy Migration
+
+# Manual only. Applies the Module 8 Strategy & Scenario Planning migration
+# (prisma/migrations/20260613190000_module8_strategy) to a network-enabled Neon
+# target using the DIRECT (non-pooler) URL from the MIGRATION_DATABASE_URL secret.
+# Additive only (creates 5 strategy tables). It does NOT deploy the app and does
+# NOT run any destructive command.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Database target label'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      confirm:
+        description: 'Must equal APPLY_MODULE8_STRATEGY_MIGRATION'
+        required: true
+
+concurrency:
+  group: module-8-strategy-migrate-${{ github.event.inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply Module 8 Strategy migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ github.event.inputs.target }}
+    env:
+      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
+    steps:
+      - name: Confirmation phrase guard (fail closed)
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "APPLY_MODULE8_STRATEGY_MIGRATION" ]; then
+            echo "::error::Confirmation phrase mismatch. Type APPLY_MODULE8_STRATEGY_MIGRATION to proceed."
+            exit 1
+          fi
+          echo "✓ Confirmation accepted. Target: ${{ github.event.inputs.target }}"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify Module 8 strategy migration file exists
+        run: |
+          test -f prisma/migrations/20260613190000_module8_strategy/migration.sql
+          echo "✓ Migration file present: 20260613190000_module8_strategy"
+
+      - name: Preflight - MIGRATION_DATABASE_URL secret present (fail closed, no print)
+        run: |
+          if [ -z "${{ secrets.MIGRATION_DATABASE_URL }}" ]; then
+            echo "::error::MIGRATION_DATABASE_URL secret is missing or empty. Aborting."
+            exit 1
+          fi
+          echo "✓ MIGRATION_DATABASE_URL secret is configured (value not printed)"
+
+      - name: Remove local env files (prevent placeholder/pooler contamination)
+        run: |
+          rm -f .env .env.local .env.local.bak .env.production .env.staging .env.postgres .env.test
+          echo "✓ Removed local .env files so the secret is the sole datasource"
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Migration status (before, informational)
+        run: |
+          set +e
+          npx prisma migrate status
+          STATUS_CODE=$?
+          set -e
+          echo "Pre-deploy migrate status exit code: $STATUS_CODE"
+          echo "Non-zero before deploy is expected when pending migrations exist."
+          exit 0
+
+      - name: Apply migration (prisma migrate deploy)
+        run: npx prisma migrate deploy
+
+      - name: Migration status (after)
+        run: npx prisma migrate status
+
+      - name: Summary (no secrets)
+        run: |
+          echo "Target label        : ${{ github.event.inputs.target }}"
+          echo "Migration command   : npx prisma migrate deploy (20260613190000_module8_strategy)"
+          echo "Tables created      : owner_strategy_snapshots, owner_strategy_cycles,"
+          echo "                      owner_strategy_findings, owner_strategy_actions,"
+          echo "                      owner_strategy_verifications (additive only)"
+          echo "Status              : completed"
+          echo "Next                : Module 8 API + services slice once migration is applied"
