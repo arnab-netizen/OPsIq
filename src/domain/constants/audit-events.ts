@@ -244,6 +244,12 @@ export const AUDIT_EVENTS = {
   OWNER_CASHFLOW_ACTION_UPDATED: "owner.cashflow_action_updated",
   OWNER_CASHFLOW_OUTCOME_VERIFIED: "owner.cashflow_outcome_verified",
 
+  // Owner Sales (Module 3)
+  OWNER_SALES_SNAPSHOT_RECORDED: "owner.sales_snapshot_recorded",
+  OWNER_SALES_DIAGNOSIS_RUN: "owner.sales_diagnosis_run",
+  OWNER_SALES_ACTION_UPDATED: "owner.sales_action_updated",
+  OWNER_SALES_OUTCOME_VERIFIED: "owner.sales_outcome_verified",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
