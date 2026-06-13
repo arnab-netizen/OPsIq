@@ -49,7 +49,8 @@ const validUpload: IntakeUploadInput = {
 const invalidUpload: IntakeUploadInput = {
   source: "csv_upload",
   targetDomain: "finance",
-  csvText: "Period Start,Period End,Currency,Revenue\n2026-05-01,2026-05-31,INR,oops", // revenue not a number
+  // Breaks a REQUIRED field (periodStart is a required date) → validationStatus "invalid".
+  csvText: "Period Start,Period End,Currency,Revenue\nnotadate,2026-05-31,INR,100000",
 };
 
 describe("[db] Owner Intake service", () => {

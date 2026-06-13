@@ -69,7 +69,8 @@ async function call(method: string, path: string, opts: { cookie?: string; body?
 }
 
 const VALID_CSV = "periodStart,periodEnd,currency,revenue,fixedCosts\n2026-05-01,2026-05-31,INR,100000,40000";
-const INVALID_CSV = "periodStart,periodEnd,currency,revenue\n2026-05-01,2026-05-31,INR,oops"; // revenue not a number
+// Breaks a REQUIRED field (periodStart is a required date) → validationStatus "invalid".
+const INVALID_CSV = "periodStart,periodEnd,currency,revenue\nnotadate,2026-05-31,INR,100000";
 
 function planLines(): string[] {
   return [
