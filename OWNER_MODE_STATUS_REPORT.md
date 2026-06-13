@@ -130,10 +130,36 @@ end to end — engine → detector → planner → schema/migration → API → 
 center; execution-domain rollup proven so operations risk drives executionRiskScore,
 not survival). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
 
+## Module 7 — SOP, Process & Execution Accountability (complete)
+
+Per execution.md §14 / §22 Phase 7 (execution/SOP system, built after operations).
+All on `main` (merge `f6b58aa` + `bf1af11`). Execution-accountability lens (sop ∈
+`EXECUTION_DOMAINS` → its risk drives `executionRiskScore`, not survival); reuses
+the Owner Intelligence Spine + Module 1 status machine / verification. Models only
+business-operational accountability variables (follow-through, overdue, repeated
+failures, verification + proof discipline, SOP coverage) — no personality/mental
+health.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Engine (deterministic metrics) | ✅ | `MODULE7_SLICE2_SOP_DETECTOR_REPORT.md` (engine in `4478250`) |
+| 2 Detector (risk/opportunity findings) | ✅ | `MODULE7_SLICE2_SOP_DETECTOR_REPORT.md` (`4478250`) |
+| 3 Action planner | ✅ | `MODULE7_SLICE3_SOP_PLANNER_REPORT.md` (`a38fdbe`) |
+| 4 Persistence schema + migration | ✅ MIGRATED | Module 7 SOP Migration #1 (target staging, `main`@`a1c0266`) — `MODULE7_SLICE4_SOP_PERSISTENCE_REPORT.md` |
+| 5 API + services | ✅ | `MODULE7_SLICE5_SOP_API_REPORT.md` (`c979e0a`) |
+| 6 UI + command-center integration | ✅ (command center now finance+recovery+cashflow+sales+operations+sop) | `MODULE7_SLICE6_SOP_UI_CONDITION_REPORT.md` (`f6b58aa`) |
+| 7 Deployed runtime proof | ✅ **PROVEN** | Module 7 SOP Runtime Proof #1 — Success (2m 6s, `main`@`bf1af11`) — `MODULE7_SLICE7_SOP_RUNTIME_PROOF_REPORT.md` |
+| 8 Audit + proof | ✅ **AUDITED** | `MODULE7_SOP_EXECUTION_INTELLIGENCE_AUDIT_REPORT.md` |
+
+Module 7 status: **STAGING_PROVEN + AUDITED** (execution loop deployed-runtime-proven
+end to end — engine → detector → planner → schema/migration → API → UI → command
+center; execution-domain rollup proven so sop risk drives executionRiskScore, not
+survival). Not REAL_BUSINESS_PROVEN (M13), not FULL_CAPACITY.
+
 ## Next single action
 
-Module 4 Operations is **STAGING_PROVEN + AUDITED** (all slices proven). Proven owner
-domains: recovery + finance + cashflow + sales + operations (command center is
-cross-domain over all five). Next per execution.md §22: the next owner module /
-capability slice, or M13 real-business validation (release gate, not a build
-blocker). Keep public/SaaS/billing/marketing frozen.
+Module 7 SOP/Execution is **STAGING_PROVEN + AUDITED** (all slices proven). Proven
+owner domains: recovery + finance + cashflow + sales + operations + sop (command
+center is cross-domain over all six). Next per execution.md §22: the next owner
+module / capability slice, or M13 real-business validation (release gate, not a
+build blocker). Keep public/SaaS/billing/marketing frozen.
