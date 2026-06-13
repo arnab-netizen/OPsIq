@@ -67,6 +67,7 @@ export default function OwnerCommandCenterPage() {
         <div className="flex gap-2">
           <Link href="/owner/finance"><Button>Finance</Button></Link>
           <Link href="/owner/cashflow"><Button>Cashflow</Button></Link>
+          <Link href="/owner/sales"><Button>Sales</Button></Link>
           <Link href="/owner/recovery"><Button>Recovery</Button></Link>
         </div>
       </div>
