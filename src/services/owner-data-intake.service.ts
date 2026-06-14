@@ -11,9 +11,18 @@
  * No I/O, no external calls, no side effects except DB writes.
  */
 
-import { db } from "@/lib/db";
-import { logAuditEvent } from "@/services/audit/audit-log";
 import type { UserRole } from "@/domain/auth/types";
+
+// Lazy-load db to avoid import-time initialization issues in tests
+async function getDb() {
+  const { db } = await import("@/lib/db");
+  return db;
+}
+
+async function getAuditLogger() {
+  const { logAuditEvent } = await import("@/services/audit/audit-log");
+  return logAuditEvent;
+}
 
 export interface ConfirmOwnerDataIntakeInput {
   intakeId: string;
@@ -75,6 +84,8 @@ export type RejectResult =
  */
 export async function confirmOwnerDataIntake(input: ConfirmOwnerDataIntakeInput): Promise<ConfirmResult> {
   try {
+    const db = await getDb();
+
     // Step 1: Fetch existing intake with exclusive lock (transaction will start automatically)
     const existing = await db.ownerDataIntake.findUnique({
       where: { id: input.intakeId },
@@ -154,6 +165,7 @@ export async function confirmOwnerDataIntake(input: ConfirmOwnerDataIntakeInput)
     });
 
     // Step 7: Emit audit event
+    const logAuditEvent = await getAuditLogger();
     await logAuditEvent({
       eventName: "owner_data_intake_confirmed",
       entityType: "owner_data_intake",
@@ -208,6 +220,8 @@ export async function confirmOwnerDataIntake(input: ConfirmOwnerDataIntakeInput)
  */
 export async function rejectOwnerDataIntake(input: RejectOwnerDataIntakeInput): Promise<RejectResult> {
   try {
+    const db = await getDb();
+
     // Step 1: Fetch existing intake
     const existing = await db.ownerDataIntake.findUnique({
       where: { id: input.intakeId },
@@ -254,6 +268,7 @@ export async function rejectOwnerDataIntake(input: RejectOwnerDataIntakeInput): 
     });
 
     // Step 5: Emit audit event
+    const logAuditEvent = await getAuditLogger();
     await logAuditEvent({
       eventName: "owner_data_intake_rejected",
       entityType: "owner_data_intake",
@@ -296,6 +311,8 @@ export async function rejectOwnerDataIntake(input: RejectOwnerDataIntakeInput): 
  */
 export async function getOwnerDataIntakeStatus(intakeId: string, workspaceId: string) {
   try {
+    const db = await getDb();
+
     const intake = await db.ownerDataIntake.findFirst({
       where: {
         id: intakeId,
