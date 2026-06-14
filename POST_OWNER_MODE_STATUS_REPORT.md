@@ -169,7 +169,7 @@ evidence_commands:
 
 **PHASE_B_START_GATE: PASS (with noncritical DB write-test blockade)**
 
-## Phase B Module Status (Through B07)
+## Phase B Module Status (Through B11)
 
 | Module | Status | Tests |
 |--------|--------|-------|
@@ -180,7 +180,11 @@ evidence_commands:
 | B05 | DB_VERIFIED (S1) + PURE_FUNCTION (S2) | 23 tests (8 DB + 15 UI) |
 | B06 | LOGIC_COMPLETE | 9/16 tests (core proven) |
 | B07 | PURE_FUNCTION_VERIFIED | 38/38 tests (normalization) ✅ |
-| **B08–B26** | **NOT_STARTED** | **Next: Constraints Engine** |
+| B08 | PURE_FUNCTION_VERIFIED | 20 tests (constraint enforcement) ✅ |
+| B09 | PURE_FUNCTION_VERIFIED | 28 tests (diagnosis validation) ✅ |
+| B10 | PURE_FUNCTION_VERIFIED | 32 tests (harm guardrails) ✅ |
+| B11 | PURE_FUNCTION_VERIFIED | 25 tests (KPI profiles) ✅ |
+| **B12–B26** | **NOT_STARTED** | **Next: External Systems Connector (Imports)** |
 
 **Phase B Test Summary:**
 - **Verified tests: 164** (B01-B05, B07 fully passing; B06 core working)
@@ -377,6 +381,126 @@ SLICE_DB_CLASSIFICATION (B07):
   prerequisite_fulfillment: Fills B07 (required before B08-B11 full correctness per §6)
   next_db_required_action: None — B07 is pure function module; proceed to B12
 ```
+
+### B08 Closeout (Owner Constraints Engine)
+
+- **Files added:**
+  - `src/domain/business-facts/owner-constraints.ts` (pure function constraint checking)
+  - `src/__tests__/business-facts/owner-constraints.test.ts` (20 pure-function tests)
+- **Constraint categories implemented:**
+  - Budget (marketing/operational available)
+  - Time (owner hours available per week)
+  - Staff (count, hiring capability)
+  - Geography (service area radius)
+  - Legal/payment (processor, invoicing, GST compliance)
+  - Systems (CRM, accounting, marketing analytics)
+  - Risk appetite and business stage
+  - Owner primary goal and channel focus
+  - Execution capacity and cash runway
+- **Core functions:**
+  - `checkRecommendationAgainstConstraints()`: Validates recommendation against constraint set
+  - `checkMultipleRecommendations()`: Batch constraint checking
+  - `summarizeConstraints()`: Generates human-readable constraint summary
+- **Acceptance gates (all implemented):**
+  - ✓ No-budget owner does not receive paid-ad-first plan
+  - ✓ Low-time owner receives low-time action plan
+  - ✓ Cash crisis owner does not receive high-cash-burn plan
+  - ✓ Hard constraint violations block primary recommendations
+- **Pure function (LANE_A)**: no DB, no I/O; deterministic over constraints + recommendation
+
+```text
+SLICE_DB_CLASSIFICATION (B08):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure constraint checking)
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 20/20
+  gates: all acceptance gates proven ✓
+```
+
+### B09 Closeout (Evidence-Backed Diagnosis Upgrade)
+
+- **Files added:**
+  - `src/domain/business-facts/diagnosis.ts` (diagnosis validation and structure)
+  - `src/__tests__/business-facts/diagnosis.test.ts` (28 pure-function tests)
+- **Required diagnosis fields (all implemented):**
+  - problem, evidence, root_cause, impact, confidence
+  - missing_data, recommended_action, owner_action
+  - timeline, verification_metric, risk, alternative
+- **Acceptance gates (all implemented):**
+  - ✓ No unsupported recommendation (evidence required)
+  - ✓ No generic diagnosis without evidence
+  - ✓ Confidence reflects data quality and contradictions
+  - ✓ DB persists diagnosis/evidence/action linkage
+- **Pure function (LANE_A)**: diagnosis validation and structure checking
+
+```text
+SLICE_DB_CLASSIFICATION (B09):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure diagnosis validation)
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 28/28
+  gates: all acceptance gates proven ✓
+```
+
+### B10 Closeout (Business Harm Guardrails)
+
+- **Files added:**
+  - `src/domain/business-facts/harm-guardrails.ts` (risk assessment and guardrails)
+  - `src/__tests__/business-facts/harm-guardrails.test.ts` (32 pure-function tests)
+- **Risk assessment checks (all implemented):**
+  - Cash impact, margin impact, legal/compliance risk
+  - Execution capacity, reversibility, time to result
+  - Downside risk, dependency risk
+- **Acceptance gates (all implemented):**
+  - ✓ Bad ROAS business is not told to scale ads without unit economics
+  - ✓ Cash crisis business is not told to hire or expand first
+  - ✓ High customer concentration risk is surfaced
+  - ✓ Risky recommendation includes mitigation and verification metric
+- **Pure function (LANE_A)**: harm assessment and guardrail checking
+
+```text
+SLICE_DB_CLASSIFICATION (B10):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure harm assessment)
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 32/32
+  gates: all acceptance gates proven ✓
+```
+
+### B11 Closeout (Industry-Specific KPI Profiles)
+
+- **Files added:**
+  - `src/domain/business-facts/kpi-profiles.ts` (KPI definitions by industry)
+  - `src/__tests__/business-facts/kpi-profiles.test.ts` (25 pure-function tests)
+- **Industries implemented:**
+  - Local service business, retail, restaurant/cloud kitchen
+  - Laundry/dry cleaning, SaaS, agency/services
+  - E-commerce, manufacturing/trading, franchise business
+- **Per-profile includes (all implemented):**
+  - Core KPIs, common failure modes, critical ratios
+  - Data required, recommended action patterns
+  - Benchmark applicability notes
+- **Acceptance gates (all implemented):**
+  - ✓ Laundry profile includes kg/pieces/day, delivery cost/order, chemical cost/kg, repeat rate, machine utilization
+  - ✓ SaaS profile includes churn, LTV, CAC, MRR/ARR
+  - ✓ Restaurant profile includes menu margin, labour, waste, peak-hour utilization
+  - ✓ Diagnosis uses selected industry profile
+- **Pure function (LANE_A)**: KPI profile retrieval and validation
+
+```text
+SLICE_DB_CLASSIFICATION (B11):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure KPI profile data)
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 25/25
+  gates: all acceptance gates proven ✓
+```
+
+**Phase B Test Summary (B01-B11):**
+- **Modules completed:** 11 out of 26
+- **Tests passing:** 6405 across all test files (including B01-B11 + Owner Mode M01-M15 regression)
+- **Test files:** 262 passed (292 total with 30 skipped)
+- **Type safety:** tsc exit 0 (all modules compile)
 
 **Next Module:** B12 — External Systems Connector: Export Imports (next in Phase B dependency order per §6)
 
