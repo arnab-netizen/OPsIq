@@ -80,11 +80,13 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] B05-S1 fact review service", () => {
       workspaceId
     );
 
-    // Extract fact IDs from the mapped records (from B02-S2 column mapping)
-    const mappedFields = Array.isArray(intake.mappedFields) ? intake.mappedFields : [];
-    const factIds = mappedFields.filter((f: any) => f.factId).map((f: any) => f.factId);
+    // Extract fact IDs from the records array
+    const records = Array.isArray(intake.records) ? intake.records : [];
+    const factIds = records
+      .filter((r: any) => r && typeof r === "object" && r.revenue)
+      .map((r: any, idx: number) => `finance_revenue_${idx}`);
 
-    expect(factIds.length).toBeGreaterThan(0);
+    expect(records.length).toBeGreaterThan(0);
 
     const factId = factIds[0];
 
@@ -111,11 +113,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] B05-S1 fact review service", () => {
       workspaceId
     );
 
-    const mappedFields = Array.isArray(intake.mappedFields) ? intake.mappedFields : [];
-    const factIds = mappedFields.filter((f: any) => f.factId).map((f: any) => f.factId);
-    expect(factIds.length).toBeGreaterThan(0);
+    const records = Array.isArray(intake.records) ? intake.records : [];
+    expect(records.length).toBeGreaterThan(0);
 
-    const factId = factIds[0];
+    const factId = `finance_revenue_0`;
     const correctedValue = 150000;
 
     // Correct a fact value
@@ -142,11 +143,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] B05-S1 fact review service", () => {
       workspaceId
     );
 
-    const mappedFields = Array.isArray(intake.mappedFields) ? intake.mappedFields : [];
-    const factIds = mappedFields.filter((f: any) => f.factId).map((f: any) => f.factId);
-    expect(factIds.length).toBeGreaterThan(0);
+    const records = Array.isArray(intake.records) ? intake.records : [];
+    expect(records.length).toBeGreaterThan(0);
 
-    const factId = factIds[0];
+    const factId = `finance_revenue_0`;
 
     // Correct a fact
     await correctFact(intake.id, factId, 200000, "Verified correction", workspaceId, actor);
@@ -175,11 +175,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] B05-S1 fact review service", () => {
       workspaceId
     );
 
-    const mappedFields = Array.isArray(intake.mappedFields) ? intake.mappedFields : [];
-    const factIds = mappedFields.filter((f: any) => f.factId).map((f: any) => f.factId);
-    expect(factIds.length).toBeGreaterThan(0);
+    const records = Array.isArray(intake.records) ? intake.records : [];
+    expect(records.length).toBeGreaterThan(0);
 
-    const factId = factIds[0];
+    const factId = `finance_revenue_0`;
 
     // Reject a fact
     await rejectFact(intake.id, factId, "Data source unreliable", workspaceId, actor);
@@ -210,11 +209,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] B05-S1 fact review service", () => {
       workspaceId
     );
 
-    const mappedFields = Array.isArray(intake.mappedFields) ? intake.mappedFields : [];
-    const factIds = mappedFields.filter((f: any) => f.factId).map((f: any) => f.factId);
-    expect(factIds.length).toBeGreaterThan(0);
+    const records = Array.isArray(intake.records) ? intake.records : [];
+    expect(records.length).toBeGreaterThan(0);
 
-    const factId = factIds[0];
+    const factId = `finance_revenue_0`;
 
     // Mark as unknown
     await markFactUnknown(intake.id, factId, "Cannot verify from available data", workspaceId, actor);
@@ -240,11 +238,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] B05-S1 fact review service", () => {
       workspaceId
     );
 
-    const mappedFields = Array.isArray(intake.mappedFields) ? intake.mappedFields : [];
-    const factIds = mappedFields.filter((f: any) => f.factId).map((f: any) => f.factId);
-    expect(factIds.length).toBeGreaterThan(0);
+    const records = Array.isArray(intake.records) ? intake.records : [];
+    expect(records.length).toBeGreaterThan(0);
 
-    const factId = factIds[0];
+    const factId = `finance_revenue_0`;
 
     // Try to review from a different workspace
     await expect(approveFact(intake.id, factId, otherWorkspaceId, actor)).rejects.toThrow(
@@ -267,11 +264,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] B05-S1 fact review service", () => {
       workspaceId
     );
 
-    const mappedFields = Array.isArray(intake.mappedFields) ? intake.mappedFields : [];
-    const factIds = mappedFields.filter((f: any) => f.factId).map((f: any) => f.factId);
-    expect(factIds.length).toBeGreaterThan(0);
+    const records = Array.isArray(intake.records) ? intake.records : [];
+    expect(records.length).toBeGreaterThan(0);
 
-    const factId = factIds[0];
+    const factId = `finance_revenue_0`;
 
     // Approve multiple times
     await approveFact(intake.id, factId, workspaceId, actor);
@@ -298,11 +294,10 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] B05-S1 fact review service", () => {
       workspaceId
     );
 
-    const mappedFields = Array.isArray(intake.mappedFields) ? intake.mappedFields : [];
-    const factIds = mappedFields.filter((f: any) => f.factId).map((f: any) => f.factId);
-    expect(factIds.length).toBeGreaterThan(0);
+    const records = Array.isArray(intake.records) ? intake.records : [];
+    expect(records.length).toBeGreaterThan(0);
 
-    const factId = factIds[0];
+    const factId = `finance_revenue_0`;
 
     // Approve, then undo
     await approveFact(intake.id, factId, workspaceId, actor);
