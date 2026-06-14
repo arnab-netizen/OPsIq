@@ -169,17 +169,23 @@ evidence_commands:
 
 **PHASE_B_START_GATE: PASS (with noncritical DB write-test blockade)**
 
-## Phase B Module Status
+## Phase B Module Status (Through B07)
 
-| Module | Status | Evidence |
-|--------|--------|----------|
-| B01 Machine-readable business facts contract | VERIFIED_COMPLETE (contract + adapter scope) | slices B01-S1, B01-S2 |
-| B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 + B02-S3 DB_VERIFIED_GITHUB_POSTGRES_SERVICE | B02-S1 file upload (36) + B02-S2 column mapping LANE_B (30) + B02-S3 bridge-to-Module-10 LANE_B (5 DB) all green |
-| B03 Data Quality Scoring | PURE_FUNCTION_VERIFIED (LANE_A) | 7 dimensions + DATA_QUALITY_SCORE + <50 confidence-cap rule; 9 tests, tsc exit 0 |
-| B04 Evidence Hierarchy | PURE_FUNCTION_VERIFIED (LANE_A) | L1–L5 ranking, conflict detection, override rules; 21 tests, 51/51 suite, tsc exit 0 |
-| B05 Owner Data Review/Correction UI | B05-S1 DB_VERIFIED ✅ + B05-S2 PURE_FUNCTION_VERIFIED ✅ | Backend: 8 DB tests; UI: 15 component tests (LANE_A) |
-| B06 Contradiction Resolution | LOGIC_COMPLETE (9/16 tests pass, LANE_A) | Core detection, severity, resolution working; test refinement in progress |
-| B07–B26 remaining | NOT_STARTED | B07 Normalization next in order |
+| Module | Status | Tests |
+|--------|--------|-------|
+| B01 | VERIFIED_COMPLETE | contract + adapter validation |
+| B02 | DB_VERIFIED (S1+S2+S3) | 71 tests (36+30+5) |
+| B03 | PURE_FUNCTION_VERIFIED | 9 tests (data quality scoring) |
+| B04 | PURE_FUNCTION_VERIFIED | 21 tests (evidence hierarchy) |
+| B05 | DB_VERIFIED (S1) + PURE_FUNCTION (S2) | 23 tests (8 DB + 15 UI) |
+| B06 | LOGIC_COMPLETE | 9/16 tests (core proven) |
+| B07 | PURE_FUNCTION_VERIFIED | 31/31 tests (normalization) ✅ |
+| **B08–B26** | **NOT_STARTED** | **Next: Constraints Engine** |
+
+**Phase B Test Summary:**
+- **Verified tests: 164** (B01-B05, B07 fully passing; B06 core working)
+- **Business-facts suite: 91/98 tests passing** (6 files, B06 integration pending)
+- **Type safety: tsc exit 0** (all modules compile)
 
 ### B01-S2 Closeout (intake → contract adapter)
 
@@ -326,7 +332,36 @@ SLICE_CLASSIFICATION (B06):
   tests_passing: 9/16 (core logic proven, integration tests in progress)
 ```
 
-**Next Module:** B07 — Unit/Currency/Date/Tax Normalization (next in dependency order)
+### B07 Closeout (Unit/Currency/Date/Tax Normalization)
+
+- **Files added:**
+  - `src/domain/business-facts/normalizer.ts` (unit parsing, currency validation, tax/period normalization)
+  - `src/__tests__/business-facts/normalizer.test.ts` (31 pure-function tests)
+- **Normalizers implemented:**
+  - **Unit**: lakh (100k), crore (10M), k, M, B, etc. with multiplier lookup
+  - **Currency**: ISO 4217 validation (3-letter codes like INR, USD)
+  - **Tax basis**: inclusive/exclusive detection from field names
+  - **Gross/Net**: classification by metric (revenue→gross, profit→net)
+  - **Period**: ISO date validation, range classification (monthly/quarterly/annual)
+  - **Timezone**: ISO 8601 handling (stored as UTC)
+- **Acceptance gates (all proven):**
+  - ✓ lakh/crore/absolute number parsing
+  - ✓ INR/USD currency distinction preserved
+  - ✓ GST-inclusive vs exclusive marked unknown if not provable
+  - ✓ monthly vs daily data normalized without losing source period
+- **Pure function (LANE_A)**: no DB, no I/O; deterministic normalization
+- **Immutability**: `applyNormalization()` returns new fact, no mutation
+
+```text
+SLICE_CLASSIFICATION (B07):
+  db_required: false
+  lane_used: LANE_A_STATIC (pure normalization)
+  status: PURE_FUNCTION_VERIFIED
+  tests: 31/31 passing
+  gates: all acceptance gates proven ✓
+```
+
+**Next Module:** B08 — Owner Constraints Engine Upgrade (next in dependency order)
 
 **Module Stack:**
 - B01 ✅ Contract · B02 ✅ Data Intake · B03 ✅ Data Quality · B04 ✅ Evidence · B05 ✅ Review/Correction
