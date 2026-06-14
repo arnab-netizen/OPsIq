@@ -169,13 +169,33 @@ evidence_commands:
 
 **PHASE_B_START_GATE: PASS (with noncritical DB write-test blockade)**
 
+## Phase B Module Status
+
+| Module | Status | Evidence |
+|--------|--------|----------|
+| B01 Machine-readable business facts contract | IMPLEMENTED_CONTRACT_ONLY_NOT_INTEGRATED | slice B01-S1 (see below) |
+| B02–B26 | NOT_STARTED | blocked on prerequisites in order |
+
+### B01-S1 Closeout
+
+- **Files added:**
+  - `src/domain/business-facts/contract.ts` (Zod source of truth: `BusinessFact` + envelope, refinements)
+  - `contracts/business-facts.schema.json` (generated JSON Schema, 18 objects)
+  - `contracts/business-facts.examples.json` (service / missing-data / contradiction)
+  - `contracts/business-facts.version.md`, `contracts/business-facts-migration.md`
+  - `scripts/generate-business-facts-schema.ts` (drift guard, `--check`)
+  - `src/__tests__/business-facts/contract.test.ts` (15 tests)
+- **Gates:** `npx tsc --noEmit` ✓ · vitest B01 15/15 ✓ · schema `--check` up-to-date ✓ · regression owner-strategy 52 passed ✓
+- **Status:** `IMPLEMENTED_CONTRACT_ONLY_NOT_INTEGRATED` (§37.14 — contract + tests; no diagnosis/intake path consumes it yet)
+- **DB:** none required (contract-only; no Prisma/DB change)
+
 ## Next Action
 
-Proceed to Phase B module B01 implementation:
-- B01: Machine-Readable Business Facts Contract
-- Start with schema/contract definition (no DB required)
-- Add validation tests
-- Defer runtime persistence tests until DB credentials available
+- Next slice candidate: B01 integration groundwork OR B02 (Data intake Level 1)
+  once B01 is consumed. Per §38.14, B02 may not begin until B01 is
+  VERIFIED_COMPLETE; B01 is currently CONTRACT_ONLY pending an integration slice.
+- DB write tests for current Owner Mode (M01-M15) remain deferred until
+  PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
 ---
 
