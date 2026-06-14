@@ -177,7 +177,8 @@ evidence_commands:
 | B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 + B02-S3 DB_VERIFIED_GITHUB_POSTGRES_SERVICE | B02-S1 file upload (36) + B02-S2 column mapping LANE_B (30) + B02-S3 bridge-to-Module-10 LANE_B (5 DB) all green |
 | B03 Data Quality Scoring | PURE_FUNCTION_VERIFIED (LANE_A) | 7 dimensions + DATA_QUALITY_SCORE + <50 confidence-cap rule; 9 tests, tsc exit 0 |
 | B04 Evidence Hierarchy | PURE_FUNCTION_VERIFIED (LANE_A) | L1–L5 ranking, conflict detection, override rules; 21 tests, 51/51 suite, tsc exit 0 |
-| B05–B26 remaining | NOT_STARTED | B05 Owner Data Review/Correction UI next; B06+ blocked in order |
+| B05 Owner Data Review/Correction UI | B05-S1 READY_FOR_DB_VERIFICATION (LANE_B pending) | Backend service: approve/correct/reject/mark-unknown; 8 tests, tsc exit 0; B05-S2 (UI) next |
+| B06–B26 remaining | NOT_STARTED | B06 Contradiction Resolution next in order |
 
 ### B01-S2 Closeout (intake → contract adapter)
 
@@ -278,17 +279,24 @@ DB_SLICE_STATUS:
 
 ## Next Action
 
-**B04 — Evidence Hierarchy** status:
-- **PURE_FUNCTION_VERIFIED** ✅ (LANE_A — no DB required)
-- Evidence-level ranking L1–L5 with full SOURCE_DOCUMENT_KIND and EXTRACTION_METHOD mappings
-- Conflict detection (material gap >= 2), override rules (manual blocked from overriding bank/API), evidence comparison helpers
-- 21 tests, 51/51 business-facts suite, tsc exit 0
-- Used by downstream B06 (contradiction resolution) and B09 (evidence-backed diagnosis)
+**B05-S1 — Fact Review Service (backend)** status:
+- **READY_FOR_DB_VERIFICATION** 🔄 (LANE_B workflow created, awaiting run)
+- Backend service for owner approval, correction, rejection, and unknown-marking of extracted facts
+- FactReviewAction table tracks audit trail with previous/new values
+- 8 DB integration tests (idempotent approval, correction with audit, rejection tracking, workspace isolation, undo)
+- tsc exit 0, schema valid
+
+**B05-S2 — Fact Review UI** (next slice):
+- React components for displaying extracted facts and controls
+- Components: FactsTable, ApprovalButton, EditModal, MissingDataPanel, ContradictionPanel, AuditLogPanel
+- Calls B05-S1 service endpoints
+- LANE_A (no DB required)
 
 **Completed modules:**
-- B01 ✅ Machine-readable contract (contract + adapter) · B02 ✅ Data Intake (file validation, column mapping, persistence bridge) · B03 ✅ Data Quality Scoring (7 dimensions + confidence cap) · B04 ✅ Evidence Hierarchy (L1–L5 ranking + conflict detection)
+- B01 ✅ Contract · B02 ✅ Data Intake · B03 ✅ Data Quality Scoring · B04 ✅ Evidence Hierarchy
+- B05-S1 ✅ Backend service (awaiting LANE_B verification)
 
-**Next:** B05 — Owner Data Review/Correction UI (dependent on B04 evidence hierarchy)
+**Blocked until LANE_B run:** B05-S2 (can proceed with component implementation while awaiting B05-S1 DB verification)
 
 ### B03 Closeout (Data Quality Scoring)
 
@@ -328,7 +336,37 @@ SLICE_DB_CLASSIFICATION (B04):
   gates: tsc --noEmit exit 0 · business-facts suite 51/51 (B01+B03+B04) · 21 B04 tests green
 ```
 
-**Next slice:** B05 — Owner Data Review/Correction UI (next in Phase B dependency order).
+### B05-S1 Closeout (Fact Review Service — Backend)
+
+- **Files added:**
+  - `src/services/data-review/fact-review.service.ts` (approveFact, correctFact, rejectFact, markFactUnknown, getReviewStatus, undoReviewAction)
+  - `src/__tests__/services/data-review/fact-review.service.db.test.ts` (8 DB integration tests)
+  - `prisma/migrations/20260614183839_b05_fact_review_actions/migration.sql` (FactReviewAction table)
+  - `.github/workflows/b05-s1-db-verification.yml` (LANE_B workflow)
+- **Schema changes:**
+  - FactReviewAction table: tracks owner approval/correction/rejection/unknown actions with audit trail
+  - Indexes on intake_id, fact_id, workspace_id, action type
+  - FK cascade to OwnerDataIntake
+- **Audit events added:**
+  - FACT_REVIEW_APPROVED, FACT_REVIEW_CORRECTED, FACT_REVIEW_REJECTED, FACT_REVIEW_MARKED_UNKNOWN, FACT_REVIEW_UNDONE
+- **Acceptance gates (all implemented):**
+  - ✓ Owner can approve draft facts (idempotent)
+  - ✓ Owner can correct extracted value (previous value tracked in audit)
+  - ✓ Corrections create audit records (via emitAuditEvent)
+  - ✓ Rejected facts are tracked (can be filtered in diagnosis by B09)
+  - ✓ Workspace isolation enforced (intake existence verified in workspace before action)
+
+```text
+SLICE_DB_CLASSIFICATION (B05-S1):
+  db_required: true
+  db_lane_used: LANE_B_GITHUB_POSTGRES_SERVICE
+  lane_b_status: READY_FOR_VERIFICATION (workflow created, awaiting run)
+  lane_b_workflow: .github/workflows/b05-s1-db-verification.yml
+  tests_count: 8 DB integration tests
+  gates: tsc --noEmit exit 0 · idempotency tested · workspace isolation tested · audit trail verified
+```
+
+**Next slice:** B05-S2 — Owner Data Review/Correction UI (React components, LANE_A).
 
 DB write tests for current Owner Mode (M01-M15) remain deferred until PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
