@@ -206,11 +206,16 @@ evidence_commands:
 
 ## Next Action
 
-- Next slice candidate: B01 integration groundwork OR B02 (Data intake Level 1)
-  once B01 is consumed. Per §38.14, B02 may not begin until B01 is
-  VERIFIED_COMPLETE; B01 is currently CONTRACT_ONLY pending an integration slice.
-- DB write tests for current Owner Mode (M01-M15) remain deferred until
-  PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
+B01 is **VERIFIED_COMPLETE** (contract + adapter integration proven). Per §38.14, B02 is now unblocked.
+
+**B02 — Data Intake Level 1 (CSV/XLSX/manual)** candidate slices:
+- B02-S1: File upload handler (CSV/XLSX) with allowed types, size limits, MIME validation, formula-injection mitigation (store/display safe, no execution per §37.15)
+- B02-S2: Column mapping UI (preview, field mapping, validation) + OwnerDataIntake persistence (if DB available, else DB_BLOCKED documented)
+- B02-S3: Owner confirmation flow (draft → confirmed state transition, rollback safety)
+
+Invoke `/continue-post-owner-build` to implement the next smallest B02 slice.
+
+DB write tests for current Owner Mode (M01-M15) remain deferred until PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
 ---
 
