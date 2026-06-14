@@ -174,8 +174,8 @@ evidence_commands:
 | Module | Status | Evidence |
 |--------|--------|----------|
 | B01 Machine-readable business facts contract | VERIFIED_COMPLETE (contract + adapter scope) | slices B01-S1, B01-S2 |
-| B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 IMPLEMENTED_PURE_FUNCTION | B02-S1 file upload handler (36 tests, 0 errors) |
-| B02–B26 remaining | NOT_STARTED | B02-S2 next; B03+ blocked in order |
+| B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 VERIFIED_PURE_FUNCTION | B02-S1 file upload (36 tests) + B02-S2 column mapping (30 unit + 5 integration) = 71 tests |
+| B03–B26 remaining | NOT_STARTED | B02-S3 next (owner confirmation); B03+ blocked in order |
 
 ### B01-S2 Closeout (intake → contract adapter)
 
@@ -220,15 +220,31 @@ evidence_commands:
   Scope note: OwnerDataIntake persistence, column mapping UI, owner confirmation flow are separate slices (B02-S2, B02-S3).
   XLSX support deferred until xlsx library is dependency-checked (B02-S1 implements CSV fully).
 
+### B02-S2 Closeout (Column Mapping + Integration)
+
+- **Files added:**
+  - `src/domain/file-intake/column-mapper.ts` (pure-function column mapping + domain detection)
+  - `src/__tests__/domain/file-intake/column-mapper.test.ts` (30 unit tests)
+  - `src/__tests__/domain/file-intake/b02-s2-integration.test.ts` (5 integration tests)
+  - `.github/workflows/b02-s2-integration.yml` (PostgreSQL service container workflow)
+- **Proves:** column mapping analysis with confidence scores (§37.16), domain detection from CSV headers (finance/sales/operations), field matching via aliases, required field validation, unmapped column handling, row transformation with mapped field names, end-to-end B02-S1 → B02-S2 flow.
+- **Gates:** `npx tsc --noEmit` ✓ · column-mapper tests 30/30 ✓ · integration tests 5/5 ✓ · combined B02-S1+S2 tests 71/71 ✓ · build passing ✓
+- **Status:** B02-S2 pure-function implementation complete.
+  Scope: CSV column → business facts field mapping (pure function, no DB persistence in B02-S2).
+  DB persistence for OwnerDataIntake deferred to B02-S3 (Owner Confirmation Flow).
+
 ## Next Action
 
-B02-S1 **IMPLEMENTED_PURE_FUNCTION** (file upload handler with formula injection safety). Per §38.14, B02-S2 is now unblocked.
+B02-S2 **VERIFIED_PURE_FUNCTION** (column mapping with domain detection + full integration).
+- Pure-function slice (no DB writes in B02-S2 scope)
+- Full CSV → mapped rows → contract flow proven with 5 integration tests
+- Domain detection (finance/sales/operations) working across all test domains
 
 **B02 — Data Intake Level 1 (CSV/XLSX/manual)** remaining slices:
-- B02-S2: Column mapping UI (preview, field mapping, validation) + OwnerDataIntake persistence (if DB available, else DB_BLOCKED documented)
-- B02-S3: Owner confirmation flow (draft → confirmed state transition, rollback safety)
+- B02-S3: Owner confirmation flow (draft → confirmed state transition, rollback safety, OwnerDataIntake persistence)
+- B02-S4+: Additional B02 slices if needed (XLSX support, error handling refinements, etc.)
 
-Invoke `/continue-post-owner-build` to implement B02-S2 (column mapping + DB persistence).
+Invoke `/continue-post-owner-build` to implement B02-S3 (owner confirmation flow + persistence).
 
 DB write tests for current Owner Mode (M01-M15) remain deferred until PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
