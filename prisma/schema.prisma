@@ -1178,6 +1178,8 @@ model Workspace {
   recommendationsLegacy RecommendationLegacy[] @ignore
   snapshotDatas        SnapshotData[]
   workspaceMemberships WorkspaceMembership[]
+  externalConnections  ExternalConnection[]
+  connectionConsents   ExternalConnectionConsent[]
 
   @@map("workspaces")
 }
@@ -2761,6 +2763,7 @@ model ExternalProvider {
   updatedAt           DateTime                  @updatedAt @map("updated_at")
   templates           ExternalImportTemplate[]
   rawRecords          ExternalRawRecord[]
+  connections         ExternalConnection[]
 
   @@map("external_providers")
 }
@@ -2839,4 +2842,85 @@ model ExternalDataLineage {
   @@index([sourceRecordId])
   @@index([factId])
   @@map("external_data_lineage")
+}
+
+// B13: OAuth Connection Management
+model ExternalConnection {
+  id String @id
+  workspaceId String
+  providerId String
+  connectionName String
+  status String // "active" | "revoked" | "expired" | "error"
+  lastSyncAt DateTime?
+  lastErrorAt DateTime?
+  lastErrorMessage String?
+  oauthScope String[]
+  disconnectToken String? // token used for revocation
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider ExternalProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  token ExternalOAuthToken?
+  consents ExternalConnectionConsent[]
+  syncJobs ExternalSyncJob[]
+
+  @@unique([workspaceId, providerId])
+  @@index([workspaceId])
+  @@index([status])
+  @@map("external_connections")
+}
+
+// B13: Encrypted OAuth Tokens
+model ExternalOAuthToken {
+  id String @id
+  connectionId String @unique
+  accessToken String // encrypted at rest
+  refreshToken String? // encrypted at rest
+  expiresAt DateTime?
+  tokenType String @default("Bearer")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@map("external_oauth_tokens")
+}
+
+// B13: User Consent Tracking
+model ExternalConnectionConsent {
+  id String @id
+  workspaceId String
+  connectionId String
+  userId String
+  consentedAt DateTime @default(now())
+  scopes String[]
+  ipAddress String?
+  userAgent String?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([connectionId])
+  @@map("external_connection_consents")
+}
+
+// B13: Sync Job Tracking
+model ExternalSyncJob {
+  id String @id
+  connectionId String
+  status String // "pending" | "running" | "completed" | "failed"
+  recordsImported Int @default(0)
+  errorMessage String?
+  startedAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+
+  connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([status])
+  @@map("external_sync_jobs")
 }
