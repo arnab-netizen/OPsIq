@@ -316,7 +316,7 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M04 | Evidence Model / Evidence Attachment | TESTED_PARTIAL | 9 unit tests + code inspection | Evidence workspace isolation proven by automated tests; bundle and item queries enforce workspace scoping |
 | M05 | Recommendation Engine | TESTED_PARTIAL | 30 unit tests + code inspection | Recommendations link to diagnosis; all required fields present; constraint respect and downgrade logic verified; not generic filler |
 | M06 | Action Plan Generator | TESTED_PARTIAL | 23 unit tests + code inspection | Actions link to recommendations; all required fields present; transactional safety and idempotency verified; no orphaned records on failure |
-| M07 | Owner Dashboard | FOUND_EXISTING_UNVERIFIED | Code present | Dashboard exists; data source proof needed |
+| M07 | Owner Dashboard | TESTED_PARTIAL | 34 unit tests + code inspection | Dashboard data sourcing verified; workspace isolation and DTO redaction enforced |
 | M08 | Operator / Action Completion | TESTED_PARTIAL | 39 unit tests + code inspection | Operator completion verified; authorization and workspace isolation enforced; status updates atomic |
 | M09 | Verification / Outcome Tracking | TESTED_PARTIAL | 40 unit tests + code inspection | Verification state machine verified; fraud detection and outcome validation confirmed; no auto-pass without evidence |
 | M10 | Constraint Handling | TESTED_PARTIAL | 14 unit tests + code inspection | Constraints identified from evidence patterns; blocking relationships enforced; release paths computed |
@@ -339,6 +339,7 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 - M04_SLICE1: Evidence cross-workspace isolation tests (TESTED_PARTIAL)
 - M05_SLICE1: Recommendation engine conformance tests (TESTED_PARTIAL)
 - M06_SLICE1: Action atomicity and transaction safety tests (TESTED_PARTIAL)
+- M07_SLICE1: Dashboard data sourcing and isolation tests (TESTED_PARTIAL)
 - M08_SLICE1: Operator action completion authorization tests (TESTED_PARTIAL)
 - M09_SLICE1: Verification state machine tests (TESTED_PARTIAL)
 - M10_SLICE1: Constraint violation detection tests (TESTED_PARTIAL)
@@ -367,10 +368,11 @@ not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACIT
 - ✓ M04 evidence workspace isolation proven (9 automated tests)
 - ✓ M05 recommendation conformance proven (30 automated tests, constraint respect, specificity)
 - ✓ M06 action atomicity proven (23 automated tests, transactions, idempotency)
+- ✓ M07 dashboard data sourcing proven (34 automated tests, workspace isolation, DTO redaction)
 - ✓ M08 operator completion proven (39 automated tests, authorization, workspace scoping)
 - ✓ M09 verification state machine proven (40 automated tests, fraud detection, no auto-pass)
 - ✓ M10 constraint violation detection proven (14 automated tests)
 - ✓ M12 cross-workspace access denial proven (12 automated tests)
-- ✓ Test files: 253 (6202 tests), TypeScript: ✓ Clean
-- 10 slices completed · 5 remaining · Framework 66% verified
-- Next: M07 dashboard (P2 read path), M11 audit logging (P1), M13 demo data (P2)
+- ✓ Test files: 254 (6236 tests), TypeScript: ✓ Clean
+- 11 slices completed · 4 remaining · Framework 73% verified
+- Next: M11 audit logging (P1), M13 demo data (P2), M14 error handling (P2)
