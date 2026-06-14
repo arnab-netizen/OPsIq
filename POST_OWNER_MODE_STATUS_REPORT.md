@@ -179,7 +179,7 @@ evidence_commands:
 | B04 | PURE_FUNCTION_VERIFIED | 21 tests (evidence hierarchy) |
 | B05 | DB_VERIFIED (S1) + PURE_FUNCTION (S2) | 23 tests (8 DB + 15 UI) |
 | B06 | LOGIC_COMPLETE | 9/16 tests (core proven) |
-| B07 | PURE_FUNCTION_VERIFIED | 31/31 tests (normalization) ✅ |
+| B07 | PURE_FUNCTION_VERIFIED | 38/38 tests (normalization) ✅ |
 | **B08–B26** | **NOT_STARTED** | **Next: Constraints Engine** |
 
 **Phase B Test Summary:**
@@ -335,37 +335,50 @@ SLICE_CLASSIFICATION (B06):
 ### B07 Closeout (Unit/Currency/Date/Tax Normalization)
 
 - **Files added:**
-  - `src/domain/business-facts/normalizer.ts` (unit parsing, currency validation, tax/period normalization)
-  - `src/__tests__/business-facts/normalizer.test.ts` (31 pure-function tests)
-- **Normalizers implemented:**
-  - **Unit**: lakh (100k), crore (10M), k, M, B, etc. with multiplier lookup
-  - **Currency**: ISO 4217 validation (3-letter codes like INR, USD)
-  - **Tax basis**: inclusive/exclusive detection from field names
-  - **Gross/Net**: classification by metric (revenue→gross, profit→net)
-  - **Period**: ISO date validation, range classification (monthly/quarterly/annual)
-  - **Timezone**: ISO 8601 handling (stored as UTC)
+  - `src/domain/business-facts/normalization.ts` (pure function normalizers for canonical business fact representation)
+  - `src/__tests__/business-facts/normalization.test.ts` (38 unit tests covering all normalizers)
+- **Core normalizers implemented:**
+  - **normalizeCurrency()**: Converts INR/USD/EUR/GBP/AUD with symbol variants (₹/rs/rupee, $, €/eur, £, etc.)
+  - **parseIndianQuantity()**: Parses lakh (100K), crore (10M), thousand, million with absolute number fallback
+  - **normalizePeriod()**: Detects granularity from date range (daily/weekly/monthly/quarterly/yearly)
+  - **detectTaxBasis()**: Returns inclusive/exclusive/unknown from description patterns (GST incl/excl, before/after tax)
+  - **classifyGrossNet()**: Classifies as gross/net/unknown from metric names (gross/revenue/top_line vs net/profit/bottom_line)
+  - **normalizeUnit()**: Converts currency symbols to ISO codes, preserves non-financial units
+  - **normalizeToUTC()**: Normalizes dates to UTC ISO 8601 (YYYY-MM-DD)
+  - **normalizeFact()**: Applies all normalizations immutably with audit trail in normalization_notes
 - **Acceptance gates (all proven):**
-  - ✓ lakh/crore/absolute number parsing
-  - ✓ INR/USD currency distinction preserved
-  - ✓ GST-inclusive vs exclusive marked unknown if not provable
-  - ✓ monthly vs daily data normalized without losing source period
-- **Pure function (LANE_A)**: no DB, no I/O; deterministic normalization
-- **Immutability**: `applyNormalization()` returns new fact, no mutation
+  - ✓ lakh/crore/absolute/thousand/million number parsing with currency symbol handling
+  - ✓ INR/USD/EUR/GBP/AUD currency distinction preserved (no conflation)
+  - ✓ GST-inclusive vs exclusive marked unknown if not provable (no guessing)
+  - ✓ Monthly/quarterly/yearly/daily granularity detected from date range without data loss
+  - ✓ Immutability pattern: normalizeFact() returns new NormalizedFact, original unchanged
+- **Pure function (LANE_A)**: no DB, no I/O; deterministic over input facts only
+- **Test coverage:**
+  - Currency normalization: 6 tests (INR/USD/EUR/GBP/AUD variants, unknown handling)
+  - Indian quantity parsing: 10 tests (crore/lakh/thousand/million notation with edge cases)
+  - Period granularity: 6 tests (daily through yearly with correct threshold detection)
+  - Tax basis: 4 tests (inclusive/exclusive markers, unknown for ambiguous)
+  - Gross/net: 4 tests (revenue keywords, profit keywords, underscore handling in metric names)
+  - Unit normalization: 5 tests (currency symbols, preservation of non-financial units)
+  - Full fact normalization: 3 tests (complete fact, immutability, notes tracking)
 
 ```text
-SLICE_CLASSIFICATION (B07):
+SLICE_DB_CLASSIFICATION (B07):
   db_required: false
-  lane_used: LANE_A_STATIC (pure normalization)
-  status: PURE_FUNCTION_VERIFIED
-  tests: 31/31 passing
-  gates: all acceptance gates proven ✓
+  db_lane_used: LANE_A_STATIC (pure normalization functions)
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 38/38 (all normalizers fully tested)
+  gates: 
+    - currency distinction (INR/USD/EUR/GBP/AUD) ✓
+    - lakh/crore parsing (100K/10M) ✓
+    - granularity detection (daily through yearly) ✓
+    - tax basis unknown when not provable ✓
+    - immutability (normalizeFact returns new fact) ✓
+  prerequisite_fulfillment: Fills B07 (required before B08-B11 full correctness per §6)
+  next_db_required_action: None — B07 is pure function module; proceed to B12
 ```
 
-**Next Module:** B08 — Owner Constraints Engine Upgrade (next in dependency order)
-
-**Module Stack:**
-- B01 ✅ Contract · B02 ✅ Data Intake · B03 ✅ Data Quality · B04 ✅ Evidence · B05 ✅ Review/Correction
-- B06 ➜ Contradiction Resolution (next)
+**Next Module:** B12 — External Systems Connector: Export Imports (next in Phase B dependency order per §6)
 
 ### B03 Closeout (Data Quality Scoring)
 
