@@ -273,11 +273,36 @@ asserts `hasInventedValues=false` and the diagnosis-run audit event is present +
 -scoped; no migration — read-only module). Not REAL_BUSINESS_PROVEN (M13), not
 FULL_CAPACITY.
 
+## Module 12 — Owner UI & Mobile Usability (complete)
+
+Per execution.md §19 / §22 Phase 13 (owner UI & mobile usability, built after the
+trust layer). All on `main` (merge `cc5c463`). **Read-only presentation layer** that
+turns the proven per-domain spine data into the §19 owner-home payload (business
+health; cash/sales/operations/execution danger; top-3 risks; top-3 opportunities;
+today's required actions; last verified improvement) and renders it mobile-first —
+owns no entity, runs no migration, mutates nothing. Honest: a domain with no diagnosis
+is `unknown` danger (never 0); an empty business has no summary.
+
+| Slice | State | Evidence |
+|---|---|---|
+| 1 Owner Home Summary engine (deterministic §19 payload) | ✅ | `MODULE12_SLICE1_OWNER_HOME_SUMMARY_ENGINE_REPORT.md` (`4444508`) |
+| 2 API + service (read-only) | ✅ | `MODULE12_SLICE2_OWNER_HOME_API_REPORT.md` (`081c77a`) |
+| 3 Mobile-first owner-home UI + command-center link | ✅ | `MODULE12_SLICE3_OWNER_HOME_UI_REPORT.md` (`fd06960`) |
+| 4 Deployed runtime proof | ✅ **PROVEN** | Module 12 Owner Home Runtime Proof #1 — Success (1m 44s, `main`@`cc5c463`) — `MODULE12_SLICE4_OWNER_HOME_RUNTIME_PROOF_REPORT.md` |
+| 5 Audit + proof | ✅ **AUDITED** | `MODULE12_OWNER_UI_MOBILE_USABILITY_AUDIT_REPORT.md` |
+
+Module 12 status: **STAGING_PROVEN + AUDITED** (owner-home loop deployed-runtime-proven
+end to end — engine → read-only API → mobile-first UI → §19 summary + a real
+verification loop surfaced as "last verified improvement"; honest unknown/empty states
+proven on the deployment; no migration — read-only module). Not REAL_BUSINESS_PROVEN
+(M13), not FULL_CAPACITY.
+
 ## Next single action
 
-Module 11 Trust/Audit/Explainability is **STAGING_PROVEN + AUDITED** (all slices
+Module 12 Owner UI & Mobile Usability is **STAGING_PROVEN + AUDITED** (all slices
 proven). Proven owner domains: recovery + finance + cashflow + sales + operations +
-sop + marketing + strategy + portfolio + data intake + trust/explainability. Next per
-execution.md §22: Module 12 (Owner UI & Mobile Usability), or M13 real-business
-validation (release gate, not a build blocker). Keep public/SaaS/billing/marketing
-frozen.
+sop + marketing + strategy + portfolio + data intake + trust/explainability + the
+mobile-first owner home. All Owner Mode build modules (1–12) are now STAGING_PROVEN +
+AUDITED. Remaining work is release-gate only: M13 real-business validation (manual,
+not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACITY_V1.
+Keep public/SaaS/billing/marketing frozen.
