@@ -314,7 +314,7 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M02 | Data Intake / Input Capture | TESTED_PARTIAL | 23 unit tests + code inspection | Fail-closed validation proven across all intake types; EngagementIntake, EvidenceIntake, ActionIntake, RequestContext schemas tested; required fields enforced; invalid values rejected immediately |
 | M03 | Diagnosis Engine | TESTED_PARTIAL | 19 unit tests + code inspection | Diagnosis output verified complete with all required fields; confidence levels tested against evidence quality; pattern matching and alternatives verified; deterministic behavior proven |
 | M04 | Evidence Model / Evidence Attachment | TESTED_PARTIAL | 9 unit tests + code inspection | Evidence workspace isolation proven by automated tests; bundle and item queries enforce workspace scoping |
-| M05 | Recommendation Engine | FOUND_EXISTING_UNVERIFIED | Code present | Recommendations exist; conformance to M05 contract not verified |
+| M05 | Recommendation Engine | TESTED_PARTIAL | 30 unit tests + code inspection | Recommendations link to diagnosis; all required fields present; constraint respect and downgrade logic verified; not generic filler |
 | M06 | Action Plan Generator | TESTED_PARTIAL | 23 unit tests + code inspection | Actions link to recommendations; all required fields present; transactional safety and idempotency verified; no orphaned records on failure |
 | M07 | Owner Dashboard | FOUND_EXISTING_UNVERIFIED | Code present | Dashboard exists; data source proof needed |
 | M08 | Operator / Action Completion | FOUND_EXISTING_UNVERIFIED | Code present | Action completion flow exists; authorization tests needed |
@@ -327,9 +327,9 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 247 test files, 6028 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
 
 **Highest-priority incomplete slices:**
-1. M05 Recommendation engine conformance (P1 correctness)
-2. M09 Verification state machine tests (P2 behavioral)
-3. M08 Operator action completion flow tests (P2 authorization)
+1. M09 Verification state machine tests (P2 behavioral)
+2. M08 Operator action completion flow tests (P2 authorization)
+3. M07 Owner dashboard data sourcing tests (P2 read path)
 4. M01 Full integration test (P0 correctness gate) — deferred (DB unavailable)
 
 **Completed slices:**
@@ -337,6 +337,7 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 - M02_SLICE1: Data intake fail-closed validation tests (TESTED_PARTIAL)
 - M03_SLICE1: Diagnosis engine acceptance criteria tests (TESTED_PARTIAL)
 - M04_SLICE1: Evidence cross-workspace isolation tests (TESTED_PARTIAL)
+- M05_SLICE1: Recommendation engine conformance tests (TESTED_PARTIAL)
 - M06_SLICE1: Action atomicity and transaction safety tests (TESTED_PARTIAL)
 - M10_SLICE1: Constraint violation detection tests (TESTED_PARTIAL)
 - M12_SLICE1: Cross-workspace access denial negative tests (TESTED_PARTIAL)
@@ -362,9 +363,10 @@ not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACIT
 - ✓ M02 fail-closed validation proven (23 automated tests, all intake types)
 - ✓ M03 diagnosis output verified (19 automated tests, confidence gates, pattern matching)
 - ✓ M04 evidence workspace isolation proven (9 automated tests)
+- ✓ M05 recommendation conformance proven (30 automated tests, constraint respect, specificity)
 - ✓ M06 action atomicity proven (23 automated tests, transactions, idempotency)
 - ✓ M10 constraint violation detection proven (14 automated tests)
 - ✓ M12 cross-workspace access denial proven (12 automated tests)
-- ✓ Test files: 250 (6093 tests), TypeScript: ✓ Clean
-- 7 slices completed · 8 remaining · Est. 1-2 more runs to completion
-- Next: M05 recommendation conformance (P1 correctness) or M09 verification state machine (P2)
+- ✓ Test files: 251 (6123 tests), TypeScript: ✓ Clean
+- 8 slices completed · 7 remaining · Est. 1 more run to completion
+- Next: M09 verification state machine (P2 behavioral) or M08 operator completion (P2 authorization)
