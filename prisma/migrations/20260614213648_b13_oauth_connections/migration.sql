@@ -3,8 +3,8 @@
 -- OAuth connections for workspace integrations
 CREATE TABLE external_connections (
   id TEXT PRIMARY KEY,
-  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  provider_id TEXT NOT NULL REFERENCES external_providers(id) ON DELETE RESTRICT,
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  provider_id UUID NOT NULL REFERENCES external_providers(id) ON DELETE RESTRICT,
   connection_name VARCHAR(255) NOT NULL,
   status VARCHAR(50) DEFAULT 'active', -- active|revoked|expired|error
   last_sync_at TIMESTAMP,
@@ -34,7 +34,7 @@ CREATE TABLE external_oauth_tokens (
 -- Connection consent audit trail
 CREATE TABLE external_connection_consents (
   id TEXT PRIMARY KEY,
-  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   connection_id TEXT NOT NULL REFERENCES external_connections(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   consented_at TIMESTAMP DEFAULT now(),

@@ -2847,17 +2847,17 @@ model ExternalDataLineage {
 // B13: OAuth Connection Management
 model ExternalConnection {
   id String @id
-  workspaceId String
-  providerId String
-  connectionName String
-  status String // "active" | "revoked" | "expired" | "error"
-  lastSyncAt DateTime?
-  lastErrorAt DateTime?
-  lastErrorMessage String?
-  oauthScope String[]
-  disconnectToken String? // token used for revocation
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  workspaceId String @db.Uuid @map("workspace_id")
+  providerId String @db.Uuid @map("provider_id")
+  connectionName String @map("connection_name")
+  status String @default("active") // "active" | "revoked" | "expired" | "error"
+  lastSyncAt DateTime? @map("last_sync_at")
+  lastErrorAt DateTime? @map("last_error_at")
+  lastErrorMessage String? @map("last_error_message")
+  oauthScope String[] @map("oauth_scope")
+  disconnectToken String? @map("disconnect_token") // token used for revocation
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   provider ExternalProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
@@ -2874,13 +2874,13 @@ model ExternalConnection {
 // B13: Encrypted OAuth Tokens
 model ExternalOAuthToken {
   id String @id
-  connectionId String @unique
-  accessToken String // encrypted at rest
-  refreshToken String? // encrypted at rest
-  expiresAt DateTime?
-  tokenType String @default("Bearer")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  connectionId String @unique @map("connection_id")
+  accessToken String @map("access_token") // encrypted at rest
+  refreshToken String? @map("refresh_token") // encrypted at rest
+  expiresAt DateTime? @map("expires_at")
+  tokenType String @default("Bearer") @map("token_type")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
@@ -2891,13 +2891,13 @@ model ExternalOAuthToken {
 // B13: User Consent Tracking
 model ExternalConnectionConsent {
   id String @id
-  workspaceId String
-  connectionId String
-  userId String
-  consentedAt DateTime @default(now())
+  workspaceId String @db.Uuid @map("workspace_id")
+  connectionId String @map("connection_id")
+  userId String @map("user_id")
+  consentedAt DateTime @default(now()) @map("consented_at")
   scopes String[]
-  ipAddress String?
-  userAgent String?
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
@@ -2910,13 +2910,13 @@ model ExternalConnectionConsent {
 // B13: Sync Job Tracking
 model ExternalSyncJob {
   id String @id
-  connectionId String
-  status String // "pending" | "running" | "completed" | "failed"
-  recordsImported Int @default(0)
-  errorMessage String?
-  startedAt DateTime?
-  completedAt DateTime?
-  createdAt DateTime @default(now())
+  connectionId String @map("connection_id")
+  status String @default("pending") // "pending" | "running" | "completed" | "failed"
+  recordsImported Int @default(0) @map("records_imported")
+  errorMessage String? @map("error_message")
+  startedAt DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
