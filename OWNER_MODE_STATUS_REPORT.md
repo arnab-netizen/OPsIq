@@ -1,11 +1,13 @@
 # OpsIQ Owner Mode — Status Report
 
-**STATUS: OWNER_MODE_STAGING_PROVEN**
+**STATUS: OWNER_MODE_STAGING_PROVEN + FULL_OWNER_MODE_V3_AUDIT_IN_PROGRESS**
 
 _(NOT `OWNER_MODE_FULL_CAPACITY_V1` — only Module 1 is proven; Module 2 in progress.)_
+_(Parallel work: Full Owner Mode M01-M15 framework audit per execution.md v3 protocol in branch `claude/execution-bootstrap-audit-uwp7pe`)_
 
-Last updated: 2026-06-12
-Branch: `main` · Module 1 proven commit: `24d66e623fb16b93a74c138419bb211644dd8b4b`
+Last updated: 2026-06-14
+Branch (main): `main` · Module 1 proven commit: `24d66e623fb16b93a74c138419bb211644dd8b4b`
+Branch (v3 audit): `claude/execution-bootstrap-audit-uwp7pe` · Last commit: `da2192a` (M01 SLICE1)
 
 ## What is proven
 
@@ -297,6 +299,46 @@ verification loop surfaced as "last verified improvement"; honest unknown/empty 
 proven on the deployment; no migration — read-only module). Not REAL_BUSINESS_PROVEN
 (M13), not FULL_CAPACITY.
 
+## Full Owner Mode M01–M15 Framework Audit (execution.md v3)
+
+Branch: `claude/execution-bootstrap-audit-uwp7pe` — Started 2026-06-14
+
+Per execution.md v3 hostile audit protocol, auditing repository against M01–M15
+functional framework (distinct from Module 1-12 lens-based framework above).
+
+### M01-M15 Module Status
+
+| Module | Name | Status | Verified By | Evidence |
+|---|---|---|---|---|
+| M01 | Business Profile / Owner Context | TESTED_PARTIAL | Unit tests + code inspection | Profile CRUD routes wired; diagnosis now enforces profile completeness before proceeding; 6 unit tests pass; full integration deferred (DB unavailable) |
+| M02 | Data Intake / Input Capture | NOT_STARTED | — | — |
+| M03 | Diagnosis Engine | FOUND_EXISTING_UNVERIFIED | Code present, tests needed | Consulting pipeline exists; M01 gate added; full acceptance criteria not yet verified |
+| M04 | Evidence Model / Evidence Attachment | FOUND_EXISTING_UNVERIFIED | Code present | Evidence linked in findings; cross-workspace isolation tests needed |
+| M05 | Recommendation Engine | FOUND_EXISTING_UNVERIFIED | Code present | Recommendations exist; conformance to M05 contract not verified |
+| M06 | Action Plan Generator | FOUND_EXISTING_UNVERIFIED | Code present | Actions generated from recommendations; atomicity tests needed |
+| M07 | Owner Dashboard | FOUND_EXISTING_UNVERIFIED | Code present | Dashboard exists; data source proof needed |
+| M08 | Operator / Action Completion | FOUND_EXISTING_UNVERIFIED | Code present | Action completion flow exists; authorization tests needed |
+| M09 | Verification / Outcome Tracking | FOUND_EXISTING_UNVERIFIED | Code present | Verification service exists; state-machine tests needed |
+| M10 | Constraint Handling | NOT_STARTED | — | — |
+| M11 | Audit Logging / Traceability | FOUND_EXISTING_UNVERIFIED | Code present | Audit events emitted; critical-path coverage needs audit |
+| M12 | Access Control / Workspace Isolation | FOUND_EXISTING_UNVERIFIED | Code inspection | Multiple enforcement patterns (withCanonicalEnforcement, withEnforcementFull); cross-workspace negative tests needed |
+| M13 | Demo / Seed / Smoke Data Integrity | FOUND_EXISTING_UNVERIFIED | Code present | Demo seed scripts exist; isolation markers need verification |
+| M14 | Error Handling / Fail-Closed Behaviour | FOUND_EXISTING_UNVERIFIED | Code inspection | Error classification exists; fail-closed contract needs formal test |
+| M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 244 test files, 5993 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
+
+**Highest-priority incomplete slices:**
+1. M12 Cross-workspace negative tests (P0 security)
+2. M01 Full integration test (P0 correctness gate) — deferred (DB unavailable)
+3. M10 Constraint handling (P1 business logic)
+4. M02 Data intake validation (P1 persistence)
+
+### Branch Architecture
+
+- `main`: Module 1-12 framework (lens-based consulting engine, proven & deployed)
+- `claude/execution-bootstrap-audit-uwp7pe`: M01-M15 framework audit (execution.md v3 protocol, in progress)
+
+The two frameworks are complementary: Module 1-12 implements the production consulting engine; M01-M15 adds the governing ownership mode gates and correctness invariants. Work continues to align both frameworks and achieve `VERIFIED_COMPLETE` for all M01-M15 modules.
+
 ## Next single action
 
 Module 12 Owner UI & Mobile Usability is **STAGING_PROVEN + AUDITED** (all slices
@@ -305,4 +347,5 @@ sop + marketing + strategy + portfolio + data intake + trust/explainability + th
 mobile-first owner home. All Owner Mode build modules (1–12) are now STAGING_PROVEN +
 AUDITED. Remaining work is release-gate only: M13 real-business validation (manual,
 not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACITY_V1.
-Keep public/SaaS/billing/marketing frozen.
+
+**M01-M15 Framework:** M01 gate implemented. Next: Add cross-workspace negative tests for M12 access control (P0 priority).
