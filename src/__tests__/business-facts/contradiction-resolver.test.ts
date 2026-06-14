@@ -52,9 +52,19 @@ describe("B06 contradiction resolver — detection and classification", () => {
   it("detects P&L revenue vs bank revenue conflicts", () => {
     const contract = asContract(examples.service_business);
 
-    // Add a conflicting revenue fact from a different source
+    // Add a conflicting revenue fact from a different source with matching source document
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "conflicting_source",
+          kind: "pdf_statement" as const,
+          filename: "alternative_statement.pdf",
+          upload_timestamp: new Date().toISOString(),
+          origin_reference: "alt_source",
+        },
+      ],
       financials: [
         ...contract.financials,
         {
@@ -409,6 +419,21 @@ describe("B06 contradiction resolver — acceptance gates", () => {
 
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "manual_owner_entry_src",
+          kind: "manual_owner_entry" as const,
+          filename: "owner_entry.txt",
+          upload_timestamp: new Date().toISOString(),
+        },
+        {
+          source_document_id: "accounting_system_export_src",
+          kind: "accounting_system_export" as const,
+          filename: "accounting_export.csv",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       financials: [
         {
           fact_id: "cost_manual",
@@ -418,7 +443,7 @@ describe("B06 contradiction resolver — acceptance gates", () => {
           currency: "INR",
           period_start: "2026-05-01",
           period_end: "2026-05-31",
-          source_document_id: "manual_owner_entry",
+          source_document_id: "manual_owner_entry_src",
           source_location: "Owner entry",
           extraction_method: "manual_entry",
           confidence_score: 0.5,
@@ -434,7 +459,7 @@ describe("B06 contradiction resolver — acceptance gates", () => {
           currency: "INR",
           period_start: "2026-05-01",
           period_end: "2026-05-31",
-          source_document_id: "accounting_system_export",
+          source_document_id: "accounting_system_export_src",
           source_location: "Accounting system",
           extraction_method: "accounting_export",
           confidence_score: 0.95,
