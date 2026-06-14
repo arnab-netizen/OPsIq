@@ -173,8 +173,23 @@ evidence_commands:
 
 | Module | Status | Evidence |
 |--------|--------|----------|
-| B01 Machine-readable business facts contract | IMPLEMENTED_CONTRACT_ONLY_NOT_INTEGRATED | slice B01-S1 (see below) |
-| B02–B26 | NOT_STARTED | blocked on prerequisites in order |
+| B01 Machine-readable business facts contract | VERIFIED_COMPLETE (contract + adapter scope) | slices B01-S1, B01-S2 (see below) |
+| B02–B26 | NOT_STARTED | B02 now unblocked (B01 complete); B03+ blocked in order |
+
+### B01-S2 Closeout (intake → contract adapter)
+
+- **Files added:**
+  - `src/domain/business-facts/intake-adapter.ts` (IntakeResult → validated contract)
+  - `src/__tests__/business-facts/intake-adapter.test.ts` (5 tests, real intake engine E2E)
+  - `src/domain/business-facts/contract.ts` (+`FactCategoryKey` type export only)
+- **Proves:** source lineage, currency-if-financial, extraction_method mapping,
+  owner-confirmation guardrail (`draft` until confirmed), missing_data on null
+  required fields, fail-closed on untrusted/invalid currency (§38.7).
+- **Gates:** `npx tsc --noEmit` ✓ · business-facts vitest 20/20 ✓ · regression
+  owner-intake 24 passed ✓
+- **Status:** B01 acceptance gates (§8) all met with adapter integration proven.
+  Scope note: fact DB persistence + diagnosis-consumption are separate downstream
+  modules (B09/B25), explicitly out of B01 scope.
 
 ### B01-S1 Closeout
 

@@ -287,6 +287,9 @@ const factCategoriesShape = {
 /** The ordered list of fact-bearing category keys. */
 export const FACT_CATEGORIES = Object.keys(factCategoriesShape) as Array<keyof typeof factCategoriesShape>;
 
+/** Union of the fact-bearing category keys (financials, sales, ... cash). */
+export type FactCategoryKey = keyof typeof factCategoriesShape;
+
 const baseContractSchema = z.object({
   schema_version: z.string().min(1),
   business_profile: businessProfileSchema,
