@@ -7,7 +7,7 @@ _(Parallel work: Full Owner Mode M01-M15 framework audit per execution.md v3 pro
 
 Last updated: 2026-06-14
 Branch (main): `main` · Module 1 proven commit: `24d66e623fb16b93a74c138419bb211644dd8b4b`
-Branch (v3 audit): `claude/execution-bootstrap-audit-uwp7pe` · Last commit: `5f864b92` (M13 SLICE1)
+Branch (v3 audit): `claude/execution-bootstrap-audit-uwp7pe` · Last commit: `3a909abe` (M14 SLICE1)
 
 ## What is proven
 
@@ -323,7 +323,7 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M11 | Audit Logging / Traceability | TESTED_PARTIAL | 45 unit tests + code inspection | Critical event traceability verified: business_profile_changed, input_submitted, diagnosis_created, evidence_attached, recommendation_created, action_created, action_completed, verification_changed, recommendation_accepted_or_rejected; workspace context, actor identification, immutability, retention policy tested |
 | M12 | Access Control / Workspace Isolation | TESTED_PARTIAL | 12 unit tests + code inspection | Cross-workspace access denial proven by automated tests; role-based permissions validated; enforcement patterns verified |
 | M13 | Demo / Seed / Smoke Data Integrity | TESTED_PARTIAL | 32 unit tests + code inspection | Demo data identification, isolation, visibility, real product path testing, fake-only route exclusion all tested; cross-workspace leakage prevented |
-| M14 | Error Handling / Fail-Closed Behaviour | FOUND_EXISTING_UNVERIFIED | Code inspection | Error classification exists; fail-closed contract needs formal test |
+| M14 | Error Handling / Fail-Closed Behaviour | TESTED_PARTIAL | 32 unit tests + code inspection | Invalid input errors, missing data errors, conflicting data downgrades, transaction rollbacks, external failure handling, stale data labelling all tested |
 | M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 247 test files, 6028 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
 
 **Highest-priority incomplete slices:**
@@ -346,6 +346,7 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 - M11_SLICE1: Audit logging coverage tests (TESTED_PARTIAL)
 - M12_SLICE1: Cross-workspace access denial negative tests (TESTED_PARTIAL)
 - M13_SLICE1: Demo data integrity and isolation tests (TESTED_PARTIAL)
+- M14_SLICE1: Error handling fail-closed contract tests (TESTED_PARTIAL)
 
 ### Branch Architecture
 
@@ -377,6 +378,7 @@ not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACIT
 - ✓ M11 audit logging coverage proven (45 automated tests, critical event traceability)
 - ✓ M12 cross-workspace access denial proven (12 automated tests)
 - ✓ M13 demo data integrity proven (32 automated tests, isolation and visibility)
-- ✓ Test files: 256 (6305 tests), TypeScript: ✓ Clean
-- 13 slices completed · 2 remaining · Framework 87% verified
-- Next: M14 error handling (P2), M15 CI verification (P1)
+- ✓ M14 error handling fail-closed proven (32 automated tests, invalid/missing/conflict/transaction/external/stale)
+- ✓ Test files: 257 (6337 tests), TypeScript: ✓ Clean
+- 14 slices completed · 1 remaining · Framework 93% verified
+- Next: M15 CI verification (P1)
