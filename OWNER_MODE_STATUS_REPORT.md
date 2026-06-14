@@ -313,7 +313,7 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M01 | Business Profile / Owner Context | TESTED_PARTIAL | Unit tests + code inspection | Profile CRUD routes wired; diagnosis now enforces profile completeness before proceeding; 6 unit tests pass; full integration deferred (DB unavailable) |
 | M02 | Data Intake / Input Capture | NOT_STARTED | — | — |
 | M03 | Diagnosis Engine | FOUND_EXISTING_UNVERIFIED | Code present, tests needed | Consulting pipeline exists; M01 gate added; full acceptance criteria not yet verified |
-| M04 | Evidence Model / Evidence Attachment | FOUND_EXISTING_UNVERIFIED | Code present | Evidence linked in findings; cross-workspace isolation tests needed |
+| M04 | Evidence Model / Evidence Attachment | TESTED_PARTIAL | 9 unit tests + code inspection | Evidence workspace isolation proven by automated tests; bundle and item queries enforce workspace scoping |
 | M05 | Recommendation Engine | FOUND_EXISTING_UNVERIFIED | Code present | Recommendations exist; conformance to M05 contract not verified |
 | M06 | Action Plan Generator | FOUND_EXISTING_UNVERIFIED | Code present | Actions generated from recommendations; atomicity tests needed |
 | M07 | Owner Dashboard | FOUND_EXISTING_UNVERIFIED | Code present | Dashboard exists; data source proof needed |
@@ -324,17 +324,18 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M12 | Access Control / Workspace Isolation | TESTED_PARTIAL | 12 unit tests + code inspection | Cross-workspace access denial proven by automated tests; role-based permissions validated; enforcement patterns verified |
 | M13 | Demo / Seed / Smoke Data Integrity | FOUND_EXISTING_UNVERIFIED | Code present | Demo seed scripts exist; isolation markers need verification |
 | M14 | Error Handling / Fail-Closed Behaviour | FOUND_EXISTING_UNVERIFIED | Code inspection | Error classification exists; fail-closed contract needs formal test |
-| M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 245 test files, 6005 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
+| M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 246 test files, 6014 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
 
 **Highest-priority incomplete slices:**
-1. M04 Cross-workspace evidence isolation tests (P1 data integrity)
-2. M10 Constraint handling (P1 business logic)
-3. M02 Data intake validation (P1 persistence)
+1. M10 Constraint handling (P1 business logic)
+2. M02 Data intake validation (P1 persistence)
+3. M03 Diagnosis acceptance criteria verification (P2 correctness)
 4. M01 Full integration test (P0 correctness gate) — deferred (DB unavailable)
 
 **Completed slices:**
 - M01_SLICE1: Business condition profile gates diagnosis (TESTED_PARTIAL)
 - M12_SLICE1: Cross-workspace access denial negative tests (TESTED_PARTIAL)
+- M04_SLICE1: Evidence cross-workspace isolation tests (TESTED_PARTIAL)
 
 ### Branch Architecture
 
@@ -352,7 +353,9 @@ mobile-first owner home. All Owner Mode build modules (1–12) are now STAGING_P
 AUDITED. Remaining work is release-gate only: M13 real-business validation (manual,
 not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACITY_V1.
 
-**M01-M15 Framework:** 
+**M01-M15 Framework Progress:**
 - ✓ M01 gate implemented (diagnosis enforces business condition profile completeness)
 - ✓ M12 cross-workspace access denial proven (12 automated tests)
-- Next: M04 evidence isolation tests (P1 data integrity) or M10 constraint handling (P1 business logic)
+- ✓ M04 evidence workspace isolation proven (9 automated tests)
+- ✓ Test files: 246 (6014 tests), TypeScript: ✓ Clean
+- Next: M10 constraint handling (P1 business logic) or M02 data intake validation (P1 persistence)
