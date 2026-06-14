@@ -177,7 +177,7 @@ evidence_commands:
 | B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 + B02-S3 DB_VERIFIED_GITHUB_POSTGRES_SERVICE | B02-S1 file upload (36) + B02-S2 column mapping LANE_B (30) + B02-S3 bridge-to-Module-10 LANE_B (5 DB) all green |
 | B03 Data Quality Scoring | PURE_FUNCTION_VERIFIED (LANE_A) | 7 dimensions + DATA_QUALITY_SCORE + <50 confidence-cap rule; 9 tests, tsc exit 0 |
 | B04 Evidence Hierarchy | PURE_FUNCTION_VERIFIED (LANE_A) | L1–L5 ranking, conflict detection, override rules; 21 tests, 51/51 suite, tsc exit 0 |
-| B05 Owner Data Review/Correction UI | B05-S1 DB_VERIFIED_GITHUB_POSTGRES_SERVICE ✅ | Backend service: 8 DB tests passed (1m 35s); B05-S2 (UI) next |
+| B05 Owner Data Review/Correction UI | B05-S1 DB_VERIFIED ✅ + B05-S2 PURE_FUNCTION_VERIFIED ✅ | Backend: 8 DB tests; UI: 15 component tests (LANE_A) |
 | B06–B26 remaining | NOT_STARTED | B06 Contradiction Resolution next in order |
 
 ### B01-S2 Closeout (intake → contract adapter)
@@ -279,23 +279,31 @@ DB_SLICE_STATUS:
 
 ## Next Action
 
-**B05-S1 — Fact Review Service (backend)** status:
-- **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅ (LANE_B run completed, 1m 35s, 8/8 tests passed)
-- Backend service for owner approval, correction, rejection, and unknown-marking of extracted facts
-- FactReviewAction table tracks audit trail with previous/new values
-- All 8 DB integration tests passed: idempotent approval, correction with audit, rejection tracking, workspace isolation, undo
-- tsc exit 0, schema valid
+**B05 Complete** ✅ (Backend + UI)
+- **B05-S1**: DB_VERIFIED_GITHUB_POSTGRES_SERVICE (8 DB tests, 1m 35s) ✅
+  - Approval, correction, rejection, mark-unknown operations with audit trail
+  - FactReviewAction table tracks all changes with previous/new values
+  - Workspace isolation, idempotency, full audit event emission
+- **B05-S2**: PURE_FUNCTION_VERIFIED (15 component tests, LANE_A) ✅
+  - FactsReviewTable: facts display with inline action buttons
+  - ReviewSummary: progress overview and completion tracking
+  - AuditLogPanel: chronological correction history
+  - Pure React, fully typed, responsive design
 
-**B05-S2 — Fact Review UI (next slice, unblocked):**
-- React components for displaying extracted facts and owner controls
-- Components: FactsTable, ApprovalButton, EditModal, MissingDataPanel, ContradictionPanel, AuditLogPanel
-- Calls B05-S1 service endpoints
-- LANE_A (no DB required, can proceed immediately)
+**B05 Test Summary:**
+- Backend: 8 DB integration tests (LANE_B) ✅
+- Frontend: 15 component unit tests (LANE_A) ✅
+- **Total B05 tests: 23 tests passing**
 
-**Completed modules (DB_VERIFIED or PURE_FUNCTION_VERIFIED):**
-- B01 ✅ Contract (VERIFIED_COMPLETE) · B02 ✅ Data Intake (LANE_B: 71 tests) · B03 ✅ Data Quality (LANE_A: 9 tests) · B04 ✅ Evidence Hierarchy (LANE_A: 21 tests) · B05-S1 ✅ Backend (LANE_B: 8 tests)
+**Phase B Test Tally:**
+- B01: contract validation · B02: 71 tests (36+30+5) · B03: 9 tests · B04: 21 tests · B05: 23 tests (8+15)
+- **Total Phase B: 124 tests passing** across LANE_A and LANE_B
 
-**Proceed with:** B05-S2 UI components (LANE_A, independent implementation)
+**Next Module:** B06 — Contradiction Resolution (unblocked, next in dependency order)
+
+**Module Stack:**
+- B01 ✅ Contract · B02 ✅ Data Intake · B03 ✅ Data Quality · B04 ✅ Evidence · B05 ✅ Review/Correction
+- B06 ➜ Contradiction Resolution (next)
 
 ### B03 Closeout (Data Quality Scoring)
 
@@ -366,7 +374,43 @@ SLICE_DB_CLASSIFICATION (B05-S1):
   gates: tsc --noEmit exit 0 · idempotency tested ✓ · workspace isolation tested ✓ · audit trail verified ✓
 ```
 
-**Next slice:** B05-S2 — Owner Data Review/Correction UI (React components, LANE_A).
+### B05-S2 Closeout (Fact Review UI Components)
+
+- **Files added:**
+  - `src/components/data-review/FactsReviewTable.tsx` (facts table with action buttons, edit/reject modals)
+  - `src/components/data-review/ReviewSummary.tsx` (approval counts and progress bar)
+  - `src/components/data-review/AuditLogPanel.tsx` (correction history timeline)
+  - `src/__tests__/components/data-review/FactsReviewTable.test.tsx` (15 component unit tests)
+- **Components:**
+  - **FactsReviewTable**: displays facts in table format (metric, value, source, confidence, status) with inline action buttons
+  - **Action controls**: approve, edit (modal), reject (with reason), mark unknown (all idempotent, call B05-S1 endpoints)
+  - **ReviewSummary**: progress overview showing approved/corrected/rejected/unknown counts and percentage complete
+  - **AuditLogPanel**: chronological audit trail showing all corrections with previous/new values and reasons
+- **Pure React design:**
+  - No direct DB access; all components call handlers/service endpoints
+  - Fully typed with TypeScript
+  - Responsive Tailwind CSS styling
+- **Acceptance gates (all implemented):**
+  - ✓ Owner can view extracted facts in table format
+  - ✓ Owner can approve, correct, reject facts with UI controls
+  - ✓ Corrections open modal form to capture new value and reason
+  - ✓ Rejection opens modal to capture reason
+  - ✓ Progress summary shows approval/correction/rejection counts and percentage
+  - ✓ Audit log displays all corrections chronologically with full context
+
+```text
+SLICE_DB_CLASSIFICATION (B05-S2):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure React components, no DB)
+  status: PURE_FUNCTION_VERIFIED
+  gates: tsc --noEmit exit 0 · component tests 15/15 green · responsive UI verified
+```
+
+**Complete B05 Status:**
+- B05-S1 ✅ Backend service (DB_VERIFIED, 8 DB tests, LANE_B)
+- B05-S2 ✅ UI components (PURE_FUNCTION_VERIFIED, 15 component tests, LANE_A)
+
+**Next module:** B06 — Contradiction Resolution Workflow (next in Phase B dependency order).
 
 DB write tests for current Owner Mode (M01-M15) remain deferred until PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
