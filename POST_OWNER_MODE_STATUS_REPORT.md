@@ -288,6 +288,54 @@ DB_SLICE_STATUS:
   next_db_required_action: none — B02-S3 DB-verified; proceed to next slice
 ```
 
+## Current Session Activity (2026-06-14 21:25+)
+
+### B12-S3 GitHub Actions TypeScript Fixes
+
+Fixed critical TypeScript compilation errors that were blocking the b12-s3-db-verification GitHub Actions workflow:
+
+**Files Fixed:**
+1. **src/domain/business-facts/business-condition-profile.ts**
+   - Fixed imports: `HarmRiskAssessment` → `HarmGuardrailAssessment`
+   - Fixed imports: `OwnerConstraintViolation` → `ConstraintViolation`
+   - Updated constraint filtering: severity values now use "blocking"/"advisory" instead of "critical"/"high"
+   - Fixed KPIProfile property references: `failure_modes` → `common_failure_modes`, `benchmarks` → `applicable_benchmarks`
+   - Updated identifyRiskFactors to work with actual HarmGuardrailAssessment structure
+
+2. **src/domain/business-facts/harm-guardrails.ts**
+   - Fixed nullish coalescing checks: `!== null` → `!= null` for proper optional parameter handling
+   - Simplified redundant severity checks
+
+3. **src/domain/business-facts/normalization.ts**
+   - Fixed return types: Always return valid TaxBasis/GrossNet values (default to "unknown" if undetected)
+   - Prevents undefined values in normalized fact output
+
+4. **src/domain/business-facts/owner-constraints.ts**
+   - Fixed all optional property access with proper nullish checks
+
+5. **src/services/business-condition/business-condition-profile.service.ts**
+   - Fixed PrismaClient import: `@prisma/client` → `@/generated/prisma/client`
+   - Fixed Prisma updateMany syntax: Changed from two-argument to single object syntax
+   - Added proper timestamps (createdAt, updatedAt) to create operations
+
+6. **src/services/external-systems/import-persistence.service.ts**
+   - Fixed PrismaClient import path
+   - Added explicit type annotations for map callback parameters
+
+7. **src/__tests__/business-facts/business-condition-profile.test.ts**
+   - Updated test fixtures to match new type interfaces
+   - Fixed mock data structures for HarmGuardrailAssessment, KPIProfile, ConstraintViolation
+   - Updated 3 failing tests to use correct property names and types
+
+**Result:**
+- ✅ TypeScript compilation: `npx tsc --noEmit` (exit 0, no errors)
+- ✅ Business-condition-profile tests: 36/36 passing
+- ✅ Ready for GitHub Actions b12-s3-db-verification workflow
+
+**Status:** Awaiting full test suite completion
+
+---
+
 ## Next Action
 
 **B05 Complete** ✅ (Backend + UI)
