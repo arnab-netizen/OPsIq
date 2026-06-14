@@ -1,0 +1,181 @@
+name: B12 Business Condition Profile Verification
+
+# B12: Business Condition Profile Evaluation Service.
+# Verifies: profile creation, version increment, isCurrent flag management, workspace isolation,
+# idempotency, audit trail creation. LANE_B: GitHub Actions postgres:16 service container.
+
+on:
+  workflow_dispatch:
+    description: 'Verify B12 business condition profile service (LANE_B postgres:16 service container)'
+  push:
+    branches:
+      - claude/execution-audit-phase-a-ulmljq
+    paths:
+      - .github/workflows/b12-business-condition-profile-verification.yml
+      - src/domain/business-facts/business-condition-profile.ts
+      - src/__tests__/business-facts/business-condition-profile.test.ts
+      - src/services/business-condition/**
+      - src/__tests__/services/business-condition/**
+      - prisma/migrations/20260614200257_b12_add_business_condition_fields/**
+      - prisma/schema.prisma
+
+jobs:
+  b12-db-verification:
+    name: B12 Business Condition Profile Tests (Persistence, Isolation, Audit Trail)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          rm -rf node_modules
+          npm ci --include=optional
+
+      - name: Verify rolldown native binding
+        run: node -e "require.resolve('@rolldown/binding-linux-x64-gnu'); console.log('✓ rolldown native binding present')"
+
+      - name: Configure CI PostgreSQL environment
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          NODE_ENV=test
+          EOF
+          echo "✓ .env.local configured for CI PostgreSQL service"
+          grep -E 'DATABASE_URL|DATABASE_URL_TEST|NODE_ENV' .env.local | sed 's/postgres:postgres@/postgres:****@/g'
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Deploy Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run B12-S1 Pure Function Tests (36 local tests)
+        run: |
+          mkdir -p artifacts/b12
+          set +e
+          npm test -- --run \
+            src/__tests__/business-facts/business-condition-profile.test.ts \
+            2>&1 | tee artifacts/b12/pure-function-tests.log
+          PURE_TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "B12-S1 pure function test exit code: $PURE_TEST_EXIT"
+          exit $PURE_TEST_EXIT
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run B12-S2 DB Tests (Persistence, Idempotency, Version Management)
+        run: |
+          mkdir -p artifacts/b12
+          set +e
+          npm test -- --run \
+            src/__tests__/services/business-condition/business-condition-profile.service.db.test.ts \
+            2>&1 | tee artifacts/b12/db-persistence-tests.log
+          DB_TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "B12-S2 DB test exit code: $DB_TEST_EXIT"
+          exit $DB_TEST_EXIT
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          TEST_WITH_DB: "true"
+
+      - name: Run B12-S3 Workspace Isolation Tests
+        run: |
+          mkdir -p artifacts/b12
+          set +e
+          npm test -- --run \
+            src/__tests__/services/business-condition/business-condition-workspace-isolation.test.ts \
+            2>&1 | tee artifacts/b12/workspace-isolation-tests.log
+          ISOLATION_TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "B12-S3 workspace isolation test exit code: $ISOLATION_TEST_EXIT"
+          exit $ISOLATION_TEST_EXIT
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          TEST_WITH_DB: "true"
+
+      - name: Run B12-S4 Audit Event Integration Tests
+        run: |
+          mkdir -p artifacts/b12
+          set +e
+          npm test -- --run \
+            src/__tests__/services/business-condition/business-condition-audit-events.test.ts \
+            2>&1 | tee artifacts/b12/audit-event-tests.log
+          AUDIT_TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "B12-S4 audit event test exit code: $AUDIT_TEST_EXIT"
+          exit $AUDIT_TEST_EXIT
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          TEST_WITH_DB: "true"
+
+      - name: Upload B12 test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b12-test-logs
+          path: artifacts/b12/
+
+      - name: B12 DB Verification Complete
+        if: success()
+        run: |
+          echo "✅ B12_GITHUB_VERIFIED"
+          echo "Tests: 36 pure function + 8+ DB tests passed"
+          echo ""
+          echo "Verified (business condition profile evaluation and persistence):"
+          echo "  ✓ B12-S1: Health score computation (owner, team, customer, financial)"
+          echo "  ✓ B12-S2: Profile persistence with version increment"
+          echo "  ✓ B12-S2: isCurrent flag management (old=false, new=true)"
+          echo "  ✓ B12-S2: Idempotency (re-evaluating same diagnosis = same record)"
+          echo "  ✓ B12-S3: Workspace isolation enforced (unauthorized workspaces blocked)"
+          echo "  ✓ B12-S3: Effective profile query with workspace scoping"
+          echo "  ✓ B12-S4: Audit events emitted for condition transitions"
+          echo "  ✓ B12-S4: No duplicate audit on no-op re-evaluation"
+          echo ""
+          echo "DB Method: GitHub Actions PostgreSQL 16 service container (LANE_B)"
+          echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "Commit: ${{ github.sha }}"
+
+      - name: B12 DB Verification Failed
+        if: failure()
+        run: |
+          echo "❌ B12_GITHUB_FAILED_WITH_EVIDENCE"
+          echo "Review artifacts/b12/ for detailed test output"
+          exit 1
