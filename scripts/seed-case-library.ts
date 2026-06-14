@@ -421,10 +421,7 @@ async function main() {
 
       if (!existing) {
         await db.caseStudy.create({
-          data: {
-            ...caseData,
-            sources: caseData.sources,
-          } as any,
+          data: caseData,
         });
         console.log(`✓ Created case: ${caseData.title}`);
       } else {
