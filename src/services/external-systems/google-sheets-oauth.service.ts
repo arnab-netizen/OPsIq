@@ -185,6 +185,7 @@ export function convertSheetRowsToImportFormat(
   return {
     recordCount: sheetData.rows.length,
     parsedRows,
+    headerRow: sheetData.headers,
     totalConfidence: 0.95,
     requiredFieldsMissing: [],
     warnings: [],
