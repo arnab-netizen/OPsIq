@@ -2748,3 +2748,95 @@ model FactReviewAction {
   @@index([action])
   @@map("fact_review_actions")
 }
+
+// B12: External Systems Connector Layer — Export Imports
+// Handles CRM/accounting/POS/marketing exports (CSV/XLSX) from providers like HubSpot, Salesforce, Zoho, QuickBooks
+
+model ExternalProvider {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String                    @db.VarChar(100)
+  category            String                    @db.VarChar(50) // "CRM", "accounting", "POS", "ads"
+  isActive            Boolean                   @default(true) @map("is_active")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  templates           ExternalImportTemplate[]
+  rawRecords          ExternalRawRecord[]
+
+  @@map("external_providers")
+}
+
+model ExternalImportTemplate {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerId          String                    @db.Uuid @map("provider_id")
+  workspaceId         String                    @db.Uuid @map("workspace_id")
+  templateName        String                    @db.VarChar(255) @map("template_name")
+  description         String?
+  expectedColumns     String[]                  @map("expected_columns") // CSV header columns
+  requiredColumns     String[]                  @map("required_columns")
+  fieldMappings       Json                      @map("field_mappings") // { "csv_col": { "target": "...", "type": "..." } }
+  isTemplate          Boolean                   @default(true) @map("is_template")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  provider            ExternalProvider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  rawRecords          ExternalRawRecord[]
+  fieldMappings_rel   ExternalFieldMapping[]
+
+  @@index([workspaceId])
+  @@index([providerId])
+  @@map("external_import_templates")
+}
+
+model ExternalRawRecord {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String                    @db.Uuid @map("workspace_id")
+  engagementId        String                    @db.Uuid @map("engagement_id")
+  providerId          String                    @db.Uuid @map("provider_id")
+  templateId          String                    @db.Uuid @map("template_id")
+  rawData             Json                      @map("raw_data") // Original record from CSV/import
+  parsedData          Json?                     @map("parsed_data") // After parsing/normalization
+  factId              String?                   @db.VarChar(255) @map("fact_id") // Links to business fact
+  status              String                    @default("pending") // pending|processed|failed|approved
+  errorMessage        String?                   @map("error_message")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  provider            ExternalProvider         @relation(fields: [providerId], references: [id])
+  template            ExternalImportTemplate   @relation(fields: [templateId], references: [id])
+  lineage             ExternalDataLineage[]
+
+  @@index([workspaceId])
+  @@index([engagementId])
+  @@index([providerId])
+  @@index([status])
+  @@index([factId])
+  @@map("external_raw_records")
+}
+
+model ExternalFieldMapping {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId          String                    @db.Uuid @map("template_id")
+  sourceField         String                    @db.VarChar(255) @map("source_field") // Field from provider export
+  targetField         String                    @db.VarChar(255) @map("target_field") // Field in business fact
+  transformationRule  Json?                     @map("transformation_rule") // { "type": "multiply", "factor": 1000 }
+  confidence          Decimal                   @default(0.80) // 0.0-1.0
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  template            ExternalImportTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("external_field_mappings")
+}
+
+model ExternalDataLineage {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String                    @db.Uuid @map("workspace_id")
+  sourceRecordId      String                    @db.Uuid @map("source_record_id")
+  processedRecordId   String?                   @db.Uuid @map("processed_record_id")
+  factId              String?                   @db.VarChar(255) @map("fact_id")
+  lineageChain        String[]                  @map("lineage_chain") // ["import:provider", "normalize", "map:template"]
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  sourceRecord        ExternalRawRecord        @relation(fields: [sourceRecordId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([sourceRecordId])
+  @@index([factId])
+  @@map("external_data_lineage")
+}
