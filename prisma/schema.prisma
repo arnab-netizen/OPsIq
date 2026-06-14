@@ -3010,3 +3010,83 @@ model BrowserImportConsent {
   @@index([sessionId])
   @@map("browser_import_consents")
 }
+
+// B15: Real-World Case-Study Benchmark Library
+model CaseStudy {
+  id String @id
+  title String
+  description String @db.Text
+
+  // Business context
+  industry String
+  businessModel String
+  businessSize String // startup|small|medium|large|enterprise
+  year Int
+  yearStart Int @map("year_start")
+  yearEnd Int @map("year_end")
+
+  // Case data
+  symptoms Json // CaseStudySymptom[]
+  availableData Json // CaseStudyEvidence[]
+
+  // Hidden vs expert causes (for blind testing)
+  hiddenRootCauses Json @map("hidden_root_causes") // RootCause[]
+  hiddenCausesSummary String? @map("hidden_causes_summary") @db.Text
+  expertIdentifiedCauses Json @map("expert_identified_causes") // RootCause[]
+  expertCausesSummary String? @map("expert_causes_summary") @db.Text
+
+  // Actions and outcomes
+  actionsTaken Json @map("actions_taken") // ImplementedAction[]
+  actualOutcome Json @map("actual_outcome") // CaseStudyOutcome
+
+  // Source transparency (CRITICAL)
+  sources Json // CaseStudySource[]
+  licenseOrAllowedUse String @map("license_or_allowed_use") @db.Text
+
+  // Confidence metrics
+  confidence Decimal @default(0.7) // 0.0-1.0
+  dataCompleteness Decimal @map("data_completeness") @default(0.7) // 0.0-1.0
+  expertValidated Boolean @map("expert_validated") @default(false)
+
+  // Metadata
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  benchmarks CaseBenchmarkResult[]
+
+  @@index([industry])
+  @@index([businessSize])
+  @@index([year])
+  @@index([confidence])
+  @@map("case_studies")
+}
+
+model CaseBenchmarkResult {
+  id String @id
+  caseId String @map("case_id")
+  diagnosisId String @map("diagnosis_id")
+
+  // What was identified
+  identifiedCauses Json @map("identified_causes") // RootCause[]
+  confidenceScores Json @map("confidence_scores") // Array of {cause, engineConfidence, actualConfidence}
+
+  // Scores
+  accuracyScore Decimal @map("accuracy_score") // 0.0-1.0
+  precisionScore Decimal @map("precision_score") // 0.0-1.0
+  recallScore Decimal @map("recall_score") // 0.0-1.0
+
+  // Analysis
+  performanceNotes String? @map("performance_notes") @db.Text
+  falsePositives Json? @map("false_positives") // Array of strings
+  falseNegatives Json? @map("false_negatives") // Array of strings
+
+  // Timestamp
+  testedAt DateTime @default(now()) @map("tested_at")
+
+  caseStudy CaseStudy @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([diagnosisId])
+  @@index([testedAt])
+  @@map("case_benchmark_results")
+}
