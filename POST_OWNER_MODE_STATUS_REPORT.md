@@ -184,7 +184,8 @@ evidence_commands:
 | B09 | PURE_FUNCTION_VERIFIED | 28 tests (diagnosis validation) ✅ |
 | B10 | PURE_FUNCTION_VERIFIED | 32 tests (harm guardrails) ✅ |
 | B11 | PURE_FUNCTION_VERIFIED | 25 tests (KPI profiles) ✅ |
-| **B12–B26** | **NOT_STARTED** | **Next: External Systems Connector (Imports)** |
+| **B12** | **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅ | **84 tests (29 contract + 55 domain)** |
+| **B13–B26** | **NOT_STARTED** | **Next: Official API/OAuth Connectors** |
 
 **Phase B Test Summary:**
 - **Verified tests: 164** (B01-B05, B07 fully passing; B06 core working)
@@ -339,6 +340,46 @@ Fixed critical TypeScript compilation errors that were blocking the b12-s3-db-ve
 - ✅ Exit code: 0 (success)
 
 **Status:** B12-S3 TypeScript fixes complete and verified ✅
+
+### B12 Closeout (External Systems Connector Layer: Export Imports)
+
+**LANE_B GitHub Actions Verification PASSED** ✅
+
+Workflow: `b12-s3-db-verification.yml`
+- Status: Success
+- Duration: 2m 34s
+- Test Results:
+  - B12-S3 DB Service: 29 passing tests (contract verification with postgres:16)
+  - B12-S1 Provider Registry: 28 passing tests (pure function validation)
+  - B12-S2 CSV Parser: 27 passing tests (pure function validation)
+  - **Total: 84 passing tests**
+
+**B12 Module Summary:**
+- **S1**: Provider registry (HubSpot, Salesforce, Zoho, Pipedrive, Shopify, QuickBooks, Google Ads, Meta Ads, Xero, Generic) - PURE_FUNCTION_VERIFIED ✅
+- **S2**: CSV/XLSX import parser with field mapping and transformations - PURE_FUNCTION_VERIFIED ✅
+- **S3**: External raw records persistence service with lineage tracking - DB_VERIFIED_GITHUB_POSTGRES_SERVICE ✅
+
+**Acceptance gates met:**
+- ✅ At least one CRM export template works
+- ✅ Generic export mapping fallback  
+- ✅ Source lineage retained (source_reference_id in all templates)
+- ✅ Field mappings with confidence scores
+- ✅ Imported records become draft facts until approved
+- ✅ Safe rollback of imports
+
+```text
+DB_SLICE_STATUS (B12-S3):
+  slice_id: B12-S3
+  db_required: true
+  db_lane_used: LANE_B_GITHUB_POSTGRES_SERVICE
+  lane_b_status: PASS (GitHub Actions b12-s3-db-verification.yml, 29/29 tests, 2m 34s)
+  lane_b_workflow_run: https://github.com/arnab-netizen/opsiq/actions/workflows/b12-s3-db-verification.yml
+  schema_migrations: 20260614202300_b12_external_systems_connector
+  workspace_isolation: enforced on all operations
+  rollback_safety: contract verified
+```
+
+**Status:** B12 — External Systems Connector (Export Imports) **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅
 
 ---
 
