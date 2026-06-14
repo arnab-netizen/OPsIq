@@ -312,7 +312,7 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 |---|---|---|---|---|
 | M01 | Business Profile / Owner Context | TESTED_PARTIAL | Unit tests + code inspection | Profile CRUD routes wired; diagnosis now enforces profile completeness before proceeding; 6 unit tests pass; full integration deferred (DB unavailable) |
 | M02 | Data Intake / Input Capture | TESTED_PARTIAL | 23 unit tests + code inspection | Fail-closed validation proven across all intake types; EngagementIntake, EvidenceIntake, ActionIntake, RequestContext schemas tested; required fields enforced; invalid values rejected immediately |
-| M03 | Diagnosis Engine | FOUND_EXISTING_UNVERIFIED | Code present, tests needed | Consulting pipeline exists; M01 gate added; full acceptance criteria not yet verified |
+| M03 | Diagnosis Engine | TESTED_PARTIAL | 19 unit tests + code inspection | Diagnosis output verified complete with all required fields; confidence levels tested against evidence quality; pattern matching and alternatives verified; deterministic behavior proven |
 | M04 | Evidence Model / Evidence Attachment | TESTED_PARTIAL | 9 unit tests + code inspection | Evidence workspace isolation proven by automated tests; bundle and item queries enforce workspace scoping |
 | M05 | Recommendation Engine | FOUND_EXISTING_UNVERIFIED | Code present | Recommendations exist; conformance to M05 contract not verified |
 | M06 | Action Plan Generator | FOUND_EXISTING_UNVERIFIED | Code present | Actions generated from recommendations; atomicity tests needed |
@@ -327,17 +327,18 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 247 test files, 6028 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
 
 **Highest-priority incomplete slices:**
-1. M03 Diagnosis acceptance criteria verification (P2 correctness)
-2. M06 Action atomicity and transaction safety (P2 data integrity)
-3. M05 Recommendation engine conformance (P1 correctness)
+1. M06 Action atomicity and transaction safety (P2 data integrity)
+2. M05 Recommendation engine conformance (P1 correctness)
+3. M09 Verification state machine tests (P2 behavioral)
 4. M01 Full integration test (P0 correctness gate) — deferred (DB unavailable)
 
 **Completed slices:**
 - M01_SLICE1: Business condition profile gates diagnosis (TESTED_PARTIAL)
 - M02_SLICE1: Data intake fail-closed validation tests (TESTED_PARTIAL)
+- M03_SLICE1: Diagnosis engine acceptance criteria tests (TESTED_PARTIAL)
 - M04_SLICE1: Evidence cross-workspace isolation tests (TESTED_PARTIAL)
-- M12_SLICE1: Cross-workspace access denial negative tests (TESTED_PARTIAL)
 - M10_SLICE1: Constraint violation detection tests (TESTED_PARTIAL)
+- M12_SLICE1: Cross-workspace access denial negative tests (TESTED_PARTIAL)
 
 ### Branch Architecture
 
@@ -358,9 +359,10 @@ not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACIT
 **M01-M15 Framework Progress:**
 - ✓ M01 gate implemented (diagnosis enforces business condition profile completeness)
 - ✓ M02 fail-closed validation proven (23 automated tests, all intake types)
+- ✓ M03 diagnosis output verified (19 automated tests, confidence gates, pattern matching)
 - ✓ M04 evidence workspace isolation proven (9 automated tests)
 - ✓ M10 constraint violation detection proven (14 automated tests)
 - ✓ M12 cross-workspace access denial proven (12 automated tests)
-- ✓ Test files: 248 (6050 tests), TypeScript: ✓ Clean
-- 5 slices completed · 10 remaining · Est. 2-3 more runs to completion
-- Next: M03 diagnosis acceptance criteria (P2 correctness) or M06 action atomicity (P2 integrity)
+- ✓ Test files: 249 (6070 tests), TypeScript: ✓ Clean
+- 6 slices completed · 9 remaining · Est. 2 more runs to completion
+- Next: M06 action atomicity (P2 integrity) or M05 recommendation conformance (P1 correctness)
