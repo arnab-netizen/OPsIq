@@ -274,6 +274,13 @@ export const AUDIT_EVENTS = {
   OWNER_DATA_INTAKE_RECORDED: "owner.data_intake_recorded",
   OWNER_DATA_INTAKE_CONFIRMED: "owner.data_intake_confirmed",
 
+  // Fact Review (B05)
+  FACT_REVIEW_APPROVED: "fact.review_approved",
+  FACT_REVIEW_CORRECTED: "fact.review_corrected",
+  FACT_REVIEW_REJECTED: "fact.review_rejected",
+  FACT_REVIEW_MARKED_UNKNOWN: "fact.review_marked_unknown",
+  FACT_REVIEW_UNDONE: "fact.review_undone",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",

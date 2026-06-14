@@ -2708,6 +2708,7 @@ model OwnerDataIntake {
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
   business            OwnerBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  reviewActions       FactReviewAction[]
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2715,4 +2716,24 @@ model OwnerDataIntake {
   @@index([validationStatus])
   @@index([ownerConfirmed])
   @@map("owner_data_intakes")
+}
+
+model FactReviewAction {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  intakeId          String          @db.Uuid @map("intake_id")
+  factId            String          @map("fact_id")
+  action            String          @map("action") // "approved" | "corrected" | "rejected" | "marked_unknown"
+  previousValue     Json?           @map("previous_value")
+  newValue          Json?           @map("new_value")
+  correctionReason  String?         @map("correction_reason")
+  actorId           String          @db.Uuid @map("actor_id")
+  workspaceId       String          @db.Uuid @map("workspace_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  intake            OwnerDataIntake @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  @@index([intakeId])
+  @@index([factId])
+  @@index([workspaceId, intakeId])
+  @@index([action])
+  @@map("fact_review_actions")
 }
