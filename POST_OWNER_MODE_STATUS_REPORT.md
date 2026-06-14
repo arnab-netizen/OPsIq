@@ -176,7 +176,8 @@ evidence_commands:
 | B01 Machine-readable business facts contract | VERIFIED_COMPLETE (contract + adapter scope) | slices B01-S1, B01-S2 |
 | B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 + B02-S3 DB_VERIFIED_GITHUB_POSTGRES_SERVICE | B02-S1 file upload (36) + B02-S2 column mapping LANE_B (30) + B02-S3 bridge-to-Module-10 LANE_B (5 DB) all green |
 | B03 Data Quality Scoring | PURE_FUNCTION_VERIFIED (LANE_A) | 7 dimensions + DATA_QUALITY_SCORE + <50 confidence-cap rule; 9 tests, tsc exit 0 |
-| B04–B26 remaining | NOT_STARTED | B04 Evidence Hierarchy next; B05+ blocked in order |
+| B04 Evidence Hierarchy | PURE_FUNCTION_VERIFIED (LANE_A) | L1–L5 ranking, conflict detection, override rules; 21 tests, 51/51 suite, tsc exit 0 |
+| B05–B26 remaining | NOT_STARTED | B05 Owner Data Review/Correction UI next; B06+ blocked in order |
 
 ### B01-S2 Closeout (intake → contract adapter)
 
@@ -277,18 +278,17 @@ DB_SLICE_STATUS:
 
 ## Next Action
 
-B02-S2 **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅
-- Column mapping pure-function verified with GitHub Actions PostgreSQL service container (30 tests, run green)
+**B04 — Evidence Hierarchy** status:
+- **PURE_FUNCTION_VERIFIED** ✅ (LANE_A — no DB required)
+- Evidence-level ranking L1–L5 with full SOURCE_DOCUMENT_KIND and EXTRACTION_METHOD mappings
+- Conflict detection (material gap >= 2), override rules (manual blocked from overriding bank/API), evidence comparison helpers
+- 21 tests, 51/51 business-facts suite, tsc exit 0
+- Used by downstream B06 (contradiction resolution) and B09 (evidence-backed diagnosis)
 
-B02-S3 **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅ (corrected scope: bridge to Module 10)
-- Bridge service reuses the proven Module 10 `createDataIntake`/`confirmDataIntake` — no duplicate flow
-- LANE_B run #4 (commit `7435d7d`): Success, 5/5 DB tests against postgres:16 service container
-- Safe-file front-door (validation + RFC-4180 parse + fail-closed formula-injection gate) proven before any DB write
+**Completed modules:**
+- B01 ✅ Machine-readable contract (contract + adapter) · B02 ✅ Data Intake (file validation, column mapping, persistence bridge) · B03 ✅ Data Quality Scoring (7 dimensions + confidence cap) · B04 ✅ Evidence Hierarchy (L1–L5 ranking + conflict detection)
 
-**B02 — Data Intake Level 1 (CSV/XLSX/manual)** status:
-- B02-S1 ✅ pure function (36 tests) · B02-S2 ✅ DB_VERIFIED (30 tests) · B02-S3 ✅ DB_VERIFIED (5 DB tests)
-- B02 core acceptance gates met: upload, classify, parse, map, validate, persist (via Module 10), owner-confirm (via Module 10), import safety
-- Optional B02-S4+ (not blocking B03): XLSX format support, route/UI wiring for the bridge
+**Next:** B05 — Owner Data Review/Correction UI (dependent on B04 evidence hierarchy)
 
 ### B03 Closeout (Data Quality Scoring)
 
@@ -306,7 +306,29 @@ SLICE_DB_CLASSIFICATION (B03):
   gates: tsc --noEmit exit 0 · business-facts suite 29/29 · 9 B03 tests green
 ```
 
-**Next slice:** B04 — Evidence Hierarchy (next in Phase B dependency order).
+### B04 Closeout (Evidence Hierarchy)
+
+- **Files added:**
+  - `src/domain/business-facts/evidence-hierarchy.ts` (L1–L5 evidence levels, all SOURCE_DOCUMENT_KIND and EXTRACTION_METHOD mappings)
+  - `src/__tests__/business-facts/evidence-hierarchy.test.ts` (21 tests)
+- **Proves:** formalizes evidence-level ranking from execution_post_owner_mode.md §13:
+  - L5: bank/API/accounting ledger/exported system record
+  - L4: structured CSV/XLSX system export
+  - L3: PDF statement/invoice
+  - L2: screenshot/OCR
+  - L1: manual owner entry
+- **Provides:** conflict detection (L1 vs L5 material gap >= 2), override rules (manual cannot silently override bank/API), evidence comparison and highest-evidence selection for downstream B06 (contradiction resolution) and B09 (evidence-backed diagnosis).
+- **Acceptance gates (all green):** L1 vs L5 conflict detected as material; highest evidence available for recommendation citation; override rules prevent L1 from silently replacing L5.
+
+```text
+SLICE_DB_CLASSIFICATION (B04):
+  db_required: false
+  db_lane_used: LANE_A_STATIC
+  status: PURE_FUNCTION_VERIFIED
+  gates: tsc --noEmit exit 0 · business-facts suite 51/51 (B01+B03+B04) · 21 B04 tests green
+```
+
+**Next slice:** B05 — Owner Data Review/Correction UI (next in Phase B dependency order).
 
 DB write tests for current Owner Mode (M01-M15) remain deferred until PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
