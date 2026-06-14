@@ -174,8 +174,8 @@ evidence_commands:
 | Module | Status | Evidence |
 |--------|--------|----------|
 | B01 Machine-readable business facts contract | VERIFIED_COMPLETE (contract + adapter scope) | slices B01-S1, B01-S2 |
-| B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 DB_VERIFIED_GITHUB_POSTGRES_SERVICE | B02-S1 file upload (36 tests) + B02-S2 column mapping LANE_B verified (30 unit); B02-S3 awaiting LANE_B |
-| B03–B26 remaining | NOT_STARTED | B02-S3 LANE_B manual trigger pending; B03+ blocked in order |
+| B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 DB_VERIFIED; B02-S3 bridge PENDING LANE_B | B02-S1 file upload (36 tests) + B02-S2 column mapping LANE_B verified (30); B02-S3 bridge-to-Module-10 (5 DB tests) awaiting LANE_B |
+| B03–B26 remaining | NOT_STARTED | B02-S3 LANE_B run pending (commit 7435d7d); B03+ blocked in order |
 
 ### B01-S2 Closeout (intake → contract adapter)
 
@@ -242,38 +242,55 @@ evidence_commands:
 - **DB Method:** GitHub Actions PostgreSQL 16 service container
 - **Proof:** All tests executed against ephemeral localhost:5432 DB
 
-### B02-S3 Closeout (Owner Confirmation Flow + Persistence)
+### B02-S3 Closeout (File-Intake Persistence Bridge — corrected scope)
+
+**Correction:** The initial B02-S3 attempt added `owner-data-intake.service.ts` with a
+`confirmOwnerDataIntake` state machine. This DUPLICATED Module 10's already-DB-proven
+`confirmDataIntake` on the same `OwnerDataIntake` table (proven by
+`src/__tests__/owner-intake/services.db.test.ts`). Per the repo rule "follow the
+existing pattern rather than inventing a second pattern", the duplicate was reverted.
 
 - **Files added:**
-  - `src/services/owner-data-intake.service.ts` (state machine service)
-  - `src/__tests__/services/owner-data-intake.service.db.test.ts` (15 comprehensive tests)
-  - `.github/workflows/b02-s3-db-verification.yml` (LANE_B workflow)
-- **Proves:** atomic state transitions (draft → confirmed), idempotent confirmation, workspace isolation, validation checks, audit event emission, transaction safety, immutable confirmed state.
-- **Status:** **GITHUB_DB_PROOF_PENDING_MANUAL_RUN** (implementation complete, workflow ready, requires manual trigger)
-- **Workflow Tests:** 15 tests (13 DB persistence + 2 input validation contracts)
+  - `src/services/file-intake/persist-file-intake.service.ts` (bridge: B02 safe-file pre-flight → Module 10 `createDataIntake`)
+  - `src/__tests__/services/file-intake/persist-file-intake.service.db.test.ts` (5 DB tests)
+  - `.github/workflows/b02-s3-db-verification.yml` (LANE_B workflow, corrected test path)
+- **Files removed:** `src/services/owner-data-intake.service.ts`, `src/__tests__/services/owner-data-intake.service.db.test.ts` (duplicate confirmation flow)
+- **Proves:** B02-S1 safe-file front-door (file validation + RFC-4180 parse + fail-closed formula-injection gate) bridges into the proven Module 10 persistence; confirmation reuses the EXISTING `confirmDataIntake` (no second confirmation service); invalid CSV persists but cannot be confirmed; workspace isolation via Module 10 guard.
+- **Local gates:** `npx tsc --noEmit` ✓ (exit 0) · test file loads + skips cleanly without DB (no Prisma import crash) ✓
+- **Status:** **GITHUB_DB_PROOF_PENDING_MANUAL_RUN** — LANE_B workflow pushed; awaiting run result.
+
+```text
+DB_SLICE_STATUS:
+  slice_id: B02-S3
+  db_required: true
+  db_lane_used: LANE_B_GITHUB_POSTGRES_SERVICE
+  lane_b_status: PENDING (workflow pushed on commit 7435d7d, auto-triggers on path match)
+  lane_b_workflow_run_url: https://github.com/arnab-netizen/opsiq/actions/workflows/b02-s3-db-verification.yml
+  lane_c_status: NOT_APPLICABLE (no hosted Neon claim in this slice)
+  lane_c_workflow_run_url: null
+  hosted_neon_verified: false
+  blocked_parts: none
+  next_db_required_action: confirm LANE_B run is green (5 DB tests), then mark DB_VERIFIED_GITHUB_POSTGRES_SERVICE
+```
 
 ## Next Action
 
 B02-S2 **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅
-- Column mapping pure-function verified with GitHub Actions PostgreSQL service container
-- All 30 unit tests passed
-- Full CSV → mapped rows flow proven
+- Column mapping pure-function verified with GitHub Actions PostgreSQL service container (30 tests, run green)
 
-B02-S3 **IMPLEMENTATION_COMPLETE_AWAITING_LANE_B_PROOF**
-- Owner confirmation state machine fully implemented
-- Service: draft → confirmed transitions, idempotency, workspace isolation, audit logging
-- Tests: 15 comprehensive test cases (DB persistence + logic contracts)
-- Workflow: ready for manual trigger at https://github.com/arnab-netizen/opsiq/actions/workflows/b02-s3-db-verification.yml
+B02-S3 **GITHUB_DB_PROOF_PENDING_MANUAL_RUN** (corrected scope: bridge to Module 10)
+- Bridge service reuses the proven Module 10 `createDataIntake`/`confirmDataIntake` — no duplicate flow
+- 5 DB tests gated on `TEST_WITH_DB=true`; typecheck green; loads cleanly without DB
+- LANE_B workflow pushed; auto-triggers on the file-intake path
 
 **B02 — Data Intake Level 1 (CSV/XLSX/manual)** remaining slices:
-- B02-S3: **Awaiting LANE_B workflow proof** (implementation complete, manual trigger required)
-- B02-S4+: Additional B02 slices if needed (XLSX support, error handling refinements, etc.)
+- B02-S3: **Awaiting LANE_B run result** (commit `7435d7d`)
+- B02-S4+: Additional B02 slices if needed (XLSX support, route/UI wiring for the bridge)
 
-To complete B02-S3 DB verification:
-1. Trigger workflow: https://github.com/arnab-netizen/opsiq/actions/workflows/b02-s3-db-verification.yml
-2. Select branch: `claude/execution-audit-phase-a-ulmljq`
-3. Wait for workflow completion (~2 minutes)
-4. Verify 15 tests pass in LANE_B (GitHub Actions postgres:16)
+To confirm B02-S3 LANE_B proof:
+1. Open: https://github.com/arnab-netizen/opsiq/actions/workflows/b02-s3-db-verification.yml
+2. Confirm the run for commit `7435d7d` on `claude/execution-audit-phase-a-ulmljq` is green
+3. Verify 5 DB tests pass against postgres:16 service container
 
 DB write tests for current Owner Mode (M01-M15) remain deferred until PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
