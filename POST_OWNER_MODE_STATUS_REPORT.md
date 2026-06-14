@@ -177,7 +177,7 @@ evidence_commands:
 | B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 + B02-S3 DB_VERIFIED_GITHUB_POSTGRES_SERVICE | B02-S1 file upload (36) + B02-S2 column mapping LANE_B (30) + B02-S3 bridge-to-Module-10 LANE_B (5 DB) all green |
 | B03 Data Quality Scoring | PURE_FUNCTION_VERIFIED (LANE_A) | 7 dimensions + DATA_QUALITY_SCORE + <50 confidence-cap rule; 9 tests, tsc exit 0 |
 | B04 Evidence Hierarchy | PURE_FUNCTION_VERIFIED (LANE_A) | L1–L5 ranking, conflict detection, override rules; 21 tests, 51/51 suite, tsc exit 0 |
-| B05 Owner Data Review/Correction UI | B05-S1 READY_FOR_DB_VERIFICATION (LANE_B pending) | Backend service: approve/correct/reject/mark-unknown; 8 tests, tsc exit 0; B05-S2 (UI) next |
+| B05 Owner Data Review/Correction UI | B05-S1 DB_VERIFIED_GITHUB_POSTGRES_SERVICE ✅ | Backend service: 8 DB tests passed (1m 35s); B05-S2 (UI) next |
 | B06–B26 remaining | NOT_STARTED | B06 Contradiction Resolution next in order |
 
 ### B01-S2 Closeout (intake → contract adapter)
@@ -280,23 +280,22 @@ DB_SLICE_STATUS:
 ## Next Action
 
 **B05-S1 — Fact Review Service (backend)** status:
-- **READY_FOR_DB_VERIFICATION** 🔄 (LANE_B workflow created, awaiting run)
+- **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅ (LANE_B run completed, 1m 35s, 8/8 tests passed)
 - Backend service for owner approval, correction, rejection, and unknown-marking of extracted facts
 - FactReviewAction table tracks audit trail with previous/new values
-- 8 DB integration tests (idempotent approval, correction with audit, rejection tracking, workspace isolation, undo)
+- All 8 DB integration tests passed: idempotent approval, correction with audit, rejection tracking, workspace isolation, undo
 - tsc exit 0, schema valid
 
-**B05-S2 — Fact Review UI** (next slice):
-- React components for displaying extracted facts and controls
+**B05-S2 — Fact Review UI (next slice, unblocked):**
+- React components for displaying extracted facts and owner controls
 - Components: FactsTable, ApprovalButton, EditModal, MissingDataPanel, ContradictionPanel, AuditLogPanel
 - Calls B05-S1 service endpoints
-- LANE_A (no DB required)
+- LANE_A (no DB required, can proceed immediately)
 
-**Completed modules:**
-- B01 ✅ Contract · B02 ✅ Data Intake · B03 ✅ Data Quality Scoring · B04 ✅ Evidence Hierarchy
-- B05-S1 ✅ Backend service (awaiting LANE_B verification)
+**Completed modules (DB_VERIFIED or PURE_FUNCTION_VERIFIED):**
+- B01 ✅ Contract (VERIFIED_COMPLETE) · B02 ✅ Data Intake (LANE_B: 71 tests) · B03 ✅ Data Quality (LANE_A: 9 tests) · B04 ✅ Evidence Hierarchy (LANE_A: 21 tests) · B05-S1 ✅ Backend (LANE_B: 8 tests)
 
-**Blocked until LANE_B run:** B05-S2 (can proceed with component implementation while awaiting B05-S1 DB verification)
+**Proceed with:** B05-S2 UI components (LANE_A, independent implementation)
 
 ### B03 Closeout (Data Quality Scoring)
 
@@ -360,10 +359,11 @@ SLICE_DB_CLASSIFICATION (B04):
 SLICE_DB_CLASSIFICATION (B05-S1):
   db_required: true
   db_lane_used: LANE_B_GITHUB_POSTGRES_SERVICE
-  lane_b_status: READY_FOR_VERIFICATION (workflow created, awaiting run)
+  lane_b_status: PASS (run triggered by commit 139acbc, completed 1m 35s)
   lane_b_workflow: .github/workflows/b05-s1-db-verification.yml
   tests_count: 8 DB integration tests
-  gates: tsc --noEmit exit 0 · idempotency tested · workspace isolation tested · audit trail verified
+  tests_result: ✓ 8/8 passed
+  gates: tsc --noEmit exit 0 · idempotency tested ✓ · workspace isolation tested ✓ · audit trail verified ✓
 ```
 
 **Next slice:** B05-S2 — Owner Data Review/Correction UI (React components, LANE_A).
