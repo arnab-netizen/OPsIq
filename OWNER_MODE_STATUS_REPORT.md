@@ -321,16 +321,20 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M09 | Verification / Outcome Tracking | FOUND_EXISTING_UNVERIFIED | Code present | Verification service exists; state-machine tests needed |
 | M10 | Constraint Handling | NOT_STARTED | — | — |
 | M11 | Audit Logging / Traceability | FOUND_EXISTING_UNVERIFIED | Code present | Audit events emitted; critical-path coverage needs audit |
-| M12 | Access Control / Workspace Isolation | FOUND_EXISTING_UNVERIFIED | Code inspection | Multiple enforcement patterns (withCanonicalEnforcement, withEnforcementFull); cross-workspace negative tests needed |
+| M12 | Access Control / Workspace Isolation | TESTED_PARTIAL | 12 unit tests + code inspection | Cross-workspace access denial proven by automated tests; role-based permissions validated; enforcement patterns verified |
 | M13 | Demo / Seed / Smoke Data Integrity | FOUND_EXISTING_UNVERIFIED | Code present | Demo seed scripts exist; isolation markers need verification |
 | M14 | Error Handling / Fail-Closed Behaviour | FOUND_EXISTING_UNVERIFIED | Code inspection | Error classification exists; fail-closed contract needs formal test |
-| M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 244 test files, 5993 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
+| M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 245 test files, 6005 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
 
 **Highest-priority incomplete slices:**
-1. M12 Cross-workspace negative tests (P0 security)
-2. M01 Full integration test (P0 correctness gate) — deferred (DB unavailable)
-3. M10 Constraint handling (P1 business logic)
-4. M02 Data intake validation (P1 persistence)
+1. M04 Cross-workspace evidence isolation tests (P1 data integrity)
+2. M10 Constraint handling (P1 business logic)
+3. M02 Data intake validation (P1 persistence)
+4. M01 Full integration test (P0 correctness gate) — deferred (DB unavailable)
+
+**Completed slices:**
+- M01_SLICE1: Business condition profile gates diagnosis (TESTED_PARTIAL)
+- M12_SLICE1: Cross-workspace access denial negative tests (TESTED_PARTIAL)
 
 ### Branch Architecture
 
@@ -348,4 +352,7 @@ mobile-first owner home. All Owner Mode build modules (1–12) are now STAGING_P
 AUDITED. Remaining work is release-gate only: M13 real-business validation (manual,
 not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACITY_V1.
 
-**M01-M15 Framework:** M01 gate implemented. Next: Add cross-workspace negative tests for M12 access control (P0 priority).
+**M01-M15 Framework:** 
+- ✓ M01 gate implemented (diagnosis enforces business condition profile completeness)
+- ✓ M12 cross-workspace access denial proven (12 automated tests)
+- Next: M04 evidence isolation tests (P1 data integrity) or M10 constraint handling (P1 business logic)
