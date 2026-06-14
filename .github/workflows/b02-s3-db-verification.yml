@@ -14,7 +14,7 @@ on:
     paths:
       - .github/workflows/b02-s3-db-verification.yml
       - src/services/owner-data-intake.service.ts
-      - src/__tests__/services/owner-data-intake.service.test.ts
+      - src/__tests__/services/owner-data-intake.service.db.test.ts
       - prisma/**
 
 jobs:
@@ -102,7 +102,7 @@ jobs:
 
           set +e
           npm test -- --run \
-            src/__tests__/services/owner-data-intake.service.test.ts \
+            src/__tests__/services/owner-data-intake.service.db.test.ts \
             2>&1 | tee artifacts/b02-s3/service-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
