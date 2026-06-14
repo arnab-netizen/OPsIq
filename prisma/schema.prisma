@@ -1180,6 +1180,8 @@ model Workspace {
   workspaceMemberships WorkspaceMembership[]
   externalConnections  ExternalConnection[]
   connectionConsents   ExternalConnectionConsent[]
+  browserImportSessions BrowserImportSession[]
+  browserImportConsents BrowserImportConsent[]
 
   @@map("workspaces")
 }
@@ -2764,6 +2766,7 @@ model ExternalProvider {
   templates           ExternalImportTemplate[]
   rawRecords          ExternalRawRecord[]
   connections         ExternalConnection[]
+  browserImportSessions BrowserImportSession[]
 
   @@map("external_providers")
 }
@@ -2923,4 +2926,87 @@ model ExternalSyncJob {
   @@index([connectionId])
   @@index([status])
   @@map("external_sync_jobs")
+}
+
+// B14: Browser-Assisted Import (Restricted Fallback)
+model BrowserImportSession {
+  id String @id
+  workspaceId String @db.Uuid @map("workspace_id")
+  providerId String @db.Uuid @map("provider_id")
+  userId String @map("user_id")
+  status String @default("active") // active|completed|failed|abandoned
+  startedAt DateTime @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  failureReason String? @map("failure_reason")
+  userAgent String @map("user_agent")
+  ipAddress String @map("ip_address")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider ExternalProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  events BrowserImportEvent[]
+  tables BrowserExtractedTable[]
+  consent BrowserImportConsent?
+
+  @@index([workspaceId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("browser_import_sessions")
+}
+
+model BrowserImportEvent {
+  id String @id
+  sessionId String @map("session_id")
+  eventType String // session_started|instruction_shown|data_extracted|export_uploaded|error_encountered|session_completed
+  description String
+  metadata Json?
+  timestamp DateTime @default(now())
+
+  session BrowserImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@map("browser_import_events")
+}
+
+model BrowserExtractedTable {
+  id String @id
+  sessionId String @map("session_id")
+  tableName String @map("table_name")
+  columnHeaders String[] @map("column_headers")
+  dataRows Json // Array of objects
+  extractionMethod String // manual_copy|file_export|screenshot
+  confidence Decimal @default(0.7) // User's confidence 0.0-1.0
+  status String @default("draft") // draft|approved|rejected
+  recordCount Int @default(0) @map("record_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  approvedAt DateTime? @map("approved_at")
+  approvedBy String? @map("approved_by")
+  rejectionReason String? @map("rejection_reason")
+
+  session BrowserImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("browser_extracted_tables")
+}
+
+model BrowserImportConsent {
+  id String @id
+  sessionId String @unique @map("session_id")
+  workspaceId String @db.Uuid @map("workspace_id")
+  userId String @map("user_id")
+  statementAccepted Boolean @map("statement_accepted")
+  statement String
+  acceptedAt DateTime @default(now()) @map("accepted_at")
+  ipAddress String @map("ip_address")
+  userAgent String @map("user_agent")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  session BrowserImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([sessionId])
+  @@map("browser_import_consents")
 }
