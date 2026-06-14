@@ -173,8 +173,9 @@ evidence_commands:
 
 | Module | Status | Evidence |
 |--------|--------|----------|
-| B01 Machine-readable business facts contract | VERIFIED_COMPLETE (contract + adapter scope) | slices B01-S1, B01-S2 (see below) |
-| B02–B26 | NOT_STARTED | B02 now unblocked (B01 complete); B03+ blocked in order |
+| B01 Machine-readable business facts contract | VERIFIED_COMPLETE (contract + adapter scope) | slices B01-S1, B01-S2 |
+| B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 IMPLEMENTED_PURE_FUNCTION | B02-S1 file upload handler (36 tests, 0 errors) |
+| B02–B26 remaining | NOT_STARTED | B02-S2 next; B03+ blocked in order |
 
 ### B01-S2 Closeout (intake → contract adapter)
 
@@ -204,16 +205,30 @@ evidence_commands:
 - **Status:** `IMPLEMENTED_CONTRACT_ONLY_NOT_INTEGRATED` (§37.14 — contract + tests; no diagnosis/intake path consumes it yet)
 - **DB:** none required (contract-only; no Prisma/DB change)
 
+### B02-S1 Closeout (File Upload Handler)
+
+- **Files added:**
+  - `src/domain/file-intake/types.ts` (types, Zod schemas, config)
+  - `src/domain/file-intake/file-validator.ts` (file validation: extension, MIME, size)
+  - `src/domain/file-intake/csv-parser.ts` (RFC 4180 CSV parser with formula detection)
+  - `src/domain/file-intake/file-upload-handler.ts` (orchestration + metadata)
+  - `src/domain/file-intake/index.ts` (public API exports)
+  - `src/__tests__/domain/file-intake/file-upload-handler.test.ts` (36 tests)
+- **Proves:** file validation (type, size, MIME), safe CSV parsing, formula injection detection and safe storage, malformed file fail-closed, source document lineage (§37.15).
+- **Gates:** `npx tsc --noEmit` ✓ · file-intake tests 36/36 ✓ · full test suite 6043 passed ✓ · build passing ✓
+- **Status:** B02-S1 pure-function implementation complete (no DB persistence).
+  Scope note: OwnerDataIntake persistence, column mapping UI, owner confirmation flow are separate slices (B02-S2, B02-S3).
+  XLSX support deferred until xlsx library is dependency-checked (B02-S1 implements CSV fully).
+
 ## Next Action
 
-B01 is **VERIFIED_COMPLETE** (contract + adapter integration proven). Per §38.14, B02 is now unblocked.
+B02-S1 **IMPLEMENTED_PURE_FUNCTION** (file upload handler with formula injection safety). Per §38.14, B02-S2 is now unblocked.
 
-**B02 — Data Intake Level 1 (CSV/XLSX/manual)** candidate slices:
-- B02-S1: File upload handler (CSV/XLSX) with allowed types, size limits, MIME validation, formula-injection mitigation (store/display safe, no execution per §37.15)
+**B02 — Data Intake Level 1 (CSV/XLSX/manual)** remaining slices:
 - B02-S2: Column mapping UI (preview, field mapping, validation) + OwnerDataIntake persistence (if DB available, else DB_BLOCKED documented)
 - B02-S3: Owner confirmation flow (draft → confirmed state transition, rollback safety)
 
-Invoke `/continue-post-owner-build` to implement the next smallest B02 slice.
+Invoke `/continue-post-owner-build` to implement B02-S2 (column mapping + DB persistence).
 
 DB write tests for current Owner Mode (M01-M15) remain deferred until PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
