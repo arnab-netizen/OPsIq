@@ -4,12 +4,13 @@
 - **execution_post_owner_mode.md** is the only roadmap for Phase A (DB verification) and Phase B (future modules B01-B26)
 - No assumptions about prior status reports
 - Repository evidence wins over documentation
-- Also obey sections 37 and 38 of execution_post_owner_mode.md; these hostile hardening addenda override weaker instructions
+- **Also obey section 8 of execution_post_owner_mode.md** ("DB VERIFICATION DURING IMPLEMENTATION — MANDATORY"); it overrides weaker instructions
+- Also obey sections 39 and 40 of execution_post_owner_mode.md; these hostile hardening addenda override weaker instructions
 
 ## Mandatory Sequence Every Run
 
 1. **Inspect repo state** (git status, branch, commit)
-2. **Read execution_post_owner_mode.md in full** (sections 0-38)
+2. **Read execution_post_owner_mode.md in full** (sections 0-40, especially section 8 DB VERIFICATION DURING IMPLEMENTATION — MANDATORY)
 3. **Run repository reality scan** (find execution files, status files, check package.json)
 4. **Import previous execution** (locate and read execution.md or OWNER_MODE_STATUS_REPORT.md)
 5. **Run Phase A DB verification** (unless freshly passed on current commit)
@@ -23,11 +24,15 @@
 7. **If Phase A gates pass** (or PHASE_A_PASSED_WITH_NONCRITICAL_DB_BLOCKERS): Check PHASE_B_START_GATE
 8. **If PHASE_B_START_GATE passes:** Implement one smallest Phase B slice (B01-B26 in order)
 9. **For each Phase B slice:**
+   - Output SLICE_DB_CLASSIFICATION (from section 8.1)
+   - If db_required=true, read section 8 and plan LANE_B GitHub Actions workflow
+   - Code the slice
    - Run targeted unit/integration tests
-   - Run DB tests where required and safe
-   - Update POST_OWNER_MODE_STATUS_REPORT.md
+   - Run LANE_B GitHub Actions DB verification workflow for DB-backed slices (do not skip)
+   - Output SLICE_DB_CLOSEOUT (from section 8.4) with workflow proof
+   - Update POST_OWNER_MODE_STATUS_REPORT.md with DB_SLICE_STATUS
    - Output SLICE_CLOSEOUT with status
-   - Commit and push (no assumptions about DB safety — use TEST_DATABASE_URL for writes)
+   - Commit and push (no assumptions about DB safety — use TEST_DATABASE_URL for writes if needed)
 10. **End with required status**
 
 ## Non-Negotiable Rules
@@ -37,8 +42,10 @@
 - No printing or exposing secrets
 - No weakening tests to pass gates
 - No skipping DB-required verification without explicit DB_BLOCKED evidence
-- No starting Phase B until Phase A gates pass per section 38.1 rules
-- No future module may start before prerequisites pass (section 38.14)
+- No starting Phase B until Phase A gates pass per section 38.1 rules (now 39.1)
+- No future module may start before prerequisites pass (section 38.14, now 39.14)
+- **No claiming DB-backed slice completion without LANE_B GitHub Actions workflow proof** (section 8.3, 8.4)
+- **No claiming hosted Neon verification without LANE_C workflow passing** (section 8.5)
 
 ## Output Format (End of Run)
 

@@ -606,7 +606,347 @@ PRODUCTION_READY
 
 ---
 
-# 8. B01 — Machine-Readable Business Facts Contract
+# 8. DB VERIFICATION DURING IMPLEMENTATION — MANDATORY
+
+This section is mandatory for all B02-B26 slices. It overrides weaker instructions and defines the only valid ways to prove DB-related implementation.
+
+## 8.1 Mandatory DB Classification Before Implementation
+
+Before coding any slice, Claude must output:
+
+```text
+SLICE_DB_CLASSIFICATION:
+  slice_id:
+  module:
+  db_required: true/false
+  db_reason:
+  db_lane_required:
+    - NONE
+    - LANE_A_STATIC
+    - LANE_B_GITHUB_POSTGRES_SERVICE
+    - LANE_C_HOSTED_TEST_DB_SECRET
+    - LANE_D_STAGING_READONLY_SMOKE
+  persistence_touched: true/false
+  schema_touched: true/false
+  workspace_isolation_touched: true/false
+  transaction_touched: true/false
+  hosted_db_claim_required: true/false
+  blocked_parts:
+```
+
+Rules:
+- If `db_required=false`, pure-function or unit/static tests may verify the slice.
+- If `db_required=true`, unit tests alone are insufficient.
+- If persistence/schema/workspace isolation/transactions are touched, LANE_B GitHub Actions proof is mandatory.
+- Local DB may be used as extra information but cannot be the only required proof.
+- If `hosted_db_claim_required=true`, a LANE_C hosted TEST_DATABASE_URL workflow must pass.
+
+## 8.2 Valid DB Lanes (Proof Methods)
+
+### LANE_A_STATIC
+
+```text
+purpose: schema/build/typecheck only
+
+commands:
+  - npm ci
+  - npx prisma validate
+  - npx prisma generate
+  - npx tsc --noEmit
+  - npm run build
+
+allowed_status: STATIC_SCHEMA_BUILD_PASS
+forbidden_status: DB_VERIFIED
+```
+
+Use for: pure functions, schema validation, type checking, build verification.
+
+### LANE_B_GITHUB_POSTGRES_SERVICE
+
+```text
+purpose: default DB proof for implementation (PRIMARY)
+
+db_source: GitHub Actions postgres:16 service container (localhost:5432)
+
+allowed_for:
+  - migrations against disposable CI DB
+  - Prisma runtime tests
+  - DB read/write/update/delete tests
+  - transaction tests
+  - workspace isolation tests
+  - persistence tests for B02-B26
+
+required_status: GITHUB_POSTGRES_SERVICE_VERIFIED
+
+proof_required:
+  - workflow name
+  - workflow path
+  - run ID
+  - run URL (https://github.com/arnab-netizen/opsiq/actions/runs/{RUN_ID})
+  - branch
+  - commit SHA
+  - job name
+  - commands run
+  - exit code
+  - test result summary
+  - relevant log excerpt
+```
+
+Use for: DB-backed slices, persistence, schema migrations, transaction integrity, workspace isolation.
+
+### LANE_C_HOSTED_TEST_DB_SECRET
+
+```text
+purpose: prove rotated Neon TEST_DATABASE_URL works
+
+db_source: GitHub Actions secret or GitHub environment secret named TEST_DATABASE_URL
+
+required_for:
+  - hosted Neon verification claims
+  - environment secret verification claims
+  - final hosted test DB proof
+
+required_status: HOSTED_TEST_DB_VERIFIED
+
+proof_required:
+  - workflow name
+  - workflow path
+  - run ID
+  - run URL
+  - secret name used (not value)
+  - exposed_old_neon_used: false
+  - command list
+  - exit codes
+  - read-only connectivity result
+  - isolated write result if attempted
+
+forbidden:
+  - printing secrets
+  - using old exposed Neon URL (ep-withered-thunder-anpiqk6i-pooler)
+  - migrate reset
+  - db push
+  - truncate
+  - broad delete/update
+```
+
+Use for: After LANE_B passes, verify hosted TEST_DATABASE_URL secret works. Do not run LANE_C first.
+
+### LANE_D_STAGING_READONLY_SMOKE
+
+```text
+purpose: deployment confidence only
+
+allowed:
+  - SELECT 1
+  - migration status
+  - health endpoint
+  - read-only smoke
+
+forbidden:
+  - destructive writes
+  - migrate reset
+  - db push
+  - truncate
+  - delete-all
+
+allowed_status: STAGING_READONLY_SMOKE_PASS
+forbidden_status: FULL_DB_TEST_PASS
+```
+
+Use for: Post-deployment sanity checks, not for slice verification.
+
+## 8.3 Mandatory GitHub Actions Proof for DB-Backed Slices
+
+If `db_required=true`:
+
+1. Claude must add or update DB-backed tests for the slice.
+2. Claude must verify using LANE_B_GITHUB_POSTGRES_SERVICE unless LANE_C is specifically required.
+3. The slice **cannot be marked VERIFIED_COMPLETE** without workflow run proof.
+4. If GitHub CLI is unavailable, Claude must:
+   - Create/update the workflow
+   - Output exact manual GitHub UI steps
+   - Mark slice `GITHUB_DB_PROOF_PENDING_MANUAL_RUN`
+5. Workflow failure: status must be `DB_FAILED_WITH_EVIDENCE` with actual error.
+6. Workflow pass: status may be `DB_VERIFIED_GITHUB_POSTGRES_SERVICE` for that slice only.
+7. Hosted Neon remains unverified unless LANE_C workflow passes (separate from LANE_B).
+
+## 8.4 Required DB-Backed Closeout Format
+
+Every DB-backed slice must include:
+
+```text
+SLICE_DB_CLOSEOUT:
+  slice_id:
+  module:
+  db_required:
+  db_lane_used:
+    - NONE
+    - LANE_A_STATIC
+    - LANE_B_GITHUB_POSTGRES_SERVICE
+    - LANE_C_HOSTED_TEST_DB_SECRET
+    - LANE_D_STAGING_READONLY_SMOKE
+    - BLOCKED
+  workflow_name:
+  workflow_path:
+  workflow_run_id:
+  workflow_run_url:
+  branch:
+  commit_sha:
+  job_names:
+  commands_run:
+  exit_codes:
+  tests_passed:
+  db_operations_verified:
+    - read
+    - write
+    - update
+    - delete
+    - transaction
+    - workspace_isolation
+    - not_applicable
+  local_db_used: true/false
+  hosted_neon_verified: true/false
+  old_exposed_neon_used: false
+  secrets_printed: false
+  persistence_status:
+  schema_status:
+  workspace_isolation_status:
+  status:
+    - PURE_FUNCTION_VERIFIED
+    - CONTRACT_VERIFIED
+    - STATIC_SCHEMA_BUILD_PASS
+    - DB_VERIFIED_GITHUB_POSTGRES_SERVICE
+    - HOSTED_TEST_DB_VERIFIED
+    - GITHUB_DB_PROOF_PENDING_MANUAL_RUN
+    - DB_FAILED_WITH_EVIDENCE
+    - BLOCKED_WITH_EVIDENCE
+  blocked_parts:
+  next_safe_slice:
+```
+
+## 8.5 Hosted Neon Readiness Rule
+
+**Before running LANE_C_HOSTED_TEST_DB_SECRET, all DB-backed slices must first pass LANE_B_GITHUB_POSTGRES_SERVICE where applicable.**
+
+Purpose:
+- Service-container tests catch schema, Prisma, migration, transaction, and workspace isolation defects first.
+- Neon workflow should then only verify hosted connectivity/environment/secret behaviour.
+- If LANE_B fails, investigate local schema/Prisma/migration issues, don't blame Neon.
+- If LANE_B passes and LANE_C fails, investigate hosted DB config/network/secret/migration state.
+
+## 8.6 Required Workflow Policy
+
+### For LANE_B Workflow (`github/workflows/*-db-verification.yml`)
+
+```text
+Required:
+  - workflow_dispatch trigger
+  - postgres:16 service container on localhost:5432
+  - no Neon secret required
+  - no old exposed URL
+  - npm ci or detected package manager install
+  - npx prisma validate
+  - npx prisma generate
+  - npx prisma migrate deploy against service DB
+  - DB-backed tests with exit code capture
+  - upload logs if test fails
+
+Forbidden:
+  - migrate reset
+  - db push
+  - destructive remote DB commands
+  - printing secrets
+  - using old exposed Neon credentials
+```
+
+### For LANE_C Workflow (hosted TEST_DATABASE_URL)
+
+```text
+Required:
+  - workflow_dispatch trigger
+  - use TEST_DATABASE_URL secret or GitHub environment secret
+  - do not print secret
+  - do not use old DATABASE_URL_TEST
+  - npx prisma validate
+  - npx prisma generate
+  - npx prisma migrate status (read-only status check)
+  - read-only SELECT 1
+  - optional isolated write smoke only if DB is test-only
+
+Forbidden:
+  - migrate reset
+  - db push
+  - truncate
+  - broad delete/update
+  - printing secrets
+  - using old exposed credentials
+
+Output:
+  - proof without secrets
+  - workflow run URL
+  - exit codes
+  - connectivity result
+```
+
+## 8.7 Update /continue-post-owner-build Behaviour
+
+The `.claude/commands/continue-post-owner-build.md` file must include:
+
+```text
+Also obey the "DB VERIFICATION DURING IMPLEMENTATION — MANDATORY" section in execution_post_owner_mode.md; it overrides weaker instructions.
+
+Before every B02-B26 slice:
+  1. Read the DB verification section.
+  2. Output SLICE_DB_CLASSIFICATION.
+  3. If db_required=true, plan LANE_B workflow.
+  4. Code the slice.
+  5. Run LANE_B workflow (or mark GITHUB_DB_PROOF_PENDING_MANUAL_RUN).
+  6. Output SLICE_DB_CLOSEOUT with workflow proof.
+  7. Never claim DB-backed completion without LANE_B proof.
+  8. Never claim hosted Neon proof without LANE_C passing.
+```
+
+## 8.8 Status Report Update Requirement
+
+After every slice, Claude must update `POST_OWNER_MODE_STATUS_REPORT.md` with:
+
+```text
+DB_SLICE_STATUS:
+  slice_id:
+  db_required:
+  db_lane_used:
+  lane_b_status:
+  lane_b_workflow_run_url:
+  lane_c_status:
+  lane_c_workflow_run_url:
+  hosted_neon_verified:
+  blocked_parts:
+  next_db_required_action:
+```
+
+## 8.9 Forbidden Generic Claims
+
+Claude must not say:
+- "DB verified" (specify lane: `DB_VERIFIED_GITHUB_POSTGRES_SERVICE`)
+- "runtime proven" (specify: `GITHUB_POSTGRES_SERVICE_VERIFIED` or `HOSTED_TEST_DB_VERIFIED`)
+- "staging proven" (specify: `STAGING_READONLY_SMOKE_PASS`)
+- "hosted DB verified" (specify: `HOSTED_TEST_DB_VERIFIED` via LANE_C)
+- "Neon verified" (specify: `HOSTED_TEST_DB_VERIFIED` via LANE_C)
+- "complete" without lane-specific proof
+- "production ready" without full evidence
+
+Allowed wording:
+- `PURE_FUNCTION_VERIFIED`
+- `STATIC_SCHEMA_BUILD_PASS`
+- `DB_VERIFIED_GITHUB_POSTGRES_SERVICE`
+- `HOSTED_TEST_DB_VERIFIED`
+- `GITHUB_DB_PROOF_PENDING_MANUAL_RUN`
+- `DB_FAILED_WITH_EVIDENCE`
+- `BLOCKED_WITH_EVIDENCE`
+
+---
+
+# 10. B01 — Machine-Readable Business Facts Contract
 
 ## Purpose
 
@@ -675,7 +1015,7 @@ updated_at
 
 ---
 
-# 9. B02 — Data Intake Level 1: CSV/XLSX/Manual
+# 11. B02 — Data Intake Level 1: CSV/XLSX/Manual
 
 ## Scope
 
@@ -726,7 +1066,7 @@ import rollback
 
 ---
 
-# 10. B03 — Data Quality Scoring
+# 12. B03 — Data Quality Scoring
 
 ## Required score dimensions
 
@@ -763,7 +1103,7 @@ Acceptance gates:
 
 ---
 
-# 11. B04 — Evidence Hierarchy
+# 13. B04 — Evidence Hierarchy
 
 Evidence levels:
 
@@ -793,7 +1133,7 @@ Acceptance gates:
 
 ---
 
-# 12. B05 — Owner Data Review/Correction UI
+# 14. B05 — Owner Data Review/Correction UI
 
 Required UI:
 
@@ -819,7 +1159,7 @@ Acceptance gates:
 
 ---
 
-# 13. B06 — Contradiction Resolution Workflow
+# 15. B06 — Contradiction Resolution Workflow
 
 States:
 
@@ -853,7 +1193,7 @@ Acceptance gates:
 
 ---
 
-# 14. B07 — Unit/Currency/Date/Tax Normalization
+# 16. B07 — Unit/Currency/Date/Tax Normalization
 
 Required normalizers:
 
@@ -889,7 +1229,7 @@ Acceptance gates:
 
 ---
 
-# 15. B08 — Owner Constraints Engine Upgrade
+# 17. B08 — Owner Constraints Engine Upgrade
 
 Constraint categories:
 
@@ -926,7 +1266,7 @@ Acceptance gates:
 
 ---
 
-# 16. B09 — Evidence-Backed Diagnosis Upgrade
+# 18. B09 — Evidence-Backed Diagnosis Upgrade
 
 Every diagnosis must include:
 
@@ -956,7 +1296,7 @@ Acceptance gates:
 
 ---
 
-# 17. B10 — Business Harm Guardrails
+# 19. B10 — Business Harm Guardrails
 
 Before action recommendation, check:
 
@@ -982,7 +1322,7 @@ Acceptance gates:
 
 ---
 
-# 18. B11 — Industry-Specific KPI Profiles
+# 20. B11 — Industry-Specific KPI Profiles
 
 Minimum profiles:
 
@@ -1020,7 +1360,7 @@ Acceptance gates:
 
 ---
 
-# 19. B12 — External Systems Connector Layer: Export Imports
+# 21. B12 — External Systems Connector Layer: Export Imports
 
 Scope:
 
@@ -1064,7 +1404,7 @@ Acceptance gates:
 
 ---
 
-# 20. B13 — External Systems Connector Layer: Official API/OAuth
+# 22. B13 — External Systems Connector Layer: Official API/OAuth
 
 Preferred long-term connector path.
 
@@ -1122,7 +1462,7 @@ Acceptance gates:
 
 ---
 
-# 21. B14 — Browser-Assisted Import Restricted Fallback
+# 23. B14 — Browser-Assisted Import Restricted Fallback
 
 This is not normal CRM integration. It is a restricted fallback.
 
@@ -1171,7 +1511,7 @@ Acceptance gates:
 
 ---
 
-# 22. B15 — Real-World Case-Study Benchmark Library
+# 24. B15 — Real-World Case-Study Benchmark Library
 
 Allowed sources only:
 
@@ -1221,7 +1561,7 @@ Acceptance gates:
 
 ---
 
-# 23. B16 — Public Dataset Test Harness
+# 25. B16 — Public Dataset Test Harness
 
 Dataset types:
 
@@ -1248,7 +1588,7 @@ Acceptance gates:
 
 ---
 
-# 24. B17 — Synthetic Business Scenario Simulator
+# 26. B17 — Synthetic Business Scenario Simulator
 
 Required scenarios:
 
@@ -1288,7 +1628,7 @@ Acceptance gates:
 
 ---
 
-# 25. B18 — Adversarial Test Suite
+# 27. B18 — Adversarial Test Suite
 
 Adversarial cases:
 
@@ -1317,7 +1657,7 @@ Acceptance gates:
 
 ---
 
-# 26. B19 — Blind Outcome Testing
+# 28. B19 — Blind Outcome Testing
 
 Structure:
 
@@ -1339,7 +1679,7 @@ Acceptance gates:
 
 ---
 
-# 27. B20 — Consultant-Grade Scoring Rubrics
+# 29. B20 — Consultant-Grade Scoring Rubrics
 
 Dimensions:
 
@@ -1378,7 +1718,7 @@ Acceptance gates:
 
 ---
 
-# 28. B21 — Controlled Learning From Every Output
+# 30. B21 — Controlled Learning From Every Output
 
 Learning layers:
 
@@ -1425,7 +1765,7 @@ Acceptance gates:
 
 ---
 
-# 29. B22 — Online Growth Intelligence
+# 31. B22 — Online Growth Intelligence
 
 Purpose:
 
@@ -1473,7 +1813,7 @@ Acceptance gates:
 
 ---
 
-# 30. B23 — Sales Pitch / Outreach Generator
+# 32. B23 — Sales Pitch / Outreach Generator
 
 Inputs:
 
@@ -1511,7 +1851,7 @@ Acceptance gates:
 
 ---
 
-# 31. B24 — Private Owner Command Mode
+# 33. B24 — Private Owner Command Mode
 
 Purpose: private high-power operating mode before public SaaS.
 
@@ -1540,7 +1880,7 @@ Acceptance gates:
 
 ---
 
-# 32. B25 — Product Integration Layer
+# 34. B25 — Product Integration Layer
 
 Final user journey:
 
@@ -1574,7 +1914,7 @@ Acceptance gates:
 
 ---
 
-# 33. B26 — Governance / Fail-Closed Final Hardening
+# 35. B26 — Governance / Fail-Closed Final Hardening
 
 Required final checks:
 
@@ -1610,7 +1950,7 @@ FINAL_POST_OWNER_MODE_VERIFICATION:
 
 ---
 
-# 34. Zero-Prompt Build Loop Command
+# 36. Zero-Prompt Build Loop Command
 
 Create command file:
 
@@ -1660,7 +2000,7 @@ After the first setup, owner can use:
 
 ---
 
-# 35. Required Status Report
+# 37. Required Status Report
 
 Maintain:
 
@@ -1711,7 +2051,7 @@ Status report is not proof. Repo evidence wins.
 
 ---
 
-# 36. First Claude Prompt
+# 38. First Claude Prompt
 
 Use this after copying this file into the repo:
 
@@ -1728,7 +2068,7 @@ After that use:
 
 ---
 
-# 37. v2 Hostile Audit Hardening Addendum — Overrides All Weaker Wording
+# 39. v2 Hostile Audit Hardening Addendum — Overrides All Weaker Wording
 
 This addendum fixes loopholes found after a hostile audit of v1. If any earlier section is weaker, this section wins.
 
@@ -2413,7 +2753,7 @@ If any are false, Claude must fix `execution_post_owner_mode.md` before proceedi
 
 ---
 
-# 38. v3 Extreme Hostile Audit Hardening Addendum — Overrides All Weaker Wording
+# 40. v3 Extreme Hostile Audit Hardening Addendum — Overrides All Weaker Wording
 
 This addendum fixes remaining loopholes found after a second hostile audit of v2. If any earlier section is weaker or ambiguous, this section wins.
 
