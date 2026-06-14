@@ -93,6 +93,25 @@ export async function runConsultingPipeline(
 
     const businessCondition = engagement.conditionProfiles[0];
 
+    // M01 Gate: Validate business condition profile (required for diagnosis confidence)
+    const conditionValidation = validateBusinessConditionProfile(businessCondition);
+    if (!conditionValidation.isValid) {
+      logger.warn("Consulting pipeline: Business condition profile incomplete", {
+        engagementId,
+        issues: conditionValidation.missingFields,
+      });
+      return {
+        status: "INSUFFICIENT_DATA",
+        decisionMemo: null,
+        recommendations: [],
+        actions: [],
+        warnings: [
+          "Business condition profile incomplete or missing. Required fields: business status, severity, urgency, cash pressure, and maturity assessments.",
+          ...conditionValidation.missingFields.map(f => `Missing: ${f}`),
+        ],
+      };
+    }
+
     const input: ConsultingEngineInput = {
       engagementId,
       businessProblem: engagement.description || engagement.title || "Business recovery engagement",
@@ -100,8 +119,7 @@ export async function runConsultingPipeline(
       clientContext: {
         industry: engagement.client.industry || "unknown",
         size: engagement.client.size || "unknown",
-        revenueImpactUrgency:
-          businessCondition?.urgencyLevel?.toUpperCase() || "HIGH",
+        revenueImpactUrgency: businessCondition.urgencyLevel.toUpperCase(),
       },
     };
 
@@ -218,4 +236,35 @@ function mapFindingToConfidence(severity: string): string {
     low: ConfidenceLevel.LOW,
   };
   return mapping[severity.toLowerCase()] || ConfidenceLevel.PROVISIONAL;
+}
+
+function validateBusinessConditionProfile(profile: any): { isValid: boolean; missingFields: string[] } {
+  const missingFields: string[] = [];
+
+  if (!profile) {
+    return { isValid: false, missingFields: ["Business condition profile not found"] };
+  }
+
+  // Check required fields for M01 diagnosis gate
+  const requiredFields = [
+    { field: "businessStatus", label: "business status" },
+    { field: "severityScore", label: "severity score" },
+    { field: "urgencyLevel", label: "urgency level" },
+    { field: "cashPressureLevel", label: "cash pressure level" },
+    { field: "marginPressureLevel", label: "margin pressure level" },
+    { field: "processMaturityLevel", label: "process maturity" },
+    { field: "managementMaturityLevel", label: "management maturity" },
+    { field: "executionCapacityLevel", label: "execution capacity" },
+  ];
+
+  for (const { field, label } of requiredFields) {
+    if (!profile[field]) {
+      missingFields.push(label);
+    }
+  }
+
+  return {
+    isValid: missingFields.length === 0,
+    missingFields,
+  };
 }
