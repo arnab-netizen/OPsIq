@@ -69,12 +69,12 @@ describe("B06 contradiction resolver — detection and classification", () => {
         ...contract.financials,
         {
           fact_id: "revenue_conflict_test",
-          metric: "revenue",
-          value: 80000, // Different from existing revenue
+          metric: "monthly_revenue",
+          value: 450000, // Different from existing monthly_revenue (480000)
           unit: "INR",
           currency: "INR",
-          period_start: "2026-05-01",
-          period_end: "2026-05-31",
+          period_start: "2026-04-01",
+          period_end: "2026-04-30",
           source_document_id: "conflicting_source",
           source_location: "Alternative statement",
           extraction_method: "manual_entry",
@@ -99,16 +99,25 @@ describe("B06 contradiction resolver — detection and classification", () => {
     // Add a manual entry that conflicts with system export
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "manual_owner_entry",
+          kind: "manual_owner_entry" as const,
+          filename: "owner_entry.txt",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       financials: [
         ...contract.financials,
         {
           fact_id: "owner_cost_estimate",
-          metric: "fixed_costs",
-          value: 30000, // Different from system export
+          metric: "chemical_cost",
+          value: 75000, // Different from system export (96000)
           unit: "INR",
           currency: "INR",
-          period_start: "2026-05-01",
-          period_end: "2026-05-31",
+          period_start: "2026-04-01",
+          period_end: "2026-04-30",
           source_document_id: "manual_owner_entry",
           source_location: "Owner estimate",
           extraction_method: "owner_estimate",
@@ -123,7 +132,7 @@ describe("B06 contradiction resolver — detection and classification", () => {
     const resolved = detectAndResolveContradictions(conflictingContract);
     expect(resolved.contradictions.length).toBeGreaterThan(0);
 
-    const costConflict = resolved.contradictions.find((c) => c.description.includes("fixed_costs"));
+    const costConflict = resolved.contradictions.find((c) => c.description.includes("chemical_cost"));
     expect(costConflict).toBeTruthy();
   });
 });
@@ -134,16 +143,25 @@ describe("B06 contradiction resolver — severity classification", () => {
 
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "source_2",
+          kind: "csv" as const,
+          filename: "alt_source.csv",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       financials: [
         ...contract.financials,
         {
           fact_id: "revenue_minor_conflict",
-          metric: "revenue",
-          value: 101000, // 1% higher than first revenue
+          metric: "monthly_revenue",
+          value: 485000, // ~1% higher than first revenue (480000)
           unit: "INR",
           currency: "INR",
-          period_start: "2026-05-01",
-          period_end: "2026-05-31",
+          period_start: "2026-04-01",
+          period_end: "2026-04-30",
           source_document_id: "source_2",
           source_location: "Alternative source",
           extraction_method: "csv_import",
@@ -167,16 +185,25 @@ describe("B06 contradiction resolver — severity classification", () => {
 
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "source_material",
+          kind: "pdf_statement" as const,
+          filename: "material_statement.pdf",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       financials: [
         ...contract.financials,
         {
           fact_id: "revenue_material_conflict",
-          metric: "revenue",
-          value: 130000, // 30% higher than first revenue
+          metric: "monthly_revenue",
+          value: 624000, // 30% higher than first revenue (480000)
           unit: "INR",
           currency: "INR",
-          period_start: "2026-05-01",
-          period_end: "2026-05-31",
+          period_start: "2026-04-01",
+          period_end: "2026-04-30",
           source_document_id: "source_material",
           source_location: "Material difference source",
           extraction_method: "ocr",
@@ -198,16 +225,25 @@ describe("B06 contradiction resolver — severity classification", () => {
 
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "source_critical",
+          kind: "manual_owner_entry" as const,
+          filename: "critical_statement.txt",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       financials: [
         ...contract.financials,
         {
           fact_id: "revenue_critical_conflict",
-          metric: "revenue",
-          value: 180000, // 80% higher than first revenue
+          metric: "monthly_revenue",
+          value: 864000, // 80% higher than first revenue (480000)
           unit: "INR",
           currency: "INR",
-          period_start: "2026-05-01",
-          period_end: "2026-05-31",
+          period_start: "2026-04-01",
+          period_end: "2026-04-30",
           source_document_id: "source_critical",
           source_location: "Critically different source",
           extraction_method: "manual_entry",
@@ -233,16 +269,25 @@ describe("B06 contradiction resolver — resolution logic", () => {
     // L5 should win automatically
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "manual_owner_entry",
+          kind: "manual_owner_entry" as const,
+          filename: "owner_entry.txt",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       financials: [
         contract.financials[0], // Original (from bank_api via service_business)
         {
           fact_id: "revenue_manual_override",
-          metric: "revenue",
-          value: 95000,
+          metric: "monthly_revenue",
+          value: 450000,
           unit: "INR",
           currency: "INR",
-          period_start: "2026-05-01",
-          period_end: "2026-05-31",
+          period_start: "2026-04-01",
+          period_end: "2026-04-30",
           source_document_id: "manual_owner_entry",
           source_location: "Owner estimate",
           extraction_method: "manual_entry",
@@ -295,11 +340,20 @@ describe("B06 contradiction resolver — acceptance gates", () => {
 
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "pdf_statement",
+          kind: "pdf_statement" as const,
+          filename: "plnl_statement.pdf",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       financials: [
         ...contract.financials,
         {
           fact_id: "plnl_revenue",
-          metric: "revenue",
+          metric: "monthly_revenue",
           value: 90000,
           unit: "INR",
           currency: "INR",
@@ -326,6 +380,21 @@ describe("B06 contradiction resolver — acceptance gates", () => {
 
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "manual_owner_entry",
+          kind: "manual_owner_entry" as const,
+          filename: "owner_claim.txt",
+          upload_timestamp: new Date().toISOString(),
+        },
+        {
+          source_document_id: "crm_export",
+          kind: "crm_system_export" as const,
+          filename: "crm_export.csv",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       sales: [
         {
           fact_id: "owner_claim_revenue",
@@ -372,6 +441,21 @@ describe("B06 contradiction resolver — acceptance gates", () => {
 
     const conflictingContract: BusinessFactsContract = {
       ...contract,
+      source_documents: [
+        ...contract.source_documents,
+        {
+          source_document_id: "csv_1",
+          kind: "csv" as const,
+          filename: "data_1.csv",
+          upload_timestamp: new Date().toISOString(),
+        },
+        {
+          source_document_id: "csv_2",
+          kind: "csv" as const,
+          filename: "data_2.csv",
+          upload_timestamp: new Date().toISOString(),
+        },
+      ],
       financials: [
         {
           fact_id: "cost_1",
