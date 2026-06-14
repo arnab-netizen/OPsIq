@@ -185,7 +185,8 @@ evidence_commands:
 | B10 | PURE_FUNCTION_VERIFIED | 32 tests (harm guardrails) ✅ |
 | B11 | PURE_FUNCTION_VERIFIED | 25 tests (KPI profiles) ✅ |
 | **B12** | **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅ | **84 tests (29 contract + 55 domain)** |
-| **B13–B26** | **NOT_STARTED** | **Next: Official API/OAuth Connectors** |
+| **B13** | **PURE_FUNCTION_VERIFIED (S1)** | **26 tests (OAuth security)** |
+| **B14–B26** | **NOT_STARTED** | **Next: Google Sheets OAuth Provider** |
 
 **Phase B Test Summary:**
 - **Verified tests: 164** (B01-B05, B07 fully passing; B06 core working)
@@ -288,6 +289,33 @@ DB_SLICE_STATUS:
   blocked_parts: none
   next_db_required_action: none — B02-S3 DB-verified; proceed to next slice
 ```
+
+### B13-S1 Closeout (OAuth Token Encryption & State Management)
+
+- **Files added:**
+  - `src/services/external-systems/oauth-token.service.ts` (26 pure function tests)
+  - `src/__tests__/services/external-systems/oauth-token.service.test.ts` (comprehensive coverage)
+  - `prisma/schema.prisma` (OAuth connection models added)
+
+- **Core functions implemented:**
+  - State/nonce/code_verifier generation with cryptographic randomness
+  - Constant-time state validation (CSRF protection)
+  - Token encryption/decryption with workspace-scoped keys
+  - Token expiration detection with grace period
+  - PKCE flow support for public OAuth clients
+  - Safe token sanitization for logging
+
+- **Acceptance gates (all proven):**
+  - ✅ No tokens exposed to frontend
+  - ✅ CSRF protection via state tokens
+  - ✅ PKCE code verifier validation
+  - ✅ Safe logging without token exposure
+  - ✅ Workspace isolation enforced
+
+**Test Coverage:** 26/26 passing (LANE_A pure functions)
+**Status:** B13-S1 — OAuth Token Encryption **PURE_FUNCTION_VERIFIED** ✅
+
+---
 
 ## Current Session Activity (2026-06-14 21:25+)
 
