@@ -175,7 +175,8 @@ evidence_commands:
 |--------|--------|----------|
 | B01 Machine-readable business facts contract | VERIFIED_COMPLETE (contract + adapter scope) | slices B01-S1, B01-S2 |
 | B02 Data Intake Level 1 (CSV/XLSX/manual) | B02-S1 + B02-S2 + B02-S3 DB_VERIFIED_GITHUB_POSTGRES_SERVICE | B02-S1 file upload (36) + B02-S2 column mapping LANE_B (30) + B02-S3 bridge-to-Module-10 LANE_B (5 DB) all green |
-| B03–B26 remaining | NOT_STARTED | B03 Data Quality Scoring next; B04+ blocked in order |
+| B03 Data Quality Scoring | PURE_FUNCTION_VERIFIED (LANE_A) | 7 dimensions + DATA_QUALITY_SCORE + <50 confidence-cap rule; 9 tests, tsc exit 0 |
+| B04–B26 remaining | NOT_STARTED | B04 Evidence Hierarchy next; B05+ blocked in order |
 
 ### B01-S2 Closeout (intake → contract adapter)
 
@@ -289,7 +290,23 @@ B02-S3 **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅ (corrected scope: bridge to M
 - B02 core acceptance gates met: upload, classify, parse, map, validate, persist (via Module 10), owner-confirm (via Module 10), import safety
 - Optional B02-S4+ (not blocking B03): XLSX format support, route/UI wiring for the bridge
 
-**Next slice:** B03 — Data Quality Scoring (next in Phase B dependency order).
+### B03 Closeout (Data Quality Scoring)
+
+- **Files added:**
+  - `src/domain/business-facts/data-quality.ts` (pure scorer + `withDataQualityScore`)
+  - `src/__tests__/business-facts/data-quality.test.ts` (9 tests)
+- **Proves:** 7 dimensions (completeness, consistency, recency, granularity, source_reliability, extraction_confidence, auditability) → combined DATA_QUALITY_SCORE (0..100); §12 hard rule (score < 50 blocks high-confidence recommendations) via tier + numeric cap; fills the `confidence.data_quality_score` field B01 reserved without mutating the contract.
+- **Acceptance gates (all green):** clean > incomplete; contradiction downgrades consistency; manual-only < source-backed; low quality caps confidence.
+
+```text
+SLICE_DB_CLASSIFICATION (B03):
+  db_required: false
+  db_lane_used: LANE_A_STATIC
+  status: PURE_FUNCTION_VERIFIED
+  gates: tsc --noEmit exit 0 · business-facts suite 29/29 · 9 B03 tests green
+```
+
+**Next slice:** B04 — Evidence Hierarchy (next in Phase B dependency order).
 
 DB write tests for current Owner Mode (M01-M15) remain deferred until PostgreSQL credentials are available (P2 blocker DB-LOCAL-CREDS).
 
