@@ -319,23 +319,24 @@ functional framework (distinct from Module 1-12 lens-based framework above).
 | M07 | Owner Dashboard | FOUND_EXISTING_UNVERIFIED | Code present | Dashboard exists; data source proof needed |
 | M08 | Operator / Action Completion | FOUND_EXISTING_UNVERIFIED | Code present | Action completion flow exists; authorization tests needed |
 | M09 | Verification / Outcome Tracking | FOUND_EXISTING_UNVERIFIED | Code present | Verification service exists; state-machine tests needed |
-| M10 | Constraint Handling | NOT_STARTED | — | — |
+| M10 | Constraint Handling | TESTED_PARTIAL | 14 unit tests + code inspection | Constraints identified from evidence patterns; blocking relationships enforced; release paths computed |
 | M11 | Audit Logging / Traceability | FOUND_EXISTING_UNVERIFIED | Code present | Audit events emitted; critical-path coverage needs audit |
 | M12 | Access Control / Workspace Isolation | TESTED_PARTIAL | 12 unit tests + code inspection | Cross-workspace access denial proven by automated tests; role-based permissions validated; enforcement patterns verified |
 | M13 | Demo / Seed / Smoke Data Integrity | FOUND_EXISTING_UNVERIFIED | Code present | Demo seed scripts exist; isolation markers need verification |
 | M14 | Error Handling / Fail-Closed Behaviour | FOUND_EXISTING_UNVERIFIED | Code inspection | Error classification exists; fail-closed contract needs formal test |
-| M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 246 test files, 6014 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
+| M15 | Tests / Smoke / CI Verification | TESTED_PARTIAL | Test suite passes | 247 test files, 6028 tests pass; no DB-required tests run (DATABASE_URL unavailable); smoke tests exist |
 
 **Highest-priority incomplete slices:**
-1. M10 Constraint handling (P1 business logic)
-2. M02 Data intake validation (P1 persistence)
-3. M03 Diagnosis acceptance criteria verification (P2 correctness)
+1. M02 Data intake validation (P1 persistence)
+2. M03 Diagnosis acceptance criteria verification (P2 correctness)
+3. M06 Action atomicity and transaction safety (P2 data integrity)
 4. M01 Full integration test (P0 correctness gate) — deferred (DB unavailable)
 
 **Completed slices:**
 - M01_SLICE1: Business condition profile gates diagnosis (TESTED_PARTIAL)
-- M12_SLICE1: Cross-workspace access denial negative tests (TESTED_PARTIAL)
 - M04_SLICE1: Evidence cross-workspace isolation tests (TESTED_PARTIAL)
+- M12_SLICE1: Cross-workspace access denial negative tests (TESTED_PARTIAL)
+- M10_SLICE1: Constraint violation detection tests (TESTED_PARTIAL)
 
 ### Branch Architecture
 
@@ -355,7 +356,9 @@ not a build blocker) and the public-release gates toward OWNER_MODE_FULL_CAPACIT
 
 **M01-M15 Framework Progress:**
 - ✓ M01 gate implemented (diagnosis enforces business condition profile completeness)
-- ✓ M12 cross-workspace access denial proven (12 automated tests)
 - ✓ M04 evidence workspace isolation proven (9 automated tests)
-- ✓ Test files: 246 (6014 tests), TypeScript: ✓ Clean
-- Next: M10 constraint handling (P1 business logic) or M02 data intake validation (P1 persistence)
+- ✓ M10 constraint violation detection proven (14 automated tests)
+- ✓ M12 cross-workspace access denial proven (12 automated tests)
+- ✓ Test files: 247 (6028 tests), TypeScript: ✓ Clean
+- 4 slices completed · 11 remaining · Est. 3-4 more runs to completion
+- Next: M02 data intake validation (P1 persistence) or M03 diagnosis criteria (P2 correctness)
