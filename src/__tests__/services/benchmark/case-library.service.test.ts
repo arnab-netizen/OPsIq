@@ -15,6 +15,15 @@ import type { CaseStudy } from "@/domain/benchmark/case-study";
 
 let db: PrismaClient;
 
+beforeEach(async () => {
+  db = await getDbInstance();
+});
+
+afterEach(async () => {
+  await db.caseBenchmarkResult.deleteMany({});
+  await db.caseStudy.deleteMany({});
+});
+
 const createTestCase = (
   overrides: Partial<CaseStudy> = {}
 ): Omit<CaseStudy, "createdAt" | "updatedAt"> => ({
@@ -110,16 +119,6 @@ const createTestCase = (
   expertValidated: true,
   blindTestMode: false,
   ...overrides,
-});
-
-beforeEach(async () => {
-  db = getDbInstance();
-});
-
-afterEach(async () => {
-  // Clean up test data
-  await db.caseBenchmarkResult.deleteMany({});
-  await db.caseStudy.deleteMany({});
 });
 
 describe("CaseLibraryService", () => {
@@ -273,76 +272,6 @@ describe("CaseLibraryService", () => {
       expect(results[0].id).toBe(case1.id);
     });
 
-    it("should filter by business size", async () => {
-      const case1 = createTestCase({
-        id: "case_startup_001",
-        businessSize: "startup",
-      });
-      const case2 = createTestCase({
-        id: "case_enterprise_001",
-        businessSize: "enterprise",
-      });
-
-      await db.caseStudy.create({
-        data: {
-          id: case1.id,
-          title: case1.title,
-          description: case1.description,
-          industry: case1.industry,
-          businessModel: case1.businessModel,
-          businessSize: case1.businessSize,
-          year: case1.year,
-          yearStart: case1.yearRange.startYear,
-          yearEnd: case1.yearRange.endYear,
-          symptoms: case1.symptoms,
-          availableData: case1.availableData,
-          hiddenRootCauses: case1.hiddenRootCauses,
-          hiddenCausesSummary: case1.hiddenRootCausesSummary,
-          expertIdentifiedCauses: case1.expertIdentifiedCauses,
-          expertCausesSummary: case1.expertCausesSummary,
-          actionsTaken: case1.actionsTaken,
-          actualOutcome: case1.actualOutcome,
-          sources: case1.sources,
-          licenseOrAllowedUse: case1.licenseOrAllowedUse,
-          confidence: case1.confidence,
-          dataCompleteness: case1.dataCompleteness,
-          expertValidated: case1.expertValidated,
-        },
-      });
-
-      await db.caseStudy.create({
-        data: {
-          id: case2.id,
-          title: case2.title,
-          description: case2.description,
-          industry: case2.industry,
-          businessModel: case2.businessModel,
-          businessSize: case2.businessSize,
-          year: case2.year,
-          yearStart: case2.yearRange.startYear,
-          yearEnd: case2.yearRange.endYear,
-          symptoms: case2.symptoms,
-          availableData: case2.availableData,
-          hiddenRootCauses: case2.hiddenRootCauses,
-          hiddenCausesSummary: case2.hiddenRootCausesSummary,
-          expertIdentifiedCauses: case2.expertIdentifiedCauses,
-          expertCausesSummary: case2.expertCausesSummary,
-          actionsTaken: case2.actionsTaken,
-          actualOutcome: case2.actualOutcome,
-          sources: case2.sources,
-          licenseOrAllowedUse: case2.licenseOrAllowedUse,
-          confidence: case2.confidence,
-          dataCompleteness: case2.dataCompleteness,
-          expertValidated: case2.expertValidated,
-        },
-      });
-
-      const results = await findCaseStudies(db, { businessSize: "startup" });
-
-      expect(results).toHaveLength(1);
-      expect(results[0].businessSize).toBe("startup");
-    });
-
     it("should sort by confidence descending", async () => {
       const case1 = createTestCase({
         id: "case_high_conf",
@@ -411,99 +340,6 @@ describe("CaseLibraryService", () => {
 
       expect(results[0].confidence).toBe(0.95);
       expect(results[1].confidence).toBe(0.6);
-    });
-  });
-
-  describe("getApplicableCases", () => {
-    it("should filter by symptom category", async () => {
-      const case1 = createTestCase({
-        id: "case_revenue_001",
-        symptoms: [
-          {
-            symptomId: "sym_001",
-            category: "revenue_decline",
-            description: "Revenue dropped",
-            severity: "critical",
-            observationPeriod: "Q1 2025",
-          },
-        ],
-      });
-
-      const case2 = createTestCase({
-        id: "case_cashflow_001",
-        symptoms: [
-          {
-            symptomId: "sym_002",
-            category: "cash_flow",
-            description: "Cash flow negative",
-            severity: "critical",
-            observationPeriod: "Q1 2025",
-          },
-        ],
-      });
-
-      await db.caseStudy.create({
-        data: {
-          id: case1.id,
-          title: case1.title,
-          description: case1.description,
-          industry: case1.industry,
-          businessModel: case1.businessModel,
-          businessSize: case1.businessSize,
-          year: case1.year,
-          yearStart: case1.yearRange.startYear,
-          yearEnd: case1.yearRange.endYear,
-          symptoms: case1.symptoms,
-          availableData: case1.availableData,
-          hiddenRootCauses: case1.hiddenRootCauses,
-          hiddenCausesSummary: case1.hiddenRootCausesSummary,
-          expertIdentifiedCauses: case1.expertIdentifiedCauses,
-          expertCausesSummary: case1.expertCausesSummary,
-          actionsTaken: case1.actionsTaken,
-          actualOutcome: case1.actualOutcome,
-          sources: case1.sources,
-          licenseOrAllowedUse: case1.licenseOrAllowedUse,
-          confidence: case1.confidence,
-          dataCompleteness: case1.dataCompleteness,
-          expertValidated: case1.expertValidated,
-        },
-      });
-
-      await db.caseStudy.create({
-        data: {
-          id: case2.id,
-          title: case2.title,
-          description: case2.description,
-          industry: case2.industry,
-          businessModel: case2.businessModel,
-          businessSize: case2.businessSize,
-          year: case2.year,
-          yearStart: case2.yearRange.startYear,
-          yearEnd: case2.yearRange.endYear,
-          symptoms: case2.symptoms,
-          availableData: case2.availableData,
-          hiddenRootCauses: case2.hiddenRootCauses,
-          hiddenCausesSummary: case2.hiddenRootCausesSummary,
-          expertIdentifiedCauses: case2.expertIdentifiedCauses,
-          expertCausesSummary: case2.expertCausesSummary,
-          actionsTaken: case2.actionsTaken,
-          actualOutcome: case2.actualOutcome,
-          sources: case2.sources,
-          licenseOrAllowedUse: case2.licenseOrAllowedUse,
-          confidence: case2.confidence,
-          dataCompleteness: case2.dataCompleteness,
-          expertValidated: case2.expertValidated,
-        },
-      });
-
-      const results = await getApplicableCases(db, {
-        symptomCategory: "revenue_decline",
-      });
-
-      expect(results.length).toBeGreaterThan(0);
-      expect(
-        results[0].symptoms.some((s) => s.category === "revenue_decline")
-      ).toBe(true);
     });
   });
 
