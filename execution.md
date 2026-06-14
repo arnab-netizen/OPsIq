@@ -1,2057 +1,1493 @@
-OpsIQ Owner Mode Execution Roadmap
+# OpsIQ Full Owner Mode — Hostile Audit + Slice Execution Protocol v3
 
-Purpose
+## Status of this file
 
-OpsIQ Owner Mode must become a full-capacity owner command system for real business operators.
+This file replaces the previous `execution.md` protocol if the goal is strict, hostile, skeptical execution. Earlier versions were directionally useful but had loopholes that could allow broad interpretation, undocumented acceptance, weak module proof, false completion, build-loop drift, command misuse, and status-report trust without repo proof.
 
-The end product must help an owner:
+This v3 protocol is intentionally stricter. It includes the additional hostile-audit hardening rules added after auditing the zero-prompt build-loop version. It forces repo-first inspection, explicit module proof, smallest-slice implementation, evidence-backed closeout, negative testing, status discipline, and no completion claims without command evidence.
 
-1. understand the real condition of the business,
-2. identify survival risks,
-3. identify profit leaks,
-4. identify growth opportunities,
-5. choose the safest highest-impact next action,
-6. assign and execute work,
-7. verify whether the action improved the business,
-8. learn only from verified outcomes,
-9. repeat the cycle across money, sales, operations, marketing, staff, customers, SOPs, strategy, and multiple businesses.
+---
 
-The system must not become a collection of disconnected pages. Every module must plug into the same owner operating loop:
+# 0. Controlling Principle
 
-Input Data
-→ Diagnosis
-→ Severity Ranking
-→ Recommendation
-→ Action Plan
-→ Execution Tracking
-→ Verification
-→ Dashboard Update
-→ Next Cycle
+Claude must treat every Full Owner Mode module as incomplete until the repository proves otherwise.
 
-The goal is not to create a demo. The goal is to create a reliable owner operating system that can be used on real businesses without hand-holding.
+Evidence hierarchy:
 
-⸻
+```text
+1. Passing command output from current repo state
+2. Tests that assert the required behaviour
+3. Runtime/API/smoke proof
+4. Implementation code wired to product flow
+5. Persistence schema and migrations
+6. Status documentation
+7. Prior chat claims
+```
 
-0. Current Strategic Rule
+Only levels 1–4 can prove implementation. Status documentation and chat claims are never proof by themselves.
 
-Owner Mode First
+---
 
-Public SaaS, Product Hunt, billing, pricing, marketing, and Module 2+ public launch work are frozen until Owner Mode is proven.
+# 1. Absolute Prohibitions
 
-Current priority:
+Claude must not:
 
-Finish Owner Mode foundation
-→ prove it on real/staging runtime
-→ build full owner capacity module by module
-→ only then resume public/SaaS launch work
+```text
+- claim COMPLETE without command evidence
+- start coding before repo reality scan and module audit
+- use prior chat/status reports as proof of completion
+- use UI presence as proof of backend functionality
+- use mocked/demo-only success as proof of production path
+- skip negative tests for auth, bad input, missing data, and cross-workspace access
+- weaken existing tests, wrappers, auth checks, or validation to make tests pass
+- hide failing commands behind “environment issue” without exact error output
+- retry unavailable DB/Docker repeatedly instead of reporting exact blocker
+- broad-rewrite current modules unless repo evidence proves existing path is unusable
+- add future/post-owner modules before current Full Owner Mode is verified
+- implement CRM/browser/API/import/simulation/learning/growth modules in this phase
+```
 
-Tumbledry Mukundapur may be used as the first real validation business, but the product must remain generic and reusable for any owner-operated business.
+---
 
-Do not hardcode Tumbledry logic into core product code.
+# 2. Allowed Status Values
 
-⸻
+Use only these status values:
 
-1. Non-Negotiable Build Principles
+```text
+NOT_STARTED
+FOUND_EXISTING_UNVERIFIED
+PARTIAL_IMPLEMENTATION
+IMPLEMENTED_UNTESTED
+TESTED_PARTIAL
+RUNTIME_DB_UNVERIFIED
+BLOCKED_WITH_EVIDENCE
+VERIFIED_COMPLETE
+```
 
-1.1 No False Green
+Definitions:
 
-Claude must never mark a phase complete unless all required gates pass.
+```text
+NOT_STARTED:
+  No meaningful implementation found.
 
-A phase is not complete if:
+FOUND_EXISTING_UNVERIFIED:
+  Files or functions exist but wiring/tests/runtime proof are missing.
 
-* code compiles but tests fail,
-* tests pass locally but CI is red,
-* CI passes but runtime is unverified,
-* runtime works only with mock data,
-* data is written but not visible in UI,
-* UI displays data but verification loop is incomplete,
-* migration exists but has not been applied to real/staging DB,
-* feature works only for one hardcoded business,
-* security/auth/tenant isolation is untested,
-* errors are hidden, skipped, or renamed instead of fixed.
+PARTIAL_IMPLEMENTATION:
+  Some implementation exists but required behaviour is missing.
 
-1.2 Backbone First
+IMPLEMENTED_UNTESTED:
+  Code exists but no targeted test has proven the behaviour.
 
-Always fix root/backbone issues before add-on branch issues.
+TESTED_PARTIAL:
+  Some tests pass but not the full module gate.
 
-Backbone issues include:
+RUNTIME_DB_UNVERIFIED:
+  Static/unit proof exists, but DB/runtime path could not be verified because the exact infrastructure command failed.
 
-* database schema,
-* migrations,
-* auth and authorization,
-* tenant/workspace isolation,
-* owner role gating,
-* API contracts,
-* persistence correctness,
-* deterministic diagnosis pipeline,
-* action/verification loop,
-* CI gates,
-* deployment proof,
-* real/staging runtime proof.
+BLOCKED_WITH_EVIDENCE:
+  Progress is blocked by exact repo/environment constraint with command output.
 
-Add-on branch issues include:
+VERIFIED_COMPLETE:
+  Full module/slice gate passed with implementation, wiring, persistence where required, negative tests, and command evidence.
+```
 
-* UI polish,
-* labels,
-* copy,
-* chart formatting,
-* extra filters,
-* additional templates,
-* optional exports,
-* Product Hunt polish,
-* billing,
-* marketing pages.
+Forbidden labels:
 
-Do not work on add-on branches while a backbone gate is red.
+```text
+DONE
+COMPLETE
+FIXED
+READY
+PRODUCTION READY
+CONSULTANT-GRADE
+FULLY IMPLEMENTED
+```
 
-1.3 Evidence Over Claims
+---
 
-Every completion report must include evidence:
+# 3. Repo Reality Scan — Mandatory First Step
 
-* files changed,
-* commands run,
-* exact results,
-* tests passed/failed,
-* CI status if available,
-* screenshots/logs only when needed,
-* migration status if DB touched,
-* runtime proof if feature is runtime-facing.
+No implementation may start before this section is completed.
 
-Never say “complete” without proof.
+## 3.1 Required discovery commands
 
-1.4 Fail Closed
+Run from repo root:
 
-If a required condition is missing, the system must fail safely.
-
-Examples:
-
-* missing auth → reject,
-* missing workspace → reject,
-* wrong role → reject,
-* missing capability → reject,
-* bad diagnostic key → reject,
-* missing DB env → fail clearly,
-* invalid state transition → reject,
-* cross-tenant access → 404/403 as appropriate,
-* unverified action → never mark successful,
-* failed verification → mark disputed/unverified, not complete.
-
-1.5 No Broad Refactors During Gate Fixes
-
-When fixing a gate:
-
-* fix the direct root cause,
-* avoid unrelated cleanup,
-* avoid module expansion,
-* avoid design changes,
-* avoid changing tests to fit broken code,
-* avoid reducing coverage.
-
-⸻
-
-2. Global Claude Execution Loop
-
-Claude must use this loop for every build cycle.
-
-2.1 Single Build Loop Command
-
-When instructed with:
-
-/continue-owner-mode-build
-
-Claude must do the following:
-
-1. read this EXECUTION.md,
-2. identify the current phase and first incomplete gate,
-3. inspect current repo status,
-4. refuse to jump ahead if a prior gate is incomplete,
-5. implement only the next allowed slice,
-6. run all required verification,
-7. create/update the relevant proof report,
-8. commit and push only if explicitly authorized by the current task or if this file says the phase requires auto-commit after green gates,
-9. report status using the required format.
-
-Claude must not ask “what next?” if the next incomplete gate is clear from this file.
-
-2.2 Required Start-of-Loop Checks
-
-Every loop begins with:
-
+```bash
 git status --short
 git branch --show-current
-git log --oneline -8
-
-Then Claude must identify:
-
-Current branch:
-Current HEAD:
-Working tree clean:
-Current phase:
-Current incomplete gate:
-Next allowed task:
-Forbidden tasks:
-
-2.3 Required End-of-Loop Report
-
-Every loop ends with:
-
-Status:
-Phase:
-Gate:
-Files changed:
-Commands run:
-Results:
-CI status:
-Runtime status:
-Migration status:
-Owner Recovery status:
-Module 2 status:
-Public/SaaS status:
-Next single action:
-
-⸻
-
-3. Universal Verification Gates
-
-Unless a task explicitly states a narrower verification set, Claude must run:
-
-git diff --check
-npm run lint:ratchet
-npm test
-npx prisma validate
-npm run build
-npx vitest run src/__tests__/founder-recovery/
-
-If a module adds new tests, run those tests directly before the full suite.
-
-If a module touches auth/security:
-
-npx vitest run src/__tests__/security/
-
-If a module touches route enforcement/canonical wrappers, run the relevant phase tests.
-
-If a module touches Prisma schema/migrations, run:
-
-npx prisma validate
-npx prisma migrate status
-
-Do not run npx prisma migrate deploy locally against real DB unless explicitly instructed.
-
-⸻
-
-4. Issue Handling Protocol
-
-When an issue appears, Claude must not patch blindly.
-
-Claude must classify the issue first:
-
-1. build failure
-2. test failure
-3. lint failure
-4. type failure
-5. migration failure
-6. workflow failure
-7. runtime failure
-8. auth/security failure
-9. data visibility failure
-10. tenant isolation failure
-11. deployment/environment failure
-12. flaky/external failure
-13. pre-existing failure
-14. unknown
-
-For every issue, Claude must report:
-
-Root cause:
-Evidence:
-Affected files:
-Whether branch-caused or pre-existing:
-Whether blocking:
-Smallest safe fix:
-Tests to prove fix:
-
-Claude must then fix the root cause and rerun the relevant gates.
-
-4.1 If CI Fails
-
-Claude must:
-
-1. inspect failed check logs,
-2. identify exact failing command,
-3. reproduce locally if possible,
-4. fix only direct root cause,
-5. rerun full gates,
-6. push,
-7. re-check PR.
-
-Claude must not guess from log tails.
-
-4.2 If DB Fails
-
-Claude must determine:
-
-Is the failure caused by:
-- missing env?
-- placeholder env?
-- pooled URL used for migration?
-- blocked TCP 5432?
-- migration drift?
-- schema mismatch?
-- auth failure?
-- unavailable DB?
-
-Claude must never print database URLs or secrets.
-
-4.3 If Test Requires Server
-
-Tests must be deterministic.
-
-Preferred order:
-
-1. in-process route handler tests,
-2. dedicated integration test command that starts server,
-3. robust test bootstrap if necessary.
-
-Do not leave normal npm test dependent on a missing localhost:3000 server.
-
-⸻
-
-5. Status Definitions
-
-5.1 Owner Mode Status Values
-
-Claude must use these status values exactly.
-
-OWNER_MODE_LOCAL_ONLY
-OWNER_MODE_CI_PENDING
-OWNER_MODE_CI_GREEN
-OWNER_MODE_MERGED_TO_MAIN
-OWNER_MODE_DB_MIGRATED
-OWNER_MODE_STAGING_DEPLOYED
-OWNER_MODE_STAGING_PROVEN
-OWNER_MODE_REAL_BUSINESS_PROVEN
-OWNER_MODE_FULL_CAPACITY_V1
-
-5.2 Module Status Values
-
-Each module must use:
-
-NOT_STARTED
-SPEC_READY
-SCHEMA_READY
-API_READY
-UI_READY
-TESTED_LOCAL
-CI_GREEN
-MIGRATED
-STAGING_PROVEN
-REAL_BUSINESS_PROVEN
-LOCKED
-
-A module is not complete until it reaches at least STAGING_PROVEN.
-
-⸻
-
-6. Current Required Backbone Gate
-
-Before starting any new owner intelligence module, complete this gate:
-
-PR #31 green
-→ merged to main
-→ Module 1 migration workflow visible on main
-→ migration applied through manual workflow
-→ app deployed/redeployed from main
-→ one owner recovery cycle completed on staging/real runtime
-→ dashboard proves data visibility
-→ verification proves before/after loop
-
-Until this is complete:
-
-Module 2: BLOCKED
-Public/SaaS: FROZEN
-Billing: FROZEN
-Product Hunt: FROZEN
-Marketing: FROZEN
-
-⸻
-
-7. Module 0 — Governance, CI, and Deployment Backbone
-
-Purpose
-
-Make the repo safe to build without constant regression.
-
-Features / Functions
-
-1. PR check inspection.
-2. CI failure classification.
-3. Lint ratchet enforcement.
-4. Prisma env safety.
-5. Migration safety.
-6. Secret safety.
-7. Required test gates.
-8. Branch status validation.
-9. No false-green reporting.
-10. Proof report creation.
-
-Required Capabilities
-
-* CI must not be broken by committed placeholder .env.local.
-* CI secrets must not be overridden by local placeholder env files.
-* Migration workflows must remove local .env* files before Prisma migration commands.
-* Manual migration workflows must require explicit confirmation.
-* No workflow may print secrets.
-* No migration workflow may run automatically on push unless intentionally designed.
-
-Required Tests / Checks
-
-npm run lint:ratchet
-npm test
-npx prisma validate
-npm run build
-
-Required Audit
-
-Create/update:
-
-GOVERNANCE_CI_DEPLOYMENT_PROOF_REPORT.md
-
-Done When
-
-All required PR checks are green or only explicitly accepted non-blocking checks remain.
-No secrets are printed.
-No placeholder env can override CI secrets.
-Migration workflows are manual and fail closed.
-
-⸻
-
-8. Module 1 — Owner Recovery Foundation
-
-Purpose
-
-Create the core owner recovery loop.
-
-This is the backbone module. All future modules must plug into it.
-
-Core Flow
-
-Owner creates business
-→ owner submits snapshot/intake
-→ system creates recovery cycle
-→ system detects findings
-→ system creates recommendations
-→ system creates actions
-→ owner/operator completes action
-→ system verifies result
-→ dashboard updates
-→ next cycle links to previous cycle
-
-Features / Functions
-
-8.1 Owner Business
-
-Required fields:
-
-business name
-industry
-currency
-location
-owner workspace
-business stage
-current problem statement
-business model type
-
-8.2 Metric Snapshot
-
-Required fields:
-
-revenue
-costs
-profit
-orders
-customers
-complaints
-staff count
-capacity
-cash on hand
-debt/EMI pressure
-owner notes
-snapshot date
-
-8.3 Recovery Cycle
-
-Required states:
-
-draft
-diagnosing
-action_planned
-in_execution
-verification_pending
-verified
-disputed
-closed
-
-Invalid state transitions must fail.
-
-8.4 Findings
-
-Each finding must include:
-
-category
-severity
-evidence
-business impact
-confidence level
-source metric
-recommended next action
-
-8.5 Actions
-
-Each action must include:
-
-title
-owner
-priority
-due date
-expected outcome
-verification method
-status
-actual outcome
-completion evidence
-
-8.6 Verification
-
-Each verification must include:
-
-before metric
-after metric
-expected impact
-actual impact
-status: unverified / verified / disputed
-evidence
-verification timestamp
-
-8.7 Dashboard
-
-Dashboard must show:
-
-business condition
-current cycle
-top findings
-recommended actions
-pending actions
-verified wins
-disputed actions
-next cycle recommendation
-
-APIs
-
-Required API namespace:
-
-/api/owner/recovery/business
-/api/owner/recovery/snapshot
-/api/owner/recovery/diagnosis
-/api/owner/recovery/actions
-/api/owner/recovery/verification
-/api/owner/recovery/dashboard
-
-UI
-
-Required route:
-
-/owner/recovery
-
-Required UI sections:
-
-business intake
-snapshot form
-diagnosis panel
-finding list
-action list
-verification panel
-dashboard summary
-cycle history
-
-Security
-
-* Owner-only access.
-* Workspace isolation.
-* Cross-workspace access blocked.
-* Unauthenticated access blocked.
-* Non-owner access blocked unless explicitly allowed by owner role policy.
-
-Tests
-
-Required tests:
-
-unit tests for diagnosis logic
-DB persistence tests
-authz tests
-route tests
-state transition tests
-dashboard read tests
-verification tests
-cross-workspace isolation tests
-
-Runtime Proof
+git rev-parse --short HEAD
+pwd
+find . -maxdepth 3 -type f | sort | sed 's#^./##' | head -300
+ls
+```
+
+## 3.2 Package manager detection
+
+Inspect lockfiles before running package commands:
+
+```bash
+ls package.json pnpm-lock.yaml package-lock.json yarn.lock bun.lockb 2>/dev/null || true
+cat package.json
+```
+
+Rules:
+
+```text
+- If pnpm-lock.yaml exists, prefer pnpm.
+- If package-lock.json exists and no pnpm-lock.yaml, prefer npm.
+- If yarn.lock exists and no npm/pnpm lockfile, prefer yarn.
+- Do not change package manager.
+- Do not regenerate lockfiles unless dependency change is necessary and justified.
+```
+
+## 3.3 Required source inspection targets
+
+Check if present:
+
+```text
+execution.md
+OWNER_MODE_STATUS_REPORT.md
+README.md
+package.json
+prisma/schema.prisma
+src/
+app/
+lib/
+services/
+components/
+tests/
+__tests__/
+e2e/
+playwright.config.*
+vitest.config.*
+jest.config.*
+```
+
+If paths differ, discover actual equivalents and document them.
+
+## 3.4 Required grep/search commands
+
+```bash
+grep -R "Owner Mode\|owner mode\|OWNER_MODE\|ownerMode" -n . --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist --exclude-dir=.git || true
+
+grep -R "diagnosis\|Diagnosis\|recommendation\|Recommendation\|action\|Action\|verification\|Verification\|evidence\|Evidence" -n src app lib services components tests __tests__ e2e 2>/dev/null || true
+
+grep -R "mock\|stub\|TODO\|FIXME\|placeholder\|fake\|demo-only\|hardcoded" -n src app lib services components tests __tests__ e2e 2>/dev/null || true
+
+grep -R "workspaceId\|workspace_id\|userId\|auth\|capability\|role" -n src app lib services components tests __tests__ e2e 2>/dev/null || true
+```
+
+## 3.5 Required repo scan output
+
+Claude must output exactly this structure before coding:
+
+```text
+REPO_REALITY_SCAN:
+  branch:
+  commit:
+  working_tree_status:
+  package_manager:
+  scripts_found:
+  app_framework:
+  database_layer:
+  auth_layer:
+  test_frameworks:
+  owner_mode_related_files:
+  owner_mode_related_tests:
+  status_docs_found:
+  schema_models_relevant_to_owner_mode:
+  api_routes_relevant_to_owner_mode:
+  ui_routes_relevant_to_owner_mode:
+  mock_placeholder_todo_hits:
+  immediate_blockers:
+```
+
+If any field is unknown, Claude must write `UNKNOWN_WITH_EVIDENCE:` and explain what was checked.
+
+---
+
+# 4. Current Full Owner Mode Scope Boundary
+
+This execution file applies only to the current Full Owner Mode modules.
+
+Explicitly out of scope until all M01–M15 are `VERIFIED_COMPLETE`:
+
+```text
+- real-world case-study benchmark library
+- public dataset harness
+- synthetic scenario simulator
+- adversarial test suite beyond module-level negative tests
+- blind outcome testing
+- learning from every output
+- online growth intelligence
+- lead research
+- CRM/API/OAuth integrations
+- browser-login/browser-assisted import
+- sales pitch generator
+- public SaaS polish beyond current Owner Mode
+```
+
+If Claude finds code for those future modules, it may document their existence but must not implement them in this phase.
+
+---
+
+# 5. Mandatory Full Owner Mode Module Inventory
+
+Audit these modules at minimum:
+
+```text
+M01 Business Profile / Owner Context
+M02 Data Intake / Input Capture
+M03 Diagnosis Engine
+M04 Evidence Model / Evidence Attachment
+M05 Recommendation Engine
+M06 Action Plan Generator
+M07 Owner Dashboard
+M08 Operator / Action Completion Flow
+M09 Verification / Outcome Tracking
+M10 Constraint Handling
+M11 Audit Logging / Traceability
+M12 Access Control / Workspace Isolation
+M13 Demo / Seed / Smoke Data Integrity
+M14 Error Handling / Fail-Closed Behaviour
+M15 Tests / Smoke / CI Verification
+```
+
+If repository contains additional current Owner Mode modules, add them as M16+ and audit them using the same standard.
+
+---
+
+# 6. Required Module Audit Output
+
+For every module, Claude must output:
+
+```text
+MODULE_AUDIT:
+  module_id:
+  module_name:
+  status:
+  implementation_files:
+  api_routes:
+  ui_files:
+  persistence_models:
+  service_functions:
+  tests:
+  commands_or_static_checks_used:
+  current_wiring_proof:
+  data_source_proof:
+  workspace_isolation_proof:
+  failure_mode_proof:
+  mock_or_placeholder_risk:
+  missing_contracts:
+  missing_tests:
+  runtime_risks:
+  exact_acceptance_gaps:
+  next_required_slice:
+```
+
+Rules:
+
+```text
+- Empty fields are not allowed.
+- Use NONE_FOUND only after search evidence.
+- Use UNKNOWN only with exact reason.
+- A module with no negative test cannot be VERIFIED_COMPLETE.
+- A module with no workspace isolation proof cannot be VERIFIED_COMPLETE if it touches user/business data.
+- A module with only UI proof cannot be VERIFIED_COMPLETE.
+```
+
+---
+
+# 7. Module Acceptance Gates
+
+A module is `VERIFIED_COMPLETE` only if all applicable gates are satisfied.
+
+## Universal gates
+
+```text
+implementation_present: true
+wired_to_product_flow: true
+real_data_path_or_valid_no_persistence_reason: true
+workspace_scoped_where_required: true
+auth_checked_where_required: true
+validation_present: true
+negative_tests_present: true
+happy_path_tests_present: true
+failure_mode_defined: true
+no_mock_only_success_path: true
+no_silent_failure_path: true
+commands_passed: true
+status_doc_updated: true
+```
+
+## Business critical gates
+
+For M03–M09 and M11–M14:
+
+```text
+auditability_present: true
+evidence_or_trace_present: true
+transaction_safety_considered: true
+bad_input_handled_fail_closed: true
+```
+
+## User-facing gates
+
+For M01, M02, M07, M08, M09, M10:
+
+```text
+ui_or_api_user_path_exists: true
+empty_state_handled: true
+loading_or_pending_state_handled_where_applicable: true
+error_state_handled: true
+```
+
+---
+
+# 8. Exact Standards per Module
+
+## M01 Business Profile / Owner Context
 
 Must prove:
 
-signup/login or owner session
-business created
-snapshot created
-diagnosis created
-actions created
-dashboard reads data
-action completion updates state
-verification updates state
-second cycle links to first
-
-Done When
-
-Module 1 local tests pass
-CI passes
-migration applied to staging/real DB
-owner recovery route works on deployed app
-one full cycle is proven
-dashboard reflects cycle
-verification loop is proven
-
-⸻
-
-9. Module 2 — Financial Intelligence
-
-Purpose
-
-Give the owner a true financial control panel.
-
-Core Questions
-
-The system must answer:
-
-Is the business making money?
-Where is money leaking?
-What is the break-even point?
-How much cash runway exists?
-Which costs are dangerous?
-Which actions improve profit fastest?
-
-Features / Functions
-
-9.1 Financial Snapshot
-
-Inputs:
-
-daily revenue
-monthly revenue
-gross revenue
-cost of goods/services
-fixed costs
-variable costs
-rent
-salary
-utilities
-marketing spend
-delivery cost
-loan EMI
-debt
-cash on hand
-receivables
-payables
-owner withdrawals
-
-9.2 Financial Metrics
-
-Calculate:
-
-gross margin
-net margin
-contribution margin
-break-even revenue
-daily break-even
-monthly burn
-cash runway
-debt service pressure
-cost ratio
-revenue per customer
-profit per order
-fixed cost coverage
-
-9.3 Financial Risk Detection
-
-Detect:
-
-negative margin
-low cash runway
-high fixed cost burden
-high debt pressure
-revenue below break-even
-cost leakage
-salary burden
-unprofitable service/product
-dangerous receivables
-
-9.4 Owner Output
-
-Show:
-
-financial health score
-top 5 financial risks
-top 5 profit leaks
-break-even target
-next 7-day money actions
-next 30-day financial recovery plan
+```text
+- business profile can be created/read/updated
+- profile is workspace-scoped
+- profile affects diagnosis/recommendations or explicitly gates them when missing
+- missing required profile data downgrades confidence or blocks diagnosis
+- owner constraints can be attached, referenced, or linked
+```
+
+Required tests:
+
+```text
+- create/read/update profile
+- invalid profile rejected
+- cross-workspace access denied
+- diagnosis without required profile data produces low-confidence/block state
+```
+
+## M02 Data Intake / Input Capture
+
+Must prove:
+
+```text
+- owner input can be submitted
+- input is persisted or intentionally transient with documented reason
+- input is workspace-scoped
+- input is validated
+- invalid/missing input produces explicit error or low-confidence state
+- source metadata is retained for any material input
+```
+
+If file upload exists, must prove:
+
+```text
+- file metadata stored
+- unsupported file rejected
+- oversized file rejected or safely handled
+- extracted facts linked to source file
+- extraction failure does not create false success
+```
+
+## M03 Diagnosis Engine
+
+Must prove:
+
+```text
+- uses real persisted or validated input data
+- produces specific findings
+- includes root cause, impact, confidence, evidence, missing data, action, verification metric, risk
+- does not produce high-confidence output from weak/missing/conflicting data
+- deterministic enough for automated tests
+```
+
+Required output fields:
+
+```text
+finding
+rootCause
+impact
+confidence
+supportingEvidence
+missingData
+actions
+verificationMetric
+risk
+```
+
+## M04 Evidence Model / Evidence Attachment
+
+Must prove:
+
+```text
+- material findings link to evidence
+- evidence references source/input/period/value where applicable
+- evidence is workspace-scoped
+- evidence appears in API or dashboard path
+- cross-workspace evidence attachment is blocked
+```
+
+Minimum evidence fields where data-based:
+
+```text
+sourceType
+sourceId
+metric
+value
+period
+confidence
+```
+
+## M05 Recommendation Engine
+
+Must prove:
+
+```text
+- recommendations link to diagnosis findings
+- recommendations include priority, expected impact, risk/trade-off, verification metric
+- recommendations respect constraints where available
+- recommendations are not generic filler
+- recommendations downgrade or block when evidence is weak
+```
+
+## M06 Action Plan Generator
+
+Must prove:
+
+```text
+- actions are created from recommendations
+- actions link back to diagnosis/recommendation
+- actions have status, owner/operator where applicable, due date where applicable
+- multi-record creation is transactional where partial write risk exists
+- action creation failure does not leave orphaned records
+```
+
+## M07 Owner Dashboard
+
+Must prove:
+
+```text
+- dashboard reads backend/persisted data
+- dashboard displays diagnosis, evidence, recommendations, actions, verification status
+- dashboard handles empty/loading/error states
+- dashboard filters client-visible records correctly where applicable
+- dashboard cannot display another workspace's data
+```
+
+## M08 Operator / Action Completion Flow
+
+Must prove:
+
+```text
+- operator can complete assigned/allowed action
+- completion records actual outcome
+- completion validates required fields
+- completion updates action status correctly
+- unauthorized action completion is blocked
+- completion cannot update wrong workspace/action
+```
+
+## M09 Verification / Outcome Tracking
+
+Must prove:
+
+```text
+- verification links to action/diagnosis
+- verification state supports unverified/verified/disputed/failed or repo-equivalent states
+- verification uses actual outcome or evidence
+- verification does not auto-pass without evidence
+- dashboard reflects verification state
+```
+
+## M10 Constraint Handling
+
+Must prove:
+
+```text
+- constraints are captured, derived, or explicitly marked unavailable
+- recommendations check constraints
+- constraint violations are surfaced
+- high-cost/high-time actions are not recommended blindly
+```
+
+Minimum constraints:
+
+```text
+budget
+time
+staffing
+cash_runway
+data_availability
+business_stage
+risk_tolerance
+```
+
+## M11 Audit Logging / Traceability
+
+Must prove critical event traceability for:
+
+```text
+business_profile_changed
+input_submitted
+diagnosis_created
+evidence_attached
+recommendation_created
+action_created
+action_completed
+verification_changed
+recommendation_accepted_or_rejected_where_applicable
+```
+
+If audit logging does not exist, first acceptable slice is to introduce minimal audit events around one critical path, not to build a massive audit framework.
+
+## M12 Access Control / Workspace Isolation
+
+Must prove:
+
+```text
+- all current Owner Mode API routes require auth
+- all records are workspace-scoped where business data is involved
+- cross-workspace reads are blocked
+- cross-workspace writes are blocked
+- role/capability checks match canonical policy
+- no client-supplied workspace_id is trusted without server-side authorization
+```
+
+## M13 Demo / Seed / Smoke Data Integrity
+
+Must prove:
+
+```text
+- demo data is clearly marked
+- demo data does not mask real-data failure
+- demo records are client_visible where required by dashboard
+- smoke path exercises real product path where possible
+- fake-only proof routes are not used as completion evidence
+```
+
+## M14 Error Handling / Fail-Closed Behaviour
+
+Must prove:
+
+```text
+- invalid input returns clear error
+- missing data does not crash silently
+- conflicting data downgrades confidence or blocks conclusion
+- transaction failure rolls back partial writes
+- external failure does not create false success
+- stale data is labelled stale, not current
+```
+
+## M15 Tests / Smoke / CI Verification
+
+Must prove:
+
+```text
+- unit tests exist for core logic
+- integration/API tests exist for data path
+- smoke/e2e exists for critical journey or exact blocker is documented
+- negative tests exist for unauthorized/missing/invalid/conflicting states
+- commands are documented
+- CI or local equivalent can run them
+```
 
-APIs
-
-/api/owner/finance/snapshot
-/api/owner/finance/metrics
-/api/owner/finance/risks
-/api/owner/finance/actions
-/api/owner/finance/dashboard
-
-UI
-
-/owner/finance
-
-Sections:
-
-financial health
-break-even
-cash runway
-profit leaks
-cost pressure
-recommended actions
-verification
-
-Tests
-
-financial calculation unit tests
-risk detection tests
-API contract tests
-authz tests
-dashboard tests
-edge cases: zero revenue, negative profit, missing cost, high debt
-
-Done When
-
-owner can enter financial data
-system calculates financial condition
-risks are ranked
-actions are created
-actions can be verified
-dashboard updates
-tests and CI pass
-
-⸻
-
-10. Module 3 — Sales and Customer Intelligence
-
-Purpose
-
-Help the owner understand whether sales are growing, stuck, leaking, or unhealthy.
-
-Core Questions
-
-Where are sales coming from?
-Where are customers dropping off?
-Are customers repeating?
-Which channel works?
-Which offer should owner push next?
-Which prospects should owner contact today?
-
-Features / Functions
-
-10.1 Sales Snapshot
-
-Inputs:
-
-leads
-qualified leads
-orders
-conversion rate
-average order value
-repeat customers
-new customers
-lost customers
-B2B prospects
-B2B pipeline value
-customer complaints
-discounts
-refunds
-
-10.2 Sales Metrics
-
-Calculate:
-
-lead-to-sale conversion
-repeat rate
-customer acquisition rate
-average order value
-sales per day
-sales per staff
-lost customer rate
-B2B pipeline health
-revenue by segment
-
-10.3 Sales Risk Detection
-
-Detect:
-
-low conversion
-low repeat rate
-high complaint-to-sale ratio
-overdependence on discounts
-weak B2B pipeline
-lost customer leakage
-poor follow-up
-sales below break-even
-
-10.4 Owner Output
-
-sales health score
-sales bottleneck
-customer leakage
-best next sales action
-daily follow-up list
-B2B prospect ranking
-offer recommendation
-
-APIs
-
-/api/owner/sales/snapshot
-/api/owner/sales/metrics
-/api/owner/sales/risks
-/api/owner/sales/actions
-/api/owner/sales/dashboard
-
-UI
-
-/owner/sales
-
-Tests
-
-conversion calculations
-repeat-rate calculations
-pipeline ranking
-risk detection
-authz
-dashboard visibility
-
-Done When
-
-owner can see sales bottlenecks
-system recommends sales actions
-actions enter execution loop
-verification updates result
-
-⸻
-
-11. Module 4 — Operations and Productivity Intelligence
-
-Purpose
-
-Help the owner identify operational bottlenecks, productivity gaps, quality leakage, and capacity constraints.
-
-Core Questions
-
-Can the business handle current demand?
-Where is work getting delayed?
-Which staff/process is underperforming?
-Is quality causing profit leakage?
-What must improve today?
-
-Features / Functions
-
-11.1 Operations Snapshot
-
-Inputs:
-
-orders received
-orders completed
-orders delayed
-rework count
-complaints
-staff hours
-machine/equipment capacity
-delivery failures
-inventory shortages
-SOP misses
-idle time
-
-11.2 Operations Metrics
-
-Calculate:
-
-completion rate
-delay rate
-rework rate
-complaint rate
-capacity utilization
-staff productivity
-orders per staff hour
-delivery success rate
-SOP compliance rate
-
-11.3 Risk Detection
-
-Detect:
-
-capacity bottleneck
-staff productivity issue
-quality leakage
-high rework
-delivery bottleneck
-SOP non-compliance
-equipment constraint
-inventory constraint
-
-11.4 Owner Output
-
-operations health score
-top bottleneck
-capacity ceiling
-staff productivity flags
-quality leakage list
-today's operations actions
-
-APIs
-
-/api/owner/operations/snapshot
-/api/owner/operations/metrics
-/api/owner/operations/risks
-/api/owner/operations/actions
-/api/owner/operations/dashboard
-
-UI
-
-/owner/operations
-
-Tests
-
-capacity calculations
-productivity calculations
-risk detection
-state transitions
-dashboard visibility
-
-⸻
-
-12. Module 5 — Cashflow, Receivables, and Leakage Control
-
-Purpose
-
-Prevent business death from cashflow mismanagement.
-
-Core Questions
-
-Who owes money?
-What must be collected first?
-Which expenses are urgent?
-Where is cash leaking?
-Can the business survive the next 30 days?
-
-Features / Functions
-
-12.1 Cashflow Inputs
-
-cash in hand
-bank balance
-daily collections
-receivables
-payables
-upcoming EMI
-rent
-salary due
-vendor due
-tax due
-owner withdrawal
-
-12.2 Metrics
-
-cash runway
-collection gap
-payables pressure
-cash conversion delay
-overdue receivables
-urgent payment risk
-
-12.3 Risk Detection
-
-cash shortage
-high overdue receivables
-salary/rent risk
-vendor cutoff risk
-debt default risk
-owner withdrawal pressure
-
-12.4 Owner Output
-
-cashflow danger score
-collection priority list
-payment priority list
-7-day survival plan
-30-day cash recovery plan
-
-APIs
-
-/api/owner/cashflow/snapshot
-/api/owner/cashflow/receivables
-/api/owner/cashflow/payables
-/api/owner/cashflow/risks
-/api/owner/cashflow/actions
-/api/owner/cashflow/dashboard
-
-UI
-
-/owner/cashflow
-
-⸻
-
-13. Module 6 — Marketing and Growth Intelligence
-
-Purpose
-
-Help the owner decide what marketing action to take, not just view vanity metrics.
-
-Core Questions
-
-Which channel brings customers?
-Which offer works?
-Which audience should be targeted?
-What should be posted/campaigned next?
-What is wasting money?
-
-Features / Functions
-
-13.1 Marketing Inputs
-
-campaigns
-channel
-spend
-leads
-orders
-conversion
-content posted
-inquiries
-coupon usage
-referrals
-walk-ins
-
-13.2 Metrics
-
-cost per lead
-cost per order
-campaign ROI
-channel conversion
-offer conversion
-referral rate
-organic vs paid mix
-
-13.3 Risk Detection
-
-wasted spend
-poor conversion
-wrong channel
-weak offer
-low referral activity
-campaign without follow-up
-
-13.4 Owner Output
-
-marketing health score
-best channel
-worst channel
-next campaign idea
-daily content/action plan
-offer recommendation
-
-APIs
-
-/api/owner/marketing/snapshot
-/api/owner/marketing/metrics
-/api/owner/marketing/risks
-/api/owner/marketing/actions
-/api/owner/marketing/dashboard
-
-UI
-
-/owner/marketing
-
-⸻
-
-14. Module 7 — SOP, Process, and Execution Accountability
-
-Purpose
-
-Turn recommendations into repeatable execution.
-
-Core Questions
-
-Who must do what?
-By when?
-How should they do it?
-Was it done?
-Did it work?
-Should it become SOP?
-
-Features / Functions
-
-14.1 SOP Library
-
-process name
-purpose
-steps
-role responsible
-frequency
-quality standard
-verification method
-
-14.2 Action Assignment
-
-owner
-manager
-staff
-external vendor
-due date
-priority
-required proof
-completion status
-
-14.3 Accountability
-
-pending
-in progress
-completed
-verified
-disputed
-overdue
-reassigned
-
-14.4 Owner Output
-
-execution health score
-overdue actions
-staff accountability view
-repeated failures
-SOP gaps
-actions to convert into SOP
-
-APIs
-
-/api/owner/sop/library
-/api/owner/sop/action
-/api/owner/sop/verification
-/api/owner/sop/dashboard
-
-UI
-
-/owner/execution
-
-⸻
-
-15. Module 8 — Strategy and Scenario Planning
-
-Purpose
-
-Help the owner choose between strategic options using numbers and risk.
-
-Core Questions
-
-Should I add staff?
-Should I buy equipment?
-Should I increase price?
-Should I target B2B?
-Should I open another branch?
-Should I cut costs?
-Which option gives highest safe upside?
-
-Features / Functions
-
-15.1 Scenario Inputs
-
-current revenue
-expected revenue change
-cost change
-investment required
-time to impact
-risk level
-cash available
-capacity impact
-staff impact
-
-15.2 Scenario Outputs
-
-projected profit
-cash requirement
-break-even change
-payback period
-risk score
-best case
-base case
-worst case
-recommendation
-
-15.3 Strategy Ranking
-
-highest ROI
-lowest risk
-fastest cash improvement
-highest survival impact
-highest growth impact
-
-APIs
-
-/api/owner/strategy/scenario
-/api/owner/strategy/compare
-/api/owner/strategy/recommend
-/api/owner/strategy/dashboard
-
-UI
-
-/owner/strategy
-
-⸻
-
-16. Module 9 — Multi-Business Portfolio Command Center
-
-Purpose
-
-Allow an owner to manage multiple businesses from one command center.
-
-Core Questions
-
-Which business is healthiest?
-Which business needs attention today?
-Which business is leaking money?
-Where should owner spend time?
-Which business should receive investment?
-
-Features / Functions
-
-16.1 Portfolio View
-
-business list
-financial score
-sales score
-operations score
-cashflow score
-execution score
-risk score
-opportunity score
-
-16.2 Cross-Business Ranking
-
-most urgent business
-highest profit opportunity
-highest cash risk
-worst execution problem
-best growth candidate
-
-16.3 Owner Output
-
-portfolio health score
-today's top 3 priorities
-business-by-business action queue
-investment recommendation
-risk alerts
-
-APIs
-
-/api/owner/portfolio/dashboard
-/api/owner/portfolio/ranking
-/api/owner/portfolio/actions
-/api/owner/portfolio/risks
-
-UI
-
-/owner/portfolio
-
-⸻
-
-17. Module 10 — Connectors and Data Intake
-
-Purpose
-
-Reduce manual input and make Owner Mode easier to use.
-
-Rule
-
-Do not build connectors before the core owner loop is stable.
-
-Initial Connector Targets
-
-CSV upload
-manual form
-Google Sheets import
-email import
-accounting export upload
-POS/order upload
-bank statement upload
-WhatsApp/manual lead import
-
-Later Connector Targets
-
-Tally
-Zoho Books
-QuickBooks
-Razorpay
-Lemon Squeezy
-Shopify
-WooCommerce
-Google Analytics
-Meta Ads
-Google Ads
-CRM tools
-
-Data Intake Requirements
-
-Every intake must include:
-
-source
-timestamp
-business
-workspace
-validation status
-normalization status
-error report
-owner confirmation
-
-No connector data should automatically change final diagnosis without validation.
-
-⸻
-
-18. Module 11 — Trust, Audit, and Explainability
-
-Purpose
-
-Make recommendations credible.
-
-Required Features
-
-Every recommendation must show:
-
-what was detected
-why it matters
-source data used
-calculation used
-confidence level
-risk if ignored
-expected impact
-verification method
-
-Audit Trail
-
-Track:
-
-input data
-diagnosis version
-recommendation version
-action created
-action completed
-verification result
-who changed what
-when it changed
-
-Anti-Hallucination Rule
-
-The system must not invent:
-
-revenue
-costs
-customers
-staff count
-market facts
-competitor facts
-tax/legal claims
-guaranteed outcomes
-
-If data is missing, say missing and request data or provide assumption-labeled scenarios.
-
-⸻
-
-19. Module 12 — Owner UI and Mobile Usability
-
-Purpose
-
-Make Owner Mode usable by a busy business owner on mobile.
-
-UI Principles
-
-* one clear next action,
-* no dashboard overload,
-* risk first,
-* money first,
-* execution second,
-* insights tied to actions,
-* every action has verification,
-* mobile-first,
-* low bandwidth friendly.
-
-Required Screens
-
-/owner
-/owner/recovery
-/owner/finance
-/owner/sales
-/owner/operations
-/owner/cashflow
-/owner/marketing
-/owner/execution
-/owner/strategy
-/owner/portfolio
-
-Owner Home Screen Must Show
-
-business health
-cash danger
-sales danger
-operations danger
-execution danger
-top 3 risks
-top 3 opportunities
-today's required actions
-last verified improvement
-
-⸻
-
-20. Module 13 — Real Business Validation
-
-Purpose
-
-Prove the product works on real businesses.
-
-First Validation Business
-
-Tumbledry Mukundapur
-Industry: Laundry / Dry Cleaning
-Currency: INR
-
-Validation Flow
-
-enter actual business data
-run diagnosis
-review findings
-accept actions
-execute at least one action
-enter after-data
-verify result
-record owner feedback
-repeat second cycle
-
-Required Proof
-
-before state
-recommendation
-action taken
-after state
-verified result
-dashboard update
-owner notes
-
-Done When
-
-at least one real/staging business cycle is proven end-to-end
-no manual DB edits required
-no hardcoded business logic required
-owner can understand and act without developer explanation
-
-⸻
-
-21. Full Capacity Owner Mode Definition
-
-Owner Mode reaches OWNER_MODE_FULL_CAPACITY_V1 only when the system can handle:
-
-Recovery
-Finance
-Sales
-Operations
-Cashflow
-Marketing
-Execution
-Strategy
-Portfolio
-Verification
-Audit trail
-
-Each domain must support:
-
-data input
-metric calculation
-risk detection
-recommendation
-action creation
-execution tracking
-verification
-dashboard update
-history
-
-⸻
-
-22. Required Implementation Order
-
-Claude must follow this order.
-
-Phase 0 — PR/CI unblock
-
-Fix PR #31 checks
-Merge to main
-Confirm workflow appears
-
-Phase 1 — Module 1 deployment proof
-
-Run manual migration workflow
-Deploy/redeploy app
-Prove one owner recovery cycle
-
-Phase 2 — Owner Command Center shell
-
-Create /owner command center
-Connect Module 1 status
-Show owner next action
-Show system readiness
-
-Phase 3 — Financial Intelligence
-
-schema
-domain logic
-API
-UI
-tests
-verification loop
-dashboard integration
-
-Phase 4 — Sales Intelligence
-
-schema
-domain logic
-API
-UI
-tests
-verification loop
-dashboard integration
-
-Phase 5 — Operations Intelligence
-
-schema
-domain logic
-API
-UI
-tests
-verification loop
-dashboard integration
-
-Phase 6 — Cashflow Intelligence
-
-schema
-domain logic
-API
-UI
-tests
-verification loop
-dashboard integration
-
-Phase 7 — Execution/SOP System
-
-schema
-domain logic
-API
-UI
-tests
-verification loop
-dashboard integration
-
-Phase 8 — Marketing Intelligence
-
-schema
-domain logic
-API
-UI
-tests
-verification loop
-dashboard integration
-
-Phase 9 — Strategy/Scenario Planning
-
-schema
-domain logic
-API
-UI
-tests
-verification loop
-dashboard integration
-
-Phase 10 — Portfolio Command Center
-
-schema
-domain logic
-API
-UI
-tests
-verification loop
-dashboard integration
-
-Phase 11 — Data Intake / CSV / Sheets
-
-CSV upload
-manual import
-validation
-normalization
-owner confirmation
-
-Phase 12 — Full audit and hardening
-
-security audit
-tenant isolation audit
-data correctness audit
-financial calculation audit
-runtime audit
-CI audit
-deployment audit
-
-Phase 13 — Public/SaaS readiness
-
-Only after Owner Mode is real-business proven.
-
-pricing
-billing
-onboarding
-landing page
-support
-Product Hunt
-
-⸻
-
-23. Per-Module Build Contract
-
-Every module must be built in this sequence:
-
-1. SPEC
-2. SCHEMA
-3. DOMAIN LOGIC
-4. API
-5. UI
-6. TESTS
-7. AUDIT
-8. RUNTIME PROOF
-9. DASHBOARD INTEGRATION
-10. REPORT
-
-Claude must not skip steps.
-
-23.1 SPEC
-
-Create/update module spec:
-
-purpose
-inputs
-outputs
-metrics
-risk rules
-recommendation rules
-action rules
-verification rules
-UI requirements
-API contract
-test matrix
-
-23.2 SCHEMA
-
-Add Prisma models only when needed.
-
-Every model must include:
-
-id
-workspaceId
-businessId where relevant
-createdAt
-updatedAt
-status where relevant
-audit fields where relevant
-
-23.3 DOMAIN LOGIC
-
-Domain logic must be deterministic first.
-
-No LLM-dependent output is allowed for core calculations.
-
-23.4 API
-
-Every API must enforce:
-
-auth
-workspace isolation
-role/capability
-input validation
-safe errors
-canonical response format
-
-23.5 UI
-
-Every UI must show:
-
-current condition
-problem
-why it matters
-next action
-verification state
-
-23.6 TESTS
-
-Each module needs:
-
-unit tests
-route/API tests
-authz tests
-persistence tests
-dashboard tests
-edge case tests
-
-23.7 AUDIT
-
-Audit must check:
-
-security
-tenant isolation
-calculation correctness
-state transitions
-error handling
-data visibility
-false-green risk
-
-23.8 RUNTIME PROOF
-
-Runtime proof must demonstrate:
-
-create
-read
-update
-verify
-dashboard reflects
-
-23.9 DASHBOARD INTEGRATION
-
-Every module must feed /owner command center.
-
-23.10 REPORT
-
-Create module report:
-
-MODULE_<N>_<NAME>_IMPLEMENTATION_REPORT.md
-
-⸻
-
-24. Testing Matrix
-
-Required Test Categories
-
-unit
-integration
-route handler
-database persistence
-authz
-tenant isolation
-state transition
-calculation correctness
-dashboard read
-runtime smoke
-CI workflow
-migration
-
-Required Edge Cases
-
-Every module must test:
-
-missing input
-zero values
-negative values where relevant
-extreme values
-invalid status
-unauthorized user
-wrong workspace
-non-owner user
-duplicate submission
-partial failure
-stale data
-
-⸻
-
-25. Audit Matrix
-
-Claude must perform audits at these levels:
-
-25.1 Code Audit
-
-type safety
-no any unless justified and scoped
-no unsafe error rendering
-no raw secret logging
-no hardcoded business
-no hardcoded workspace
-no hardcoded user
-
-25.2 Security Audit
-
-auth required
-role enforced
-workspace isolation
-diagnostic key correct
-no same-length bypass
-safe errors
-no sensitive logs
-
-25.3 Data Audit
-
-writes are transactional where needed
-reads are workspace-scoped
-dashboard reads actual persisted data
-no fake demo data presented as real
-
-25.4 Business Logic Audit
-
-calculations correct
-recommendations traceable
-risk scoring explainable
-actions tied to findings
-verification tied to metrics
-
-25.5 Runtime Audit
-
-route accessible
-forms submit
-data persists
-dashboard updates
-errors handled
-cycle can be repeated
-
-⸻
-
-26. Commit Rules
-
-Claude may commit only when:
-
-working tree is reviewed
-diff is scoped
-verification gates pass
-secret scan is clean
-report is created/updated
-
-Before every commit:
-
-git status --short
-git diff --stat
-git diff --check
-git diff --cached --name-only
-
-Commit message format:
-
-MODULE_<N>_<SHORT_REASON>
-FIX_<GATE>_<SHORT_REASON>
-AUDIT_<AREA>_<SHORT_REASON>
-
-No commit may include:
-
-.env*
-node_modules
-generated DB files
-real secrets
-logs with secrets
-unrelated product code
-unapproved module work
-
-⸻
-
-27. Reports Required
-
-Reports must be concise and evidence-based.
-
-Required report types:
-
-PR_CHECK_FIX_REPORT.md
-MODULE_<N>_<NAME>_SPEC.md
-MODULE_<N>_<NAME>_IMPLEMENTATION_REPORT.md
-MODULE_<N>_<NAME>_RUNTIME_PROOF.md
-MODULE_<N>_<NAME>_AUDIT_REPORT.md
-OWNER_MODE_STATUS_REPORT.md
-
-Every report must include:
-
-status
-files changed
-commands run
-results
-known limitations
-next gate
-
-⸻
-
-28. Stop Conditions
-
-Claude must stop and report if:
-
-secret is required but missing
-migration would run against unknown DB
-real DB URL would be printed
-destructive command is requested
-CI failure cannot be reproduced
-test requires external service not available
-scope would enter Module 2 before Module 1 proven
-public/SaaS work is requested before Owner Mode proof
-
-⸻
-
-29. Fast-Track Rule
-
-Fast-track does not mean skipping gates.
-
-Fast-track means:
-
-small slices
-clear gates
-no broad refactors
-proof immediately
-commit cleanly
-move to next module only after lock
-
-The fastest safe route is:
-
-Finish backbone
-→ prove runtime
-→ build next smallest owner module
-→ integrate into common loop
-→ verify
-→ repeat
-
-⸻
-
-30. Current Next Action
-
-The current next action is:
-
-Fix remaining PR #31 Phase 3 Slice 2 env override
-→ get PR #31 fully green
-→ merge to main
-→ run Module 1 migration workflow manually
-→ prove one owner recovery cycle
-
-Do not start Module 2 until Module 1 reaches:
-
-OWNER_MODE_STAGING_PROVEN
-
-⸻
-
-31. Claude Final Output Format
-
-Every Claude execution must end with:
-
-FINAL STATUS
-Current phase:
-Current gate:
-Status:
-Branch:
-Commit:
-Files changed:
-Commands run:
-Results:
-CI status:
-Runtime status:
-Migration status:
-Security status:
-Owner Recovery status:
-Module 2 status:
-Public/SaaS status:
-Known blockers:
-Next single action:
-
-Allowed status values:
-
-GREEN_AND_LOCKED
-GREEN_PENDING_CI
-CI_FAILED_FIXED_AND_PUSHED
-BLOCKED_NEEDS_SECRET
-BLOCKED_NEEDS_DB
-BLOCKED_NEEDS_USER_DECISION
-FAILED_ROOT_CAUSE_FOUND
-FAILED_ROOT_CAUSE_UNKNOWN
-
-Claude must not use vague statuses such as:
-
-mostly done
-should work
-probably fixed
-seems okay
-ready maybe
-
-⸻
-
-32. End Goal
-
-The end goal is:
-
-OpsIQ Owner Mode becomes a full-capacity owner command center that can diagnose, prioritize, execute, and verify business improvement across finance, sales, operations, cashflow, marketing, SOPs, strategy, and multiple businesses.
-
-The product is successful only when an owner can open OpsIQ and know:
-
-what is wrong
-why it matters
-what to do today
-who should do it
-how to verify it
-whether it worked
-what to do next
-
-Until that is true, do not resume public/SaaS launch work.
 ---
 
-# PHASE 3 SLICE 2 — EVENT SOURCING TRUTH CLASSIFICATION
+# 9. Hostile Audit Checklist Before and After Every Slice
 
-Honest runtime classification of the Phase 3 Slice 2 event-sourcing systems,
-verified by grepping `src/services` and `src/app` (non-test, excluding each
-engine's own definition file) and by the DB-backed integration test in CI. This
-section is enforced by the `Phase 3 Slice 2 - Truth Pass Verification` workflow
-(Gate 10). It deliberately does NOT mark this slice COMPLETE: only the emission
-path is runtime-proven. It does not replace the Owner Mode Roadmap above; it is a
-truth-classification addendum required by the Gate 10 honesty check.
+A slice fails if any of these are true.
 
-### Phase 3 — Event Sourcing (Emission + Forward Projection)
-**Status: PARTIAL**
+## 9.1 Mock-only success
 
-PARTIAL means only the event-emission path and its forward projection are live
-and proven; the replay, rebuild, and snapshot systems exist as code only and are
-NOT runtime-wired.
+```text
+- hardcoded demo data proves production behaviour
+- static fake response used in real route
+- mock service is imported in production path
+- placeholder recommendation is treated as diagnosis
+- always-pass verification exists
+- UI status changes without backend state
+```
 
-Live (proven by runtime wiring + DB-backed integration test in CI Gate 6):
-- `EventEmitterService.emit()` is invoked from `recommendation.ts`, `action.ts`,
-  and `evidence.ts` (multiple call sites) and appends to the append-only
-  `canonical_events` store. The forward-projection `ProjectionEngine` is ACTIVE,
-  invoked synchronously by `EventEmitterService.emit()` (`event-emitter.ts:242`,
-  confirmed by Gate 8 and Gate 9).
+## 9.2 Data integrity failure
 
-Not live (code only, zero runtime wiring — intentionally parked):
-- `EventReplayEngine` — historical event replay; defined but never imported or
-  called by any non-test runtime file. Remains PARKED.
-- `ProjectionRebuildEngine` — full projection rebuild; defined but never imported
-  or called by any non-test runtime file. Remains PARKED.
-- `SnapshotEngine` — aggregate snapshotting; defined but never imported or called
-  by any non-test runtime file. Remains PARKED.
+```text
+- business data not tied to workspace/user
+- diagnosis can read another workspace's data
+- action completion can update wrong action
+- verification can be written without valid action/diagnosis link
+- evidence is not traceable to source
+- partial writes can leave inconsistent state
+```
 
-| System | Role | Classification |
-|---|---|---|
-| EventEmitterService | append-only event emission | ACTIVE |
-| EventReplayEngine | historical event replay | PARKED |
-| ProjectionRebuildEngine | full projection rebuild | PARKED |
-| SnapshotEngine | aggregate snapshotting | PARKED |
+## 9.3 Consultant-quality failure
 
-The forward-projection `ProjectionEngine` is intentionally not listed as a table
-row above; its genuine ACTIVE status is stated in prose so that no PARKED system
-(replay/rebuild/snapshot) is implied to be live. Gate 9 verifies the parked
-engines stay unwired; Gate 8 verifies the emission path is wired.
+```text
+- recommendation is generic
+- recommendation has no evidence
+- recommendation ignores business context
+- recommendation ignores constraints
+- recommendation has no expected impact
+- recommendation has no verification metric
+- recommendation has no risk/trade-off
+```
 
-### Phase 4 — Replay / Rebuild / Snapshot Consumers
-**Status: SCAFFOLD**
+## 9.4 Owner usefulness failure
 
-SCAFFOLD means the Phase 4 systems (replay-driven read models, projection rebuild
-orchestration, snapshot lifecycle) exist only as un-wired scaffolding. None is
-imported or invoked by any runtime path; there is no runtime proof and no
-DB-backed integration coverage. They remain SCAFFOLD until explicitly wired and
-proven in a future slice.
+```text
+- owner cannot see what is wrong
+- owner cannot see why it matters
+- owner cannot see what to do next
+- owner cannot see who should do it
+- owner cannot see when to do it
+- owner cannot see how improvement will be verified
+- owner cannot see missing data/confidence
+```
+
+## 9.5 Fail-closed failure
+
+```text
+- missing critical data produces confident recommendation
+- conflicting data is hidden
+- failed verification shows success
+- failed import/sync shows current data
+- caught error returns fake success
+```
+
+## 9.6 Security failure
+
+```text
+- workspace_id is optional where required
+- user authorization is skipped
+- client-supplied workspace_id is trusted blindly
+- role/capability checks are inconsistent
+- server-only secret reaches client
+- cross-tenant data access is possible
+```
+
+---
+
+# 10. Slice Execution Loop
+
+Claude must execute one small slice at a time.
+
+## 10.1 Slice size rule
+
+A slice should normally:
+
+```text
+- target one module
+- fix one behaviour
+- touch the smallest practical file set
+- add or update tests for that behaviour
+- run targeted verification and one regression command
+```
+
+Acceptable slices:
+
+```text
+- Add evidence relation to diagnosis response and test it.
+- Block cross-workspace action completion and test it.
+- Add missing-data confidence downgrade and test it.
+- Make dashboard display verification status from backend and test it.
+```
+
+Unacceptable slices:
+
+```text
+- Rebuild Owner Mode.
+- Implement all modules.
+- Rewrite diagnosis, dashboard, action flow, and verification together.
+- Add external integrations or simulations before current Owner Mode is verified.
+```
+
+## 10.2 Required slice start output
+
+Before implementation:
+
+```text
+SLICE_START:
+  slice_id:
+  target_module:
+  defect_or_gap:
+  evidence_from_repo:
+  why_this_is_highest_risk_next:
+  intended_change:
+  files_expected_to_touch:
+  tests_expected_to_add_or_update:
+  commands_expected_to_run:
+  rollback_risk:
+```
+
+## 10.3 Required implementation discipline
+
+```text
+1. Inspect existing implementation first.
+2. Reuse existing patterns and wrappers.
+3. Do not invent parallel architecture.
+4. Keep response contracts compatible unless a documented contract change is required.
+5. Add migrations only when required.
+6. Add tests before or with implementation.
+7. Do not weaken existing tests.
+8. Do not remove existing guardrails.
+9. Do not bypass type errors.
+10. Do not hide lint/type/build failures.
+11. Do not continue to a second slice until closeout is complete.
+```
+
+## 10.4 Required slice closeout output
+
+After implementation/testing:
+
+```text
+SLICE_CLOSEOUT:
+  slice_id:
+  files_changed:
+  implementation_summary:
+  tests_added_or_updated:
+  commands_run:
+  command_results:
+  acceptance_gate_check:
+  hostile_audit_result:
+  remaining_risks:
+  status:
+```
+
+Status must be one of:
+
+```text
+VERIFIED_COMPLETE
+IMPLEMENTED_UNTESTED
+TESTED_PARTIAL
+RUNTIME_DB_UNVERIFIED
+BLOCKED_WITH_EVIDENCE
+```
+
+---
+
+# 11. Required Test Command Discovery
+
+Claude must determine actual commands from package.json and repo config.
+
+Common possibilities only if present:
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run test
+npm run test:ci
+npm run build
+npm run smoke
+npm run e2e
+```
+
+If scripts differ, use actual scripts only.
+
+## 11.1 Minimum verification per slice
+
+Each slice requires:
+
+```text
+- targeted test for changed behaviour
+- one regression command where feasible
+- typecheck/build/lint when relevant and available
+```
+
+If no relevant tests exist, the slice must add tests unless blocked by exact repo limitation.
+
+## 11.2 DB unavailable protocol
+
+Do not repeatedly attempt DB startup.
+
+Required output:
+
+```text
+DB_BLOCKER:
+  command_attempted:
+  exact_error:
+  database_expected_by_repo:
+  docker_available:
+  local_db_available:
+  tests_that_could_run_without_db:
+  tests_not_run:
+  verification_status: RUNTIME_DB_UNVERIFIED
+```
+
+Allowed after DB blocker:
+
+```text
+- static analysis
+- typecheck
+- unit tests not requiring DB
+- contract tests not requiring DB
+- documentation of exact missing runtime proof
+```
+
+Forbidden after DB blocker:
+
+```text
+- claiming runtime journey complete
+- repeatedly retrying same unavailable DB command
+- editing tests to avoid DB without explicit test-scope reason
+```
+
+---
+
+# 12. Mandatory Customer Journey Proof
+
+Full Owner Mode cannot be accepted without this journey being proven by automated smoke/e2e, API-level integration test, or exact command-backed equivalent.
+
+```text
+signup/login
+↓
+workspace created/selected
+↓
+business profile created
+↓
+owner inputs business data
+↓
+diagnosis generated
+↓
+finding/recommendation/action/evidence persisted
+↓
+owner dashboard displays same records
+↓
+operator/action route completes an action
+↓
+actual outcome is recorded
+↓
+verification status updates
+↓
+owner dashboard reflects updated status
+```
+
+Required assertions:
+
+```text
+- no cross-workspace leakage
+- no mock-only success
+- diagnosis response includes evidence/confidence/missing data
+- action has valid status transition
+- verification does not auto-pass without outcome/evidence
+- dashboard reads persisted records
+- invalid/missing input path fails closed
+```
+
+If this cannot run, status is not `VERIFIED_COMPLETE`.
+
+---
+
+# 13. Documentation Requirements
+
+Every slice must update `OWNER_MODE_STATUS_REPORT.md` if it exists. If it does not exist, create it.
+
+Required module status entry:
+
+```text
+module:
+status:
+verified_by:
+commands_run:
+files_changed:
+known_gaps:
+remaining_risks:
+next_slice:
+```
+
+Rules:
+
+```text
+- Do not write marketing language.
+- Do not write “done” without evidence.
+- Do not erase previous unresolved risks.
+- Do not mark module VERIFIED_COMPLETE unless all gates are satisfied.
+```
+
+---
+
+# 14. Final Full Owner Mode Acceptance Gate
+
+Full Owner Mode is accepted only when every module is `VERIFIED_COMPLETE`:
+
+```text
+FINAL_OWNER_MODE_ACCEPTANCE:
+  M01 Business Profile: VERIFIED_COMPLETE
+  M02 Data Intake: VERIFIED_COMPLETE
+  M03 Diagnosis Engine: VERIFIED_COMPLETE
+  M04 Evidence Model: VERIFIED_COMPLETE
+  M05 Recommendation Engine: VERIFIED_COMPLETE
+  M06 Action Plan: VERIFIED_COMPLETE
+  M07 Owner Dashboard: VERIFIED_COMPLETE
+  M08 Operator Completion: VERIFIED_COMPLETE
+  M09 Verification Tracking: VERIFIED_COMPLETE
+  M10 Constraint Handling: VERIFIED_COMPLETE
+  M11 Audit Logging: VERIFIED_COMPLETE
+  M12 Access Control: VERIFIED_COMPLETE
+  M13 Demo/Smoke Data: VERIFIED_COMPLETE
+  M14 Fail-Closed Errors: VERIFIED_COMPLETE
+  M15 Tests/CI: VERIFIED_COMPLETE
+```
+
+And this journey passes:
+
+```text
+signup -> workspace -> business profile -> input -> diagnosis -> dashboard -> action completion -> verification -> dashboard update
+```
+
+And this command set passes or has exact blocker evidence:
+
+```text
+typecheck
+lint
+unit tests
+integration/API tests
+build
+smoke/e2e customer journey
+```
+
+If any required runtime command is blocked, the final status cannot be `VERIFIED_COMPLETE`; it must be `RUNTIME_DB_UNVERIFIED` or `BLOCKED_WITH_EVIDENCE`.
+
+---
+
+# 15. First Execution Instruction for Claude
+
+```text
+Read execution.md fully.
+
+Perform the Repo Reality Scan from section 3.
+
+Then audit all current Full Owner Mode modules using sections 5–9.
+
+Do not implement anything until the repo-backed module audit is complete.
+
+After the audit, select the single smallest highest-risk incomplete slice.
+
+Output SLICE_START.
+
+Implement only that slice.
+
+Run targeted tests and one regression command.
+
+Update OWNER_MODE_STATUS_REPORT.md.
+
+Output SLICE_CLOSEOUT with command evidence.
+
+Repeat until every module is VERIFIED_COMPLETE or blocked with exact evidence.
+```
+
+---
+
+# 16. Mobile-Safe Short Prompt
+
+```text
+Read execution.md. Follow it exactly. Repo scan first. Audit M01–M15. No coding before audit. Then implement the smallest highest-risk incomplete slice only. Test, update OWNER_MODE_STATUS_REPORT.md, close out with evidence, repeat. No assumptions. No broad rewrites. No false COMPLETE.
+```
+
+---
+
+# 17. Zero-Prompt Build Loop Command
+
+Purpose: allow the owner to continue the next slice with a short command instead of pasting a full prompt.
+
+Claude must support a repository-resident command named:
+
+```text
+/continue-build
+```
+
+## 17.1 Required command file
+
+If the repo uses Claude Code slash commands, create this file:
+
+```text
+.claude/commands/continue-build.md
+```
+
+with this exact content:
+
+```text
+Read execution.md from repo root and follow it exactly.
+
+Continue Full Owner Mode from the latest repo-proven state only.
+
+Mandatory sequence:
+1. Read execution.md.
+2. Read OWNER_MODE_STATUS_REPORT.md if present.
+3. Run a minimal repo reality check:
+   - git status --short
+   - git rev-parse --short HEAD
+   - cat package.json
+4. Determine the next incomplete M01–M15 slice from repo evidence, not chat memory.
+5. Output SLICE_START using execution.md format.
+6. Implement only the single smallest highest-risk incomplete slice.
+7. Run the targeted test for that slice.
+8. Run one relevant regression command.
+9. Update OWNER_MODE_STATUS_REPORT.md.
+10. Output SLICE_CLOSEOUT using execution.md format.
+
+Rules:
+- No broad rewrites.
+- No future/post-owner modules.
+- No CRM/API/browser import/growth/simulation/learning modules.
+- No skipped audit gates.
+- No false COMPLETE.
+- If DB/Docker/runtime is unavailable, capture exact command and error once, mark RUNTIME_DB_UNVERIFIED or BLOCKED_WITH_EVIDENCE, then continue with non-DB-verifiable slices only.
+- Do not repeatedly retry blocked infrastructure.
+```
+
+## 17.2 If Claude Code slash commands are unavailable
+
+Create this fallback command file:
+
+```text
+opsiq-continue-build.md
+```
+
+with the same content as `.claude/commands/continue-build.md`.
+
+Then the short command/prompt to use is:
+
+```text
+Run opsiq-continue-build.md
+```
+
+## 17.3 Required startup behaviour when `/continue-build` is used
+
+On every `/continue-build`, Claude must not ask what to do next. It must:
+
+```text
+1. Inspect repo state.
+2. Read status report.
+3. Identify next incomplete slice.
+4. Start SLICE_START.
+5. Implement one slice.
+6. Test it.
+7. Update status.
+8. Output SLICE_CLOSEOUT.
+```
+
+## 17.4 Required closeout behaviour
+
+At the end of every `/continue-build` run, Claude must state one of these:
+
+```text
+NEXT_RUN_READY: /continue-build
+```
+
+or
+
+```text
+BLOCKED_NEXT_RUN_NOT_SAFE:
+  reason:
+  exact_command_failed:
+  exact_error_summary:
+  human_action_required:
+```
+
+Claude must not end with a vague question such as:
+
+```text
+What would you like me to do next?
+```
+
+## 17.5 Command must not bypass gates
+
+The short command is only a trigger. It does not weaken any audit requirement in this execution file.
+
+`/continue-build` must still obey:
+
+```text
+- repo evidence hierarchy
+- M01–M15 module scope
+- smallest-slice execution
+- targeted test requirement
+- regression command requirement
+- status report update requirement
+- no false VERIFIED_COMPLETE rule
+```
+
+
+---
+
+# 18. v3 Hostile Hardening Addendum — Mandatory
+
+This section fixes loopholes found after auditing the zero-prompt build-loop version. It overrides any weaker wording above.
+
+## 18.1 Dirty working tree policy
+
+Before any `/continue-build` implementation, Claude must inspect the working tree.
+
+Required command:
+
+```bash
+git status --short
+```
+
+Rules:
+
+```text
+- If the working tree has uncommitted changes, Claude must classify them before editing.
+- If changes appear to be from the previous slice and are documented in OWNER_MODE_STATUS_REPORT.md, Claude may continue.
+- If changes are undocumented, unrelated, or ambiguous, Claude must stop before editing and output DIRTY_TREE_BLOCKER.
+- Claude must not overwrite, delete, reformat, or silently absorb unrelated user/worktree changes.
+```
+
+Required output if blocked:
+
+```text
+DIRTY_TREE_BLOCKER:
+  changed_files:
+  suspected_origin:
+  risk:
+  safe_next_action:
+```
+
+## 18.2 Status report is not a source of truth
+
+`OWNER_MODE_STATUS_REPORT.md` is only a navigation aid.
+
+Rules:
+
+```text
+- Status report entries do not prove completion.
+- Every claimed completed slice must be re-checked against code/tests/commands before relying on it.
+- If status report and repo evidence disagree, repo evidence wins.
+- If status report marks VERIFIED_COMPLETE but required tests are absent or failing, downgrade the module.
+```
+
+## 18.3 Build-loop bootstrap must be implemented as its own first slice if missing
+
+The zero-prompt command cannot be assumed to exist.
+
+Before normal module work, Claude must check:
+
+```text
+.claude/commands/continue-build.md
+opsiq-continue-build.md
+```
+
+Rules:
+
+```text
+- If neither exists, the first permitted slice is BUILD_LOOP_BOOTSTRAP.
+- BUILD_LOOP_BOOTSTRAP may create only the command file(s), not product logic.
+- After bootstrap, Claude must output NEXT_RUN_READY: /continue-build.
+- Bootstrap does not count as M01–M15 verification.
+```
+
+Required bootstrap closeout:
+
+```text
+BUILD_LOOP_BOOTSTRAP_CLOSEOUT:
+  command_files_created:
+  content_matches_execution_md: true/false
+  product_files_touched: must be NONE
+  next_run_command:
+```
+
+## 18.4 Full audit is not required on every continuation, but delta audit is mandatory
+
+The first execution after installing this file must perform the full M01–M15 audit.
+
+For later `/continue-build` runs:
+
+```text
+- Claude must not re-run the entire expensive audit unless repo evidence changed materially.
+- Claude must read the prior audit/status report.
+- Claude must run a delta audit for the selected next slice.
+- Claude must verify that the selected module status is still supported by current repo evidence.
+```
+
+Required output on continuation:
+
+```text
+DELTA_AUDIT:
+  prior_status_source:
+  files_rechecked:
+  commands_or_searches_rechecked:
+  status_confirmed_or_downgraded:
+  reason:
+```
+
+## 18.5 Evidence artifacts must be durable
+
+Closeout cannot rely only on prose.
+
+For every command run, Claude must capture or summarize command evidence with enough specificity to verify later.
+
+Required:
+
+```text
+- exact command
+- exit code
+- pass/fail
+- relevant output excerpt
+- if available, log file path under logs/owner-mode/
+```
+
+Recommended log convention:
+
+```text
+logs/owner-mode/<YYYYMMDD-HHMM>-<slice_id>-<command-name>.log
+```
+
+If log files are not created, Claude must explain why and include output excerpts in SLICE_CLOSEOUT.
+
+## 18.6 Test modification restriction
+
+Claude must not make tests pass by weakening the test suite.
+
+Forbidden unless explicitly justified as a test-correction slice:
+
+```text
+- deleting failing tests
+- skipping tests
+- replacing assertions with weaker assertions
+- changing production expectations to match broken behaviour
+- changing fixtures to hide real defects
+- excluding failing files from test config
+```
+
+If tests are changed, closeout must include:
+
+```text
+TEST_CHANGE_JUSTIFICATION:
+  tests_changed:
+  why_change_was_required:
+  production_behaviour_asserted:
+  did_assertion_strength_increase: true/false
+```
+
+If `did_assertion_strength_increase` is false, the slice cannot be `VERIFIED_COMPLETE` without separate justification.
+
+## 18.7 Migration and schema-change controls
+
+Schema changes are high-risk.
+
+Before editing Prisma/schema/migrations/database types, Claude must output:
+
+```text
+SCHEMA_CHANGE_PRECHECK:
+  reason_schema_change_is_required:
+  existing_models_checked:
+  backward_compatibility_risk:
+  migration_required: true/false
+  data_backfill_required: true/false
+  rollback_plan:
+```
+
+Rules:
+
+```text
+- Do not add duplicate models if an equivalent model exists.
+- Do not rename/delete fields without migration/backward-compatibility analysis.
+- Do not introduce nullable fields to bypass required data without documenting why.
+- Do not mark schema-related module VERIFIED_COMPLETE if migration cannot be verified and runtime DB verification is required.
+```
+
+## 18.8 API contract controls
+
+Any changed API route/service response must have a documented response contract.
+
+Required when touching API/service outputs:
+
+```text
+API_CONTRACT_CHECK:
+  route_or_function:
+  request_shape:
+  response_shape:
+  error_shape:
+  auth_required:
+  workspace_scope_source:
+  backward_compatibility:
+  tests_covering_contract:
+```
+
+Rules:
+
+```text
+- Do not silently change response field names.
+- Do not remove fields used by UI/tests without updating all consumers.
+- Do not return raw internal errors to the client.
+- Do not return success=true when persistence/action failed.
+```
+
+## 18.9 UI contract controls
+
+Any changed UI path must be tied to backend data or explicitly marked as mock/demo.
+
+Required when touching UI:
+
+```text
+UI_CONTRACT_CHECK:
+  page_or_component:
+  backend_source:
+  loading_state:
+  empty_state:
+  error_state:
+  unauthorized_state:
+  stale_data_state_where_applicable:
+  tests_or_static_proof:
+```
+
+Rules:
+
+```text
+- UI cannot be accepted if it only renders static placeholder content.
+- UI must not hide backend error states as empty success states.
+- Dashboard data must be traced to API/service/persistence path.
+```
+
+## 18.10 Auth and workspace isolation proof must include negative checks
+
+For any slice touching user/business data, closeout must include one of:
+
+```text
+- automated cross-workspace negative test, or
+- existing test path re-run with exact command, or
+- exact blocker explaining why it could not be run.
+```
+
+Static inspection alone cannot make access-control-sensitive work `VERIFIED_COMPLETE` unless the module is purely non-runtime and no route/service writes/reads user data.
+
+## 18.11 DB blocker does not permit indefinite avoidance of DB-required modules
+
+If DB/runtime is unavailable:
+
+```text
+- Claude may continue only with slices whose acceptance gates do not require DB/runtime proof.
+- Claude must maintain a DB_BLOCKED_QUEUE listing modules/slices that cannot be verified.
+- Claude must not mark the overall Full Owner Mode as VERIFIED_COMPLETE.
+- Claude must not repeatedly choose low-value non-DB slices while high-risk DB-required slices remain blocked without stating that limitation.
+```
+
+Required output when DB is blocked and work continues:
+
+```text
+DB_BLOCKED_QUEUE:
+  blocked_slices:
+  reason_each_requires_db:
+  non_db_slice_selected:
+  why_non_db_slice_is_safe_and_useful:
+```
+
+## 18.12 Slice priority must be deterministic
+
+After audit, next slice selection must follow this priority unless a blocker exists:
+
+```text
+P0: security/workspace isolation/auth failure
+P1: data integrity/persistence/transaction failure
+P2: diagnosis/evidence/recommendation correctness failure
+P3: action completion/verification/customer journey failure
+P4: dashboard visibility/error-state failure
+P5: tests/status/audit documentation hardening
+```
+
+Required in SLICE_START:
+
+```text
+priority_class:
+why_no_higher_priority_slice_selected:
+```
+
+## 18.13 No hidden dependency installation
+
+Claude must not install packages just to complete a slice unless required.
+
+Before adding dependencies:
+
+```text
+DEPENDENCY_CHANGE_PRECHECK:
+  package:
+  why_needed:
+  alternatives_in_repo:
+  security_or_maintenance_risk:
+  lockfile_to_change:
+```
+
+Rules:
+
+```text
+- Prefer existing dependencies.
+- Do not add large new frameworks for a small slice.
+- Do not change package manager.
+```
+
+## 18.14 Environment variable and secret handling
+
+Claude must not require unavailable secrets for normal verification unless unavoidable.
+
+Rules:
+
+```text
+- Do not print secrets.
+- Do not add real secrets to files.
+- Document required env vars with placeholder names only.
+- Tests should use safe test env values or mocks where appropriate.
+- Missing env vars must produce explicit fail-closed errors, not fake success.
+```
+
+## 18.15 Completion language restriction applies to final responses too
+
+Claude must not end a slice with vague positive language.
+
+Forbidden final phrases unless the strict status supports them:
+
+```text
+all done
+fully complete
+production ready
+ready to launch
+works perfectly
+no issues
+```
+
+Required ending:
+
+```text
+NEXT_RUN_READY: /continue-build
+```
+
+or:
+
+```text
+BLOCKED_NEXT_RUN_NOT_SAFE:
+  reason:
+  exact_command_failed:
+  exact_error_summary:
+  human_action_required:
+```
+
+## 18.16 The `/continue-build` command content must include v3 hardening
+
+If `.claude/commands/continue-build.md` or `opsiq-continue-build.md` exists but does not mention this v3 hardening section, Claude must update it before continuing product work.
+
+Minimum command-file line required:
+
+```text
+Also obey section 18 v3 Hostile Hardening Addendum in execution.md; it overrides weaker instructions.
+```
+
+## 18.17 Final acceptance requires fresh verification, not accumulated claims
+
+Before final Full Owner Mode acceptance, Claude must run a fresh verification pass from current repo state.
+
+Required:
+
+```text
+FINAL_FRESH_VERIFICATION:
+  branch:
+  commit:
+  working_tree_status:
+  commands_run:
+  module_statuses_rechecked:
+  customer_journey_result:
+  unresolved_blockers:
+  final_status:
+```
+
+If any verification command is skipped, blocked, or stale, final status cannot be `VERIFIED_COMPLETE`.
