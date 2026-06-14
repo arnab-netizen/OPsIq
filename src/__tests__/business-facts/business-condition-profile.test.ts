@@ -28,8 +28,8 @@ import {
   type HealthScores,
 } from "../../domain/business-facts/business-condition-profile";
 import type { BusinessDiagnosis } from "../../domain/business-facts/diagnosis";
-import type { HarmRiskAssessment } from "../../domain/business-facts/harm-guardrails";
-import type { OwnerConstraintViolation } from "../../domain/business-facts/owner-constraints";
+import type { HarmGuardrailAssessment } from "../../domain/business-facts/harm-guardrails";
+import type { ConstraintViolation } from "../../domain/business-facts/owner-constraints";
 import type { KPIProfile } from "../../domain/business-facts/kpi-profiles";
 
 // --- Test Fixtures ---
@@ -85,72 +85,31 @@ const createMockDiagnosis = (overrides?: Partial<BusinessDiagnosis>): BusinessDi
 });
 
 const createMockHarmRisks = (
-  overrides?: Partial<HarmRiskAssessment>,
-): HarmRiskAssessment => ({
-  assessment_id: "risk_001",
-  cash_impact: {
-    risk_type: "cash_impact",
-    estimated_cash_required: 50000,
-    estimated_monthly_available_cash: 40000,
-    severity: "medium",
-    risk_description: "Moderate cash requirement",
-  },
-  margin_impact: {
-    risk_type: "margin_impact",
-    margin_impact_percent: -5,
-    severity: "medium",
-    risk_description: "Slight margin pressure",
-  },
-  team_capacity: {
-    risk_type: "team_capacity",
-    team_capacity_percent: 60,
-    severity: "low",
-    risk_description: "Team has capacity",
-  },
-  owner_burnout: {
-    risk_type: "owner_burnout",
-    workload_hours_per_week: 45,
-    severity: "low",
-    risk_description: "Normal workload",
-  },
-  market_response: {
-    risk_type: "market_response",
-    competitor_risk: false,
-    severity: "low",
-    risk_description: "No competitive risk",
-  },
-  customer_impact: {
-    risk_type: "customer_impact",
-    customer_risk: false,
-    severity: "low",
-    risk_description: "No customer impact",
-  },
-  execution_risk: {
-    risk_type: "execution_risk",
-    execution_feasibility_percent: 80,
-    severity: "low",
-    risk_description: "Feasible execution",
-  },
-  regulatory_risk: {
-    risk_type: "regulatory_risk",
-    regulatory_concern: false,
-    severity: "low",
-    risk_description: "No regulatory concern",
-  },
+  overrides?: Partial<HarmGuardrailAssessment>,
+): HarmGuardrailAssessment => ({
+  recommendation_id: "rec_001",
+  is_harmful: false,
+  can_be_primary: true,
+  critical_risks: [],
+  high_risks: [],
+  medium_risks: [],
+  risk_summary: "No critical or high risks identified",
+  mitigation_required: [],
+  verification_metrics_required: [],
   ...overrides,
 });
 
 const createMockConstraints = (
   count: number = 0,
-): OwnerConstraintViolation[] => {
-  const violations: OwnerConstraintViolation[] = [];
+): ConstraintViolation[] => {
+  const violations: ConstraintViolation[] = [];
   for (let i = 0; i < count; i++) {
     violations.push({
-      constraint_id: `cst_${i}`,
-      constraint_type: "availability",
-      severity: i === 0 ? "critical" : "high",
-      violated: true,
-      reason: `Constraint violation ${i}`,
+      category: "budget",
+      description: `Constraint violation ${i}`,
+      severity: i === 0 ? "blocking" : "advisory",
+      owner_constraint: `Constraint ${i}`,
+      requirement: `Requirement ${i}`,
     });
   }
   return violations;
@@ -159,15 +118,51 @@ const createMockConstraints = (
 const createMockKPIProfile = (
   overrides?: Partial<KPIProfile>,
 ): KPIProfile => ({
-  profile_id: "kpi_saas",
-  business_type: "saas",
-  core_kpis: ["mrr", "arpu", "churn", "nps"],
-  failure_modes: [
-    { mode: "high_churn", trigger: "churn > 10%", mitigation: "increase retention" },
+  industry_type: "saas",
+  display_name: "SaaS",
+  description: "SaaS business KPI profile",
+  core_kpis: [
+    {
+      kpi_name: "MRR",
+      measurement_unit: "₹",
+      calculation_method: "Sum of monthly recurring revenue",
+      frequency: "monthly",
+      why_matters: "Indicates business growth",
+    },
   ],
-  critical_ratios: { "burn/runway": 0.3, "cac/ltv": 0.25 },
-  action_patterns: ["daily_monitoring", "weekly_review", "monthly_planning"],
-  benchmarks: { industry_avg_nps: 45, industry_avg_churn: 5 },
+  common_failure_modes: [
+    {
+      failure_name: "High churn",
+      symptoms: ["Increased customer churn rate"],
+      typical_root_causes: ["Poor product-market fit"],
+      financial_impact: "Revenue loss",
+      timeline_if_unchecked: "6 months to business threat",
+    },
+  ],
+  critical_ratios: [
+    {
+      ratio_name: "CAC/LTV",
+      numerator: "Customer Acquisition Cost",
+      denominator: "Customer Lifetime Value",
+      healthy_range: { min: 0, max: 0.3 },
+      unit: "multiplier",
+      why_critical: "Indicates unit economics health",
+    },
+  ],
+  required_data_sources: ["Stripe", "Analytics"],
+  minimum_data_points_for_diagnosis: ["MRR", "Churn"],
+  action_patterns: [
+    {
+      pattern_name: "Churn reduction",
+      when_to_apply: "When churn > 5%",
+      typical_steps: ["Review customer feedback", "Improve product"],
+      expected_timeline: "3 months",
+      success_metrics: ["Churn reduced to <5%"],
+    },
+  ],
+  benchmark_notes: "Industry benchmarks from SaaS databases",
+  applicable_benchmarks: ["MRR growth rate", "Churn rate"],
+  caveats: ["Benchmarks vary by geography"],
   ...overrides,
 });
 
@@ -177,7 +172,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
   describe("scoreOwnerHealth", () => {
     it("should return 50 for diagnosis with no constraints", () => {
       const diagnosis = createMockDiagnosis();
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
 
       const score = scoreOwnerHealth(diagnosis, constraints);
 
@@ -196,7 +191,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
 
     it("should increase score for high diagnosis confidence", () => {
       const diagnosis = createMockDiagnosis({ confidence_score: 0.85 });
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
 
       const score = scoreOwnerHealth(diagnosis, constraints);
 
@@ -244,14 +239,32 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
 
     it("should penalize failure modes", () => {
       const profileWithFailures = createMockKPIProfile({
-        failure_modes: [
-          { mode: "m1", trigger: "t1", mitigation: "mit1" },
-          { mode: "m2", trigger: "t2", mitigation: "mit2" },
-          { mode: "m3", trigger: "t3", mitigation: "mit3" },
+        common_failure_modes: [
+          {
+            failure_name: "m1",
+            symptoms: ["s1"],
+            typical_root_causes: ["c1"],
+            financial_impact: "High",
+            timeline_if_unchecked: "1 month",
+          },
+          {
+            failure_name: "m2",
+            symptoms: ["s2"],
+            typical_root_causes: ["c2"],
+            financial_impact: "High",
+            timeline_if_unchecked: "1 month",
+          },
+          {
+            failure_name: "m3",
+            symptoms: ["s3"],
+            typical_root_causes: ["c3"],
+            financial_impact: "High",
+            timeline_if_unchecked: "1 month",
+          },
         ],
       });
       const profileWithoutFailures = createMockKPIProfile({
-        failure_modes: [],
+        common_failure_modes: [],
       });
 
       const scoreWith = scoreTeamHealth(profileWithFailures);
@@ -273,10 +286,10 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
 
     it("should increase score for strong benchmarks", () => {
       const strongBenchmarks = createMockKPIProfile({
-        benchmarks: { nps: 60, churn: 2, retention: 95, nrr: 120 },
+        applicable_benchmarks: ["NPS", "Churn", "Retention", "NRR"],
       });
       const weakBenchmarks = createMockKPIProfile({
-        benchmarks: { nps: 20, churn: 15 },
+        applicable_benchmarks: ["NPS", "Churn"],
       });
 
       const strongScore = scoreCustomerHealth(strongBenchmarks);
@@ -447,18 +460,18 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
     it("should identify critical harm guardrail risks", () => {
       const diagnosis = createMockDiagnosis();
       const risks = createMockHarmRisks({
-        cash_impact: {
-          risk_type: "cash_impact",
-          estimated_cash_required: 100000,
-          estimated_monthly_available_cash: 5000,
-          severity: "critical",
-          risk_description: "Critical cash shortfall",
-        },
+        critical_risks: [
+          {
+            category: "cash_impact",
+            severity: "critical",
+            notes: ["Critical cash shortfall"],
+          } as any,
+        ],
       });
 
       const factors = identifyRiskFactors(diagnosis, risks);
 
-      expect(factors.some((f) => f.includes("cash"))).toBe(true);
+      expect(factors.some((f) => f.includes("critical"))).toBe(true);
     });
   });
 
@@ -467,7 +480,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
       const diagnosis = createMockDiagnosis({
         confidence_score: 0.85,
       });
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
 
       const strengths = identifyStrengths(diagnosis, constraints);
 
@@ -478,7 +491,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
       const diagnosis = createMockDiagnosis({
         can_act_without_data: true,
       });
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
 
       const strengths = identifyStrengths(diagnosis, constraints);
 
@@ -504,7 +517,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
           why_not_primary: "Primary better aligns with goals",
         },
       });
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
 
       const strengths = identifyStrengths(diagnosis, constraints);
 
@@ -516,7 +529,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
     it("should produce valid assessment with all fields", () => {
       const diagnosis = createMockDiagnosis();
       const risks = createMockHarmRisks();
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
       const kpiProfile = createMockKPIProfile();
 
       const assessment = evaluateBusinessConditionProfile(
@@ -538,7 +551,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
     it("should produce consistent scores within valid ranges", () => {
       const diagnosis = createMockDiagnosis();
       const risks = createMockHarmRisks();
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
       const kpiProfile = createMockKPIProfile();
 
       const assessment = evaluateBusinessConditionProfile(
@@ -563,7 +576,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
     it("should correctly match urgency to status", () => {
       const diagnosis = createMockDiagnosis();
       const risks = createMockHarmRisks();
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
       const kpiProfile = createMockKPIProfile();
 
       const assessment = evaluateBusinessConditionProfile(
@@ -581,7 +594,7 @@ describe("B12-S1: Business Condition Profile Evaluation", () => {
     it("should correctly match hardening pressure to status", () => {
       const diagnosis = createMockDiagnosis();
       const risks = createMockHarmRisks();
-      const constraints: OwnerConstraintViolation[] = [];
+      const constraints: ConstraintViolation[] = [];
       const kpiProfile = createMockKPIProfile();
 
       const assessment = evaluateBusinessConditionProfile(

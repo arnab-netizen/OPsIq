@@ -16,8 +16,8 @@
  */
 
 import type { BusinessDiagnosis } from "./diagnosis";
-import type { HarmRiskAssessment } from "./harm-guardrails";
-import type { OwnerConstraintViolation } from "./owner-constraints";
+import type { HarmGuardrailAssessment } from "./harm-guardrails";
+import type { ConstraintViolation } from "./owner-constraints";
 import type { KPIProfile } from "./kpi-profiles";
 
 // --- Business Condition Profile Assessment ---
@@ -56,16 +56,16 @@ export interface ConditionTransition {
  */
 export function scoreOwnerHealth(
   diagnosis: BusinessDiagnosis,
-  constraints: OwnerConstraintViolation[],
+  constraints: ConstraintViolation[],
 ): number {
   let score = 50;
 
   // Constraint violations reduce score
-  const critical_constraints = constraints.filter((c) => c.severity === "critical");
-  const high_constraints = constraints.filter((c) => c.severity === "high");
+  const blocking_constraints = constraints.filter((c) => c.severity === "blocking");
+  const advisory_constraints = constraints.filter((c) => c.severity === "advisory");
 
-  score -= critical_constraints.length * 20;
-  score -= high_constraints.length * 10;
+  score -= blocking_constraints.length * 20;
+  score -= advisory_constraints.length * 5;
 
   // Confidence in diagnosis reflects owner's ability to execute
   if (diagnosis.confidence_score >= 0.8) {
@@ -101,8 +101,8 @@ export function scoreTeamHealth(kpiProfile: KPIProfile): number {
 
   // Adjust based on failure modes (high count = low resilience)
   const failureModeCount =
-    kpiProfile.failure_modes && Array.isArray(kpiProfile.failure_modes)
-      ? kpiProfile.failure_modes.length
+    kpiProfile.common_failure_modes && Array.isArray(kpiProfile.common_failure_modes)
+      ? kpiProfile.common_failure_modes.length
       : 0;
   score -= Math.min(20, failureModeCount * 3);
 
@@ -118,12 +118,11 @@ export function scoreCustomerHealth(kpiProfile: KPIProfile): number {
 
   // Benchmarks indicate performance vs industry
   if (
-    kpiProfile.benchmarks &&
-    typeof kpiProfile.benchmarks === "object" &&
-    !Array.isArray(kpiProfile.benchmarks)
+    kpiProfile.applicable_benchmarks &&
+    Array.isArray(kpiProfile.applicable_benchmarks)
   ) {
-    // Higher benchmark scores indicate strong market position
-    const benchmarkCount = Object.keys(kpiProfile.benchmarks).length;
+    // Higher benchmark availability indicates strong market position
+    const benchmarkCount = kpiProfile.applicable_benchmarks.length;
     if (benchmarkCount > 3) {
       score += 15;
     }
@@ -238,7 +237,7 @@ export function statusToHardeningPressure(
  */
 export function identifyRiskFactors(
   diagnosis: BusinessDiagnosis,
-  harmRisks: HarmRiskAssessment,
+  harmRisks: HarmGuardrailAssessment,
 ): string[] {
   const risks: string[] = [];
 
@@ -258,20 +257,12 @@ export function identifyRiskFactors(
   }
 
   // Harm guardrail risks
-  if (harmRisks.cash_impact && harmRisks.cash_impact.severity === "critical") {
-    risks.push("Critical cash impact risk");
+  if (harmRisks.critical_risks.length > 0) {
+    risks.push(`${harmRisks.critical_risks.length} critical harm risks identified`);
   }
 
-  if (harmRisks.margin_impact && harmRisks.margin_impact.severity === "critical") {
-    risks.push("Critical margin impact risk");
-  }
-
-  if (harmRisks.team_capacity && harmRisks.team_capacity.severity === "critical") {
-    risks.push("Critical team capacity risk");
-  }
-
-  if (harmRisks.owner_burnout && harmRisks.owner_burnout.severity === "critical") {
-    risks.push("Critical owner burnout risk");
+  if (harmRisks.high_risks.length > 2) {
+    risks.push(`${harmRisks.high_risks.length} high-severity harm risks identified`);
   }
 
   // Timeline risks
@@ -290,7 +281,7 @@ export function identifyRiskFactors(
  */
 export function identifyStrengths(
   diagnosis: BusinessDiagnosis,
-  constraints: OwnerConstraintViolation[],
+  constraints: ConstraintViolation[],
 ): string[] {
   const strengths: string[] = [];
 
@@ -302,9 +293,9 @@ export function identifyStrengths(
     strengths.push("Can proceed without additional data");
   }
 
-  const critical_constraints = constraints.filter((c) => c.severity === "critical");
-  if (critical_constraints.length === 0) {
-    strengths.push("No critical owner constraint violations");
+  const blocking_constraints = constraints.filter((c) => c.severity === "blocking");
+  if (blocking_constraints.length === 0) {
+    strengths.push("No blocking owner constraint violations");
   }
 
   if (diagnosis.alternative && diagnosis.alternative.why_not_primary) {
@@ -324,8 +315,8 @@ export function identifyStrengths(
  */
 export function evaluateBusinessConditionProfile(
   diagnosis: BusinessDiagnosis,
-  harmRisks: HarmRiskAssessment,
-  constraints: OwnerConstraintViolation[],
+  harmRisks: HarmGuardrailAssessment,
+  constraints: ConstraintViolation[],
   kpiProfile: KPIProfile,
 ): BusinessConditionProfileAssessment {
   // Compute health scores

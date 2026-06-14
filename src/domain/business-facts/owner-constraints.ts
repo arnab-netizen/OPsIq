@@ -165,7 +165,7 @@ export function checkRecommendationAgainstConstraints(
 
   // Cash runway constraint (critical: no high-burn recommendations in crisis)
   if (
-    constraints.months_of_cash_runway !== null &&
+    constraints.months_of_cash_runway != null &&
     constraints.months_of_cash_runway < 3 &&
     recommendation.cash_requirement_monthly &&
     recommendation.cash_requirement_monthly > 0
@@ -208,7 +208,7 @@ export function checkRecommendationAgainstConstraints(
       });
     } else {
       const new_hires_needed = recommendation.staff_requirement - (constraints.total_staff_count ?? 0);
-      if (constraints.max_new_hires !== null && new_hires_needed > constraints.max_new_hires) {
+      if (constraints.max_new_hires != null && new_hires_needed > constraints.max_new_hires) {
         violations.push({
           category: "staff",
           description: "Recommendation exceeds max new hires constraint",
@@ -264,7 +264,7 @@ export function checkRecommendationAgainstConstraints(
   }
 
   // Risk appetite constraint
-  if (recommendation.priority_level === "critical" && constraints.risk_appetite !== null && constraints.risk_appetite < 3) {
+  if (recommendation.priority_level === "critical" && constraints.risk_appetite != null && constraints.risk_appetite < 3) {
     violations.push({
       category: "risk_appetite",
       description: "High-risk recommendation not suitable for conservative owner",
@@ -305,7 +305,7 @@ export function checkRecommendationAgainstConstraints(
   // Execution capacity constraint
   if (
     recommendation.priority_level === "critical" &&
-    constraints.execution_capacity !== null &&
+    constraints.execution_capacity != null &&
     constraints.execution_capacity < 3
   ) {
     notes.push("Recommendation requires high execution capacity but owner has limited bandwidth");

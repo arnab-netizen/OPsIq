@@ -338,8 +338,8 @@ export function normalizeFact(fact: BusinessFact): NormalizedFact {
   return {
     ...fact,
     currency: normCurrency,
-    tax_basis: detectedTaxBasis !== "unknown" ? detectedTaxBasis : fact.tax_basis,
-    gross_or_net: classifiedGrossNet !== "unknown" ? classifiedGrossNet : fact.gross_or_net,
+    tax_basis: detectedTaxBasis !== "unknown" ? detectedTaxBasis : (fact.tax_basis || "unknown"),
+    gross_or_net: classifiedGrossNet !== "unknown" ? classifiedGrossNet : (fact.gross_or_net || "unknown"),
     unit: normUnit,
     normalization_applied: modified,
     normalization_notes: notes,

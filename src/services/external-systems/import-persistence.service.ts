@@ -15,7 +15,7 @@
  * - Parsed import results (B12-S2)
  */
 
-import type { PrismaClient } from "@/generated/prisma";
+import type { PrismaClient } from "@/generated/prisma/client";
 import type { ImportResult, ParsedRow } from "@/domain/external-systems/import-parser";
 
 export interface CreateExternalRawRecordInput {
@@ -251,7 +251,7 @@ export async function getEngagementImportRecords(
     orderBy: { createdAt: "desc" },
   });
 
-  return records.map((r) => ({
+  return records.map((r: any) => ({
     id: r.id,
     workspaceId: r.workspaceId,
     engagementId: r.engagementId,
@@ -288,14 +288,14 @@ export async function rollbackImport(
   const lineageRemoved = await prisma.externalDataLineage.deleteMany({
     where: {
       workspaceId,
-      sourceRecordId: { in: records.map((r) => r.id) },
+      sourceRecordId: { in: records.map((r: any) => r.id) },
     },
   });
 
   // Update records to failed
   const updated = await prisma.externalRawRecord.updateMany({
     where: {
-      id: { in: records.map((r) => r.id) },
+      id: { in: records.map((r: any) => r.id) },
     },
     data: {
       status: "failed",

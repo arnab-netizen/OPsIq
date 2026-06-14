@@ -288,23 +288,21 @@ export function assessExecutionCapacityRisk(
   let exceeds = false;
 
   // Check owner capacity first
-  if (ownerCapacityUsagePct !== null && ownerCapacityUsagePct > 100) {
+  if (ownerCapacityUsagePct != null && ownerCapacityUsagePct > 100) {
     exceeds = true;
     severity = "critical";
     notes.push(`Owner capacity already at ${ownerCapacityUsagePct}% (exceeds 100%)`);
-  } else if (ownerCapacityUsagePct !== null && ownerCapacityUsagePct > 80) {
-    if (severity !== "critical") {
-      severity = "high";
-    }
+  } else if (ownerCapacityUsagePct != null && ownerCapacityUsagePct > 80) {
+    severity = "high";
     notes.push(`Owner capacity at ${ownerCapacityUsagePct}% (exceeds 80% threshold)`);
   }
 
   // Check team capacity, but don't downgrade severity
-  if (teamCapacityUsagePct !== null && teamCapacityUsagePct > 100) {
+  if (teamCapacityUsagePct != null && teamCapacityUsagePct > 100) {
     exceeds = true;
     severity = "critical";
     notes.push(`Team capacity already at ${teamCapacityUsagePct}% (exceeds 100%)`);
-  } else if (teamCapacityUsagePct !== null && teamCapacityUsagePct > 80 && severity !== "critical") {
+  } else if (teamCapacityUsagePct != null && teamCapacityUsagePct > 80 && severity !== "critical") {
     severity = "high";
     notes.push(`Team capacity at ${teamCapacityUsagePct}% (exceeds 80% threshold)`);
   }

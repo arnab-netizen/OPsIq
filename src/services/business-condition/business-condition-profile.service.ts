@@ -6,7 +6,7 @@
  * S4: Audit event emission on transitions
  */
 
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@/generated/prisma/client";
 import { randomUUID } from "crypto";
 import type { BusinessConditionProfileAssessment, ConditionTransition } from "../../domain/business-facts/business-condition-profile";
 
@@ -50,19 +50,18 @@ export async function createBusinessConditionProfile(
   }
 
   // Mark previous profiles as not current (soft replace)
-  await prisma.businessConditionProfile.updateMany(
-    {
-      where: {
-        engagementId: engagement_id,
-        isCurrent: true,
-      },
+  await prisma.businessConditionProfile.updateMany({
+    where: {
+      engagementId: engagement_id,
+      isCurrent: true,
     },
-    {
+    data: {
       isCurrent: false,
     },
-  );
+  });
 
   // Create new profile
+  const now = new Date();
   const profile = await prisma.businessConditionProfile.create({
     data: {
       id: `bcp_${Date.now()}_${Math.random().toString(36).substring(7)}`,
@@ -93,6 +92,8 @@ export async function createBusinessConditionProfile(
       assessedBy: assessed_by_user_id || null,
       version: 1,
       isCurrent: true,
+      createdAt: now,
+      updatedAt: now,
     },
   });
 
@@ -158,6 +159,7 @@ export async function updateBusinessConditionProfile(
 
   // Create new version
   const newVersion = profile.version + 1;
+  const now = new Date();
   const newProfile = await prisma.businessConditionProfile.create({
     data: {
       id: `bcp_${Date.now()}_${Math.random().toString(36).substring(7)}`,
@@ -188,6 +190,8 @@ export async function updateBusinessConditionProfile(
       assessedBy: userId || null,
       version: newVersion,
       isCurrent: true,
+      createdAt: now,
+      updatedAt: now,
     },
   });
 
