@@ -16,13 +16,15 @@ env:
   NODE_ENV: test
   TEST_WITH_DB: 'true'
   SKIP_ENV_VALIDATION: 'true'
-  DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-  TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
 
 jobs:
   lane-b-db-test:
     name: LANE_B DB Test
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
 
     services:
       postgres:
