@@ -2,7 +2,7 @@
 
 **Report Date:** 2026-06-15  
 **Branch:** `claude/execution-audit-phase-a-ulmljq`  
-**Current Commit:** `b51fab0` (B20-S1 Consultant-Grade Scoring Rubrics, PURE_FUNCTION_VERIFIED)
+**Current Commit:** `9168b47` (B21-S1 Controlled Learning From Every Output, PURE_FUNCTION_VERIFIED)
 
 ## Phase A — DB Verification Status
 
@@ -707,6 +707,82 @@ SLICE_DB_CLASSIFICATION (B20-S1):
 
 **Status:** B20-S1 — Consultant-Grade Scoring Rubrics **PURE_FUNCTION_VERIFIED** ✅
 
+### B21-S1 Closeout (Controlled Learning From Every Output)
+
+- **Files added:**
+  - `src/domain/benchmark/learning-observation.ts` (domain model, hard rules, validation)
+  - `src/services/benchmark/learning-observation.service.ts` (3 sample observations, learning service)
+  - `src/__tests__/benchmark/learning-observation.service.test.ts` (37 comprehensive unit tests)
+
+- **Scope:** Pure deterministic learning observation framework that records diagnosis outcomes without automatic production changes. No persistence, no schema change, no migration.
+
+- **Hard Rules (Non-Negotiable):**
+  1. **No automatic production rule changes** — All promotions require explicit admin approval
+  2. **No learning from unverified outcomes** — Only verified outcomes can change production logic (unverified = weak signal only)
+  3. **Admin approval mandatory** — Every rule change candidate requires admin review and sign-off
+
+- **Learning Layers:**
+  - **Observation memory**: Records complete diagnosis + actual outcome
+  - **Evaluation memory**: Tracks system assessment of recommendation accuracy
+  - **Rule candidate**: Extracts lessons and proposes rule changes
+  - **Production logic change**: Blocked until admin approval (hard rule)
+
+- **Required Record Structure:**
+  - diagnosis_id, business_context, input_data_snapshot
+  - recommendations_given, confidence_score
+  - owner_actions_taken, verification_metric, actual_result_after_period
+  - user_feedback, system_self_assessment
+  - lesson_learned, rule_change_candidate, promotion_status
+
+- **3 Sample Learning Observations:**
+  1. Successful: Cash flow diagnosis (full success, high accuracy, promoted to review)
+  2. Partial: Churn diagnosis (partial success, identified constraint issue)
+  3. Unverified: Margin diagnosis (under investigation, cannot learn yet)
+
+- **Core Functions:**
+  - `validateLearningObservation()`: Validate observation structure
+  - `canLearnFromObservation()`: Check if outcome verified and learning allowed
+  - `scoreObservation()`: Score accuracy, alignment, learning value
+  - `extractCommonPatterns()`: Batch analysis of success/failure patterns
+  - `requireAdminApprovalForPromotion()`: Hard rule enforcement
+  - `promoteObservationToRule()`: Only succeeds with admin approval
+
+- **Acceptance gates (all implemented):**
+  - ✅ Output creates learning observation with full context
+  - ✅ Unverified outcome cannot change production logic (weak signal only)
+  - ✅ Admin approval required for all rule promotions (hard rule)
+  - ✅ Batch analysis identifies success/failure patterns
+  - ✅ Lessons extracted with confidence scores
+  - ✅ Rule change candidates tracked with risk assessment
+
+```text
+SLICE_DB_CLASSIFICATION (B21-S1):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure learning observation framework)
+  persistence_touched: false
+  schema_touched: false
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 37/37
+  gates: tsc --noEmit exit 0 · vitest 37/37 green · purely additive (no existing module modified)
+  hard_rules_enforced: 
+    - no_auto_promotion: ✅
+    - unverified_blocked: ✅
+    - admin_approval_mandatory: ✅
+```
+
+**Test Coverage:** 37/37 passing (LANE_A pure functions)
+- Sample observations: 7 tests
+- Validation: 4 tests
+- Hard rule: No learning from unverified: 4 tests
+- Hard rule: Admin approval required: 4 tests
+- Observation scoring: 4 tests
+- Lesson extraction: 4 tests
+- Learning service: 4 tests
+- Determinism: 2 tests
+- Integration workflow: 2 tests
+
+**Status:** B21-S1 — Controlled Learning From Every Output **PURE_FUNCTION_VERIFIED** ✅
+
 ---
 
 ## Current Session Activity (2026-06-14 21:25+)
@@ -1125,6 +1201,7 @@ SLICE_DB_CLASSIFICATION (B12-S2):
 | B18-S1 | Adversarial test suite | 20 | PURE_FUNCTION_VERIFIED ✅ |
 | B19-S1 | Blind outcome testing | 44 | PURE_FUNCTION_VERIFIED ✅ |
 | B20-S1 | Consultant-grade scoring rubrics | 43 | PURE_FUNCTION_VERIFIED ✅ |
+| B21-S1 | Controlled learning from every output | 37 | PURE_FUNCTION_VERIFIED ✅ |
 
 ### B15 — Case-Study Benchmark Library (LANE_B Verified ✓)
 
@@ -1195,22 +1272,23 @@ SLICE_DB_CLASSIFICATION (B12-S2):
 - B16-S1: Deterministic calculation tests (DB_VERIFIED_GITHUB_POSTGRES_SERVICE, 11/11)
 - B16-S2: Advanced evaluation harness — segmentation/trend/anomaly/forecast/output validation (PURE_FUNCTION_VERIFIED, 33/33, LANE_A)
 
-### In Progress (B17-B20)
+### In Progress (B17-B21)
 - B17-S1: Synthetic business scenario simulator ✅ PURE_FUNCTION_VERIFIED
 - B18-S1: Adversarial test suite (11 cases) ✅ PURE_FUNCTION_VERIFIED
 - B19-S1: Blind outcome testing (5 test cases) ✅ PURE_FUNCTION_VERIFIED
 - B20-S1: Consultant-grade scoring rubrics (10 dimensions + 5 gates) ✅ PURE_FUNCTION_VERIFIED
+- B21-S1: Controlled learning from every output (hard rules enforced) ✅ PURE_FUNCTION_VERIFIED
 
-### Not Yet Started (B21-B26)
-- B21-B26: Learning loops, online growth, sales pitch, governance
+### Not Yet Started (B22-B26)
+- B22-B26: Online growth intelligence, sales pitch generator, owner command mode, governance
 
 **Phase B Test Summary:**
-- **Modules completed:** 11 full (B01-B11) + 3 slices (B12) + 5 modules (B16-S2, B17-S1, B18-S1, B19-S1, B20-S1)
-- **Tests new this session:** 38 (B07) + 28 (B12-S1) + 27 (B12-S2) + 29 (B12-S3) + 33 (B16-S2) + 36 (B17-S1) + 20 (B18-S1) + 44 (B19-S1) + 43 (B20-S1) = **298 new tests**
-- **Tests passing:** 6831 across all test files (including full Phase B01-B11 + B12-B20 + Owner Mode M01-M15)
-- **Test files:** 268 passed (298 total with 30 skipped)
+- **Modules completed:** 11 full (B01-B11) + 3 slices (B12) + 6 modules (B16-S2, B17-S1, B18-S1, B19-S1, B20-S1, B21-S1)
+- **Tests new this session:** 38 (B07) + 28 (B12-S1) + 27 (B12-S2) + 29 (B12-S3) + 33 (B16-S2) + 36 (B17-S1) + 20 (B18-S1) + 44 (B19-S1) + 43 (B20-S1) + 37 (B21-S1) = **335 new tests**
+- **Tests passing:** 6868 across all test files (including full Phase B01-B11 + B12-B21 + Owner Mode M01-M15)
+- **Test files:** 269 passed (299 total with 30 skipped)
 - **Type safety:** tsc exit 0 (all modules compile)
-- **Benchmark framework complete:** B16 (dataset harness) + B17 (synthetic scenarios) + B18 (adversarial cases) + B19 (blind testing) + B20 (scoring rubrics) = 176/176 tests passing
+- **Benchmark + Learning framework complete:** B16 (dataset harness) + B17 (synthetic scenarios) + B18 (adversarial cases) + B19 (blind testing) + B20 (scoring rubrics) + B21 (learning with hard rules) = 213/213 tests passing
 
 ### B12-S3 Closeout (External Raw Records Persistence)
 
