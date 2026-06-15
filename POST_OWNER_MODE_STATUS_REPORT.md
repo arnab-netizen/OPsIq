@@ -1244,6 +1244,54 @@ gates:
 next_action: Trigger LANE_B workflow via GitHub Actions or continue to B25-S1
 ```
 
+### B25-S1 Closeout (Owner Dashboard Private Mode Gate)
+
+**Status:** PURE_FUNCTION_VERIFIED ✅
+
+- **Files added:**
+  - `src/middleware/private-mode-gate.ts` (role/feature gating middleware)
+  - `src/__tests__/middleware/private-mode-gate.test.ts` (23 unit tests)
+
+- **Core middleware functions:**
+  - `getPrivateModeAccess()`: Extract private mode status from request headers (userId, workspaceId, role)
+  - `enforcePrivateModeGate()`: Enforce role/feature requirements, return 403 if denied
+  - `addPrivateModeContext()`: Add response headers for conditional frontend rendering
+
+- **Predefined gate configurations:**
+  - `OWNER_DASHBOARD_GATE`: Public access, bypasses private mode (backward compatible with Owner Mode)
+  - `PRIVATE_ADMIN_GATE`: Requires OWNER role (role management, learning logs)
+  - `PRIVATE_CONSULTANT_GATE`: Requires simulation + growth features (advisor-focused)
+  - `PRIVATE_ANALYST_GATE`: Requires data upload feature (analyst-focused)
+
+- **Acceptance gates (§34) — all implemented:**
+  - ✅ Role-based feature gating (three roles with different access levels)
+  - ✅ Owner Mode dashboard remains public (bypassPrivateMode=true for compatibility)
+  - ✅ Private mode overlays gated by role (OWNER-only, CONSULTANT, ANALYST)
+  - ✅ Feature requirements checked per role (caseSimulationRunner, growthIntelligence, etc.)
+
+**Test Coverage:** 23/23 passing (LANE_A)
+- Private mode access extraction from headers
+- Role requirement enforcement
+- Feature requirement validation
+- Response context addition
+- Role isolation enforcement
+- Backward compatibility for Owner Mode
+- All predefined gate configurations
+
+**Type Safety:** tsc --noEmit exit 0
+
+SLICE_DB_CLASSIFICATION (B25-S1):
+```
+slice_id: B25-S1
+module: B25 (Product Integration Layer)
+db_required: false
+db_lane_used: LANE_A_STATIC (pure middleware logic)
+status: PURE_FUNCTION_VERIFIED
+tests_passing: 23/23 (all gate scenarios)
+gates: tsc --noEmit exit 0 · middleware tests 23/23 · no regressions
+next_slice: B25-S2 (Dashboard route integration)
+```
+
 ---
 
 **Blocker Register**
