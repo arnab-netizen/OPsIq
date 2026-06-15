@@ -527,9 +527,9 @@ describe("CaseLibraryService", () => {
 
       expect(scores.totalBenchmarks).toBe(2);
       expect(scores.casesCovered).toBe(2);
-      expect(scores.averageAccuracy).toBe(0.85);
-      expect(scores.averagePrecision).toBe(0.9);
-      expect(scores.averageRecall).toBe(0.8);
+      expect(scores.averageAccuracy).toBeCloseTo(0.85, 2);
+      expect(scores.averagePrecision).toBeCloseTo(0.9, 2);
+      expect(scores.averageRecall).toBeCloseTo(0.8, 2);
     });
 
     it("should return zeros when no benchmarks exist", async () => {
