@@ -217,7 +217,7 @@ export async function updateSyncJobStatus(
         id: `sync_${request.connectionId}_${randomBytes(8).toString("hex")}`,
         connectionId: request.connectionId,
         status: "failed",
-        recordsImported: 0,
+        recordsImported: request.recordsImported,
         errorMessage: request.errorMessage,
         startedAt: now,
         completedAt: now,

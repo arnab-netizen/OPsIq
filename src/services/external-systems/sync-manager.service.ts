@@ -152,7 +152,22 @@ export async function executeSyncWithTokenValidation(
   syncFn: (token: string) => Promise<number>,
 ): Promise<SyncOperationResult> {
   try {
-    // Check token validity first
+    // Check token existence first
+    const token = await prisma.externalOAuthToken.findUnique({
+      where: { connectionId },
+      select: { accessToken: true },
+    });
+
+    if (!token) {
+      return await handleSyncFailure(
+        prisma,
+        connectionId,
+        workspaceId,
+        "Token not found in database",
+      );
+    }
+
+    // Check token validity
     const tokenCheck = await preSyncTokenValidation(
       prisma,
       connectionId,
@@ -185,21 +200,6 @@ export async function executeSyncWithTokenValidation(
         errorMessage: "Token refresh required",
         requiresTokenRefresh: true,
       };
-    }
-
-    // Token is valid, get it for the sync operation
-    const token = await prisma.externalOAuthToken.findUnique({
-      where: { connectionId },
-      select: { accessToken: true },
-    });
-
-    if (!token) {
-      return await handleSyncFailure(
-        prisma,
-        connectionId,
-        workspaceId,
-        "Token not found in database",
-      );
     }
 
     // Execute the sync operation with valid token
@@ -260,6 +260,7 @@ export async function checkConnectionHealth(
   const connection = await prisma.externalConnection.findUnique({
     where: { id: connectionId },
     select: {
+      workspaceId: true,
       status: true,
       lastSyncAt: true,
       lastErrorAt: true,
@@ -267,7 +268,7 @@ export async function checkConnectionHealth(
     },
   });
 
-  if (!connection) {
+  if (!connection || connection.workspaceId !== workspaceId) {
     return {
       connectionStatus: "not_found",
       tokenStatus: "missing",
