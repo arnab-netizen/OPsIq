@@ -78,36 +78,71 @@ jobs:
       - name: Deploy migrations
         run: npx prisma migrate deploy
 
-      - name: Validate checkout and test file exists
+      - name: Print checkout details
         run: |
-          echo "Current branch: $(git branch --show-current)"
-          echo "Current commit: $(git rev-parse HEAD)"
-          echo "Test file exists: $(test -f '${{ github.event.inputs.test_pattern }}' && echo 'YES' || echo 'NO')"
+          echo "========================================"
+          echo "LANE_B Checkout and Test Selection"
+          echo "========================================"
+          echo "Checked-out branch: $(git branch --show-current)"
+          echo "Checked-out commit: $(git rev-parse HEAD)"
+          echo "Requested test_pattern: ${{ github.event.inputs.test_pattern }}"
           echo "Working directory: $(pwd)"
-          echo "Files matching pattern:"
-          find . -name "*case-library.service.db.test.ts" 2>/dev/null || echo "No files found"
+          echo "========================================"
 
-      - name: Fail if test pattern is invalid
+      - name: Validate test pattern is non-empty
         run: |
-          if [ -z "${{ github.event.inputs.test_pattern }}" ]; then
-            echo "ERROR: test_pattern input is empty"
+          TEST_PATTERN="${{ github.event.inputs.test_pattern }}"
+          if [ -z "$TEST_PATTERN" ]; then
+            echo "FATAL: test_pattern input is EMPTY"
             exit 1
           fi
-          if [ ! -f "${{ github.event.inputs.test_pattern }}" ]; then
-            echo "ERROR: test file not found at ${{ github.event.inputs.test_pattern }}"
+          echo "✓ test_pattern is non-empty: $TEST_PATTERN"
+
+      - name: Validate test file exists
+        run: |
+          TEST_PATTERN="${{ github.event.inputs.test_pattern }}"
+          if [ ! -f "$TEST_PATTERN" ]; then
+            echo "FATAL: test file DOES NOT EXIST at: $TEST_PATTERN"
+            echo "Current directory contents (find):"
+            find . -name "*.test.ts" -type f | head -20
             exit 1
           fi
-          echo "✓ Test file validation passed: ${{ github.event.inputs.test_pattern }}"
+          echo "✓ test file exists: $TEST_PATTERN"
 
-      - name: Run DB-backed tests
-        run: npm test -- "${{ github.event.inputs.test_pattern }}" --run --reporter=verbose
+      - name: Print test file content (head)
+        run: |
+          TEST_PATTERN="${{ github.event.inputs.test_pattern }}"
+          echo "========================================"
+          echo "Test File: $TEST_PATTERN"
+          echo "========================================"
+          grep -n "describe\|it(" "$TEST_PATTERN" | head -80 || echo "No describe/it patterns found"
+          echo "========================================"
 
-      - name: Upload test results on failure
-        if: failure()
+      - name: Run DB-backed tests (exact command)
+        run: |
+          echo "Executing: npm test -- \"${{ github.event.inputs.test_pattern }}\" --run"
+          npm test -- "${{ github.event.inputs.test_pattern }}" --run 2>&1 | tee test-output.log
+          exit_code=$?
+
+          # Hard guard: fail if Playwright/browser tests ran
+          if grep -qE "tests/browser/|e2e/|Playwright|chromium_headless_shell|playwright" test-output.log; then
+            echo ""
+            echo "========================================"
+            echo "FATAL: Playwright/browser tests ran instead of DB test"
+            echo "========================================"
+            cat test-output.log
+            exit 1
+          fi
+
+          exit $exit_code
+
+      - name: Upload test results and diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: db-test-results
           path: |
+            test-output.log
             test-results/
             coverage/
           retention-days: 30
