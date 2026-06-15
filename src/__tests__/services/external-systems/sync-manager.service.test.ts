@@ -21,8 +21,11 @@ import {
 } from "@/services/external-systems/sync-manager.service";
 import { storeOAuthToken } from "@/services/external-systems/token-lifecycle.service";
 
-const TEST_WORKSPACE_ID = "ws_test_sync_manager";
+// Workspace and provider IDs must be valid UUIDs (UUID primary keys,
+// shared with B12). Connection IDs are TEXT primary keys.
+const TEST_WORKSPACE_ID = "22222222-2222-4222-8222-222222222221";
 const TEST_CONNECTION_ID = "conn_test_sync_manager";
+const TEST_PROVIDER_ID = "22222222-2222-4222-8222-2222222222a0";
 
 let prisma: PrismaClient;
 
@@ -40,17 +43,13 @@ beforeEach(async () => {
     update: {},
   });
 
-  // Create test provider
+  // Create test provider (ExternalProvider model: id/name/category only)
   await prisma.externalProvider.upsert({
-    where: { id: "google_sheets" },
+    where: { id: TEST_PROVIDER_ID },
     create: {
-      id: "google_sheets",
+      id: TEST_PROVIDER_ID,
       name: "Google Sheets",
-      apiBaseUrl: "https://sheets.googleapis.com",
-      oauthTokenUrl: "https://oauth2.googleapis.com/token",
-      requiresOAuth: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      category: "api_connector",
     },
     update: {},
   });
@@ -61,7 +60,7 @@ beforeEach(async () => {
     create: {
       id: TEST_CONNECTION_ID,
       workspaceId: TEST_WORKSPACE_ID,
-      providerId: "google_sheets",
+      providerId: TEST_PROVIDER_ID,
       connectionName: "Test Sync Connection",
       status: "active",
       oauthScope: ["spreadsheets.readonly"],

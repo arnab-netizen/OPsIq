@@ -23,11 +23,14 @@ import {
   getApprovalHistory,
 } from "@/services/external-systems/browser-import-approval.service";
 
-const TEST_WORKSPACE_ID = "ws_test_browser_import";
-const TEST_PROVIDER_ID = "google_sheets";
+// Workspace and provider IDs must be valid UUIDs — the workspaces and
+// external_providers tables use UUID primary keys (shared with B12).
+// Session/user IDs are TEXT, so they remain plain strings.
+const TEST_WORKSPACE_ID = "33333333-3333-4333-8333-333333333331";
+const TEST_PROVIDER_ID = "33333333-3333-4333-8333-3333333333a0";
 const TEST_USER_ID = "user_test_browser_import";
 const TEST_APPROVER_ID = "user_approver_test";
-const TEST_WORKSPACE_2 = "ws_test_browser_import_2";
+const TEST_WORKSPACE_2 = "33333333-3333-4333-8333-333333333332";
 
 let prisma: PrismaClient;
 
@@ -55,11 +58,11 @@ beforeEach(async () => {
     update: {},
   });
 
-  // Create test provider
+  // Create test provider (ExternalProvider model: id/name/category only)
   await prisma.externalProvider.upsert({
-    where: { id: "google_sheets" as any },
+    where: { id: TEST_PROVIDER_ID },
     create: {
-      id: "google_sheets" as any,
+      id: TEST_PROVIDER_ID,
       name: "Google Sheets",
       category: "api_connector",
     },
@@ -71,7 +74,7 @@ beforeEach(async () => {
     data: {
       id: `bimport_test_${TEST_WORKSPACE_ID}`,
       workspaceId: TEST_WORKSPACE_ID,
-      providerId: "google_sheets" as any,
+      providerId: TEST_PROVIDER_ID,
       userId: TEST_USER_ID,
       status: "active",
       userAgent: "Test Browser",
@@ -154,7 +157,8 @@ describe("B14-S2: Browser Import Approval Workflow", () => {
       });
 
       expect(table?.status).toBe("draft");
-      expect(table?.confidence).toBe(0.85);
+      // confidence is a Prisma Decimal; convert before numeric comparison
+      expect(Number(table?.confidence)).toBe(0.85);
       expect(table?.recordCount).toBe(2);
     });
 

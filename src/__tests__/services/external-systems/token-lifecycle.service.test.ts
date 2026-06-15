@@ -24,10 +24,14 @@ import {
   type SyncJobTrackingRequest,
 } from "@/services/external-systems/token-lifecycle.service";
 
-const TEST_WORKSPACE_ID = "ws_test_token_lifecycle";
+// Workspace and provider IDs must be valid UUIDs — the workspaces and
+// external_providers tables use UUID primary keys (shared with B12).
+// Connection IDs are TEXT primary keys, so they remain plain strings.
+const TEST_WORKSPACE_ID = "11111111-1111-4111-8111-111111111111";
 const TEST_CONNECTION_ID = "conn_test_token_lifecycle";
-const TEST_WORKSPACE_2 = "ws_test_token_lifecycle_2";
+const TEST_WORKSPACE_2 = "11111111-1111-4111-8111-111111111112";
 const TEST_CONNECTION_2 = "conn_test_token_lifecycle_2";
+const TEST_PROVIDER_ID = "11111111-1111-4111-8111-1111111111a0";
 
 let prisma: PrismaClient;
 
@@ -55,17 +59,13 @@ beforeEach(async () => {
     update: {},
   });
 
-  // Create test provider
+  // Create test provider (ExternalProvider model: id/name/category only)
   await prisma.externalProvider.upsert({
-    where: { id: "google_sheets" },
+    where: { id: TEST_PROVIDER_ID },
     create: {
-      id: "google_sheets",
+      id: TEST_PROVIDER_ID,
       name: "Google Sheets",
-      apiBaseUrl: "https://sheets.googleapis.com",
-      oauthTokenUrl: "https://oauth2.googleapis.com/token",
-      requiresOAuth: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      category: "api_connector",
     },
     update: {},
   });
@@ -76,7 +76,7 @@ beforeEach(async () => {
     create: {
       id: TEST_CONNECTION_ID,
       workspaceId: TEST_WORKSPACE_ID,
-      providerId: "google_sheets",
+      providerId: TEST_PROVIDER_ID,
       connectionName: "Test Connection",
       status: "active",
       oauthScope: ["spreadsheets.readonly"],
@@ -91,7 +91,7 @@ beforeEach(async () => {
     create: {
       id: TEST_CONNECTION_2,
       workspaceId: TEST_WORKSPACE_2,
-      providerId: "google_sheets",
+      providerId: TEST_PROVIDER_ID,
       connectionName: "Test Connection 2",
       status: "active",
       oauthScope: ["spreadsheets.readonly"],
