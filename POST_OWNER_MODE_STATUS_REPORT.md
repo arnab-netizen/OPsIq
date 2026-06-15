@@ -2,7 +2,7 @@
 
 **Report Date:** 2026-06-15  
 **Branch:** `claude/execution-audit-phase-a-ulmljq`  
-**Current Commit:** `7c92a6c` (B19-S1 Blind Outcome Testing, PURE_FUNCTION_VERIFIED)
+**Current Commit:** `b51fab0` (B20-S1 Consultant-Grade Scoring Rubrics, PURE_FUNCTION_VERIFIED)
 
 ## Phase A — DB Verification Status
 
@@ -633,6 +633,80 @@ SLICE_DB_CLASSIFICATION (B19-S1):
 
 **Status:** B19-S1 — Blind Outcome Testing **PURE_FUNCTION_VERIFIED** ✅
 
+### B20-S1 Closeout (Consultant-Grade Scoring Rubrics)
+
+- **Files added:**
+  - `src/domain/benchmark/scoring-rubric.ts` (domain model, rubric definitions, validation, fail gates)
+  - `src/services/benchmark/scoring-rubric.service.ts` (4 sample recommendations, scoring service)
+  - `src/__tests__/benchmark/scoring-rubric.service.test.ts` (43 comprehensive unit tests)
+
+- **Scope:** Pure deterministic scoring framework for evaluating recommendation quality across 10 dimensions with 5 binary fail gates. No persistence, no schema change, no migration.
+
+- **10 Scoring Dimensions (0-10 scale):**
+  1. **root_cause_accuracy** — Diagnosis precision and ruling out alternatives
+  2. **financial_correctness** — Financial estimates and modeling accuracy
+  3. **strategic_quality** — Alignment with business strategy and sustainability
+  4. **operational_practicality** — Feasibility and resource requirements
+  5. **evidence_discipline** — Data backing for all claims and gap documentation
+  6. **risk_awareness** — Risk identification and mitigation planning
+  7. **constraint_handling** — Respect for hard limits and constraint optimization
+  8. **prioritisation** — Action sequencing and dependency mapping
+  9. **owner_usefulness** — Clarity and actionability for owner decision-making
+  10. **verification_plan** — Measurable outcomes and success metrics
+
+- **5 Binary Fail Gates (auto-fail on trigger):**
+  - `calculation_correct`: Financial estimates have logical basis
+  - `cites_evidence`: All major claims cite sources
+  - `constraint_violation`: No violation of stated constraints
+  - `hallucinated_fact`: No unsourced claims
+  - `unsafe_recommendation`: Risk mitigations documented for risky actions
+
+- **Core Functions:**
+  - `scoreRubricDimension()`: Score individual dimension based on evidence
+  - `checkFailGates()`: Check all 5 binary fail gates
+  - `scoreRecommendation()`: Full recommendation scoring with all dimensions and gates
+  - `scoreMultipleRecommendations()`: Batch scoring with aggregation
+  - `validateScoringResult()`: Verify result structure
+  - `getRubricDefinition()`: Retrieve rubric text for dimension/score
+
+- **4 Sample Recommendations:**
+  - Good: Cash flow optimization (complete with all elements)
+  - Partial: Margin collapse (missing some constraints)
+  - Weak: Sales decline (missing evidence and verification)
+  - Hallucinated: False causality (bad diagnosis)
+
+- **Acceptance gates (all implemented):**
+  - ✅ 10 dimensions with 0/2/4/6/8/10 rubric definitions
+  - ✅ 5 binary fail gates that trigger automatic failure
+  - ✅ Rubric scoring deterministic for sample cases
+  - ✅ Hallucinated fact triggers fail regardless of prose quality
+  - ✅ Calculation error triggers fail where material
+  - ✅ Overall score 0-100 based on dimension averages
+
+```text
+SLICE_DB_CLASSIFICATION (B20-S1):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure rubric evaluation)
+  persistence_touched: false
+  schema_touched: false
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 43/43
+  gates: tsc --noEmit exit 0 · vitest 43/43 green · purely additive (no existing module modified)
+```
+
+**Test Coverage:** 43/43 passing (LANE_A pure functions)
+- Rubric definitions and dimensions: 8 tests
+- Sample recommendations: 5 tests
+- Rubric scoring logic: 5 tests
+- Fail gates: 6 tests
+- Full recommendation scoring: 7 tests
+- Scoring service: 4 tests
+- Determinism: 2 tests
+- Validation: 3 tests
+- Integration workflow: 3 tests
+
+**Status:** B20-S1 — Consultant-Grade Scoring Rubrics **PURE_FUNCTION_VERIFIED** ✅
+
 ---
 
 ## Current Session Activity (2026-06-14 21:25+)
@@ -1050,6 +1124,7 @@ SLICE_DB_CLASSIFICATION (B12-S2):
 | B17-S1 | Synthetic scenario simulator | 36 | PURE_FUNCTION_VERIFIED ✅ |
 | B18-S1 | Adversarial test suite | 20 | PURE_FUNCTION_VERIFIED ✅ |
 | B19-S1 | Blind outcome testing | 44 | PURE_FUNCTION_VERIFIED ✅ |
+| B20-S1 | Consultant-grade scoring rubrics | 43 | PURE_FUNCTION_VERIFIED ✅ |
 
 ### B15 — Case-Study Benchmark Library (LANE_B Verified ✓)
 
@@ -1120,21 +1195,22 @@ SLICE_DB_CLASSIFICATION (B12-S2):
 - B16-S1: Deterministic calculation tests (DB_VERIFIED_GITHUB_POSTGRES_SERVICE, 11/11)
 - B16-S2: Advanced evaluation harness — segmentation/trend/anomaly/forecast/output validation (PURE_FUNCTION_VERIFIED, 33/33, LANE_A)
 
-### In Progress (B17-B19)
+### In Progress (B17-B20)
 - B17-S1: Synthetic business scenario simulator ✅ PURE_FUNCTION_VERIFIED
 - B18-S1: Adversarial test suite (11 cases) ✅ PURE_FUNCTION_VERIFIED
 - B19-S1: Blind outcome testing (5 test cases) ✅ PURE_FUNCTION_VERIFIED
+- B20-S1: Consultant-grade scoring rubrics (10 dimensions + 5 gates) ✅ PURE_FUNCTION_VERIFIED
 
-### Not Yet Started (B20-B26)
-- B20-B26: Learning, scoring, governance
+### Not Yet Started (B21-B26)
+- B21-B26: Learning loops, online growth, sales pitch, governance
 
 **Phase B Test Summary:**
-- **Modules completed:** 11 full (B01-B11) + 3 slices (B12) + 3 modules (B16-S2, B17-S1, B18-S1, B19-S1)
-- **Tests new this session:** 38 (B07) + 28 (B12-S1) + 27 (B12-S2) + 29 (B12-S3) + 33 (B16-S2) + 36 (B17-S1) + 20 (B18-S1) + 44 (B19-S1) = **255 new tests**
-- **Tests passing:** 6788 across all test files (including full Phase B01-B11 + B12-B19 + Owner Mode M01-M15)
-- **Test files:** 267 passed (297 total with 30 skipped)
+- **Modules completed:** 11 full (B01-B11) + 3 slices (B12) + 5 modules (B16-S2, B17-S1, B18-S1, B19-S1, B20-S1)
+- **Tests new this session:** 38 (B07) + 28 (B12-S1) + 27 (B12-S2) + 29 (B12-S3) + 33 (B16-S2) + 36 (B17-S1) + 20 (B18-S1) + 44 (B19-S1) + 43 (B20-S1) = **298 new tests**
+- **Tests passing:** 6831 across all test files (including full Phase B01-B11 + B12-B20 + Owner Mode M01-M15)
+- **Test files:** 268 passed (298 total with 30 skipped)
 - **Type safety:** tsc exit 0 (all modules compile)
-- **Benchmark framework complete:** B16 (dataset harness) + B17 (synthetic scenarios) + B18 (adversarial cases) + B19 (blind testing) = 133/133 tests passing
+- **Benchmark framework complete:** B16 (dataset harness) + B17 (synthetic scenarios) + B18 (adversarial cases) + B19 (blind testing) + B20 (scoring rubrics) = 176/176 tests passing
 
 ### B12-S3 Closeout (External Raw Records Persistence)
 
