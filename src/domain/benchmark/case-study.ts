@@ -176,7 +176,7 @@ export interface CaseBenchmarkResult {
   // Feedback
   performanceNotes: string;
   falsePositives: string[]; // Causes identified but not actual
-  falsNegatives: string[]; // Actual causes not identified
+  falseNegatives: string[]; // Actual causes not identified
 
   // Timestamp
   testedAt: Date;
@@ -201,7 +201,7 @@ export function validateCaseStudyCompliance(
   }
 
   if (!caseStudy.licenseOrAllowedUse) {
-    errors.push("License or allowed use must be documented");
+    errors.push("license or allowed use must be documented");
   }
 
   // Validate each source

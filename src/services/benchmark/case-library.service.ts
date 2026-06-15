@@ -308,7 +308,7 @@ function parseBenchmarkRecord(record: PrismaCaseBenchmarkResult): CaseBenchmarkR
     recallScore: Number(record.recallScore),
     performanceNotes: record.performanceNotes || "",
     falsePositives: (Array.isArray(record.falsePositives) ? record.falsePositives : JSON.parse(record.falsePositives as string)) as string[],
-    falsNegatives: (Array.isArray(record.falseNegatives) ? record.falseNegatives : JSON.parse(record.falseNegatives as string)) as string[],
+    falseNegatives: (Array.isArray(record.falseNegatives) ? record.falseNegatives : JSON.parse(record.falseNegatives as string)) as string[],
     testedAt: record.testedAt,
   };
 }
