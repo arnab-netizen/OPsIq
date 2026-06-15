@@ -61,7 +61,7 @@ export async function defineCalculation(
   datasetId: string,
   test: Omit<CalculationTest, "id" | "testedAt" | "passed" | "actualOutput" | "executionTimeMs">
 ): Promise<CalculationTest> {
-  const validation = validateCalculationTest(test as CalculationTest);
+  const validation = validateCalculationTest({ ...test, datasetId } as CalculationTest);
   if (!validation.valid) {
     throw new Error(`Invalid calculation test: ${validation.errors.join("; ")}`);
   }
