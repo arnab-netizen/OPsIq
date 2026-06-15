@@ -69,9 +69,7 @@ jobs:
           done
 
       - name: Push schema to database
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-        run: npx prisma db push --skip-generate --skip-validate
+        run: npx prisma db push --url postgresql://postgres:postgres@localhost:5432/opsiq_test --accept-data-loss
 
       - name: Validate checkout and test file exists
         run: |
