@@ -3019,15 +3019,15 @@ model CaseStudy {
 
   // Business context
   industry String
-  businessModel String
-  businessSize String // startup|small|medium|large|enterprise
+  businessModel String @map("business_model")
+  businessSize String @map("business_size") // startup|small|medium|large|enterprise
   year Int
   yearStart Int @map("year_start")
   yearEnd Int @map("year_end")
 
   // Case data
   symptoms Json // CaseStudySymptom[]
-  availableData Json // CaseStudyEvidence[]
+  availableData Json @map("available_data") // CaseStudyEvidence[]
 
   // Hidden vs expert causes (for blind testing)
   hiddenRootCauses Json @map("hidden_root_causes") // RootCause[]
