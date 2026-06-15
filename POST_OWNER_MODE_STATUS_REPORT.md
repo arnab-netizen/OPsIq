@@ -417,6 +417,50 @@ DB_SLICE_STATUS:
 
 ---
 
+### B16-S2 Closeout (Public Dataset Test Harness — Advanced Evaluation)
+
+- **Files added:**
+  - `src/domain/benchmark/dataset-evaluation.ts` (pure deterministic evaluation harness)
+  - `src/__tests__/benchmark/dataset-evaluation.test.ts` (33 pure-function tests)
+
+- **Scope:** Advanced evaluation layer on top of B16-S1's deterministic calculation
+  tests. Pure, deterministic functions over in-memory dataset rows/series. No
+  persistence, no schema change, no migration — B16-S1's `DatasetCalculation` /
+  `CalculationLog` persistence is unchanged.
+
+- **Core functions implemented:**
+  - `evaluateSegmentation()`: group-by aggregation (sum/avg/count/min/max) vs expected per-segment values, with relative tolerance; fails closed on non-numeric measures or missing segments
+  - `evaluateTrend()` / `classifyTrend()`: least-squares slope → increasing/decreasing/flat vs expected, optional slope assertion
+  - `evaluateAnomaly()` / `detectAnomalies()`: z-score and IQR outlier detection vs expected anomaly indices
+  - `evaluateForecast()` / `computeForecast()`: linear projection forecast that ALWAYS includes a prediction interval (range) + confidence level
+  - `validateOutput()`: generic actual-vs-expected validation (relative tolerance for numbers, strict equality otherwise)
+  - `buildHarnessReport()`: aggregates results with clear, evidence-backed failure reporting
+
+- **Acceptance gates (B16, §25 — advanced evaluation portion):**
+  - ✅ Segmentation tests (group-by aggregation against expected)
+  - ✅ Trend tests (direction + slope)
+  - ✅ Anomaly tests (z-score / IQR)
+  - ✅ Forecast includes range/confidence where applicable
+  - ✅ Calculation/output validation against expected values
+  - ✅ Failure reporting carries clear evidence (every result has `evidence[]` + `failureReason`)
+  - ✅ Determinism (identical inputs → identical outputs; explicit repeat-run test)
+
+```text
+SLICE_DB_CLASSIFICATION (B16-S2):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure deterministic evaluation harness)
+  persistence_touched: false
+  schema_touched: false
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 33/33
+  gates: tsc --noEmit exit 0 · vitest 33/33 green · purely additive (no existing module modified)
+```
+
+**Test Coverage:** 33/33 passing (LANE_A pure functions)
+**Status:** B16-S2 — Public Dataset Test Harness (Advanced Evaluation) **PURE_FUNCTION_VERIFIED** ✅
+
+---
+
 ## Current Session Activity (2026-06-14 21:25+)
 
 ### B12-S3 GitHub Actions TypeScript Fixes
@@ -828,7 +872,7 @@ SLICE_DB_CLASSIFICATION (B12-S2):
 | B14-S2 | Browser consent & approval | 15 | DB_VERIFIED_GITHUB_POSTGRES_SERVICE (LANE_B #27) ✅ |
 | B15 | Case-study benchmarks | 15 | DB_VERIFIED_GITHUB_POSTGRES_SERVICE ✅ |
 | B16-S1 | Test harness bootstrap | 11 | DB_VERIFIED_GITHUB_POSTGRES_SERVICE ✅ |
-| B16-S2 | Test harness extension | — | NOT_STARTED (per instruction) |
+| B16-S2 | Advanced evaluation harness | 33 | PURE_FUNCTION_VERIFIED ✅ |
 
 ### B15 — Case-Study Benchmark Library (LANE_B Verified ✓)
 
@@ -895,10 +939,11 @@ SLICE_DB_CLASSIFICATION (B12-S2):
 - B14-S1: Workflow #26, 18/18 passing (includes both S1 and integration), postgres:16 service container
 - B14-S2: Workflow #27, 15/15 passing (pure extraction & consent), postgres:16 service container
 
-### Not Yet Started (B16-B26)
-- B16: Public Dataset Test Harness (READY_TO_START)
-- B16-S1: Test harness bootstrap (DB_VERIFIED_GITHUB_POSTGRES_SERVICE, 11/11, awaiting final scope audit)
-- B16-S2: Not started (per user instruction: "Do not continue B16-S2 yet")
+### B16 — Public Dataset Test Harness (verified)
+- B16-S1: Deterministic calculation tests (DB_VERIFIED_GITHUB_POSTGRES_SERVICE, 11/11)
+- B16-S2: Advanced evaluation harness — segmentation/trend/anomaly/forecast/output validation (PURE_FUNCTION_VERIFIED, 33/33, LANE_A)
+
+### Not Yet Started (B17-B26)
 - B17-B19: Synthetic scenarios & adversarial testing
 - B20-B26: Learning, scoring, governance
 
