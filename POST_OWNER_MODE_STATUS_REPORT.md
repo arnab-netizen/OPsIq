@@ -1,8 +1,8 @@
 # POST OWNER MODE STATUS REPORT
 
-**Report Date:** 2026-06-14  
+**Report Date:** 2026-06-15  
 **Branch:** `claude/execution-audit-phase-a-ulmljq`  
-**Current Commit:** `62d1391` (command file bootstrap)
+**Current Commit:** `b04e862` (B15 LANE_B verified, all 15 tests passing)
 
 ## Phase A — DB Verification Status
 
@@ -722,11 +722,38 @@ SLICE_DB_CLASSIFICATION (B12-S2):
 | B12-S2 | CSV/XLSX import parser | 27 | PURE_FUNCTION_VERIFIED ✅ |
 | B12-S3 | DB persistence + lineage | TBD | PENDING (requires LANE_B) |
 
-### Not Yet Started (B13-B26)
+### B15 — Case-Study Benchmark Library (LANE_B Verified ✓)
+
+**Status:** B15_LANE_B_VERIFIED  
+**Commits:**
+- b426cae: Domain model typo + error message case sensitivity  
+- 177b496: Migration: benchmark column types (initial)  
+- 1ba5d4c: Migration: array_to_json casting attempt  
+- 21e5693: Migration: to_jsonb casting (final)  
+- b04e862: Test: toBeCloseTo for floating-point assertions  
+
+**LANE_B Workflow Proof:**
+- Workflow: LANE_B — Database Test Bootstrap
+- DB source: postgres:16 service container
+- Test file: src/__tests__/services/benchmark/case-library.service.db.test.ts
+- Result: ✓ 15/15 passing, 0 failures
+- Duration: 1m 45s
+- Migrations applied: 2 (initial + column type fix)
+
+**Acceptance gates (all passed):**
+- ✓ Case studies with compliance validation
+- ✓ Blind test mode (outcome/cause hidden)
+- ✓ Source transparency and license tracking
+- ✓ Benchmark result recording and retrieval
+- ✓ Average score calculation with floating-point tolerance
+- ✓ Database persistence with Prisma schema mapping
+- ✓ Transaction integrity and data consistency
+
+### Not Yet Started (B13, B14, B16-B26)
 - B13: External Systems API/OAuth connectors
 - B14: Browser-assisted import (fallback)
-- B15: Case-study benchmark library
-- B16-B19: Testing suites
+- B16: Public Dataset Test Harness (READY_TO_START)
+- B17-B19: Synthetic scenarios & adversarial testing
 - B20-B26: Learning, scoring, governance
 
 **Phase B Test Summary:**
