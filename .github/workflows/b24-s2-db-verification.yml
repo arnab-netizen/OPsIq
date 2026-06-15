@@ -54,10 +54,10 @@ jobs:
             sleep 1
           done
 
-      - name: Deploy migrations
+      - name: Push schema to database
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-        run: npx prisma migrate deploy
+        run: npx prisma db push --skip-generate --skip-validate
 
       - run: npm run test -- src/__tests__/services/private-mode/role-access.service.db.test.ts --run
         env:
