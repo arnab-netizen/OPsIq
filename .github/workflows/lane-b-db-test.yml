@@ -16,6 +16,8 @@ env:
   NODE_ENV: test
   TEST_WITH_DB: 'true'
   SKIP_ENV_VALIDATION: 'true'
+  DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+  TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
 
 jobs:
   lane-b-db-test:
@@ -70,8 +72,6 @@ jobs:
 
       - name: Deploy migrations
         run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
 
       - name: Validate checkout and test file exists
         run: |
@@ -84,9 +84,6 @@ jobs:
 
       - name: Run DB-backed tests
         run: npm test -- ${{ github.event.inputs.test_pattern }} --run
-        env:
-          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
 
       - name: Upload test results on failure
         if: failure()
