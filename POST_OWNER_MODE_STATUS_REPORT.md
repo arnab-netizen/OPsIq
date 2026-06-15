@@ -1169,6 +1169,81 @@ gates: tsc --noEmit exit 0 · role-config tests 17/17 · schema valid
 next_slice: B24-S2 (Admin role grant/revocation service with DB)
 ```
 
+### B24-S2 Closeout (Private Mode Role Access Service)
+
+**Status:** READY_FOR_LANE_B_VERIFICATION
+
+- **Files added:**
+  - `src/services/private-mode/role-access.service.ts` (role grant/revoke/approve/reject logic)
+  - `src/__tests__/services/private-mode/role-access.service.db.test.ts` (23 DB integration tests)
+  - `.github/workflows/b24-s2-db-verification.yml` (LANE_B workflow, postgres:16 service)
+
+- **Core service functions:**
+  - `grantRoleAccess()`: Create role access record with pending/approved status (owner-only)
+  - `approveRoleAccess()`: Owner approves pending role request
+  - `rejectRoleAccess()`: Owner rejects pending request with reason
+  - `revokeRoleAccess()`: Owner revokes any role (pending or approved)
+  - `getWorkspaceRoles()`: List all active (non-revoked) roles in workspace
+  - `getPendingRequests()`: List pending approval requests for workspace
+  - `getUserRole()`: Get user's approved role in workspace (null if no access)
+  - `hasPrivateModeAccess()`: Check if user has any active private mode access
+
+- **Acceptance gates (§33) — all implemented:**
+  - ✅ Private mode gated by role/config (grantRoleAccess enforces OWNER-only)
+  - ✅ Cannot leak to public users (role verification on all operations)
+  - ✅ Admin actions audited (PrivateModeAccess fields: grantedBy, approvedBy, revokedBy, audit reasons)
+  - ✅ Approval workflow enforced (pending → approved/rejected → can reject → can revoke)
+
+- **DB tests (23 total, currently skipped locally, will run LANE_B):**
+  - Role grant with pending approval
+  - Role grant with immediate approval
+  - Approve pending role request
+  - Reject pending role request
+  - Non-OWNER cannot grant roles
+  - Prevent duplicate roles for same user
+  - Re-grant after revocation
+  - Revoke approved role
+  - Revoke pending role
+  - Cannot double-revoke
+  - Non-OWNER cannot revoke
+  - Workspace isolation enforcement
+  - Cross-workspace rejection
+  - Get all active roles in workspace
+  - Exclude revoked roles from active list
+  - Get pending role requests
+  - Get user role in workspace
+  - Return null for unapproved role
+  - Return null for revoked role
+  - Check user has private mode access
+  - Gate private mode by role/config
+  - Prevent unauthorized role changes
+  - Track audit fields for role changes
+
+**Type Safety:** tsc --noEmit exit 0
+
+**LANE_B Workflow:** `.github/workflows/b24-s2-db-verification.yml`
+- PostgreSQL 16 service container on localhost:5432
+- Runs: npm ci, prisma validate, prisma generate, prisma migrate deploy, test suite
+- Exit codes captured
+- Ready to trigger manually or via CI
+
+SLICE_DB_CLASSIFICATION (B24-S2):
+```
+slice_id: B24-S2
+module: B24 (Private Owner Command Mode)
+db_required: true
+db_lane_used: LANE_B_GITHUB_POSTGRES_SERVICE
+workflow_file: .github/workflows/b24-s2-db-verification.yml
+status: READY_FOR_LANE_B_VERIFICATION
+tests_count: 23 (all DB integration)
+test_framework: vitest with db helper from @/lib/db
+gates: 
+  - tsc --noEmit exit 0
+  - 23 DB tests defined and loadable
+  - LANE_B workflow ready to run
+next_action: Trigger LANE_B workflow via GitHub Actions or continue to B25-S1
+```
+
 ---
 
 **Blocker Register**
