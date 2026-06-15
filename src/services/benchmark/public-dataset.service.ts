@@ -237,7 +237,7 @@ function parseDatasetRecord(record: PrismaPublicDataset): PublicDataset {
     name: record.name,
     datasetType: record.datasetType as any,
     description: record.description,
-    rawData: Array.isArray(record.rawData) ? record.rawData : JSON.parse(record.rawData as string),
+    rawData: (typeof record.rawData === "string" ? JSON.parse(record.rawData) : record.rawData) as Record<string, unknown>[],
     sourceUrl: record.sourceUrl || undefined,
     licenseType: record.licenseType,
     allowedUse: record.allowedUse,
@@ -255,14 +255,14 @@ function parseCalculationRecord(record: PrismaDatasetCalculation): CalculationTe
     datasetId: record.datasetId,
     calculationType: record.calculationType as any,
     description: record.description,
-    input: (Array.isArray(record.input) ? record.input : JSON.parse(record.input as string)) as any,
-    expectedOutput: (Array.isArray(record.expectedOutput) ? record.expectedOutput : JSON.parse(record.expectedOutput as string)) as any,
+    input: (typeof record.input === "string" ? JSON.parse(record.input) : record.input) as any,
+    expectedOutput: (typeof record.expectedOutput === "string" ? JSON.parse(record.expectedOutput) : record.expectedOutput) as any,
     actualOutput: record.actualOutput
-      ? ((Array.isArray(record.actualOutput) ? record.actualOutput : JSON.parse(record.actualOutput as string)) as any)
+      ? ((typeof record.actualOutput === "string" ? JSON.parse(record.actualOutput) : record.actualOutput) as any)
       : undefined,
-    passed: record.passed || undefined,
+    passed: record.passed ?? undefined,
     errorMessage: record.errorMessage || undefined,
     testedAt: record.testedAt || undefined,
-    executionTimeMs: record.executionTimeMs || undefined,
+    executionTimeMs: record.executionTimeMs ?? undefined,
   };
 }
