@@ -2,7 +2,7 @@
 
 **Report Date:** 2026-06-15  
 **Branch:** `claude/execution-audit-phase-a-ulmljq`  
-**Current Commit:** `ecee617` (B17-S1 Synthetic Business Scenario Simulator, PURE_FUNCTION_VERIFIED)
+**Current Commit:** `4c91bb8` (B18-S1 Adversarial Test Suite, PURE_FUNCTION_VERIFIED)
 
 ## Phase A — DB Verification Status
 
@@ -528,6 +528,47 @@ SLICE_DB_CLASSIFICATION (B17-S1):
 - Acceptance criteria: 1 test
 
 **Status:** B17-S1 — Synthetic Business Scenario Simulator **PURE_FUNCTION_VERIFIED** ✅
+
+### B18-S1 Closeout (Adversarial Test Suite)
+
+- **Files added:**
+  - `src/domain/benchmark/adversarial-case.ts` (domain model, validators, evaluation)
+  - `src/services/benchmark/adversarial-evaluator.service.ts` (all 11 cases, evaluation harness)
+  - `src/__tests__/benchmark/adversarial-evaluator.test.ts` (20 comprehensive unit tests)
+
+- **Scope:** Pure deterministic adversarial case engine for testing diagnosis engine robustness against bad data and misleading signals. No persistence, no schema change, no migration.
+
+- **11 Adversarial Cases:**
+  1. Missing Data — critical metrics unavailable
+  2. Misleading Data — seasonal spike vs. trend without historical context
+  3. Conflicting Data — revenue up/cash down contradiction
+  4. Fake Improvement — margin up due to cost cut, revenue down
+  5. Vanity Metrics — signup growth doesn't drive revenue
+  6. Wrong Attribution — revenue attributed to wrong source
+  7. Margin Illusion — margin includes one-time gains, unsustainable
+  8. Cash Illusion — cash high but ignores payable obligations
+  9. Founder Bias — forecast historically optimistic, accuracy low
+  10. Seasonality Trap — mistaking seasonal decline for crisis
+  11. Outlier Distortion — single large customer skews aggregate metrics
+
+- **Each case includes:**
+  - BadDataCharacteristics (severity, description, detection method)
+  - InputMetrics and InputEvidence (intentionally flawed)
+  - AcceptableBehavior (confidence thresholds, recommendation blocks)
+  - ExpectedDetection (how system should identify case)
+
+```text
+SLICE_DB_CLASSIFICATION (B18-S1):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure functions)
+  persistence_touched: false
+  schema_touched: false
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 20/20
+```
+
+**Test Coverage:** 20/20 passing (LANE_A pure functions)
+**Status:** B18-S1 — Adversarial Test Suite **PURE_FUNCTION_VERIFIED** ✅
 
 ---
 
