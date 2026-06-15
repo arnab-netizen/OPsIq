@@ -1292,6 +1292,83 @@ gates: tsc --noEmit exit 0 · middleware tests 23/23 · no regressions
 next_slice: B25-S2 (Dashboard route integration)
 ```
 
+### B25-S2 Closeout (Owner Dashboard Service with Private Mode Integration)
+
+**Status:** PURE_FUNCTION_VERIFIED ✅
+
+- **Files added:**
+  - `src/services/dashboard/owner-dashboard.service.ts` (dashboard data assembly with role-conditional features)
+  - `src/__tests__/services/dashboard/owner-dashboard.service.test.ts` (18 unit tests)
+
+- **Core service methods:**
+  - `assembleDashboard()`: Assemble core data + role-conditional features
+  - `sanitizeForRole()`: Remove features not visible to role
+  - `getDashboardWithEditCapability()`: Set readOnly flag (OWNER can edit)
+  - `validateDashboard()`: Check data consistency
+  - `createSnapshot()`: Archive dashboard state
+
+- **Feature visibility by role:**
+  - **OWNER**: Learning log, full analytics, can edit, admin access
+  - **CONSULTANT**: Simulation results, read-only
+  - **ANALYST**: Confidence breakdown, read-only
+  - **Owner Mode** (null role): Core data only, no private overlays
+
+- **Acceptance gates (§34) — all implemented:**
+  - ✅ Complete owner journey (diagnosis → recommendations → actions → verification)
+  - ✅ Enhanced private mode journey (+ learning log, + simulations, conditional analytics)
+  - ✅ Role-based edit capability (only OWNER can modify)
+  - ✅ Data consistency validation (action counts, feature visibility)
+
+**Test Coverage:** 18/18 passing (LANE_A)
+- Basic dashboard assembly
+- Action status counting and summaries
+- Learning log visibility for OWNER
+- Simulation results for CONSULTANT
+- Confidence breakdown for ANALYST
+- Data sanitization by role
+- ReadOnly flag enforcement
+- Dashboard validation (consistency checks)
+- Snapshot creation with metadata
+- Complete owner journey tests
+- Role isolation enforcement
+
+**Type Safety:** tsc --noEmit exit 0
+
+SLICE_DB_CLASSIFICATION (B25-S2):
+```
+slice_id: B25-S2
+module: B25 (Product Integration Layer)
+db_required: false
+db_lane_used: LANE_A_STATIC (pure data assembly logic)
+status: PURE_FUNCTION_VERIFIED
+tests_passing: 18/18
+gates: tsc --noEmit exit 0 · tests 18/18 · no regressions
+next_slice: B26-S1 (Governance & Final Hardening)
+```
+
+---
+
+## Phase B Session Summary (Today)
+
+| Module | Slice | Status | Tests | Type |
+|--------|-------|--------|-------|------|
+| B24 | S1 | PURE_FUNCTION_VERIFIED | 17 | Role Config |
+| B24 | S2 | READY_FOR_LANE_B_VERIFICATION | 23 | Role Access (DB) |
+| B25 | S1 | PURE_FUNCTION_VERIFIED | 23 | Middleware |
+| B25 | S2 | PURE_FUNCTION_VERIFIED | 18 | Dashboard Service |
+
+**Total:** 81 new tests, 4 slices implemented, 2+ modules started
+
+**Commits this session:**
+- e3bdcae: B24-S1
+- b379c5f: B24-S2  
+- 1486e12: Status (B24)
+- 2695d3d: B25-S1
+- 4744ad9: Status (B25)
+- c07af4b: B25-S2
+
+**Remaining:** B26 (Governance/Final Hardening) → Production readiness
+
 ---
 
 **Blocker Register**
