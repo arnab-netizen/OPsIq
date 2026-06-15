@@ -73,8 +73,17 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
 
+      - name: Validate checkout and test file exists
+        run: |
+          echo "Current branch: $(git branch --show-current)"
+          echo "Current commit: $(git rev-parse HEAD)"
+          echo "Test file exists: $(test -f '${{ github.event.inputs.test_pattern }}' && echo 'YES' || echo 'NO')"
+          echo "Working directory: $(pwd)"
+          echo "Files matching pattern:"
+          find . -name "*case-library.service.db.test.ts" 2>/dev/null || echo "No files found"
+
       - name: Run DB-backed tests
-        run: npm test -- '${{ github.event.inputs.test_pattern }}' --run
+        run: npm test -- ${{ github.event.inputs.test_pattern }} --run
         env:
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
