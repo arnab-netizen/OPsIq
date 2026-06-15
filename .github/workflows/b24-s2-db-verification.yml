@@ -47,7 +47,17 @@ jobs:
 
       - run: npx prisma generate
 
-      - run: npx prisma migrate deploy
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -p 5432; do
+            echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
+
+      - name: Deploy migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+        run: npx prisma migrate deploy
 
       - run: npm run test -- src/__tests__/services/private-mode/role-access.service.db.test.ts --run
         env:
