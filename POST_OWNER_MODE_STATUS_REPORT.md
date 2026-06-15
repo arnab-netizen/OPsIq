@@ -2,7 +2,7 @@
 
 **Report Date:** 2026-06-15  
 **Branch:** `claude/execution-audit-phase-a-ulmljq`  
-**Current Commit:** `4f022d4` (B16-S2 Advanced Evaluation Harness, PURE_FUNCTION_VERIFIED)
+**Current Commit:** `ecee617` (B17-S1 Synthetic Business Scenario Simulator, PURE_FUNCTION_VERIFIED)
 
 ## Phase A — DB Verification Status
 
@@ -458,6 +458,76 @@ SLICE_DB_CLASSIFICATION (B16-S2):
 
 **Test Coverage:** 33/33 passing (LANE_A pure functions)
 **Status:** B16-S2 — Public Dataset Test Harness (Advanced Evaluation) **PURE_FUNCTION_VERIFIED** ✅
+
+### B17-S1 Closeout (Synthetic Business Scenario Simulator)
+
+- **Files added:**
+  - `src/domain/benchmark/synthetic-scenario.ts` (domain model, validators, failure conditions, scoring)
+  - `src/domain/benchmark/scenario-engine.ts` (all 12 scenarios, execution harness, batch scoring)
+  - `src/__tests__/benchmark/scenario-engine.test.ts` (36 comprehensive unit tests)
+
+- **Scope:** Pure deterministic scenario engine for testing diagnosis accuracy against 12 predefined business scenarios. No persistence, no schema change, no migration — purely evaluation logic on synthetic inputs.
+
+- **12 Scenarios implemented:**
+  1. **Cash Crisis** — Receivables buildup + extended payment terms, cash runway critical
+  2. **High Revenue Low Profit** — Sales discounting + manufacturing inefficiency, margin erosion
+  3. **Low Revenue High Profit** — Niche premium market, capacity-constrained growth
+  4. **Bad Marketing ROI** — Wrong audience targeting, low funnel conversion, poor attribution
+  5. **High Churn** — Product-market fit issue, weak onboarding, no customer success
+  6. **Inventory Overstock** — Inaccurate forecasting, manual processes, 22 weeks supply
+  7. **Staff Productivity** — Team scaling without discipline, no clear roadmap
+  8. **Founder Blind Spot** — Poor communication, change management failure, team morale risk
+  9. **Debt Overload** — Expansion underperformance, covenant risk, debt service burden
+  10. **Seasonal Business** — Single-season revenue model, 70% revenue in 4 months
+  11. **Customer Concentration** — Top 3 customers = 65% revenue, existential concentration risk
+  12. **Fast Growth Negative Cash** — Unprofitable growth, poor unit economics, 8-month runway
+
+- **Each scenario includes:**
+  - BusinessMetrics (revenue, costs, cash, inventory, team, churn, etc.)
+  - Expected root causes (2-3 per scenario)
+  - Expected recommendations (3-5 per scenario)
+  - Expected risk flags (4 per scenario with severity: critical/high/medium/low)
+  - Failure conditions (deterministic pass/fail rules, both fatal and non-fatal)
+  - Acceptance criteria (minCauseAccuracy, minRecommendationQuality, maxFalsePositives)
+
+- **Core functions:**
+  - `createAllScenarios()`: Generate all 12 scenarios deterministically
+  - `getScenarioById() / getScenarioByType()`: Retrieve scenarios
+  - `executeScenario()`: Run diagnosis against scenario and evaluate result
+  - `checkFailureConditions()`: Validate against fatal/non-fatal failure rules
+  - `scoreScenarioResult()`: Numerical scoring (0-100 based on accuracy, quality, false positives)
+  - `scoreAllScenarios()`: Batch scoring across multiple results
+
+- **Acceptance gates (B17, §26):**
+  - ✅ All 12 scenarios are well-formed and validate without errors
+  - ✅ Scenarios can be retrieved by ID and type
+  - ✅ Determinism verified (same inputs → identical outputs across multiple executions)
+  - ✅ Failure conditions are enforced (fatal blocks pass, non-fatal violations flagged)
+  - ✅ Result scoring correctly identifies pass/fail based on acceptance criteria
+  - ✅ Batch scoring aggregates results correctly
+
+```text
+SLICE_DB_CLASSIFICATION (B17-S1):
+  db_required: false
+  db_lane_used: LANE_A_STATIC (pure deterministic functions)
+  persistence_touched: false
+  schema_touched: false
+  status: PURE_FUNCTION_VERIFIED ✅
+  tests_passing: 36/36
+  gates: tsc --noEmit exit 0 · vitest 36/36 green · purely additive (no existing module modified)
+```
+
+**Test Coverage:** 36/36 passing (LANE_A pure functions)
+- Scenario creation and validation: 10 tests
+- Scenario retrieval: 4 tests
+- Individual scenario execution (12 scenarios): 12 tests
+- Result scoring: 2 tests
+- Determinism verification: 1 test
+- Batch scoring: 2 tests
+- Failure condition enforcement: 2 tests
+- Acceptance criteria: 1 test
+
+**Status:** B17-S1 — Synthetic Business Scenario Simulator **PURE_FUNCTION_VERIFIED** ✅
 
 ---
 
