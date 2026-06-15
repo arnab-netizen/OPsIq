@@ -1443,19 +1443,38 @@ final_module_status: GOVERNANCE_HARDENING_COMPLETE
 ### B24-S2 Workflow Verification Status
 
 **File:** `.github/workflows/b24-s2-db-verification.yml`
-- **Status:** WORKFLOW_FILE_EXISTS_AWAITING_TRIGGER
-- **Location:** Committed in commit b379c5f
+- **Status:** WORKFLOW_EXISTS_ON_FEATURE_BRANCH_ONLY
+- **Location:** Feature branch `claude/continue-post-owner-build-wabkf5` (NOT on main)
 - **Configuration:** PostgreSQL 16 service container, prisma migrate deploy, 23 DB tests
-- **Manual Trigger:** Can be triggered via GitHub Actions UI → "B24-S2 DB Verification" workflow → "Run workflow" button
-- **Test Execution:** Will run `npm test -- src/__tests__/services/private-mode/role-access.service.db.test.ts --run` with TEST_WITH_DB=true
-- **Expected Result:** 23/23 tests passing (workflow #28+ on feature branch)
+- **GitHub UI Visibility:** NOT VISIBLE (workflows only shown if on main/default branch)
+- **Test Execution:** `npm test -- src/__tests__/services/private-mode/role-access.service.db.test.ts --run` with TEST_WITH_DB=true
+- **Expected Result:** 23/23 tests passing
+
+**How to Trigger B24-S2 Tests:**
+
+Option 1: Use Generic LANE_B Workflow (Immediate)
+- Workflow: `.github/workflows/lane-b-db-test.yml` (exists on main)
+- Manual trigger from GitHub Actions UI
+- Input parameters:
+  - `branch`: `claude/continue-post-owner-build-wabkf5`
+  - `test_pattern`: `src/__tests__/services/private-mode/role-access.service.db.test.ts`
+- Will run B24-S2 tests from feature branch against postgres:16 service
+
+Option 2: Merge Feature Branch to Main
+- Create PR from `claude/continue-post-owner-build-wabkf5` to main
+- Once merged, b24-s2-db-verification.yml will appear in GitHub Actions UI
+- Then manually trigger or use as PR check
+
+Option 3: Push Workflow to Main Separately
+- Requires direct write access to main branch
+- Copies workflow file (only) to main without merging code changes
 
 ### Phase B Module Completion Summary
 
 | Module | Slice | Status | Tests | Lane |
 |--------|-------|--------|-------|------|
 | B24 | S1 | PURE_FUNCTION_VERIFIED ✅ | 17/17 | A |
-| B24 | S2 | WORKFLOW_READY_AWAITING_TRIGGER | 23 | B |
+| B24 | S2 | WORKFLOW_EXISTS_FEATURE_BRANCH_ONLY | 23 | B |
 | B25 | S1 | PURE_FUNCTION_VERIFIED ✅ | 23/23 | A |
 | B25 | S2 | PURE_FUNCTION_VERIFIED ✅ | 18/18 | A |
 | B26 | S1 | PURE_FUNCTION_VERIFIED ✅ | 25/25 | A |
@@ -1486,5 +1505,5 @@ final_module_status: GOVERNANCE_HARDENING_COMPLETE
 | ID | Severity | First Seen | Last Checked | Blocked Modules | Owner Action | Phase B Impact |
 |----|----------|-----------|--------------|-----------------|--------------|---|
 | DB-LOCAL-CREDS | P2 | 2026-06-14 | 2026-06-15 | Local DB write tests | Obtain PostgreSQL credentials or update .env | None — GitHub Actions LANE_B ready |
-| B24-S2-WORKFLOW-TRIGGER | P2 | 2026-06-15 | 2026-06-15 | B24-S2 LANE_B verification | Manually trigger workflow via GitHub Actions UI or await GitHub indexing | Workflow file exists, awaiting manual trigger |
+| B24-S2-WORKFLOW-LOCATION | P2 | 2026-06-15 | 2026-06-15 | B24-S2 LANE_B verification | Use Option 1 (generic LANE_B), Option 2 (merge to main), or Option 3 (push workflow to main) | Not visible in UI; feature branch only |
 
