@@ -14,11 +14,12 @@ on:
 
 env:
   NODE_ENV: test
+  CI: 'true'
   TEST_WITH_DB: 'true'
   SKIP_ENV_VALIDATION: 'true'
-  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-  TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-  DIRECT_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+  TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+  DIRECT_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
 
 jobs:
   lane-b-db-test:
@@ -68,8 +69,14 @@ jobs:
             sleep 1
           done
 
-      - name: Push schema to database
-        run: npx prisma db push --url postgresql://postgres:postgres@localhost:5432/opsiq_test --accept-data-loss
+      - name: Diagnostic — datasource env presence (redacted)
+        run: |
+          echo "DATABASE_URL present: $([ -n "$DATABASE_URL" ] && echo yes || echo no)"
+          echo "TEST_DATABASE_URL present: $([ -n "$TEST_DATABASE_URL" ] && echo yes || echo no)"
+          echo "CI: ${CI:-unset}"
+
+      - name: Deploy migrations
+        run: npx prisma migrate deploy
 
       - name: Validate checkout and test file exists
         run: |
