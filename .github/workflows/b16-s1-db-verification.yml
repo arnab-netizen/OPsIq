@@ -2,6 +2,12 @@ name: B16-S1 Public Dataset Test Harness — DB Verification (LANE_B)
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to test (default: claude/execution-audit-phase-a-ulmljq for B16-S1 feature branch)'
+        required: false
+        default: 'claude/execution-audit-phase-a-ulmljq'
+        type: string
 
 env:
   NODE_ENV: test
@@ -30,8 +36,10 @@ jobs:
           - 5432:5432
 
     steps:
-      - name: Checkout code
+      - name: Checkout code from specified branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'claude/execution-audit-phase-a-ulmljq' }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
