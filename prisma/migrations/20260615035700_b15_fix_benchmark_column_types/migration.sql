@@ -3,5 +3,5 @@
 -- to match Prisma schema and handle JavaScript array serialization
 
 ALTER TABLE case_benchmark_results
-  ALTER COLUMN false_positives SET DATA TYPE jsonb USING false_positives::jsonb,
-  ALTER COLUMN false_negatives SET DATA TYPE jsonb USING false_negatives::jsonb;
+  ALTER COLUMN false_positives SET DATA TYPE jsonb USING COALESCE(array_to_json(false_positives), '[]'::jsonb),
+  ALTER COLUMN false_negatives SET DATA TYPE jsonb USING COALESCE(array_to_json(false_negatives), '[]'::jsonb);
