@@ -3095,13 +3095,13 @@ model CaseBenchmarkResult {
 model PublicDataset {
   id String @id
   name String
-  datasetType String // retail|ecommerce|restaurant|saas|marketing|cashflow|inventory|financial_statement
+  datasetType String @map("dataset_type") // retail|ecommerce|restaurant|saas|marketing|cashflow|inventory|financial_statement
   description String @db.Text
-  rawData Json // Array of transaction/record objects
-  sourceUrl String?
-  licenseType String
-  allowedUse String @db.Text
-  rowCount Int
+  rawData Json @map("raw_data") // Array of transaction/record objects
+  sourceUrl String? @map("source_url")
+  licenseType String @map("license_type")
+  allowedUse String @map("allowed_use") @db.Text
+  rowCount Int @map("row_count")
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -3115,12 +3115,12 @@ model PublicDataset {
 model DatasetCalculation {
   id String @id
   datasetId String @map("dataset_id")
-  calculationType String // revenue_sum|average_transaction|growth_rate|margin_percent|churn_rate|conversion_rate|inventory_turnover|cash_position
+  calculationType String @map("calculation_type") // revenue_sum|average_transaction|growth_rate|margin_percent|churn_rate|conversion_rate|inventory_turnover|cash_position
   description String @db.Text
 
   // Test definition
   input Json // { filters?: {...}, parameters?: {...} }
-  expectedOutput Json // { value: number|string|boolean, tolerance?: number }
+  expectedOutput Json @map("expected_output") // { value: number|string|boolean, tolerance?: number }
 
   // Test result
   actualOutput Json? @map("actual_output") // { value: number|string|boolean, calculatedAt: Date }
