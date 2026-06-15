@@ -87,8 +87,20 @@ jobs:
           echo "Files matching pattern:"
           find . -name "*case-library.service.db.test.ts" 2>/dev/null || echo "No files found"
 
+      - name: Fail if test pattern is invalid
+        run: |
+          if [ -z "${{ github.event.inputs.test_pattern }}" ]; then
+            echo "ERROR: test_pattern input is empty"
+            exit 1
+          fi
+          if [ ! -f "${{ github.event.inputs.test_pattern }}" ]; then
+            echo "ERROR: test file not found at ${{ github.event.inputs.test_pattern }}"
+            exit 1
+          fi
+          echo "✓ Test file validation passed: ${{ github.event.inputs.test_pattern }}"
+
       - name: Run DB-backed tests
-        run: npm test -- ${{ github.event.inputs.test_pattern }} --run
+        run: npm test -- "${{ github.event.inputs.test_pattern }}" --run --reporter=verbose
 
       - name: Upload test results on failure
         if: failure()
