@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { PrismaClient } = require("./src/generated/prisma");
 
 const db = new PrismaClient();
@@ -13,7 +14,7 @@ const requiredTables = ["workspace", "user", "decision", "action", "auditEvent",
       console.log(`${table}: ${result[0]?.exists ? '✓' : '✗'}`);
     }
   } catch (error) {
-    console.error("Error checking schema:", error.message);
+    console.error("Error checking schema:", (error as unknown as Error).message);
   } finally {
     await db.$disconnect();
   }

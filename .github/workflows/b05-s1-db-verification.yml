@@ -1,0 +1,135 @@
+name: B05-S1 Fact Review Service DB Verification
+
+# B05-S1: Owner Data Review/Correction backend service.
+# Verifies: fact approval, correction, rejection, mark unknown operations; workspace isolation;
+# idempotency; audit trail creation. LANE_B: GitHub Actions postgres:16 service container.
+
+on:
+  workflow_dispatch:
+    description: 'Verify B05-S1 fact review service (LANE_B postgres:16 service container)'
+  push:
+    branches:
+      - claude/execution-audit-phase-a-ulmljq
+    paths:
+      - .github/workflows/b05-s1-db-verification.yml
+      - src/services/data-review/**
+      - src/__tests__/services/data-review/**
+      - src/domain/constants/audit-events.ts
+      - prisma/**
+
+jobs:
+  b05-s1-db-verification:
+    name: B05-S1 Fact Review Service Tests (Approval, Correction, Audit Trail)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          rm -rf node_modules
+          npm ci --include=optional
+
+      - name: Verify rolldown native binding
+        run: node -e "require.resolve('@rolldown/binding-linux-x64-gnu'); console.log('✓ rolldown native binding present')"
+
+      - name: Configure CI PostgreSQL environment
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          NODE_ENV=test
+          EOF
+          echo "✓ .env.local configured for CI PostgreSQL service"
+          grep -E 'DATABASE_URL|DATABASE_URL_TEST|NODE_ENV' .env.local | sed 's/postgres:postgres@/postgres:****@/g'
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Deploy Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run B05-S1 Fact Review Service Tests (8 DB tests)
+        run: |
+          mkdir -p artifacts/b05-s1
+          set +e
+          npm test -- --run \
+            src/__tests__/services/data-review/fact-review.service.db.test.ts \
+            2>&1 | tee artifacts/b05-s1/fact-review-tests.log
+          TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "B05-S1 fact review test exit code: $TEST_EXIT"
+          exit $TEST_EXIT
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          TEST_WITH_DB: "true"
+
+      - name: Upload B05-S1 test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b05-s1-test-logs
+          path: artifacts/b05-s1/
+
+      - name: B05-S1 DB Verification Complete
+        if: success()
+        run: |
+          echo "✅ B05_S1_DB_VERIFIED_GITHUB_POSTGRES_SERVICE"
+          echo "Tests: 8 DB tests passed"
+          echo ""
+          echo "Verified (fact review and approval operations):"
+          echo "  ✓ Owner can approve draft facts"
+          echo "  ✓ Owner can correct extracted value"
+          echo "  ✓ Corrections create audit record"
+          echo "  ✓ Rejected facts are tracked"
+          echo "  ✓ Owner can mark facts as unknown"
+          echo "  ✓ Workspace isolation enforced (unauthorized users blocked)"
+          echo "  ✓ Approval is idempotent (safe to re-approve)"
+          echo "  ✓ Review actions can be undone"
+          echo ""
+          echo "DB Method: GitHub Actions PostgreSQL 16 service container (LANE_B)"
+          echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "Commit: ${{ github.sha }}"
+
+      - name: B05-S1 DB Verification Failed
+        if: failure()
+        run: |
+          echo "❌ B05_S1_DB_FAILED_WITH_EVIDENCE"
+          echo "Review artifacts/b05-s1/ for detailed test output"
+          exit 1

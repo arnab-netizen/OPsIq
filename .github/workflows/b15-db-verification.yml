@@ -1,4 +1,4 @@
-name: B16-S1 Public Dataset Test Harness — DB Verification (LANE_B)
+name: B15 Case-Study Benchmark Library — DB Verification (LANE_B)
 
 on:
   workflow_dispatch:
@@ -9,8 +9,8 @@ env:
   SKIP_ENV_VALIDATION: 'true'
 
 jobs:
-  b16-s1-db-verification:
-    name: B16-S1 DB-Backed Tests (LANE_B)
+  b15-db-verification:
+    name: B15 DB-Backed Tests (LANE_B)
     runs-on: ubuntu-latest
 
     # PostgreSQL service container for test database
@@ -63,17 +63,17 @@ jobs:
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/opsiq_test"
 
-      - name: Run B16-S1 tests
-        run: npm test -- src/__tests__/services/benchmark/public-dataset.service.db.test.ts --run
+      - name: Run case library tests
+        run: npm test -- src/__tests__/services/benchmark/case-library.service.db.test.ts --run
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/opsiq_test"
           TEST_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/opsiq_test"
 
       - name: Upload test results on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: b16-s1-test-results
+          name: b15-test-results
           path: |
             test-results/
             coverage/
@@ -82,24 +82,24 @@ jobs:
   db-integration-summary:
     name: DB Integration Summary
     runs-on: ubuntu-latest
-    needs: b16-s1-db-verification
+    needs: b15-db-verification
     if: always()
 
     steps:
       - name: Check test status
         run: |
-          if [ "${{ needs.b16-s1-db-verification.result }}" == "success" ]; then
-            echo "✓ B16-S1 DB-Backed Tests Passed (LANE_B_GITHUB_POSTGRES_SERVICE)"
-            echo "## B16-S1 Public Dataset Test Harness Verification Status ✓" >> $GITHUB_STEP_SUMMARY
-            echo "- Deterministic Calculation Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.b15-db-verification.result }}" == "success" ]; then
+            echo "✓ B15 DB-Backed Tests Passed (LANE_B_GITHUB_POSTGRES_SERVICE)"
+            echo "## B15 Case-Study Benchmark Library Verification Status ✓" >> $GITHUB_STEP_SUMMARY
+            echo "- Case Library Service Tests: PASSED" >> $GITHUB_STEP_SUMMARY
             echo "- Database Persistence: VERIFIED" >> $GITHUB_STEP_SUMMARY
-            echo "- Test Result Recording: VERIFIED" >> $GITHUB_STEP_SUMMARY
-            echo "- Calculation History: VERIFIED" >> $GITHUB_STEP_SUMMARY
-            echo "- Dataset Statistics: VERIFIED" >> $GITHUB_STEP_SUMMARY
-            echo "- B16-S2 Integration: READY" >> $GITHUB_STEP_SUMMARY
+            echo "- Compliance Validation: VERIFIED" >> $GITHUB_STEP_SUMMARY
+            echo "- Blind Test Mode: VERIFIED" >> $GITHUB_STEP_SUMMARY
+            echo "- Transaction Integrity: VERIFIED" >> $GITHUB_STEP_SUMMARY
+            echo "- B16 Integration: READY" >> $GITHUB_STEP_SUMMARY
           else
-            echo "✗ B16-S1 DB-Backed Tests Failed"
-            echo "## B16-S1 Public Dataset Test Harness Verification Status ✗" >> $GITHUB_STEP_SUMMARY
+            echo "✗ B15 DB-Backed Tests Failed"
+            echo "## B15 Case-Study Benchmark Library Verification Status ✗" >> $GITHUB_STEP_SUMMARY
             echo "Review logs above for details" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi

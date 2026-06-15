@@ -1,0 +1,76 @@
+name: B12-S3 DB Verification
+
+on:
+  push:
+    paths:
+      - src/services/external-systems/**
+      - src/domain/external-systems/**
+      - src/__tests__/services/external-systems/**
+      - src/__tests__/domain/external-systems/**
+      - prisma/migrations/20260614202300_b12_external_systems_connector/**
+      - prisma/schema.prisma
+      - .github/workflows/b12-s3-db-verification.yml
+
+jobs:
+  b12-s3-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: opsiq_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres@localhost:5432/opsiq_test
+      TEST_WITH_DB: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+
+      - name: Run B12-S3 DB tests
+        run: npm test -- --run src/__tests__/services/external-systems/import-persistence.service.db.test.ts
+
+      - name: Run B12-S1/S2 pure function tests
+        run: npm test -- --run src/__tests__/domain/external-systems/
+
+      - name: Check TypeScript
+        run: npx tsc --noEmit
+
+  result:
+    needs: b12-s3-verification
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check result
+        run: |
+          if [[ "${{ needs.b12-s3-verification.result }}" == "success" ]]; then
+            echo "✅ B12-S3 DB verification passed"
+            exit 0
+          else
+            echo "❌ B12-S3 DB verification failed"
+            exit 1
+          fi

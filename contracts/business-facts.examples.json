@@ -1,0 +1,372 @@
+{
+  "$comment": "B01 canonical business-facts examples. Validated against the Zod contract in src/__tests__/business-facts/contract.test.ts. Three required cases: a service business, a missing-data case, and a contradiction case.",
+  "service_business": {
+    "schema_version": "1.0.0",
+    "business_profile": {
+      "workspace_id": "ws_demo_laundry",
+      "business_id": "biz_sparkle_laundry",
+      "name": "Sparkle Laundry & Dry Cleaning",
+      "industry": "laundry_service",
+      "stage": "growth",
+      "country": "IN",
+      "base_currency": "INR"
+    },
+    "reporting_period": {
+      "period_start": "2026-04-01",
+      "period_end": "2026-04-30",
+      "label": "April 2026",
+      "timezone": "Asia/Kolkata"
+    },
+    "source_documents": [
+      {
+        "source_document_id": "doc_pos_apr",
+        "kind": "pos_export",
+        "label": "POS monthly orders export (April 2026)",
+        "received_at": "2026-05-02T09:00:00Z",
+        "origin_reference": "pos_export_2026_04.csv"
+      },
+      {
+        "source_document_id": "doc_bank_apr",
+        "kind": "bank_api",
+        "label": "Bank current-account statement (April 2026)",
+        "received_at": "2026-05-02T09:05:00Z"
+      }
+    ],
+    "financials": [
+      {
+        "fact_id": "fact_revenue_apr",
+        "metric": "monthly_revenue",
+        "value": 480000,
+        "unit": "INR",
+        "currency": "INR",
+        "tax_basis": "exclusive",
+        "gross_or_net": "gross",
+        "period_start": "2026-04-01",
+        "period_end": "2026-04-30",
+        "source_document_id": "doc_pos_apr",
+        "source_location": "summary!B2",
+        "extraction_method": "pos_export",
+        "confidence_score": 0.9,
+        "validation_status": "owner_confirmed",
+        "created_at": "2026-05-02T09:10:00Z",
+        "updated_at": "2026-05-02T09:10:00Z"
+      },
+      {
+        "fact_id": "fact_cogs_apr",
+        "metric": "chemical_cost",
+        "value": 96000,
+        "unit": "INR",
+        "currency": "INR",
+        "tax_basis": "exclusive",
+        "gross_or_net": "net",
+        "period_start": "2026-04-01",
+        "period_end": "2026-04-30",
+        "source_document_id": "doc_pos_apr",
+        "source_location": "costs!B7",
+        "extraction_method": "pos_export",
+        "confidence_score": 0.8,
+        "validation_status": "system_validated",
+        "created_at": "2026-05-02T09:10:00Z",
+        "updated_at": "2026-05-02T09:10:00Z"
+      }
+    ],
+    "sales": [
+      {
+        "fact_id": "fact_orders_apr",
+        "metric": "orders_count",
+        "value": 1600,
+        "unit": "orders",
+        "period_start": "2026-04-01",
+        "period_end": "2026-04-30",
+        "source_document_id": "doc_pos_apr",
+        "source_location": "summary!B3",
+        "extraction_method": "pos_export",
+        "confidence_score": 0.95,
+        "validation_status": "system_validated",
+        "created_at": "2026-05-02T09:10:00Z",
+        "updated_at": "2026-05-02T09:10:00Z"
+      }
+    ],
+    "customers": [
+      {
+        "fact_id": "fact_repeat_rate_apr",
+        "metric": "repeat_customer_rate",
+        "value": 0.42,
+        "unit": "ratio",
+        "period_start": "2026-04-01",
+        "period_end": "2026-04-30",
+        "source_document_id": "doc_pos_apr",
+        "source_location": "customers!C5",
+        "extraction_method": "calculation",
+        "confidence_score": 0.7,
+        "validation_status": "system_validated",
+        "created_at": "2026-05-02T09:10:00Z",
+        "updated_at": "2026-05-02T09:10:00Z"
+      }
+    ],
+    "marketing": [],
+    "operations": [
+      {
+        "fact_id": "fact_machine_util_apr",
+        "metric": "machine_utilization",
+        "value": 0.68,
+        "unit": "ratio",
+        "period_start": "2026-04-01",
+        "period_end": "2026-04-30",
+        "source_document_id": "doc_pos_apr",
+        "source_location": "ops!D9",
+        "extraction_method": "owner_estimate",
+        "confidence_score": 0.5,
+        "validation_status": "owner_confirmed",
+        "created_at": "2026-05-02T09:10:00Z",
+        "updated_at": "2026-05-02T09:10:00Z"
+      }
+    ],
+    "inventory": [],
+    "staffing": [
+      {
+        "fact_id": "fact_headcount_apr",
+        "metric": "staff_headcount",
+        "value": 6,
+        "unit": "people",
+        "period_start": "2026-04-01",
+        "period_end": "2026-04-30",
+        "source_document_id": "doc_pos_apr",
+        "source_location": "staff!A2",
+        "extraction_method": "manual_entry",
+        "confidence_score": 1,
+        "validation_status": "owner_confirmed",
+        "created_at": "2026-05-02T09:10:00Z",
+        "updated_at": "2026-05-02T09:10:00Z"
+      }
+    ],
+    "debt": [],
+    "cash": [
+      {
+        "fact_id": "fact_cash_balance_apr",
+        "metric": "closing_cash_balance",
+        "value": 215000,
+        "unit": "INR",
+        "currency": "INR",
+        "tax_basis": "not_applicable",
+        "gross_or_net": "not_applicable",
+        "period_start": "2026-04-01",
+        "period_end": "2026-04-30",
+        "source_document_id": "doc_bank_apr",
+        "source_location": "statement!closing_balance",
+        "extraction_method": "bank_statement",
+        "confidence_score": 0.98,
+        "validation_status": "system_validated",
+        "created_at": "2026-05-02T09:10:00Z",
+        "updated_at": "2026-05-02T09:10:00Z"
+      }
+    ],
+    "risks": [
+      {
+        "risk_id": "risk_low_util",
+        "description": "Machine utilization at 68% leaves capacity unused during weekdays.",
+        "severity": "medium",
+        "related_fact_ids": ["fact_machine_util_apr"]
+      }
+    ],
+    "constraints": [
+      {
+        "constraint_id": "con_budget",
+        "category": "budget",
+        "description": "No paid-marketing budget available this quarter.",
+        "hard": true
+      }
+    ],
+    "confidence": {
+      "overall_score": 0.82,
+      "data_quality_score": 78,
+      "basis": "Most facts source-backed (POS + bank); utilization is an owner estimate."
+    },
+    "missing_data": [],
+    "contradictions": []
+  },
+  "missing_data_case": {
+    "schema_version": "1.0.0",
+    "business_profile": {
+      "workspace_id": "ws_demo_agency",
+      "business_id": "biz_brightpath_agency",
+      "name": "BrightPath Marketing Agency",
+      "industry": "marketing_agency",
+      "stage": "early",
+      "country": "IN",
+      "base_currency": "INR"
+    },
+    "reporting_period": {
+      "period_start": "2026-03-01",
+      "period_end": "2026-03-31",
+      "label": "March 2026"
+    },
+    "source_documents": [
+      {
+        "source_document_id": "doc_manual_mar",
+        "kind": "manual_owner_entry",
+        "label": "Owner-entered March figures",
+        "received_at": "2026-04-03T11:00:00Z"
+      }
+    ],
+    "financials": [
+      {
+        "fact_id": "fact_revenue_mar",
+        "metric": "monthly_revenue",
+        "value": 250000,
+        "unit": "INR",
+        "currency": "INR",
+        "tax_basis": "unknown",
+        "gross_or_net": "unknown",
+        "period_start": "2026-03-01",
+        "period_end": "2026-03-31",
+        "source_document_id": "doc_manual_mar",
+        "source_location": "owner form: revenue",
+        "extraction_method": "manual_entry",
+        "confidence_score": 0.4,
+        "validation_status": "owner_confirmed",
+        "created_at": "2026-04-03T11:05:00Z",
+        "updated_at": "2026-04-03T11:05:00Z"
+      },
+      {
+        "fact_id": "fact_margin_mar",
+        "metric": "net_margin",
+        "value": null,
+        "unit": "ratio",
+        "currency": "INR",
+        "tax_basis": "unknown",
+        "gross_or_net": "net",
+        "period_start": "2026-03-01",
+        "period_end": "2026-03-31",
+        "source_document_id": "doc_manual_mar",
+        "source_location": "owner form: margin (left blank)",
+        "extraction_method": "manual_entry",
+        "confidence_score": 0,
+        "validation_status": "unknown",
+        "created_at": "2026-04-03T11:05:00Z",
+        "updated_at": "2026-04-03T11:05:00Z"
+      }
+    ],
+    "sales": [],
+    "customers": [],
+    "marketing": [],
+    "operations": [],
+    "inventory": [],
+    "staffing": [],
+    "debt": [],
+    "cash": [],
+    "risks": [],
+    "constraints": [],
+    "confidence": {
+      "overall_score": 0.3,
+      "data_quality_score": 35,
+      "basis": "Manual-only entry; net margin unknown blocks profit diagnosis."
+    },
+    "missing_data": [
+      {
+        "field": "net_margin",
+        "reason": "Owner left margin blank; cost data not provided.",
+        "blocking": true
+      },
+      {
+        "field": "cash_balance",
+        "reason": "No bank statement or cash figure supplied.",
+        "blocking": false
+      }
+    ],
+    "contradictions": []
+  },
+  "contradiction_case": {
+    "schema_version": "1.0.0",
+    "business_profile": {
+      "workspace_id": "ws_demo_retail",
+      "business_id": "biz_corner_retail",
+      "name": "Corner Street Retail",
+      "industry": "retail",
+      "stage": "growth",
+      "country": "IN",
+      "base_currency": "INR"
+    },
+    "reporting_period": {
+      "period_start": "2026-02-01",
+      "period_end": "2026-02-28",
+      "label": "February 2026"
+    },
+    "source_documents": [
+      {
+        "source_document_id": "doc_pl_feb",
+        "kind": "accounting_system_export",
+        "label": "P&L export (February 2026)",
+        "received_at": "2026-03-04T08:00:00Z"
+      },
+      {
+        "source_document_id": "doc_bank_feb",
+        "kind": "bank_api",
+        "label": "Bank statement (February 2026)",
+        "received_at": "2026-03-04T08:02:00Z"
+      }
+    ],
+    "financials": [
+      {
+        "fact_id": "fact_revenue_feb_pl",
+        "metric": "monthly_revenue",
+        "value": 900000,
+        "unit": "INR",
+        "currency": "INR",
+        "tax_basis": "exclusive",
+        "gross_or_net": "gross",
+        "period_start": "2026-02-01",
+        "period_end": "2026-02-28",
+        "source_document_id": "doc_pl_feb",
+        "source_location": "P&L!revenue",
+        "extraction_method": "accounting_export",
+        "confidence_score": 0.75,
+        "validation_status": "system_validated",
+        "created_at": "2026-03-04T08:10:00Z",
+        "updated_at": "2026-03-04T08:10:00Z"
+      },
+      {
+        "fact_id": "fact_revenue_feb_bank",
+        "metric": "monthly_revenue",
+        "value": 760000,
+        "unit": "INR",
+        "currency": "INR",
+        "tax_basis": "inclusive",
+        "gross_or_net": "gross",
+        "period_start": "2026-02-01",
+        "period_end": "2026-02-28",
+        "source_document_id": "doc_bank_feb",
+        "source_location": "statement!deposits_total",
+        "extraction_method": "bank_statement",
+        "confidence_score": 0.9,
+        "validation_status": "system_validated",
+        "created_at": "2026-03-04T08:10:00Z",
+        "updated_at": "2026-03-04T08:10:00Z"
+      }
+    ],
+    "sales": [],
+    "customers": [],
+    "marketing": [],
+    "operations": [],
+    "inventory": [],
+    "staffing": [],
+    "debt": [],
+    "cash": [],
+    "risks": [],
+    "constraints": [],
+    "confidence": {
+      "overall_score": 0.45,
+      "data_quality_score": 50,
+      "basis": "Material revenue conflict between P&L and bank caps confidence until resolved."
+    },
+    "missing_data": [],
+    "contradictions": [
+      {
+        "contradiction_id": "contra_revenue_feb",
+        "description": "P&L revenue (900000) vs bank deposits (760000) for February differ by 140000; not averaged — flagged for owner resolution.",
+        "fact_ids": ["fact_revenue_feb_pl", "fact_revenue_feb_bank"],
+        "status": "material_conflict"
+      }
+    ]
+  }
+}

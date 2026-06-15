@@ -95,32 +95,43 @@ model BillingAccount {
 }
 
 model BusinessConditionProfile {
-  id                    String     @id @db.Uuid
-  engagementId          String     @db.Uuid @map("engagement_id")
-  businessStatus        String     @map("business_status")
-  severityScore         Int        @map("severity_score")
-  urgencyLevel          String     @map("urgency_level")
-  cashPressureLevel     String     @map("cash_pressure_level")
-  marginPressureLevel   String     @map("margin_pressure_level")
-  clientConcentrationRisk String    @map("client_concentration_risk")
-  ownerDependencyRisk   String     @map("owner_dependency_risk")
-  keyPersonDependencyRisk String    @map("key_person_dependency_risk")
-  processMaturityLevel  String     @map("process_maturity_level")
-  managementMaturityLevel String    @map("management_maturity_level")
-  executionCapacityLevel String     @map("execution_capacity_level")
-  moralFragilityLevel   String     @map("morale_fragility_level")
-  resilienceLevel       String     @map("resilience_level")
-  growthReadinessLevel  String     @map("growth_readiness_level")
-  notes                 String?
-  assessedBy            String?    @db.Uuid @map("assessed_by")
-  version               Int        @default(1)
-  isCurrent             Boolean    @default(true) @map("is_current")
-  createdAt             DateTime   @default(now()) @map("created_at")
-  updatedAt             DateTime   @map("updated_at")
-  engagement            Engagement @relation(fields: [engagementId], references: [id])
+  id                      String     @id @db.Uuid
+  engagementId            String     @db.Uuid @map("engagement_id")
+  workspaceId             String     @db.Uuid @map("workspace_id")
+  businessStatus          String     @map("business_status")
+  severityScore           Int        @map("severity_score")
+  urgencyLevel            String     @map("urgency_level")
+  cashPressureLevel       String     @map("cash_pressure_level")
+  marginPressureLevel     String     @map("margin_pressure_level")
+  clientConcentrationRisk String     @map("client_concentration_risk")
+  ownerDependencyRisk     String     @map("owner_dependency_risk")
+  keyPersonDependencyRisk String     @map("key_person_dependency_risk")
+  processMaturityLevel    String     @map("process_maturity_level")
+  managementMaturityLevel String     @map("management_maturity_level")
+  executionCapacityLevel  String     @map("execution_capacity_level")
+  moralFragilityLevel     String     @map("morale_fragility_level")
+  resilienceLevel         String     @map("resilience_level")
+  growthReadinessLevel    String     @map("growth_readiness_level")
+  notes                   String?
+  assessedBy              String?    @db.Uuid @map("assessed_by")
+  conditionScore          Int        @default(50) @map("condition_score")
+  ownerHealthScore        Int        @default(50) @map("owner_health_score")
+  teamHealthScore         Int        @default(50) @map("team_health_score")
+  customerHealthScore     Int        @default(50) @map("customer_health_score")
+  financialHealthScore    Int        @default(50) @map("financial_health_score")
+  riskFactors             Json       @default("[]") @map("risk_factors")
+  strengths               Json       @default("[]") @map("strengths")
+  diagnosisId             String?    @db.Uuid @map("diagnosis_id")
+  version                 Int        @default(1)
+  isCurrent               Boolean    @default(true) @map("is_current")
+  createdAt               DateTime   @default(now()) @map("created_at")
+  updatedAt               DateTime   @map("updated_at")
+  engagement              Engagement @relation(fields: [engagementId], references: [id])
 
   @@index([engagementId])
   @@index([engagementId, isCurrent])
+  @@index([workspaceId])
+  @@index([diagnosisId])
   @@map("business_condition_profiles")
 }
 
@@ -1167,6 +1178,10 @@ model Workspace {
   recommendationsLegacy RecommendationLegacy[] @ignore
   snapshotDatas        SnapshotData[]
   workspaceMemberships WorkspaceMembership[]
+  externalConnections  ExternalConnection[]
+  connectionConsents   ExternalConnectionConsent[]
+  browserImportSessions BrowserImportSession[]
+  browserImportConsents BrowserImportConsent[]
 
   @@map("workspaces")
 }
@@ -2708,6 +2723,7 @@ model OwnerDataIntake {
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
   business            OwnerBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  reviewActions       FactReviewAction[]
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2715,4 +2731,427 @@ model OwnerDataIntake {
   @@index([validationStatus])
   @@index([ownerConfirmed])
   @@map("owner_data_intakes")
+}
+
+model FactReviewAction {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  intakeId          String          @db.Uuid @map("intake_id")
+  factId            String          @map("fact_id")
+  action            String          @map("action") // "approved" | "corrected" | "rejected" | "marked_unknown"
+  previousValue     Json?           @map("previous_value")
+  newValue          Json?           @map("new_value")
+  correctionReason  String?         @map("correction_reason")
+  actorId           String          @db.Uuid @map("actor_id")
+  workspaceId       String          @db.Uuid @map("workspace_id")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  intake            OwnerDataIntake @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  @@index([intakeId])
+  @@index([factId])
+  @@index([workspaceId, intakeId])
+  @@index([action])
+  @@map("fact_review_actions")
+}
+
+// B12: External Systems Connector Layer — Export Imports
+// Handles CRM/accounting/POS/marketing exports (CSV/XLSX) from providers like HubSpot, Salesforce, Zoho, QuickBooks
+
+model ExternalProvider {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String                    @db.VarChar(100)
+  category            String                    @db.VarChar(50) // "CRM", "accounting", "POS", "ads"
+  isActive            Boolean                   @default(true) @map("is_active")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  templates           ExternalImportTemplate[]
+  rawRecords          ExternalRawRecord[]
+  connections         ExternalConnection[]
+  browserImportSessions BrowserImportSession[]
+
+  @@map("external_providers")
+}
+
+model ExternalImportTemplate {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerId          String                    @db.Uuid @map("provider_id")
+  workspaceId         String                    @db.Uuid @map("workspace_id")
+  templateName        String                    @db.VarChar(255) @map("template_name")
+  description         String?
+  expectedColumns     String[]                  @map("expected_columns") // CSV header columns
+  requiredColumns     String[]                  @map("required_columns")
+  fieldMappings       Json                      @map("field_mappings") // { "csv_col": { "target": "...", "type": "..." } }
+  isTemplate          Boolean                   @default(true) @map("is_template")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  provider            ExternalProvider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  rawRecords          ExternalRawRecord[]
+  fieldMappings_rel   ExternalFieldMapping[]
+
+  @@index([workspaceId])
+  @@index([providerId])
+  @@map("external_import_templates")
+}
+
+model ExternalRawRecord {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String                    @db.Uuid @map("workspace_id")
+  engagementId        String                    @db.Uuid @map("engagement_id")
+  providerId          String                    @db.Uuid @map("provider_id")
+  templateId          String                    @db.Uuid @map("template_id")
+  rawData             Json                      @map("raw_data") // Original record from CSV/import
+  parsedData          Json?                     @map("parsed_data") // After parsing/normalization
+  factId              String?                   @db.VarChar(255) @map("fact_id") // Links to business fact
+  status              String                    @default("pending") // pending|processed|failed|approved
+  errorMessage        String?                   @map("error_message")
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  provider            ExternalProvider         @relation(fields: [providerId], references: [id])
+  template            ExternalImportTemplate   @relation(fields: [templateId], references: [id])
+  lineage             ExternalDataLineage[]
+
+  @@index([workspaceId])
+  @@index([engagementId])
+  @@index([providerId])
+  @@index([status])
+  @@index([factId])
+  @@map("external_raw_records")
+}
+
+model ExternalFieldMapping {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  templateId          String                    @db.Uuid @map("template_id")
+  sourceField         String                    @db.VarChar(255) @map("source_field") // Field from provider export
+  targetField         String                    @db.VarChar(255) @map("target_field") // Field in business fact
+  transformationRule  Json?                     @map("transformation_rule") // { "type": "multiply", "factor": 1000 }
+  confidence          Decimal                   @default(0.80) // 0.0-1.0
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  template            ExternalImportTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@map("external_field_mappings")
+}
+
+model ExternalDataLineage {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String                    @db.Uuid @map("workspace_id")
+  sourceRecordId      String                    @db.Uuid @map("source_record_id")
+  processedRecordId   String?                   @db.Uuid @map("processed_record_id")
+  factId              String?                   @db.VarChar(255) @map("fact_id")
+  lineageChain        String[]                  @map("lineage_chain") // ["import:provider", "normalize", "map:template"]
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  sourceRecord        ExternalRawRecord        @relation(fields: [sourceRecordId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([sourceRecordId])
+  @@index([factId])
+  @@map("external_data_lineage")
+}
+
+// B13: OAuth Connection Management
+model ExternalConnection {
+  id String @id
+  workspaceId String @db.Uuid @map("workspace_id")
+  providerId String @db.Uuid @map("provider_id")
+  connectionName String @map("connection_name")
+  status String @default("active") // "active" | "revoked" | "expired" | "error"
+  lastSyncAt DateTime? @map("last_sync_at")
+  lastErrorAt DateTime? @map("last_error_at")
+  lastErrorMessage String? @map("last_error_message")
+  oauthScope String[] @map("oauth_scope")
+  disconnectToken String? @map("disconnect_token") // token used for revocation
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider ExternalProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  token ExternalOAuthToken?
+  consents ExternalConnectionConsent[]
+  syncJobs ExternalSyncJob[]
+
+  @@unique([workspaceId, providerId])
+  @@index([workspaceId])
+  @@index([status])
+  @@map("external_connections")
+}
+
+// B13: Encrypted OAuth Tokens
+model ExternalOAuthToken {
+  id String @id
+  connectionId String @unique @map("connection_id")
+  accessToken String @map("access_token") // encrypted at rest
+  refreshToken String? @map("refresh_token") // encrypted at rest
+  expiresAt DateTime? @map("expires_at")
+  tokenType String @default("Bearer") @map("token_type")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@map("external_oauth_tokens")
+}
+
+// B13: User Consent Tracking
+model ExternalConnectionConsent {
+  id String @id
+  workspaceId String @db.Uuid @map("workspace_id")
+  connectionId String @map("connection_id")
+  userId String @map("user_id")
+  consentedAt DateTime @default(now()) @map("consented_at")
+  scopes String[]
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([connectionId])
+  @@map("external_connection_consents")
+}
+
+// B13: Sync Job Tracking
+model ExternalSyncJob {
+  id String @id
+  connectionId String @map("connection_id")
+  status String @default("pending") // "pending" | "running" | "completed" | "failed"
+  recordsImported Int @default(0) @map("records_imported")
+  errorMessage String? @map("error_message")
+  startedAt DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  connection ExternalConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([status])
+  @@map("external_sync_jobs")
+}
+
+// B14: Browser-Assisted Import (Restricted Fallback)
+model BrowserImportSession {
+  id String @id
+  workspaceId String @db.Uuid @map("workspace_id")
+  providerId String @db.Uuid @map("provider_id")
+  userId String @map("user_id")
+  status String @default("active") // active|completed|failed|abandoned
+  startedAt DateTime @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  failureReason String? @map("failure_reason")
+  userAgent String @map("user_agent")
+  ipAddress String @map("ip_address")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider ExternalProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  events BrowserImportEvent[]
+  tables BrowserExtractedTable[]
+  consent BrowserImportConsent?
+
+  @@index([workspaceId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("browser_import_sessions")
+}
+
+model BrowserImportEvent {
+  id String @id
+  sessionId String @map("session_id")
+  eventType String @map("event_type") // session_started|instruction_shown|data_extracted|export_uploaded|error_encountered|session_completed
+  description String
+  metadata Json?
+  timestamp DateTime @default(now())
+
+  session BrowserImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@map("browser_import_events")
+}
+
+model BrowserExtractedTable {
+  id String @id
+  sessionId String @map("session_id")
+  tableName String @map("table_name")
+  columnHeaders String[] @map("column_headers")
+  dataRows Json @map("data_rows") // Array of objects
+  extractionMethod String @map("extraction_method") // manual_copy|file_export|screenshot
+  confidence Decimal @default(0.7) // User's confidence 0.0-1.0
+  status String @default("draft") // draft|approved|rejected
+  recordCount Int @default(0) @map("record_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  approvedAt DateTime? @map("approved_at")
+  approvedBy String? @map("approved_by")
+  rejectionReason String? @map("rejection_reason")
+
+  session BrowserImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("browser_extracted_tables")
+}
+
+model BrowserImportConsent {
+  id String @id
+  sessionId String @unique @map("session_id")
+  workspaceId String @db.Uuid @map("workspace_id")
+  userId String @map("user_id")
+  statementAccepted Boolean @map("statement_accepted")
+  statement String
+  acceptedAt DateTime @default(now()) @map("accepted_at")
+  ipAddress String @map("ip_address")
+  userAgent String @map("user_agent")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  session BrowserImportSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([sessionId])
+  @@map("browser_import_consents")
+}
+
+// B15: Real-World Case-Study Benchmark Library
+model CaseStudy {
+  id String @id
+  title String
+  description String @db.Text
+
+  // Business context
+  industry String
+  businessModel String @map("business_model")
+  businessSize String @map("business_size") // startup|small|medium|large|enterprise
+  year Int
+  yearStart Int @map("year_start")
+  yearEnd Int @map("year_end")
+
+  // Case data
+  symptoms Json // CaseStudySymptom[]
+  availableData Json @map("available_data") // CaseStudyEvidence[]
+
+  // Hidden vs expert causes (for blind testing)
+  hiddenRootCauses Json @map("hidden_root_causes") // RootCause[]
+  hiddenCausesSummary String? @map("hidden_causes_summary") @db.Text
+  expertIdentifiedCauses Json @map("expert_identified_causes") // RootCause[]
+  expertCausesSummary String? @map("expert_causes_summary") @db.Text
+
+  // Actions and outcomes
+  actionsTaken Json @map("actions_taken") // ImplementedAction[]
+  actualOutcome Json @map("actual_outcome") // CaseStudyOutcome
+
+  // Source transparency (CRITICAL)
+  sources Json // CaseStudySource[]
+  licenseOrAllowedUse String @map("license_or_allowed_use") @db.Text
+
+  // Confidence metrics
+  confidence Decimal @default(0.7) // 0.0-1.0
+  dataCompleteness Decimal @map("data_completeness") @default(0.7) // 0.0-1.0
+  expertValidated Boolean @map("expert_validated") @default(false)
+
+  // Metadata
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  benchmarks CaseBenchmarkResult[]
+
+  @@index([industry])
+  @@index([businessSize])
+  @@index([year])
+  @@index([confidence])
+  @@map("case_studies")
+}
+
+model CaseBenchmarkResult {
+  id String @id
+  caseId String @map("case_id")
+  diagnosisId String @map("diagnosis_id")
+
+  // What was identified
+  identifiedCauses Json @map("identified_causes") // RootCause[]
+  confidenceScores Json @map("confidence_scores") // Array of {cause, engineConfidence, actualConfidence}
+
+  // Scores
+  accuracyScore Decimal @map("accuracy_score") // 0.0-1.0
+  precisionScore Decimal @map("precision_score") // 0.0-1.0
+  recallScore Decimal @map("recall_score") // 0.0-1.0
+
+  // Analysis
+  performanceNotes String? @map("performance_notes") @db.Text
+  falsePositives Json? @map("false_positives") // Array of strings
+  falseNegatives Json? @map("false_negatives") // Array of strings
+
+  // Timestamp
+  testedAt DateTime @default(now()) @map("tested_at")
+
+  caseStudy CaseStudy @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([diagnosisId])
+  @@index([testedAt])
+  @@map("case_benchmark_results")
+}
+
+// B16-S1: Public Dataset Test Harness — Deterministic Calculation Tests
+model PublicDataset {
+  id String @id
+  name String
+  datasetType String @map("dataset_type") // retail|ecommerce|restaurant|saas|marketing|cashflow|inventory|financial_statement
+  description String @db.Text
+  rawData Json @map("raw_data") // Array of transaction/record objects
+  sourceUrl String? @map("source_url")
+  licenseType String @map("license_type")
+  allowedUse String @map("allowed_use") @db.Text
+  rowCount Int @map("row_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  calculations DatasetCalculation[]
+
+  @@index([datasetType])
+  @@index([createdAt])
+  @@map("public_datasets")
+}
+
+model DatasetCalculation {
+  id String @id
+  datasetId String @map("dataset_id")
+  calculationType String @map("calculation_type") // revenue_sum|average_transaction|growth_rate|margin_percent|churn_rate|conversion_rate|inventory_turnover|cash_position
+  description String @db.Text
+
+  // Test definition
+  input Json // { filters?: {...}, parameters?: {...} }
+  expectedOutput Json @map("expected_output") // { value: number|string|boolean, tolerance?: number }
+
+  // Test result
+  actualOutput Json? @map("actual_output") // { value: number|string|boolean, calculatedAt: Date }
+  passed Boolean?
+  errorMessage String? @map("error_message") @db.Text
+
+  testedAt DateTime? @map("tested_at")
+  executionTimeMs Int? @map("execution_time_ms")
+
+  dataset PublicDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  logs CalculationLog[]
+
+  @@index([datasetId])
+  @@index([calculationType])
+  @@index([passed])
+  @@index([testedAt])
+  @@map("dataset_calculations")
+}
+
+model CalculationLog {
+  id String @id
+  calculationId String @map("calculation_id")
+  executionTimeMs Int @map("execution_time_ms")
+  memoryUsedMb Int? @map("memory_used_mb")
+  notes String? @db.Text
+
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  calculation DatasetCalculation @relation(fields: [calculationId], references: [id], onDelete: Cascade)
+
+  @@index([calculationId])
+  @@index([recordedAt])
+  @@map("calculation_logs")
 }

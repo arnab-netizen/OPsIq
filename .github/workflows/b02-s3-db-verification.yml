@@ -1,0 +1,136 @@
+name: B02-S3 File Intake Persistence Bridge DB Verification
+
+# B02-S3: File-intake persistence bridge into the PROVEN Module 10 flow.
+# Verifies: safe CSV persists an unconfirmed Module 10 candidate + existing confirm
+# flow confirms it; formula-injection blocked pre-write; bad file type rejected
+# pre-write; invalid CSV persists but cannot be confirmed; workspace isolation.
+# LANE_B: GitHub Actions postgres:16 service container (no hosted Neon, no secrets).
+
+on:
+  workflow_dispatch:
+    description: 'Verify B02-S3 file-intake persistence bridge (LANE_B postgres:16 service container)'
+  push:
+    branches:
+      - claude/execution-audit-phase-a-ulmljq
+    paths:
+      - .github/workflows/b02-s3-db-verification.yml
+      - src/services/file-intake/**
+      - src/services/owner-intake/**
+      - src/domain/file-intake/**
+      - src/__tests__/services/file-intake/**
+      - prisma/**
+
+jobs:
+  b02-s3-db-verification:
+    name: B02-S3 File Intake Bridge Tests (Persistence + Confirmation)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          rm -rf node_modules
+          npm ci --include=optional
+
+      - name: Verify rolldown native binding
+        run: node -e "require.resolve('@rolldown/binding-linux-x64-gnu'); console.log('✓ rolldown native binding present')"
+
+      - name: Configure CI PostgreSQL environment
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          NODE_ENV=test
+          EOF
+          echo "✓ .env.local configured for CI PostgreSQL service"
+          grep -E 'DATABASE_URL|DATABASE_URL_TEST|NODE_ENV' .env.local | sed 's/postgres:postgres@/postgres:****@/g'
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Deploy Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run B02-S3 File Intake Bridge Tests (5 DB tests)
+        run: |
+          mkdir -p artifacts/b02-s3
+          set +e
+          npm test -- --run \
+            src/__tests__/services/file-intake/persist-file-intake.service.db.test.ts \
+            2>&1 | tee artifacts/b02-s3/bridge-tests.log
+          TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "B02-S3 bridge test exit code: $TEST_EXIT"
+          exit $TEST_EXIT
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          TEST_WITH_DB: "true"
+
+      - name: Upload B02-S3 test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b02-s3-test-logs
+          path: artifacts/b02-s3/
+
+      - name: B02-S3 DB Verification Complete
+        if: success()
+        run: |
+          echo "✅ B02_S3_DB_VERIFIED_GITHUB_POSTGRES_SERVICE"
+          echo "Tests: 5 DB tests passed"
+          echo ""
+          echo "Verified (bridge reuses proven Module 10 flow, no duplicate confirmation service):"
+          echo "  ✓ Safe CSV → Module 10 unconfirmed candidate → existing confirmDataIntake confirms"
+          echo "  ✓ Duplicate confirm rejected by existing flow"
+          echo "  ✓ Formula-injection file blocked before any DB write"
+          echo "  ✓ Unsupported file type rejected before any DB write"
+          echo "  ✓ Invalid CSV persists (Module 10 authority) but cannot be confirmed"
+          echo "  ✓ Workspace isolation enforced via Module 10 business guard"
+          echo ""
+          echo "DB Method: GitHub Actions PostgreSQL 16 service container (LANE_B)"
+          echo "Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "Commit: ${{ github.sha }}"
+
+      - name: B02-S3 DB Verification Failed
+        if: failure()
+        run: |
+          echo "❌ B02_S3_DB_FAILED_WITH_EVIDENCE"
+          echo "Review artifacts/b02-s3/ for detailed test output"
+          exit 1
