@@ -198,6 +198,7 @@ model ClientAccount {
   clientContacts ClientContact[]
   engagements    Engagement[]
   leadRecords    LeadRecord[]
+  privateModeAccess PrivateModeAccess[]
 
   @@index([status])
   @@map("client_accounts")
@@ -3154,4 +3155,34 @@ model CalculationLog {
   @@index([calculationId])
   @@index([recordedAt])
   @@map("calculation_logs")
+}
+
+model PrivateModeAccess {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String @db.Uuid @map("workspace_id")
+  userId String @db.Uuid @map("user_id")
+  role String // 'OWNER' | 'CONSULTANT' | 'ANALYST'
+  grantedAt DateTime @default(now()) @map("granted_at")
+  grantedBy String? @db.Uuid @map("granted_by")
+  revokedAt DateTime? @map("revoked_at")
+  revokedBy String? @db.Uuid @map("revoked_by")
+  revokeReason String? @map("revoke_reason") @db.Text
+  approvalStatus String @default("pending") @map("approval_status") // 'pending' | 'approved' | 'rejected'
+  approvedAt DateTime? @map("approved_at")
+  approvedBy String? @db.Uuid @map("approved_by")
+  rejectionReason String? @map("rejection_reason") @db.Text
+  metadata Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @map("updated_at")
+
+  workspace ClientAccount @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([role])
+  @@index([approvalStatus])
+  @@index([grantedAt])
+  @@index([revokedAt])
+  @@map("private_mode_access")
 }
