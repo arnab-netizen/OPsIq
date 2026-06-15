@@ -316,17 +316,25 @@ export function getBlindTestVersion(
   CaseStudy,
   "hiddenRootCauses" | "hiddenRootCausesSummary" | "expertIdentifiedCauses" | "expertCausesSummary" | "actualOutcome"
 > {
-  const {
-    hiddenRootCauses,
-    hiddenRootCausesSummary,
-    expertIdentifiedCauses,
-    expertCausesSummary,
-    actualOutcome,
-    ...blindVersion
-  } = caseStudy;
-
   return {
-    ...blindVersion,
+    id: caseStudy.id,
+    title: caseStudy.title,
+    description: caseStudy.description,
+    industry: caseStudy.industry,
+    businessModel: caseStudy.businessModel,
+    businessSize: caseStudy.businessSize,
+    year: caseStudy.year,
+    yearRange: caseStudy.yearRange,
+    symptoms: caseStudy.symptoms,
+    availableData: caseStudy.availableData,
+    actionsTaken: caseStudy.actionsTaken,
+    sources: caseStudy.sources,
+    licenseOrAllowedUse: caseStudy.licenseOrAllowedUse,
+    confidence: caseStudy.confidence,
+    dataCompleteness: caseStudy.dataCompleteness,
+    expertValidated: caseStudy.expertValidated,
+    createdAt: caseStudy.createdAt,
+    updatedAt: caseStudy.updatedAt,
     blindTestMode: true,
   };
 }

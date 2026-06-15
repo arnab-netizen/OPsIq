@@ -9,7 +9,7 @@
  * - Case applicability matching
  */
 
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { PrismaClient, CaseStudy as PrismaCaseStudy, CaseBenchmarkResult as PrismaCaseBenchmarkResult } from "@/generated/prisma/client";
 import {
   validateCaseStudyCompliance,
   isCaseStudyApplicable,
@@ -117,8 +117,8 @@ export async function recordBenchmarkResult(
   caseId: string,
   result: {
     diagnosisId: string;
-    identifiedCauses: any[];
-    confidenceScores: any[];
+    identifiedCauses: Record<string, unknown>[];
+    confidenceScores: Record<string, number>[];
     accuracyScore: number;
     precisionScore: number;
     recallScore: number;
@@ -261,14 +261,14 @@ export async function getCaseLibraryStats(
 /**
  * Helper: Parse database record to domain model.
  */
-function parseCaseStudyRecord(record: any): CaseStudy {
+function parseCaseStudyRecord(record: PrismaCaseStudy): CaseStudy {
   return {
     id: record.id,
     title: record.title,
     description: record.description,
     industry: record.industry,
     businessModel: record.businessModel,
-    businessSize: record.businessSize as any,
+    businessSize: record.businessSize as "startup" | "scaleup" | "midmarket" | "enterprise",
     year: record.year,
     yearRange: {
       startYear: record.yearStart,
@@ -296,7 +296,7 @@ function parseCaseStudyRecord(record: any): CaseStudy {
 /**
  * Helper: Parse benchmark record.
  */
-function parseBenchmarkRecord(record: any): CaseBenchmarkResult {
+function parseBenchmarkRecord(record: PrismaCaseBenchmarkResult): CaseBenchmarkResult {
   return {
     benchmarkId: record.id,
     caseId: record.caseId,
