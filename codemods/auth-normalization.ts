@@ -11,7 +11,9 @@
  * Uses jscodeshift for AST safety - preserves semantics & formatting.
  */
 
+// @ts-ignore jscodeshift types not fully exported
 import type { FileInfo, API } from 'jscodeshift';
+// @ts-ignore jscodeshift internal types
 import type { ASTPath } from 'jscodeshift/src/core';
 
 export default function transformer(fileInfo: FileInfo, api: API): string | undefined {

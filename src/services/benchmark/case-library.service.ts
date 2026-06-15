@@ -117,14 +117,14 @@ export async function recordBenchmarkResult(
   caseId: string,
   result: {
     diagnosisId: string;
-    identifiedCauses: Record<string, unknown>[];
-    confidenceScores: Record<string, number>[];
+    identifiedCauses: unknown;
+    confidenceScores: unknown;
     accuracyScore: number;
     precisionScore: number;
     recallScore: number;
     performanceNotes?: string;
-    falsePositives?: string[];
-    falseNegatives?: string[];
+    falsePositives?: unknown;
+    falseNegatives?: unknown;
   }
 ): Promise<CaseBenchmarkResult> {
   const benchmarkRecord = await prisma.caseBenchmarkResult.create({
@@ -132,14 +132,14 @@ export async function recordBenchmarkResult(
       id: `bench_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       caseId,
       diagnosisId: result.diagnosisId,
-      identifiedCauses: result.identifiedCauses,
-      confidenceScores: result.confidenceScores,
+      identifiedCauses: result.identifiedCauses as never,
+      confidenceScores: result.confidenceScores as never,
       accuracyScore: result.accuracyScore,
       precisionScore: result.precisionScore,
       recallScore: result.recallScore,
       performanceNotes: result.performanceNotes,
-      falsePositives: result.falsePositives,
-      falseNegatives: result.falseNegatives,
+      falsePositives: result.falsePositives as never,
+      falseNegatives: result.falseNegatives as never,
     },
   });
 
@@ -268,21 +268,21 @@ function parseCaseStudyRecord(record: PrismaCaseStudy): CaseStudy {
     description: record.description,
     industry: record.industry,
     businessModel: record.businessModel,
-    businessSize: record.businessSize as "startup" | "scaleup" | "midmarket" | "enterprise",
+    businessSize: record.businessSize as "startup" | "small" | "medium" | "large" | "enterprise",
     year: record.year,
     yearRange: {
       startYear: record.yearStart,
       endYear: record.yearEnd,
     },
-    symptoms: record.symptoms || [],
-    availableData: record.availableData || [],
-    hiddenRootCauses: record.hiddenRootCauses || [],
-    hiddenRootCausesSummary: record.hiddenCausesSummary || "",
-    expertIdentifiedCauses: record.expertIdentifiedCauses || [],
-    expertCausesSummary: record.expertCausesSummary || "",
-    actionsTaken: record.actionsTaken || [],
-    actualOutcome: record.actualOutcome || {},
-    sources: record.sources || [],
+    symptoms: (Array.isArray(record.symptoms) ? record.symptoms : JSON.parse(record.symptoms as string)) as CaseStudy["symptoms"],
+    availableData: (Array.isArray(record.availableData) ? record.availableData : JSON.parse(record.availableData as string)) as CaseStudy["availableData"],
+    hiddenRootCauses: (Array.isArray(record.hiddenRootCauses) ? record.hiddenRootCauses : JSON.parse(record.hiddenRootCauses as string)) as CaseStudy["hiddenRootCauses"],
+    hiddenRootCausesSummary: (typeof record.hiddenCausesSummary === "string" ? record.hiddenCausesSummary : JSON.stringify(record.hiddenCausesSummary)) || "",
+    expertIdentifiedCauses: (Array.isArray(record.expertIdentifiedCauses) ? record.expertIdentifiedCauses : JSON.parse(record.expertIdentifiedCauses as string)) as CaseStudy["expertIdentifiedCauses"],
+    expertCausesSummary: (typeof record.expertCausesSummary === "string" ? record.expertCausesSummary : JSON.stringify(record.expertCausesSummary)) || "",
+    actionsTaken: (Array.isArray(record.actionsTaken) ? record.actionsTaken : JSON.parse(record.actionsTaken as string)) as CaseStudy["actionsTaken"],
+    actualOutcome: (typeof record.actualOutcome === "object" ? record.actualOutcome : JSON.parse(record.actualOutcome as string)) as CaseStudy["actualOutcome"],
+    sources: (Array.isArray(record.sources) ? record.sources : JSON.parse(record.sources as string)) as CaseStudy["sources"],
     licenseOrAllowedUse: record.licenseOrAllowedUse || "",
     confidence: Number(record.confidence),
     dataCompleteness: Number(record.dataCompleteness),
@@ -301,14 +301,14 @@ function parseBenchmarkRecord(record: PrismaCaseBenchmarkResult): CaseBenchmarkR
     benchmarkId: record.id,
     caseId: record.caseId,
     diagnosisId: record.diagnosisId,
-    identifiedCauses: record.identifiedCauses || [],
-    confidenceScores: record.confidenceScores || [],
+    identifiedCauses: (Array.isArray(record.identifiedCauses) ? record.identifiedCauses : JSON.parse(record.identifiedCauses as string)) as CaseBenchmarkResult["identifiedCauses"],
+    confidenceScores: (Array.isArray(record.confidenceScores) ? record.confidenceScores : JSON.parse(record.confidenceScores as string)) as CaseBenchmarkResult["confidenceScores"],
     accuracyScore: Number(record.accuracyScore),
     precisionScore: Number(record.precisionScore),
     recallScore: Number(record.recallScore),
     performanceNotes: record.performanceNotes || "",
-    falsePositives: record.falsePositives || [],
-    falsNegatives: record.falseNegatives || [],
+    falsePositives: (Array.isArray(record.falsePositives) ? record.falsePositives : JSON.parse(record.falsePositives as string)) as string[],
+    falsNegatives: (Array.isArray(record.falseNegatives) ? record.falseNegatives : JSON.parse(record.falseNegatives as string)) as string[],
     testedAt: record.testedAt,
   };
 }
