@@ -3090,3 +3090,68 @@ model CaseBenchmarkResult {
   @@index([testedAt])
   @@map("case_benchmark_results")
 }
+
+// B16-S1: Public Dataset Test Harness — Deterministic Calculation Tests
+model PublicDataset {
+  id String @id
+  name String
+  datasetType String // retail|ecommerce|restaurant|saas|marketing|cashflow|inventory|financial_statement
+  description String @db.Text
+  rawData Json // Array of transaction/record objects
+  sourceUrl String?
+  licenseType String
+  allowedUse String @db.Text
+  rowCount Int
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  calculations DatasetCalculation[]
+
+  @@index([datasetType])
+  @@index([createdAt])
+  @@map("public_datasets")
+}
+
+model DatasetCalculation {
+  id String @id
+  datasetId String @map("dataset_id")
+  calculationType String // revenue_sum|average_transaction|growth_rate|margin_percent|churn_rate|conversion_rate|inventory_turnover|cash_position
+  description String @db.Text
+
+  // Test definition
+  input Json // { filters?: {...}, parameters?: {...} }
+  expectedOutput Json // { value: number|string|boolean, tolerance?: number }
+
+  // Test result
+  actualOutput Json? @map("actual_output") // { value: number|string|boolean, calculatedAt: Date }
+  passed Boolean?
+  errorMessage String? @map("error_message") @db.Text
+
+  testedAt DateTime? @map("tested_at")
+  executionTimeMs Int? @map("execution_time_ms")
+
+  dataset PublicDataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  logs CalculationLog[]
+
+  @@index([datasetId])
+  @@index([calculationType])
+  @@index([passed])
+  @@index([testedAt])
+  @@map("dataset_calculations")
+}
+
+model CalculationLog {
+  id String @id
+  calculationId String @map("calculation_id")
+  executionTimeMs Int @map("execution_time_ms")
+  memoryUsedMb Int? @map("memory_used_mb")
+  notes String? @db.Text
+
+  recordedAt DateTime @default(now()) @map("recorded_at")
+
+  calculation DatasetCalculation @relation(fields: [calculationId], references: [id], onDelete: Cascade)
+
+  @@index([calculationId])
+  @@index([recordedAt])
+  @@map("calculation_logs")
+}
