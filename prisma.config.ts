@@ -1,9 +1,11 @@
 import { defineConfig } from '@prisma/config';
 import { config } from 'dotenv';
 
-// Load local env (developer machine / CI). Never required for the app to build,
-// and must never contain committed real secrets.
-config({ path: '.env.local', override: true });
+// Load local env (developer machine only). In CI, GitHub Actions env vars take precedence.
+// Never required for the app to build, and must never contain committed real secrets.
+if (!process.env.CI) {
+  config({ path: '.env.local', override: false });
+}
 
 // Datasource URL used by the Prisma CLI (migrate, validate, studio, generate).
 // Resolution priority:
