@@ -2956,7 +2956,7 @@ model BrowserImportSession {
 model BrowserImportEvent {
   id String @id
   sessionId String @map("session_id")
-  eventType String // session_started|instruction_shown|data_extracted|export_uploaded|error_encountered|session_completed
+  eventType String @map("event_type") // session_started|instruction_shown|data_extracted|export_uploaded|error_encountered|session_completed
   description String
   metadata Json?
   timestamp DateTime @default(now())
@@ -2974,8 +2974,8 @@ model BrowserExtractedTable {
   sessionId String @map("session_id")
   tableName String @map("table_name")
   columnHeaders String[] @map("column_headers")
-  dataRows Json // Array of objects
-  extractionMethod String // manual_copy|file_export|screenshot
+  dataRows Json @map("data_rows") // Array of objects
+  extractionMethod String @map("extraction_method") // manual_copy|file_export|screenshot
   confidence Decimal @default(0.7) // User's confidence 0.0-1.0
   status String @default("draft") // draft|approved|rejected
   recordCount Int @default(0) @map("record_count")
