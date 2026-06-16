@@ -191,6 +191,361 @@ const rootCausePatterns: RootCausePattern[] = [
       ],
     }),
   },
+  {
+    name: "Brand Perception Trust Gap",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "market_position" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("brand") ||
+            e.finding.toLowerCase().includes("trust") ||
+            e.finding.toLowerCase().includes("reputation"))
+      ) &&
+      evidence.some(
+        (e) =>
+          e.dimension === "customer_retention" &&
+          (e.finding.toLowerCase().includes("churn") ||
+            e.finding.toLowerCase().includes("switch"))
+      ),
+    confidence: (evidence) => {
+      const brandEvidence = evidence.filter(
+        (e) =>
+          e.dimension === "market_position" &&
+          (e.finding.toLowerCase().includes("brand") ||
+            e.finding.toLowerCase().includes("trust") ||
+            e.finding.toLowerCase().includes("reputation"))
+      );
+      const retentionEvidence = evidence.filter(
+        (e) => e.dimension === "customer_retention"
+      );
+      const highConfidenceBrand = brandEvidence.filter(
+        (e) => e.confidence === ConfidenceLevel.HIGH
+      ).length;
+      const highConfidenceRetention = retentionEvidence.filter(
+        (e) => e.confidence === ConfidenceLevel.HIGH
+      ).length;
+
+      if (
+        highConfidenceBrand >= 2 &&
+        highConfidenceRetention >= 1
+      ) {
+        return DiagnosisConfidence.HIGH;
+      } else if (brandEvidence.length >= 1 && retentionEvidence.length >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.INSUFFICIENT_EVIDENCE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.BRAND_PERCEPTION_TRUST_GAP,
+      description: "Brand perception or trust gap driving customer switching",
+      mechanismDescription:
+        "Damaged brand reputation or lack of market positioning causes customers to perceive competitors as better alternatives. Trust deficit leads to churn despite product quality.",
+      evidenceIds: evidence
+        .filter(
+          (e) =>
+            (e.dimension === "market_position" &&
+              (e.finding.toLowerCase().includes("brand") ||
+                e.finding.toLowerCase().includes("trust") ||
+                e.finding.toLowerCase().includes("reputation"))) ||
+            e.dimension === "customer_retention"
+        )
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Competitors may offer lower prices",
+        "Product features may not match market expectations",
+      ],
+      missingEvidenceFor: [
+        "Specific brand perception metrics",
+        "Customer perception vs competitor perception",
+        "Awareness of brand strengths in target market",
+      ],
+    }),
+  },
+  {
+    name: "Unit Economics Breakdown",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "financial_health" &&
+          (e.finding.toLowerCase().includes("margin") ||
+            e.finding.toLowerCase().includes("cogs") ||
+            e.finding.toLowerCase().includes("acquisition"))
+      ) &&
+      evidence.some(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.confidence === ConfidenceLevel.HIGH
+      ),
+    confidence: (evidence) => {
+      const financialEvidence = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          (e.finding.toLowerCase().includes("margin") ||
+            e.finding.toLowerCase().includes("cogs") ||
+            e.finding.toLowerCase().includes("acquisition"))
+      );
+      const highConfidence = financialEvidence.filter(
+        (e) => e.confidence === ConfidenceLevel.HIGH
+      ).length;
+
+      if (highConfidence >= 2) {
+        return DiagnosisConfidence.HIGH;
+      } else if (financialEvidence.length >= 1 && highConfidence >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      } else if (financialEvidence.length >= 1) {
+        return DiagnosisConfidence.PROVISIONAL;
+      }
+      return DiagnosisConfidence.INSUFFICIENT_EVIDENCE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.UNIT_ECONOMICS_BREAKDOWN,
+      description: "Unit economics unsustainable below required scale",
+      mechanismDescription:
+        "Acquisition cost, cost of goods sold, or delivery cost make individual unit unprofitable. Business cannot reach profitability without either scale, price increase, or cost reduction.",
+      evidenceIds: evidence
+        .filter(
+          (e) =>
+            e.dimension === "financial_health" &&
+            (e.finding.toLowerCase().includes("margin") ||
+              e.finding.toLowerCase().includes("cogs") ||
+              e.finding.toLowerCase().includes("acquisition"))
+        )
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Scale may improve unit economics",
+        "Process improvements may reduce costs",
+      ],
+      missingEvidenceFor: [
+        "Detailed cost breakdown by unit",
+        "Customer lifetime value vs acquisition cost",
+        "Contribution margin by product line",
+      ],
+    }),
+  },
+  {
+    name: "Demand Forecasting Capacity Mismatch",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "process_maturity" &&
+          (e.finding.toLowerCase().includes("demand") ||
+            e.finding.toLowerCase().includes("forecast") ||
+            e.finding.toLowerCase().includes("capacity"))
+      ) &&
+      evidence.some(
+        (e) =>
+          e.dimension === "operational_efficiency" &&
+          (e.finding.toLowerCase().includes("bottleneck") ||
+            e.finding.toLowerCase().includes("backlog"))
+      ),
+    confidence: (evidence) => {
+      const demandEvidence = evidence.filter(
+        (e) =>
+          e.dimension === "process_maturity" &&
+          (e.finding.toLowerCase().includes("demand") ||
+            e.finding.toLowerCase().includes("forecast") ||
+            e.finding.toLowerCase().includes("capacity"))
+      );
+      const operationalEvidence = evidence.filter(
+        (e) =>
+          e.dimension === "operational_efficiency" &&
+          (e.finding.toLowerCase().includes("bottleneck") ||
+            e.finding.toLowerCase().includes("backlog"))
+      );
+      const highConfidence = evidence.filter(
+        (e) => e.confidence === ConfidenceLevel.HIGH
+      ).length;
+
+      if (demandEvidence.length >= 1 && operationalEvidence.length >= 1 && highConfidence >= 2) {
+        return DiagnosisConfidence.HIGH;
+      } else if (demandEvidence.length >= 1 && operationalEvidence.length >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.INSUFFICIENT_EVIDENCE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.DEMAND_FORECASTING_CAPACITY_MISMATCH,
+      description: "Capacity planning not aligned with demand forecasting",
+      mechanismDescription:
+        "Business lacks formal demand forecasting or capacity planning. Unmet demand creates backlog and lost sales; excess capacity creates waste and cash drag.",
+      evidenceIds: evidence
+        .filter(
+          (e) =>
+            (e.dimension === "process_maturity" &&
+              (e.finding.toLowerCase().includes("demand") ||
+                e.finding.toLowerCase().includes("forecast") ||
+                e.finding.toLowerCase().includes("capacity"))) ||
+            (e.dimension === "operational_efficiency" &&
+              (e.finding.toLowerCase().includes("bottleneck") ||
+                e.finding.toLowerCase().includes("backlog")))
+        )
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Demand may be unpredictable due to market volatility",
+        "Capacity may be fixed and cannot scale",
+      ],
+      missingEvidenceFor: [
+        "Historical demand patterns",
+        "Capacity utilization metrics",
+        "Lead time variability",
+      ],
+    }),
+  },
+  {
+    name: "Overexpansion Operating Model Break",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "team_capability" &&
+          (e.finding.toLowerCase().includes("growth") ||
+            e.finding.toLowerCase().includes("expansion") ||
+            e.finding.toLowerCase().includes("scale"))
+      ) &&
+      evidence.some(
+        (e) =>
+          e.dimension === "financial_health" &&
+          (e.finding.toLowerCase().includes("burn") ||
+            e.finding.toLowerCase().includes("cash") ||
+            e.finding.toLowerCase().includes("loss"))
+      ),
+    confidence: (evidence) => {
+      const teamEvidence = evidence.filter(
+        (e) =>
+          e.dimension === "team_capability" &&
+          (e.finding.toLowerCase().includes("growth") ||
+            e.finding.toLowerCase().includes("expansion") ||
+            e.finding.toLowerCase().includes("scale"))
+      );
+      const financialEvidence = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          (e.finding.toLowerCase().includes("burn") ||
+            e.finding.toLowerCase().includes("cash") ||
+            e.finding.toLowerCase().includes("loss"))
+      );
+      const highConfidence = evidence.filter(
+        (e) => e.confidence === ConfidenceLevel.HIGH
+      ).length;
+
+      if (teamEvidence.length >= 1 && financialEvidence.length >= 1 && highConfidence >= 2) {
+        return DiagnosisConfidence.HIGH;
+      } else if (teamEvidence.length >= 1 && financialEvidence.length >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.INSUFFICIENT_EVIDENCE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.OVEREXPANSION_OPERATING_MODEL_BREAK,
+      description: "Operating model cannot support current scale or growth ambition",
+      mechanismDescription:
+        "Business expanded before systems, processes, and team capability matured. Current organizational structure cannot handle revenue and complexity. Cash burn accelerates as overhead grows faster than revenue.",
+      evidenceIds: evidence
+        .filter(
+          (e) =>
+            (e.dimension === "team_capability" &&
+              (e.finding.toLowerCase().includes("growth") ||
+                e.finding.toLowerCase().includes("expansion") ||
+                e.finding.toLowerCase().includes("scale"))) ||
+            (e.dimension === "financial_health" &&
+              (e.finding.toLowerCase().includes("burn") ||
+                e.finding.toLowerCase().includes("cash") ||
+                e.finding.toLowerCase().includes("loss")))
+        )
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Growth may be sustainable with operational improvements",
+        "Team capability may improve with training and hiring",
+      ],
+      missingEvidenceFor: [
+        "Specific operational bottlenecks",
+        "Team skill gaps",
+        "Process bottlenecks",
+      ],
+    }),
+  },
+  {
+    name: "Pricing Packaging Misalignment",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "market_position" &&
+          (e.finding.toLowerCase().includes("price") ||
+            e.finding.toLowerCase().includes("positioning") ||
+            e.finding.toLowerCase().includes("competitor"))
+      ) &&
+      evidence.some(
+        (e) =>
+          e.dimension === "customer_retention" &&
+          (e.finding.toLowerCase().includes("value") ||
+            e.finding.toLowerCase().includes("benefit") ||
+            e.finding.toLowerCase().includes("price-sensitive"))
+      ),
+    confidence: (evidence) => {
+      const marketEvidence = evidence.filter(
+        (e) =>
+          e.dimension === "market_position" &&
+          (e.finding.toLowerCase().includes("price") ||
+            e.finding.toLowerCase().includes("positioning") ||
+            e.finding.toLowerCase().includes("competitor"))
+      );
+      const retentionEvidence = evidence.filter(
+        (e) =>
+          e.dimension === "customer_retention" &&
+          (e.finding.toLowerCase().includes("value") ||
+            e.finding.toLowerCase().includes("benefit") ||
+            e.finding.toLowerCase().includes("price-sensitive"))
+      );
+      const highConfidence = marketEvidence.filter(
+        (e) => e.confidence === ConfidenceLevel.HIGH
+      ).length;
+
+      if (marketEvidence.length >= 1 && retentionEvidence.length >= 1 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (marketEvidence.length >= 1 && retentionEvidence.length >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.INSUFFICIENT_EVIDENCE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.PRICING_PACKAGING_MISALIGNMENT,
+      description: "Pricing or packaging does not align with customer value perception",
+      mechanismDescription:
+        "Price is too high relative to perceived value, or packaging does not match customer needs. Customers choose competitors perceived as better value. Revenue per customer or customer acquisition is impacted.",
+      evidenceIds: evidence
+        .filter(
+          (e) =>
+            (e.dimension === "market_position" &&
+              (e.finding.toLowerCase().includes("price") ||
+                e.finding.toLowerCase().includes("positioning") ||
+                e.finding.toLowerCase().includes("competitor"))) ||
+            (e.dimension === "customer_retention" &&
+              (e.finding.toLowerCase().includes("value") ||
+                e.finding.toLowerCase().includes("benefit") ||
+                e.finding.toLowerCase().includes("price-sensitive")))
+        )
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Product differentiation may not be clear to market",
+        "Packaging may be right but marketing ineffective",
+      ],
+      missingEvidenceFor: [
+        "Customer willingness-to-pay analysis",
+        "Competitor pricing and packaging",
+        "Perceived value vs actual price",
+      ],
+    }),
+  },
 ];
 
 export interface DiagnosisResult {

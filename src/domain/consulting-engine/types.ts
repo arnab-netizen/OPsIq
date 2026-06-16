@@ -6,6 +6,11 @@ export enum DiagnosisType {
   OPERATIONAL_BOTTLENECK = "operational_bottleneck",
   QUALITY_CONTROL_FAILURE = "quality_control_failure",
   CUSTOMER_RETENTION_EROSION = "customer_retention_erosion",
+  BRAND_PERCEPTION_TRUST_GAP = "brand_perception_trust_gap",
+  UNIT_ECONOMICS_BREAKDOWN = "unit_economics_breakdown",
+  DEMAND_FORECASTING_CAPACITY_MISMATCH = "demand_forecasting_capacity_mismatch",
+  OVEREXPANSION_OPERATING_MODEL_BREAK = "overexpansion_operating_model_break",
+  PRICING_PACKAGING_MISALIGNMENT = "pricing_packaging_misalignment",
   UNKNOWN = "unknown",
 }
 
