@@ -1,27 +1,159 @@
 {
   "case_id": "SYN-020",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Operations)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Synthetic stress-test case SYN-020 (Data / Data Platform): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "answer_creator": "Domain Expert (SaaS Unit Economics and Enterprise Go-To-Market)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert assembled the full fully-loaded acquire-and-deploy cost stack (sales cycle, sales-engineering, subsidized implementation) against LTV and payback, and incorporated the LTV-truncating effect of early-life churn, rather than treating sales and delivery as separate problems. The convergence on a sub-2.0 LTV/CAC at 34-month payback against 16-month runway identifies a unit-economics breakdown.",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "The combined cost of acquiring and deploying a customer now exceeds what that customer's lifetime value can support, and the company cannot fund the gap. Fully-loaded CAC has risen to ~$220k (sales + marketing + sales-engineering + ~$48k subsidized implementation), LTV/CAC fell from 3.4 to 1.6, and CAC payback extended from 18 to 34 months, against only 16 months of runway at $560k/month burn. The breakdown is structural and multi-sourced: a 6.5-month sales cycle with sales-engineering hours up 45% (without improving the stable 22% win rate), a 16-week implementation the company subsidizes ~60% of, and early-life churn (~40% of churned customers leave within 9 months over implementation delays) that truncates realized LTV on the most expensively acquired customers before payback is reached. The owner's framing of separate 'sales efficiency' and 'delivery' problems is wrong because each cost compounds into a single economics failure; point fixes that add more sales-engineering or CS would raise CAC further. Segmentation reveals the lever: large-enterprise deals carry the worst LTV/CAC while mid-size deals are materially better, so the economics can be restructured through deal selection, implementation pricing/productization, and cost discipline.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "LTV/CAC fell 3.4->1.6",
+      "CAC payback 18->34 months",
+      "Fully-loaded CAC ~$220k",
+      "~40% early-life churn truncating LTV"
+    ],
+    "contributing_factors": [
+      "6.5-month sales cycle with SE hours up 45%",
+      "16-week implementation subsidized ~60% (~$48k/customer)",
+      "Largest deals have worst economics but are pursued for ACV",
+      "Competitors with simpler scopes undercut cost-to-serve"
+    ],
+    "true_root_cause": "Fully-loaded acquire-and-deploy cost exceeds supportable LTV (LTV/CAC 1.6, payback 34 months) against a 16-month runway; the unit economics are broken and unfundable under the current motion and deal mix."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Within ~6 weeks, restructure the acquire-and-deploy economics on three levers simultaneously, sequenced by runway impact: (1) deal selection: re-weight the pipeline toward the mid-size segment that already shows materially better LTV/CAC and apply a deal-economics gate (minimum projected LTV/CAC and payback) before pursuing the longest, most SE-heavy enterprise deals; (2) implementation economics: stop absorbing ~60% of implementation cost by repricing implementation toward cost-recovery for new deals and launching an 8-12 week productization/automation of the highest-cost implementation steps (data migration, pipeline setup) to cut the 16-week timeline and the ~$48k subsidy; (3) early-churn defense: instrument and accelerate first-value delivery so the ~40% early-life churn that truncates LTV is reduced, protecting the denominator of the ratio. Build a cohort-level contribution-margin model and gate all new spend on projected payback under 24 months. Hold incremental sales-engineering and CS hiring until per-segment economics are restructured.",
+  "action_description": "It is first because the economics are existential: at 34-month payback on 16-month runway, the current motion runs out of cash before customers become profitable, and the next raise is gated on fixing LTV/CAC. The action attacks all three cost/LTV drivers because they compound into one failure; fixing only sales or only delivery leaves the ratio broken. Re-weighting toward better-economics segments and repricing/automating implementation moves CAC and payback fastest, while cutting early churn protects LTV, and the contribution-margin gate prevents adding cost that worsens the ratio.",
+  "accepted_alternative_actions": [
+    "Run a 3-week segment-level LTV/CAC and payback teardown FIRST to quantify exactly which deal sizes/segments are contribution-margin-positive and at what timing, then set the deal-economics gate from the data, provided it does not delay repricing implementation on in-flight new deals.",
+    "Pilot a 'productized standard implementation' tier (fixed scope, automated migration templates, customer-prep prerequisites) on mid-size deals to validate the CAC and timeline reduction before applying it broadly."
+  ],
+  "bad_actions": [
+    "Add more sales-engineering capacity to shorten the sales cycle: SE hours are already up 45% without improving the 22% win rate, so adding SE raises CAC further and deepens the economics breakdown.",
+    "Add more CS headcount to fix early-life churn without changing implementation: this raises cost-to-serve while leaving the 16-week, heavily-subsidized implementation (the churn cause) intact, worsening the ratio.",
+    "Chase larger enterprise deals for ACV to outgrow the problem: the largest deals have the worst LTV/CAC and longest, most expensive delivery, so growing them accelerates cash burn against a 16-month runway.",
+    "Cut prices to win more deals: with LTV/CAC at 1.6, lowering ACV further collapses LTV and makes payback worse; the problem is cost structure and deal mix, not list price being too high."
+  ],
+  "action_constraints_respected": [
+    "Funding (16-month runway, economics-gated raise): action prioritizes the levers that move CAC/payback fastest and gates new spend on payback under 24 months, directly addressing fundability.",
+    "Implementation (genuinely complex, 8-12 week productization possible): action reprices and automates implementation rather than simply cutting scope, fitting the build window.",
+    "Organizational (SE and implementation expensive): action holds incremental SE/CS hiring and redirects effort to higher-economics segments.",
+    "Market (competitors cheaper to serve in enterprise): action re-weights toward the mid-size segment where the company's economics are competitive."
+  ],
+  "rationale": "The decisive evidence is the assembled economics: LTV/CAC at 1.6 and payback at 34 months against 16-month runway is a definitional unit-economics breakdown, and each input (long SE-heavy cycle, subsidized 16-week implementation, early-life churn) compounds into it. Because the failure is the ratio, not any single function, the correct response restructures all three drivers and disciplines spend with a contribution-margin gate, using the segment evidence that mid-size deals are already healthier as the fastest route back to fundable economics.",
+  "evidence_basis": [
+    "unit_economics: fully-loaded CAC ~$220k, LTV/CAC 3.4->1.6, payback 18->34 months",
+    "go_to_market: 6.5-month cycle, SE hours +45%, win rate stable 22%",
+    "operational_efficiency: 16-week implementation, ~60% subsidized, ~$48k/customer",
+    "customer_retention: ~40% churn within 9 months from implementation delays, truncating LTV",
+    "market_position: large-enterprise deals worst LTV/CAC, mid-size materially better"
+  ],
+  "evidence_not_explained": [
+    "The exact contribution-margin-positive timing per segment is not yet modeled, so the action begins with a segment teardown; the diagnosis is confident the aggregate economics are broken but needs the per-segment cut to calibrate the deal-economics gate and pricing."
+  ],
+  "alternative_explanations": [
+    "GO_TO_MARKET_MISALIGNMENT: that the sales motion targets wrong customers. Partly relevant (enterprise deals have poor economics) but secondary, because even with a stable win rate the breakdown is driven by the full cost stack including subsidized delivery and early churn, not just targeting.",
+    "OPERATIONAL_BOTTLENECK: that implementation is simply too slow. A real contributor (16 weeks, early churn) but not the whole story; the subsidized cost and the long SE-heavy sales cycle independently break the ratio, so fixing delivery alone would not restore LTV/CAC.",
+    "TRUST_QUALITY_CRISIS: that the product fails customers. Weaker because gross retention is 90% and churn is concentrated at implementation/early-life delay, a delivery-economics issue, not broad product distrust."
+  ],
+  "missing_evidence": [
+    "LTV/CAC and payback broken out by deal size and segment",
+    "Automation/productization cost-reduction potential for the 16-week implementation",
+    "Price elasticity for charging versus subsidizing implementation",
+    "Cohort-level contribution-margin-positive timing under alternative motions"
+  ],
+  "success_metrics": [
+    "LTV/CAC recovers from 1.6 toward 3.0 within 2-3 cohorts via deal-mix and implementation repricing",
+    "CAC payback falls from 34 months toward under 24 months on new cohorts",
+    "Implementation timeline falls from 16 weeks and the ~60% subsidy is reduced toward cost-recovery on new deals",
+    "Early-life (sub-9-month) churn share falls materially as first-value delivery accelerates, lengthening realized LTV"
+  ],
+  "expected_outcome": "If the unit-economics breakdown is the true root cause, re-weighting toward higher-economics segments, repricing/automating implementation, and cutting early churn should lift LTV/CAC back toward fundable levels and shorten payback within a few cohorts, restoring the next raise's viability. If the ratio does not recover despite these moves, the residual problem would be that the enterprise segment is structurally unservable at acceptable economics, prompting a sharper strategic narrowing, which the segment teardown would justify.",
+  "automatic_fail_conditions": [
+    "Recommending more sales-engineering or CS hiring as the primary fix, which raises CAC and deepens the breakdown",
+    "Recommending pursuit of larger enterprise deals for ACV when those deals carry the worst LTV/CAC",
+    "Recommending price cuts that further collapse LTV when LTV/CAC is already 1.6",
+    "Treating sales and delivery as separate problems and proposing point fixes that do not move the LTV/CAC ratio"
+  ],
+  "source_references": [
+    "Finance unit-economics model (CAC, LTV, payback)",
+    "CRM cycle data and sales-engineering time tracking",
+    "Implementation cost model and services P&L",
+    "Churn ledger with tenure breakdown and segment-level deal analysis"
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "LTV/CAC fell 3.4->1.6 and payback extended 18->34 months", "implication": "The core ratio measuring whether customers are worth acquiring has broken below sustainable levels."},
+      {"fact": "Fully-loaded CAC ~$220k including ~$48k subsidized implementation", "implication": "Acquisition cost is structurally inflated by a subsidized, complex deployment, a primary driver of the breakdown."},
+      {"fact": "6.5-month cycle with SE hours up 45% but win rate flat at 22%", "implication": "Sales cost is rising without conversion gains, inflating CAC, so adding more SE would worsen the ratio."},
+      {"fact": "~40% of churned customers leave within 9 months over implementation delays", "implication": "Early-life churn truncates realized LTV on the most expensive customers, compounding the economics failure."},
+      {"fact": "16-month runway against 34-month payback", "implication": "The company spends well past its cash horizon before customers turn profitable, making the breakdown existential."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "GO_TO_MARKET_MISALIGNMENT", "why_weaker": "Targeting is a contributor (enterprise deals are poor), but the breakdown also comes from subsidized delivery and early churn; fixing targeting alone would not restore the ratio."},
+      {"alternate": "OPERATIONAL_BOTTLENECK", "why_weaker": "Slow implementation is one input, but the long SE-heavy sales cycle and the subsidy independently break LTV/CAC, so delivery speed alone is not the whole cause."},
+      {"alternate": "TRUST_QUALITY_CRISIS", "why_weaker": "Gross retention is 90% and churn concentrates at implementation/early-life delay, an economics/delivery issue rather than broad product distrust."}
+    ],
+    "first_action_justification": "Because the failure is the LTV/CAC ratio itself, compounded from multiple cost and churn drivers, the first action must restructure all three drivers (deal mix, implementation pricing/automation, early-churn defense) under a contribution-margin spend gate, the only path to fundable economics within the 16-month runway.",
+    "constraints_effect_on_action": "The 16-month runway against 34-month payback forces ruthless prioritization of the levers that move CAC/payback fastest and forbids point fixes that add cost (more SE/CS); the genuine implementation complexity pushes toward repricing plus 8-12 week productization rather than mere scope cuts, and the segment evidence directs re-weighting toward mid-size deals where the company's economics are competitive."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses growth/demand issue"
+      "criterion": "Does the engine diagnose UNIT_ECONOMICS_BREAKDOWN by assembling the full cost stack and LTV truncation, rather than treating sales and delivery as separate problems?",
+      "rubric_10": "Diagnoses UNIT_ECONOMICS_BREAKDOWN and ties it to LTV/CAC 1.6, 34-month payback vs 16-month runway, the ~$220k CAC stack, and early-churn LTV truncation, recognizing the drivers compound.",
+      "rubric_8": "Diagnoses a unit-economics root cause with evidence but underweights one driver (e.g., omits early-churn LTV effect).",
+      "rubric_6": "Identifies poor economics but is ambiguous about whether the cause is acquisition, delivery, or churn.",
+      "rubric_4": "Accepts the owner's split framing and centers either sales efficiency or delivery alone.",
+      "rubric_2": "Diagnoses a product-quality crisis despite 90% gross retention.",
+      "rubric_0": "Diagnosis unrelated to the evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic"
+      "criterion": "Does the engine prioritize restructuring the acquire-and-deploy economics (deal mix + implementation pricing/automation + early-churn defense + spend gate) over point fixes?",
+      "rubric_10": "Recommends a multi-lever economics restructure with a contribution-margin/payback gate, sequenced by runway impact, holding incremental SE/CS hiring.",
+      "rubric_8": "Recommends an economics-focused restructure but addresses only two of the three drivers.",
+      "rubric_6": "Recommends economics work but mixes in cost-adding point fixes.",
+      "rubric_4": "Recommends more SE/CS hiring or chasing bigger deals as primary.",
+      "rubric_2": "Recommends price cuts that worsen LTV.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect an enterprise data-platform reality where heavy delivery and long cycles drive a fundability-threatening economics break on a short runway?",
+      "rubric_10": "Action centers on restoring fundable LTV/CAC within the 16-month runway via deal mix and implementation economics.",
+      "rubric_6": "Action is economics-relevant but generic about the enterprise-delivery cost dynamic.",
+      "rubric_2": "Action loosely related to the context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 16-month runway, the economics-gated raise, the genuine implementation complexity, and the expensive SE/implementation org?",
+      "rubric_10": "Prioritizes fastest CAC/payback levers, gates spend on payback under 24 months, reprices/automates implementation, and holds cost-adding hiring.",
+      "rubric_6": "Respects most constraints but proposes some cost-adding fix.",
+      "rubric_2": "Proposes actions that add cost or chase worse-economics deals.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-020 metrics?",
+      "rubric_10": "Every claim traces to data: CAC ~$220k, LTV/CAC 3.4->1.6, payback 18->34 months, cycle 6.5 months, SE +45%, implementation 16 weeks/~60% subsidy/$48k, 40% early churn, 16-month runway.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence justified given the directly-measured economics and convergent cost drivers?",
+      "rubric_10": "HIGH well-calibrated: the ratio, payback, cost stack, and churn data converge unambiguously on an economics break.",
+      "rubric_6": "Confidence defensible but acknowledges missing per-segment economics as residual uncertainty about the precise gate/pricing.",
+      "rubric_2": "Confidence asserted without grounding.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe and runway-protective (no cost-adding point fixes, no LTV-collapsing price cuts, no doubling down on worst-economics deals)?",
+      "rubric_10": "Action disciplines spend, reprices/automates, and re-weights to better economics, all reversible and runway-protective.",
+      "rubric_6": "Action mostly safe but includes one element needing justification.",
+      "rubric_2": "Action adds cost or chases worse economics.",
+      "rubric_0": "Action high-risk (cost-adding fixes or price collapse on a short runway)."
     }
   },
-  "creation_methodology": "Expert analysis of SYNTHETIC case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

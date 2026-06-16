@@ -2,9 +2,113 @@
   "caseId": "SYN-020",
   "caseType": "SYNTHETIC",
   "industry": "Data / Data Platform",
+  "businessModel": "B2B data platform (cloud data warehousing + analytics) sold to enterprise data teams; large annual contracts with a long sales cycle and a heavy, complex implementation before value; CS-intensive post-sale.",
+  "businessStage": "Series B, Growth Stage",
+  "sourceNote": "Synthetic stress-test case in the Data / Data Platform domain, built with realistic, internally-consistent SaaS metrics (ARR, growth, churn, NRR, CAC/LTV, adoption, sales-cycle, and support signals). The intended root-cause diagnosis is withheld from this visible input; the owner intake intentionally frames the problem in the owner's own words, and the engine must trace the evidence to the true root cause without being told the answer. Not a historical case; all figures are representative.",
   "ownerIntake": {
-    "businessType": "Data platform (warehousing + analytics), $11M ARR, 40% growth, but CAC exceeding LTV timeline expectations",
-    "stage": "Sales cycle 6+ months, implementation complex, customer success resources over-stretched, churn risk from implementation delays",
-    "ownerGoal": "Improve sales efficiency and customer delivery"
+    "businessType": "B2B cloud data platform (data warehousing + analytics) for enterprise data teams. Founded 2018, total raised $65M (Series B). Large annual contracts (average ACV $140k), long sales cycle, heavy implementation, CS-intensive. Current ARR $11.0M, 40% YoY growth, 95 customers.",
+    "stage": "ARR $11.0M, 40% YoY growth. Gross margin 71%. Fully-loaded CAC has risen to ~$220k per new customer (sales + marketing + sales-engineering + a subsidized portion of implementation). Sales cycle averages 6.5 months. LTV/CAC has fallen from 3.4 to 1.6, and CAC payback extended from 18 to 34 months. Implementation averages 16 weeks and is heavily subsidized. Early-life churn from implementation delays is rising. Cash runway 16 months at $560k/month burn.",
+    "ownerGoal": "Restore healthy unit economics (LTV/CAC toward 3.0, payback under 24 months) and improve delivery so implementation delays stop causing early churn; reach sustainable, fundable growth within 12-15 months.",
+    "ownerConstraints": [
+      "Funding constraint: $65M raised but only 16-month runway at $560k/month burn; the deteriorating LTV/CAC makes the next raise difficult, so improving unit economics is existential, not optional.",
+      "Product/implementation constraint: implementation is genuinely complex (data migration, pipeline setup, governance config) and partly subsidized; reducing cost requires productizing/automating onboarding (8-12 weeks) and/or repricing implementation.",
+      "Organizational constraint: 100 staff (28 engineering, 26 go-to-market including heavy sales-engineering, 18 implementation, 16 CS, rest G&A). Sales-engineering and implementation are expensive and consumed by long cycles and complex deployments.",
+      "Market constraint: enterprise data-platform buyers expect heavy hand-holding; competitors with simpler scopes have shorter cycles and cheaper delivery, pressuring the company's cost-to-acquire-and-serve.",
+      "Commercial constraint: with payback at 34 months and 16 months of runway, the company is spending far ahead of when each customer becomes profitable, and implementation-delay churn shortens LTV before payback is even reached."
+    ],
+    "immediateConcern": "Fully-loaded CAC has climbed to ~$220k, LTV/CAC fell from 3.4 to 1.6, and CAC payback stretched from 18 to 34 months, while a 6.5-month sales cycle and a 16-week subsidized implementation drive cost and early-life churn from implementation delays shortens LTV. The owner frames it as separate 'sales efficiency' and 'delivery' problems and is considering point fixes (more sales-engineering, more CS). But the binding issue is that the combined cost of acquiring and standing up a customer now exceeds what the customer's lifetime value can support, and the company has only 16 months of runway. The owner must decide within the next month how to restructure the acquire-and-deploy economics, because at payback of 34 months against 16 months of runway, continuing the current motion is unsustainable.",
+    "availableData": [
+      "Financial: ARR $11.0M, 40% YoY growth, gross margin 71%, average ACV $140k, burn $560k/month, runway 16 months",
+      "Unit economics: fully-loaded CAC ~$220k; LTV/CAC 3.4->1.6 over 18 months; CAC payback 18->34 months",
+      "Sales: average sales cycle 6.5 months; sales-engineering hours per deal up 45%; win rate stable at 22%",
+      "Delivery: implementation 16 weeks average, heavily subsidized (company absorbs ~60% of implementation cost); implementation cost per customer ~$48k",
+      "Retention: gross retention 90%; ~40% of churned customers churn within the first 9 months citing implementation delays/unrealized value, shortening realized LTV",
+      "Segmentation: large enterprise deals have the longest cycles and most expensive delivery but also highest ACV; mid-size deals show materially better LTV/CAC"
+    ],
+    "unavailableData": [
+      "LTV/CAC and payback broken out by deal size and segment",
+      "Automation/productization potential and cost reduction for the 16-week implementation",
+      "Price elasticity for charging (vs subsidizing) implementation",
+      "Contribution-margin-positive timing per cohort under alternative motions"
+    ],
+    "timeHorizon": "12-15 months to fundable, sustainable economics; with 16-month runway and 34-month payback, the economics decision is urgent and existential",
+    "riskAppetite": "MEDIUM-LOW (short runway and broken payback force discipline; point fixes that do not move LTV/CAC are unaffordable)"
+  },
+  "businessProblem": "A Series B data platform growing 40% is acquiring and deploying customers at a cost its lifetime value can no longer support: fully-loaded CAC has risen to ~$220k, LTV/CAC fell from 3.4 to 1.6, and CAC payback stretched from 18 to 34 months, against only 16 months of runway. The cost stack is structural: a 6.5-month sales cycle with sales-engineering hours up 45%, plus a 16-week implementation the company subsidizes ~60% of (~$48k per customer), and ~40% of churned customers leave within 9 months over implementation delays, shortening realized LTV before payback is reached. The owner frames it as separate 'sales efficiency' and 'delivery' problems and weighs point fixes (more sales-engineering, more CS). But the binding issue is a unit-economics breakdown: the combined acquire-and-deploy cost exceeds supportable LTV, and at 34-month payback on 16-month runway the current motion is unsustainable. The owner must decide within a month how to restructure the economics, including segment focus, implementation pricing/productization, and deal selection.",
+  "evidence": [
+    {
+      "dimension": "unit_economics",
+      "finding": "Fully-loaded CAC has risen to ~$220k (sales + marketing + sales-engineering + subsidized implementation), LTV/CAC fell from 3.4 to 1.6, and CAC payback extended from 18 to 34 months. At a 1.6 ratio and 34-month payback, the company spends far ahead of customer profitability, and the economics are below the threshold needed to be fundable.",
+      "confidence": "HIGH",
+      "source": "Finance unit-economics model, CAC and LTV computation",
+      "isCritical": true,
+      "supportingData": {
+        "fully_loaded_cac": "~$220k",
+        "ltv_cac_prior": "3.4",
+        "ltv_cac_current": "1.6",
+        "payback_prior_months": 18,
+        "payback_current_months": 34
+      }
+    },
+    {
+      "dimension": "go_to_market",
+      "finding": "The sales motion is expensive and slow: average sales cycle 6.5 months and sales-engineering hours per deal up 45%, while win rate is stable at 22%. The rising SE intensity inflates CAC without improving conversion, indicating the cost of acquiring each customer is structurally high, especially in the largest deals.",
+      "confidence": "HIGH",
+      "source": "CRM cycle data, sales-engineering time tracking",
+      "isCritical": true,
+      "supportingData": {
+        "sales_cycle_months": 6.5,
+        "se_hours_per_deal_change": "+45%",
+        "win_rate": "22% (stable)"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Implementation averages 16 weeks and is heavily subsidized: the company absorbs ~60% of implementation cost, roughly $48k per customer, which is loaded into CAC. Implementation is genuinely complex (data migration, pipeline setup, governance), so the subsidy is a structural drag on acquisition economics rather than a one-off.",
+      "confidence": "HIGH",
+      "source": "Implementation cost model, services P&L",
+      "isCritical": true,
+      "supportingData": {
+        "implementation_weeks": 16,
+        "subsidy_share": "~60%",
+        "implementation_cost_per_customer": "~$48k"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "~40% of churned customers leave within the first 9 months, citing implementation delays and unrealized value, which shortens realized LTV before payback (34 months) is ever reached. Gross retention is 90%. Early-life churn does not just lose revenue; it directly worsens the LTV/CAC ratio by truncating lifetime on the most expensively acquired customers.",
+      "confidence": "MEDIUM",
+      "source": "Churn ledger with tenure breakdown",
+      "isCritical": true,
+      "supportingData": {
+        "early_churn_share": "~40% within 9 months",
+        "early_churn_reason": "implementation delays / unrealized value",
+        "gross_retention": "90%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Segmentation matters: large enterprise deals have the longest cycles and most expensive delivery (and worst LTV/CAC) but highest ACV, while mid-size deals show materially better LTV/CAC. Competitors with simpler scopes run shorter cycles and cheaper delivery, pressuring the company's cost-to-acquire-and-serve in the enterprise segment.",
+      "confidence": "MEDIUM",
+      "source": "Segment-level deal analysis, competitive intelligence",
+      "isCritical": false,
+      "supportingData": {
+        "large_enterprise_ltv_cac": "worst",
+        "mid_size_ltv_cac": "materially better",
+        "competitor_advantage": "shorter cycles, cheaper delivery"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Data / Data Platform",
+    "size": "Series B ($11.0M ARR, 100 employees, 95 customers, ACV $140k)",
+    "revenueImpactUrgency": "CRITICAL (broken LTV/CAC at 34-month payback against 16-month runway threatens fundability and solvency)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (only 16-month runway at $560k/month burn despite total raised; economics gate the next raise)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (100 staff; sales-engineering and implementation are expensive and consumed by long cycles/complex deployments)",
+    "cashRunwayMonths": 16,
+    "legalComplianceSensitive": true
   }
 }

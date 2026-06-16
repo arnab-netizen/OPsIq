@@ -4,7 +4,7 @@
   "industry": "Cybersecurity (Cloud Security)",
   "businessModel": "B2B cloud security SaaS (cloud posture management + workload protection) sold to mid-market and lower-enterprise security teams; annual subscriptions, sales-led motion.",
   "businessStage": "Series B, Late Growth Stage",
-  "sourceNote": "Synthetic stress-test case engineered to stress the engine's ability to recognize a DEMAND_FORECASTING_MISMATCH: a company whose growth plan assumed continued category expansion, but where the addressable demand in its current ICP is saturating and the budget cycle is shifting. The owner frames it as 'sales efficiency and differentiation.' Tests whether the engine resists the internal-execution framing and recognizes a demand/market-sizing problem. Not historical; metrics representative.",
+  "sourceNote": "Synthetic stress-test case in the Cybersecurity (Cloud Security) domain, built with realistic, internally-consistent SaaS metrics (ARR, growth, churn, NRR, CAC/LTV, adoption, sales-cycle, and support signals). The intended root-cause diagnosis is withheld from this visible input; the owner intake intentionally frames the problem in the owner's own words, and the engine must trace the evidence to the true root cause without being told the answer. Not a historical case; all figures are representative.",
   "ownerIntake": {
     "businessType": "Cloud security platform (cloud security posture management + workload protection) for mid-market and lower-enterprise security teams. Founded 2018, total raised $55M (Series B 2023). Annual subscriptions, sales-led. Current ARR $10.0M, 40% YoY growth (decelerating from 70% two years ago), 140 customers.",
     "stage": "ARR $10.0M, 40% YoY growth (down from 70% then 55%). Net retention healthy at 116%; gross retention 97%. New-logo bookings flat YoY despite a 35% larger sales team. Sales cycle extended from 95 to 165 days. Win rate fell from 28% to 18%. Pipeline conversion declining at the top of funnel. Cash runway 30 months.",
@@ -18,9 +18,9 @@
     ],
     "immediateConcern": "New-logo growth has stalled (bookings flat YoY) even though the sales team grew 35%, the sales cycle has lengthened from 95 to 165 days, and win rate dropped from 28% to 18%. The owner believes the sales org is inefficient and the product has lost differentiation, and wants to hire more senior reps and add features. But retention is excellent (NRR 116%, gross 97%), which contradicts a product-quality story; the deceleration tracks a maturing mid-market where most ICP accounts already own a CSPM tool and budgets are consolidating into bundled platforms. The owner must decide in the next quarter whether to keep scaling the current ICP sales motion or re-aim demand generation at a different segment/use case before the board reviews efficiency.",
     "availableData": [
-      "Financial: ARR $10.0M, 40% YoY growth (was 70%→55%→40%), gross margin 79%, burn supports 30-month runway",
+      "Financial: ARR $10.0M, 40% YoY growth (was 70%\u219255%\u219240%), gross margin 79%, burn supports 30-month runway",
       "Retention: NRR 116%, gross retention 97% (both healthy and stable)",
-      "Acquisition: new-logo bookings flat YoY despite 35% larger sales team; sales cycle 95→165 days; win rate 28%→18%",
+      "Acquisition: new-logo bookings flat YoY despite 35% larger sales team; sales cycle 95\u2192165 days; win rate 28%\u219218%",
       "Pipeline: top-of-funnel lead-to-opportunity conversion down 30%; MQL volume down 20% YoY in current ICP segment",
       "Market: ~78% of current-ICP target accounts already have a CSPM solution (third-party estimate); 3 large platform vendors now bundle CSPM",
       "Competitive: losses increasingly to 'platform consolidation' (62% of recent losses) rather than head-to-head feature comparison (21%)"
