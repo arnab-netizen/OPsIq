@@ -552,7 +552,258 @@ ARCHITECTURE_CEILING_REPORT:
 
 ⸻
 
-18. HARD STOP CONDITIONS
+17A. OWNER_MODE_CONSULTANT_GRADE_ARCHITECTURE ROADMAP
+
+The Architecture Ceiling Rule triggered Round 2 failure (0% root-cause accuracy, 0% first-action accuracy).
+No consultant-grade claim is possible with current deterministic pattern-matching architecture.
+
+Owner-mode must pivot to a long-term architecture roadmap toward practical consultant-grade capability.
+However, no claim of consultant-grade may ever be made until measured by benchmark and validated by real-business evidence.
+
+The roadmap comprises four stages: A (evidence synthesis), B (causal reasoning), C (LLM reviewer), D (owner validation).
+
+### STAGE A: Evidence Synthesis + Hypothesis Ranking + Constraint-Aware Action + Numeric Reasoning
+
+**Target Metrics:**
+* root-cause accuracy: 40-60%
+* first-action accuracy: 30-50%
+* evidence trace rate: ≥85%
+* dangerous recommendations: 0
+* hallucinations: ≤2%
+
+**Required Components:**
+1. Evidence synthesis engine — aggregate multi-dimensional evidence (financial, operational, market, team)
+2. Symptom vs contributing factor vs root-cause separator — distinguish symptom from root diagnosis
+3. Top-3 hypothesis generator — surface competing hypotheses ranked by confidence
+4. Hypothesis ranking with supporting/conflicting evidence — show why alternatives are weaker
+5. Constraint-aware first-action selector — weight actions by constraint impact (cost, timeline, risk)
+6. Numeric reasoning layer — handle quantitative decision logic, margin calculations, financial thresholds
+7. Missing-data refusal rules — refuse diagnosis if required evidence is absent
+8. Confidence calibration — bound confidence to measured accuracy; no false certainty
+
+**Minimum Scope (no scope creep):**
+* Do not include causal graphs (Stage B)
+* Do not include adversarial trap detection (Stage B)
+* Do not include LLM reasoning (Stage C)
+* Do not include owner outcome tracking (Stage D)
+
+---
+
+### STAGE B: Multi-Hypothesis Causal Reasoning + Adversarial/Blind Outcome Logic
+
+**Target Metrics:**
+* root-cause accuracy: 60-75%
+* first-action accuracy: 50-70%
+* adversarial pass rate: ≥80%
+* blind-outcome pass rate: ≥75%
+
+**Required Components:**
+1. Causal reasoning graph — model cause-effect relationships between business factors
+2. Competing hypothesis eliminator — use evidence to reject false hypotheses
+3. Adversarial trap detector — recognize patterns that trick deterministic reasoning
+4. Blind-outcome decision evaluator — decide without knowing future outcome
+5. Counterfactual action comparison — compare what would happen under alternative actions
+6. Second-order consequence check — identify unintended consequences of recommended action
+
+**Minimum Scope (no scope creep):**
+* Do not include LLM reasoning (Stage C)
+* Do not include human review at scale (Stage C)
+* Do not include owner outcome tracking (Stage D)
+
+---
+
+### STAGE C: Evidence-Grounded LLM Reasoning Reviewer + Verification Layer
+
+**Target Metrics:**
+* root-cause accuracy: 75-90%+
+* first-action accuracy: 75-90%+
+* evidence trace rate: ≥95%
+* confidence calibration error: ≤3%
+* dangerous recommendations: 0
+
+**Required Components:**
+1. LLM reasoning reviewer — use LLM to reason about evidence from Stage A/B outputs
+2. Strict evidence-only grounding — LLM can only reference evidence provided by deterministic engine
+3. No unsupported claims — LLM cannot suggest facts not in the evidence
+4. Deterministic safety validator — check all recommendations against safety rules
+5. Hallucination detector — reject LLM output if it claims facts not in evidence
+6. Contradiction detector — reject LLM output if it contradicts deterministic output without evidence
+7. Owner approval gate — no action taken without explicit owner approval
+8. Final recommendation verifier — verify output is specific, actionable, and constraint-aware
+
+**Minimum Scope (no scope creep):**
+* Do not train LLM on cases (keep deterministic-first)
+* Do not auto-apply recommendations (owner approval required)
+* Do not include outcome tracking (Stage D)
+
+---
+
+### STAGE D: Real-Business Owner Validation
+
+**Target Metrics:**
+* validated on actual owner business data
+* recommendations tracked to outcomes
+* failed recommendations logged and analyzed
+* learning candidates manually approved before implementation
+
+**Required Components:**
+1. Action/outcome tracking — record which recommendations were taken and what happened
+2. Owner feedback capture — owner reports actual outcome vs predicted outcome
+3. Result verification — validate that improvement actually happened
+4. Learning approval gate — before any pattern is learned from owner data, owner approves
+5. Regression monitoring — detect if old recommendations start failing
+
+**Minimum Scope (no scope creep):**
+* No auto-learning without approval
+* No modification of answer keys from owner feedback
+* No re-benchmark based on owner data without Stage C complete
+
+---
+
+⸻
+
+17B. STAGE EXECUTION HOSTILE RULES
+
+These rules apply to every stage implementation:
+
+1. **No stage may be marked complete unless all target metrics for that stage are measured.**
+   - Metrics must come from actual benchmark execution, not unit tests or claims.
+   - If metrics cannot be measured (e.g., Stage D outcome tracking requires owner data), defer the stage.
+
+2. **No "expected improvement" may be treated as actual improvement.**
+   - Only measured, benchmark-validated improvement counts.
+   - Design claims do not count.
+   - Unit test improvements do not count.
+   - Partial results do not count until all metrics for the stage pass.
+
+3. **No benchmark pass may be claimed from Round 1 alone.**
+   - Round 1 is used only for regression testing and failure pattern analysis.
+   - Final stage validation requires Round 2.
+
+4. **No benchmark pass may be claimed from Round 2 if cases were used during implementation.**
+   - Round 2 is fixed before Stage A implementation begins.
+   - Cases used during Slice 2A design are contaminated for Stage A final validation.
+   - Fresh Round 3 required if Stage A uses Round 2 cases during design.
+
+5. **Every stage must run: static gates, unit tests, regression tests, adversarial tests, benchmark subset, full benchmark where required, manual review where required.**
+   - No shortcutting; no skipping tests.
+   - If a test fails, stop and fix.
+
+6. **Every output must preserve: evidence citations, confidence score, missing-data statement, root-cause reasoning, first-action rationale, owner constraint mapping.**
+   - Engine output must be auditable to evidence.
+   - Owner must understand why action was recommended.
+
+7. **Any hallucination, unsafe recommendation, answer-key leakage, benchmark contamination, or frozen-artifact mutation causes immediate hard stop.**
+   - BLOCKED_WITH_EVIDENCE status.
+   - No progress until root cause fixed.
+
+8. **If two consecutive architecture stages fail to materially improve root-cause accuracy and first-action accuracy, stop and produce architecture redesign report.**
+   - Stage A targets 40-60% accuracy; if Stage A achieves only 5-10%, HALT.
+   - Stage B targets 60-75% accuracy; if Stage A+B achieves only 35-45%, HALT.
+   - No continuation without architecture redesign.
+
+9. **If any closeout claim is not directly supported by repository files, tests, benchmark artifacts, and audit evidence, the closeout is invalid.**
+   - All claims must be traceable to files.
+   - "Expected to improve" ≠ "improved".
+   - "Should work" ≠ "works".
+
+10. **Claude must not skip, merge, compress, or silently mark complete any stage, gate, audit, test, benchmark, manual review, or closeout.**
+    - Every step is required.
+    - Every gate is required.
+    - Skipping is not an option.
+
+⸻
+
+17C. NEXT REQUIRED STEP: DESIGN_STAGE_A_EXECUTION_SPEC
+
+Round 2 execution failed (0% accuracy). The current deterministic pattern-matching architecture has reached its ceiling.
+
+The next required step is NOT to implement Stage A immediately.
+
+The next required step is to DESIGN the Stage A Execution Specification.
+
+**Stage A implementation must not start until the Stage A execution specification is created, reviewed, and hostile-audited.**
+
+**Stage A Spec must define:**
+
+1. **Data Structures**
+   - Evidence schema (dimensions, fields, enrichment)
+   - Hypothesis structure (name, confidence, supporting/conflicting evidence)
+   - Action structure (description, constraint impact, ranking)
+
+2. **Services/Modules**
+   - Evidence synthesis service
+   - Symptom/contributing/root-cause separator
+   - Hypothesis generator
+   - Hypothesis ranker
+   - Action selector
+   - Numeric reasoning module
+   - Confidence calibrator
+
+3. **Scoring Targets**
+   - Root-cause accuracy 40-60% (what evidence patterns distinguish root causes?)
+   - First-action accuracy 30-50% (what constraints matter for action selection?)
+   - Evidence trace 85% (what evidence is currently missed?)
+
+4. **Test Cases**
+   - Unit tests for each service (20+ test cases per service)
+   - Regression tests on Round 1 (must not worsen)
+   - Adversarial tests on Round 2 adversarial cases (must improve from 0%)
+
+5. **Benchmark Cases**
+   - Target subset of Round 2: 20 cases representing all root-cause types
+   - Expected result: At least 8/20 correct (40% accuracy on subset = Stage A target lower bound)
+
+6. **Safety Gates**
+   - 0 dangerous recommendations (same as Round 1)
+   - Confidence ≤ 65% for diagnosis (no false certainty)
+   - Evidence trace ≥ 85% (at least 85% of evidence examined)
+
+7. **Hallucination Gates**
+   - All evidence cited must exist in case input
+   - No facts claimed beyond input evidence
+   - If LLM used, deterministic safety check blocks unsupported claims
+
+8. **Rollback Rules**
+   - If evidence trace drops below 75%, HALT and fix evidence service
+   - If safety metrics worsen, HALT and review changes
+   - If unit tests fail >10%, HALT and redesign
+
+9. **Manual Review Rules**
+   - Manual review required for all 20 benchmark cases
+   - Manual review of 5 failed cases (understand why)
+   - Manual review of 5 passed cases (verify not accidental)
+
+10. **Exact Pass/Fail Criteria**
+    - Stage A PASS: root-cause accuracy ≥40% on benchmark subset, evidence trace ≥85%, safety = clean
+    - Stage A FAIL: root-cause accuracy <35% on benchmark subset, or evidence trace <80%, or safety regression
+
+⸻
+
+17D. LOOP RULE UPDATE
+
+When /continue-consultant-remediation is invoked:
+
+1. Read execution_consultant_engine_v2.md (all sections)
+2. Verify branch, commit, and working tree
+3. Verify frozen artifacts are unchanged
+4. Read latest closeouts
+5. Identify the next incomplete required step
+6. Execute only that step
+
+**The next required step is no longer incremental Slice 2.**
+
+**The next required step is: DESIGN_STAGE_A_EXECUTION_SPEC**
+
+Claude must not implement Stage A code until the Stage A execution specification is complete.
+
+The spec is a design document, not code. It may be created and reviewed without implementation.
+
+Once the Stage A spec is approved, the next invocation will implement Stage A per the specification.
+
+---
+
+
 
 Stop immediately if:
 

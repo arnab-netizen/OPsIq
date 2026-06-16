@@ -8,9 +8,9 @@
 ## REMEDIATION STATUS BLOCK (authoritative)
 
 ```yaml
-current_phase: OWNER_MODE_ARCHITECTURE_DECISION
-current_slice: NONE
-last_completed_step: ARCHITECTURE_CEILING_REPORT_AUDIT_COMPLETE
+current_phase: OWNER_MODE_CONSULTANT_GRADE_ARCHITECTURE
+current_slice: STAGE_A_SPECIFICATION
+last_completed_step: ARCHITECTURE_CEILING_CONFIRMED
 universal_benchmark_artifact_quality_gate: PASS
 benchmark_artifact_gate_recorded: true
 round_2_execution_status: COMPLETE (50/50 cases executed, 49 valid, 0% root-cause accuracy)
@@ -24,14 +24,14 @@ consultant_grade_gate: FAILED (4/11 criteria pass)
   - evidence_trace_rate: 58.5% (required 95%+)
   - safety: PASS (0 dangerous, 0 hallucinations, 0 leakage)
 architecture_ceiling: CONFIRMED (per execution_consultant_engine_v2.md §17)
-consultant_grade_claim: PROHIBITED (owner-mode does not require autonomous accuracy)
-public_saas_claim: PROHIBITED (private use only)
-engine_status: ARCHITECTURE_CEILING_REACHED → OWNER_MODE_DECISION_REQUIRED
-next_required_step: USER_DECISION_ON_REVISED_OWNER_MODE_ARCHITECTURE
-recommendation: PATH 1 (7.5 weeks, €30-50k, owner-mode useful) or PATH 2 (7-8 weeks, €40-60k, 20-30% accuracy)
-recommendation_rationale: Architecture Ceiling Report was over-engineered for SaaS; owner-mode use case requires diagnostic assistant (evidence + hypotheses), not autonomous consultant
-blocker_removed: OWNER_DECISION_NOW_BETWEEN_PRAGMATIC_PATHS (not 12-week consultant-grade)
-blockers: [USER_DECISION_BETWEEN_PATH_1_PATH_2_OR_ALTERNATIVE]
+consultant_grade_claim: PROHIBITED (until Stage C + Round 3 validates)
+public_saas_claim: PROHIBITED
+owner_mode_target: PRACTICAL_CONSULTANT_GRADE (40-60% → 60-75% → 75-90%+ across stages)
+target_accuracy_claim: PROHIBITED_UNTIL_VALIDATED
+engine_status: ARCHITECTURE_CEILING_REACHED → STAGE_A_DESIGN_REQUIRED
+next_required_step: DESIGN_STAGE_A_EXECUTION_SPEC (per execution_consultant_engine_v2.md §17C)
+implementation_started: false
+blockers: [DESIGN_GATE_ONLY]
 ```
 
 The original hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack. All
