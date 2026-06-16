@@ -22,10 +22,10 @@
           "operational_efficiency"
         ],
         "supportingItems": [
-          "b4e33efa-29e4-4440-826f-6d45bd625c45",
-          "e8103312-1cae-4b69-ad46-139602f4bafb",
-          "8feffdab-9906-4793-9faa-9de4981ce0fa",
-          "254f84eb-fcc1-4fcc-a007-1a4d80b3cdf5"
+          "ca03b25f-c9af-40be-8c2d-97bd8854fdb5",
+          "0fbeb378-32b9-4544-9a65-b7d7f904845b",
+          "926f1e31-821b-4f20-be0b-335e7e8852df",
+          "59243b57-a1cc-482d-ad16-c9b3aafeb399"
         ],
         "patternStrength": 8,
         "potentialRootCauses": [
@@ -40,8 +40,8 @@
           "operational_efficiency"
         ],
         "supportingItems": [
-          "4a7c21a1-9a2a-464e-8ac6-d2e312e82357",
-          "8feffdab-9906-4793-9faa-9de4981ce0fa"
+          "52dc258c-5833-482d-ac7a-cf978c48f1b7",
+          "926f1e31-821b-4f20-be0b-335e7e8852df"
         ],
         "patternStrength": 4,
         "potentialRootCauses": [
@@ -54,25 +54,25 @@
   "hypotheses": [
     {
       "id": "hyp-0",
-      "rootCause": "operational_bottleneck",
+      "rootCause": "unit_economics_breakdown",
       "confidence": 65,
       "supportingEvidenceCount": 4,
       "conflictingEvidenceCount": 0,
       "patternCount": 1,
       "patternStrengthSum": 8,
       "evidenceDiversity": 2,
-      "reasoning": "operational bottleneck (1 pattern): 4 supporting, 0 contradictions"
+      "reasoning": "unit economics breakdown (1 pattern): 4 supporting, 0 contradictions"
     },
     {
       "id": "hyp-1",
-      "rootCause": "unit_economics_breakdown",
+      "rootCause": "operational_bottleneck",
       "confidence": 60,
       "supportingEvidenceCount": 4,
       "conflictingEvidenceCount": 0,
       "patternCount": 1,
       "patternStrengthSum": 8,
       "evidenceDiversity": 2,
-      "reasoning": "unit economics breakdown (1 pattern): 4 supporting, 0 contradictions"
+      "reasoning": "operational bottleneck (1 pattern): 4 supporting, 0 contradictions"
     },
     {
       "id": "hyp-2",
@@ -89,22 +89,6 @@
   "rankedHypotheses": [
     {
       "id": "hyp-0",
-      "rootCause": "operational_bottleneck",
-      "confidence": 64,
-      "supportingEvidenceCount": 4,
-      "conflictingEvidenceCount": 0,
-      "patternCount": 1,
-      "patternStrengthSum": 8,
-      "evidenceDiversity": 2,
-      "reasoning": "operational bottleneck (1 pattern): 4 supporting, 0 contradictions",
-      "supportingScore": 8,
-      "conflictScore": 0,
-      "netScore": 8,
-      "specificity": 4,
-      "confidenceJustification": "Supporting: 4 items, Conflicting: 0 items, Total: 5 (1 pattern), Confidence = 64%"
-    },
-    {
-      "id": "hyp-1",
       "rootCause": "unit_economics_breakdown",
       "confidence": 64,
       "supportingEvidenceCount": 4,
@@ -113,6 +97,22 @@
       "patternStrengthSum": 8,
       "evidenceDiversity": 2,
       "reasoning": "unit economics breakdown (1 pattern): 4 supporting, 0 contradictions",
+      "supportingScore": 8,
+      "conflictScore": 0,
+      "netScore": 8,
+      "specificity": 4,
+      "confidenceJustification": "Supporting: 4 items, Conflicting: 0 items, Total: 5 (1 pattern), Confidence = 64%"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "operational_bottleneck",
+      "confidence": 64,
+      "supportingEvidenceCount": 4,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 1,
+      "patternStrengthSum": 8,
+      "evidenceDiversity": 2,
+      "reasoning": "operational bottleneck (1 pattern): 4 supporting, 0 contradictions",
       "supportingScore": 8,
       "conflictScore": 0,
       "netScore": 8,
@@ -138,64 +138,32 @@
   ],
   "mappings": [
     {
-      "hypothesis": "operational_bottleneck",
-      "supporting": [
-        {
-          "evidenceId": "8feffdab-9906-4793-9faa-9de4981ce0fa",
-          "strength": 8,
-          "reasoning": "operational_efficiency evidence supports operational_bottleneck"
-        }
-      ],
-      "conflicting": [
-        {
-          "evidenceId": "4a7c21a1-9a2a-464e-8ac6-d2e312e82357",
-          "strength": 7,
-          "reasoning": "market_position evidence may contradict operational_bottleneck"
-        }
-      ],
-      "neutral": [
-        {
-          "evidenceId": "b4e33efa-29e4-4440-826f-6d45bd625c45",
-          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
-        },
-        {
-          "evidenceId": "e8103312-1cae-4b69-ad46-139602f4bafb",
-          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
-        },
-        {
-          "evidenceId": "254f84eb-fcc1-4fcc-a007-1a4d80b3cdf5",
-          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
-        }
-      ],
-      "coverage": 100
-    },
-    {
       "hypothesis": "unit_economics_breakdown",
       "supporting": [
         {
-          "evidenceId": "b4e33efa-29e4-4440-826f-6d45bd625c45",
+          "evidenceId": "ca03b25f-c9af-40be-8c2d-97bd8854fdb5",
           "strength": 10,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         },
         {
-          "evidenceId": "e8103312-1cae-4b69-ad46-139602f4bafb",
+          "evidenceId": "0fbeb378-32b9-4544-9a65-b7d7f904845b",
           "strength": 10,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         },
         {
-          "evidenceId": "8feffdab-9906-4793-9faa-9de4981ce0fa",
+          "evidenceId": "926f1e31-821b-4f20-be0b-335e7e8852df",
           "strength": 8,
           "reasoning": "operational_efficiency evidence supports unit_economics_breakdown"
         },
         {
-          "evidenceId": "254f84eb-fcc1-4fcc-a007-1a4d80b3cdf5",
+          "evidenceId": "59243b57-a1cc-482d-ad16-c9b3aafeb399",
           "strength": 10,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "4a7c21a1-9a2a-464e-8ac6-d2e312e82357",
+          "evidenceId": "52dc258c-5833-482d-ac7a-cf978c48f1b7",
           "strength": 7,
           "reasoning": "market_position evidence may contradict unit_economics_breakdown"
         }
@@ -204,32 +172,64 @@
       "coverage": 100
     },
     {
+      "hypothesis": "operational_bottleneck",
+      "supporting": [
+        {
+          "evidenceId": "926f1e31-821b-4f20-be0b-335e7e8852df",
+          "strength": 8,
+          "reasoning": "operational_efficiency evidence supports operational_bottleneck"
+        }
+      ],
+      "conflicting": [
+        {
+          "evidenceId": "52dc258c-5833-482d-ac7a-cf978c48f1b7",
+          "strength": 7,
+          "reasoning": "market_position evidence may contradict operational_bottleneck"
+        }
+      ],
+      "neutral": [
+        {
+          "evidenceId": "ca03b25f-c9af-40be-8c2d-97bd8854fdb5",
+          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
+        },
+        {
+          "evidenceId": "0fbeb378-32b9-4544-9a65-b7d7f904845b",
+          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
+        },
+        {
+          "evidenceId": "59243b57-a1cc-482d-ad16-c9b3aafeb399",
+          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
+        }
+      ],
+      "coverage": 100
+    },
+    {
       "hypothesis": "demand_forecasting_mismatch",
       "supporting": [
         {
-          "evidenceId": "4a7c21a1-9a2a-464e-8ac6-d2e312e82357",
+          "evidenceId": "52dc258c-5833-482d-ac7a-cf978c48f1b7",
           "strength": 7,
           "reasoning": "market_position evidence supports demand_forecasting_mismatch"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "8feffdab-9906-4793-9faa-9de4981ce0fa",
+          "evidenceId": "926f1e31-821b-4f20-be0b-335e7e8852df",
           "strength": 8,
           "reasoning": "operational_efficiency evidence may contradict demand_forecasting_mismatch"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "b4e33efa-29e4-4440-826f-6d45bd625c45",
+          "evidenceId": "ca03b25f-c9af-40be-8c2d-97bd8854fdb5",
           "reasoning": "financial_health evidence is neutral to demand_forecasting_mismatch"
         },
         {
-          "evidenceId": "e8103312-1cae-4b69-ad46-139602f4bafb",
+          "evidenceId": "0fbeb378-32b9-4544-9a65-b7d7f904845b",
           "reasoning": "financial_health evidence is neutral to demand_forecasting_mismatch"
         },
         {
-          "evidenceId": "254f84eb-fcc1-4fcc-a007-1a4d80b3cdf5",
+          "evidenceId": "59243b57-a1cc-482d-ad16-c9b3aafeb399",
           "reasoning": "financial_health evidence is neutral to demand_forecasting_mismatch"
         }
       ],
@@ -237,6 +237,6 @@
     }
   ],
   "evidenceTraceRate": 100,
-  "topHypothesis": "operational_bottleneck",
+  "topHypothesis": "unit_economics_breakdown",
   "topConfidence": 64
 }

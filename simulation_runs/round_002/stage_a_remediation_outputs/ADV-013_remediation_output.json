@@ -22,6 +22,17 @@
   "hypotheses": [
     {
       "id": "hyp-0",
+      "rootCause": "unit_economics_breakdown",
+      "confidence": 26,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "unit economics breakdown (no patterns): 0 supporting, 0 contradictions"
+    },
+    {
+      "id": "hyp-1",
       "rootCause": "customer_retention_erosion",
       "confidence": 20,
       "supportingEvidenceCount": 0,
@@ -30,17 +41,6 @@
       "patternStrengthSum": 0,
       "evidenceDiversity": 0,
       "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions"
-    },
-    {
-      "id": "hyp-1",
-      "rootCause": "unit_economics_breakdown",
-      "confidence": 15,
-      "supportingEvidenceCount": 0,
-      "conflictingEvidenceCount": 0,
-      "patternCount": 0,
-      "patternStrengthSum": 0,
-      "evidenceDiversity": 0,
-      "reasoning": "unit economics breakdown (no patterns): 0 supporting, 0 contradictions"
     },
     {
       "id": "hyp-2",
@@ -57,22 +57,6 @@
   "rankedHypotheses": [
     {
       "id": "hyp-0",
-      "rootCause": "customer_retention_erosion",
-      "confidence": 17,
-      "supportingEvidenceCount": 0,
-      "conflictingEvidenceCount": 0,
-      "patternCount": 0,
-      "patternStrengthSum": 0,
-      "evidenceDiversity": 0,
-      "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions",
-      "supportingScore": 0,
-      "conflictScore": 0,
-      "netScore": 0,
-      "specificity": 2,
-      "confidenceJustification": "Supporting: 0 items, Conflicting: 0 items, Total: 4, Confidence = 17%"
-    },
-    {
-      "id": "hyp-1",
       "rootCause": "unit_economics_breakdown",
       "confidence": 17,
       "supportingEvidenceCount": 0,
@@ -81,6 +65,22 @@
       "patternStrengthSum": 0,
       "evidenceDiversity": 0,
       "reasoning": "unit economics breakdown (no patterns): 0 supporting, 0 contradictions",
+      "supportingScore": 0,
+      "conflictScore": 0,
+      "netScore": 0,
+      "specificity": 2,
+      "confidenceJustification": "Supporting: 0 items, Conflicting: 0 items, Total: 4, Confidence = 17%"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "customer_retention_erosion",
+      "confidence": 17,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions",
       "supportingScore": 0,
       "conflictScore": 0,
       "netScore": 0,
@@ -106,10 +106,38 @@
   ],
   "mappings": [
     {
+      "hypothesis": "unit_economics_breakdown",
+      "supporting": [
+        {
+          "evidenceId": "44f10056-c65f-4be0-9ee0-4dffb99f4221",
+          "strength": 10,
+          "reasoning": "financial_health evidence supports unit_economics_breakdown"
+        }
+      ],
+      "conflicting": [
+        {
+          "evidenceId": "88479576-ce75-45f8-b420-f70ae428bebd",
+          "strength": 7,
+          "reasoning": "customer_retention evidence may contradict unit_economics_breakdown"
+        }
+      ],
+      "neutral": [
+        {
+          "evidenceId": "bdbbd7c2-c5b8-4cb8-b712-453487b487af",
+          "reasoning": "unit_economics_cohort_detail evidence is neutral to unit_economics_breakdown"
+        },
+        {
+          "evidenceId": "28e890e2-366e-4495-b78e-423e1af5b6f4",
+          "reasoning": "go_to_market evidence is neutral to unit_economics_breakdown"
+        }
+      ],
+      "coverage": 100
+    },
+    {
       "hypothesis": "customer_retention_erosion",
       "supporting": [
         {
-          "evidenceId": "f3d1ab75-6f1b-4571-ab4a-2d2f1bfd46cb",
+          "evidenceId": "88479576-ce75-45f8-b420-f70ae428bebd",
           "strength": 7,
           "reasoning": "customer_retention evidence supports customer_retention_erosion"
         }
@@ -117,44 +145,16 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "9521affd-bf82-4078-9221-ac358871e960",
+          "evidenceId": "44f10056-c65f-4be0-9ee0-4dffb99f4221",
           "reasoning": "financial_health evidence is neutral to customer_retention_erosion"
         },
         {
-          "evidenceId": "387feccc-7cad-41f4-b1ae-3ce5723eb742",
+          "evidenceId": "bdbbd7c2-c5b8-4cb8-b712-453487b487af",
           "reasoning": "unit_economics_cohort_detail evidence is neutral to customer_retention_erosion"
         },
         {
-          "evidenceId": "a8bbb4f4-94e9-4668-9ed6-b8db75f22a8b",
+          "evidenceId": "28e890e2-366e-4495-b78e-423e1af5b6f4",
           "reasoning": "go_to_market evidence is neutral to customer_retention_erosion"
-        }
-      ],
-      "coverage": 100
-    },
-    {
-      "hypothesis": "unit_economics_breakdown",
-      "supporting": [
-        {
-          "evidenceId": "9521affd-bf82-4078-9221-ac358871e960",
-          "strength": 10,
-          "reasoning": "financial_health evidence supports unit_economics_breakdown"
-        }
-      ],
-      "conflicting": [
-        {
-          "evidenceId": "f3d1ab75-6f1b-4571-ab4a-2d2f1bfd46cb",
-          "strength": 7,
-          "reasoning": "customer_retention evidence may contradict unit_economics_breakdown"
-        }
-      ],
-      "neutral": [
-        {
-          "evidenceId": "387feccc-7cad-41f4-b1ae-3ce5723eb742",
-          "reasoning": "unit_economics_cohort_detail evidence is neutral to unit_economics_breakdown"
-        },
-        {
-          "evidenceId": "a8bbb4f4-94e9-4668-9ed6-b8db75f22a8b",
-          "reasoning": "go_to_market evidence is neutral to unit_economics_breakdown"
         }
       ],
       "coverage": 100
@@ -163,25 +163,25 @@
       "hypothesis": "go_to_market_misalignment",
       "supporting": [
         {
-          "evidenceId": "f3d1ab75-6f1b-4571-ab4a-2d2f1bfd46cb",
+          "evidenceId": "88479576-ce75-45f8-b420-f70ae428bebd",
           "strength": 7,
           "reasoning": "customer_retention evidence supports go_to_market_misalignment"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "9521affd-bf82-4078-9221-ac358871e960",
+          "evidenceId": "44f10056-c65f-4be0-9ee0-4dffb99f4221",
           "strength": 10,
           "reasoning": "financial_health evidence may contradict go_to_market_misalignment"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "387feccc-7cad-41f4-b1ae-3ce5723eb742",
+          "evidenceId": "bdbbd7c2-c5b8-4cb8-b712-453487b487af",
           "reasoning": "unit_economics_cohort_detail evidence is neutral to go_to_market_misalignment"
         },
         {
-          "evidenceId": "a8bbb4f4-94e9-4668-9ed6-b8db75f22a8b",
+          "evidenceId": "28e890e2-366e-4495-b78e-423e1af5b6f4",
           "reasoning": "go_to_market evidence is neutral to go_to_market_misalignment"
         }
       ],
@@ -189,6 +189,6 @@
     }
   ],
   "evidenceTraceRate": 100,
-  "topHypothesis": "customer_retention_erosion",
+  "topHypothesis": "unit_economics_breakdown",
   "topConfidence": 17
 }

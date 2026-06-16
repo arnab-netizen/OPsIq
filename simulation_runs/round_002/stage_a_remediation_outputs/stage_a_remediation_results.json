@@ -51,7 +51,7 @@
     {
       "caseId": "ADV-013",
       "traceRate": 100,
-      "topHypothesis": "customer_retention_erosion",
+      "topHypothesis": "unit_economics_breakdown",
       "confidence": 17
     },
     {
@@ -63,25 +63,25 @@
     {
       "caseId": "RW-016",
       "traceRate": 100,
-      "topHypothesis": "operational_bottleneck",
+      "topHypothesis": "unit_economics_breakdown",
       "confidence": 64
     },
     {
       "caseId": "RW-018",
       "traceRate": 100,
-      "topHypothesis": "operational_bottleneck",
+      "topHypothesis": "unit_economics_breakdown",
       "confidence": 64
     },
     {
       "caseId": "RW-020",
       "traceRate": 100,
-      "topHypothesis": "operational_bottleneck",
+      "topHypothesis": "unit_economics_breakdown",
       "confidence": 64
     },
     {
       "caseId": "RW-022",
       "traceRate": 100,
-      "topHypothesis": "operational_bottleneck",
+      "topHypothesis": "demand_forecasting_mismatch",
       "confidence": 59
     },
     {
@@ -93,7 +93,7 @@
     {
       "caseId": "PD-011",
       "traceRate": 100,
-      "topHypothesis": "operational_bottleneck",
+      "topHypothesis": "unit_economics_breakdown",
       "confidence": 64
     },
     {
@@ -105,7 +105,7 @@
     {
       "caseId": "PD-015",
       "traceRate": 100,
-      "topHypothesis": "operational_bottleneck",
+      "topHypothesis": "unit_economics_breakdown",
       "confidence": 59
     },
     {
@@ -117,7 +117,7 @@
     {
       "caseId": "PD-019",
       "traceRate": 100,
-      "topHypothesis": "operational_bottleneck",
+      "topHypothesis": "demand_forecasting_mismatch",
       "confidence": 59
     },
     {

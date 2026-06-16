@@ -108,21 +108,21 @@
       "hypothesis": "unit_economics_breakdown",
       "supporting": [
         {
-          "evidenceId": "8ac97437-610d-4260-9881-6e666e137470",
+          "evidenceId": "d78dcfbf-9b69-4788-ab7c-f01a37959518",
           "strength": 7,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "6b96ccb8-6ec9-4793-91e1-989a60c8b4e8",
+          "evidenceId": "745348a2-5604-4a87-860d-c9b3b853c51c",
           "strength": 7,
           "reasoning": "market_position evidence may contradict unit_economics_breakdown"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "e849ae99-0cd9-480c-ab05-4fe1b6da3286",
+          "evidenceId": "2d058096-d476-4461-ae84-fe0dfd981347",
           "reasoning": "talent_retention evidence is neutral to unit_economics_breakdown"
         }
       ],
@@ -132,7 +132,7 @@
       "hypothesis": "demand_forecasting_mismatch",
       "supporting": [
         {
-          "evidenceId": "6b96ccb8-6ec9-4793-91e1-989a60c8b4e8",
+          "evidenceId": "745348a2-5604-4a87-860d-c9b3b853c51c",
           "strength": 7,
           "reasoning": "market_position evidence supports demand_forecasting_mismatch"
         }
@@ -140,11 +140,11 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "e849ae99-0cd9-480c-ab05-4fe1b6da3286",
+          "evidenceId": "2d058096-d476-4461-ae84-fe0dfd981347",
           "reasoning": "talent_retention evidence is neutral to demand_forecasting_mismatch"
         },
         {
-          "evidenceId": "8ac97437-610d-4260-9881-6e666e137470",
+          "evidenceId": "d78dcfbf-9b69-4788-ab7c-f01a37959518",
           "reasoning": "financial_health evidence is neutral to demand_forecasting_mismatch"
         }
       ],
@@ -154,21 +154,21 @@
       "hypothesis": "go_to_market_misalignment",
       "supporting": [
         {
-          "evidenceId": "6b96ccb8-6ec9-4793-91e1-989a60c8b4e8",
+          "evidenceId": "745348a2-5604-4a87-860d-c9b3b853c51c",
           "strength": 7,
           "reasoning": "market_position evidence supports go_to_market_misalignment"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "8ac97437-610d-4260-9881-6e666e137470",
+          "evidenceId": "d78dcfbf-9b69-4788-ab7c-f01a37959518",
           "strength": 7,
           "reasoning": "financial_health evidence may contradict go_to_market_misalignment"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "e849ae99-0cd9-480c-ab05-4fe1b6da3286",
+          "evidenceId": "2d058096-d476-4461-ae84-fe0dfd981347",
           "reasoning": "talent_retention evidence is neutral to go_to_market_misalignment"
         }
       ],

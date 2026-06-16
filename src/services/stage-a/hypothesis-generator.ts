@@ -29,40 +29,55 @@ export class HypothesisGenerator {
   ];
 
   // Diagnosis-specific evidence requirements and boost factors
+  // SLICE 3: Added evidence specificity scores to improve discrimination
   private readonly diagnosisRequirements: Record<string, {
     preferredDimensions: string[];
     minSupportingItems: number;
     patternBoost: number;
+    specificity: number; // 0-1, how specific evidence needs to be (higher = more discriminative)
+    requiredEvidenceIndicators: string[]; // Specific evidence indicators required
   }> = {
     [DiagnosisType.UNIT_ECONOMICS_BREAKDOWN]: {
       preferredDimensions: ["financial_health"],
       minSupportingItems: 2,
       patternBoost: 1.3,
+      specificity: 0.95, // SLICE 3: Very high specificity - boost for financial evidence
+      requiredEvidenceIndicators: ["cac", "payback", "margin", "ltv", "arpu"],
     },
     [DiagnosisType.OPERATIONAL_BOTTLENECK]: {
       preferredDimensions: ["operational_efficiency"],
       minSupportingItems: 2,
       patternBoost: 1.2,
+      specificity: 0.65, // SLICE 3: Moderate specificity
+      requiredEvidenceIndicators: ["bottleneck", "capacity", "throughput", "queue"],
     },
     [DiagnosisType.DEMAND_FORECASTING_MISMATCH]: {
       preferredDimensions: ["market_position"],
       minSupportingItems: 2,
       patternBoost: 1.2,
+      specificity: 0.75, // SLICE 3: Moderate specificity
+      requiredEvidenceIndicators: ["forecast", "expected", "demand", "projected"],
     },
     [DiagnosisType.GO_TO_MARKET_MISALIGNMENT]: {
       preferredDimensions: ["market_position", "customer_retention"],
       minSupportingItems: 2,
       patternBoost: 1.2,
+      specificity: 0.75, // Moderately specific
+      requiredEvidenceIndicators: ["gtm", "positioning", "messaging", "segment"],
     },
     [DiagnosisType.CUSTOMER_RETENTION_EROSION]: {
       preferredDimensions: ["customer_retention"],
       minSupportingItems: 2,
       patternBoost: 1.1,
+      specificity: 0.8, // Fairly specific
+      requiredEvidenceIndicators: ["churn", "retention", "attrition", "loss"],
     },
     [DiagnosisType.TRUST_QUALITY_CRISIS]: {
       preferredDimensions: ["quality_delivery"],
       minSupportingItems: 2,
       patternBoost: 1.1,
+      specificity: 0.85, // Very specific
+      requiredEvidenceIndicators: ["trust", "fraud", "breach", "scandal"],
     },
   };
 
@@ -139,19 +154,25 @@ export class HypothesisGenerator {
       return [];
     }
 
-    // Sort by confidence descending, then by pattern count, then by evidence diversity
+    // SLICE 3: Sort by confidence, then by evidence specificity match (new)
     const sorted = candidates.sort((a, b) => {
       if (Math.abs(b.confidence - a.confidence) > 2) {
         return b.confidence - a.confidence; // Significant confidence difference
       }
-      // Tie-breaking for similar confidence
+      // Tie-breaking: use evidence specificity (new for Slice 3)
+      // Higher specificity match means more evidence-specific diagnosis wins
+      const aSpecificity = this.calculateEvidenceSpecificityMatch(a.rootCause, allEvidence);
+      const bSpecificity = this.calculateEvidenceSpecificityMatch(b.rootCause, allEvidence);
+      if (Math.abs(bSpecificity - aSpecificity) > 0.1) {
+        return bSpecificity - aSpecificity; // Diagnosis with more specific evidence match wins
+      }
+      // If still tied, use pattern count
       if ((b.patternCount || 0) !== (a.patternCount || 0)) {
         return (b.patternCount || 0) - (a.patternCount || 0);
       }
       if ((b.evidenceDiversity || 0) !== (a.evidenceDiversity || 0)) {
         return (b.evidenceDiversity || 0) - (a.evidenceDiversity || 0);
       }
-      // If still tied, lower confidence slightly to indicate uncertainty
       return 0;
     });
 
@@ -240,8 +261,10 @@ export class HypothesisGenerator {
       baseConfidence - contradictions.length * 8
     );
 
-    // Blend pattern-based with keyword validation
+    // SLICE 3: Blend pattern-based with keyword validation and evidence specificity
     let confidence = 0;
+    const specificityMatch = this.calculateEvidenceSpecificityMatch(diagnosisType, allEvidence);
+
     if (matchingPatterns.length > 0) {
       // Pattern-based diagnosis is primary
       confidence = Math.min(65, Math.round(scoreAfterContradictions));
@@ -254,6 +277,11 @@ export class HypothesisGenerator {
         // Keywords contradict the diagnosis - reduce significantly
         confidence = Math.max(10, confidence - 15);
       }
+
+      // SLICE 3: Boost for high evidence specificity match
+      if (specificityMatch > 0.5) {
+        confidence = Math.min(65, confidence + Math.round(specificityMatch * 10));
+      }
     } else {
       // No patterns - use keyword-based scoring as fallback
       confidence = this.calculateBaselineScore(
@@ -265,6 +293,11 @@ export class HypothesisGenerator {
       // If keywords are present, boost baseline
       if (keywordMatch.hasRequiredKeywords) {
         confidence = Math.min(40, confidence + (keywordMatch.supportingKeywordCount > 0 ? 15 : 10));
+      }
+
+      // SLICE 3: Boost for evidence specificity even without patterns
+      if (specificityMatch > 0.5) {
+        confidence = Math.min(40, confidence + Math.round(specificityMatch * 8));
       }
     }
 
@@ -284,6 +317,35 @@ export class HypothesisGenerator {
         matchingPatterns.length
       ),
     };
+  }
+
+  // SLICE 3: Calculate how well evidence matches diagnosis-specific requirements
+  private calculateEvidenceSpecificityMatch(
+    diagnosis: DiagnosisType,
+    allEvidence: EvidenceItem[]
+  ): number {
+    const req = this.diagnosisRequirements[diagnosis];
+    if (!req) return 0;
+
+    let specificityScore = 0;
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+
+    // Check how many required evidence indicators are present
+    let requiredIndicatorCount = 0;
+    for (const indicator of req.requiredEvidenceIndicators) {
+      if (allText.includes(indicator.toLowerCase())) {
+        requiredIndicatorCount++;
+      }
+    }
+
+    // Specificity match: higher if more specific evidence present
+    // Range: 0-1 where 1 = all required indicators present
+    specificityScore = Math.min(1, requiredIndicatorCount / Math.max(req.requiredEvidenceIndicators.length, 1));
+
+    // Weight by diagnosis specificity requirement (higher specificity needs more evidence)
+    specificityScore = specificityScore * req.specificity;
+
+    return specificityScore;
   }
 
   private scoreKeywordMatch(
