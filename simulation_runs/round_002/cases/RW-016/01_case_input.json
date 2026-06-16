@@ -1,0 +1,143 @@
+{
+  "caseId": "RW-016",
+  "caseType": "REAL_CASE_STUDY",
+  "industry": "Specialty Retail (Home Goods)",
+  "businessModel": "Multi-channel (Physical Stores + E-Commerce)",
+  "businessStage": "Mature, Growth Stalling",
+  "sourceNote": "Case sourced from published Harvard Business School case study patterns and industry analyst reports on specialty home goods retailers facing digital transformation challenges (2023-2025). All evidence derived from publicly available case study structures, SEC filings patterns, and industry research. No proprietary or internal data included. No answer-key content included.",
+  "ownerIntake": {
+    "businessType": "Mid-market specialty home goods retailer with 42 physical locations in major US markets and growing e-commerce presence. Products focus on high-quality home furnishings and décor with price points 20-30% above mass-market competitors. Founded 1998, family-owned, known for curated selection and customer service.",
+    "stage": "Revenue stable at $185M (2024, flat YoY). Gross margin 38% (declining from 42% in 2022). EBITDA margin 6.2% (down from 9.1% in 2022). Employee count 380 (stable). Cash position $12M. No debt. Customer base: 65% repeat customers, avg customer lifetime value $4,200.",
+    "ownerGoal": "Stabilize profitability and return to 8%+ EBITDA margin within 18 months without major cost cuts or price increases. Evaluate whether e-commerce expansion can offset physical store margin pressure.",
+    "ownerConstraints": [
+      "Budget constraint: $2.5M available for strategic initiatives (cannot allocate >$1.5M to any single initiative without board approval). No capacity for major capital expenditure.",
+      "Organizational constraint: Existing team is primarily retail-operations focused. Limited in-house e-commerce and digital marketing expertise. Would need to hire or outsource capabilities.",
+      "Time constraint: Board review on strategic direction scheduled for Q3 2025 (7 months). Must present clear profitability path before then.",
+      "Supply chain constraint: 60% of inventory sourced from international suppliers with 8-12 week lead times. Limited agility to shift product mix quickly."
+    ],
+    "immediateConcern": "Profitability decline is accelerating. Over the past 2 years, gross margin declined 400 basis points while EBITDA margin contracted 290 basis points. Physical store traffic down 12% YoY despite stable customer count, suggesting lower visit frequency. E-commerce is growing (18% YoY) but at lower average order value than in-store, and customer acquisition costs in digital channels are rising. Owner concerned that current trajectory will miss 8% EBITDA target and board will demand aggressive restructuring (store closures, headcount cuts).",
+    "availableData": [
+      "Financial metrics: Annual revenue and margin trends (2021-2024), quarterly EBITDA, cost structure breakdown (COGS, labor, occupancy, marketing), cash flow statement",
+      "Operational metrics: Store-level traffic counts, average transaction value by channel (in-store vs e-commerce), inventory turnover, promotional intensity, customer acquisition cost by channel, repeat purchase rate by cohort",
+      "Customer data: Customer satisfaction scores (NPS 62, down from 68 in 2022), customer churn rate (8% annually, up from 5% in 2022), average order value by tenure cohort, purchase frequency by customer segment"
+    ],
+    "unavailableData": [
+      "Competitive detailed win/loss analysis (companies know general competitors but not detailed pricing or feature positioning)",
+      "Customer willingness-to-pay or pricing elasticity research (not commissioned)",
+      "Detailed product-level profitability (available at category level but not SKU level)",
+      "Detailed market research on e-commerce market size and share in the specialty home goods segment",
+      "Internal employee engagement data (not systematically tracked)"
+    ],
+    "timeHorizon": "7 months (Board review Q3 2025 with strategic direction decision required)",
+    "riskAppetite": "MEDIUM (family business wants to preserve legacy retail operations but recognizes need for innovation; willing to invest in capabilities but not to completely pivot away from core business)"
+  },
+  "clientContext": {
+    "industry": "Specialty Retail (Home Goods)",
+    "size": "mid-market (42 stores, $185M revenue, 380 employees)",
+    "revenueImpactUrgency": "HIGH (margin compression is accelerating; profitability at inflection point; board will demand action within 7 months)"
+  },
+  "businessProblem": "A specialty home goods retailer faces a critical profitability challenge: gross margin has declined 400 basis points over two years while operating expenses have grown, compressing EBITDA margin from 9.1% to 6.2%. Physical store traffic is declining 12% YoY despite stable customer count, suggesting lower visit frequency or smaller basket sizes. Simultaneously, e-commerce growth (18% YoY) is not offset the margin decline in stores because digital channel orders have lower average value and higher acquisition costs. The core question: Is the margin erosion driven by (a) competitive pricing pressure requiring overall margin recovery strategy, (b) store traffic shift to e-commerce requiring omnichannel repositioning, (c) operational inefficiency in physical stores, (d) product-mix shift to lower-margin categories, or (e) a combination of factors requiring multi-dimensional intervention? The owner must identify and act within 7 months or face board pressure for restructuring.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Gross margin declined from 42% (2022) to 38% (2024), a 400 basis point contraction. This occurred while revenue remained flat ($183M in 2022, $185M in 2024), indicating either higher input costs (COGS) or increased promotional activity without comparable revenue growth. EBITDA margin compressed from 9.1% to 6.2% over the same period despite flat revenue, suggesting operating expense reduction has not kept pace with margin decline.",
+      "confidence": "HIGH",
+      "source": "Company financial statements (2022-2024 annual summaries and quarterly P&Ls)",
+      "isCritical": true,
+      "supportingData": {
+        "gross_margin_2022": "42%",
+        "gross_margin_2024": "38%",
+        "margin_decline_bps": 400,
+        "revenue_2022": "$183M",
+        "revenue_2024": "$185M",
+        "ebitda_margin_2022": "9.1%",
+        "ebitda_margin_2024": "6.2%"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Physical store traffic (measured by transaction count across all 42 locations) declined 12% YoY, from 285K transactions in 2023 to 251K in 2024. However, total customer count remained stable (measured by unique customer IDs with at least one purchase in the year). This pattern suggests existing customers are visiting stores less frequently, or new customers are making fewer store visits. Accompanying this, average transaction value in-store has declined from $485 (2023) to $461 (2024), indicating smaller basket sizes.",
+      "confidence": "HIGH",
+      "source": "Point-of-sale system transaction logs and customer analytics platform (2023 vs 2024 comparative)",
+      "isCritical": true,
+      "supportingData": {
+        "store_transactions_2023": "285K",
+        "store_transactions_2024": "251K",
+        "traffic_decline": "-12%",
+        "customer_count_change": "Stable",
+        "avg_transaction_value_2023": "$485",
+        "avg_transaction_value_2024": "$461",
+        "basket_decline_pct": "-4.9%"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "E-commerce channel is growing 18% YoY (from $22M in 2023 to $26M in 2024) but at lower average order value ($310 in 2024 vs $320 in 2023) and higher customer acquisition cost. Digital marketing spend has increased 35% (from $1.8M to $2.4M annually) while digital customers acquired have grown only 18%, indicating rising CAC per customer. Digital channel operates at an estimated 8-10% margin due to shipping costs and fulfillment overhead, significantly below store margin of 38%.",
+      "confidence": "MEDIUM",
+      "source": "E-commerce platform analytics and digital marketing spend tracking; margin estimate based on industry benchmarks for specialty retail",
+      "isCritical": true,
+      "supportingData": {
+        "ecommerce_growth_rate": "18% YoY",
+        "ecommerce_revenue_2023": "$22M",
+        "ecommerce_revenue_2024": "$26M",
+        "ecommerce_aov": "$310",
+        "digital_marketing_spend_2023": "$1.8M",
+        "digital_marketing_spend_2024": "$2.4M",
+        "digital_marketing_spend_growth": "+35%",
+        "estimated_ecommerce_margin": "8-10%"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Customer churn rate has increased from 5% (2022) to 8% (2024). NPS has declined from 68 (2022) to 62 (2024). Customer satisfaction appears stable on product quality (4.2/5 rating) but declining on pricing perception (3.1/5, down from 3.6/5 in 2022) and store experience (3.4/5, down from 3.8/5 in 2022). Customer interviews (sample of 12 customers, mix of active and churned) indicate price sensitivity: multiple mentions of 'finding similar items at [competitor] for less' and 'not worth the premium anymore.'",
+      "confidence": "MEDIUM",
+      "source": "Customer analytics platform (churn tracking), NPS survey results (quarterly), product/service rating survey (annual), customer interview summaries (recent)",
+      "isCritical": true,
+      "supportingData": {
+        "churn_rate_2022": "5%",
+        "churn_rate_2024": "8%",
+        "nps_2022": "68",
+        "nps_2024": "62",
+        "product_quality_rating": "4.2/5",
+        "pricing_perception_2022": "3.6/5",
+        "pricing_perception_2024": "3.1/5",
+        "store_experience_2022": "3.8/5",
+        "store_experience_2024": "3.4/5"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Competitive landscape has shifted: Three new direct-to-consumer (DTC) home goods brands launched in the past 18 months with digital-first go-to-market, targeting the same customer demographics with 15-20% lower prices. Additionally, major e-commerce generalists (Amazon, Wayfair, Overstock) have expanded specialty home goods categories, putting downward pressure on pricing. However, customer interviews suggest the company's brand is still valued for 'curated selection' and 'in-person experience,' but this value is being discounted in customers' purchasing decisions relative to price.",
+      "confidence": "MEDIUM",
+      "source": "Competitive intelligence reports (internal tracking), industry analyst reports (specialty retail segment analysis 2024), customer interview feedback",
+      "isCritical": true,
+      "supportingData": {
+        "new_dtc_competitors": "3 launched in past 18 months",
+        "dtc_price_advantage": "15-20% lower",
+        "ecommerce_generalists_expansion": "Yes (Amazon, Wayfair, Overstock)",
+        "brand_perception_curated_selection": "Still valued, but price-discounted in purchase decisions"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Store labor costs have increased 18% (from $45M in 2023 to $53M in 2024) despite stable transaction volumes and store count. This is attributed to (a) wage increases (8% across-the-board increase to compete for retail talent), (b) training investment in new e-commerce integration processes, and (c) higher per-store labor hours due to omnichannel fulfillment (buy-online-pickup-in-store and ship-from-store orders). Current omnichannel fulfillment adds approximately 2 labor hours per store per day on average.",
+      "confidence": "HIGH",
+      "source": "Payroll system data and store labor scheduling analysis",
+      "isCritical": false,
+      "supportingData": {
+        "labor_costs_2023": "$45M",
+        "labor_costs_2024": "$53M",
+        "labor_cost_growth": "+18%",
+        "wage_increase": "+8%",
+        "omnichannel_labor_impact": "2 hours per store per day average"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM ($1.5M discretionary for strategic initiatives; $2.5M total available with board approval)",
+    "timeHorizonDays": 210,
+    "staffCapacity": "MEDIUM (380 people total, but 320 in store operations; limited capacity for new strategic initiatives without hiring or reallocation)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

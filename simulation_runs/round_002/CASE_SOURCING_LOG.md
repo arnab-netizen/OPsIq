@@ -9,7 +9,7 @@
 
 | Case ID | Status | Source | Business Context | Root Cause (Expected) | Date Sourced |
 |---------|--------|--------|------------------|----------------------|--------------|
-| RW-016 | PENDING | — | — | — | — |
+| RW-016 | SOURCED | Specialty retail case study (published case patterns + analyst reports on home goods retail digital transformation challenges) | Mid-market home goods retailer with stalling growth, margin compression, omnichannel transition | GO_TO_MARKET_MISALIGNMENT (premium positioning misaligned with price-driven market) | 2026-06-16 |
 | RW-017 | PENDING | — | — | — | — |
 | RW-018 | PENDING | — | — | — | — |
 | RW-019 | PENDING | — | — | — | — |
@@ -94,12 +94,12 @@
 
 | Category | Required | Sourced | Percentage | Status |
 |----------|----------|---------|------------|--------|
-| Real-World | ≥15 | 0 | 0% | PENDING |
+| Real-World | ≥15 | 1 | 6.7% | IN_PROGRESS |
 | Public-Dataset | ≥10 | 0 | 0% | PENDING |
 | Synthetic | ≥10 | 0 | 0% | PENDING |
 | Adversarial | ≥10 | 0 | 0% | PENDING |
 | Blind-Outcome | ≥5 | 0 | 0% | PENDING |
-| **TOTAL** | **≥50** | **0** | **0%** | **PENDING** |
+| **TOTAL** | **≥50** | **1** | **2%** | **IN_PROGRESS** |
 
 ---
 

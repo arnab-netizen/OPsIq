@@ -10,7 +10,7 @@
 
 | Case ID | Status | Created | Reviewed | Locked | Notes |
 |---------|--------|---------|----------|--------|-------|
-| RW-016 | PENDING | — | — | — | Awaiting case input creation and sourcing |
+| RW-016 | CREATED | ✓ | — | — | Answer key created with detailed scoring criteria and success metrics |
 | RW-017 | PENDING | — | — | — | — |
 | RW-018 | PENDING | — | — | — | — |
 | RW-019 | PENDING | — | — | — | — |
@@ -26,7 +26,7 @@
 | RW-029 | PENDING | — | — | — | — |
 | RW-030 | PENDING | — | — | — | — |
 
-**Summary (RW):** 0/15 created, 0/15 reviewed, 0/15 locked
+**Summary (RW):** 1/15 created, 0/15 reviewed, 0/15 locked
 
 ---
 
@@ -110,7 +110,7 @@
 | Synthetic | 10 | 0 | 0 | 0 | 0% |
 | Adversarial | 10 | 0 | 0 | 0 | 0% |
 | Blind-Outcome | 5 | 0 | 0 | 0 | 0% |
-| **TOTAL** | **50** | **0** | **0** | **0** | **0%** |
+| **TOTAL** | **50** | **1** | **0** | **0** | **2%** |
 
 ---
 
