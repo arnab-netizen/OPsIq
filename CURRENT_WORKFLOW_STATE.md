@@ -8,8 +8,8 @@
 ## REMEDIATION STATUS BLOCK (authoritative)
 
 ```yaml
-current_phase: OWNER_MODE_CONSULTANT_GRADE_ARCHITECTURE
-current_slice: STAGE_A_SPECIFICATION
+current_phase: OWNER_MODE_LEARNING_AND_VALIDATION_ARCHITECTURE
+current_stage: STAGE_A_THROUGH_D1_DESIGN_REQUIRED
 last_completed_step: ARCHITECTURE_CEILING_CONFIRMED
 universal_benchmark_artifact_quality_gate: PASS
 benchmark_artifact_gate_recorded: true
@@ -24,14 +24,17 @@ consultant_grade_gate: FAILED (4/11 criteria pass)
   - evidence_trace_rate: 58.5% (required 95%+)
   - safety: PASS (0 dangerous, 0 hallucinations, 0 leakage)
 architecture_ceiling: CONFIRMED (per execution_consultant_engine_v2.md §17)
-consultant_grade_claim: PROHIBITED (until Stage C + Round 3 validates)
+consultant_grade_claim: PROHIBITED (until Stage C + Round 3 validates + D5 owner validation complete)
 public_saas_claim: PROHIBITED
-owner_mode_target: PRACTICAL_CONSULTANT_GRADE (40-60% → 60-75% → 75-90%+ across stages)
+owner_mode_target: PRACTICAL_CONSULTANT_GRADE_90_TO_100_PERCENT (via Stage A→B→C→D→D1-D5)
 target_accuracy_claim: PROHIBITED_UNTIL_VALIDATED
-engine_status: ARCHITECTURE_CEILING_REACHED → STAGE_A_DESIGN_REQUIRED
-next_required_step: DESIGN_STAGE_A_EXECUTION_SPEC (per execution_consultant_engine_v2.md §17C)
+engine_status: ARCHITECTURE_CEILING_REACHED → LEARNING_ARCHITECTURE_REQUIRED
+next_required_step: DESIGN_STAGE_A_EXECUTION_SPEC + DESIGN_ROUND_3_CASE_PACK + DESIGN_CASE_LIBRARY_SOURCING (parallel fast-track)
 implementation_started: false
+hostile_rules_count: 15_UNIVERSAL_RULES_PLUS_ORIGINAL_24_NON_NEGOTIABLE_RULES
 blockers: [DESIGN_GATE_ONLY]
+target_accuracy_status: UNVALIDATED
+roadmap_target_accuracy: 90_TO_100_PERCENT_OWNER_MODE_PRACTICAL_DECISION_QUALITY
 ```
 
 The original hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack. All

@@ -803,9 +803,372 @@ Once the Stage A spec is approved, the next invocation will implement Stage A pe
 
 ---
 
+⸻
+
+17E. OWNER_MODE_LEARNING_AND_VALIDATION_ARCHITECTURE
+
+Building 90-100% practical owner decision quality requires learning and validation beyond Stage D.
+This section defines stages D1-D5 for learning, retrieval, and real-world validation.
+
+### STAGE D1: DEVELOPMENT CASE LIBRARY
+
+**Purpose:**
+Build a large case library used for development, learning, and pattern discovery.
+
+**Target Scale:**
+* Minimum: 500 validated cases
+* Stretch: 2000+ cases
+* Diversity: Multi-industry, multi-business-model, multi-stage, multi-geography
+
+**Required Sources:**
+* Public company failures (SEC filings, bankruptcy records)
+* Turnarounds (documented case studies, business press)
+* Earnings calls (transcripts, analysis)
+* Consulting case studies (published, licensed, or commissioned)
+* Business-school cases (Harvard, Kellogg, INSEAD archives)
+* SMB failures (credit agency data, interviews, archival)
+* SMB successes (growth trajectories, published interviews)
+* Owner-submitted cases (with permission and verification)
+
+**Required Metadata for Every Case:**
+* symptoms (observable business indicators at time of diagnosis)
+* constraints (timeline, budget, leadership, market, regulatory)
+* evidence available at decision time (what was known, not known, or ambiguous)
+* actual root cause (verified retrospectively)
+* actual intervention (what was actually done)
+* actual outcome (measured result, verified independently)
+* outcome confidence level (how certain is the historical record)
+* source quality rating (1-5 star, based on documentation)
+* date of diagnosis
+* date of outcome measurement
+
+**STRICT RULES:**
+
+1. No case may enter the library without source attribution.
+2. No synthetic answer key may be marked as "verified" — only "expert opinion" or "researcher inference"
+3. No unverifiable internet anecdote may be treated as ground truth
+4. No benchmark case may be copied into the learning library
+5. No learning case may be copied into benchmark packs
+6. Every case requires provenance documentation
+7. Cases must be searchable by industry, business model, root-cause type, intervention type, outcome
+
+---
+
+### STAGE D2: BLIND VALIDATION LIBRARY
+
+**Purpose:**
+Prevent overfitting and false-positive learning by validating on hidden cases.
+
+**Requirements:**
+
+All validation cases must:
+* hide the outcome (what actually happened)
+* hide the answer key (expert diagnosis)
+* hide the intervention (what was actually done)
+* hide the result metrics (did it work or fail)
+
+**Validation Process:**
+
+1. OpsIQ generates diagnosis from evidence
+2. OpsIQ generates first action from evidence
+3. OpsIQ generates confidence scores
+4. Output is frozen (before revealing answer)
+5. Expert answer is revealed
+6. Score comparison performed (engine vs expert)
+7. Metrics recorded and analyzed
+
+**STRICT RULES:**
+
+1. No tuning allowed using blind validation cases
+2. No architecture change may use hidden answers for guidance
+3. No benchmark score may be claimed if blind validation contamination occurs
+4. Any contamination immediately invalidates benchmark status
+5. Blind validation cases must remain separate from development library
+6. No pattern learned from blind validation cases without Stage C complete
+7. Blind validation results must be independently verified
+
+---
+
+### STAGE D3: VERIFIED OUTCOME LEARNING
+
+**Purpose:**
+Learn only from real-world outcomes, not simulations or benchmarks.
+
+**Learning Workflow:**
+
+```
+OpsIQ generates diagnosis + action
+→ Owner chooses to implement (or not)
+→ Action is taken in real business
+→ Outcome observed over time
+→ Outcome verified independently
+→ Owner approves learning from this case
+→ Learning candidate enters corpus
+→ Learning acceptance review
+→ Pattern extracted (or rejected)
+```
+
+**STRICT RULES:**
+
+1. No recommendation automatically becomes training data
+2. No learning without verified outcome
+3. No learning from assumptions (must be actual outcome)
+4. No learning from simulated success
+5. No learning from benchmark performance
+6. Only verified real outcomes may enter the learning corpus
+7. Owner must approve before case becomes training data
+8. Learning approval gate is mandatory, not optional
+9. If outcome contradicts diagnosis, case is flagged for analysis, not learning
+10. Failures are as valuable as successes — both must be logged
+
+---
+
+### STAGE D4: CONSULTING MEMORY AND RETRIEVAL
+
+**Purpose:**
+Retrieve relevant historical cases before diagnosis to inform reasoning.
+
+**Required Capabilities:**
+
+1. Similar case retrieval — find cases with matching symptoms
+2. Similar failure retrieval — find cases where same root cause occurred
+3. Similar turnaround retrieval — find cases where similar action succeeded
+4. Industry analogs — find cases in same or analogous industry
+5. Constraint analogs — find cases with similar constraints (timeline, budget, leadership)
+6. Action success rates — what percentage of similar interventions succeeded
+7. Action failure rates — what percentage of similar interventions failed
+8. Outcome timing — how long did similar turnarounds take
+
+**Retrieval Process:**
+
+1. OpsIQ identifies case characteristics (industry, business model, root-cause type, constraint profile)
+2. Retrieval engine finds 3-5 most similar cases
+3. Historical cases shown to owner as "similar situations and what happened"
+4. Retrieved cases inform reasoning but do not determine diagnosis
+
+**STRICT RULES:**
+
+1. Retrieved cases are evidence input, not truth
+2. Retrieved cases are NOT authority
+3. Historical similarity cannot override current evidence
+4. Evidence always outranks retrieval
+5. Retrieval confidence must be bounded
+6. Owner must understand why cases were retrieved
+7. Failure to retrieve similar cases does not invalidate diagnosis
+8. Retrieval results must cite source and confidence level
+
+---
+
+### STAGE D5: REAL OWNER VALIDATION
+
+**Purpose:**
+Validate actual usefulness on real businesses owned or operated by the user.
+
+**Required Validation Domains:**
+
+1. Tumbledry (primary owner business)
+2. Personal finance (household optimization)
+3. Maritime operations (if applicable)
+4. Future ventures (new business launches)
+5. Additional owner businesses (portfolio companies)
+
+**Measurement Protocol:**
+
+```
+OpsIQ generates diagnosis + recommendation for owner's real case
+→ Owner implements (or doesn't)
+→ Outcome is measured over agreed-upon time period
+→ Before/after metrics are captured
+→ Owner verifies outcome independently
+→ Score recorded (did recommendation help?)
+→ Learning candidate reviewed (should this be added to corpus?)
+```
+
+**STRICT RULES:**
+
+1. No recommendation counted as successful until outcome measured
+2. No self-reported success accepted without evidence
+3. No claimed improvement without before/after metrics
+4. No anecdotal success counted toward readiness
+5. Every real owner case must have documented outcome
+6. Owner approval required for every measurement
+7. Failures are more valuable than successes — analyze every failure
+8. Recommendations that fail must be understood (why failed?)
+9. Results must be independently verifiable (not just owner opinion)
+10. Real owner validation is mandatory before consultant-grade claim
+
+---
+
+⸻
+
+17F. UNIVERSAL HOSTILE EXECUTION RULES
+
+These 15 rules apply globally to every execution phase, every stage, every iteration, and every closeout.
+
+**Rule 1: Nothing is complete until measured.**
+- Expected improvement = zero improvement
+- Projected accuracy = zero accuracy
+- Claimed performance = zero performance until benchmarked
+- Benchmark improvement = invalid until independently verified
+- Only measured results count
+
+**Rule 2: Every stage requires implementation proof, test proof, benchmark proof, audit proof, closeout proof.**
+- Implementation: Code must exist and be in repository
+- Test: Unit tests, regression tests, adversarial tests must pass
+- Benchmark: Cases executed, scores recorded, metrics calculated
+- Audit: Hostile audit performed, contamination checked, integrity verified
+- Closeout: Claims matched to file evidence, not speculative
+
+**Rule 3: Every closeout must contain evidence, metrics, failures, limitations, unresolved risks.**
+- Evidence: File paths to code, tests, benchmarks, data
+- Metrics: Actual numbers, not ranges or projections
+- Failures: Cases that didn't work, why they failed
+- Limitations: What the implementation doesn't do
+- Unresolved Risks: What could still go wrong
+
+**Rule 4: Any benchmark contamination triggers immediate hard stop.**
+- Benchmark contamination = using answer keys during implementation
+- Using hidden outcomes during development
+- Copying benchmark cases into learning library
+- Leaking case IDs to engine training
+- Using benchmark scores for tuning
+- Status: BLOCKED_WITH_EVIDENCE (not COMPLETE)
+
+**Rule 5: Any answer-key leakage triggers immediate hard stop.**
+- Leakage = engine seeing correct answer during case execution
+- Leakage = prompt containing answer key fragments
+- Leakage = output training using ground truth
+- Leakage = learned patterns from answer keys
+- Status: BLOCKED_WITH_EVIDENCE (not COMPLETE)
+
+**Rule 6: Any hallucinated metric triggers immediate hard stop.**
+- Hallucinated metric = claimed improvement not in benchmark data
+- Hallucinated metric = expected vs actual confusion
+- Hallucinated metric = statistically invalid comparison
+- Hallucinated metric = single case extrapolated to population
+- Status: BLOCKED_WITH_EVIDENCE (not COMPLETE)
+
+**Rule 7: Any unsupported claim invalidates the closeout.**
+- Unsupported claim = statement not traceable to repository file
+- Unsupported claim = inference without data
+- Unsupported claim = consultant-grade before Round 3 validates
+- Unsupported claim = accuracy claim without benchmark
+- Unsupported claim = "expected to improve" as if already improved
+- Closeout status: INVALID
+
+**Rule 8: Claude must not skip stages, merge stages, compress stages, mark partial work complete, bypass audits, bypass benchmarks, or bypass manual review.**
+- Every stage is required
+- Every gate is required
+- Every audit is required
+- Partial work is not complete
+- Compression is not allowed
+- Skipping is not allowed
+
+**Rule 9: After every completed step, perform: hostile audit, regression audit, contamination audit, benchmark integrity audit, roadmap integrity audit.**
+- Hostile audit: Can this be gamed? Cheated? Circumvented?
+- Regression audit: Did we break anything else?
+- Contamination audit: Did benchmark/learning/validation isolation hold?
+- Benchmark integrity audit: Are cases, outputs, scores, metrics uncorrupted?
+- Roadmap integrity audit: Is roadmap state accurate in CURRENT_WORKFLOW_STATE.md?
+
+**Rule 10: If any audit fails, status = BLOCKED_WITH_EVIDENCE (not COMPLETE).**
+- Failed audit = issues identified
+- Issues identified = must be fixed
+- Fixed = must be re-audited
+- Re-audit fails = BLOCKED again
+- Only after all audits pass = status can change
+
+**Rule 11: If two consecutive major architecture stages fail to materially improve root-cause accuracy and first-action accuracy, then generate ARCHITECTURE_REDESIGN_REPORT and halt roadmap progression.**
+- Stage A targets 40-60% accuracy; if Stage A achieves <35%, HALT
+- Stage B targets 60-75% accuracy; if Stage A+B achieves <50%, HALT
+- Material improvement = improvement ≥20 percentage points
+- Non-material improvement = halt progression
+- Halt status: BLOCKED_WITH_EVIDENCE
+
+**Rule 12: Every benchmark artifact modification requires re-audit before proceeding.**
+- Any change to Round 1 artifacts = HALT (immutable)
+- Any change to Round 2 artifacts = HALT (locked)
+- Any change to Round 3 artifacts = re-audit required
+- Any case addition = full quality gate required
+- Re-audit failure = BLOCKED_WITH_EVIDENCE
+
+**Rule 13: Every learning case requires provenance, source attribution, outcome verification, and owner approval.**
+- No case without source = rejected
+- No case without outcome verification = rejected
+- No case without owner approval = rejected
+- Provenance = traceable to public/licensed/permitted source
+- Verification = independent confirmation of outcome
+- Approval = owner signed off in writing (documented in code comment)
+
+**Rule 14: Consultant-grade claim is prohibited until: Stage C complete, Round 3 benchmarks pass, real owner validation shows ≥80% practical accuracy, manual review sign-off complete.**
+- Stage C must be implemented and benchmarked
+- Round 3 must be fresh cases (not Round 2)
+- Round 3 accuracy must be ≥80% on measured primary metrics
+- Real owner validation must show ≥80% practical utility
+- Manual review of all Round 3 failures required
+- Only then: consultant-grade claim allowed
+
+**Rule 15: If any stage produces no primary metric improvement over two consecutive iterations, produce stage redesign report and halt progression.**
+- Iteration 1 produces no improvement = continue to iteration 2
+- Iteration 2 produces no improvement = HALT
+- Halt action: Produce redesign report
+- Halt status: BLOCKED_WITH_EVIDENCE
+- Redesign report must explain: why no improvement, what is root cause, what architecture change is needed
+
+---
+
+⸻
+
+17G. FAST_TRACK_OWNER_MODE_PROGRAM
+
+**Purpose:**
+Accelerate learning while preserving benchmark integrity and preventing contamination.
+
+**Allowed Parallel Workstreams:**
+
+1. **Stage A Implementation** (code + tests + benchmarking)
+2. **Case Library Construction** (D1: source cases, verify outcomes, create metadata)
+3. **Retrieval Architecture Design** (D4: design similar-case retrieval, build index)
+4. **Outcome Learning Design** (D3: design learning workflow, define corpus)
+5. **Benchmark Expansion** (Round 3: design new cases, create answer keys, peer review)
+
+**Workstream Isolation Rules:**
+
+1. Stage A implementation is isolated from case library construction
+2. Case library does NOT feed Stage A during implementation
+3. Retrieval design does NOT require Stage A implementation
+4. Outcome learning design does NOT require Stage A implementation
+5. Round 3 case creation is isolated from Stage A benchmarking
+
+**Not Allowed:**
+
+- Parallel benchmark execution and benchmark tuning (must be sequential)
+- Benchmark cases used during Stage A design
+- Learning corpus used during Stage A implementation
+- Blind validation corpus used during any tuning
+- Round 1 or Round 2 artifacts modified
+- Answer-key leakage during any workstream
+
+**Checkpoint Schedule:**
+
+- Week 1-2: Stage A design complete, Round 3 case design complete
+- Week 3-4: Case library sourcing 100 cases, retrieval design complete
+- Week 5-6: Stage A implementation complete, Round 3 cases complete (50), first 50 D1 cases sourced
+- Week 7-8: Stage A benchmarking on Round 2 subset (20 cases), case library expansion (200 cases)
+- Week 9-10: Outcome learning design complete, D1 cases verified (100+)
+- Week 11: Stage A results analyzed, failures understood, next stage planned
+
+**Fast-Track Constraints:**
+
+1. Implementation blocked until specification approved
+2. All checkpoints require hostile audit before proceeding
+3. All inter-workstream dependencies must be explicitly documented
+4. Contamination check required at each checkpoint
+5. If contamination detected, full isolation audit required
+
+---
 
 
-Stop immediately if:
 
 hard_stop:
   immutable_artifacts_modified: true
