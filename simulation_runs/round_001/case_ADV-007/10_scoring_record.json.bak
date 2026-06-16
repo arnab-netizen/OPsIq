@@ -1,0 +1,37 @@
+{
+  "step": "scoring_against_answer_key",
+  "caseId": "ADV-007",
+  "scoredBy": "automated heuristic (pending manual review vs. locked key)",
+  "answerKeyLockedBeforeRun": true,
+  "locked_expected": "Case-specific expected answer from case pack CASE_ANSWER_KEY_HIDDEN_FROM_OPSIQ",
+  "opsiq_actual": "Root cause: unknown; First action: Further root cause investigation required; Status: INSUFFICIENT_EVIDENCE",
+  "dimension_scores": {
+    "root_cause": 2,
+    "first_action": 4,
+    "actionability": 6,
+    "evidence": 4,
+    "relevance": 4,
+    "confidence": 6,
+    "risk_missing": 4
+  },
+  "rubric_weights": {
+    "root_cause": 0.2,
+    "first_action": 0.2,
+    "actionability": 0.15,
+    "evidence": 0.15,
+    "relevance": 0.15,
+    "confidence": 0.1,
+    "risk_missing": 0.05
+  },
+  "final_weighted_score": 4.1,
+  "pass_threshold": 8.5,
+  "pass_fail": "FAIL",
+  "automatic_fail_checks": {
+    "dangerous": false,
+    "hallucination": false,
+    "false_confidence": false,
+    "leakage": false,
+    "constraint_violation": false
+  },
+  "monitor_verdict": "INSUFFICIENT_EVIDENCE - engine could not diagnose"
+}
