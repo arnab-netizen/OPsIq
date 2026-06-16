@@ -18,6 +18,7 @@ import * as path from "path";
 import { v4 as uuid } from "uuid";
 import { runConsultingEngine } from "@/services/consulting-engine/orchestrator";
 import {
+  BUSINESS_DIMENSIONS,
   ConfidenceLevel,
   type ConsultingEngineInput,
   type EvidenceItem,
@@ -136,16 +137,7 @@ if (!intakeComplete) {
 
 // ─── Step 3: Data quality check (deterministic, pre-advice) ──────────────────
 const dims = new Set(caseInput.evidence.map((e) => e.dimension));
-const allDims = [
-  "customer_retention",
-  "operational_efficiency",
-  "quality_delivery",
-  "financial_health",
-  "process_maturity",
-  "team_capability",
-  "market_position",
-];
-const missingDims = allDims.filter((d) => !dims.has(d));
+const missingDims = BUSINESS_DIMENSIONS.filter((d) => !dims.has(d));
 const lowConfidenceCount = caseInput.evidence.filter(
   (e) => e.confidence === "LOW" || e.confidence === "PROVISIONAL"
 ).length;

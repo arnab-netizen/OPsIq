@@ -40,19 +40,23 @@ export enum ConfidenceLevel {
   PROVISIONAL = "PROVISIONAL",
 }
 
+export const BUSINESS_DIMENSIONS = [
+  "customer_retention",
+  "operational_efficiency",
+  "quality_delivery",
+  "financial_health",
+  "process_maturity",
+  "team_capability",
+  "market_position",
+] as const;
+
+export type BusinessDimension = (typeof BUSINESS_DIMENSIONS)[number];
+
 export const SupportingDataSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]));
 
 export const EvidenceItemSchema = z.object({
   id: z.string().uuid(),
-  dimension: z.enum([
-    "customer_retention",
-    "operational_efficiency",
-    "quality_delivery",
-    "financial_health",
-    "process_maturity",
-    "team_capability",
-    "market_position",
-  ]),
+  dimension: z.enum(BUSINESS_DIMENSIONS),
   finding: z.string().min(1),
   confidence: z.nativeEnum(ConfidenceLevel),
   source: z.string().min(1),
