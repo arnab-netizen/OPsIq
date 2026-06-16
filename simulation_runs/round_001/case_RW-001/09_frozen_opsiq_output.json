@@ -1,0 +1,306 @@
+{
+  "frozenAt": "2026-06-16T03:58:38.392Z",
+  "caseId": "RW-001",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency",
+    "1 constraint(s) identified that may block execution"
+  ],
+  "decisionMemo": {
+    "id": "227b6d1d-ab37-4785-8975-b8ca1c42ece2",
+    "engagementId": "2246e7da-b951-47ad-bbc3-96f7fd6454cc",
+    "timestamp": "2026-06-16T03:58:38.383Z",
+    "businessProblem": "Domino's Pizza is a national QSR franchise facing a credibility and taste perception crisis. The company ranks last among the big three pizza chains. Sales growth has stalled. The CMO needs a strategy to restore brand credibility and drive traffic growth within 6-12 months. What is the root cause of the brand erosion? What is the priority action? What metrics would you track to validate progress?",
+    "rootCauseDiagnosis": {
+      "id": "d12f9b6d-7231-43a3-aa14-a10b7258b5aa",
+      "type": "quality_control_failure",
+      "description": "Absence of quality control process or quality assurance checkpoints",
+      "mechanismDescription": "Without QA checkpoints, defects reach customers. Each complaint damages reputation and reduces repeat business.",
+      "evidenceIds": [
+        "9a55d8e4-373c-4f0a-bd66-ff8f3149ca7e"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "Quality standard may be poorly communicated to team",
+        "Team may lack skills to meet quality standard"
+      ],
+      "missingEvidenceFor": [
+        "What specifically is wrong with quality (consistency, defect rate, etc)",
+        "Team awareness of quality standard",
+        "Root cause of quality issues (skills, materials, process)"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [
+      {
+        "id": "25bcd258-2bdf-4e23-a2cd-207a51764913",
+        "type": "SKILL",
+        "description": "Quality control processes not documented; team quality assurance capability limited",
+        "severity": "MEDIUM",
+        "blocksActions": [
+          "scale_quality",
+          "automated_quality"
+        ],
+        "releasableVia": [
+          "training_program",
+          "process_documentation"
+        ]
+      }
+    ],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "9cf54e32-9575-4ee7-b1d1-1e05183c20d7",
+          "title": "Implement complaint tracking and customer outreach",
+          "class": "CONTAINMENT",
+          "objective": "Capture complaint data to identify patterns and immediately contact affected customers",
+          "rationale": "Shows customers concerns are taken seriously; generates data for root cause analysis",
+          "whyThisNow": "Immediate action to rebuild trust and prevent repeat customer loss",
+          "ownerRole": "operations_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Create complaint log template",
+              "description": "Record what went wrong, customer name, order details, resolution offered",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 1,
+              "successCriteria": "Template reviewed and approved by team"
+            },
+            {
+              "sequence": 2,
+              "title": "Implement follow-up protocol",
+              "description": "All complaints receive same-day acknowledgment and manager review",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "Complaints reviewed daily, customers contacted within 24 hours"
+            },
+            {
+              "sequence": 3,
+              "title": "Analyze complaint patterns monthly",
+              "description": "Group complaints by cause, identify most common issue, propose countermeasure",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "Monthly pattern report generated, top 3 issues identified"
+            }
+          ],
+          "estimatedCostBand": "MINIMAL",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "All complaints logged and analyzed",
+            "Customer follow-up response time <24 hours",
+            "Top complaint sources identified"
+          ],
+          "failureRisks": [
+            "Complaint tracking abandoned after initial month",
+            "Follow-up feels insincere without real resolution"
+          ],
+          "fallbackPlan": "Use complaints to justify investment in full QA program or third-party quality auditing",
+          "evidenceBasis": [
+            "9a55d8e4-373c-4f0a-bd66-ff8f3149ca7e"
+          ],
+          "estimatedTotalDays": 5,
+          "priorityScore": 0
+        },
+        "priorityScore": 65,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 5 days. Team capacity: HIGH. Cost: MINIMAL"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 9,
+            "rationale": "Failure risks: 2. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 4,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.5,
+            "rationale": "Cost band: MINIMAL vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      },
+      {
+        "intervention": {
+          "id": "adb57aea-aeae-4284-b7e3-fcef62934937",
+          "title": "Implement quality checkpoints before customer delivery",
+          "class": "STABILIZATION",
+          "objective": "Establish QA checkpoints to prevent defect shipment and catch issues early",
+          "rationale": "Reduces complaint rate by catching issues before customer, improves team quality awareness",
+          "whyThisNow": "Foundational quality practice that can begin immediately without capital",
+          "ownerRole": "operations_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Define quality standard and checklist",
+              "description": "Based on complaint patterns, define what 'good quality' means and create inspection checklist",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "Checklist covers 80% of historical complaint causes"
+            },
+            {
+              "sequence": 2,
+              "title": "Assign quality checkpoint responsibility",
+              "description": "Designate team member or create rotation for pre-shipment quality check",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 1,
+              "successCriteria": "Team trained on checklist, ownership clear"
+            },
+            {
+              "sequence": 3,
+              "title": "Track defects caught vs. released",
+              "description": "For 4 weeks, log defects caught at checkpoint vs shipped (escaped) defects",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 28,
+              "successCriteria": ">85% of defects caught at checkpoint, escaped defect rate <5%"
+            }
+          ],
+          "estimatedCostBand": "MINIMAL",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Quality checklist implemented",
+            "Defect detection rate >85%",
+            "Complaint rate drops by 30%"
+          ],
+          "failureRisks": [
+            "Checklist too complex, team skips steps",
+            "QA checker lacks authority to stop shipment",
+            "No time allocated for quality check"
+          ],
+          "fallbackPlan": "Simplify checklist to 3 critical items only, assign most experienced team member as QA owner",
+          "evidenceBasis": [
+            "9a55d8e4-373c-4f0a-bd66-ff8f3149ca7e"
+          ],
+          "estimatedTotalDays": 31,
+          "priorityScore": 0
+        },
+        "priorityScore": 56,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 6,
+            "rationale": "Duration: 31 days. Team capacity: HIGH. Cost: MINIMAL"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 7.5,
+            "rationale": "Failure risks: 3. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.5,
+            "rationale": "Cost band: MINIMAL vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Optimal balance of impact and feasibility"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "31f42c1d-04c5-4125-ad79-42dd7a83a0ad",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "9cf54e32-9575-4ee7-b1d1-1e05183c20d7",
+          "adb57aea-aeae-4284-b7e3-fcef62934937"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "f3953919-411d-4160-9b72-0a4f452b8b21",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "9cf54e32-9575-4ee7-b1d1-1e05183c20d7",
+          "adb57aea-aeae-4284-b7e3-fcef62934937"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      },
+      {
+        "id": "ca6d4b5f-1c82-4cf6-8ffb-90a1fc86dc41",
+        "name": "Defensive Hold (Minimal Risk)",
+        "description": "Execute containment interventions only to stabilize immediate crisis",
+        "assumptions": [
+          "Longer-term structural fixes deferred 6+ months",
+          "Focus on preserving cash and customer base",
+          "External investment or M&A may be needed for growth"
+        ],
+        "interventionSubset": [
+          "9cf54e32-9575-4ee7-b1d1-1e05183c20d7"
+        ],
+        "expectedOutcome": "Stabilize revenue decline, buy time for external support",
+        "risks": [
+          "Does not address root causes; temporary relief only",
+          "Competitors gain market share during hold period",
+          "Team morale declines with no visible improvement"
+        ],
+        "likelihood": "MODERATE"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "9cf54e32-9575-4ee7-b1d1-1e05183c20d7",
+      "totalEstimatedDays": 5,
+      "criticalPathInterventions": [
+        "9cf54e32-9575-4ee7-b1d1-1e05183c20d7"
+      ],
+      "contingencyRequired": true
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency",
+      "1 constraint(s) must be released before full execution: Quality control processes not documented; team quality assurance capability limited",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

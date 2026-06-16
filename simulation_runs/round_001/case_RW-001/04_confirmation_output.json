@@ -1,0 +1,26 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Customer complaints consistently cite that pizza taste and quality are inferior to competitors",
+    "Ranked last (third) of three major pizza chains on customer taste perception",
+    "Same-store sales flat to slightly negative for 18 consecutive months",
+    "Losing market share and traffic to Papa John's and Pizza Hut",
+    "High national brand awareness but weak quality perception",
+    "Delivery-dependent customer base defecting to competitors"
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Controlled taste-test results (perception vs. actual taste)",
+    "Franchisee readiness for reformulation",
+    "Competitor response plans",
+    "Customer-segment-level satisfaction"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Customer complaints consistently cite that pizza taste and quality are inferior to competitors",
+    "Ranked last (third) of three major pizza chains on customer taste perception",
+    "Same-store sales flat to slightly negative for 18 consecutive months",
+    "Losing market share and traffic to Papa John's and Pizza Hut",
+    "High national brand awareness but weak quality perception",
+    "Delivery-dependent customer base defecting to competitors"
+  ]
+}
