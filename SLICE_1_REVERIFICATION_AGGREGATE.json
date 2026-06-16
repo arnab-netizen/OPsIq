@@ -1,0 +1,39 @@
+{
+  "cases_reviewed": 12,
+  "valid_cases": 12,
+  "invalid_cases": 0,
+  "average_before": 5.6,
+  "average_after": 5.6,
+  "median_before": 5.75,
+  "median_after": 5.75,
+  "score_delta": 0.0,
+  "improved_cases": [
+    "RW-006"
+  ],
+  "unchanged_cases": [
+    "RW-001",
+    "RW-003",
+    "RW-005",
+    "RW-009",
+    "RW-010",
+    "RW-011",
+    "RW-012",
+    "RW-013",
+    "RW-014",
+    "ADV-004",
+    "ADV-009"
+  ],
+  "regressed_cases": [],
+  "diagnosis_gap_before": 2,
+  "diagnosis_gap_after": 2,
+  "false_positive_before": 0,
+  "false_positive_after": 0,
+  "dangerous_before": 0,
+  "dangerous_after": 0,
+  "hallucination_before": 0,
+  "hallucination_after": 0,
+  "leakage_events": 0,
+  "adv_004_status": "NO_CHANGE",
+  "adv_009_status": "NO_CHANGE",
+  "final_verdict": "SLICE_1_NO_EFFECT"
+}
