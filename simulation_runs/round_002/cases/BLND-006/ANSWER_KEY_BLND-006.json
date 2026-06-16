@@ -6,8 +6,31 @@
   "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
   "root_cause_description": "The company incorrectly forecasted the TAM and sustainable growth rate in the fashion subscription market. The company has grown rapidly (achieving 15-20% monthly growth) in a market with ~15% annual growth, which means the company has been gaining market share. However, as market consolidation occurs (Rent the Runway raising $70M Series C, Depop/Poshmark entering), the company's acquisition growth is decelerating toward market growth rate (~15% annual = 1.2% MoM equivalent, or the ~15% MoM the company is now seeing is plateauing). The rising churn (4% → 5%) is consistent with customers discovering better-funded competitors or market saturation in the initial target segment. The root cause is not operational (operations are efficient), not customer satisfaction (NPS 48, repeat rate 72%), but market-structural: the company grew faster than the market, and now growth is reverting to market rate (or below, as customers switch to better-funded competitors). The company's unit economics CAC $45, LTV $2,800 are reasonable for the market, but the assumption that 25% MoM growth was sustainable was incorrect.",
   "confidence_in_diagnosis": "HIGH",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Customer-acquisition growth decelerating 25% -> 15% MoM",
+      "Churn rising 4% -> 5% MoM (~46% annualized) while marketing spend rose 40% over 6 months",
+      "CAC/LTV under pressure: $45 CAC, $2,800 LTV, 62-month payback at risk of extending to ~83 months if CAC rises to $60"
+    ],
+    "contributing_factors": [
+      "Better-funded competitors (Rent the Runway $70M Series C, growing 30% YoY; Depop/Poshmark adding rental)",
+      "$5B TAM growing only ~15% annually while the company grew far faster, implying share gains now reverting",
+      "No detailed customer-segmentation/cohort data to size which segments remain profitably acquirable"
+    ],
+    "true_root_cause": "A demand-forecasting mismatch: the company planned and spent against an assumption that ~25% MoM acquisition was sustainable, but in a ~15%-annual-growth market with intensifying competition, acquisition is reverting toward (or below) market rate while satisfaction stays intact (NPS 48, repeat 72%) -- the growth plan was forecast against demand that does not exist at that level, not an operational or satisfaction failure."
+  },
   "first_priority_action": "Conduct detailed customer cohort analysis to understand LTV and churn by acquisition cohort, customer segment (by initial channel, spending pattern, demographics), and tenure. Specifically: (1) Which customer cohorts have LTV >$3,500 and <3% annual churn? (2) Which segments are acquiring at CAC <$35? (3) For 2+ year tenure customers (acquired in Year 1-2 of company operations), what is the actual observed lifetime value? (4) Segment analysis: are high-LTV customers concentrated in specific demographics or behaviors? Results will inform whether the company should: (A) Focus on high-LTV segments (supporting Premium Pivot option), (B) Optimize across all segments to improve payback (supporting Optimization option), or (C) Accept lower unit economics at higher volume and pursue Aggressive Growth. Without this analysis, all three strategic options are guesses.",
   "action_description": "This action is first priority because all three strategic options depend on understanding which customer segments are truly valuable. If analysis shows high-LTV concentrated in premium segment, Premium Pivot makes sense. If analysis shows LTV is consistent across segments but churn is cohort-dependent, Optimization makes sense. If analysis shows newer cohorts have higher CAC but comparable LTV to older cohorts, the CAC increase may be sustainable and Aggressive Growth may work. The 2-week diagnostic is low-risk and provides clarity for the 90-day Series C narrative decision.",
+  "accepted_alternative_actions": [
+    "Run the cohort analysis in parallel with a capped retention/optimization pilot (lower marketing spend, targeted churn-reduction on the highest-value segments) to begin improving payback while the data lands, provided the full strategic commitment (Aggressive Growth vs Optimization vs Premium Pivot) is gated on the cohort findings -- acceptable because it advances the most-likely-correct lever (unit economics/retention) without locking in an irreversible strategy.",
+    "Commission a churn-reason / exit-interview study alongside the cohort analysis to separate affordability-driven churn from competitive switching and from satisfaction issues, given stable NPS (48) and repeat rate (72%) -- acceptable because it directly resolves the unexplained churn driver that determines which of the three options fits."
+  ],
+  "bad_actions": [
+    "Choosing Option A (Aggressive Growth: +50% marketing spend, push to 30% MoM acquisition) now: wrong for THIS case because acquisition is already decelerating in a ~15%-annual-growth market and CAC is rising (40% more spend for 15% growth); scaling spend would extend payback toward ~83 months, accelerate burn, and bet on a 'winner-take-most' scenario the data does not support -- before any cohort analysis confirms there is profitable demand to capture.",
+    "Committing to Option C (Premium Pivot, +20-30% price, reposition upmarket) without segmentation data: wrong because there is no evidence yet that a high-LTV premium segment exists at sufficient size or willingness-to-pay; an unproven repositioning could alienate the existing base (NPS 48, repeat 72%) and is irreversible-by-brand if wrong.",
+    "Cutting marketing to the bone to force profitability immediately: wrong because it could surrender share to better-funded competitors during a 90-day window without first knowing which channels/segments are efficient (CAC <$35) versus wasteful (CAC >$60); blanket cuts destroy efficient acquisition along with inefficient.",
+    "Accepting the rising churn as an operational/quality problem and reworking logistics: wrong because operations are stable and efficient (logistics $12/rental, turnover 4.2x, 85% utilization) and satisfaction is intact (NPS 48, repeat 72%); the problem is acquisition demand/market structure, not operational breakdown."
+  ],
   "action_constraints_respected": [
     "Capital constraint: Diagnostic uses internal analytics team (no external spend), fits within cash runway; informs capital allocation decisions for Series C growth phase.",
     "Unit economics constraint: Diagnostic identifies which segments have sustainable unit economics, informing whether to scale those segments (supporting optimization) or pivot upmarket (supporting premium).",
@@ -42,6 +65,30 @@
     "Series C narrative clarity: By end of 2-week analysis, clear recommendation for which of three strategic options best fits the data: Aggressive Growth (if high-value segments underserved and TAM large), Optimization (if unit economics deteriorating and churn fixable), or Premium Pivot (if high-LTV premium segment under-addressed)."
   ],
   "expected_outcome": "If the diagnosis is correct and the cohort analysis is executed well: (1) Within 2 weeks, clear understanding of which customer segments have sustainable unit economics and which have deteriorating metrics. (2) Within 4 weeks, strategic decision made on which of the three options to pursue (Aggressive Growth, Optimization, Premium Pivot). (3) Within 90 days, execution of chosen strategy begins with Series C narrative clear and investor conversations informed. If the cohort analysis reveals data contradicting the diagnosis (e.g., no high-LTV segment exists despite Premium Pivot option, or unit economics are excellent in all segments despite Optimization focus), the company has learned that the root cause is different and must reassess.",
+  "automatic_fail_conditions": [
+    "Commits to a single strategic option (Aggressive Growth, Optimization, or Premium Pivot) with no customer cohort/segmentation analysis to validate it.",
+    "Recommends increasing marketing spend / pushing to 30% MoM acquisition while acquisition is decelerating, churn is rising, and CAC is climbing.",
+    "Diagnoses an operational or quality root cause despite stable operations (logistics $12, turnover 4.2x, 85% utilization) and intact satisfaction (NPS 48, repeat 72%).",
+    "Recommends a Premium Pivot (20-30% price increase, reposition) with no willingness-to-pay or high-LTV-segment evidence, risking alienation of the existing base.",
+    "Treats the 25%->15% MoM deceleration as a temporary blip requiring more spend rather than a market-rate-reversion / demand-forecast signal."
+  ],
+  "source_references": [
+    "Case input BLND-006: ownerIntake.availableData, ownerConstraints, evidence[financial_health, market_position, customer_retention, quality_delivery], and strategicOptions.",
+    "D2C subscription/rental benchmarks (CAC/LTV payback, monthly churn, and TAM-growth norms) used to frame the diagnostic, not to assert internal values."
+  ],
+  "blind_structure": {
+    "hidden_outcome": "REFERENCE ONLY, NOT FOR SCORING: The company ran a 2-week customer cohort analysis, found that a high-LTV segment (longer-tenure, higher-AOV buyers) retained materially better and acquired at lower CAC, and chose Option B (Optimization) with a selective lean toward that segment -- cutting low-efficiency marketing spend, focusing customer success on retention, and improving payback below 50 months. Churn stabilized back toward 4% and the company entered Series C conversations with an improved unit-economics narrative rather than a growth-at-all-costs story; aggressive growth (Option A) would have extended payback and deepened burn. This outcome is recorded solely for later validation and must NOT be used to score the engine's pre-decision reasoning.",
+    "pre_outcome_correct_decision": "Run a 2-week customer cohort/segmentation analysis (LTV, churn, CAC by cohort/channel/segment and a churn-reason read) before committing to any of the three options, and gate the strategic choice -- Aggressive Growth, Optimization, or Premium Pivot -- on which segments have sustainable, acquirable demand.",
+    "knowable_before_outcome": [
+      "Acquisition decelerating 25% -> 15% MoM while marketing spend rose 40% (rising CAC)",
+      "Churn rising 4% -> 5% MoM with satisfaction intact (NPS 48, repeat 72%), pointing away from a quality cause",
+      "Market growing only ~15% annually with better-funded competitors (Rent the Runway $70M Series C) reverting the company's growth toward market rate",
+      "CAC $45 / LTV $2,800 / 62-month payback at risk of extending to ~83 months if CAC rises to $60",
+      "No customer cohort/segmentation data exists to size which segments are profitably acquirable, and a 90-day Series C clock"
+    ],
+    "hindsight_trap": "Knowing that Optimization was chosen and worked could tempt a scorer to reward 'pick Option B now' and penalize a cohort-analysis-first or a well-reasoned alternative answer. The pre-outcome facts did not guarantee that Optimization was correct; committing to any option blind was not the sound move even though Optimization happened to work, and a rigorous pilot-/analysis-gated path is the right pre-outcome decision regardless of which option the hidden outcome names.",
+    "scoring_without_leaking_outcome": "Score only on whether the engine reasoned soundly from the pre-outcome facts: did it identify the demand-forecast/market-rate-reversion driver, refuse to commit an irreversible strategy without cohort/segmentation validation, respect the capital/time/team constraints, and select a defensible analysis-gated path? Do NOT award or deduct points based on whether the engine named the option (Optimization) that the hidden outcome shows succeeded."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose DEMAND_FORECASTING_MISMATCH or related forward-looking diagnosis?",

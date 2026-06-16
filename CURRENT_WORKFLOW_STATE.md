@@ -1,6 +1,6 @@
 # CURRENT_WORKFLOW_STATE.md
 
-**Updated:** 2026-06-16 20:10 UTC  
+**Updated:** 2026-06-16 20:40 UTC  
 **Execution Contract:** execution_consultant_engine_v2.md (primary authority)
 
 ---
@@ -10,32 +10,43 @@
 ```yaml
 current_phase: ROUND_2_CASE_PACK_REMEDIATION
 current_slice: Universal Benchmark Artifact Quality Gate
-last_completed_step: ROUND_2_HOSTILE_AUDIT_FAILED
-next_required_step: FIX_ROUND_2_CASE_PACK_DEFECTS_AND_HARDEN_UNIVERSAL_BENCHMARK_GATE
-blockers:
-  - ROUND_2_NOT_READY
-  - CASE_COUNT_INCOMPLETE
-  - DUPLICATE_GENERIC_ANSWER_KEYS
-  - UNIVERSAL_GATE_NOT_YET_PASSED
-benchmark_execution_authorized: false
+last_completed_step: ROUND_2_CASE_PACK_REMEDIATION_COMPLETE
+universal_benchmark_artifact_quality_gate: PASS   # BENCHMARK_ARTIFACTS_READY
+benchmark_artifact_gate_recorded: true
+next_required_step: ROUND_2_EXECUTION (per execution_consultant_engine_v2.md §14)
+blockers: []
+benchmark_execution_authorized: true   # artifact gate only; §14 staged process + §15 pass-gate still apply
 ```
 
-A prior hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack:
-- only 46/50 complete case pairs (RW-027..RW-030 empty),
-- 28 duplicate/generic answer keys (PD-013..020, SYN-013..020, ADV-013..020, BLND-007..010),
-- plus RW-026 used an invalid (non-enum) root-cause label.
+The original hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack. All
+defects have now been remediated and re-verified by the hostile re-audit harness
+(`simulation_runs/round_002/round2_artifact_audit.py`,
+report: `simulation_runs/round_002/ROUND_2_FINAL_HOSTILE_AUDIT.txt`):
 
-Remediation is IN PROGRESS. Round 2 execution remains PROHIBITED until the
-Universal Benchmark Artifact Quality Gate (execution_consultant_engine_v2.md §13A)
-returns `final_verdict: BENCHMARK_ARTIFACTS_READY` and this file records it.
+- 50/50 complete case pairs (RW-027..RW-030 created),
+- 0 duplicate / 0 generic answer keys (28 duplicates + RW-026 invalid label replaced
+  with case-specific content; 50/50 distinct first_actions, root-cause descriptions,
+  and scoring rubrics),
+- 0 leakage events (SYN sourceNote label-leak sanitized; "trap" removed from ADV inputs;
+  BLND hidden outcomes confined to answer keys),
+- all 10 public-dataset cases carry deterministic_scoring (formulas/expected_values/
+  tolerance/refuse-if-missing); all 10 adversarial cases carry trap_definition; all 5
+  blind cases carry blind_structure.hidden_outcome,
+- root-cause distribution diversified across 9 labels (max 24%).
+
+UNIVERSAL_BENCHMARK_ARTIFACT_QUALITY_GATE = PASS (final_verdict: BENCHMARK_ARTIFACTS_READY).
+
+Per execution_consultant_engine_v2.md §13A, the artifact gate is satisfied. Round 2
+EXECUTION may now proceed under the §14 staged owner-mode process; consultant-grade
+may be claimed only if the §15 pass-gate is met. No execution has been run yet.
 
 ---
 
 ## Current Phase
 
-**ROUND_2_CASE_PACK_REMEDIATION**
+**ROUND_2_CASE_PACK_REMEDIATION — COMPLETE ✓**
 
-- Status: IN_PROGRESS (fixing defects found by hostile audit)
+- Status: COMPLETE (all hostile-audit defects fixed; artifact gate PASS)
 - Previous Phase: SLICE_2A_IMPLEMENTATION (PASS ✓)
 - Branch: `claude/execution-consultant-engine-v2-kobwgj`
 - Baseline Commit (pre-remediation): f7952ec
@@ -44,10 +55,12 @@ returns `final_verdict: BENCHMARK_ARTIFACTS_READY` and this file records it.
 
 ## Current Slice
 
-**Universal Benchmark Artifact Quality Gate (execution_consultant_engine_v2.md §13A)**
+**Universal Benchmark Artifact Quality Gate (execution_consultant_engine_v2.md §13A) — PASS ✓**
 
-- Missing RW cases: being rebuilt (RW-027, RW-028, RW-029, RW-030)
-- Duplicate/generic answer keys: being replaced (PD/SYN/ADV/BLND + RW-026)
+- RW-027..RW-030: created (4 new real-world cases, distinct industries + labels)
+- 28 duplicate/generic answer keys: replaced with case-specific content
+- RW-026 invalid label: replaced (GO_TO_MARKET_MISALIGNMENT) + full schema
+- 7 pre-existing cases (PD-011/012, SYN-011/012, ADV-011/012, BLND-006): hardened
 - Execution contract: hardened with §13A Universal Benchmark Artifact Quality Gate
 - Round 1 immutable artifacts: untouched
 
@@ -55,7 +68,7 @@ returns `final_verdict: BENCHMARK_ARTIFACTS_READY` and this file records it.
 
 ## Last Completed Step
 
-**ROUND_2_HOSTILE_AUDIT — FAILED (defects confirmed; remediation initiated)**
+**ROUND_2_CASE_PACK_REMEDIATION — COMPLETE (hostile re-audit PASS)**
 
 **All 15 Steps Completed:**
 1. ✓ Define target failure mode: DIAGNOSIS_COVERAGE_GAP (43/50 cases, 86%)
