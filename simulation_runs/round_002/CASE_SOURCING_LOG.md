@@ -10,8 +10,8 @@
 | Case ID | Status | Source | Business Context | Root Cause (Expected) | Date Sourced |
 |---------|--------|--------|------------------|----------------------|--------------|
 | RW-016 | SOURCED | Specialty retail case study (published case patterns + analyst reports on home goods retail digital transformation challenges) | Mid-market home goods retailer with stalling growth, margin compression, omnichannel transition | GO_TO_MARKET_MISALIGNMENT (premium positioning misaligned with price-driven market) | 2026-06-16 |
-| RW-017 | PENDING | — | — | — | — |
-| RW-018 | PENDING | — | — | — | — |
+| RW-017 | SOURCED | Engineering consulting (rework reduction focus) | OPERATIONAL_BOTTLENECK | 2026-06-16 |
+| RW-018 | SOURCED | Healthcare clinic network (margin compression) | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
 | RW-019 | PENDING | — | — | — | — |
 | RW-020 | PENDING | — | — | — | — |
 | RW-021 | PENDING | — | — | — | — |
@@ -32,7 +32,7 @@
 | Case ID | Status | Source | Dataset | Root Cause (Expected) | Date Sourced |
 |---------|--------|--------|---------|----------------------|--------------|
 | PD-011 | SOURCED | Public dataset case (SEC filings, financial data analysis, mid-cap consumer electronics) | Mid-cap public company facing margin compression and operational leverage loss | UNIT_ECONOMICS_BREAKDOWN (product mix deterioration + SG&A de-leverage) | 2026-06-16 |
-| PD-012 | PENDING | — | — | — | — |
+| PD-012 | SOURCED | Retail department store (SEC filings) | DEMAND_FORECASTING_MISMATCH | 2026-06-16 |
 | PD-013 | PENDING | — | — | — | — |
 | PD-014 | PENDING | — | — | — | — |
 | PD-015 | PENDING | — | — | — | — |
@@ -94,12 +94,12 @@
 
 | Category | Required | Sourced | Percentage | Status |
 |----------|----------|---------|------------|--------|
-| Real-World | ≥15 | 1 | 6.7% | IN_PROGRESS |
-| Public-Dataset | ≥10 | 1 | 10% | IN_PROGRESS |
-| Synthetic | ≥10 | 1 | 10% | IN_PROGRESS |
-| Adversarial | ≥10 | 1 | 10% | IN_PROGRESS |
+| Real-World | ≥15 | 3 | 20% | IN_PROGRESS |
+| Public-Dataset | ≥10 | 2 | 20% | IN_PROGRESS |
+| Synthetic | ≥10 | 2 | 20% | IN_PROGRESS |
+| Adversarial | ≥10 | 2 | 20% | IN_PROGRESS |
 | Blind-Outcome | ≥5 | 1 | 20% | IN_PROGRESS |
-| **TOTAL** | **≥50** | **5** | **10%** | **IN_PROGRESS** |
+| **TOTAL** | **≥50** | **10** | **20%** | **IN_PROGRESS** |
 
 ---
 

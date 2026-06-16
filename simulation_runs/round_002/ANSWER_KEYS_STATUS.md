@@ -26,7 +26,7 @@
 | RW-029 | PENDING | — | — | — | — |
 | RW-030 | PENDING | — | — | — | — |
 
-**Summary (RW):** 1/15 created, 0/15 reviewed, 0/15 locked
+**Summary (RW):** 3/15 created, 0/15 reviewed, 0/15 locked
 
 ---
 
@@ -35,7 +35,7 @@
 | Case ID | Status | Created | Reviewed | Locked | Notes |
 |---------|--------|---------|----------|--------|-------|
 | PD-011 | CREATED | ✓ | — | — | Answer key created with detailed scoring criteria for margin recovery diagnosis |
-| PD-012 | PENDING | — | — | — | — |
+| PD-012 | CREATED | ✓ | — | — | Answer key with DEMAND_FORECASTING_MISMATCH diagnosis |
 | PD-013 | PENDING | — | — | — | — |
 | PD-014 | PENDING | — | — | — | — |
 | PD-015 | PENDING | — | — | — | — |
@@ -45,7 +45,7 @@
 | PD-019 | PENDING | — | — | — | — |
 | PD-020 | PENDING | — | — | — | — |
 
-**Summary (PD):** 1/10 created, 0/10 reviewed, 0/10 locked
+**Summary (PD):** 2/10 created, 0/10 reviewed, 0/10 locked
 
 ---
 
@@ -54,7 +54,7 @@
 | Case ID | Status | Created | Reviewed | Locked | Notes |
 |---------|--------|---------|----------|--------|-------|
 | SYN-011 | CREATED | ✓ | — | — | Answer key created with TRUST_QUALITY_CRISIS diagnosis and stability recovery roadmap |
-| SYN-012 | PENDING | — | — | — | — |
+| SYN-012 | CREATED | ✓ | — | — | Answer key with DEMAND_FORECASTING_MISMATCH diagnosis |
 | SYN-013 | PENDING | — | — | — | — |
 | SYN-014 | PENDING | — | — | — | — |
 | SYN-015 | PENDING | — | — | — | — |
@@ -64,7 +64,7 @@
 | SYN-019 | PENDING | — | — | — | — |
 | SYN-020 | PENDING | — | — | — | — |
 
-**Summary (SYN):** 1/10 created, 0/10 reviewed, 0/10 locked
+**Summary (SYN):** 2/10 created, 0/10 reviewed, 0/10 locked
 
 ---
 
@@ -73,7 +73,7 @@
 | Case ID | Status | Created | Reviewed | Locked | Notes |
 |---------|--------|---------|----------|--------|-------|
 | ADV-011 | CREATED | ✓ | — | — | Answer key created with INSUFFICIENT_EVIDENCE diagnosis; tests trap recognition |
-| ADV-012 | PENDING | — | — | — | — |
+| ADV-012 | CREATED | ✓ | — | — | Answer key with TRUST_QUALITY_CRISIS diagnosis |
 | ADV-013 | PENDING | — | — | — | — |
 | ADV-014 | PENDING | — | — | — | — |
 | ADV-015 | PENDING | — | — | — | — |
@@ -83,7 +83,7 @@
 | ADV-019 | PENDING | — | — | — | — |
 | ADV-020 | PENDING | — | — | — | — |
 
-**Summary (ADV):** 1/10 created, 0/10 reviewed, 0/10 locked
+**Summary (ADV):** 2/10 created, 0/10 reviewed, 0/10 locked
 
 ---
 
@@ -110,7 +110,7 @@
 | Synthetic | 10 | 1 | 0 | 0 | 10% |
 | Adversarial | 10 | 1 | 0 | 0 | 10% |
 | Blind-Outcome | 5 | 0 | 0 | 0 | 0% |
-| **TOTAL** | **50** | **5** | **0** | **0** | **10%** |
+| **TOTAL** | **50** | **10** | **0** | **0** | **20%** |
 
 ---
 
