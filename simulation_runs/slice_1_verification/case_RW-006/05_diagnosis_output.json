@@ -1,0 +1,16 @@
+{
+  "step": "diagnosis",
+  "rootCauseType": "unit_economics_breakdown",
+  "description": "Unit economics unsustainable below required scale",
+  "mechanism": "Acquisition cost, cost of goods sold, or delivery cost make individual unit unprofitable. Business cannot reach profitability without either scale, price increase, or cost reduction.",
+  "confidence": "MODERATE",
+  "rejectedHypotheses": [
+    "Scale may improve unit economics",
+    "Process improvements may reduce costs"
+  ],
+  "missingEvidence": [
+    "Detailed cost breakdown by unit",
+    "Customer lifetime value vs acquisition cost",
+    "Contribution margin by product line"
+  ]
+}

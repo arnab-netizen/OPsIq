@@ -1,0 +1,121 @@
+{
+  "caseId": "RW-005",
+  "caseType": "REAL_CASE_STUDY",
+  "industry": "Hardware / Consumer Electronics / Fitness Equipment",
+  "businessModel": "Direct-to-consumer hardware + subscription (bikes/treadmills + classes)",
+  "businessStage": "High-growth unicorn in crisis",
+  "sourceNote": "Evidence below is derived ONLY from CASE_INPUT_VISIBLE_TO_OPSIQ in simulation_case_pack_real_world_v1.md (RW-005). No answer-key content included.",
+  "ownerIntake": {
+    "businessType": "Direct-to-consumer fitness hardware manufacturer with subscription content",
+    "stage": "High-growth unicorn in crisis",
+    "ownerGoal": "Increase manufacturing capacity to meet surging demand; scale the business",
+    "ownerConstraints": [
+      "Supply chain globally disrupted by COVID-19",
+      "Demand far exceeds production capacity; months-long backlog",
+      "Capex decision being made at peak demand (risky timing)",
+      "Public company at all-time high stock price (can lead to overconfidence)",
+      "Customer retention post-lockdown unknown"
+    ],
+    "immediateConcern": "Production capacity is bottleneck; months of backlog; considering $300-400M investment in new U.S. manufacturing facility",
+    "availableData": [
+      "2020-2021 revenue: Growing rapidly due to pandemic demand surge",
+      "Gross margin: High for hardware (40-45%)",
+      "Stock price: At or near all-time high",
+      "Market value: $50B+ (peak valuation)",
+      "Cash on hand: Significant (public company, access to capital)",
+      "Demand: Far exceeds supply (backlog, waitlists)",
+      "Growth rate: 100%+ YoY during pandemic",
+      "Delivery times: Months-long backlog",
+      "Customer acquisition cost: Low (demand-driven, no need for heavy marketing)",
+      "Average order value: $1,500-2,500 per bike/treadmill + subscription"
+    ],
+    "unavailableData": [
+      "What demand will look like post-pandemic (is surge temporary or permanent?)",
+      "Customer retention once lockdowns end",
+      "Comparison to pre-pandemic home fitness market size",
+      "Whether high-end fitness boom will continue after gyms reopen",
+      "Cohort retention by acquisition timing"
+    ],
+    "timeHorizon": "Immediate (months-long backlog creates urgency)",
+    "riskAppetite": "HIGH"
+  },
+  "clientContext": {
+    "industry": "Hardware / Consumer Electronics / Fitness Equipment",
+    "size": "scale-up",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "Peloton is in the midst of a home fitness boom driven by pandemic lockdowns. Demand far exceeds production. The CEO is considering a $300-400M investment in a new U.S. manufacturing facility to increase capacity 3-5x. Should Peloton invest? What is the risk? What data should inform the decision?",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "2020-2021 revenue growing rapidly at 100%+ YoY; high gross margin (40-45%) for hardware; stock price at all-time high; market value $50B+; public company with significant cash access",
+      "confidence": "HIGH",
+      "source": "visible_financial_data",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_growth": "100%+ YoY during pandemic",
+        "gross_margin": "40-45%",
+        "market_value": "$50B+",
+        "cash_position": "significant"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Production capacity is severely constrained; months-long backlog; delivery times extend for months; customer acquisition cost is low due to demand-driven model",
+      "confidence": "HIGH",
+      "source": "visible_operations_data, visible_sales_data",
+      "isCritical": true,
+      "supportingData": {
+        "production_capacity": "limited, constrained",
+        "backlog": "months-long",
+        "delivery_times": "months-long",
+        "cac": "low (demand-driven, no need for heavy marketing)"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Customer retention post-lockdown is unknown; product still new; can't project long-term churn; demographic is high-income, home workers (likely during lockdown)",
+      "confidence": "LOW",
+      "source": "visible_customer_data",
+      "isCritical": true,
+      "supportingData": {
+        "demographic": "high-income, fitness-focused, home workers (during lockdown)",
+        "acquisition_rate": "accelerating (lockdowns driving fitness interest)",
+        "retention": "unknown (product still new, can't project long-term)"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Brand awareness surging and Peloton bikes are status symbol in pandemic; celebrities using Peloton; but base rate for home fitness market historically much smaller than current surge",
+      "confidence": "MEDIUM",
+      "source": "visible_marketing_data",
+      "isCritical": true,
+      "supportingData": {
+        "brand_awareness": "surging",
+        "social_proof": "celebrities using Peloton",
+        "market_position": "status symbol in pandemic",
+        "context": "lockdowns are temporary"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Capex requirement significant ($300M+) for new manufacturing facility; public company with high stock price and access to capital enables aggressive investment but creates overconfidence risk",
+      "confidence": "HIGH",
+      "source": "visible_financial_data",
+      "isCritical": true,
+      "supportingData": {
+        "capex_under_consideration": "$300-400M for new U.S. manufacturing facility",
+        "capacity_increase_target": "3-5x",
+        "stock_context": "at all-time high",
+        "capital_access": "significant (public company)"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH",
+    "timeHorizonDays": 90,
+    "staffCapacity": "HIGH",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

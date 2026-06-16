@@ -1,0 +1,95 @@
+{
+  "caseId": "RW-001",
+  "caseType": "REAL_CASE_STUDY",
+  "industry": "Food Service / Restaurants",
+  "businessModel": "QSR Franchise (national chain, franchisee-operated)",
+  "businessStage": "Mature company in decline",
+  "sourceNote": "Evidence below is derived ONLY from CASE_INPUT_VISIBLE_TO_OPSIQ in simulation_case_pack_real_world_v1.md (RW-001). No answer-key content included.",
+  "ownerIntake": {
+    "businessType": "National QSR pizza franchise (Domino's)",
+    "stage": "Mature, in decline (18 months flat/negative sales)",
+    "ownerGoal": "Restore brand credibility and drive traffic growth within 6-12 months",
+    "ownerConstraints": [
+      "Campaign budget modest for national brand ($2-5M initial)",
+      "Cannot unilaterally change ingredients without franchisee buy-in",
+      "Operational changes require retraining all store staff",
+      "Board expects measurable progress within 6-12 months"
+    ],
+    "immediateConcern": "Ranked last of big three on taste perception; losing traffic to Papa John's and Pizza Hut",
+    "availableData": [
+      "Customer taste perception rank (last of three)",
+      "Same-store sales trend (18 months flat/negative)",
+      "Customer complaint themes (taste/quality)",
+      "Brand awareness level (high)",
+      "Social media sentiment (mixed; negative on taste)"
+    ],
+    "unavailableData": [
+      "Controlled taste-test results (perception vs. actual taste)",
+      "Franchisee readiness for reformulation",
+      "Competitor response plans",
+      "Customer-segment-level satisfaction"
+    ],
+    "timeHorizon": "6-12 months",
+    "riskAppetite": "MEDIUM"
+  },
+  "clientContext": {
+    "industry": "restaurant",
+    "size": "enterprise",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "Domino's Pizza is a national QSR franchise facing a credibility and taste perception crisis. The company ranks last among the big three pizza chains. Sales growth has stalled. The CMO needs a strategy to restore brand credibility and drive traffic growth within 6-12 months. What is the root cause of the brand erosion? What is the priority action? What metrics would you track to validate progress?",
+  "evidence": [
+    {
+      "dimension": "quality_delivery",
+      "finding": "Customer complaints consistently cite that pizza taste and quality are inferior to competitors",
+      "confidence": "HIGH",
+      "source": "Voice-of-customer / customer complaints (owner-reported)",
+      "isCritical": true,
+      "supportingData": { "tasteRankAmongBigThree": 3 }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Ranked last (third) of three major pizza chains on customer taste perception",
+      "confidence": "HIGH",
+      "source": "Owner-reported competitive perception data",
+      "isCritical": true,
+      "supportingData": { "rank": 3, "totalMajorChains": 3 }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Same-store sales flat to slightly negative for 18 consecutive months",
+      "confidence": "HIGH",
+      "source": "Owner-reported sales trend",
+      "isCritical": true,
+      "supportingData": { "monthsFlatOrNegative": 18 }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Losing market share and traffic to Papa John's and Pizza Hut",
+      "confidence": "MEDIUM",
+      "source": "Owner-reported market share trend",
+      "isCritical": false
+    },
+    {
+      "dimension": "market_position",
+      "finding": "High national brand awareness but weak quality perception",
+      "confidence": "MEDIUM",
+      "source": "Owner-reported brand metrics",
+      "isCritical": false
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Delivery-dependent customer base defecting to competitors",
+      "confidence": "MEDIUM",
+      "source": "Owner-reported traffic trend",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 365,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}
