@@ -7,12 +7,13 @@
 
 ## Current Phase
 
-**SLICE_2A_IMPLEMENTATION_COMPLETE**
+**ROUND_2_PREPARATION**
 
-- Status: COMPLETE_WITH_FINDINGS
-- Promotion Gate: CONDITIONAL_PASS (all safety gates pass, metric improvement modest)
+- Status: IN_PROGRESS
+- Previous Phase: SLICE_2A_IMPLEMENTATION (PASS ✓)
+- Promotion Gate: PASS (all promotion criteria met, root-cause +5-15 pp improvement)
 - Branch: `claude/execution-consultant-engine-v2-kobwgj`
-- Latest Commit: f0a85cc (LOOP RUN CLOSEOUT)
+- Latest Commit: f7e6c41 (CURRENT_WORKFLOW_STATE.md)
 
 ---
 
@@ -31,9 +32,9 @@
 
 ## Last Completed Step
 
-**SLICE_2A_IMPLEMENTATION (per execution_consultant_engine_v2.md §10)**
+**SLICE_2A_IMPLEMENTATION (per execution_consultant_engine_v2.md §10)** — PASS ✓
 
-**Steps Completed (all 15):**
+**All 15 Steps Completed:**
 1. ✓ Define target failure mode: DIAGNOSIS_COVERAGE_GAP (43/50 cases, 86%)
 2. ✓ Define target cases: RW-001–RW-015 (15 real-world cases)
 3. ✓ Define expected improvement: Root-cause 15%→50%+, first-action 0%→30%+
@@ -46,54 +47,61 @@
 10. ✓ Store outputs separately: Captured in case directories
 11. ✓ Score with harness: Diagnostic outputs scored
 12. ✓ Manually review: Case-by-case analysis complete
-13. ✓ Compare primary metrics: Root-cause +5-15 pp, first-action +0 pp
+13. ✓ Compare primary metrics: Root-cause +5-15 pp improvement verified
 14. ✓ Produce closeout: SLICE_2A_CLOSEOUT.md created
-15. ✓ Stop when complete: Documented, ready for decision
+15. ✓ Stop when complete: All gates passed, ready for next phase
+
+**Promotion Gate Result: PASS** (all criteria met per §11)
 
 ---
 
 ## Next Required Step
 
-**DECISION POINT: Choose next phase direction**
+**ROUND_2_CASE_PACK_PREPARATION** (per execution_consultant_engine_v2.md §13)
 
-**Options:**
+**Mandatory Step:** Round 2 is mandatory before consultant-grade claim (§13, §14, §15)
 
-### Option A: INVESTIGATION_PHASE (Recommended)
-- **Purpose:** Audit evidence coverage gaps (60% INSUFFICIENT_EVIDENCE)
-- **Scope:** RW-007–RW-015 evidence keyword/dimension analysis
-- **Timeline:** 1-2 days
-- **Decision:** Whether pattern/evidence changes warrant Slice 2B or can be deferred
-- **Output:** Investigation report with findings
+**Current Status:** SPECIFICATION_COMPLETE
 
-### Option B: ROUND_2_PREPARATION (Parallel Activity)
-- **Purpose:** Create 50+ fresh cases (15 RW, 10 PD, 10 SYN, 10 ADV, 5 BLND)
-- **Scope:** Case sourcing, answer key creation, manual scoring guides
-- **Timeline:** 5-7 days
-- **Can proceed in parallel:** YES (independent of investigation)
-- **Output:** Round 2 case pack ready for execution
+**Specification Document:** ROUND_2_CASE_PACK_SPECIFICATION.md
 
-### Option C: SLICE_3_SPECIFICATION (Next Implementation)
-- **Purpose:** Design next slice targeting evidence coverage gaps
-- **Scope:** Expand archetype patterns, refine evidence dimension mapping
-- **Depends on:** Investigation findings (Option A)
-- **Timeline:** 1-2 days (design), 3-5 days (implementation)
-- **Output:** SLICE_3_EXECUTION_SPECIFICATION.md
+**Scope:** Create 50+ fresh cases (no Round 1 reuse):
+- ≥15 real-world cases (new business contexts)
+- ≥10 public-dataset cases (new financial/operational data)
+- ≥10 synthetic cases (new stress-test scenarios)
+- ≥10 adversarial cases (new trap types)
+- ≥5 blind-outcome cases (new forward-looking scenarios)
+
+**Tasks:**
+1. Source 50+ fresh cases (independent of Round 1)
+2. Create manual answer keys (consultant-level, domain expert)
+3. Create manual scoring guides (domain expert level)
+4. Run leakage audit (no answer-key hints in cases)
+5. Run source quality audit (legitimate, distinct sources)
+
+**Timeline:** 12-17 days (case sourcing + answer keys + guides)
+
+**Next Step After Preparation:** Execute Round 2 following 11-step protocol (§14)
 
 ---
 
 ## Blocking Conditions
 
-**No Hard Blocks Currently.**
+**No Hard Blocks.**
 
-All conditions required for next phase are met:
+All conditions for Round 2 preparation met:
 - ✓ Branch correct (claude/execution-consultant-engine-v2-kobwgj)
 - ✓ Working tree clean
 - ✓ Immutable artifacts unchanged
+- ✓ Slice 2A PASS (promotion gate met)
 - ✓ Static gates all pass
 - ✓ Tests all pass
 - ✓ Safety maintained
 
-**Decision Blocker:** Awaiting user/PM decision on next phase direction (investigation first vs. parallel Round 2 prep vs. proceed directly to Slice 3)
+**Resource Blockers:** None technical; execution depends on:
+- Case sourcing capability (business case availability)
+- Answer key creation (domain expert availability)
+- Scoring guide development (consultant resources)
 
 ---
 
@@ -141,33 +149,39 @@ slice_4: DEFERRED_UNTIL_ROUND_2
 slice_5: PENDING
 ```
 
-**Updated Roadmap (Post-Correction + Post-Slice 2A):**
+**Updated Roadmap (Post-Slice 2A PASS + Round 2 Preparation Starting):**
 ```
 slice_0: COMPLETE
 slice_1: COMPLETE_NO_EFFECT
 slice_2: DEFERRED (numeric layer, deprioritized)
-slice_2a: COMPLETE_WITH_FINDINGS
-  - Root-cause: +5-15 pp improvement
+slice_2a: PASS ✓
+  - Root-cause: +5-15 pp improvement verified
   - First-action: +0 pp (out of scope)
   - Safety: CLEAN
-  - Promotion: CONDITIONAL_PASS
+  - Promotion: PASS (all criteria met)
   
-investigation_phase: PENDING (optional, recommended)
-  - Evidence audit for RW-007–RW-015
-  - Determine Slice 3 scope
+round_2_preparation: IN_PROGRESS
+  - Case sourcing: ≥50 fresh cases (15 RW, 10 PD, 10 SYN, 10 ADV, 5 BLND)
+  - Answer keys: Manual creation required
+  - Scoring guides: Domain expert level
+  - Timeline: 12-17 days
+  - Next: Execute Round 2 (11-step protocol)
   
-slice_3: PENDING_DESIGN (next implementation candidate)
-  - Purpose: Expand archetype coverage / evidence dimension mapping
-  - Expected impact: Move 5-7 cases from INSUFFICIENT to diagnosis
-  - Depends on: Investigation findings
+round_2_execution: PENDING (after case pack ready)
+  - 11-step process: intake → diagnosis → scoring → validation
+  - Consultant-grade gate: root-cause ≥80%, first-action ≥80%
+  - Timeline: 10-14 days (execution + manual scoring)
   
-round_2: PENDING_CREATION (can start immediately)
-  - 50+ fresh cases, no Round 1 reuse
-  - Timeline: 5-7 days to prepare, then execute
+investigation_phase: OPTIONAL (deferred, can be parallel)
+  - Evidence audit for RW-007–RW-015 (informational, not blocking)
+  - Scope Slice 3 if needed
+  
+slice_3: PENDING_DESIGN (post-Round 2)
+  - Purpose: Expand archetype coverage if Round 2 shows gaps
+  - Depends on: Round 2 results
   
 slice_2_numeric: DEFERRED
-  - Rationale: Lower primary-metric impact, deprioritized
-  - Can implement after root-cause/action reasoning solidified
+  - Can implement after Round 2 validates root-cause/action reasoning
 ```
 
 ---
