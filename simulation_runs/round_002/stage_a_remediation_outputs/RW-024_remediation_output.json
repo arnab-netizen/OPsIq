@@ -32,25 +32,25 @@
     },
     {
       "id": "hyp-1",
-      "rootCause": "demand_forecasting_mismatch",
+      "rootCause": "brand_erosion",
       "confidence": 10,
       "supportingEvidenceCount": 0,
       "conflictingEvidenceCount": 0,
       "patternCount": 0,
       "patternStrengthSum": 0,
       "evidenceDiversity": 0,
-      "reasoning": "demand forecasting mismatch (no patterns): 0 supporting, 0 contradictions"
+      "reasoning": "brand erosion (no patterns): 0 supporting, 0 contradictions"
     },
     {
       "id": "hyp-2",
-      "rootCause": "go_to_market_misalignment",
+      "rootCause": "strategic_pricing_error",
       "confidence": 10,
       "supportingEvidenceCount": 0,
       "conflictingEvidenceCount": 0,
       "patternCount": 0,
       "patternStrengthSum": 0,
       "evidenceDiversity": 0,
-      "reasoning": "go to market misalignment (no patterns): 0 supporting, 0 contradictions"
+      "reasoning": "strategic pricing error (no patterns): 0 supporting, 0 contradictions"
     }
   ],
   "rankedHypotheses": [
@@ -72,14 +72,14 @@
     },
     {
       "id": "hyp-1",
-      "rootCause": "demand_forecasting_mismatch",
+      "rootCause": "brand_erosion",
       "confidence": 17,
       "supportingEvidenceCount": 0,
       "conflictingEvidenceCount": 0,
       "patternCount": 0,
       "patternStrengthSum": 0,
       "evidenceDiversity": 0,
-      "reasoning": "demand forecasting mismatch (no patterns): 0 supporting, 0 contradictions",
+      "reasoning": "brand erosion (no patterns): 0 supporting, 0 contradictions",
       "supportingScore": 0,
       "conflictScore": 0,
       "netScore": 0,
@@ -88,14 +88,14 @@
     },
     {
       "id": "hyp-2",
-      "rootCause": "go_to_market_misalignment",
+      "rootCause": "strategic_pricing_error",
       "confidence": 17,
       "supportingEvidenceCount": 0,
       "conflictingEvidenceCount": 0,
       "patternCount": 0,
       "patternStrengthSum": 0,
       "evidenceDiversity": 0,
-      "reasoning": "go to market misalignment (no patterns): 0 supporting, 0 contradictions",
+      "reasoning": "strategic pricing error (no patterns): 0 supporting, 0 contradictions",
       "supportingScore": 0,
       "conflictScore": 0,
       "netScore": 0,
@@ -108,68 +108,64 @@
       "hypothesis": "unit_economics_breakdown",
       "supporting": [
         {
-          "evidenceId": "d78dcfbf-9b69-4788-ab7c-f01a37959518",
+          "evidenceId": "0b41883b-57ea-4267-ac16-0dd26d3f7ab6",
           "strength": 7,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "745348a2-5604-4a87-860d-c9b3b853c51c",
+          "evidenceId": "f1b75ff9-1665-4aec-b3fc-e8241c16a38f",
           "strength": 7,
           "reasoning": "market_position evidence may contradict unit_economics_breakdown"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "2d058096-d476-4461-ae84-fe0dfd981347",
+          "evidenceId": "16c583d7-df52-4bd6-ba19-d94ee5faf963",
           "reasoning": "talent_retention evidence is neutral to unit_economics_breakdown"
         }
       ],
       "coverage": 100
     },
     {
-      "hypothesis": "demand_forecasting_mismatch",
-      "supporting": [
-        {
-          "evidenceId": "745348a2-5604-4a87-860d-c9b3b853c51c",
-          "strength": 7,
-          "reasoning": "market_position evidence supports demand_forecasting_mismatch"
-        }
-      ],
+      "hypothesis": "brand_erosion",
+      "supporting": [],
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "2d058096-d476-4461-ae84-fe0dfd981347",
-          "reasoning": "talent_retention evidence is neutral to demand_forecasting_mismatch"
+          "evidenceId": "16c583d7-df52-4bd6-ba19-d94ee5faf963",
+          "reasoning": "talent_retention evidence is neutral to brand_erosion"
         },
         {
-          "evidenceId": "d78dcfbf-9b69-4788-ab7c-f01a37959518",
-          "reasoning": "financial_health evidence is neutral to demand_forecasting_mismatch"
+          "evidenceId": "0b41883b-57ea-4267-ac16-0dd26d3f7ab6",
+          "reasoning": "financial_health evidence is neutral to brand_erosion"
+        },
+        {
+          "evidenceId": "f1b75ff9-1665-4aec-b3fc-e8241c16a38f",
+          "reasoning": "market_position evidence is neutral to brand_erosion"
         }
       ],
       "coverage": 100
     },
     {
-      "hypothesis": "go_to_market_misalignment",
-      "supporting": [
-        {
-          "evidenceId": "745348a2-5604-4a87-860d-c9b3b853c51c",
-          "strength": 7,
-          "reasoning": "market_position evidence supports go_to_market_misalignment"
-        }
-      ],
+      "hypothesis": "strategic_pricing_error",
+      "supporting": [],
       "conflicting": [
         {
-          "evidenceId": "d78dcfbf-9b69-4788-ab7c-f01a37959518",
+          "evidenceId": "f1b75ff9-1665-4aec-b3fc-e8241c16a38f",
           "strength": 7,
-          "reasoning": "financial_health evidence may contradict go_to_market_misalignment"
+          "reasoning": "market_position evidence may contradict strategic_pricing_error"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "2d058096-d476-4461-ae84-fe0dfd981347",
-          "reasoning": "talent_retention evidence is neutral to go_to_market_misalignment"
+          "evidenceId": "16c583d7-df52-4bd6-ba19-d94ee5faf963",
+          "reasoning": "talent_retention evidence is neutral to strategic_pricing_error"
+        },
+        {
+          "evidenceId": "0b41883b-57ea-4267-ac16-0dd26d3f7ab6",
+          "reasoning": "financial_health evidence is neutral to strategic_pricing_error"
         }
       ],
       "coverage": 100

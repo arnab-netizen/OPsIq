@@ -25,8 +25,8 @@
           "customer_retention"
         ],
         "supportingItems": [
-          "50bcf86b-684f-4e7f-afae-7491e2fa0e4a",
-          "ba2b5296-9a1f-4fd6-9c9c-86817e61da3d"
+          "c80c60ef-6cc8-4dea-b323-d2271ee39fb0",
+          "7b5c51dd-3a69-4419-be12-eebb40f9e593"
         ],
         "patternStrength": 4,
         "potentialRootCauses": [
@@ -51,7 +51,7 @@
     {
       "id": "hyp-1",
       "rootCause": "customer_retention_erosion",
-      "confidence": 25,
+      "confidence": 20,
       "supportingEvidenceCount": 0,
       "conflictingEvidenceCount": 0,
       "patternCount": 0,
@@ -126,12 +126,12 @@
       "hypothesis": "go_to_market_misalignment",
       "supporting": [
         {
-          "evidenceId": "50bcf86b-684f-4e7f-afae-7491e2fa0e4a",
+          "evidenceId": "c80c60ef-6cc8-4dea-b323-d2271ee39fb0",
           "strength": 10,
           "reasoning": "customer_retention evidence supports go_to_market_misalignment"
         },
         {
-          "evidenceId": "ba2b5296-9a1f-4fd6-9c9c-86817e61da3d",
+          "evidenceId": "7b5c51dd-3a69-4419-be12-eebb40f9e593",
           "strength": 5,
           "reasoning": "market_position evidence supports go_to_market_misalignment"
         }
@@ -139,15 +139,15 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "342a407b-fe62-4a46-949e-9954c68c5730",
+          "evidenceId": "bd210a1e-cb81-44be-b155-b32cd4a5befb",
           "reasoning": "product_adoption evidence is neutral to go_to_market_misalignment"
         },
         {
-          "evidenceId": "677c82eb-53f2-4695-9037-c29d1b9b3b84",
+          "evidenceId": "1dbb73d6-951b-41cd-b51e-24704f738487",
           "reasoning": "customer_success evidence is neutral to go_to_market_misalignment"
         },
         {
-          "evidenceId": "be1d7d98-92a3-4cf0-a1fb-da29d128f86e",
+          "evidenceId": "356a950b-0e55-4a88-b97c-baa04a19c0dd",
           "reasoning": "unit_economics evidence is neutral to go_to_market_misalignment"
         }
       ],
@@ -157,7 +157,7 @@
       "hypothesis": "customer_retention_erosion",
       "supporting": [
         {
-          "evidenceId": "50bcf86b-684f-4e7f-afae-7491e2fa0e4a",
+          "evidenceId": "c80c60ef-6cc8-4dea-b323-d2271ee39fb0",
           "strength": 10,
           "reasoning": "customer_retention evidence supports customer_retention_erosion"
         }
@@ -165,19 +165,19 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "342a407b-fe62-4a46-949e-9954c68c5730",
+          "evidenceId": "bd210a1e-cb81-44be-b155-b32cd4a5befb",
           "reasoning": "product_adoption evidence is neutral to customer_retention_erosion"
         },
         {
-          "evidenceId": "677c82eb-53f2-4695-9037-c29d1b9b3b84",
+          "evidenceId": "1dbb73d6-951b-41cd-b51e-24704f738487",
           "reasoning": "customer_success evidence is neutral to customer_retention_erosion"
         },
         {
-          "evidenceId": "ba2b5296-9a1f-4fd6-9c9c-86817e61da3d",
+          "evidenceId": "7b5c51dd-3a69-4419-be12-eebb40f9e593",
           "reasoning": "market_position evidence is neutral to customer_retention_erosion"
         },
         {
-          "evidenceId": "be1d7d98-92a3-4cf0-a1fb-da29d128f86e",
+          "evidenceId": "356a950b-0e55-4a88-b97c-baa04a19c0dd",
           "reasoning": "unit_economics evidence is neutral to customer_retention_erosion"
         }
       ],
@@ -188,27 +188,27 @@
       "supporting": [],
       "conflicting": [
         {
-          "evidenceId": "50bcf86b-684f-4e7f-afae-7491e2fa0e4a",
+          "evidenceId": "c80c60ef-6cc8-4dea-b323-d2271ee39fb0",
           "strength": 10,
           "reasoning": "customer_retention evidence may contradict unit_economics_breakdown"
         },
         {
-          "evidenceId": "ba2b5296-9a1f-4fd6-9c9c-86817e61da3d",
+          "evidenceId": "7b5c51dd-3a69-4419-be12-eebb40f9e593",
           "strength": 5,
           "reasoning": "market_position evidence may contradict unit_economics_breakdown"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "342a407b-fe62-4a46-949e-9954c68c5730",
+          "evidenceId": "bd210a1e-cb81-44be-b155-b32cd4a5befb",
           "reasoning": "product_adoption evidence is neutral to unit_economics_breakdown"
         },
         {
-          "evidenceId": "677c82eb-53f2-4695-9037-c29d1b9b3b84",
+          "evidenceId": "1dbb73d6-951b-41cd-b51e-24704f738487",
           "reasoning": "customer_success evidence is neutral to unit_economics_breakdown"
         },
         {
-          "evidenceId": "be1d7d98-92a3-4cf0-a1fb-da29d128f86e",
+          "evidenceId": "356a950b-0e55-4a88-b97c-baa04a19c0dd",
           "reasoning": "unit_economics evidence is neutral to unit_economics_breakdown"
         }
       ],

@@ -62,22 +62,57 @@ export class HypothesisGenerator {
       preferredDimensions: ["market_position", "customer_retention"],
       minSupportingItems: 2,
       patternBoost: 1.2,
-      specificity: 0.75, // Moderately specific
-      requiredEvidenceIndicators: ["gtm", "positioning", "messaging", "segment"],
+      specificity: 0.85, // SLICE 4: Increased from 0.75 - needs market-specific evidence
+      requiredEvidenceIndicators: ["gtm", "positioning", "messaging", "segment", "market entry"],
     },
     [DiagnosisType.CUSTOMER_RETENTION_EROSION]: {
       preferredDimensions: ["customer_retention"],
       minSupportingItems: 2,
       patternBoost: 1.1,
-      specificity: 0.8, // Fairly specific
-      requiredEvidenceIndicators: ["churn", "retention", "attrition", "loss"],
+      specificity: 0.75, // SLICE 4: Reduced from 0.8 to avoid over-matching
+      requiredEvidenceIndicators: ["churn", "retention", "attrition", "customer loss"],
     },
     [DiagnosisType.TRUST_QUALITY_CRISIS]: {
       preferredDimensions: ["quality_delivery"],
       minSupportingItems: 2,
       patternBoost: 1.1,
-      specificity: 0.85, // Very specific
-      requiredEvidenceIndicators: ["trust", "fraud", "breach", "scandal"],
+      specificity: 0.9, // SLICE 4: Increased from 0.85 - very specific
+      requiredEvidenceIndicators: ["trust", "fraud", "breach", "scandal", "reputation"],
+    },
+    [DiagnosisType.CASH_RUNWAY_CRISIS]: {
+      preferredDimensions: ["financial_health"],
+      minSupportingItems: 2,
+      patternBoost: 1.25,
+      specificity: 0.92, // SLICE 4: Very high specificity
+      requiredEvidenceIndicators: ["cash", "runway", "burn", "burn rate", "fundraising"],
+    },
+    [DiagnosisType.QUALITY_CONTROL_FAILURE]: {
+      preferredDimensions: ["quality_delivery"],
+      minSupportingItems: 2,
+      patternBoost: 1.1,
+      specificity: 0.8, // SLICE 4: Added specificity requirement
+      requiredEvidenceIndicators: ["quality", "defect", "bug", "failure", "reliability"],
+    },
+    [DiagnosisType.BRAND_EROSION]: {
+      preferredDimensions: ["market_position"],
+      minSupportingItems: 1,
+      patternBoost: 1.1,
+      specificity: 0.75, // SLICE 4: Added specificity requirement
+      requiredEvidenceIndicators: ["brand", "reputation", "perception", "image"],
+    },
+    [DiagnosisType.STRATEGIC_PRICING_ERROR]: {
+      preferredDimensions: ["financial_health"],
+      minSupportingItems: 1,
+      patternBoost: 1.15,
+      specificity: 0.8, // SLICE 4: Added specificity requirement
+      requiredEvidenceIndicators: ["pricing", "price", "willingness", "sensitivity"],
+    },
+    [DiagnosisType.GOVERNANCE_COMPLIANCE_FAILURE]: {
+      preferredDimensions: ["process_maturity"],
+      minSupportingItems: 1,
+      patternBoost: 1.1,
+      specificity: 0.85, // SLICE 4: Added specificity requirement
+      requiredEvidenceIndicators: ["governance", "compliance", "audit", "regulation"],
     },
   };
 
