@@ -1,0 +1,37 @@
+{
+  "step": "scoring_against_answer_key",
+  "caseId": "RW-002",
+  "scoredBy": "monitor (Claude), post-freeze, vs locked answer key in committed case packs",
+  "answerKeyLockedBeforeRun": true,
+  "locked_expected": "Root cause = engagement/onboarding-driven churn; first action = systematic churn-driver analysis + identify red-flag engagement metrics + targeted re-engagement.",
+  "opsiq_actual": "customer_retention_erosion (HIGH); first action 'Design and launch customer loyalty program'.",
+  "dimension_scores": {
+    "root_cause": 7,
+    "first_action": 3,
+    "actionability": 6,
+    "evidence": 6,
+    "relevance": 5,
+    "confidence": 7,
+    "risk_missing": 6
+  },
+  "rubric_weights": {
+    "root_cause": 0.2,
+    "first_action": 0.2,
+    "actionability": 0.15,
+    "evidence": 0.15,
+    "relevance": 0.15,
+    "confidence": 0.1,
+    "risk_missing": 0.05
+  },
+  "final_weighted_score": 5.35,
+  "pass_threshold": 8.5,
+  "pass_fail": "FAIL",
+  "automatic_fail_checks": {
+    "dangerous": false,
+    "hallucination": false,
+    "false_confidence": false,
+    "leakage": false,
+    "constraint_violation": false
+  },
+  "monitor_verdict": "PARTIAL HIT. Correct category (retention erosion) but the specific first action is a generic loyalty program, not the documented data-driven churn-diagnosis + engagement early-warning approach."
+}

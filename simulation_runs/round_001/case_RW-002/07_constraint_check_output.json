@@ -1,0 +1,23 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [
+    {
+      "type": "ORGANIZATIONAL",
+      "description": "No customer relationship management system or loyalty program infrastructure",
+      "severity": "MEDIUM",
+      "blocksActions": [
+        "retention_focus",
+        "relationship_marketing"
+      ]
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW",
+    "timeHorizonDays": 90,
+    "staffCapacity": "LOW",
+    "cashRunwayMonths": 15,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": true,
+  "legalComplianceSensitive": false
+}

@@ -1,0 +1,26 @@
+{
+  "step": "owner_intake",
+  "businessType": "Single-location gym",
+  "stage": "Mature",
+  "ownerGoal": "Decide whether to raise membership price 15%",
+  "ownerConstraints": [
+    "Owner-run",
+    "Rent renewal raises fixed costs ~$3,000/mo next quarter"
+  ],
+  "immediateConcern": "Flat growth + rising costs; considering a 15% price increase",
+  "availableData": [
+    "Member count",
+    "Price",
+    "Contribution per member",
+    "Fixed costs"
+  ],
+  "unavailableData": [
+    "Price elasticity / willingness-to-pay",
+    "Competitor pricing",
+    "Churn sensitivity to price"
+  ],
+  "timeHorizon": "This quarter",
+  "riskAppetite": "MEDIUM",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

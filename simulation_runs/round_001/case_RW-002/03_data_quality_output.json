@@ -1,0 +1,24 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 2,
+  "missingDimensions": [
+    "operational_efficiency",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability",
+    "market_position"
+  ],
+  "unavailableDataDeclared": [
+    "Engagement metrics by cohort",
+    "Systematic exit-interview data",
+    "Churn correlation analysis"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Engagement metrics by cohort",
+    "Cannot conclude on: Systematic exit-interview data",
+    "Cannot conclude on: Churn correlation analysis"
+  ]
+}

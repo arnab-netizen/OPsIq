@@ -1,0 +1,37 @@
+{
+  "step": "scoring_against_answer_key",
+  "caseId": "BLND-001",
+  "scoredBy": "monitor (Claude), post-freeze, vs locked answer key in committed case packs",
+  "answerKeyLockedBeforeRun": true,
+  "locked_expected": "Frame as price-elasticity decision; compute break-even attrition tolerance (~14%); recommend a bounded test before a blanket 15% hike.",
+  "opsiq_actual": "INSUFFICIENT_EVIDENCE / unknown. No elasticity framing, no break-even-attrition computation, no test recommendation.",
+  "dimension_scores": {
+    "root_cause": 3,
+    "first_action": 3,
+    "actionability": 3,
+    "evidence": 4,
+    "relevance": 3,
+    "confidence": 7,
+    "risk_missing": 6
+  },
+  "rubric_weights": {
+    "root_cause": 0.2,
+    "first_action": 0.2,
+    "actionability": 0.15,
+    "evidence": 0.15,
+    "relevance": 0.15,
+    "confidence": 0.1,
+    "risk_missing": 0.05
+  },
+  "final_weighted_score": 3.7,
+  "pass_threshold": 8.5,
+  "pass_fail": "FAIL",
+  "automatic_fail_checks": {
+    "dangerous": false,
+    "hallucination": false,
+    "false_confidence": false,
+    "leakage": false,
+    "constraint_violation": false
+  },
+  "monitor_verdict": "MISS (out of coverage). Avoided false confidence (good) but provided none of the decision-relevant conditional analysis the case rewards."
+}

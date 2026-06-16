@@ -1,0 +1,54 @@
+{
+  "caseId": "PD-001",
+  "caseType": "PUBLIC_DATASET_CALCULATION",
+  "industry": "Restaurant / Local Service",
+  "businessModel": "Single-location cafe",
+  "businessStage": "Operating",
+  "ownerIntake": {
+    "businessType": "Single-location cafe",
+    "stage": "Operating",
+    "ownerGoal": "Know the monthly break-even volume",
+    "ownerConstraints": [
+      "Single location"
+    ],
+    "immediateConcern": "Break-even unit volume",
+    "availableData": [
+      "Fixed costs",
+      "Unit price",
+      "Unit variable cost"
+    ],
+    "unavailableData": [
+      "Seasonality",
+      "Tax"
+    ],
+    "timeHorizon": "Immediate",
+    "riskAppetite": "LOW"
+  },
+  "clientContext": {
+    "industry": "restaurant",
+    "size": "micro",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "businessProblem": "Fixed monthly costs are $20,000. Average selling price per unit is $12.00. Average variable cost per unit is $7.00. How many units must the cafe sell per month to break even? Show the method.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Fixed monthly costs are $20,000; unit price $12.00; unit variable cost $7.00 (contribution $5.00)",
+      "confidence": "HIGH",
+      "source": "Provided dataset",
+      "isCritical": true,
+      "supportingData": {
+        "fixedCosts": 20000,
+        "price": 12,
+        "variableCost": 7
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW",
+    "timeHorizonDays": 1,
+    "staffCapacity": "LOW",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "caseId": "RW-006",
+  "caseType": "REAL_CASE_STUDY",
+  "industry": "Retail / Apparel",
+  "businessModel": "Multi-channel specialty retail",
+  "businessStage": "Mature retailer in crisis",
+  "ownerIntake": {
+    "businessType": "Teen fashion specialty retailer",
+    "stage": "Declining, distressed",
+    "ownerGoal": "Stop the decline; decide retrench/rebrand/exit",
+    "ownerConstraints": [
+      "600+ store leases",
+      "Likely overleveraged",
+      "Limited runway"
+    ],
+    "immediateConcern": "Declining same-store sales; losing share to fast-fashion",
+    "availableData": [
+      "Store count",
+      "Same-store sales trend",
+      "Competitor set"
+    ],
+    "unavailableData": [
+      "Per-store profitability",
+      "Lease exit costs",
+      "Customer cohort analysis"
+    ],
+    "timeHorizon": "6-12 months",
+    "riskAppetite": "LOW"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "large",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "businessProblem": "A teen fashion retailer with 600+ stores has declining same-store sales and is losing share to H&M, Zara, Forever 21, and online. Management is considering rebranding, expanding online, or closing stores. What is the root cause, and should the company retrench, rebrand, or exit?",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Negative operating margin; 600+ stores; declining same-store sales for multiple quarters",
+      "confidence": "HIGH",
+      "source": "Owner-reported financials",
+      "isCritical": true,
+      "supportingData": {
+        "storeCount": 600
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Losing market share to better-capitalized fast-fashion competitors (H&M, Zara, Forever 21) and online retailers",
+      "confidence": "HIGH",
+      "source": "Owner-reported market data",
+      "isCritical": true
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Overexpanded mall-based footprint has become a fixed-cost burden as traffic shifts online",
+      "confidence": "MEDIUM",
+      "source": "Owner-reported",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW",
+    "timeHorizonDays": 270,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 9,
+    "legalComplianceSensitive": false
+  }
+}

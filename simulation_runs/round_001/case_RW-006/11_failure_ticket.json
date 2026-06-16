@@ -1,0 +1,13 @@
+{
+  "step": "failure_ticket",
+  "caseId": "RW-006",
+  "ticketId": "SIM-RW-001-001",
+  "severity": "P2",
+  "failure_type": "MISS (out of coverage). A diagnosable case; engine has no ar",
+  "affected_module": "src/services/consulting-engine/diagnosis-engine.ts",
+  "summary": "MISS (out of coverage). A diagnosable case; engine has no archetype for overexpansion/unit-economics, so it returned insufficient. Honest (no false confidence) but unhelpful.",
+  "approval_required": true,
+  "blocks_round": false,
+  "status": "OPEN_TICKETED_NOT_FIXED",
+  "note": "Per user direction, engine is left ticketed and NOT fixed during benchmarking."
+}

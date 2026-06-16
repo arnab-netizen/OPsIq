@@ -1,0 +1,24 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 3,
+  "numericEvidenceCount": 1,
+  "missingDimensions": [
+    "customer_retention",
+    "operational_efficiency",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Per-store profitability",
+    "Lease exit costs",
+    "Customer cohort analysis"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Per-store profitability",
+    "Cannot conclude on: Lease exit costs",
+    "Cannot conclude on: Customer cohort analysis"
+  ]
+}

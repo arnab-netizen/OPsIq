@@ -1,0 +1,26 @@
+{
+  "step": "owner_intake",
+  "businessType": "B2B SaaS customer-support software",
+  "stage": "Growth, churn crisis",
+  "ownerGoal": "Reduce unsustainable churn within 2-3 months",
+  "ownerConstraints": [
+    "Lean team",
+    "Limited analytics resources",
+    "12-18 month runway"
+  ],
+  "immediateConcern": "4.5% monthly churn is unsustainable; root cause unknown",
+  "availableData": [
+    "Monthly churn rate",
+    "Customer base size",
+    "Vague exit feedback"
+  ],
+  "unavailableData": [
+    "Engagement metrics by cohort",
+    "Systematic exit-interview data",
+    "Churn correlation analysis"
+  ],
+  "timeHorizon": "2-3 months",
+  "riskAppetite": "MEDIUM",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

@@ -1,0 +1,19 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Negative operating margin; 600+ stores; declining same-store sales for multiple quarters",
+    "Losing market share to better-capitalized fast-fashion competitors (H&M, Zara, Forever 21) and online retailers",
+    "Overexpanded mall-based footprint has become a fixed-cost burden as traffic shifts online"
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Per-store profitability",
+    "Lease exit costs",
+    "Customer cohort analysis"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Negative operating margin; 600+ stores; declining same-store sales for multiple quarters",
+    "Losing market share to better-capitalized fast-fashion competitors (H&M, Zara, Forever 21) and online retailers",
+    "Overexpanded mall-based footprint has become a fixed-cost burden as traffic shifts online"
+  ]
+}

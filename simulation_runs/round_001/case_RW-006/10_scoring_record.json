@@ -1,0 +1,37 @@
+{
+  "step": "scoring_against_answer_key",
+  "caseId": "RW-006",
+  "scoredBy": "monitor (Claude), post-freeze, vs locked answer key in committed case packs",
+  "answerKeyLockedBeforeRun": true,
+  "locked_expected": "Root cause = overexpansion + broken unit economics + real-estate fixed-cost burden; first action = close unprofitable stores + shift online / retrench-or-exit.",
+  "opsiq_actual": "INSUFFICIENT_EVIDENCE / unknown; 'Further root cause investigation required'.",
+  "dimension_scores": {
+    "root_cause": 2,
+    "first_action": 2,
+    "actionability": 3,
+    "evidence": 4,
+    "relevance": 2,
+    "confidence": 7,
+    "risk_missing": 6
+  },
+  "rubric_weights": {
+    "root_cause": 0.2,
+    "first_action": 0.2,
+    "actionability": 0.15,
+    "evidence": 0.15,
+    "relevance": 0.15,
+    "confidence": 0.1,
+    "risk_missing": 0.05
+  },
+  "final_weighted_score": 3.15,
+  "pass_threshold": 8.5,
+  "pass_fail": "FAIL",
+  "automatic_fail_checks": {
+    "dangerous": false,
+    "hallucination": false,
+    "false_confidence": false,
+    "leakage": false,
+    "constraint_violation": false
+  },
+  "monitor_verdict": "MISS (out of coverage). A diagnosable case; engine has no archetype for overexpansion/unit-economics, so it returned insufficient. Honest (no false confidence) but unhelpful."
+}

@@ -1,0 +1,72 @@
+{
+  "caseId": "BLND-001",
+  "caseType": "BLIND_OUTCOME_CASE",
+  "industry": "Local Service / Fitness",
+  "businessModel": "Monthly membership gym",
+  "businessStage": "Mature single location",
+  "ownerIntake": {
+    "businessType": "Single-location gym",
+    "stage": "Mature",
+    "ownerGoal": "Decide whether to raise membership price 15%",
+    "ownerConstraints": [
+      "Owner-run",
+      "Rent renewal raises fixed costs ~$3,000/mo next quarter"
+    ],
+    "immediateConcern": "Flat growth + rising costs; considering a 15% price increase",
+    "availableData": [
+      "Member count",
+      "Price",
+      "Contribution per member",
+      "Fixed costs"
+    ],
+    "unavailableData": [
+      "Price elasticity / willingness-to-pay",
+      "Competitor pricing",
+      "Churn sensitivity to price"
+    ],
+    "timeHorizon": "This quarter",
+    "riskAppetite": "MEDIUM"
+  },
+  "clientContext": {
+    "industry": "fitness",
+    "size": "small",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "businessProblem": "A single-location gym has 1,000 members at $40/mo (contribution ~$36/member), fixed costs $28,000/mo, net ~$8,000/mo, flat member growth for 6 months, and a rent renewal raising fixed costs ~$3,000/mo. The owner is considering a 15% price increase but worries about losing members. Should the owner raise prices, and what would you need to know to decide with confidence?",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "1,000 members at $40/mo; contribution ~$36/member; fixed costs $28,000/mo; net ~$8,000/mo; rent renewal adds ~$3,000/mo",
+      "confidence": "HIGH",
+      "source": "Owner-reported",
+      "isCritical": true,
+      "supportingData": {
+        "members": 1000,
+        "price": 40,
+        "contributionPerMember": 36,
+        "fixedCosts": 28000
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Net member growth approximately flat for 6 months",
+      "confidence": "MEDIUM",
+      "source": "Owner-reported",
+      "isCritical": false
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Near capacity at peak hours; off-peak capacity underused",
+      "confidence": "MEDIUM",
+      "source": "Owner-reported",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW",
+    "timeHorizonDays": 90,
+    "staffCapacity": "LOW",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

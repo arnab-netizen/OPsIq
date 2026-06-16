@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW",
+    "timeHorizonDays": 1,
+    "staffCapacity": "LOW",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

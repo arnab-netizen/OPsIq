@@ -1,0 +1,23 @@
+{
+  "step": "owner_intake",
+  "businessType": "Single-location cafe",
+  "stage": "Operating",
+  "ownerGoal": "Know the monthly break-even volume",
+  "ownerConstraints": [
+    "Single location"
+  ],
+  "immediateConcern": "Break-even unit volume",
+  "availableData": [
+    "Fixed costs",
+    "Unit price",
+    "Unit variable cost"
+  ],
+  "unavailableData": [
+    "Seasonality",
+    "Tax"
+  ],
+  "timeHorizon": "Immediate",
+  "riskAppetite": "LOW",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

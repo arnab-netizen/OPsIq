@@ -1,0 +1,30 @@
+{
+  "step": "owner_intake",
+  "businessType": "Marketing agency considering an acquisition",
+  "stage": "M&A decision",
+  "ownerGoal": "Go/no-go and price on acquiring a competitor by Friday",
+  "ownerConstraints": [
+    "Decision by Friday",
+    "Seller withholds data room until signed LOI",
+    "Limited M&A experience"
+  ],
+  "immediateConcern": "Whether to acquire at 5x EBITDA under deadline pressure",
+  "availableData": [
+    "Target revenue",
+    "Reported EBITDA",
+    "Asking multiple",
+    "Approx client count",
+    "Founder role"
+  ],
+  "unavailableData": [
+    "Client concentration / revenue by client",
+    "Contract terms & cancellation clauses",
+    "Revenue retention / churn history",
+    "Whether EBITDA is normalized/adjusted",
+    "Key-person / earn-out terms"
+  ],
+  "timeHorizon": "Days (manufactured urgency)",
+  "riskAppetite": "MEDIUM",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

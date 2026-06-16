@@ -1,0 +1,16 @@
+{
+  "step": "diagnosis",
+  "rootCauseType": "unknown",
+  "description": "Evidence insufficient for definitive diagnosis",
+  "mechanism": "The evidence provided does not clearly match known root cause patterns.",
+  "confidence": "INSUFFICIENT_EVIDENCE",
+  "rejectedHypotheses": [
+    "Multiple root causes may be present",
+    "Root cause may be unique to this business"
+  ],
+  "missingEvidence": [
+    "Deeper investigation required on each dimension",
+    "Customer interviews",
+    "Process observation"
+  ]
+}
