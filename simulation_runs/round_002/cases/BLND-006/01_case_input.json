@@ -1,0 +1,148 @@
+{
+  "caseId": "BLND-006",
+  "caseType": "BLIND_OUTCOME",
+  "industry": "E-Commerce / Direct-to-Consumer Fashion",
+  "businessModel": "Subscription-based apparel service (rental and purchase)",
+  "businessStage": "Growth stage, Series B company",
+  "sourceNote": "Blind-outcome case designed to test forward-looking strategic decision-making. Scenario presents a company at a critical strategic fork with three viable-sounding options. The engine's diagnosis should recommend which option aligns with the root-cause drivers and constraints. Actual outcome (which option succeeded) is hidden from engine input. All data realistic and representative.",
+  "ownerIntake": {
+    "businessType": "D2C fashion company offering subscription rental service with optional purchase option. Founded 2019, Series B funding $15M (2024). Monthly subscribers: 22,000 paying members. Revenue model: 60% subscription revenue ($2M/month), 40% purchase/sales revenue ($1.3M/month). Target demographic: women 25-40, disposable income $50k+.",
+    "stage": "Series B growth: Total revenue $3.3M/month ($40M ARR). Gross margin 48% (after COGS and logistics). Unit economics: CAC $45, LTV estimate $2,800 (62-month payback). Churn rate 5% monthly (elevated for subscription). Burn rate $400k/month (cash runway 37 months at current rate with $15M raised capital). Customer acquisition growth 15% MoM but slowing (was 25% MoM 6 months ago).",
+    "ownerGoal": "Reach sustainable unit economics and Series C readiness ($100M+ valuation trajectory) within 24 months. Series B investors expect path to profitability and deceleration of burn rate.",
+    "ownerConstraints": [
+      "Capital constraint: $15M Series B capital, $400k/month burn, 37-month runway. Must demonstrate path to profitability or lower burn before Series C conversations. Cannot sustain current burn indefinitely.",
+      "Unit economics constraint: CAC $45, LTV $2,800 (62-month payback) is acceptable but not exceptional. Must improve payback to <50 months or increase LTV to sustain growth at current CAC.",
+      "Operational constraint: Subscription logistics (inventory management, rental fulfillment, cleaning/repair cycle) are capital and labor intensive. Warehouse footprint is already constrained at current scale. Expansion requires new facilities (3-6 month lead time, $2-3M capex per facility).",
+      "Market constraint: Competition from both established luxury rental services (Rent the Runway, Le Tote) and emerging resale/subscription hybrid models (Depop, Poshmark adding rental). Market consolidation risk: larger players could dominate with capital advantage.",
+      "Team constraint: Lean team (35 people). Founding team focused on product and customer. Limited operations and CFO resources for major financial/strategic pivots."
+    ],
+    "immediateConcern": "Customer acquisition growth decelerating (25% MoM down to 15% MoM) while churn rate rising (was 4% MoM 6 months ago, now 5% MoM). Company is at a strategic inflection: (1) continue aggressive growth acquisition (requires increased marketing spend, faster burn, Series C timing uncertain), (2) optimize existing customer base (reduce churn, increase LTV through upsells, lower burn), or (3) reposition toward premium/profitable segment (shift customer acquisition target, likely slower overall growth but better unit economics). CEO must choose direction and communicate to investors before Series C conversations begin.",
+    "availableData": [
+      "Financial metrics: Monthly revenue ($3.3M = $2M subscription + $1.3M sales), gross margin 48%, CAC estimate $45 (based on marketing spend / new customers), LTV estimate $2,800, churn rate 5% MoM, burn rate $400k/month, cash runway 37 months",
+      "Customer metrics: 22,000 monthly subscribers, customer acquisition growth 15% MoM (declining from 25%), churn 5% MoM (trending up), repeat purchase rate on rentals 72%, NPS 48 (neutral)",
+      "Operational metrics: Logistics cost per rental ~$12 (pickup/cleaning/return), average rental value $45, average purchase order value $80, warehouse utilization 85%, inventory turnover 4.2x per month",
+      "Market data: Competitor Rent the Runway raised $70M Series C (2023), growing 30% YoY; Depop + Poshmark expanding rental. Market estimated $5B TAM growing 15% annually"
+    ],
+    "unavailableData": [
+      "Detailed customer segmentation: Which customer cohorts (by acquisition source, spending pattern, tenure) have highest LTV vs highest churn? Which are most profitable?",
+      "Detailed competitor positioning: Exact pricing, retention rates, and unit economics of Rent the Runway and other competitors (proprietary)",
+      "Customer willingness-to-pay research: Would customers accept higher prices for premium curated selection, better fit guarantee, or faster fulfillment? How much more would they pay?",
+      "Detailed operational cost breakdown: Is the $12 logistics cost variable, or are there fixed facility costs that could decrease per unit with scale?",
+      "Long-term retention potential: For customers acquired in Year 1 (now 2+ year tenure), what is the actual lifetime value observed? Is the $2,800 estimate realistic or optimistic?"
+    ],
+    "timeHorizon": "90 days (Series C conversations likely to begin within 3 months; must have clear strategic direction and financial narrative by then)",
+    "riskAppetite": "MEDIUM-HIGH (Series B company willing to take growth risk, but Series B investors expect clear path to profitability)"
+  },
+  "clientContext": {
+    "industry": "E-Commerce / Fashion Tech",
+    "size": "growth-stage (Series B, $40M ARR, 35 people, $15M capital, 22k subscribers)",
+    "revenueImpactUrgency": "CRITICAL (deceleration of customer acquisition and rising churn threaten unit economics and investor confidence; strategic choice made now will determine Series C feasibility)"
+  },
+  "businessProblem": "An e-commerce subscription service faces a critical strategic fork. Customer acquisition growth is decelerating (25% MoM → 15% MoM) while churn is rising (4% MoM → 5% MoM), suggesting unit economics are deteriorating even as the company scales. The company must choose between three strategic directions within 90 days (Series C timeline): (1) Aggressive Growth (increase marketing spend, push CAC acquisition to 30% MoM, accept burn rate increase, bet on scale economies and Series C capital), (2) Optimization (focus on retention and LTV improvement, reduce marketing spend, lower burn rate, target profitability path, slower growth), or (3) Premium Pivot (reposition toward high-end customers with better LTV/retention, reduce overall growth but improve unit economics and margins). The core question: Which strategic option aligns with the root-cause drivers of the acquisition deceleration and churn rise? Is the deceleration a market/competitive issue (requiring growth response), a unit economics issue (requiring optimization response), or a customer quality/satisfaction issue (requiring pivot response)?",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Customer acquisition growth decelerated from 25% MoM (6 months ago) to 15% MoM (current). Simultaneously, churn increased from 4% MoM to 5% MoM. Blended impact: net subscriber growth declining. Marketing spend increased 40% over past 6 months (to push 25% acquisition), suggesting rising CAC or declining conversion efficiency. Company continues to add revenue ($3.3M/month current vs $2.8M 6 months ago) due to growth in existing customer LTV, but new customer acquisition economics deteriorating.",
+      "confidence": "HIGH",
+      "source": "Monthly financial tracking, marketing spend analysis, cohort retention tracking",
+      "isCritical": true,
+      "supportingData": {
+        "acquisition_growth_6mo_ago": "25% MoM",
+        "acquisition_growth_current": "15% MoM",
+        "churn_6mo_ago": "4% MoM",
+        "churn_current": "5% MoM",
+        "marketing_spend_growth": "+40% over 6 months",
+        "revenue_current": "$3.3M/month",
+        "revenue_6mo_ago": "$2.8M/month"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Competitive landscape intensifying: Rent the Runway (well-funded competitor) raised $70M Series C and is growing 30% YoY (faster than company's 15%). Resale platforms (Depop, Poshmark) adding rental capabilities and growing customer bases significantly. Market TAM is large ($5B) but consolidation risk is real; well-funded competitors may be winning market share. Company's competitive advantage unclear: not the largest (Rent the Runway), not the fastest growing (Depop), not the most profitable (all are pre-profitable).",
+      "confidence": "MEDIUM",
+      "source": "Competitive intelligence, public fundraising announcements, growth rate benchmarking",
+      "isCritical": true,
+      "supportingData": {
+        "rent_runway_funding": "$70M Series C",
+        "rent_runway_growth": "30% YoY",
+        "company_growth": "15% MoM (180% annualized, but decelerating)",
+        "market_tam": "$5B",
+        "market_growth": "15% annually",
+        "competitive_positioning": "Unclear differentiation"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Churn rising from 4% to 5% MoM (a 25% increase in churn rate). At 5% MoM, annualized churn ~46%. However, repeat purchase rate on rentals is 72% (strong for subscription), and NPS is 48 (neutral, not bad). This suggests customers are not deeply dissatisfied; churn may be driven by affordability concerns (discretionary category hit by economic pressures?) or competitive alternatives discovered. Without detailed exit interviews or customer segmentation, the cause of churn rise is unclear.",
+      "confidence": "MEDIUM",
+      "source": "Cohort retention tracking, NPS survey, repeat purchase metrics",
+      "isCritical": true,
+      "supportingData": {
+        "churn_rate_increase": "4% → 5% MoM (+25%)",
+        "repeat_purchase_rate": "72%",
+        "nps": "48 (neutral)",
+        "churn_drivers": "Unknown (affordability? competition? satisfaction?)"
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Operational metrics stable: logistics cost $12/rental, inventory turnover 4.2x/month, warehouse utilization 85%, average rental value $45, average purchase order value $80. These suggest operational efficiency is adequate and not deteriorating. Quality is not obviously the problem (repeat purchase rate 72%, NPS 48 not negative). The issue appears to be growth deceleration and acquisition economics, not operational breakdown.",
+      "confidence": "HIGH",
+      "source": "Operational tracking, warehouse management systems",
+      "isCritical": false,
+      "supportingData": {
+        "logistics_cost_per_rental": "$12",
+        "inventory_turnover": "4.2x/month",
+        "warehouse_utilization": "85%",
+        "avg_rental_value": "$45",
+        "avg_purchase_order_value": "$80"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Unit economics under pressure: CAC $45, LTV $2,800 estimated (62-month payback). As acquisition slows and becomes more expensive, payback period risk extends. If CAC rises to $60 (possible given 40% marketing spend increase for 15% acquisition growth), payback extends to 83 months. Company burn rate $400k/month, but Series B investors expect path to profitability within 24 months. Continuing aggressive growth acquisition may exceed investor patience and Series C timeline constraints.",
+      "confidence": "MEDIUM",
+      "source": "CAC/LTV calculations, marketing spend trends, investor expectations from Series B terms",
+      "isCritical": true,
+      "supportingData": {
+        "current_cac": "$45",
+        "current_ltv": "$2,800",
+        "current_payback_months": "62",
+        "potential_cac_if_trend_continues": "$60",
+        "potential_payback_if_cac_rises": "83 months",
+        "monthly_burn": "$400k",
+        "investor_profitability_expectation": "<24 months to profitability path"
+      }
+    }
+  ],
+  "strategicOptions": [
+    {
+      "optionId": "Option_A_Aggressive_Growth",
+      "description": "Double down on customer acquisition: increase marketing spend 50% in Q3-Q4, target 30% MoM acquisition growth, accept rising CAC and extended payback period, aim to reach $100M+ revenue run-rate to justify Series C at premium valuation",
+      "rationale": "If the problem is market share consolidation (Rent the Runway is winning), the response is scale faster and capture share before market consolidates. Requires Series C capital and investor confidence in 'winner-take-most' scenario.",
+      "implementationRisk": "HIGH (requires Series C capital commitment before proving unit economics; customer payback extends to 70+ months; burn rate increases; profitability timeline extends beyond 24 months)",
+      "timelineIfChosen": "12-18 months to Series C close and clarification of strategy success/failure"
+    },
+    {
+      "optionId": "Option_B_Optimization",
+      "description": "Focus on retention and LTV: reduce marketing spend 30%, target <3% MoM churn through product improvements and customer success initiatives, improve payback period to <50 months, demonstrate path to unit economics sustainability and Series C readiness with lower burn",
+      "rationale": "If the problem is unit economics deterioration and unsustainable acquisition costs, the response is to optimize existing customers and reduce burn. Slower growth but clearer path to profitability and investor confidence.",
+      "implementationRisk": "MEDIUM (requires belief that LTV can improve without growth investment; may allow competitors to capture market share; Series C valuation could be limited by slower growth trajectory)",
+      "timelineIfChosen": "6-9 months to demonstrate improved unit economics and retention metrics, validate Series C story"
+    },
+    {
+      "optionId": "Option_C_Premium_Pivot",
+      "description": "Reposition toward premium customer segment: shift acquisition messaging and positioning toward high-spending fashion-conscious segment, raise prices 20-30% for premium service tier (faster fulfillment, curated selection, fit guarantee), target lower acquisition volume but higher LTV ($4,000+), improve margins through premium pricing",
+      "rationale": "If the problem is customer quality/mix (acquiring lower-LTV price-sensitive customers), the response is to shift upmarket and capture higher-value segment. Requires brand repositioning and product/service differentiation.",
+      "implementationRisk": "MEDIUM (unproven premium positioning; could alienate existing customer base; requires new product/service capabilities; slower overall growth but potentially sustainable margins)",
+      "timelineIfChosen": "9-12 months to launch premium positioning, prove unit economics, establish Series C narrative"
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (Series B capital $15M, but burn rate high; limited discretionary spending without impact on runway)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (35 people, lean team; major product/operational pivots require external hires or rapid reallocation)",
+    "cashRunwayMonths": 37,
+    "legalComplianceSensitive": false
+  }
+}

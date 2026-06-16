@@ -91,13 +91,13 @@
 
 | Case ID | Status | Created | Reviewed | Locked | Notes |
 |---------|--------|---------|----------|--------|-------|
-| BLND-006 | PENDING | — | — | — | Awaiting case input creation |
+| BLND-006 | CREATED | ✓ | — | — | Answer key created with DEMAND_FORECASTING_MISMATCH diagnosis and strategic option evaluation |
 | BLND-007 | PENDING | — | — | — | — |
 | BLND-008 | PENDING | — | — | — | — |
 | BLND-009 | PENDING | — | — | — | — |
 | BLND-010 | PENDING | — | — | — | — |
 
-**Summary (BLND):** 0/5 created, 0/5 reviewed, 0/5 locked
+**Summary (BLND):** 1/5 created, 0/5 reviewed, 0/5 locked
 
 ---
 
@@ -110,7 +110,7 @@
 | Synthetic | 10 | 1 | 0 | 0 | 10% |
 | Adversarial | 10 | 1 | 0 | 0 | 10% |
 | Blind-Outcome | 5 | 0 | 0 | 0 | 0% |
-| **TOTAL** | **50** | **4** | **0** | **0** | **8%** |
+| **TOTAL** | **50** | **5** | **0** | **0** | **10%** |
 
 ---
 

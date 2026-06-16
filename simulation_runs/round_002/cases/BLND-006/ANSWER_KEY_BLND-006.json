@@ -1,0 +1,111 @@
+{
+  "case_id": "BLND-006",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (E-Commerce Growth Strategy)",
+  "creation_methodology": "Blind review: Expert analyzed strategic case scenario without knowledge of which option succeeded. Diagnosed root cause of acquisition deceleration and churn rise, then assessed which strategic option best addresses the underlying drivers.",
+  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "root_cause_description": "The company incorrectly forecasted the TAM and sustainable growth rate in the fashion subscription market. The company has grown rapidly (achieving 15-20% monthly growth) in a market with ~15% annual growth, which means the company has been gaining market share. However, as market consolidation occurs (Rent the Runway raising $70M Series C, Depop/Poshmark entering), the company's acquisition growth is decelerating toward market growth rate (~15% annual = 1.2% MoM equivalent, or the ~15% MoM the company is now seeing is plateauing). The rising churn (4% → 5%) is consistent with customers discovering better-funded competitors or market saturation in the initial target segment. The root cause is not operational (operations are efficient), not customer satisfaction (NPS 48, repeat rate 72%), but market-structural: the company grew faster than the market, and now growth is reverting to market rate (or below, as customers switch to better-funded competitors). The company's unit economics CAC $45, LTV $2,800 are reasonable for the market, but the assumption that 25% MoM growth was sustainable was incorrect.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Conduct detailed customer cohort analysis to understand LTV and churn by acquisition cohort, customer segment (by initial channel, spending pattern, demographics), and tenure. Specifically: (1) Which customer cohorts have LTV >$3,500 and <3% annual churn? (2) Which segments are acquiring at CAC <$35? (3) For 2+ year tenure customers (acquired in Year 1-2 of company operations), what is the actual observed lifetime value? (4) Segment analysis: are high-LTV customers concentrated in specific demographics or behaviors? Results will inform whether the company should: (A) Focus on high-LTV segments (supporting Premium Pivot option), (B) Optimize across all segments to improve payback (supporting Optimization option), or (C) Accept lower unit economics at higher volume and pursue Aggressive Growth. Without this analysis, all three strategic options are guesses.",
+  "action_description": "This action is first priority because all three strategic options depend on understanding which customer segments are truly valuable. If analysis shows high-LTV concentrated in premium segment, Premium Pivot makes sense. If analysis shows LTV is consistent across segments but churn is cohort-dependent, Optimization makes sense. If analysis shows newer cohorts have higher CAC but comparable LTV to older cohorts, the CAC increase may be sustainable and Aggressive Growth may work. The 2-week diagnostic is low-risk and provides clarity for the 90-day Series C narrative decision.",
+  "action_constraints_respected": [
+    "Capital constraint: Diagnostic uses internal analytics team (no external spend), fits within cash runway; informs capital allocation decisions for Series C growth phase.",
+    "Unit economics constraint: Diagnostic identifies which segments have sustainable unit economics, informing whether to scale those segments (supporting optimization) or pivot upmarket (supporting premium).",
+    "Time constraint (90 days to Series C): 2-week analysis fits within 90-day window, allowing 75 days for execution of chosen strategy (Aggressive Growth, Optimization, or Premium Pivot).",
+    "Team constraint: Diagnostic requires data analysis (lean team can manage internally); subsequent execution of chosen strategy may require external hires (product, operations, marketing) depending on option."
+  ],
+  "rationale": "The three strategic options (Aggressive Growth, Optimization, Premium Pivot) are all plausible responses to growth deceleration. However, they require different diagnoses to be optimal: (1) Aggressive Growth assumes the deceleration is temporary market share consolidation (fixable with scale), (2) Optimization assumes unit economics are deteriorating and need fix, (3) Premium Pivot assumes customer quality/segment is shifting and high-value segments are underserved. Without customer cohort analysis, the company is choosing blind. The diagnostic is insurance: it either validates the chosen strategy or redirects the company to the strategy that actually fits the data.",
+  "evidence_basis": [
+    "financial_health finding: CAC/LTV metrics show reasonable unit economics ($2,800 LTV, 62-month payback), but CAC rising (marketing spend +40% for 15% acquisition growth) suggests acquisition is becoming less efficient",
+    "market_position finding: Competitors better funded and growing faster (Rent the Runway 30% YoY vs company 15% MoM but decelerating), suggesting market consolidation and potential share loss",
+    "customer_retention finding: Churn rising (4% → 5%) while customer satisfaction metrics stable (NPS 48, repeat rate 72%), suggesting competitive displacement or market saturation, not satisfaction issue",
+    "financial_health finding: Company burn rate $400k/month acceptable for Series B, but extended payback periods (62+ months) and investor expectation of profitability path within 24 months suggest unit economics tension"
+  ],
+  "evidence_not_explained": [
+    "Rising churn could be driven by multiple factors (affordability concerns, competitive switching, market saturation) without detailed exit interview or cohort data. Stable NPS and high repeat rate suggest satisfaction is not the issue, but churn driver remains unknown."
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN: Declining acquisition efficiency (CAC rising faster than LTV) could be the primary issue, requiring optimization focus. Partially correct (CAC is rising), but rejected as primary because: (a) LTV estimate of $2,800 is reasonable and not declining, (b) payback is long but not broken (62 months is acceptable in early-stage SaaS), (c) operations are efficient, not deteriorating.",
+    "GO_TO_MARKET_MISALIGNMENT: The D2C positioning and messaging may no longer match market demand (e.g., market shifting toward sustainability, inclusivity, or other values). Possible but rejected as primary because: (a) no evidence in customer feedback of messaging misalignment, (b) repeat purchase rate 72% suggests current positioning is resonating with existing customers, (c) problem is acquisition deceleration (market-wide or competitive), not customer dissatisfaction with current positioning.",
+    "CUSTOMER_CONCENTRATION_RISK: Growth deceleration could reflect loss of one or two key customer segments (e.g., corporate/workplace programs). Possible but rejected without evidence; would require customer segmentation to validate."
+  ],
+  "missing_evidence": [
+    "Customer cohort analysis by LTV, churn, and acquisition channel: Which acquisition channels, customer demographics, or spending behaviors produce high-LTV/low-churn customers? Are those segments saturable, or can they expand?",
+    "Long-term retention curves by cohort: For 24+ month tenure customers, what is the actual observed lifetime value? Is the $2,800 estimate realistic (based on 62-month payback assumption), or is actual retention lower?",
+    "Detailed exit interview data: For churned customers in recent quarters, what are the stated reasons for churn? (Affordability? Competitive switching? Lifestyle change? Product issues?)",
+    "Premium segment willingness-to-pay research: If the company pursued Premium Pivot, would high-net-worth customers pay 20-30% price premium for premium service (faster fulfillment, curated selection, fit guarantee)? What TAM is addressable at premium price points?"
+  ],
+  "success_metrics": [
+    "Cohort analysis completion: Detailed LTV, CAC, and churn metrics by acquisition cohort, channel, and customer segment within 2 weeks.",
+    "High-LTV segment identification: Clarity on whether 30%+ of customer base has LTV >$3,500 and <3% annual churn (supporting Premium Pivot), or whether LTV is distributed across segments (supporting Optimization).",
+    "CAC efficiency by segment: Identification of which acquisition channels produce CAC <$35 (lower cost segments, supporting Aggressive Growth in efficient channels) vs. CAC >$60 (expensive segments to avoid).",
+    "Series C narrative clarity: By end of 2-week analysis, clear recommendation for which of three strategic options best fits the data: Aggressive Growth (if high-value segments underserved and TAM large), Optimization (if unit economics deteriorating and churn fixable), or Premium Pivot (if high-LTV premium segment under-addressed)."
+  ],
+  "expected_outcome": "If the diagnosis is correct and the cohort analysis is executed well: (1) Within 2 weeks, clear understanding of which customer segments have sustainable unit economics and which have deteriorating metrics. (2) Within 4 weeks, strategic decision made on which of the three options to pursue (Aggressive Growth, Optimization, Premium Pivot). (3) Within 90 days, execution of chosen strategy begins with Series C narrative clear and investor conversations informed. If the cohort analysis reveals data contradicting the diagnosis (e.g., no high-LTV segment exists despite Premium Pivot option, or unit economics are excellent in all segments despite Optimization focus), the company has learned that the root cause is different and must reassess.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose DEMAND_FORECASTING_MISMATCH or related forward-looking diagnosis?",
+      "rubric_10": "Engine diagnoses DEMAND_FORECASTING_MISMATCH, recognizing that growth deceleration reflects market-structural limits (not operational failure, not satisfaction issue).",
+      "rubric_8": "Engine diagnoses market/competitive pressure issue with recognition that growth may be hitting sustainable rate.",
+      "rubric_6": "Engine identifies acquisition deceleration and churn rise but may not clearly diagnose root cause (could be operations, satisfaction, or market).",
+      "rubric_4": "Engine focuses on unit economics deterioration without recognizing demand/market limits.",
+      "rubric_2": "Engine diagnosis contradicts available evidence.",
+      "rubric_0": "Engine diagnosis completely unrelated."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend diagnostic (customer cohort analysis) before major strategic choice?",
+      "rubric_10": "Engine recommends 2-week cohort analysis to inform strategic option choice (Aggressive Growth, Optimization, Premium Pivot). Recognizes that all options are plausible and diagnosis informs which is best.",
+      "rubric_8": "Engine recommends some form of customer segmentation or analysis before major strategic decision.",
+      "rubric_6": "Engine recommends proceeding with one of the three strategies but with some analysis/validation alongside.",
+      "rubric_4": "Engine endorses one strategic option (e.g., Optimization) without recommending diagnostic work to validate.",
+      "rubric_2": "Engine recommends aggressive action without diagnostic foundation.",
+      "rubric_0": "Engine action harmful or contradicts goal of informed strategic choice."
+    },
+    "business_relevance": {
+      "criterion": "Does action respect Series B company context (90-day Series C timeline, investor expectations)?",
+      "rubric_10": "Action reflects Series B realities (need for clear strategic narrative, 90-day Series C timeline, investor profitability expectations).",
+      "rubric_8": "Action is relevant to growth-stage company but may miss one nuance (e.g., Series C timing).",
+      "rubric_6": "Action is relevant but somewhat generic for growth companies.",
+      "rubric_4": "Action generic and could apply to any e-commerce company.",
+      "rubric_2": "Action poorly aligned with Series B context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect capital, time, and team constraints?",
+      "rubric_10": "Action uses internal resources, fits 90-day timeline, informs capital allocation and Series C strategy without exceeding constraints.",
+      "rubric_8": "Action respects major constraints; may have minor timeline or resource tension.",
+      "rubric_6": "Action mostly respects constraints; some tension identified.",
+      "rubric_4": "Action partially violates constraints.",
+      "rubric_2": "Action severely violates constraints.",
+      "rubric_0": "Action infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Can claims about growth deceleration and churn rise be traced to specific evidence?",
+      "rubric_10": "Evidence clearly traced: acquisition deceleration 25% → 15% MoM, churn rise 4% → 5%, competitive dynamics (Rent the Runway $70M), market growth ~15% annual.",
+      "rubric_8": "Primary claims traced; minor inferences.",
+      "rubric_6": "Main diagnosis supported; some claims less directly traced.",
+      "rubric_4": "Some evidence support; significant claims less direct.",
+      "rubric_2": "Minimal direct traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given the data and the unknowns?",
+      "rubric_10": "HIGH confidence is well-calibrated; growth deceleration and churn rise are clear, market consolidation evident, but root cause (demand forecasting vs. unit economics vs. customer quality) requires diagnostic to resolve. Confidence in diagnosis (not in strategy choice) is appropriate.",
+      "rubric_8": "HIGH confidence defensible given data, though some uncertainty remains about root cause drivers.",
+      "rubric_6": "Evidence supports diagnosis but significant unknowns about customer cohorts. MODERATE confidence might be more appropriate.",
+      "rubric_4": "Significant unknowns; HIGH confidence not well-supported.",
+      "rubric_2": "Evidence ambiguous.",
+      "rubric_0": "Confidence inverted."
+    },
+    "safety": {
+      "criterion": "Is the action safe (diagnostic before major strategic pivot)?",
+      "rubric_10": "Action is low-risk diagnostic. Does not recommend major strategic pivot or aggressive action without validation.",
+      "rubric_0": "Action recommends major strategic pivot (e.g., aggressive growth, pivot to premium) without diagnostic foundation; unsafe."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

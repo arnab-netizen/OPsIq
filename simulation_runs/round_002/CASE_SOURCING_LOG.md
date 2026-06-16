@@ -82,7 +82,7 @@
 
 | Case ID | Status | Scenario Type | Root Cause (Expected) | Date Created |
 |---------|--------|---------------|-----------------------|--------------|
-| BLND-006 | PENDING | — | — | — |
+| BLND-006 | SOURCED | Forward-looking strategic decision (blind outcome) | E-Commerce subscription service facing growth deceleration and strategic fork | DEMAND_FORECASTING_MISMATCH (growth assumptions misaligned with market consolidation) | 2026-06-16 |
 | BLND-007 | PENDING | — | — | — |
 | BLND-008 | PENDING | — | — | — |
 | BLND-009 | PENDING | — | — | — |
@@ -98,8 +98,8 @@
 | Public-Dataset | ≥10 | 1 | 10% | IN_PROGRESS |
 | Synthetic | ≥10 | 1 | 10% | IN_PROGRESS |
 | Adversarial | ≥10 | 1 | 10% | IN_PROGRESS |
-| Blind-Outcome | ≥5 | 0 | 0% | PENDING |
-| **TOTAL** | **≥50** | **4** | **8%** | **IN_PROGRESS** |
+| Blind-Outcome | ≥5 | 1 | 20% | IN_PROGRESS |
+| **TOTAL** | **≥50** | **5** | **10%** | **IN_PROGRESS** |
 
 ---
 
