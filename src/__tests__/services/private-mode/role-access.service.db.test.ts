@@ -22,8 +22,8 @@ describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', ()
       data: {
         id: workspaceId,
         name: 'Test Workspace',
-        created_at: new Date(),
-        updated_at: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     });
 
@@ -269,8 +269,8 @@ describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', ()
         data: {
           id: workspace2Id,
           name: 'Workspace 2',
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       });
 
@@ -323,8 +323,8 @@ describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', ()
         data: {
           id: workspace2Id,
           name: 'Workspace 2',
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         },
       });
 
