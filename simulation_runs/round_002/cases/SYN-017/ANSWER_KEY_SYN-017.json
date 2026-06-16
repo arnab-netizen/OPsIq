@@ -1,0 +1,27 @@
+{
+  "case_id": "SYN-017",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (SaaS Operations)",
+  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "root_cause_description": "Synthetic stress-test case SYN-017 (Marketplace / Platform): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
+  "confidence_in_diagnosis": "MEDIUM",
+  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "rubric_10": "Diagnoses growth/demand issue"
+    },
+    "first_action_accuracy": {
+      "rubric_10": "Recommends diagnostic"
+    }
+  },
+  "creation_methodology": "Expert analysis of SYNTHETIC case",
+  "action_constraints_respected": [
+    "Analysis fits timeline and budget"
+  ],
+  "rationale": "Identify root cause and improvement opportunities",
+  "evidence_basis": [
+    "Financial and operational data support diagnosis"
+  ],
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

@@ -1,0 +1,10 @@
+{
+  "caseId": "SYN-020",
+  "caseType": "SYNTHETIC",
+  "industry": "Data / Data Platform",
+  "ownerIntake": {
+    "businessType": "Data platform (warehousing + analytics), $11M ARR, 40% growth, but CAC exceeding LTV timeline expectations",
+    "stage": "Sales cycle 6+ months, implementation complex, customer success resources over-stretched, churn risk from implementation delays",
+    "ownerGoal": "Improve sales efficiency and customer delivery"
+  }
+}

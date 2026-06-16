@@ -1,0 +1,10 @@
+{
+  "caseId": "ADV-016",
+  "caseType": "ADVERSARIAL",
+  "industry": "Staffing",
+  "ownerIntake": {
+    "businessType": "Staffing firm, $25M revenue, 10% growth, margins stable at 12%",
+    "stage": "Trap: Recency bias. Management attributes recent slowdown to 'temporary macro headwinds' (plausible) without investigating utilization or recruiter productivity by cohort/channel. Overlooking that slowdown might be structural.",
+    "ownerGoal": "Must diagnose: is slowdown temporary or structural?"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "case_id": "RW-026",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (SaaS Business Operations)",
+  "root_cause_diagnosis": "CUSTOMER_CONCENTRATION_RISK (or GO_TO_MARKET_MISALIGNMENT if diagnosing GTM focus on large customers)",
+  "root_cause_description": "Company has 35% of revenue from top 10 customers, 12% from single customer (DSO group). While company is growing 22% YoY and churn is acceptable (2% quarterly), valuation and risk profile are constrained by customer concentration. Business is healthy, but strategic vulnerability is high.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Commission 4-week customer segmentation and go-to-market analysis: (1) Analyze customer cohorts by CAC, LTV, expansion, churn by segment size/acquisition channel. (2) Identify which customer segments (SMB, mid-market, DSO) have healthiest unit economics. (3) Assess GTM efficiency by segment; are smaller customers underserved or under-monetized? (4) Model revenue concentration scenarios with customer diversification targets. Results determine whether solution is (A) GTM rebalancing (invest more in SMB/mid-market vs. DSO focus), (B) product repositioning (build features for smaller customers), or (C) pricing optimization (increase ARPU in smaller segments).",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "rubric_10": "Diagnoses customer concentration risk or GTM misalignment toward large customers."
+    },
+    "first_action_accuracy": {
+      "rubric_10": "Recommends customer segmentation and GTM analysis before major strategic shifts."
+    },
+    "business_relevance": {
+      "rubric_10": "Addresses Series B valuation/risk profile through concentration reduction."
+    },
+    "safety": {
+      "rubric_10": "Diagnostic before major GTM changes or customer exit."
+    }
+  },
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

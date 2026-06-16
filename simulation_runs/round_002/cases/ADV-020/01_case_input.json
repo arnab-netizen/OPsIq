@@ -1,0 +1,10 @@
+{
+  "caseId": "ADV-020",
+  "caseType": "ADVERSARIAL",
+  "industry": "Logistics",
+  "ownerIntake": {
+    "businessType": "3PL company, $50M revenue, growth 6% YoY, EBITDA 11% margin",
+    "stage": "Trap: Growth and margin metrics stable. However, margin stability masks deteriorating unit economics (gross margin per unit declining, offset by operating leverage gains from cost control). Model shows margin unsustainable as operational leverage exhausts.",
+    "ownerGoal": "Must diagnose: are stable margins sustainable, or masking deteriorating unit economics?"
+  }
+}

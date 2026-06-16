@@ -1,0 +1,10 @@
+{
+  "caseId": "ADV-017",
+  "caseType": "ADVERSARIAL",
+  "industry": "SaaS",
+  "ownerIntake": {
+    "businessType": "SaaS platform, $6M ARR, 40% growth, but customer support costs rising 60% YoY",
+    "stage": "Trap: Scaling success narrative ('we're growing 40%!') masks inefficiency (support costs rising 60% = support cost per customer rising). Leadership celebrating growth without recognizing operational leverage gap.",
+    "ownerGoal": "Must diagnose: is support cost rise temporary (new feature adoption) or structural (product-market fit issue)?"
+  }
+}

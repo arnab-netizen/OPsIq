@@ -1,0 +1,10 @@
+{
+  "caseId": "SYN-013",
+  "caseType": "SYNTHETIC",
+  "industry": "SaaS / HR Tech",
+  "ownerIntake": {
+    "businessType": "HR tech platform (recruitment, onboarding, performance), $6M ARR, 35% growth, but NPS declining",
+    "stage": "Churn rising (2% to 4% quarterly), feature parity with larger competitors increasing, customer acquisition costs rising (+15%)",
+    "ownerGoal": "Restore unit economics and differentiation"
+  }
+}

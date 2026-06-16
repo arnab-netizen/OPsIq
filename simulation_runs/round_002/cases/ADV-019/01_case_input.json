@@ -1,0 +1,10 @@
+{
+  "caseId": "ADV-019",
+  "caseType": "ADVERSARIAL",
+  "industry": "SaaS / HR Tech",
+  "ownerIntake": {
+    "businessType": "HR tech SaaS, $5M ARR, 30% growth, NPS 45 (positive), 5% quarterly churn (acceptable)",
+    "stage": "Trap: Metrics all look positive (growth, NPS, churn acceptable). However, churn is concentrated in mid-market segment (8% churn), masked by enterprise segment retention (2% churn). Mid-market is 30% of revenue and deteriorating.",
+    "ownerGoal": "Must diagnose: is churn trend healthy, or is concentration risk hidden in segment mix?"
+  }
+}

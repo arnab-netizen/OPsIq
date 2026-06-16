@@ -1,0 +1,103 @@
+{
+  "caseId": "RW-021",
+  "caseType": "REAL_WORLD",
+  "industry": "Manufacturing / Industrial Equipment",
+  "businessModel": "Mid-market industrial equipment manufacturer, B2B direct and distributor channels",
+  "businessStage": "Mature profitable company, $180M revenue",
+  "sourceNote": "Real-world case from industrial manufacturing sector. Business context reflects typical mid-sized manufacturer facing supply chain disruption and margin pressure.",
+  "ownerIntake": {
+    "businessType": "Industrial equipment manufacturer (pumps, valves, controls) serving oil/gas, water, chemical industries. $180M revenue, 650 employees, 3 manufacturing facilities (US + Mexico), distributed through 200+ distributors + 12% direct. Established in 1988, family-owned, now managed by second generation with professional ops team.",
+    "stage": "Mature profitable: EBITDA $28M (15.6% margin, down from 18% 24mo ago), gross margin 42% (down from 46%), operating cash flow $18M. Supply chain disruptions (post-COVID, semiconductor shortages, logistics) driving cost increases.",
+    "ownerGoal": "Restore EBITDA margin to 18%+ within 18 months to position for potential PE acquisition.",
+    "ownerConstraints": [
+      "Supply chain risk: Semiconductor components sourced globally; shortages driving 15-20% cost increases on electronic controls. Substitute suppliers limited and qual takes 6-12 months.",
+      "Pricing power limited: Highly competitive market; price increases met with customer push-back. OEM customers (who buy direct) have long contracts (2-3 year lock, price-adjust clauses capped at 5% annually). Distributors will shift sourcing if prices rise too much.",
+      "Margin structure: Gross margin 42% supports overhead (engineering, sales, ops), leaving limited EBITDA even with cost discipline. Volume leverage is critical.",
+      "Manufacturing footprint: Mexico plant underutilized due to logistics costs (tariffs, freight); US plants operating at 85% utilization. Consolidation would improve leverage but require capex and disruption.",
+      "Working capital: Extended customer payment terms (60-90 days standard in industry) tie up significant cash. Inventory buildup due to supply uncertainty consuming cash."
+    ],
+    "immediateConcern": "EBITDA margin eroding rapidly: down 240bps in 24 months (18% → 15.6%). Cost of goods sold rising faster than revenue (supply chain pressures) while selling price relatively flat. Operating leverage working in reverse. At current trajectory, EBITDA margin could drop to 14% within 12 months, making PE acquisition unviable. Must address whether problem is structural (market/supply chain headwinds), operational (manufacturing inefficiency or overhead bloat), or strategic (product mix shift to lower-margin products).",
+    "availableData": [
+      "Financial: $180M revenue, EBITDA $28M (15.6% margin, down from 18%), gross margin 42% (down from 46%), OpEx $45M (25% of revenue), OCF $18M",
+      "Operational: 650 employees, 3 facilities (US, Mexico, Mexico small), utilization US 85%, Mexico 65%. Supply cost increases 15-20% (semiconductors, raw materials), freight 12% higher",
+      "Sales: 200+ distributors (88% of revenue), 12% direct (OEM long-term contracts, price-adjust capped 5% annually). Average order size $50k, 40-day order cycle",
+      "Market: Commodity-like competition; pricing power limited. End-market demand flat (oil/gas stable, water/chemical slight growth)"
+    ],
+    "unavailableData": [
+      "Product-level profitability: Which products (pumps, valves, controls) are compressing? Which are holding margins?",
+      "Channel profitability: Are distributors more profitable than direct? Which distributors are high-margin, low-margin?",
+      "Cost structure deep dive: Where are supply costs rising fastest? Which materials, components are constrained?",
+      "Customer segmentation: Which end-market segments (oil/gas, water, chemical) are most profitable? Which are declining?",
+      "Manufacturing efficiency: Where is utilization opportunity? What is the cost of Mexico under-utilization? Consolidation impact?"
+    ],
+    "timeHorizon": "18 months (PE acquisition window; must restore margin credibility before exit process)",
+    "riskAppetite": "MEDIUM (mature company with stable cash flow; PE owner wants growth but valuation multiples matter)"
+  },
+  "clientContext": {
+    "industry": "Manufacturing / Industrial Equipment",
+    "size": "Mid-market ($180M revenue, 650 people, $28M EBITDA)",
+    "revenueImpactUrgency": "CRITICAL (margin erosion threatens PE acquisition valuation; must restore profitability path)"
+  },
+  "businessProblem": "A mid-market industrial equipment manufacturer is experiencing margin compression (EBITDA 18% → 15.6% in 24 months, gross margin 46% → 42%) driven by supply chain cost increases, while revenue growth is flat and pricing power is limited. Management must determine whether margin erosion is temporary (supply chain headwinds, normalize when costs stabilize) or structural (operational inefficiency, adverse product/channel mix shift, or permanent competitive deterioration), and identify which levers (pricing, product mix, channel mix, manufacturing efficiency, supply chain optimization) offer the highest-impact path to restore 18% EBITDA margin within 18 months.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "EBITDA margin declined 240bps in 24 months (18% → 15.6%), gross margin down 400bps (46% → 42%). Revenue flat while costs rising, suggesting pricing not keeping pace with cost inflation. Operating leverage negative: costs growing faster than volume.",
+      "confidence": "HIGH",
+      "source": "P&L trend analysis, 24-month financial statements",
+      "isCritical": true,
+      "supportingData": {
+        "ebitda_margin_24mo_ago": "18%",
+        "ebitda_margin_current": "15.6%",
+        "gross_margin_24mo_ago": "46%",
+        "gross_margin_current": "42%",
+        "revenue_trend": "Flat YoY"
+      }
+    },
+    {
+      "dimension": "cost_structure",
+      "finding": "Supply costs rising 15-20% (semiconductors, raw materials) while supply volumes down due to shortages. Freight costs +12%. These are pass-through cost pressures, not operational inefficiency. However, pricing power limited: OEM customers have multi-year contracts with 5% annual cap on price adjustments; distributors will source elsewhere if prices rise too much.",
+      "confidence": "HIGH",
+      "source": "Procurement analysis, supply chain review, pricing contract analysis",
+      "isCritical": true,
+      "supportingData": {
+        "supply_cost_increase": "15-20%",
+        "freight_cost_increase": "+12%",
+        "oem_price_adjustment_cap": "5% annually",
+        "distributor_switching_risk": "High if price increases >5-7%"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Manufacturing utilization imbalanced: US plants 85%, Mexico plant 65%. Mexico plant underutilized due to logistics/tariff costs. Consolidation opportunity exists but requires capex and operational disruption. Current footprint consuming overhead costs without full utilization benefit.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "Manufacturing operations analysis, capacity planning",
+      "isCritical": true,
+      "supportingData": {
+        "us_utilization": "85%",
+        "mexico_utilization": "65%",
+        "logistics_cost_mexico": "High (tariffs, freight)",
+        "consolidation_impact": "Estimated 200-300bps EBITDA improvement if executed"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Demand environment flat: oil/gas stable, water/chemical slight growth. Competition commodity-like; limited pricing power. Distributors (88% of revenue) price-sensitive; direct customers (12%) have long-term contracts with price caps. No pricing relief available in near term.",
+      "confidence": "MEDIUM",
+      "source": "Market demand analysis, customer contract review, competitive positioning",
+      "isCritical": true,
+      "supportingData": {
+        "end_market_demand": "Flat",
+        "competitive_positioning": "Commodity-like, limited pricing power",
+        "distributor_concentration": "88% of revenue, price-sensitive"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (profitable, but margin constrained; capex limited for non-essential projects)",
+    "timeHorizonDays": 540,
+    "staffCapacity": "MEDIUM (650 people, but manufacturing teams stretched with supply chain management burden)",
+    "cashRunwayMonths": "N/A (profitable, positive cash flow)",
+    "legalComplianceSensitive": false
+  }
+}

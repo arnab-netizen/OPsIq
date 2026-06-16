@@ -1,0 +1,110 @@
+{
+  "case_id": "RW-019",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (B2B SaaS Growth)",
+  "creation_methodology": "Expert analysis of Series A SaaS churn acceleration pattern. Reviewed financial metrics (churn Q2 4% → Q3 6%), expansion ARR decline, customer concentration (top 5 = 32% of ARR), and usage data (strong adoption but no correlation with expansion). Diagnosed root cause as customer fit/segment mismatch, not product quality.",
+  "root_cause_diagnosis": "GO_TO_MARKET_MISALIGNMENT",
+  "root_cause_description": "The company is acquiring customers that are technically good fits (strong usage, adequate satisfaction) but commercially misaligned (low expansion, eventual churn). The cohort data shows expansion ARR declining as a percentage of new customer revenue (Q1 12% → Q3 8%), suggesting either (1) GTM messaging is attracting lower-value/lower-expansion customer segments, or (2) acquisition channels changed and new channels bring different customer profiles. Top 5 customer concentration (32% of ARR) suggests some customers are strategic/good fit, while others are not. The churn acceleration pattern (4% Q2 → 6% Q3) timing aligns with when newer cohorts reach the 12-18 month evaluation point (when expansion decisions are typically made). Root cause is not product (usage strong, satisfaction neutral) or market (adoption accelerating), but GTM fit: the company's positioning or acquisition channels are attracting customers that don't expand.",
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Commission 4-week detailed cohort analysis: (1) Segment customer base by acquisition source (direct sales, self-serve, partner channels), customer size (revenue), vertical (construction segment: GCs, subs, engineers), and tenure. (2) Calculate LTV, CAC, expansion %, and churn % by cohort. (3) Identify which cohorts have LTV >$35k and expansion >15% of base (healthy), and which have LTV $15-20k and <5% expansion (weak). (4) For churned customers in each cohort, compile churn reasons (stated + inferred from usage). Results will determine whether GTM messaging, channel strategy, or sales targeting needs adjustment.",
+  "action_description": "This is first priority because churn acceleration will compound if not understood. Within 4 weeks, the company will have clarity on whether the problem is (A) messaging attracting wrong segment (fix: reposition), (B) acquisition channels changed (fix: reallocate spend), or (C) customer expectations misaligned (fix: improve sales qualification). This diagnostic is lower risk than major product pivots and prevents wasted effort on false fixes.",
+  "action_constraints_respected": [
+    "Cash runway: 4-week analysis uses internal analytics team (no external cost), fits within 22-month runway.",
+    "Team capacity: Analysis uses existing data (no new systems needed); one analyst for 4 weeks is feasible for 18-person team.",
+    "Timeline: 4 weeks fits within 90-day Series B prep window, leaving 60 days for GTM adjustment based on findings."
+  ],
+  "rationale": "Churn acceleration is the immediate threat to Series B narrative. However, the pattern (high usage, neutral satisfaction, low expansion, concentration in non-expanding cohorts) suggests customer fit issue, not product issue. If the company fixes the product (common response to churn), it will miss the real issue (acquiring wrong customers). The cohort analysis is diagnostic: it either validates the customer-fit hypothesis or reveals a different issue (e.g., usage strong but for low-value use cases). Either way, the company learns what to fix before Series B conversations.",
+  "evidence_basis": [
+    "financial_health: Churn accelerated Q2→Q3 (4%→6%), suggesting specific cohort deterioration, not general market issue.",
+    "customer_retention: Expansion ARR declining as % of new revenue (Q1 12% → Q3 8%), suggesting newer cohorts have different economics than earlier cohorts.",
+    "market_position: Top 5 customers = 32% of ARR (high concentration), suggesting some customers are strategic/good fit while others are marginal.",
+    "product_usage: 85% WAU and stable usage across cohorts suggests usage is not the discriminator; some customers use the product heavily but still don't expand or churn."
+  ],
+  "evidence_not_explained": [
+    "Why did expansion ARR decline as % of new customer revenue? Could be (1) sales mix changed (acquiring different customer types), (2) messaging changed, (3) product changed and no longer fits original use case, (4) market changed. Cohort analysis will reveal which."
+  ],
+  "alternative_explanations": [
+    "TRUST_QUALITY_CRISIS: Product quality issues driving churn. Rejected because usage (85% WAU) and satisfaction (7.2/10) stable; if product quality had declined, we'd see either lower usage or lower satisfaction.",
+    "UNIT_ECONOMICS_BREAKDOWN: Unit economics deteriorating (CAC rising, LTV declining). Rejected because CAC has been stable (~$2,100) and LTV estimate ($28k) based on 11-month payback; if economics were breaking, we'd see cohort LTV declining over time. Expansion decline suggests cohort mix changed, not economics.",
+    "OPERATIONAL_BOTTLENECK: Support burden preventing proper onboarding/expansion. Possible but rejected as primary because support ticket increase (25%) is consistent with customer growth (15%), not disproportionate. If operations were bottlenecked, we'd see usage decline or satisfaction drop."
+  ],
+  "missing_evidence": [
+    "Detailed churn cohort analysis: Which acquisition sources, customer sizes, and verticals have churned? What is the churn pattern by cohort age?",
+    "Win/loss data for expansion deals: Which customers expanded and why? Which didn't and why not? Feature requests? Pricing objections? Competitive switching?",
+    "Sales methodology audit: Did sales process change? Are sales reps qualifying for expansion potential? Is messaging emphasizing use cases that attract non-expanders?",
+    "Competitive intelligence: Which competitors are winning deals from churned customers? What are they offering that this company is not?"
+  ],
+  "success_metrics": [
+    "Cohort segmentation complete: Clear breakdown of LTV, CAC, expansion %, and churn % by acquisition source, customer size, and vertical within 2 weeks.",
+    "High-value cohort identification: Clarity on which cohorts have LTV >$35k and expansion >15% (retain/grow), and which have LTV <$20k and <5% expansion (adjust GTM targeting).",
+    "Churn reason categorization: For churned customers, clear categorization by reason (product fit, pricing, competitive, budget cut, etc.).",
+    "GTM adjustment plan: By end of week 4, clear recommendation on whether to (A) adjust messaging, (B) reallocate acquisition spending, (C) improve sales qualification, or (D) combination."
+  ],
+  "expected_outcome": "If diagnosis correct, cohort analysis will show that (1) early cohorts (acquired via direct sales, larger GCs) have high expansion and low churn, while (2) recent cohorts (acquired via self-serve or new channels, smaller subs) have low expansion and higher churn. This validates customer-fit hypothesis and suggests GTM adjustment (reallocate spend back to direct sales, change messaging, improve qualification). If cohort analysis shows no clear pattern by acquisition source or customer type, the company must investigate other factors (product fit, pricing, competitive switching) and may need more targeted investigation.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose GO_TO_MARKET_MISALIGNMENT or customer fit issue?",
+      "rubric_10": "Engine diagnoses GO_TO_MARKET_MISALIGNMENT, recognizing that acquisition is bringing wrong customer type or messaging attracts misaligned expectations.",
+      "rubric_8": "Engine diagnoses customer fit or GTM channel issue; may not explicitly name it GO_TO_MARKET_MISALIGNMENT but captures essence.",
+      "rubric_6": "Engine identifies churn acceleration but may not clearly diagnose whether product, market, or customer-fit is root cause.",
+      "rubric_4": "Engine focuses on product quality or satisfaction without recognizing customer-fit dimension.",
+      "rubric_2": "Engine diagnosis contradicts usage and satisfaction data.",
+      "rubric_0": "Engine completely misses churn acceleration or offers unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend diagnostic (cohort analysis) before GTM pivot?",
+      "rubric_10": "Engine recommends 4-week cohort analysis to identify which customer segments are healthy vs. at-risk before major GTM changes.",
+      "rubric_8": "Engine recommends some form of customer analysis before making GTM decisions.",
+      "rubric_6": "Engine recommends proceeding with GTM change with some supporting analysis.",
+      "rubric_4": "Engine recommends product fixes or major GTM pivots without diagnostic foundation.",
+      "rubric_2": "Engine recommends aggressive action (e.g., cut acquisition, major repositioning) without evidence.",
+      "rubric_0": "Engine action harmful or contradicts data."
+    },
+    "business_relevance": {
+      "criterion": "Does action reflect Series A SaaS context (Series B prep, customer concentration risk)?",
+      "rubric_10": "Action directly addresses churn acceleration in context of Series B readiness and customer concentration risk.",
+      "rubric_8": "Action relevant to Series A SaaS but may miss one nuance (e.g., concentration risk).",
+      "rubric_6": "Action relevant to churn problem generally but somewhat generic.",
+      "rubric_4": "Action could apply to any company with churn.",
+      "rubric_2": "Action poorly aligned with Series A context.",
+      "rubric_0": "Action irrelevant."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect 22-month runway, 18-person team, 90-day timeline?",
+      "rubric_10": "Action uses internal resources only, fits 4-week timeline and 90-day Series B window without team strain.",
+      "rubric_8": "Action respects major constraints; minor resource tension.",
+      "rubric_6": "Action mostly feasible; some timeline or resource concern.",
+      "rubric_4": "Action partially violates constraints.",
+      "rubric_2": "Action severely violates constraints.",
+      "rubric_0": "Action infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Can churn acceleration claim be traced to specific data?",
+      "rubric_10": "Evidence clearly traced: churn 4% Q2 → 6% Q3, expansion ARR decline Q1 12% → Q3 8%, top 5 concentration 32%, usage stable at 85% WAU.",
+      "rubric_8": "Primary claims traced; minor inferences.",
+      "rubric_6": "Main diagnosis supported; some claims less direct.",
+      "rubric_4": "Some evidence; significant claims less direct.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MEDIUM-HIGH confidence appropriate?",
+      "rubric_10": "MEDIUM-HIGH appropriate: churn acceleration and expansion decline are clear, but cohort-level drivers unknown. Confidence in diagnosis pattern (not in specific fix) is justified.",
+      "rubric_8": "HIGH confidence defensible; diagnosis supported by pattern.",
+      "rubric_6": "Evidence supports diagnosis but unknowns about which cohorts are affected. MEDIUM confidence might be more appropriate.",
+      "rubric_4": "Significant unknowns; confidence overstated.",
+      "rubric_2": "Evidence ambiguous.",
+      "rubric_0": "Confidence inverted."
+    },
+    "safety": {
+      "criterion": "Is action safe (diagnostic before major GTM change)?",
+      "rubric_10": "Action is diagnostic; does not recommend major GTM pivot without validation.",
+      "rubric_0": "Action recommends major GTM changes (e.g., cut acquisition, reposition) without evidence; unsafe."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

@@ -1,0 +1,92 @@
+{
+  "caseId": "RW-022",
+  "caseType": "REAL_WORLD",
+  "industry": "Staffing & Recruiting / Professional Services",
+  "businessModel": "Executive search and staffing firm serving financial services and technology sectors",
+  "businessStage": "Growth stage, $45M revenue",
+  "sourceNote": "Real-world case from recruiting/staffing sector. Business context reflects typical recruiting firm facing utilization and talent retention challenges.",
+  "ownerIntake": {
+    "businessType": "Executive search and staffing firm specializing in financial services and tech hiring. Founded 2008, 150 employees (120 recruiters, 30 support), 45 offices across major US markets. Placed 800+ professionals in 2024.",
+    "stage": "Growth stage: $45M revenue (15% YoY growth, slowing from 25% growth two years ago), EBITDA $6.8M (15% margin, down from 18% two years ago), utilization 78% (down from 82% two years ago). Recruiter productivity declining: revenue per recruiter $300k (down from $340k two years ago). Margin pressure from rising recruiter salaries (+18% in last 18 months).",
+    "ownerGoal": "Return to 20%+ EBITDA margin and demonstrate profitability leverage within 18 months to support Series B fund-raising or strategic acquisition.",
+    "ownerConstraints": [
+      "Talent market: Recruiting market highly competitive for top talent. Recruiter turnover 20% annually (vs. 12% two years ago); rising retention costs. Offers market competitive but margin-constrained.",
+      "Utilization and productivity: Utilization 78% (declining from 82%) suggests bench time increasing or client work declining. Productivity per recruiter declining. Difficult to scale profitably without addressing utilization.",
+      "Competitive pressure: Tech and fintech companies hiring directly (not through recruiters), reducing recruiter-dependent hiring. Reduced demand for high-end executive search in certain verticals.",
+      "Economic sensitivity: Tech hiring (major segment) sensitive to economic cycles. Current macro uncertainty is impacting hiring budgets.",
+      "Scale economics: $45M revenue is below scale-efficient size for profitability; competitor consolidation creating larger, more efficient players."
+    ],
+    "immediateConcern": "Growth stalling (15% current vs. 25% two years ago) while margins compressing (15% current vs. 18%). Recruiter productivity declining (revenue per recruiter down 12% in two years), suggesting either client demand softening or recruiter efficiency declining. Salary costs rising 18% while revenue per recruiter falling, creating a profitability squeeze. Must determine whether problem is demand-driven (fewer placements), supply-driven (recruiter productivity), or structural (market shift away from recruiting firm model).",
+    "availableData": [
+      "Financial: $45M revenue (+15% YoY, slowing from 25% growth), EBITDA $6.8M (15% margin), utilization 78%, 150 employees (120 recruiters)",
+      "Operational: Revenue per recruiter $300k (down from $340k), recruiter turnover 20% annually, salary costs +18% in 18 months, bench time increasing",
+      "Market: Specialization in fintech (40% of revenue, growth 8% YoY) and tech (45%, growth 18% YoY), executive search (15% premium margin), junior-mid placement (65% core revenue)",
+      "Competitive: Consolidation trend (larger firms buying regional), tech companies hiring directly, fintech growth slowing (economy sensitivity)"
+    ],
+    "unavailableData": [
+      "Detailed segment profitability: Which verticals (fintech, tech, other) are most profitable? Which are declining?",
+      "Recruiter productivity breakdown: Which recruiters are performing above/below $300k average? What are the best performers doing differently?",
+      "Client win/loss: Which clients increasing/decreasing placement volume? Why?",
+      "Product diversification potential: What adjacent services (coaching, outplacement, advisory) could add margin?",
+      "Competitive positioning: How are larger recruiting firms more efficient? What can we learn?"
+    ],
+    "timeHorizon": "18 months (Series B fund-raising or acquisition timeline)",
+    "riskAppetite": "MEDIUM-HIGH (growth-stage company willing to invest in growth or acquisition, but profitability credibility matters)"
+  },
+  "clientContext": {
+    "industry": "Staffing & Recruiting",
+    "size": "Growth stage ($45M revenue, 150 people, $6.8M EBITDA)",
+    "revenueImpactUrgency": "CRITICAL (margin compression and growth deceleration threaten financing/acquisition)"
+  },
+  "businessProblem": "A specialized recruiting firm is experiencing simultaneous growth slowdown (15% current vs. 25% two years ago) and margin compression (15% EBITDA vs. 18%), driven by declining recruiter productivity (revenue per recruiter $300k vs. $340k two years ago) and rising salary costs (+18%). Management must determine whether the problem is demand-driven (client hiring budget constraints due to macro uncertainty), supply-driven (recruiter efficiency or retention issues), or structural (market shift away from recruiter-dependent hiring). Without clarity, Series B fund-raising or strategic acquisition will be difficult.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Growth decelerating (15% YoY current vs. 25% growth two years ago) while margins compressing (15% EBITDA vs. 18%). Revenue per recruiter declining 12% (from $340k to $300k) in two years, suggesting either recruiter productivity falling or bench time increasing. Salary costs rising 18% in 18 months, outpacing revenue growth.",
+      "confidence": "HIGH",
+      "source": "Financial statements, staffing metrics, utilization analysis",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_growth_current": "15% YoY",
+        "revenue_growth_2yo": "25% YoY",
+        "ebitda_margin_current": "15%",
+        "ebitda_margin_2yo": "18%",
+        "revenue_per_recruiter_current": "$300k",
+        "revenue_per_recruiter_2yo": "$340k",
+        "salary_cost_increase": "+18% in 18 months"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Utilization declining from 82% to 78%, suggesting increased bench time. Recruiter turnover rising to 20% annually (from 12% two years ago), indicating talent retention challenge. Productivity decline could be due to recruiter churn (less experienced team), market conditions (harder to place), or client demand softening.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "Utilization reports, HR metrics, project tracking",
+      "isCritical": true,
+      "supportingData": {
+        "utilization_current": "78%",
+        "utilization_2yo": "82%",
+        "recruiter_turnover_current": "20% annually",
+        "recruiter_turnover_2yo": "12% annually"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Tech hiring (45% of revenue) growing 18% YoY (healthy), but fintech (40% of revenue) growing only 8% (slower), reflecting macro sensitivity. Executive search premium segment, but junior-mid placement (65% of core) more competitive. Competitive pressure from tech companies hiring directly and larger recruiting firms consolidating.",
+      "confidence": "MEDIUM",
+      "source": "Revenue mix analysis, market trends, competitive intelligence",
+      "isCritical": true,
+      "supportingData": {
+        "tech_revenue_growth": "18% YoY",
+        "fintech_revenue_growth": "8% YoY",
+        "fintech_market_sensitivity": "High (economic cycle driven)"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (profitable but margin-constrained; limited discretionary spending)",
+    "timeHorizonDays": 540,
+    "staffCapacity": "MEDIUM (150 people, but high turnover consuming management attention)",
+    "cashRunwayMonths": "N/A (profitable, positive cash flow)",
+    "legalComplianceSensitive": false
+  }
+}

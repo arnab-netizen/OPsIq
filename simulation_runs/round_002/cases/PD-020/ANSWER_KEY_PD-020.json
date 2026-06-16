@@ -1,0 +1,27 @@
+{
+  "case_id": "PD-020",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Public Dataset Analysis)",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "Public dataset case PD-020 (Retail / Department Stores): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+    },
+    "first_action_accuracy": {
+      "rubric_10": "Recommends diagnostic analysis"
+    }
+  },
+  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
+  "action_constraints_respected": [
+    "Analysis fits timeline and budget"
+  ],
+  "rationale": "Identify root cause and improvement opportunities",
+  "evidence_basis": [
+    "Financial and operational data support diagnosis"
+  ],
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

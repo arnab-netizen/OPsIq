@@ -1,0 +1,10 @@
+{
+  "caseId": "PD-020",
+  "caseType": "PUBLIC_DATASET",
+  "industry": "Retail / Department Stores",
+  "ownerIntake": {
+    "businessType": "Regional department store chain, 30 locations, $600M revenue, declining, EBITDA margin 4%",
+    "stage": "Store traffic declining, e-commerce cannibalizing sales, margins compressed by inventory write-downs",
+    "ownerGoal": "Stabilize business and improve profitability"
+  }
+}

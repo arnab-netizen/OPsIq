@@ -1,0 +1,10 @@
+{
+  "caseId": "ADV-015",
+  "caseType": "ADVERSARIAL",
+  "industry": "E-commerce",
+  "ownerIntake": {
+    "businessType": "D2C e-commerce brand, $8M revenue, 35% YoY growth, but CAC rising and repeat purchase declining",
+    "stage": "Trap: Growth masking unit economics deterioration. New customer acquisition increasing but LTV/retention declining. Growth narrative (35% growth) anchoring attention away from cohort quality decline.",
+    "ownerGoal": "Must diagnose: does growth trajectory support unit economics, or is cohort quality deteriorating?"
+  }
+}

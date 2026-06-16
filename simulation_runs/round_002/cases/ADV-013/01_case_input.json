@@ -1,0 +1,10 @@
+{
+  "caseId": "ADV-013",
+  "caseType": "ADVERSARIAL",
+  "industry": "SaaS",
+  "ownerIntake": {
+    "businessType": "SaaS startup, $4M ARR, 50% YoY growth, CEO celebrating 'unit economics victory'",
+    "stage": "Trap: metrics show CAC payback 10 months and LTV $120k, but cohort analysis reveals newer customers have CAC payback 18 months (CAC rising, unit economics deteriorating). CEO celebrating aggregate metrics while individual cohorts deteriorating.",
+    "ownerGoal": "Must diagnose before Series B: is unit economics really healthy, or deteriorating?"
+  }
+}

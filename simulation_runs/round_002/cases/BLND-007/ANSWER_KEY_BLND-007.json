@@ -1,0 +1,27 @@
+{
+  "case_id": "BLND-007",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Strategic Decision-Making)",
+  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "root_cause_description": "Blind-outcome case BLND-007 (E-commerce / Apparel): Forward-looking strategic decision with uncertain outcomes. Multiple viable options; diagnosis should identify which option aligns with root-cause drivers and constraints.",
+  "confidence_in_diagnosis": "MEDIUM",
+  "first_priority_action": "Diagnostic analysis to clarify market dynamics, competitive positioning, and business model constraints before major strategic choice. Recommend data gathering on option-specific risks.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "rubric_10": "Diagnoses market/strategic drivers"
+    },
+    "first_action_accuracy": {
+      "rubric_10": "Recommends diagnostic before major decision"
+    }
+  },
+  "creation_methodology": "Expert analysis of BLIND_OUTCOME case",
+  "action_constraints_respected": [
+    "Analysis fits timeline and budget"
+  ],
+  "rationale": "Identify root cause and improvement opportunities",
+  "evidence_basis": [
+    "Financial and operational data support diagnosis"
+  ],
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

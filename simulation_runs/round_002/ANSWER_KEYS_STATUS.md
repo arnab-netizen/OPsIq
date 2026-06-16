@@ -105,12 +105,12 @@
 
 | Category | Required | Created | Reviewed | Locked | % Complete |
 |----------|----------|---------|----------|--------|------------|
-| Real-World | 15 | 1 | 0 | 0 | 6.7% |
-| Public-Dataset | 10 | 1 | 0 | 0 | 10% |
-| Synthetic | 10 | 1 | 0 | 0 | 10% |
-| Adversarial | 10 | 1 | 0 | 0 | 10% |
-| Blind-Outcome | 5 | 0 | 0 | 0 | 0% |
-| **TOTAL** | **50** | **10** | **0** | **0** | **20%** |
+| Real-World | 15 | 15 | 0 | 0 | 100% |
+| Public-Dataset | 10 | 10 | 0 | 0 | 100% |
+| Synthetic | 10 | 10 | 0 | 0 | 100% |
+| Adversarial | 10 | 10 | 0 | 0 | 100% |
+| Blind-Outcome | 5 | 5 | 0 | 0 | 100% |
+| **TOTAL** | **50** | **50** | **0** | **0** | **100%** |
 
 ---
 
@@ -165,7 +165,8 @@
 
 ---
 
-**Status:** IN_PROGRESS - Awaiting case sourcing completion before answer key creation begins  
-**Blocking:** Case sourcing (must complete first)  
-**Next checkpoint:** 2026-06-22 (case sourcing should be 80%+ complete)
+**Status:** COMPLETE - All 50 answer keys created  
+**Case sourcing:** COMPLETE (50/50 cases, 100%)
+**Answer keys:** COMPLETE (50/50 created, 100%)
+**Next:** Peer review and locking (beginning 2026-06-16)
 

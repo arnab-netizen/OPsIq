@@ -1,0 +1,112 @@
+{
+  "case_id": "RW-021",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Manufacturing Operations)",
+  "creation_methodology": "Expert analysis of industrial manufacturer margin compression. Reviewed financial trends (EBITDA 18%→15.6%, gross margin 46%→42%), supply chain cost pressures (semiconductors +15-20%, freight +12%), pricing constraints (OEM contracts capped at 5% adjustment, distributor switching risk), and manufacturing utilization (US 85%, Mexico 65%). Diagnosed root cause as unit economics breakdown due to cost inflation outpacing pricing.",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "The manufacturer's gross margin is eroding due to supply cost inflation (semiconductors +15-20%, freight +12%) outpacing pricing power. Selling prices constrained by customer contracts (OEM multi-year contracts with 5% price-adjust cap) and competitive dynamics (distributors price-sensitive). This creates a structural margin squeeze: costs rising 15-20% while prices capped at 5%. Simultaneously, manufacturing footprint is inefficient (Mexico plant 65% utilization, underutilized by logistics costs), preventing full overhead leverage. Combined, these factors are driving EBITDA margin down 240bps in 24 months (18%→15.6%). Root cause is not demand (flat but not declining) or operational breakdown (cost discipline is good, but costs are structural/external), but unit economics deterioration due to cost inflation outpacing pricing. Without intervention, margin will continue eroding as contract price-adjust lags cost inflation.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Commission 6-week product and channel profitability analysis: (1) Calculate gross margin and EBITDA contribution by product line (pumps, valves, controls): which products are contracting, which holding? (2) Analyze profitability by channel (distributor vs. direct): are there channel mix opportunities? (3) Identify supply cost drivers by product (which products most exposed to semiconductor, freight, raw material inflation?). (4) Quantify manufacturing efficiency impact (Mexico under-utilization cost, US consolidation opportunity). Results will determine whether solution is (A) repricing strategy (which product lines can sustain price increases?), (B) product mix shift (shift to higher-margin products), (C) manufacturing consolidation (Mexico plant optimization or closure), or (D) supply chain optimization (identify alternative suppliers, redesign for lower-cost materials).",
+  "action_description": "This is first priority because margin erosion is accelerating and threatens PE exit timeline (18-month window). Without understanding which products/channels are compressing and which structural costs can be addressed, management risks making wrong investments (e.g., consolidating wrong plant, cutting costs from growth areas, pursuing price increases on products that can't sustain them). The 6-week analysis is low-risk and provides clarity for 12-month margin recovery plan.",
+  "action_constraints_respected": [
+    "PE acquisition timeline: 6-week analysis fits within 18-month window, leaving 14 months for margin recovery execution.",
+    "Cash flow impact: Uses internal resources (no major capex for analysis phase); profitability analysis can run parallel to operations.",
+    "Operational disruption: Analysis does not require plant closures, supply chain disruptions, or major changes during execution; findings inform future decisions."
+  ],
+  "rationale": "Margin erosion is a critical threat to valuation, but the improvement path is unclear without detailed analysis. The company has multiple levers (repricing, product mix, supply chain optimization, manufacturing consolidation), but pulling the wrong lever could harm valuation (e.g., losing margin customers with aggressive repricing, cutting costs from growth areas, pursuing consolidation that destroys customer proximity). The profitability analysis will show which levers are high-impact and which customer/product segments drive the margin problem.",
+  "evidence_basis": [
+    "financial_health: EBITDA margin down 240bps (18%→15.6%), gross margin down 400bps (46%→42%) in 24 months.",
+    "cost_structure: Supply costs rising 15-20% (semiconductors, materials), freight +12%, while pricing power limited (OEM contracts capped 5%, distributors price-sensitive).",
+    "operational_efficiency: Manufacturing utilization imbalanced (US 85%, Mexico 65%), suggesting consolidation opportunity or footprint inefficiency.",
+    "market_position: Demand flat; pricing power limited due to commodity-like competition and distributor leverage."
+  ],
+  "evidence_not_explained": [
+    "Which product lines are most margin-compressed? Are all products hit equally by supply cost inflation, or are some more exposed?",
+    "Is distributor channel less profitable than direct? Could channel mix shift improve margins?",
+    "What is the true cost of Mexico plant under-utilization? Is consolidation economically viable?"
+  ],
+  "alternative_explanations": [
+    "OPERATIONAL_BOTTLENECK: Manufacturing inefficiency driving costs. Possible but rejected as primary because cost discipline appears good; the issue is external cost inflation (supply, freight) outpacing pricing, not internal operational breakdown.",
+    "DEMAND_FORECASTING_MISMATCH: Market demand shifting away from the manufacturer's products. Rejected because revenue is flat, not declining. If demand were shifting, we'd see revenue decline or order patterns changing.",
+    "GO_TO_MARKET_MISALIGNMENT: Positioning or channel strategy misaligned with customer needs. Possible if distributor channel is less profitable or wrong customer segments acquired, but rejected without evidence; current problem appears to be cost structure, not channel mismatch."
+  ],
+  "missing_evidence": [
+    "Product-level margin analysis: Detailed gross margin and EBITDA by product (pumps, valves, controls) showing which are compressing and which stable.",
+    "Supply cost exposure by product: Which products are most exposed to semiconductor, freight, and raw material cost inflation?",
+    "Channel profitability comparison: Detailed economics of distributor vs. direct channels; are there channel mix opportunities?",
+    "Customer contract analysis: Which customer contracts allow pricing flexibility? Which are locked in? What % of revenue is locked vs. flexible pricing?"
+  ],
+  "success_metrics": [
+    "Product profitability analysis: Clear margin and EBITDA contribution by product line within 2 weeks, identifying which products are most compressed.",
+    "Supply cost exposure mapping: Clear understanding of which products are most exposed to semiconductor, freight, and material cost inflation.",
+    "Channel economics: Clear comparison of distributor vs. direct channel profitability; quantified impact of potential channel mix shift.",
+    "Improvement path clarity: By end of week 6, clear recommendation on which 2-3 levers (repricing, product mix, supply chain optimization, manufacturing consolidation) offer highest-impact margin recovery potential."
+  ],
+  "expected_outcome": "If diagnosis correct, analysis will show that (1) certain product lines (e.g., electronic controls) are more exposed to semiconductor cost inflation and have compressed more than others, (2) distributor channel may have lower margins than direct but is necessary for volume, (3) Mexico plant under-utilization is a 100-150bps drag on EBITDA that could be recovered through consolidation or channel shift, (4) specific customer contracts or products with flexible pricing offer repricing opportunity. This will enable a 12-month margin recovery plan combining selective repricing (high-margin products), supply chain optimization (identify alternative suppliers or material substitutes), and potential manufacturing optimization. If analysis reveals different findings (e.g., all products equally compressed, no channel profitability difference, demand actually declining in specific segments), the company must reassess and may need competitive analysis or market assessment.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or margin deterioration?",
+      "rubric_10": "Engine diagnoses UNIT_ECONOMICS_BREAKDOWN, recognizing cost inflation outpacing pricing power is core issue.",
+      "rubric_8": "Engine diagnoses margin compression or cost/price mismatch; may frame differently but captures essence.",
+      "rubric_6": "Engine identifies margin or cost issues but may not clearly diagnose as unit economics problem.",
+      "rubric_4": "Engine focuses on supply chain risk or manufacturing without recognizing margin deterioration.",
+      "rubric_2": "Engine diagnosis contradicts data.",
+      "rubric_0": "Engine misses margin erosion or offers unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend profitability analysis before major changes?",
+      "rubric_10": "Engine recommends product and channel profitability analysis to identify which levers (repricing, product mix, consolidation) are highest-impact.",
+      "rubric_8": "Engine recommends some form of profitability analysis.",
+      "rubric_6": "Engine recommends proceeding with one strategy with some analysis.",
+      "rubric_4": "Engine recommends major changes (repricing, consolidation) without analysis.",
+      "rubric_2": "Engine recommends aggressive action without foundation.",
+      "rubric_0": "Engine action harmful."
+    },
+    "business_relevance": {
+      "criterion": "Does action reflect manufacturing business context (PE exit, margin credibility)?",
+      "rubric_10": "Action directly addresses margin erosion in context of 18-month PE exit window.",
+      "rubric_8": "Action relevant to manufacturing margin challenge but may miss exit urgency.",
+      "rubric_6": "Action relevant to margin issue generally.",
+      "rubric_4": "Action generic for cost pressure.",
+      "rubric_2": "Action poorly aligned.",
+      "rubric_0": "Action irrelevant."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect 18-month PE timeline, operational continuity, cash flow constraints?",
+      "rubric_10": "Action fits timeline, uses internal resources, maintains operational continuity.",
+      "rubric_8": "Action respects major constraints.",
+      "rubric_6": "Action mostly feasible.",
+      "rubric_4": "Action partially violates constraints.",
+      "rubric_2": "Action severely violates constraints.",
+      "rubric_0": "Action infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Can margin erosion be traced to specific data?",
+      "rubric_10": "Clearly traced: EBITDA 18%→15.6% (240bps), gross margin 46%→42% (400bps), supply costs +15-20%, pricing capped at 5%.",
+      "rubric_8": "Primary claims traced.",
+      "rubric_6": "Main diagnosis supported.",
+      "rubric_4": "Some evidence.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate?",
+      "rubric_10": "HIGH appropriate: margin erosion and cost-price mismatch are clear facts, but improvement path (which levers, which products) unknown. Confidence in problem justified.",
+      "rubric_8": "HIGH defensible.",
+      "rubric_6": "Evidence supports problem; solution complex. MEDIUM-HIGH might be appropriate.",
+      "rubric_4": "Confidence overstated.",
+      "rubric_2": "Evidence ambiguous.",
+      "rubric_0": "Confidence inverted."
+    },
+    "safety": {
+      "criterion": "Is action safe (diagnostic before major changes)?",
+      "rubric_10": "Action is diagnostic; does not recommend repricing, consolidation, or product changes without analysis.",
+      "rubric_0": "Action recommends major changes without diagnostic foundation."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

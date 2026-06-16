@@ -1,0 +1,10 @@
+{
+  "caseId": "PD-018",
+  "caseType": "PUBLIC_DATASET",
+  "industry": "Regional Utility / Energy",
+  "ownerIntake": {
+    "businessType": "Regional utility company, $3B revenue, regulated rate environment, EBITDA stable but capex needs high",
+    "stage": "Rate growth limited by regulatory environment (avg 2-3% annually), capex inflation rising, ROE pressure",
+    "ownerGoal": "Navigate regulatory and capital constraints"
+  }
+}

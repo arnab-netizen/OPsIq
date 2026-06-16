@@ -1,0 +1,10 @@
+{
+  "caseId": "SYN-016",
+  "caseType": "SYNTHETIC",
+  "industry": "Supply Chain / Logistics SaaS",
+  "ownerIntake": {
+    "businessType": "Supply chain visibility platform, $5M ARR, 25% growth (slowing from 40%), churn 5% quarterly",
+    "stage": "Product adoption slow (customer feedback: too complex), support burden high, utilization per customer low",
+    "ownerGoal": "Improve product fit and customer success"
+  }
+}

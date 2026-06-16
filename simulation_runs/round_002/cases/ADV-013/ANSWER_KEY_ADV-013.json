@@ -1,0 +1,27 @@
+{
+  "case_id": "ADV-013",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Business Analysis)",
+  "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
+  "root_cause_description": "Adversarial case ADV-013 (SaaS): Trap scenario - plausible narrative (market conditions, growth metrics) masks underlying issue (cohort deterioration, segment concentration, unit economics hidden in aggregated metrics). Must diagnose root cause before strategic action.",
+  "confidence_in_diagnosis": "MEDIUM",
+  "first_priority_action": "Commission thorough diagnostic (cohort analysis, segment profitability, competitive positioning) to test plausible narrative against actual drivers before major strategic decisions.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "rubric_10": "Recognizes trap; recommends diagnosis before accepting narrative"
+    },
+    "first_action_accuracy": {
+      "rubric_10": "Recommends validation analysis"
+    }
+  },
+  "creation_methodology": "Expert analysis of ADVERSARIAL case",
+  "action_constraints_respected": [
+    "Analysis fits timeline and budget"
+  ],
+  "rationale": "Identify root cause and improvement opportunities",
+  "evidence_basis": [
+    "Financial and operational data support diagnosis"
+  ],
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

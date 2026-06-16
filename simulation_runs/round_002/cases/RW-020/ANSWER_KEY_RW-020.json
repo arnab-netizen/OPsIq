@@ -1,0 +1,112 @@
+{
+  "case_id": "RW-020",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Banking & Finance)",
+  "creation_methodology": "Expert analysis of regional bank margin compression. Reviewed financial trends (NIM 3.4%→3.1%, net income -12% YoY, efficiency ratio 59%→62%), deposit dynamics (beta rising, rate competition from mega-banks and fintechs), and operational costs (personnel 43% vs. peer 40%). Diagnosed root cause as unit economics deterioration (margin per dollar of assets declining while cost structure not adapting).",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "The bank's profitability per dollar of assets (ROA) is deteriorating due to two compounding factors: (1) deposit costs rising faster than loan yields (NIM compression from 3.4%→3.1%, with further compression expected), and (2) cost structure not adjusting (efficiency ratio worsening 59%→62% despite no revenue growth). The root cause is structural unit economics breakdown, not temporary rate pressure. Deposit beta is rising because customers have alternatives (mega-bank 4.5%+ deposits, fintechs, CDs, Treasury exposure), and the bank is losing rate competition. Simultaneously, operating costs (personnel 43% of revenue vs. peer 40%) are not declining, creating a profitability squeeze. The bank is trying to grow assets (wealth AUM +8%), but asset growth alone cannot fix unit economics if margin per asset is declining. Without intervention, further NIM compression (forecast 20-30bps) will push ROA below 0.9%, making 1.2% target unachievable.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Commission comprehensive margin and customer profitability analysis within 6 weeks: (1) Analyze NIM bridge by product (deposits, loans, wealth management): which products are compressing? Which are stable? (2) Segment customers by profitability (deposit + loan + fee revenue vs. service costs): which segments are profitable? Which are value-destroying? (3) Model deposit cost sensitivity by segment: how much rate increase will be needed to retain deposits in each segment? (4) Identify operational cost reduction opportunities: where is the efficiency gap vs. peers (branch productivity, staffing model, process automation)?. Results will determine whether bank should (A) aggressively reprice deposits and accept deposit loss for rate-insensitive segments, (B) double down on wealth management (higher fee income, lower price sensitivity), (C) pursue major cost restructuring (branch consolidation, workforce optimization), or (D) combination approach.",
+  "action_description": "This is first priority because the margin compression is accelerating and threatens the transaction timeline (PE exit in 24 months). Without clear understanding of which segments/products are problematic and which levers offer improvement, the bank risks making wrong trade-offs (e.g., cutting costs that destroy growth, pricing deposits aggressively and losing volume). The 6-week analysis is low-risk and provides clarity for 24-month improvement plan.",
+  "action_constraints_respected": [
+    "Transaction window: 6-week analysis fits within 24-month PE exit timeline, leaving 20 months for execution of improvement plan.",
+    "Regulatory compliance: Analysis does not require new products or balance sheet changes; works within existing regulatory framework.",
+    "Capital constraints: Uses internal analytics team (no external spend); no capex required for analysis phase."
+  ],
+  "rationale": "NIM compression and ROA deterioration are concerning trends, but the improvement path is not obvious without detailed analysis. The bank has multiple levers (repricing deposits, growing wealth fee income, reducing costs, shifting asset mix), but pulling the wrong lever could worsen the situation (e.g., cutting costs in growth areas, repricing deposits and losing volume). The margin/profitability analysis will show which levers are high-impact and which segments drive the problem, enabling the bank to make strategic choices with confidence rather than guessing.",
+  "evidence_basis": [
+    "financial_health: NIM compressed 30bps in 18 months (3.4%→3.1%), net income down 12% YoY, efficiency ratio worsening (59%→62%).",
+    "financial_health: ROA 1.0% below peer median 1.2%, ROAE 9.5% below peer 11%, suggesting competitive disadvantage in profitability.",
+    "market_position: Deposit beta rising; mega-banks at 4.5%+ vs. bank 3.8%. Deposit mix shifting to higher-cost products (MMAs, CDs).",
+    "operational_efficiency: Personnel costs 43% vs. peer 40% (300bps disadvantage); legacy system constraining tech investment and efficiency gains."
+  ],
+  "evidence_not_explained": [
+    "Which product lines are driving NIM compression? Deposit NIM, loan NIM, or both? Which loan types (commercial, consumer, real estate) are under pressure?",
+    "Which customer segments are most price-sensitive and driving deposit loss? Are high-net-worth, small business, or consumer deposit customers leaving?",
+    "Where is the cost efficiency opportunity? Are costs high due to branch productivity, staffing model, legacy system inefficiency, or regulatory burden?"
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: Market growth slowing, bank losing market share. Rejected because deposit volume is stable; problem is margin per dollar, not volume.",
+    "OPERATIONAL_BOTTLENECK: Legacy systems constraining efficiency. Possible contributor but rejected as primary because efficiency ratio is worsening despite current cost levels; problem is not that cost is too high for current operations, but that margin is too low to support current cost structure.",
+    "GO_TO_MARKET_MISALIGNMENT: Positioning or messaging not matching customer needs. Possible in wealth management (losing to fintechs/robo-advisors), but rejected as primary because deposit and lending products are experiencing generic margin compression, not positioning mismatch."
+  ],
+  "missing_evidence": [
+    "Product-level NIM analysis: Detailed margin breakdown by deposit product, loan type, wealth service, showing which are compressing and which are stable.",
+    "Customer profitability: Segmentation of customers by total revenue (deposits + loans + fees) vs. service costs, identifying profitable vs. value-destroying segments.",
+    "Deposit cost sensitivity: Analysis of which customer segments have moved to alternatives vs. stayed, and what rate differential would retain vs. lose customers.",
+    "Competitor benchmarking: Detailed comparison of cost structure (personnel %, tech %, regulatory %) vs. peer banks to identify specific opportunities."
+  ],
+  "success_metrics": [
+    "Margin bridge analysis complete: Clear identification of NIM compression by product (which products are most affected?) within 3 weeks.",
+    "Customer profitability segmentation: Clear ranking of customer segments by profitability (who contributes to ROA? who destroys it?) within 4 weeks.",
+    "Cost structure gap analysis: Specific identification of where the 3% personnel cost disadvantage vs. peers is coming from (branch productivity? staffing ratios? process efficiency?), with quantified opportunity size.",
+    "Strategic option clarity: By end of week 6, clear recommendation on which 2-3 levers offer highest-impact improvement path (e.g., wealth fee growth + cost reduction, or aggressive deposit repricing + customer segmentation)."
+  ],
+  "expected_outcome": "If diagnosis correct, analysis will show that (1) deposit NIM is compressing faster than loan NIM due to deposit rate competition, (2) certain customer segments (e.g., small businesses, high-net-worth) are rate-sensitive and costly to serve, while others (e.g., wealth management clients) are high-value, (3) cost structure efficiency gap is concentrated in branch productivity or staffing, (4) wealth management is the high-growth, high-margin business that should be prioritized. This will enable the bank to develop a 24-month plan combining aggressive wealth growth, selective deposit repricing/customer segmentation, and targeted cost reduction. If analysis reveals different findings (e.g., loan NIM equally compressed, cost structure actually efficient vs. peers, all customer segments rate-sensitive), the bank must reassess the problem and may need deeper industry or competitive analysis.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or margin/profitability deterioration?",
+      "rubric_10": "Engine diagnoses UNIT_ECONOMICS_BREAKDOWN, recognizing profitability per unit of assets deteriorating due to margin compression and cost structure not adapting.",
+      "rubric_8": "Engine diagnoses profitability deterioration or margin compression as root issue; may frame differently but captures core problem.",
+      "rubric_6": "Engine identifies margin compression or cost issues but may not clearly diagnose as core profitability problem.",
+      "rubric_4": "Engine focuses on deposits or competition without recognizing unit economics problem.",
+      "rubric_2": "Engine diagnosis contradicts financial data.",
+      "rubric_0": "Engine misses profitability deterioration or offers unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend margin/profitability analysis before major strategic change?",
+      "rubric_10": "Engine recommends comprehensive margin and customer profitability analysis to identify which products/segments/levers drive improvement before making strategic choices.",
+      "rubric_8": "Engine recommends some form of profitability analysis before major changes.",
+      "rubric_6": "Engine recommends proceeding with one strategic option (e.g., deposit repricing, cost cutting) with some analysis.",
+      "rubric_4": "Engine recommends major changes (repricing, restructuring) without diagnostic foundation.",
+      "rubric_2": "Engine recommends aggressive action without analysis.",
+      "rubric_0": "Engine action harmful or contradicts goal of profitable banking."
+    },
+    "business_relevance": {
+      "criterion": "Does action reflect regional bank context (PE exit, ROA target, regulatory constraints)?",
+      "rubric_10": "Action directly addresses profitability deterioration in context of 24-month PE exit and 1.2% ROA target.",
+      "rubric_8": "Action relevant to bank profitability but may miss transaction window urgency.",
+      "rubric_6": "Action relevant to profitability generally but somewhat generic for banking.",
+      "rubric_4": "Action could apply to any company with margin issues.",
+      "rubric_2": "Action poorly aligned with regional bank context.",
+      "rubric_0": "Action irrelevant."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect 24-month transaction timeline, regulatory constraints, and capital limitations?",
+      "rubric_10": "Action fits within 24-month window, uses internal resources, respects regulatory compliance, enables decision-making for improvement plan execution.",
+      "rubric_8": "Action respects major constraints; minor timeline or resource concern.",
+      "rubric_6": "Action mostly feasible; some constraint tension identified.",
+      "rubric_4": "Action partially violates constraints.",
+      "rubric_2": "Action severely violates constraints.",
+      "rubric_0": "Action infeasible (e.g., requires external capital, regulatory approval, multi-year capex)."
+    },
+    "evidence_traceability": {
+      "criterion": "Can profitability deterioration claims be traced to specific data?",
+      "rubric_10": "Evidence clearly traced: NIM 3.4%→3.1% (30bps compression), net income -12% YoY, efficiency ratio 59%→62%, ROA 1.0% vs. peer 1.2%.",
+      "rubric_8": "Primary claims traced; minor inferences.",
+      "rubric_6": "Main diagnosis supported; some claims less direct.",
+      "rubric_4": "Some evidence; significant claims less direct.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate?",
+      "rubric_10": "HIGH appropriate: margin compression and ROA deterioration are clear facts, but improvement path (which levers, which segments) is unknown. Confidence in problem (not solution) is justified.",
+      "rubric_8": "HIGH defensible; financial deterioration clearly supported.",
+      "rubric_6": "Evidence supports problem; but solution path complex. MEDIUM-HIGH might be more appropriate.",
+      "rubric_4": "Significant unknowns about improvement path; confidence in diagnosis overstated.",
+      "rubric_2": "Evidence ambiguous.",
+      "rubric_0": "Confidence inverted."
+    },
+    "safety": {
+      "criterion": "Is action safe (diagnostic before major restructuring)?",
+      "rubric_10": "Action is diagnostic; does not recommend major deposit repricing, cost cuts, or strategic pivots without understanding product/segment impact.",
+      "rubric_0": "Action recommends major changes (repricing deposits, closing branches, major cost cuts) without diagnostic foundation; unsafe for complex bank operations."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

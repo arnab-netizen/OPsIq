@@ -1,0 +1,10 @@
+{
+  "caseId": "ADV-018",
+  "caseType": "ADVERSARIAL",
+  "industry": "Manufacturing",
+  "ownerIntake": {
+    "businessType": "Industrial manufacturer, $120M revenue, flat growth, but selling top 3 customers at discount pricing",
+    "stage": "Trap: Customer concentration (top 3 = 45% revenue) masked by healthy gross margin numbers (top customers are lower-margin but not obviously so). Sales team optimizing for volume/top-customer relationships without measuring profitability per customer.",
+    "ownerGoal": "Must diagnose: is customer mix optimal, or is concentration in low-margin customers driving profitability issue?"
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "case_id": "RW-022",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Recruiting & Staffing Operations)",
+  "creation_methodology": "Expert analysis of recruiting firm margin and productivity decline. Reviewed financial trends (15% revenue growth vs. 25% two years ago, 15% EBITDA vs. 18%), recruiter productivity (revenue per recruiter $300k vs. $340k, declining 12%), cost pressures (salary +18% in 18 months), and utilization (78% vs. 82%). Diagnosed root cause as unit economics breakdown due to recruiter cost rising faster than revenue per recruiter.",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "The recruiting firm's unit economics are deteriorating: cost per recruiter (salary) rising 18% while revenue per recruiter falling 12%, creating a profitability squeeze. Utilization declining (82%→78%) suggests bench time increasing or client work declining. The root cause is not market demand collapse (revenue still growing 15%, tech segment growing 18%), but cost structure misalignment with revenue model. Salary costs are rising faster than value delivered, and utilization is declining (suggesting either lower-value work or productivity loss). This creates a math problem: to maintain 18% EBITDA margin with current cost structure, the firm would need revenue per recruiter to be $380k+, but it's only $300k. Without addressing the cost-revenue mismatch, profitability will continue declining.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Commission 4-week operational profitability analysis: (1) Segment revenue and profitability by vertical (fintech, tech, executive search, junior-mid): which segments are healthy margins vs. compressed? (2) Analyze recruiter productivity: which recruiters are above $300k revenue? What are they doing differently (client mix, service model, efficiency)? (3) Benchmark against larger recruiting firms: how do they achieve better unit economics? (4) Identify utilization drivers: is 78% due to bench time, lower client demand, or internal process inefficiency? Results will determine whether solution is (A) premium service repositioning (shift to higher-value executive search), (B) process efficiency (reduce bench time, improve placement velocity), (C) segment exit (deprioritize lower-margin verticals), or (D) productivity-based incentive realignment.",
+  "action_description": "This is first priority because the profitability trajectory is unsustainable. Salary cost increases (18% in 18 months) require matching revenue growth or productivity improvement, but neither is happening. The 4-week analysis will identify whether the problem is structural (market shift to lower-margin business) or operational (recruiters not performing, bench time too high), enabling targeted intervention before Series B conversations.",
+  "action_constraints_respected": [
+    "Series B timeline: 4-week analysis fits within 18-month window.",
+    "Cash impact: Uses internal resources (no external hiring); analysis runs parallel to operations.",
+    "Talent risk: Analysis does not require immediate staffing changes; findings inform future talent strategy."
+  ],
+  "rationale": "Margin compression with growth deceleration is a red flag for Series B investors. The analysis will clarify whether the company has a structural problem (market shift) or operational problem (inefficiency, productivity decline). If structural, the company may need to reposition or consolidate. If operational, the company can fix productivity and demonstrate path to margin recovery.",
+  "evidence_basis": [
+    "financial_health: EBITDA margin down 300bps (18%→15%), revenue per recruiter down 12% ($340k→$300k).",
+    "cost_structure: Salary costs +18% in 18 months, outpacing revenue growth (15% YoY).",
+    "operational_efficiency: Utilization declining (82%→78%), recruiter turnover increasing (12%→20%), suggesting productivity or retention issues.",
+    "market_position: Growth decelerating (25%→15% YoY); fintech segment slow growth (8% YoY), suggesting market headwinds."
+  ],
+  "evidence_not_explained": [
+    "Which verticals are most profitable? Are lower-margin segments driving the productivity decline?",
+    "Which recruiters are performing well? What differentiates top performers from below-average?",
+    "Is 78% utilization acceptable (placement-based business models vary) or problematic? What is the target?"
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: Market demand shifting away from recruiting firm model. Possible but not primary evidence: revenue still growing 15%, tech segment 18%. Demand is not collapsing, but may be shifting.",
+    "OPERATIONAL_BOTTLENECK: Process inefficiency causing bench time and lower utilization. Possible contributor but rejected as primary because costs are rising (not a process efficiency issue), and utilization is declining (suggesting demand or recruiter issue, not process).",
+    "GO_TO_MARKET_MISALIGNMENT: Product positioning (e.g., pursuing lower-margin junior-mid placements instead of premium executive search) driving unit economics decline. Possible but requires detailed segment analysis to confirm."
+  ],
+  "missing_evidence": [
+    "Vertical profitability: Which segments (fintech, tech, executive search, junior-mid) are most profitable and trending?",
+    "Recruiter cohort analysis: Which cohorts (by tenure, experience, location) have best productivity? Are newer hires less productive?",
+    "Utilization root cause: Is 78% utilization due to (A) less client demand (pipeline declining), (B) longer sales cycles, (C) bench time between placements, or (D) internal process delays?",
+    "Competitive benchmarking: How do larger recruiting firms maintain better margins? What is their unit economics model?"
+  ],
+  "success_metrics": [
+    "Segment profitability analysis: Clear margin and revenue per recruiter by vertical within 2 weeks.",
+    "Recruiter performance distribution: Clear understanding of which recruiters are at/above $300k revenue and what they do differently within 2 weeks.",
+    "Utilization drivers: Clarity on whether 78% utilization is acceptable for model or indicates problem; identification of improvement path.",
+    "Strategic option clarity: By end of week 4, clear recommendation on which levers (segment repositioning, recruiter training/retention, process efficiency, incentive realignment) offer highest-impact margin recovery."
+  ],
+  "expected_outcome": "If diagnosis correct, analysis will show that (1) executive search vertical is higher-margin (25%+) but smaller, while junior-mid is lower-margin (12%) but larger, (2) top 20% of recruiters achieve $450k+ revenue per recruiter (demonstrating $340k is achievable), while bottom 20% only $180k (opportunity to improve), (3) 78% utilization is due to bench time or longer sales cycles (addressable through process improvement or incentives). This enables Series B narrative: company has profitability leverage (proven by top recruiters' metrics) and pathway is operational efficiency + segment mix improvement. If analysis reveals different findings (e.g., all recruiters at $300k regardless of effort, all verticals compressed equally, utilization acceptable for market), the company must consider whether market fundamentals have shifted or whether larger, consolidated players have structural advantage.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or cost-revenue mismatch?",
+      "rubric_10": "Engine diagnoses UNIT_ECONOMICS_BREAKDOWN, recognizing recruiter cost rising faster than revenue.",
+      "rubric_8": "Engine diagnoses productivity or cost efficiency issue.",
+      "rubric_6": "Engine identifies margin or cost issues but may not clearly diagnose.",
+      "rubric_4": "Engine focuses on market demand without recognizing cost structure problem.",
+      "rubric_2": "Engine diagnosis contradicts data.",
+      "rubric_0": "Engine misses margin compression or offers unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend operational analysis before major changes?",
+      "rubric_10": "Engine recommends segment and recruiter productivity analysis to identify which levers improve margins.",
+      "rubric_8": "Engine recommends some form of operational analysis.",
+      "rubric_6": "Engine recommends proceeding with one strategy with some analysis.",
+      "rubric_4": "Engine recommends major changes (restructuring, segment exit) without analysis.",
+      "rubric_2": "Engine recommends aggressive action without foundation.",
+      "rubric_0": "Engine action harmful."
+    },
+    "business_relevance": {
+      "criterion": "Does action reflect recruiting firm context (Series B timeline, margin credibility)?",
+      "rubric_10": "Action directly addresses margin decline in context of Series B fund-raising timeline.",
+      "rubric_8": "Action relevant to recruiting firm challenge but may miss Series B urgency.",
+      "rubric_6": "Action relevant to margin issue generally.",
+      "rubric_4": "Action generic for staffing firms.",
+      "rubric_2": "Action poorly aligned.",
+      "rubric_0": "Action irrelevant."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect 18-month timeline, talent risk, cash constraints?",
+      "rubric_10": "Action fits timeline, uses internal resources, does not disrupt operations.",
+      "rubric_8": "Action respects major constraints.",
+      "rubric_6": "Action mostly feasible.",
+      "rubric_4": "Action partially violates constraints.",
+      "rubric_2": "Action severely violates constraints.",
+      "rubric_0": "Action infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Can margin/productivity decline be traced to data?",
+      "rubric_10": "Clearly traced: EBITDA 18%→15%, revenue per recruiter $340k→$300k, salary +18%, utilization 82%→78%.",
+      "rubric_8": "Primary claims traced.",
+      "rubric_6": "Main diagnosis supported.",
+      "rubric_4": "Some evidence.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate?",
+      "rubric_10": "HIGH appropriate: margin decline and cost-revenue mismatch clear, but whether structural or operational is unknown. Confidence in problem (not solution) justified.",
+      "rubric_8": "HIGH defensible.",
+      "rubric_6": "Evidence supports problem; root cause uncertain. MEDIUM-HIGH might be appropriate.",
+      "rubric_4": "Confidence overstated.",
+      "rubric_2": "Evidence ambiguous.",
+      "rubric_0": "Confidence inverted."
+    },
+    "safety": {
+      "criterion": "Is action safe (diagnostic before major changes)?",
+      "rubric_10": "Action is diagnostic; does not recommend segment exit, restructuring, or major salary cuts without analysis.",
+      "rubric_0": "Action recommends major changes without diagnostic foundation."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

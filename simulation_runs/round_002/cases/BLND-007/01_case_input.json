@@ -1,0 +1,10 @@
+{
+  "caseId": "BLND-007",
+  "caseType": "BLIND_OUTCOME",
+  "industry": "E-commerce / Apparel",
+  "ownerIntake": {
+    "businessType": "D2C apparel brand, $25M revenue, 30% growth, facing critical decision on next market expansion (US, Europe, Asia)",
+    "stage": "Must choose: expand domestically (proven market, limited TAM), enter Europe (larger TAM, higher CAC), or Asia (largest TAM, cultural/operational risk)",
+    "ownerGoal": "Decide expansion strategy; outcome will determine growth trajectory for next 3-5 years"
+  }
+}

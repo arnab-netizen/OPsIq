@@ -1,0 +1,10 @@
+{
+  "caseId": "SYN-019",
+  "caseType": "SYNTHETIC",
+  "industry": "Collaboration / Productivity",
+  "ownerIntake": {
+    "businessType": "Workplace collaboration tool, $12M ARR, 45% growth, but product adoption within customers low (% of intended users)",
+    "stage": "Feature bloat, UX complexity, support burden rising, expansion revenue stalling",
+    "ownerGoal": "Improve product simplicity and customer expansion"
+  }
+}

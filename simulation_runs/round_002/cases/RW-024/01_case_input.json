@@ -1,0 +1,89 @@
+{
+  "caseId": "RW-024",
+  "caseType": "REAL_WORLD",
+  "industry": "Management Consulting",
+  "businessModel": "Boutique strategy consulting firm, 60 employees, $18M revenue",
+  "businessStage": "Growth stage consulting firm, founded 2010",
+  "sourceNote": "Real-world case from consulting sector. Business context reflects boutique firm facing partner utilization and junior talent retention challenges.",
+  "ownerIntake": {
+    "businessType": "Strategy consulting firm serving mid-market manufacturing and industrial clients. 60 employees (10 partners, 35 consultants, 15 support), $18M revenue, 85% realization rate (target 90%).",
+    "stage": "Growth: $18M revenue (+8% YoY), EBITDA $2.2M (12.2% margin), partner utilization 72% billable (target 75%), junior consultant turnover 18% annually (vs. 10% two years ago). Revenue per employee $300k (below peer average $320k). Junior consultants leaving after 18-24 months; partnership track is narrow (2 partners per 10 hired consultants).",
+    "ownerGoal": "Return to 15% EBITDA margin and 18%+ revenue growth within 24 months through improved utilization and retention.",
+    "ownerConstraints": [
+      "Junior talent market: Top graduates choosing strategy roles at McKinsey/BCG over boutique firms. Retention poor: 18% turnover, losing to corporate and Big Four moves. Compensation race difficult with large competitors.",
+      "Utilization: Partners at 72% billable (vs. peer 75-80%), suggesting bench time or suboptimal project staffing. Consultants' utilization likely lower due to training time.",
+      "Client concentration: Top 3 clients = 32% of revenue; client diversification limited. Single client loss would impact revenue 10%+.",
+      "Partnership: Only 10 partners; adding partners requires 5+ year track record. Junior-to-partner pipeline weak (18% turnover means most hired consultants leave before partnership consideration).",
+      "Market: Boutique consulting consolidating; larger firms (Big Four) expanding in strategy. Differentiation needed; price competition increasing."
+    ],
+    "immediateConcern": "Junior turnover accelerating (10% → 18% in two years) while revenue growth slowing (8% YoY) and margins compressing (moving toward 12% EBITDA from historical 15%+). If turnover continues, firm risks losing institutional knowledge and project delivery capability. Partnership expansion is blocked by weak junior pipeline. Must understand whether problem is compensation (losing to Big Four offers), career path (limited partnership opportunities), or culture/fit.",
+    "availableData": [
+      "Financial: $18M revenue (+8% YoY), EBITDA $2.2M (12.2% margin), realization 85% (target 90%), partner utilization 72%",
+      "Talent: 60 employees (10 partners), junior turnover 18% annually, partner track narrow (2/10 hired become partners), compensation vs. Big Four not competitive",
+      "Client: Top 3 = 32% of revenue, average project $300k-500k, client retention 90%, new client acquisition slow",
+      "Operations: Revenue per employee $300k (vs. peer $320k), training/mentoring burden consuming capacity"
+    ],
+    "unavailableData": [
+      "Junior consultant feedback: Why are they leaving? Compensation? Career path? Fit/culture?",
+      "Partner productivity variance: Do some partners generate higher revenue than others? What differentiates?",
+      "Client profitability: Which clients are most profitable? Are low-margin clients driving utilization down?",
+      "Market positioning: How is firm differentiated from Big Four? Why should juniors stay for partnership track?"
+    ],
+    "timeHorizon": "24 months (Partners considering exit/sale; must demonstrate growth and retention trajectory)",
+    "riskAppetite": "MEDIUM (Partners want partnership growth and exit optionality)"
+  },
+  "clientContext": {
+    "industry": "Management Consulting",
+    "size": "Boutique ($18M revenue, 60 people, $2.2M EBITDA)",
+    "revenueImpactUrgency": "CRITICAL (Junior turnover threatens delivery capability and partnership sustainability)"
+  },
+  "businessProblem": "A boutique consulting firm is experiencing junior consultant turnover acceleration (10% → 18% in two years) while revenue growth stalls (8% YoY) and EBITDA margin compresses (toward 12% from 15%+). Management must determine whether turnover is driven by (1) compensation uncompetitiveness with Big Four, (2) limited partnership opportunity (only 2 out of 10 hired reach partnership), (3) suboptimal project selection/staffing (low utilization, boring projects), or (4) culture/fit issues. Without addressing turnover, the firm risks institutional knowledge loss and reduced delivery capacity.",
+  "evidence": [
+    {
+      "dimension": "talent_retention",
+      "finding": "Junior turnover doubled (10% → 18% in two years). Exit interviews suggest junior consultants leaving for Big Four strategy roles or corporate positions. Partnership track is narrow: only 2 out of 10 hired consultants reach partner level. This creates perception of limited career advancement.",
+      "confidence": "HIGH",
+      "source": "HR retention metrics, exit interview notes",
+      "isCritical": true,
+      "supportingData": {
+        "junior_turnover_2yo": "10% annually",
+        "junior_turnover_current": "18% annually",
+        "partnership_track_rate": "2 out of 10 (20%)",
+        "exit_reason_pattern": "Better opportunities elsewhere (Big Four, corporate)"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue growth slowing (8% YoY, down from higher historical growth), EBITDA margin compressing toward 12% from historical 15%+. Partner utilization at 72% (below peer 75-80%), suggesting bench time or suboptimal project staffing. Realization rate 85% (below target 90%), indicating discount pressure or project profitability issues.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "Financial statements, utilization tracking, project economics",
+      "isCritical": true,
+      "supportingData": {
+        "ebitda_margin_historical": "15%+",
+        "ebitda_margin_current": "12.2%",
+        "partner_utilization": "72%",
+        "peer_utilization_benchmark": "75-80%",
+        "realization_rate": "85% (vs. 90% target)"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Boutique firm facing consolidation pressure; Big Four expanding in strategy. Client concentration risk: top 3 = 32% of revenue. Limited differentiation vs. larger competitors; pricing pressure from Big Four. Market perception: boutique = smaller, less resourced, riskier than Big Four.",
+      "confidence": "MEDIUM",
+      "source": "Market intelligence, client feedback, competitive analysis",
+      "isCritical": true,
+      "supportingData": {
+        "top_3_client_concentration": "32%",
+        "market_consolidation_trend": "Big Four expanding in strategy",
+        "differentiation": "Limited vs. Big Four"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (profitable but not venture-backed; limited comp flexibility vs. Big Four)",
+    "timeHorizonDays": 730,
+    "staffCapacity": "MEDIUM (60 people, stretched by turnover and utilization)",
+    "cashRunwayMonths": "N/A (profitable, positive cash flow)",
+    "legalComplianceSensitive": false
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "caseId": "ADV-014",
+  "caseType": "ADVERSARIAL",
+  "industry": "Consulting",
+  "ownerIntake": {
+    "businessType": "Boutique consulting, $15M revenue, flat growth, EBITDA declining",
+    "stage": "Trap: Partners attributing margin decline to 'market softness' (plausible narrative) without investigating utilization decline or customer profitability by segment. Confirmation bias: selecting evidence that supports 'market softness' narrative.",
+    "ownerGoal": "Must diagnose: is it market, or operational/customer mix issue?"
+  }
+}

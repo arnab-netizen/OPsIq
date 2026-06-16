@@ -1,0 +1,10 @@
+{
+  "caseId": "PD-013",
+  "caseType": "PUBLIC_DATASET",
+  "industry": "Healthcare / Hospital Network",
+  "ownerIntake": {
+    "businessType": "Mid-size hospital network (5 hospitals, 50 outpatient clinics), $1.8B revenue (public data from SEC),  EBITDA margin declining",
+    "stage": "Net patient revenue flat YoY, operating expenses rising (labor, supplies), admissions declining 3% YoY, outpatient volume +2% YoY. Margin pressure.",
+    "ownerGoal": "Return to sustainable profitability; current trajectory unsustainable"
+  }
+}

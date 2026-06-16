@@ -1,0 +1,14 @@
+{
+  "caseId": "RW-026",
+  "caseType": "REAL_WORLD",
+  "industry": "SaaS / Vertical Software",
+  "businessModel": "Vertical SaaS for dental practices, 150 employees, $22M ARR",
+  "ownerIntake": {
+    "businessType": "Cloud-based practice management software for dental offices. $22M ARR, 2,500 customers, 65% gross margin.",
+    "stage": "Growth: $22M ARR (+22% YoY), EBITDA 8% ($1.76M), customer concentration risk: top 10 = 35% of revenue. Net revenue retention 98%, churn 2% quarterly (acceptable). However, top customer (DSO group with 300 offices) represents 12% of revenue. Loss of top customer = 12% revenue cliff.",
+    "ownerGoal": "Reduce customer concentration and diversify customer base to reduce risk and improve valuation for Series B.",
+    "ownerConstraints": [
+      "Top customer has pricing leverage; renegotiation risk annually. DSO customer growing at 5% but competitive pricing pressure. Rest of customer base growing 28% but smaller accounts. Must balance growth with concentration reduction."
+    ]
+  }
+}

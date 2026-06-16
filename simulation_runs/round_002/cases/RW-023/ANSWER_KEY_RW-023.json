@@ -1,0 +1,112 @@
+{
+  "case_id": "RW-023",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Logistics & Supply Chain Operations)",
+  "creation_methodology": "Expert analysis of 3PL margin compression. Reviewed financial trends (EBITDA 14%→12% in three years, revenue growth 12%→5%), customer mix shift (e-commerce now 38% of revenue at 8-10% margin vs. retail 15-18%), and cost pressures (labor +12% in 24 months, utilization only 72%). Diagnosed root cause as unit economics deterioration due to customer mix shift and cost inflation.",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "The 3PL's unit economics are deteriorating due to two factors: (1) customer mix shift to e-commerce (lower-margin 8-10% vs. retail 15-18%), and (2) labor cost inflation (+12% in 24 months) without matching automation/productivity improvements. The math is clear: if e-commerce (38% of revenue) is 8% margin and retail (62% of revenue) is 16% margin, blended margin should be ~13% (which matches current 12% closely). But labor costs are rising 12% while utilization is only 72%, suggesting labor expense per unit of output is rising. Without automation investment or customer mix improvement, margin will continue declining. The company is trying to serve a changing market (shift to e-commerce) without changing its operating model (still labor-intensive), creating profitability squeeze.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Commission 6-week customer profitability and operational efficiency analysis: (1) Calculate exact margin by customer; identify which customers are above 12% margin (sustainable) vs. below (marginal or unprofitable). (2) Analyze e-commerce vs. retail service cost drivers: what makes e-commerce more expensive to serve? Returns? Speed requirements? (3) Assess utilization opportunity: can 28 warehouses be consolidated to higher utilization levels? (4) Model automation ROI: for top 3 customers, what would automation capex save in labor cost? Results will determine whether solution is (A) customer mix shift (exit lower-margin e-commerce), (B) pricing adjustment (repricing lower-margin customers), (C) operational efficiency (consolidation, process improvement), or (D) targeted automation (capex in high-opportunity warehouses).",
+  "action_description": "This is first priority because margin trajectory is unsustainable without intervention. Growth is slowing (5% YoY) while costs rising, creating a profitability spiral. The 6-week analysis will identify which customers and services are economically viable and which require action (repricing, exit, or efficiency improvement), enabling the owner to position the company for exit with clear profitability path.",
+  "action_constraints_respected": [
+    "Cash runway: 6-week analysis uses internal resources (no external capex required yet); analysis informs capex decisions.",
+    "Owner timeline: 6 weeks fits within 24-month exit window.",
+    "Operational continuity: Analysis does not require immediate changes; findings inform future strategy."
+  ],
+  "rationale": "Margin compression with growth slowdown is a classic profitability squeeze. Without understanding which customers and services are profitable, the owner risks exiting at the wrong valuation (based on declining profitability trend). The analysis will show whether margins are structurally impaired (unfixable without major operational change) or tactically addressable (through pricing, mix adjustment, or efficiency improvement).",
+  "evidence_basis": [
+    "financial_health: EBITDA margin down 200bps in three years (14%→12%), revenue growth slowing (12%→5% YoY).",
+    "customer_mix: E-commerce now 38% of revenue at 8-10% margin (vs. retail 15-18%), representing mix shift to lower-margin business.",
+    "cost_structure: Labor costs +12% in 24 months; utilization only 72%, suggesting excess labor capacity or rising cost per unit of output.",
+    "market_position: E-commerce growth outpacing retail decline industry-wide; customer demand shifting toward 3PL services that company is delivering at lower margin."
+  ],
+  "evidence_not_explained": [
+    "Exact customer-level profitability: Which customers are profitable and which marginal?",
+    "Service cost drivers: What specific costs are higher for e-commerce vs. retail? (Returns? Speed? Complexity?)",
+    "Capacity utilization opportunity: Are 28 warehouses optimally located/sized, or is consolidation opportunity?"
+  ],
+  "alternative_explanations": [
+    "OPERATIONAL_BOTTLENECK: Warehouses inefficient or underutilized due to poor operations. Possible but rejected as primary because utilization (72%) suggests capacity available, not inefficiency; problem is customer mix (lower-margin) and cost structure (labor intensity).",
+    "DEMAND_FORECASTING_MISMATCH: Market demand shifting away from 3PL model. Rejected because revenue still growing (5% YoY), e-commerce is growing; company is gaining volume, but at lower margins.",
+    "GO_TO_MARKET_MISALIGNMENT: Positioning or service offering misaligned with customer needs. Possible in service model (e-commerce customers need faster fulfillment, returns capability), but rejected as primary without evidence."
+  ],
+  "missing_evidence": [
+    "Customer-level profitability: Margin by customer, identifying which are profitable vs. marginal.",
+    "Service cost detail: Specific cost drivers for e-commerce service (returns processing, speed, complexity).",
+    "Capacity analysis: Warehouse-level utilization and consolidation opportunity.",
+    "Competitive pricing: What are competitors charging for e-commerce vs. retail services? Pricing power?"
+  ],
+  "success_metrics": [
+    "Customer profitability ranking: Clear list of which customers are above/below sustainable margin within 2 weeks.",
+    "Service cost analysis: Understanding of what drives e-commerce service cost vs. retail; quantified opportunity size.",
+    "Consolidation opportunity: Clarity on whether 28 warehouses can consolidate to fewer locations at higher utilization (estimated EBITDA impact).",
+    "Strategic option clarity: By end of week 6, clear recommendation on which 2-3 levers (mix adjustment, pricing, consolidation, automation) are highest-impact for margin recovery."
+  ],
+  "expected_outcome": "If diagnosis correct, analysis will show that (1) top 10 customers are mix of high-margin retail and lower-margin e-commerce; (2) e-commerce margin could be improved through repricing or service efficiency, (3) top 3 customers are sufficiently large that consolidation around their primary warehouses could improve utilization to 85%+ and reduce costs by 150-200bps EBITDA, (4) automation ROI is positive but requires capex. This enables owner to develop exit strategy: demonstrate to buyer that company has profitability leverage (through mix improvement, consolidation, or automation) even if current margins appear compressed. If analysis reveals different findings (e.g., all customers uniformly unprofitable at e-commerce margins, consolidation not feasible due to customer location requirements), the company must reassess market viability.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or margin deterioration?",
+      "rubric_10": "Engine diagnoses UNIT_ECONOMICS_BREAKDOWN, recognizing customer mix shift and cost structure misalignment.",
+      "rubric_8": "Engine diagnoses margin compression or cost efficiency issue.",
+      "rubric_6": "Engine identifies margin or cost issues but may not clearly diagnose.",
+      "rubric_4": "Engine focuses on demand or competition without recognizing unit economics.",
+      "rubric_2": "Engine diagnosis contradicts data.",
+      "rubric_0": "Engine misses margin compression."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend customer/operational profitability analysis?",
+      "rubric_10": "Engine recommends customer profitability and operational efficiency analysis to identify improvement levers.",
+      "rubric_8": "Engine recommends some form of profitability analysis.",
+      "rubric_6": "Engine recommends proceeding with one strategy with some analysis.",
+      "rubric_4": "Engine recommends major changes without analysis.",
+      "rubric_2": "Engine recommends aggressive action.",
+      "rubric_0": "Engine action harmful."
+    },
+    "business_relevance": {
+      "criterion": "Does action reflect 3PL context (customer mix, exit planning)?",
+      "rubric_10": "Action directly addresses margin decline in context of owner exit planning.",
+      "rubric_8": "Action relevant to 3PL challenge but may miss exit timeline.",
+      "rubric_6": "Action relevant to margin issue generally.",
+      "rubric_4": "Action generic for logistics.",
+      "rubric_2": "Action poorly aligned.",
+      "rubric_0": "Action irrelevant."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect 24-month timeline and capex constraints?",
+      "rubric_10": "Action fits timeline, does not require immediate capex, uses internal resources.",
+      "rubric_8": "Action respects major constraints.",
+      "rubric_6": "Action mostly feasible.",
+      "rubric_4": "Action partially violates constraints.",
+      "rubric_2": "Action severely violates constraints.",
+      "rubric_0": "Action infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Can margin decline and mix shift be traced to data?",
+      "rubric_10": "Clearly traced: EBITDA 14%→12%, revenue growth 12%→5%, e-commerce 38% at 8-10% margin vs. retail 15-18%.",
+      "rubric_8": "Primary claims traced.",
+      "rubric_6": "Main diagnosis supported.",
+      "rubric_4": "Some evidence.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate?",
+      "rubric_10": "HIGH appropriate: margin decline and mix shift clear, but improvement path (mix adjustment, pricing, consolidation, automation) unknown. Confidence in problem justified.",
+      "rubric_8": "HIGH defensible.",
+      "rubric_6": "Evidence supports problem; solution complex. MEDIUM-HIGH might be appropriate.",
+      "rubric_4": "Confidence overstated.",
+      "rubric_2": "Evidence ambiguous.",
+      "rubric_0": "Confidence inverted."
+    },
+    "safety": {
+      "criterion": "Is action safe (diagnostic before major changes)?",
+      "rubric_10": "Action is diagnostic; does not recommend pricing changes, consolidation, or automation without analysis.",
+      "rubric_0": "Action recommends major changes without diagnostic foundation."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

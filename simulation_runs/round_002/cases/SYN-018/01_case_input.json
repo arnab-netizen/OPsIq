@@ -1,0 +1,10 @@
+{
+  "caseId": "SYN-018",
+  "caseType": "SYNTHETIC",
+  "industry": "Analytics / Business Intelligence",
+  "ownerIntake": {
+    "businessType": "Analytics platform, $9M ARR, 35% growth, but implementation time extending (customer ROI realization slow)",
+    "stage": "Time-to-value increasing, competitive pressure from larger BI vendors, net revenue retention 102%",
+    "ownerGoal": "Improve time-to-value and customer success"
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "caseId": "RW-019",
+  "caseType": "REAL_WORLD",
+  "industry": "B2B SaaS / Vertical Software",
+  "businessModel": "Subscription SaaS platform for project management and resource planning",
+  "businessStage": "Growth stage, Series A company",
+  "sourceNote": "Real-world case from construction technology sector. Business context and metrics reflect typical Series A growth-stage SaaS facing customer concentration and churn acceleration.",
+  "ownerIntake": {
+    "businessType": "B2B SaaS serving construction and engineering firms with AI-powered project planning and risk forecasting. Founded 2018, Series A funding $8M (2023). Current 280 customers, $3.2M ARR, 45% YoY growth.",
+    "stage": "Growth stage Series A: Monthly recurring revenue $267k, gross margin 68%, CAC $2,100, LTV $28,000 (11-month payback), churn rate 6% quarterly. Burn rate $180k/month. Cash runway 22 months.",
+    "ownerGoal": "Achieve PMF validation (>10% qualified expansion ARR from existing customers) and Series B readiness within 18 months.",
+    "ownerConstraints": [
+      "Customer concentration: Top 5 customers = 32% of ARR. Loss of any top customer would trigger 15%+ revenue cliff.",
+      "Unit economics not yet proven at scale: CAC $2,100 assumes 11-month payback, but that assumes zero expansion and benchmark churn. Actual cohort data still building.",
+      "Sales cycle: 4-6 months from prospecting to close. Pipeline visibility limited; forecasting challenging for Series B readiness.",
+      "Team constraint: 18 people. Product team small relative to customer support burden from concentrated base.",
+      "Market timing: Construction tech adoption accelerating post-COVID, but market still heterogeneous; buyer consolidation pressure increasing."
+    ],
+    "immediateConcern": "Churn accelerating unexpectedly. Q2 quarterly churn was 4%, Q3 was 6%. Simultaneously, expansion ARR (upsells to existing customers) is 8% of revenue but declining relative to new customer acquisition. Net revenue retention ~95% (unhealthy for SaaS). Must understand churn driver before Series B positioning.",
+    "availableData": [
+      "Financial: $3.2M ARR, 45% YoY growth, gross margin 68%, CAC $2,100, LTV $28,000, churn 6% quarterly, expansion ARR $260k/quarter",
+      "Customer: 280 customers, top 5 = 32% of ARR, average customer tenure 18 months, NPS 38 (moderate)",
+      "Product: Feature set mature (planning, risk, collaboration, reporting), used 3-5 days/week by average customer, user adoption strong (85% DAU among paying accounts)",
+      "Market: Construction industry adoption of SaaS increasing 20% YoY, competitive landscape includes Procore (public, $10B+), Touchplan (private, ~$500M), and niche players"
+    ],
+    "unavailableData": [
+      "Detailed churn cohort analysis: Which cohorts are churning (by acquisition source, customer size, vertical, tenure)?",
+      "Win/loss analysis for churned customers: Stated reasons for churn (product fit, pricing, feature gap, competitive switching)?",
+      "Expansion data by customer segment: Which segments expand, which stay flat, which churn?",
+      "Competitive win/loss: How often losing deals to specific competitors? Product vs. pricing vs. go-to-market?",
+      "Usage cohort analysis: Correlation between usage patterns and churn risk?"
+    ],
+    "timeHorizon": "90 days (Series B fund-raising cycle begins in Q1; must clarify churn driver and expansion opportunity before investor conversations)",
+    "riskAppetite": "MEDIUM (Series A company wants growth but Series A investors expect clear path to unit economics; churn acceleration is red flag)"
+  },
+  "clientContext": {
+    "industry": "SaaS / Construction Tech",
+    "size": "growth-stage Series A ($3.2M ARR, 280 customers, 18 people, $8M capital)",
+    "revenueImpactUrgency": "CRITICAL (churn acceleration threatens unit economics narrative and Series B positioning)"
+  },
+  "businessProblem": "A Series A SaaS company serving the construction industry is experiencing unexpected churn acceleration (4% Q2 → 6% Q3) while expansion ARR is declining relative to new customer acquisition. Unit economics appear healthy on paper (11-month LTV payback), but cohort-level data is still building. The company must understand whether churn is driven by (1) product fit issues (feature gap, usability), (2) customer fit issues (wrong customer segment acquired), (3) market dynamics (consolidation, customer acquisition pressure), or (4) pricing/economics issues (ROI story not resonating). Net revenue retention of 95% is unhealthy for SaaS; without expansion, the company is on a treadmill of constant acquisition to offset churn.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Churn accelerated from 4% quarterly (Q2) to 6% (Q3), reversing earlier trend. Simultaneously, expansion ARR declined from 12% of new customer revenue in Q1 to 8% in Q3. This suggests either customer satisfaction is declining, or customer cohorts being acquired now have different economics than earlier cohorts.",
+      "confidence": "HIGH",
+      "source": "Monthly financial reporting, customer cohort tracking",
+      "isCritical": true,
+      "supportingData": {
+        "churn_q2": "4% quarterly",
+        "churn_q3": "6% quarterly",
+        "expansion_arr_q1": "12% of new acquisition",
+        "expansion_arr_q3": "8% of new acquisition",
+        "net_revenue_retention": "95%"
+      }
+    },
+    {
+      "dimension": "customer_satisfaction",
+      "finding": "NPS 38 (neutral, not negative). Customer satisfaction survey scores stable at 7.2/10. However, support ticket volume increased 25% YoY while customer count only increased 15% YoY, suggesting support burden rising. Churn reasons unknown (no structured exit interview data).",
+      "confidence": "MEDIUM",
+      "source": "NPS tracking, support ticket volume, satisfaction survey",
+      "isCritical": true,
+      "supportingData": {
+        "nps": "38 (neutral)",
+        "satisfaction_score": "7.2/10",
+        "support_ticket_growth_yoy": "+25%",
+        "customer_count_growth_yoy": "+15%"
+      }
+    },
+    {
+      "dimension": "product_usage",
+      "finding": "User adoption strong: 85% of paying accounts have weekly active users (WAU). Usage metrics stable across cohorts. This suggests product is not obviously broken, but does not rule out feature fit or use-case fit issues for churning segments.",
+      "confidence": "MEDIUM",
+      "source": "Product analytics, in-app telemetry",
+      "isCritical": false,
+      "supportingData": {
+        "weekly_active_user_rate": "85%",
+        "usage_trend": "Stable across cohorts"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Customer base concentrated: top 5 customers = 32% of ARR. Series A company in market with larger competitors (Procore $10B+, Touchplan ~$500M). Competitive landscape consolidating; larger vendors acquiring niche players. Market adoption accelerating but heterogeneous (large GCs prioritize Procore, mid-market and regional buyers more open to alternatives).",
+      "confidence": "MEDIUM",
+      "source": "Customer list analysis, market intelligence, competitive landscape review",
+      "isCritical": true,
+      "supportingData": {
+        "top_5_customer_concentration": "32% of ARR",
+        "largest_competitor_valuation": "Procore $10B+",
+        "market_consolidation_trend": "Larger vendors acquiring niche players"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (Series A capital $8M, 22-month runway; limited discretionary spending)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM-LOW (18 people, lean team; major product/sales changes require prioritization)",
+    "cashRunwayMonths": 22,
+    "legalComplianceSensitive": false
+  }
+}

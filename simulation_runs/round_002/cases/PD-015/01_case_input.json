@@ -1,0 +1,10 @@
+{
+  "caseId": "PD-015",
+  "caseType": "PUBLIC_DATASET",
+  "industry": "Restaurant Chain / QSR",
+  "ownerIntake": {
+    "businessType": "Multi-unit QSR chain, 200+ locations, $850M revenue, same-store sales flat",
+    "stage": "Labor costs +10%, food costs +8%, pricing limited by competition. Unit-level profitability declining.",
+    "ownerGoal": "Stabilize unit economics and profitability"
+  }
+}

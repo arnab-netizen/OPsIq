@@ -1,0 +1,118 @@
+{
+  "caseId": "RW-020",
+  "caseType": "REAL_WORLD",
+  "industry": "Financial Services / Regional Bank",
+  "businessModel": "Community bank with deposit and lending focus, expanding into wealth management",
+  "businessStage": "Mature growth company, $8B+ assets",
+  "sourceNote": "Real-world case from regional banking sector. Business context reflects typical mid-sized bank facing margin compression and regulatory cost burden.",
+  "ownerIntake": {
+    "businessType": "Regional bank, $8.2B total assets, 45 branches across three states, $850M net interest income, expanding wealth management ($2.1B AUM). Founded 1987, private equity backed (2018). CEO in role 3 years.",
+    "stage": "Mature company: Net interest margin (NIM) 3.1% (down from 3.4% 18 months ago, -30bps erosion), net income $82M (down 12% YoY from $93M), efficiency ratio 62% (up from 59%), deposit beta rising (customers switching to higher-yield alternatives). ROA 1.0% (below peer median 1.2%), ROAE 9.5% (below peer median 11%).",
+    "ownerGoal": "Return ROA to 1.2%+ and ROAE to 12%+ within 24 months to support Series B PE transaction (exit opportunity for PE owner).",
+    "ownerConstraints": [
+      "Regulatory constraint: Compliance costs rising due to regulatory expansion (CFPB rules, Community Reinvestment Act, enhanced monitoring). Cannot cut compliance without regulatory risk.",
+      "Competitive constraint: Mega-banks offer higher deposit rates (attracting deposits away from regional bank). Tech-forward fintech competitors attracting wealth management and payments customers.",
+      "Cost structure: Personnel costs 43% of revenue (high for retail banking). Legacy systems consuming tech budget; modernization requires 3-5 year capex commitment.",
+      "Deposit dynamics: Interest rate environment pressure; as Fed rates stay elevated, customers moving deposits to yield-bearing alternatives (MMAs, CDs, direct Treasury exposure).",
+      "Market saturation: Regional market mature; growth must come from market share gains (difficult, price-based) or customer wallet expansion (limited in retail banking)."
+    ],
+    "immediateConcern": "NIM compression accelerating: down 30bps in 18 months. Model shows further 20-30bps compression if rates stay elevated and deposit mix continues to shift toward rate-sensitive deposits. At current trajectory, NIM could drop to 2.8%, making 1.2% ROA target unachievable without major cost reduction or fee income growth. Must understand whether NIM compression is temporary (rate environment driven) or structural (permanent competitive/market shift), and identify which levers (pricing, deposit mix, cost structure, fee income) offer improvement path.",
+    "availableData": [
+      "Financial: $8.2B assets, $850M NIM (3.1% current, 3.4% 18mo ago), net income $82M (-12% YoY), efficiency ratio 62% (-3pp YoY), deposit beta rising, ROA 1.0%, ROAE 9.5%",
+      "Operational: 45 branches, 2,200 employees, personnel costs 43% of revenue, legacy core system (15 years old), tech investment 2.5% of revenue",
+      "Market: Deposit market share stable but eroding in key demographics (high-net-worth, young professionals), wealth management AUM $2.1B (growing 8% YoY, above bank growth), average customer age rising (55 to 56 YoY)",
+      "Competitive: 3 mega-banks nearby offering 4.5%+ on deposits (vs. bank's 3.8%), 5+ fintechs competing in payments/lending, robo-advisors competing in wealth ($500k+ portfolios)"
+    ],
+    "unavailableData": [
+      "Customer segmentation by profitability and retention: Which customer segments contribute to ROA? Which are declining or at risk?",
+      "Deposit pricing elasticity: How sensitive are deposits to rate changes by segment (consumers, businesses, high-net-worth)?",
+      "Fee income potential: Which new fee products (advisory, management fees, transactional) could improve revenue without asset growth?",
+      "Cost structure deep dive: Where is the efficiency opportunity (branch consolidation? workforce optimization? process automation)?",
+      "Competitive win/loss: Which customers are leaving to competitors? Which are being retained and why?"
+    ],
+    "timeHorizon": "24 months (PE exit window; Series B transaction requires clear path to 1.2% ROA)",
+    "riskAppetite": "MEDIUM (PE owner wants growth but transaction certainty matters; cannot take balance sheet risks)"
+  },
+  "clientContext": {
+    "industry": "Financial Services / Regional Banking",
+    "size": "Large mature ($8.2B assets, 2,200 people, $850M NIM)",
+    "revenueImpactUrgency": "CRITICAL (NIM compression eroding profitability; transaction dependent on ROA improvement path)"
+  },
+  "businessProblem": "A regional bank is experiencing margin compression (NIM 3.4% → 3.1% in 18 months) driven by rising deposit costs and competitive pressure, while net income declined 12% YoY. Efficiency ratio worsening (59% → 62%) despite cost control efforts. Management must determine whether margin compression is temporary (rate environment driven) or structural (competitive shift), and identify which levers (deposit repricing, fee income growth, cost reduction, balance sheet mix) offer the highest-impact path to restore ROA to 1.2%+ within 24 months. PE owner has transaction window; delay in identifying improvement path risks exit opportunity.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "NIM compressed 30bps over 18 months (3.4% → 3.1%), accelerating. Net income down 12% YoY despite flat deposit base, suggesting margin per dollar of assets deteriorating. Efficiency ratio worsening (59% → 62%), indicating costs not decreasing with margin. This is a profitability squeeze: revenues declining, costs flat to increasing.",
+      "confidence": "HIGH",
+      "source": "Financial statements, P&L trend analysis",
+      "isCritical": true,
+      "supportingData": {
+        "nim_18mo_ago": "3.4%",
+        "nim_current": "3.1%",
+        "nim_compression": "30bps",
+        "net_income_change_yoy": "-12%",
+        "efficiency_ratio_18mo_ago": "59%",
+        "efficiency_ratio_current": "62%"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Deposit beta (cost increase relative to Fed rate increase) rising. Market deposit rates (mega-banks) at 4.5%+ while bank's blended deposit rate 3.8%. Deposit migration to higher-yield products (MMAs, CDs) observed. This is a structural shift: as rates stay elevated, customers shopping for better rates. Deposit volume stable but mix deteriorating (lower-cost checking declining, higher-cost MMAs increasing).",
+      "confidence": "HIGH",
+      "source": "Deposit mix analysis, pricing study, rate competitive analysis",
+      "isCritical": true,
+      "supportingData": {
+        "mega_bank_deposit_rates": "4.5%+",
+        "our_blended_deposit_rate": "3.8%",
+        "deposit_volume_change": "Flat YoY",
+        "deposit_mix_shift": "Checking declining, MMA/CD increasing"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Competitive landscape intensifying: mega-banks expanding in regional markets with rate-aggressive deposits. Fintechs (Ally, Marcus, etc.) offering 4.5%+ on savings, attracting tech-comfortable customers. Robo-advisors (Betterment, Wealthfront) competing in wealth management for <$1M portfolios. Bank's wealth management growing (8% AoUM growth) but losing younger customer acquisition to fintechs and robo-advisors.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "Competitive intelligence, customer acquisition trends, product mix analysis",
+      "isCritical": true,
+      "supportingData": {
+        "wealth_aum_growth": "8% YoY",
+        "bank_overall_growth": "Flat",
+        "customer_age_trend": "Increasing (55→56 YoY)",
+        "younger_customer_acquisition": "Declining (losing to fintechs, robo-advisors)"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Personnel costs 43% of revenue (high for retail banking; peer median ~40%). Legacy core system (15 years old) consuming tech budget; modernization roadmap would cost 3-5 year capex commitment. Tech investment only 2.5% of revenue (peer median 3.5%), suggesting under-investment in digital capabilities.",
+      "confidence": "HIGH",
+      "source": "Cost structure analysis, IT capex plan, peer benchmarking",
+      "isCritical": false,
+      "supportingData": {
+        "personnel_cost_pct": "43% of revenue",
+        "peer_personnel_median": "40%",
+        "legacy_system_age": "15 years",
+        "tech_investment_pct": "2.5% of revenue"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "ROA 1.0% and ROAE 9.5%, both below peer median (ROA 1.2%, ROAE 11%). Current trajectory continues to deteriorate ROA. At 1.0% ROA on $8.2B assets, annual net income ~$82M; if assets grow 2% and ROA stays flat, net income grows 2%. To achieve $1.2% ROA target (transaction requirement), must improve profitability while maintaining asset base or grow assets with improved profitability. Currently doing neither.",
+      "confidence": "HIGH",
+      "source": "Financial statements, peer benchmarking",
+      "isCritical": true,
+      "supportingData": {
+        "current_roa": "1.0%",
+        "peer_roa_median": "1.2%",
+        "current_roae": "9.5%",
+        "peer_roae_median": "11%"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (large balance sheet, but capex constrained by legacy system transition)",
+    "timeHorizonDays": 720,
+    "staffCapacity": "MEDIUM (2,200 people, but core team heavily focused on compliance/regulatory, limited capacity for innovation)",
+    "cashRunwayMonths": "N/A (mature company, ongoing operations)",
+    "legalComplianceSensitive": true
+  }
+}

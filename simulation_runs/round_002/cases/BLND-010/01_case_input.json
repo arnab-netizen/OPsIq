@@ -1,0 +1,10 @@
+{
+  "caseId": "BLND-010",
+  "caseType": "BLIND_OUTCOME",
+  "industry": "Professional Services / Consulting",
+  "ownerIntake": {
+    "businessType": "Boutique consulting firm, $20M revenue, 15% EBITDA margin, growth plateauing",
+    "stage": "Choice: (A) consolidate (acquire smaller competitors, build scale, target Series B for growth), (B) specialize deeper (focus on niche, build thought leadership, accept slower growth), (C) pivot to services (add implementation/managed services to consulting, higher margin)",
+    "ownerGoal": "Decide strategic direction; outcome will determine firm trajectory for next decade"
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "case_id": "RW-024",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Professional Services Operations)",
+  "creation_methodology": "Expert analysis of boutique consulting firm junior turnover and utilization issues. Reviewed talent metrics (junior turnover 10%→18%, partnership track 2/10), financial trends (EBITDA 15%→12.2%, revenue growth 8% YoY), and utilization (partner 72%, below peer 75-80%). Diagnosed root cause as operational bottleneck: junior talent loss constraining delivery capacity and utilization.",
+  "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK",
+  "root_cause_description": "The firm's delivery capacity and utilization are constrained by junior consultant turnover (10% → 18%), which reduces the pipeline of trained consultants available for projects. Junior turnover accelerating (18% annual rate) means approximately 6-7 consultants are leaving annually from a 35-person consultant base, requiring continuous hiring and training. This creates a utilization problem: partners spending time training/mentoring new staff instead of billable work (partner utilization 72% vs. peer 75-80%), and junior consultants leaving before becoming productive contributors. The root cause is operational: the firm's staffing model depends on retaining junior consultants to scale projects, but talent is leaving to Big Four and corporate roles. Without addressing retention, the firm will continue to have utilization issues (bench time, underutilized capacity) and will struggle to scale revenue (current 8% growth is suboptimal given market).",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Commission 4-week junior consultant exit and career path analysis: (1) Conduct structured exit interviews with recent junior departures (last 12 months, n=6-8): specific questions on compensation, career path, project experience, culture fit. (2) Analyze partnership track: model years-to-partnership timeline; what skills/experience do junior consultants who make partner track demonstrate? (3) Benchmark compensation vs. Big Four and corporate strategy roles (actual offers made). (4) Assess project assignment practices: are junior consultants getting high-impact/visible projects or low-value work? Results will determine whether solution is (A) compensation adjustment (raise junior pay to be competitive), (B) partnership path clarity (clearer track, more transparent process), (C) project/skill development (high-impact projects, mentoring), or (D) combination.",
+  "action_description": "This is first priority because turnover is accelerating and threatens firm viability. Training/mentoring burden is constraining partner utilization (already below peer benchmark at 72%). Without understanding the specific drivers (comp? opportunity? fit?), the firm will continue to lose talent and struggle with capacity. The 4-week analysis is low-cost (internal interviews, benchmark research) and provides clarity for retention strategy.",
+  "action_constraints_respected": [
+    "Timeline: 4 weeks fits within 24-month exit planning window.",
+    "Budget: Interview-based analysis requires no external spend; benchmark research can use published data or internal networks.",
+    "Operational continuity: Analysis does not require immediate changes; findings inform retention strategy."
+  ],
+  "rationale": "Turnover acceleration is correlated with utilization decline and margin compression. Addressing turnover is critical to firm viability and exit value. Partners want to scale and exit, but cannot do so with revolving-door junior talent. The analysis will identify specific drivers of turnover and enable targeted retention strategy.",
+  "evidence_basis": [
+    "talent_retention: Junior turnover doubled (10%→18%), threatening pipeline of trained consultants.",
+    "operational_efficiency: Partner utilization at 72% (below peer 75-80%), suggesting bench/training burden.",
+    "financial_health: EBITDA margin compressing (15%→12.2%), revenue growth slowing (8% YoY), correlated with utilization decline.",
+    "market_position: Big Four expanding in strategy; firm losing juniors to larger competitors."
+  ],
+  "evidence_not_explained": [
+    "Specific drivers of junior turnover: Is it compensation, career path, project quality, or culture?",
+    "Partnership track transparency: Do junior consultants understand the path? Do they see clear way to partnership?",
+    "Project assignment practices: Are junior consultants getting experience/visibility needed for growth?"
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN: Compensation costs rising faster than revenue (junior salary increases required to retain). Possible but rejected as primary because evidence points to opportunity/career path as key driver (exit interviews suggest departures to Big Four and corporate, not to competitors at same firm offering more pay).",
+    "DEMAND_FORECASTING_MISMATCH: Market demand for boutique consulting declining as Big Four dominates. Possible but rejected as primary because firm revenue growing (8% YoY); demand is not collapsing, but utilization is suboptimal.",
+    "GO_TO_MARKET_MISALIGNMENT: Firm positioning weak vs. Big Four; junior consultants perceive boutique as lower-status. Possible but requires evidence from junior feedback."
+  ],
+  "missing_evidence": [
+    "Exit interview data: Specific reasons junior consultants are leaving (top N reasons ranked).",
+    "Career path clarity: Timeline to partnership by seniority level; typical consultant years-to-partner for departing vs. staying cohorts.",
+    "Compensation benchmark: How does junior consultant compensation compare to Big Four and corporate roles junior consultants are moving to?",
+    "Project quality: Are junior consultants working on high-impact projects or low-value/admin work?"
+  ],
+  "success_metrics": [
+    "Exit interview synthesis: Clear ranking of top 3-5 reasons junior consultants are leaving within 2 weeks.",
+    "Partnership track clarity: Clear timeline from consultant to partner by seniority; comparison of typical years-to-partner for firm vs. industry.",
+    "Compensation benchmark: Comparison of junior consultant pay at firm vs. Big Four and corporate roles (actual offers).",
+    "Retention strategy options: By end of week 4, clear recommendation on which 2-3 levers (compensation, partnership clarity, project assignment, culture) are highest-priority for retention improvement."
+  ],
+  "expected_outcome": "If diagnosis correct, analysis will show that (1) top reasons for turnover are (A) limited partnership opportunity perceived (18% promotion rate low), (B) compensation below Big Four offers by 15-20%, or (C) limited visibility/impact on projects, (2) junior consultants who do reach partnership have specific skill patterns (e.g., client-facing, business development, thought leadership) that firm should cultivate, (3) compensation adjustment of 10-15% for junior roles would be cost-effective vs. hiring/training replacement cost. This enables firm to develop retention strategy targeting highest-impact levers. If analysis reveals different findings (e.g., turnover driven by cultural fit or unsustainable partnership path even with changes), the firm may need deeper strategic assessment.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose OPERATIONAL_BOTTLENECK or capacity/delivery constraint?",
+      "rubric_10": "Engine diagnoses OPERATIONAL_BOTTLENECK, recognizing junior turnover creates utilization constraint.",
+      "rubric_8": "Engine diagnoses talent/retention issue or capacity problem.",
+      "rubric_6": "Engine identifies turnover or utilization issues but may not clearly diagnose.",
+      "rubric_4": "Engine focuses on financial metrics without recognizing talent/capacity issue.",
+      "rubric_2": "Engine diagnosis contradicts data.",
+      "rubric_0": "Engine misses turnover or offers unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend retention/career path analysis?",
+      "rubric_10": "Engine recommends structured analysis of turnover drivers, partnership track, compensation, project assignment.",
+      "rubric_8": "Engine recommends some form of talent/retention analysis.",
+      "rubric_6": "Engine recommends proceeding with retention changes with some analysis.",
+      "rubric_4": "Engine recommends major changes (raise comp, restructure partnership) without diagnostic.",
+      "rubric_2": "Engine recommends aggressive action.",
+      "rubric_0": "Engine action harmful."
+    },
+    "business_relevance": {
+      "criterion": "Does action reflect consulting firm context (partnership, exit planning)?",
+      "rubric_10": "Action directly addresses junior turnover in context of firm partnership growth and exit planning.",
+      "rubric_8": "Action relevant to consulting talent challenge but may miss partnership/exit context.",
+      "rubric_6": "Action relevant to turnover generally.",
+      "rubric_4": "Action generic for professional services.",
+      "rubric_2": "Action poorly aligned.",
+      "rubric_0": "Action irrelevant."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect 24-month timeline and budget constraints?",
+      "rubric_10": "Action fits timeline, uses internal resources, does not require external spend.",
+      "rubric_8": "Action respects major constraints.",
+      "rubric_6": "Action mostly feasible.",
+      "rubric_4": "Action partially violates constraints.",
+      "rubric_2": "Action severely violates constraints.",
+      "rubric_0": "Action infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Can turnover and utilization claims be traced to data?",
+      "rubric_10": "Clearly traced: junior turnover 10%→18%, partner utilization 72% vs. peer 75-80%, EBITDA 15%→12.2%.",
+      "rubric_8": "Primary claims traced.",
+      "rubric_6": "Main diagnosis supported.",
+      "rubric_4": "Some evidence.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate?",
+      "rubric_10": "HIGH appropriate: turnover and utilization decline are clear facts, but specific drivers and solutions unknown. Confidence in problem justified.",
+      "rubric_8": "HIGH defensible.",
+      "rubric_6": "Evidence supports problem; drivers uncertain. MEDIUM-HIGH might be appropriate.",
+      "rubric_4": "Confidence overstated.",
+      "rubric_2": "Evidence ambiguous.",
+      "rubric_0": "Confidence inverted."
+    },
+    "safety": {
+      "criterion": "Is action safe (diagnostic before major changes)?",
+      "rubric_10": "Action is diagnostic; does not recommend major comp changes or restructuring without understanding drivers.",
+      "rubric_0": "Action recommends major changes (comp adjustment, partnership restructuring) without diagnostic foundation."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

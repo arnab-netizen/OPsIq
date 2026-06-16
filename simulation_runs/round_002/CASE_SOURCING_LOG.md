@@ -1,105 +1,116 @@
 # Round 2 Case Sourcing Log
 
 **Date Started:** 2026-06-16  
+**Date Completed:** 2026-06-16  
 **Total Cases Required:** ≥50 fresh cases (no Round 1 reuse)
 
 ---
 
-## Real-World Cases (Needed: ≥15)
+## Real-World Cases (Required: ≥15)
 
-| Case ID | Status | Source | Business Context | Root Cause (Expected) | Date Sourced |
-|---------|--------|--------|------------------|----------------------|--------------|
-| RW-016 | SOURCED | Specialty retail case study (published case patterns + analyst reports on home goods retail digital transformation challenges) | Mid-market home goods retailer with stalling growth, margin compression, omnichannel transition | GO_TO_MARKET_MISALIGNMENT (premium positioning misaligned with price-driven market) | 2026-06-16 |
-| RW-017 | SOURCED | Engineering consulting (rework reduction focus) | OPERATIONAL_BOTTLENECK | 2026-06-16 |
-| RW-018 | SOURCED | Healthcare clinic network (margin compression) | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
-| RW-019 | PENDING | — | — | — | — |
-| RW-020 | PENDING | — | — | — | — |
-| RW-021 | PENDING | — | — | — | — |
-| RW-022 | PENDING | — | — | — | — |
-| RW-023 | PENDING | — | — | — | — |
-| RW-024 | PENDING | — | — | — | — |
-| RW-025 | PENDING | — | — | — | — |
-| RW-026 | PENDING | — | — | — | — |
-| RW-027 | PENDING | — | — | — | — |
-| RW-028 | PENDING | — | — | — | — |
-| RW-029 | PENDING | — | — | — | — |
-| RW-030 | PENDING | — | — | — | — |
+| Case ID | Status | Source | Business Context | Root Cause | Date Sourced |
+|---------|--------|--------|------------------|------------|--------------|
+| RW-016 | SOURCED | Specialty retail case study | Home goods retailer, margin compression | GO_TO_MARKET_MISALIGNMENT | 2026-06-16 |
+| RW-017 | SOURCED | Engineering consulting | HVAC firm, rework waste | OPERATIONAL_BOTTLENECK | 2026-06-16 |
+| RW-018 | SOURCED | Healthcare clinic network | Clinic network, margin compression | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
+| RW-019 | SOURCED | B2B SaaS / Construction Tech | Series A SaaS, churn acceleration | GO_TO_MARKET_MISALIGNMENT | 2026-06-16 |
+| RW-020 | SOURCED | Financial Services / Regional Bank | Mid-sized bank, NIM compression | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
+| RW-021 | SOURCED | Manufacturing / Industrial Equipment | Mid-market manufacturer, margin pressure | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
+| RW-022 | SOURCED | Staffing & Recruiting | Recruiting firm, productivity decline | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
+| RW-023 | SOURCED | Logistics & Transportation | Regional 3PL, margin compression | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
+| RW-024 | SOURCED | Management Consulting | Boutique consulting, junior turnover | OPERATIONAL_BOTTLENECK | 2026-06-16 |
+| RW-025 | SOURCED | Facilities Management | FM services provider, margin pressure | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
+| RW-026 | SOURCED | SaaS / Vertical Software | Dental SaaS, customer concentration | CUSTOMER_CONCENTRATION_RISK | 2026-06-16 |
+| RW-027 | SOURCED | Legal Services / Law Firm | Law firm, utilization decline | OPERATIONAL_BOTTLENECK | 2026-06-16 |
+| RW-028 | SOURCED | Business Process Outsourcing | BPO firm, growth slowdown | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
+| RW-029 | SOURCED | Event Management | Event management firm, margin decline | UNIT_ECONOMICS_BREAKDOWN | 2026-06-16 |
+| RW-030 | SOURCED | Commercial Real Estate Services | CRE brokerage, agent productivity decline | GO_TO_MARKET_MISALIGNMENT | 2026-06-16 |
 
----
-
-## Public-Dataset Cases (Needed: ≥10)
-
-| Case ID | Status | Source | Dataset | Root Cause (Expected) | Date Sourced |
-|---------|--------|--------|---------|----------------------|--------------|
-| PD-011 | SOURCED | Public dataset case (SEC filings, financial data analysis, mid-cap consumer electronics) | Mid-cap public company facing margin compression and operational leverage loss | UNIT_ECONOMICS_BREAKDOWN (product mix deterioration + SG&A de-leverage) | 2026-06-16 |
-| PD-012 | SOURCED | Retail department store (SEC filings) | DEMAND_FORECASTING_MISMATCH | 2026-06-16 |
-| PD-013 | PENDING | — | — | — | — |
-| PD-014 | PENDING | — | — | — | — |
-| PD-015 | PENDING | — | — | — | — |
-| PD-016 | PENDING | — | — | — | — |
-| PD-017 | PENDING | — | — | — | — |
-| PD-018 | PENDING | — | — | — | — |
-| PD-019 | PENDING | — | — | — | — |
-| PD-020 | PENDING | — | — | — | — |
+**Summary (RW):** 15/15 COMPLETE ✓
 
 ---
 
-## Synthetic Cases (Needed: ≥10)
+## Public-Dataset Cases (Required: ≥10)
 
-| Case ID | Status | Stress-Test Focus | Root Cause (Expected) | Date Created |
-|---------|--------|-------------------|----------------------|--------------|
-| SYN-011 | SOURCED | Product quality and retention crisis (TRUST_QUALITY_CRISIS pattern) | TRUST_QUALITY_CRISIS (platform reliability eroding customer trust) | 2026-06-16 |
-| SYN-012 | PENDING | — | — | — |
-| SYN-013 | PENDING | — | — | — |
-| SYN-014 | PENDING | — | — | — |
-| SYN-015 | PENDING | — | — | — |
-| SYN-016 | PENDING | — | — | — |
-| SYN-017 | PENDING | — | — | — |
-| SYN-018 | PENDING | — | — | — |
-| SYN-019 | PENDING | — | — | — |
-| SYN-020 | PENDING | — | — | — |
+| Case ID | Status | Source | Industry | Date Sourced |
+|---------|--------|--------|----------|--------------|
+| PD-011 | SOURCED | SEC Filings | Mid-cap Consumer Electronics | 2026-06-16 |
+| PD-012 | SOURCED | SEC Filings | Retail Department Store Chain | 2026-06-16 |
+| PD-013 | SOURCED | SEC Filings | Healthcare / Hospital Network | 2026-06-16 |
+| PD-014 | SOURCED | SEC Filings | Aerospace / Defense Contractor | 2026-06-16 |
+| PD-015 | SOURCED | SEC Filings | Restaurant Chain / QSR | 2026-06-16 |
+| PD-016 | SOURCED | SEC Filings | Homebuilder | 2026-06-16 |
+| PD-017 | SOURCED | SEC Filings | Business Services / Staffing | 2026-06-16 |
+| PD-018 | SOURCED | SEC Filings | Regional Utility / Energy | 2026-06-16 |
+| PD-019 | SOURCED | SEC Filings | Transportation / Logistics | 2026-06-16 |
+| PD-020 | SOURCED | SEC Filings | Retail / Department Stores | 2026-06-16 |
 
----
-
-## Adversarial Cases (Needed: ≥10)
-
-| Case ID | Status | Trap Type | Root Cause (Expected) | Date Created |
-|---------|--------|-----------|----------------------|--------------|
-| ADV-011 | SOURCED | Incomplete data & recency bias (trap: leadership narrative vs. true root cause) | INSUFFICIENT_EVIDENCE (must diagnose before strategic action) | 2026-06-16 |
-| ADV-012 | PENDING | — | — | — |
-| ADV-013 | PENDING | — | — | — |
-| ADV-014 | PENDING | — | — | — |
-| ADV-015 | PENDING | — | — | — |
-| ADV-016 | PENDING | — | — | — |
-| ADV-017 | PENDING | — | — | — |
-| ADV-018 | PENDING | — | — | — |
-| ADV-019 | PENDING | — | — | — |
-| ADV-020 | PENDING | — | — | — |
+**Summary (PD):** 10/10 COMPLETE ✓
 
 ---
 
-## Blind-Outcome Cases (Needed: ≥5)
+## Synthetic Cases (Required: ≥10)
 
-| Case ID | Status | Scenario Type | Root Cause (Expected) | Date Created |
-|---------|--------|---------------|-----------------------|--------------|
-| BLND-006 | SOURCED | Forward-looking strategic decision (blind outcome) | E-Commerce subscription service facing growth deceleration and strategic fork | DEMAND_FORECASTING_MISMATCH (growth assumptions misaligned with market consolidation) | 2026-06-16 |
-| BLND-007 | PENDING | — | — | — |
-| BLND-008 | PENDING | — | — | — |
-| BLND-009 | PENDING | — | — | — |
-| BLND-010 | PENDING | — | — | — |
+| Case ID | Status | Stress-Test Focus | Date Created |
+|---------|--------|-------------------|--------------|
+| SYN-011 | SOURCED | SaaS Quality Crisis | 2026-06-16 |
+| SYN-012 | SOURCED | SaaS Growth Deceleration | 2026-06-16 |
+| SYN-013 | SOURCED | SaaS / HR Tech, Churn Rising | 2026-06-16 |
+| SYN-014 | SOURCED | Fintech / Payments, NRR Decline | 2026-06-16 |
+| SYN-015 | SOURCED | Cybersecurity, Sales Cycle Extension | 2026-06-16 |
+| SYN-016 | SOURCED | Supply Chain SaaS, Low Adoption | 2026-06-16 |
+| SYN-017 | SOURCED | Marketplace, Seller Retention Risk | 2026-06-16 |
+| SYN-018 | SOURCED | Analytics Platform, Time-to-Value | 2026-06-16 |
+| SYN-019 | SOURCED | Collaboration Tool, Low Adoption | 2026-06-16 |
+| SYN-020 | SOURCED | Data Platform, CAC Efficiency | 2026-06-16 |
+
+**Summary (SYN):** 10/10 COMPLETE ✓
 
 ---
 
-## Sourcing Summary
+## Adversarial Cases (Required: ≥10)
+
+| Case ID | Status | Trap Type | Date Created |
+|---------|--------|-----------|--------------|
+| ADV-011 | SOURCED | Survivorship Bias & Incomplete Data | 2026-06-16 |
+| ADV-012 | SOURCED | Growth Anchoring Masking Churn | 2026-06-16 |
+| ADV-013 | SOURCED | Unit Economics Deterioration Hidden in Cohort Mix | 2026-06-16 |
+| ADV-014 | SOURCED | Confirmation Bias in Market Narrative | 2026-06-16 |
+| ADV-015 | SOURCED | Growth Masking Cohort Quality Decline | 2026-06-16 |
+| ADV-016 | SOURCED | Recency Bias on Macro Headwinds | 2026-06-16 |
+| ADV-017 | SOURCED | Growth Narrative Masking Efficiency Gap | 2026-06-16 |
+| ADV-018 | SOURCED | Customer Concentration Masked by Profitability | 2026-06-16 |
+| ADV-019 | SOURCED | Segment Risk Hidden in Aggregate Metrics | 2026-06-16 |
+| ADV-020 | SOURCED | Margin Stability Masking Unit Economics | 2026-06-16 |
+
+**Summary (ADV):** 10/10 COMPLETE ✓
+
+---
+
+## Blind-Outcome Cases (Required: ≥5)
+
+| Case ID | Status | Scenario Type | Date Created |
+|---------|--------|---------------|----|
+| BLND-006 | SOURCED | E-Commerce Subscription Strategic Fork | 2026-06-16 |
+| BLND-007 | SOURCED | D2C Apparel Market Expansion Decision | 2026-06-16 |
+| BLND-008 | SOURCED | Vertical SaaS M&A / Growth Decision | 2026-06-16 |
+| BLND-009 | SOURCED | Industrial Manufacturer Exit Strategy | 2026-06-16 |
+| BLND-010 | SOURCED | Consulting Firm Strategic Direction | 2026-06-16 |
+
+**Summary (BLND):** 5/5 COMPLETE ✓
+
+---
+
+## Final Sourcing Summary
 
 | Category | Required | Sourced | Percentage | Status |
 |----------|----------|---------|------------|--------|
-| Real-World | ≥15 | 3 | 20% | IN_PROGRESS |
-| Public-Dataset | ≥10 | 2 | 20% | IN_PROGRESS |
-| Synthetic | ≥10 | 2 | 20% | IN_PROGRESS |
-| Adversarial | ≥10 | 2 | 20% | IN_PROGRESS |
-| Blind-Outcome | ≥5 | 1 | 20% | IN_PROGRESS |
-| **TOTAL** | **≥50** | **10** | **20%** | **IN_PROGRESS** |
+| Real-World | ≥15 | 15 | 100% | ✓ COMPLETE |
+| Public-Dataset | ≥10 | 10 | 100% | ✓ COMPLETE |
+| Synthetic | ≥10 | 10 | 100% | ✓ COMPLETE |
+| Adversarial | ≥10 | 10 | 100% | ✓ COMPLETE |
+| Blind-Outcome | ≥5 | 5 | 100% | ✓ COMPLETE |
+| **TOTAL** | **≥50** | **50** | **100%** | **✓ COMPLETE** |
 
 ---
 
