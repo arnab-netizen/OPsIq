@@ -1,27 +1,183 @@
 {
   "case_id": "PD-014",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Public Dataset Analysis)",
-  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
-  "root_cause_description": "Public dataset case PD-014 (Aerospace / Defense Contractor): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
-  "confidence_in_diagnosis": "MEDIUM-HIGH",
-  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "answer_creator": "Domain Expert (Aerospace & Defense Contract Pricing and Government Contracting)",
+  "creation_methodology": "Blind review: Expert analyzed public-disclosure-pattern financials independently. Diagnosed root cause through multi-dimensional evidence (200 bps EBITDA margin decline despite revenue growth and strong backlog; materials +12% and labor +8% input inflation; ~70% of revenue in firm-fixed-price multi-year contracts without economic price adjustment clauses). Distinguished structural pricing/contracting failure from unit-economics deterioration and operational bottleneck by isolating where the margin loss originates (locked FFP pricing structure, not operations or demand).",
+  "root_cause_diagnosis": "STRATEGIC_PRICING_ERROR",
+  "root_cause_description": "The company holds a large book of multi-year firm-fixed-price (FFP) government and prime contracts — approximately 70% of revenue ($1,470M) — that were priced before the recent inflation surge and that lack economic price adjustment (EPA) clauses. Materials are up 12% and direct labor up 8% year-over-year, but on the no-EPA FFP book those cost increases cannot be passed through, so they fall straight to margin. Only the ~30% cost-plus/escalating book ($630M) recovers its cost inflation. The result is a 200 bps EBITDA margin compression (10.0% to 8.0%, $204M to $168M) even though revenue grew (+2.9%) and backlog is strong ($5.6B, 2.7x revenue, book-to-bill 1.1). The root cause is the pricing and contracting STRUCTURE: contracts were committed at prices and terms (no EPA / weak escalation) that under-hedged input-cost risk over a multi-year horizon. This is a STRATEGIC_PRICING_ERROR — mispriced and under-hedged fixed-price contracts — not a UNIT_ECONOMICS_BREAKDOWN (the underlying operations are not inefficient; unit costs rose only because of exogenous input inflation that the contract terms failed to protect against) and not an operational bottleneck (throughput, scrap, and productivity are not the disclosed gap, and demand is healthy). The exposure is forward-looking: the FFP portion of the $5.6B backlog will recognize future revenue at the same pre-inflation fixed prices, so margin pressure will persist and compound unless pricing discipline and contractual escalation are corrected for the next bid cycle and contractual relief (REAs/claims) is pursued where grounds exist.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin fell 200 bps from 10.0% to 8.0% (EBITDA $204M to $168M), an implied ~$42M margin drag.",
+      "Materials cost is 35% of revenue and rose +12% YoY; direct labor is 26% of revenue and rose +8% YoY.",
+      "Profitability per revenue dollar declined even though total revenue grew +2.9% to $2,100M."
+    ],
+    "contributing_factors": [
+      "Materials inflation +12% and labor inflation +8% (exogenous cost shock) — the trigger that exposed the pricing structure.",
+      "Multi-year contract terms locking future-period revenue at pre-inflation prices, so the FFP backlog carries embedded margin exposure.",
+      "Concentration of revenue (~70%) in firm-fixed-price work, which magnifies the impact of any pricing/escalation gap.",
+      "Limited near-term ability to renegotiate locked contracts, which prevents fast recovery and makes next-cycle bid discipline decisive."
+    ],
+    "true_root_cause": "Firm-fixed-price multi-year contracts (~70% of revenue, $1,470M) were priced and committed without economic price adjustment (EPA) clauses or adequate inflation hedging, so input-cost inflation cannot be passed through — a strategic pricing/contracting error in how the contract book was structured, not an operations or demand failure."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Stand up a contract-portfolio pricing and EPA-exposure review across the FFP book, completed within ~10-12 weeks (inside the ~120-day window) at an estimated $250-400k cost using internal contracts, pricing, and legal teams plus targeted outside government-contracts counsel. Scope: (1) Map every material FFP contract by remaining performance obligation, locked price, embedded input-cost assumptions, and presence/strength of EPA or escalation clauses, to quantify unrecovered inflation exposure on current revenue (~$92M estimated) and on the FFP portion of the $5.6B backlog. (2) Assess Request for Equitable Adjustment (REA) and claims rights contract-by-contract — identify government-caused changes, constructive changes, differing site conditions, or schedule disruption that create a contractually grounded, DFARS/FAR-compliant basis for price relief, and prioritize REA filings before re-pricing/option windows close. (3) Establish forward bid-pricing discipline for the next cycle: require EPA/escalation clauses (or priced-in inflation contingencies) on new FFP bids, set walk-away thresholds, and gate new FFP awards through a pricing-risk committee so the company stops adding underpriced backlog. (4) Develop a materials hedging / long-term supplier-agreement strategy to cap commodity exposure on committed FFP work. Deliver a board-ready exposure quantification and a go/no-go REA recommendation within the 120-day window.",
+  "action_description": "This is first priority because the ~120-day decision window is hard: bid-pricing for the next cycle and REA filing windows close, and every new FFP bid placed without escalation protection locks in additional multi-year underpriced backlog that will compound the margin problem. The action is diagnostic-and-decision-enabling rather than an irreversible move: it quantifies the unrecovered-inflation exposure, establishes the legally defensible path to contractual relief (REAs/claims), and installs pricing discipline so the company stops the bleeding on new work. It is low risk — it does not breach any contract, does not cut safety/quality-critical labor, and does not chase volume — while directly targeting the structural pricing error. Without it, the company would either keep bidding at loss-making fixed prices or react with unilateral or operational moves that violate contracts or compromise defense-program quality.",
+  "accepted_alternative_actions": [
+    "Prioritize and file Requests for Equitable Adjustment (REAs) and contractually grounded claims on the subset of FFP contracts with the strongest legal basis (government-caused or constructive changes, differing conditions, schedule disruption), pursued in full DFARS/FAR compliance, to recover unrecovered cost on existing work before windows close — provided this is sequenced off a portfolio exposure assessment rather than filed blindly.",
+    "Immediately impose forward bid-pricing discipline: mandate EPA/escalation clauses or explicit inflation contingencies on all new FFP bids, set walk-away pricing thresholds, and route new FFP awards through a pricing-risk gate — stopping the addition of underpriced multi-year backlog even before the full portfolio review concludes.",
+    "Launch a materials hedging and long-term supplier-agreement program to cap commodity-price exposure on the committed FFP backlog, reducing the unrecoverable inflation on work already locked at fixed prices."
+  ],
+  "bad_actions": [
+    "Cut direct labor or reduce headcount on flight-critical and defense work to restore margin. Wrong for this case: labor inflation is exogenous and operations are not the inefficiency; cutting labor on AS9100/airworthiness-governed, source-inspected work risks quality escapes, first-article failures, schedule slips, and loss of program eligibility — it attacks a symptom while creating safety, compliance, and recompete risk, and does nothing about the locked FFP pricing structure.",
+    "Attempt to unilaterally raise prices on existing locked firm-fixed-price contracts. Wrong for this case: FFP contracts cannot be reopened unilaterally; doing so is breach, exposes the company to default termination, damages, and debarment risk, and destroys the customer relationships needed for recompetes. Price relief must come through negotiated change orders or grounded REAs/claims, not fiat.",
+    "Chase more volume / aggressively bid to grow the backlog. Wrong for this case: demand is already strong (book-to-bill 1.1, backlog 2.7x revenue); adding more FFP work under the same pre-inflation, no-EPA pricing structure simply locks in more underpriced multi-year revenue and compounds the margin problem rather than fixing it.",
+    "Launch a broad operational efficiency / cost-reduction (lean/Six Sigma) program as the primary response. Wrong for this case: there is no disclosed efficiency deterioration (scrap, rework, productivity, throughput are not the gap); the cost increase is input-price inflation that fixed-price contracts fail to recover, so an operations program would consume the 120-day window without addressing the contractual pricing root cause."
+  ],
+  "action_constraints_respected": [
+    "Contractual constraint (FFP cannot be reopened unilaterally): The action seeks relief only through grounded REAs/claims and negotiated change orders, and otherwise focuses on future bid pricing — no unilateral price increases or breach.",
+    "Regulatory constraint (DFARS/FAR/TINA/CAS): REA and pricing work is structured to be fully compliant and documented, using government-contracts counsel; no certification or pricing-data violations.",
+    "Strategic constraint (cannot walk away from strategic programs): The action does not abandon programs; it protects them by stabilizing pricing on future work and seeking compliant relief on current work.",
+    "Competitive / recompete constraint: Pricing discipline and EPA clauses are applied to new bids; no aggressive or non-performance posture that would jeopardize follow-on awards.",
+    "Quality/safety constraint: No reduction of safety- or quality-critical labor or materials; defense and airworthiness conformance is preserved.",
+    "Timeline constraint (~120 days): The review and REA go/no-go recommendation are delivered inside the window, before re-pricing/option and bid windows close."
+  ],
+  "rationale": "Three explanations were considered: (1) STRATEGIC_PRICING_ERROR — the FFP contract book was priced/structured without inflation protection; (2) UNIT_ECONOMICS_BREAKDOWN — the underlying per-unit economics are structurally unprofitable; (3) OPERATIONAL_BOTTLENECK — internal inefficiency or throughput constraint is eroding margin. The evidence points decisively to (1). Margin fell 200 bps in a single year while revenue grew and backlog stayed strong, so demand and scale are not the issue. The cost increases are explicitly exogenous input inflation (materials +12%, labor +8%) with no disclosed deterioration in productivity, scrap, or throughput, which rules out operational bottleneck. Crucially, the inflation hits margin only because ~70% of revenue is locked in firm-fixed-price multi-year contracts without EPA clauses — the pricing/contracting structure, decided when the work was bid, is what converts an input-cost shock into unrecoverable margin loss. That is a strategic pricing error, not a breakdown of intrinsic unit economics: the same operations under cost-plus or EPA-protected terms would have recovered the inflation (as the ~30% escalating book does). The first action must therefore quantify the contractual exposure, secure compliant relief where grounds exist, and fix forward bid pricing before the 120-day window closes — not cut labor, not breach contracts, and not chase more underpriced volume.",
+  "evidence_basis": [
+    "financial_health: EBITDA margin declined 200 bps (10.0% to 8.0%, $204M to $168M) despite +2.9% revenue growth — profitability-per-dollar problem, ~$42M implied drag, not a demand problem.",
+    "financial_health: ~70% of revenue ($1,470M) is firm-fixed-price multi-year without EPA clauses; only ~30% ($630M) is cost-plus/escalating — the structural locus of unrecoverable inflation.",
+    "operational_efficiency: materials +12% (to $735M, 35% of revenue) and labor +8% (to $546M, 26% of revenue) are input-price driven with no disclosed efficiency deterioration — exogenous shock, not operations failure.",
+    "market_position: backlog $5.6B (2.7x revenue), book-to-bill 1.1 — strong demand rules out demand/market-share causes and shows the locked backlog carries forward pricing exposure.",
+    "financial_health (derived): ~$92M of input inflation is attributable to the no-EPA FFP book and is structurally unrecoverable; net realized drag (~$42M) is smaller due to partial recovery on the escalating book and volume growth."
+  ],
+  "evidence_not_explained": [
+    "The exact split of the ~$92M estimated FFP-attributable inflation between contracts that may still qualify for REA/claims relief versus those with no contractual basis is not determinable from public data; only a contract-level legal review (the first action) can resolve which portion is recoverable.",
+    "Why EPA/escalation clauses were omitted from the original FFP bids (competitive pressure to win, optimistic inflation assumptions, or weak pricing governance) is not disclosed; the answer treats it as a structural pricing-discipline gap to be corrected forward."
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN: That the business's intrinsic per-unit economics are structurally unprofitable. Rejected as primary because operations show no disclosed inefficiency and unit costs rose only because of exogenous input inflation (materials +12%, labor +8%); the ~30% cost-plus/escalating book recovers that inflation while the ~70% no-EPA FFP book does not, proving the loss originates in contract pricing terms, not in the underlying cost-to-serve. The same operations under EPA-protected pricing would hold margin.",
+    "OPERATIONAL_BOTTLENECK: That an internal throughput, productivity, or supply constraint is eroding margin. Rejected because there is no disclosed deterioration in scrap, rework, productivity, or throughput; revenue grew and backlog is strong (book-to-bill 1.1), which is inconsistent with a binding operational bottleneck. An efficiency program would not recover inflation that the contracts contractually refuse to pass through.",
+    "DEMAND_FORECASTING_MISMATCH: That over- or under-forecasting demand drove the margin loss. Rejected because demand is healthy and growing (backlog 2.7x revenue, book-to-bill 1.1); the problem is the price at which committed demand was sold, not the volume of demand."
+  ],
+  "missing_evidence": [
+    "Contract-level EPA/escalation clause language and remaining performance obligations to size unrecoverable exposure precisely on current revenue and on the FFP backlog.",
+    "Per-contract REA/claims basis: documented government-caused changes, constructive changes, differing conditions, or schedule disruption that would support compliant price relief.",
+    "Forward materials hedging positions and supplier-contract terms to determine how much of the committed FFP inflation can still be capped.",
+    "Program-level (contract-level) margin to identify which specific FFP contracts are underwater and should be prioritized for relief or repricing at option/recompete."
+  ],
+  "success_metrics": [
+    "Exposure quantified: contract-level map of unrecovered input-cost inflation across the FFP book (validating the ~$92M current-revenue estimate) and the embedded exposure in the FFP portion of the $5.6B backlog, delivered within ~12 weeks.",
+    "REA decision made: a board-ready, DFARS/FAR-compliant go/no-go REA/claims recommendation with prioritized filings completed inside the 120-day window before re-pricing/option windows close.",
+    "Forward pricing discipline installed: 100% of new FFP bids in the next cycle carry EPA/escalation clauses or explicit inflation contingencies and pass a pricing-risk gate; no new uncovered FFP backlog added.",
+    "Margin trajectory: EBITDA margin stabilizes and trends back toward 10% over the following 12-24 months through recovered relief, repriced options/recompetes, and hedged input costs — not through quality- or program-compromising cuts."
+  ],
+  "expected_outcome": "If STRATEGIC_PRICING_ERROR is the root cause and the portfolio pricing/EPA review is executed well, the company should expect: (1) within ~12 weeks, a quantified exposure map showing how much of the ~$92M FFP-attributable inflation is recoverable via REAs/claims versus structurally locked, and the embedded exposure in the FFP backlog; (2) within the 120-day window, prioritized REA filings on contracts with valid grounds and a hard pricing-discipline gate that prevents new uncovered FFP awards; (3) over 12-24 months, EBITDA margin recovering toward 10% as relief is realized, option years and recompetes are repriced with escalation, and materials exposure is hedged. If the review finds little contractual basis for relief on existing FFP contracts, the recovery shifts almost entirely to forward pricing discipline and hedging, and the company must plan for margin to stay near 8% until the underpriced backlog works off — making bid discipline the decisive lever.",
+  "automatic_fail_conditions": [
+    "Recommending cuts to safety- or quality-critical labor or materials on flight-critical/defense work, or any action that compromises AS9100/airworthiness conformance to chase margin.",
+    "Recommending a unilateral price increase on, or unilateral reopening/repudiation of, existing firm-fixed-price contracts (breach, default-termination, and debarment risk).",
+    "Recommending aggressive new-volume pursuit or bidding more FFP work without escalation protection, thereby locking in additional underpriced multi-year backlog.",
+    "Diagnosing the case primarily as an operational-efficiency problem and prescribing a lean/cost-cutting program while ignoring the locked no-EPA FFP pricing structure as the root cause."
+  ],
+  "source_references": [
+    "SEC 10-K filing patterns for mid-cap aerospace & defense tier-1 suppliers (income statement, segment contract-type disclosures, backlog and book-to-bill, MD&A inflation commentary).",
+    "FAR/DFARS framework for firm-fixed-price vs cost-reimbursement contracts, economic price adjustment (EPA) clauses, and Requests for Equitable Adjustment (REA)/claims procedures.",
+    "TINA (certified cost-or-pricing data) and CAS compliance requirements governing government-contract pricing adjustments.",
+    "Industry disclosure conventions on multi-year program backlog, remaining performance obligations, and option/recompete structures."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "EBITDA margin = EBITDA / Revenue",
+      "Margin decline (bps) = (prior margin - current margin) x 100",
+      "EBITDA drag (USD) = (prior margin - current margin) x current revenue",
+      "FFP revenue (USD) = FFP revenue share x total revenue",
+      "Unrecovered FFP input inflation (USD) approx = FFP revenue share x ( (materials cost / revenue) x materials inflation + (labor cost / revenue) x labor inflation ) x revenue",
+      "Equivalently: Unrecovered FFP input inflation (USD) approx = FFP share x ( materials cost x materials inflation + labor cost x labor inflation )"
+    ],
+    "expected_values": {
+      "current_ebitda_margin_pct": 8.0,
+      "prior_ebitda_margin_pct": 10.0,
+      "ebitda_margin_decline_bps": 200,
+      "ebitda_drag_usd_m": 42,
+      "ffp_revenue_share_pct": 70,
+      "ffp_revenue_usd_m": 1470,
+      "materials_cost_usd_m": 735,
+      "materials_pct_of_revenue": 35,
+      "materials_inflation_pct": 12,
+      "labor_cost_usd_m": 546,
+      "labor_pct_of_revenue": 26,
+      "labor_inflation_pct": 8,
+      "ffp_materials_inflation_usd_m": 61.7,
+      "ffp_labor_inflation_usd_m": 30.6,
+      "est_unrecovered_ffp_inflation_usd_m": 92
+    },
+    "tolerance": "Margins within +/-0.5 percentage points; bps within +/-50; derived inflation/drag estimates within +/-10% relative. The est_unrecovered_ffp_inflation_usd_m (~$92M) is an estimate, not a reported figure; it is expected to exceed the net realized EBITDA drag (~$42M) because the ~30% cost-plus/escalating book recovers its share and revenue growth absorbs part of the impact.",
+    "unit_assumptions": "All USD figures in millions (USD_m) unless suffixed _b (billions). Margins and inflation rates in percent. FFP material/labor inflation computed as FFP share (70%) x cost line x inflation rate: materials 0.70 x 735 x 0.12 = 61.74; labor 0.70 x 546 x 0.08 = 30.576; total approx 92.3, rounded to 92. EBITDA drag = (0.10 - 0.08) x 2100 = 42.",
+    "invalid_input_rules": "Reject if current EBITDA margin does not equal EBITDA/Revenue within tolerance (168/2100 = 8.0%); reject if FFP share + cost-plus/escalating share != 100% (70 + 30); reject if margin decline bps != (prior - current) x 100 within tolerance; reject negative or >100% shares/margins; reject if materials% + labor% implied costs exceed revenue.",
+    "missing_input_behavior": "If a required input is absent, do not fabricate it; state the dependency and request it. Compute only the metrics whose inputs are present (e.g., margin decline needs both prior and current margin).",
+    "refuse_if_missing": [
+      "If contract-mix percentages (FFP vs cost-plus/escalating share) are absent, refuse to estimate the pass-through gap or unrecovered FFP inflation.",
+      "If EBITDA and revenue for both years are not provided, refuse to compute margin decline or EBITDA drag.",
+      "If materials/labor cost lines or their inflation rates are absent, refuse to estimate unrecovered FFP input inflation.",
+      "If EPA/escalation clause presence on the FFP book is unknown, refuse to assert that inflation is unrecoverable (the structural claim depends on it)."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+      "criterion": "Does the engine diagnose STRATEGIC_PRICING_ERROR — recognizing that the ~70% no-EPA firm-fixed-price book converts materials +12% / labor +8% inflation into an unrecoverable 200 bps margin loss because of the contract pricing structure, not operations or demand?",
+      "rubric_10": "Diagnoses STRATEGIC_PRICING_ERROR exactly, citing the ~70% FFP no-EPA book, the +12% materials / +8% labor inflation that cannot be passed through, and the 200 bps margin decline despite strong backlog; explicitly distinguishes structural pricing from unit-economics/operations.",
+      "rubric_8": "Diagnoses a pricing/contracting structural issue (e.g., 'fixed-price contracts under-hedged against inflation' or a closely related pricing archetype) with sound reasoning on FFP/EPA exposure, even if not named STRATEGIC_PRICING_ERROR verbatim.",
+      "rubric_6": "Identifies that inflation is not being passed through and margin is compressed, but is fuzzy on whether the root cause is contract pricing structure vs general cost pressure; mentions FFP only loosely.",
+      "rubric_4": "Focuses on input-cost inflation or margin symptoms without recognizing the no-EPA FFP pricing structure as the root cause; leans toward generic cost management.",
+      "rubric_2": "Diagnoses operational inefficiency or demand as the root cause, contradicting the strong backlog (book-to-bill 1.1) and absence of disclosed efficiency deterioration.",
+      "rubric_0": "Diagnosis unrelated to the case (e.g., product-market fit, leadership) or ignores the 200 bps / FFP facts entirely."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic analysis"
+      "criterion": "Does the engine recommend a contract-portfolio pricing & EPA-exposure review (quantify exposure, assess REA/claims rights, install forward bid-pricing discipline, hedge materials) within the ~120-day window before recommending irreversible moves?",
+      "rubric_10": "Recommends exactly this: portfolio FFP/EPA exposure quantification, contract-level REA/claims assessment, forward bid-pricing discipline (EPA clauses, walk-away thresholds, pricing gate), and materials hedging, scoped with $ and weeks inside the 120-day window.",
+      "rubric_8": "Recommends a pricing/contract review and REA assessment with forward pricing discipline, with slightly different scope or sequencing but still sound and compliant.",
+      "rubric_6": "Recommends investigating contract pricing or filing REAs, but partially (e.g., REAs only, or pricing discipline only) and less clearly scoped to the 120-day window.",
+      "rubric_4": "Recommends a generic financial/operational efficiency review without targeting the FFP/EPA pricing structure or the REA/bid-cycle timing.",
+      "rubric_2": "Recommends cost-cutting on labor, or pursuing more volume, as the first action.",
+      "rubric_0": "Recommends a harmful action (unilateral price increase/breach on locked FFP contracts, or cutting safety/quality-critical labor) or one that contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect the aerospace & defense / government-contracting context (DFARS/FAR, FFP vs cost-plus, REAs, recompete risk, ~120-day bid/re-pricing window)?",
+      "rubric_10": "Action is grounded in defense-contracting reality: FFP/EPA mechanics, DFARS/FAR-compliant REAs, recompete and program-continuity sensitivity, and the bid-cycle/re-pricing deadline.",
+      "rubric_6": "Action is relevant to a contractor's margin problem but misses one key contracting nuance (e.g., recompete risk, or the REA mechanism).",
+      "rubric_2": "Action is generic margin advice that could apply to any manufacturer and largely ignores the government-contracting structure.",
+      "rubric_0": "Action is irrelevant to or unsafe for a defense contractor (e.g., ignores compliance entirely)."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the constraints: FFP cannot be reopened unilaterally, DFARS/FAR compliance, cannot abandon strategic programs, recompete risk, quality/safety, and the ~120-day timeline?",
+      "rubric_10": "Action explicitly honors all major constraints — seeks relief only via grounded REAs/negotiation (no breach), stays DFARS/FAR-compliant, preserves programs and quality, and fits the 120-day window.",
+      "rubric_6": "Action respects most constraints but has minor tension (e.g., timeline optimism or under-specified compliance handling).",
+      "rubric_2": "Action violates a key constraint (e.g., implies unilateral repricing, or work that cannot finish before the window closes).",
+      "rubric_0": "Action is infeasible or breaches contracts/compliance outright."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every claim be traced to case evidence — 200 bps decline, $204M to $168M EBITDA, ~70% FFP/$1,470M, materials +12%/$735M, labor +8%/$546M, backlog $5.6B / book-to-bill 1.1?",
+      "rubric_10": "Every material claim is tied to the specific figures (200 bps, EBITDA bridge, FFP share, input inflation, backlog metrics, ~$92M derived exposure).",
+      "rubric_6": "Primary claims traced; some derived figures (e.g., FFP-attributable inflation) asserted without showing the calculation.",
+      "rubric_2": "Minimal traceability; claims largely unsupported by the case numbers.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given the evidence?",
+      "rubric_10": "HIGH is well-calibrated: the structural facts (200 bps decline, ~70% no-EPA FFP, exogenous input inflation, strong backlog) clearly isolate a pricing-structure root cause; the only material unknown is contract-level recoverability, which does not change the diagnosis.",
+      "rubric_6": "HIGH is defensible but the answer should flag that contract-level EPA/REA detail is estimated, suggesting HIGH-with-caveats or MEDIUM-HIGH.",
+      "rubric_2": "Confidence is overstated or understated relative to the evidence.",
+      "rubric_0": "Confidence is inverted relative to the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe — diagnostic/decision-enabling, compliant, and non-destructive to programs, contracts, and flight-critical quality?",
+      "rubric_10": "Action is a low-risk, compliant portfolio review and forward-pricing discipline that protects quality, contracts, and programs while addressing the pricing root cause.",
+      "rubric_6": "Action is broadly safe but under-specifies a safeguard (e.g., compliance review of REAs, or quality protection).",
+      "rubric_2": "Action carries real risk (e.g., near-unilateral pricing moves, or operational cuts that could touch quality).",
+      "rubric_0": "Action is unsafe: unilateral FFP repricing/breach, debarment risk, or cutting safety/quality-critical defense work."
     }
   },
-  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

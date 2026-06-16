@@ -1,0 +1,107 @@
+{
+  "caseId": "RW-030",
+  "caseType": "REAL_WORLD",
+  "industry": "B2B Distribution / Industrial MRO & Fasteners Distributor",
+  "businessModel": "Regional business-to-business distributor of maintenance-repair-operations (MRO) supplies, fasteners, fluid-power, and safety products serving manufacturers, contractors, and municipalities through outside sales reps, branches, and a growing e-commerce storefront",
+  "businessStage": "Mature, family-owned third-generation distributor under margin pressure from digital price transparency",
+  "sourceNote": "Real-world pattern from regional industrial-distribution consolidation and the digital disruption of B2B MRO (mirrors public patterns from the Grainger/Fastenal/MSC competitive set and the rise of Amazon Business price transparency). Reflects the well-documented distributor margin-leak problem: thousands of SKUs priced via legacy cost-plus matrices and rep discretion, where undisciplined discounting, stale price files, and 'me-too' matching against transparent online prices erode gross margin even as revenue holds. Metrics reflect typical industrial-distribution economics (gross margin %, SKU count, customer/SKU price-band dispersion, rep-override rates).",
+  "ownerIntake": {
+    "businessType": "Third-generation family-owned industrial MRO and fastener distributor, founded 1971. 6 branches in two states, 240 employees, 22 outside sales reps, ~52,000 active SKUs. ~$96M revenue TTM. Sells to ~3,100 active business accounts (manufacturers, mechanical/electrical contractors, municipalities). E-commerce storefront launched 2 years ago now ~14% of revenue and growing.",
+    "stage": "Revenue $96M TTM, roughly flat (+1.5% YoY). Blended gross margin fell from 27.4% to 24.1% over 24 months (-330bps) while operating expenses held flat as a percent of sales, so operating margin dropped from 6.1% to 3.2%. Inventory turns 4.1x (industry top-quartile 5.5x+). Rep-discretion price overrides occur on ~38% of order lines. Price files for ~60% of SKUs not updated against vendor cost increases in over 9 months.",
+    "ownerGoal": "Recover blended gross margin to 26.5%+ and operating margin to 5%+ within 12 months without losing more than 2% of revenue, to fund a planned warehouse-automation investment and a possible third-generation ownership transition.",
+    "ownerConstraints": [
+      "Gross margin fell 330bps in 24 months while revenue stayed flat; the leak is in margin, not volume.",
+      "22 outside reps have broad pricing discretion and override list prices on ~38% of order lines, frequently matching customer-cited online/competitor prices with no margin floor.",
+      "~60% of SKU price files have not been updated against vendor cost increases in 9+ months, so pass-through of cost inflation is incomplete and inconsistent.",
+      "E-commerce (14% of revenue) exposes the catalog to direct price comparison with Amazon Business, Grainger, and Fastenal, increasing customer price sensitivity on commodity SKUs.",
+      "Reps are compensated on revenue, not margin; sales culture resists any change perceived as 'taking away their ability to win deals.'",
+      "No segmented pricing strategy exists: commodity, A-brand, and proprietary/low-competition SKUs are all priced on the same legacy cost-plus matrix, leaving margin on the table on differentiated products and over-discounting commodities."
+    ],
+    "immediateConcern": "Operating margin has halved (6.1% to 3.2%) over 24 months even though revenue is flat, driven almost entirely by a 330bps blended gross-margin decline. Leadership cannot tell whether the erosion is from incomplete cost pass-through (stale price files), undisciplined rep discounting, unfavorable customer/product mix shift toward low-margin commodities, or competitive price matching forced by e-commerce transparency. With a warehouse-automation investment and an ownership transition both depending on restored margin, leadership must identify the dominant leak before changing pricing, rep comp, or the e-commerce strategy.",
+    "availableData": [
+      "Revenue $96M TTM (+1.5% YoY), blended gross margin 27.4% -> 24.1% (-330bps), operating margin 6.1% -> 3.2%, opex flat as % of sales",
+      "~52,000 active SKUs, ~3,100 active accounts, 22 outside reps, e-commerce ~14% of revenue and growing, inventory turns 4.1x (top-quartile 5.5x+)",
+      "Rep price overrides on ~38% of order lines; ~60% of SKU price files not updated vs. vendor cost increases in 9+ months",
+      "Reps compensated on revenue not margin; single legacy cost-plus matrix across commodity, A-brand, and proprietary SKUs"
+    ],
+    "unavailableData": [
+      "Margin-leak attribution: how much of the 330bps decline is stale price files (cost pass-through gap) vs. rep discounting vs. mix shift vs. e-commerce matching",
+      "SKU-level price-band dispersion: how widely the same SKU is sold across customers, and which SKUs/customers carry the deepest unjustified discounts",
+      "Customer/product-mix bridge: did the customer or product mix shift toward lower-margin commodity SKUs, or did margin on the same mix fall?",
+      "Competitive price-sensitivity by SKU category: which SKUs are genuinely price-transparent commodities vs. differentiated/proprietary items with pricing power",
+      "Rep-override outcomes: do overrides actually win/retain business, or do reps discount deals that would have closed at list?"
+    ],
+    "timeHorizon": "120 days to diagnose and begin margin recovery (the automation investment decision and ownership-transition planning both hinge on a demonstrated margin-recovery path within the next two quarters)",
+    "riskAppetite": "MEDIUM-LOW (margin recovery cannot come at the cost of losing key accounts or triggering a rep exodus; a clumsy across-the-board price hike could drive volume to transparent online competitors)"
+  },
+  "businessProblem": "A mature family-owned industrial MRO distributor has seen blended gross margin fall 330bps (27.4% to 24.1%) over 24 months on flat revenue, halving operating margin (6.1% to 3.2%), with the leak driven by some combination of stale price files (~60% of SKUs not cost-adjusted in 9+ months), undisciplined rep discounting (overrides on ~38% of order lines, reps paid on revenue), unfavorable mix shift toward commodities, and competitive price matching forced by e-commerce transparency (now 14% of revenue). Management must determine which of these is the dominant margin leak before changing pricing strategy, rep compensation, or e-commerce approach — because an undifferentiated across-the-board price increase risks driving volume to transparent online competitors and a rep-comp overhaul risks a sales-team exodus, while inaction stalls a warehouse-automation investment and an ownership transition both contingent on restored margin.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Blended gross margin fell from 27.4% to 24.1% (-330bps) over 24 months while revenue stayed roughly flat (+1.5%) and operating expenses held flat as a percent of sales — so operating margin dropped from 6.1% to 3.2%. The deterioration is entirely a margin (price-versus-cost) phenomenon, not a volume or cost-structure problem: the same revenue is yielding far less gross profit per dollar.",
+      "confidence": "HIGH",
+      "source": "Financial statements, gross-margin trend, opex ratio analysis",
+      "isCritical": true,
+      "supportingData": {
+        "gross_margin_prior": "27.4%",
+        "gross_margin_now": "24.1%",
+        "gross_margin_change": "-330bps",
+        "revenue_change": "+1.5%",
+        "operating_margin_prior": "6.1%",
+        "operating_margin_now": "3.2%"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Pricing governance is broken: ~60% of the 52,000 SKU price files have not been updated against vendor cost increases in 9+ months, so cost inflation is being absorbed rather than passed through, and reps override list price on ~38% of order lines with no margin floor. There is a single legacy cost-plus matrix applied uniformly across commodity, A-brand, and proprietary SKUs, with no segmentation by competitive intensity or pricing power.",
+      "confidence": "HIGH",
+      "source": "ERP price-file audit, order-line override report, pricing-process review",
+      "isCritical": true,
+      "supportingData": {
+        "stale_price_file_pct": "60% of SKUs",
+        "price_file_staleness": "9+ months",
+        "rep_override_rate": "38% of order lines",
+        "margin_floor": "None",
+        "pricing_segmentation": "Single legacy cost-plus matrix"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "E-commerce has grown to ~14% of revenue and exposes the catalog to direct price comparison with Amazon Business, Grainger, and Fastenal, increasing customer price sensitivity specifically on commodity SKUs. However, a large share of the 52,000-SKU catalog is differentiated, application-specific, or proprietary, where pricing power remains — the distributor is not distinguishing between the two when it discounts or matches.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "E-commerce channel data, competitive catalog comparison, SKU-category review",
+      "isCritical": true,
+      "supportingData": {
+        "ecommerce_share": "14% of revenue",
+        "transparent_competitors": "Amazon Business, Grainger, Fastenal",
+        "price_sensitivity": "High on commodity SKUs, lower on proprietary",
+        "catalog_mix": "Mix of commodity and differentiated/proprietary SKUs"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Reps are compensated on revenue, not margin, and sales culture resists changes seen as limiting their ability to win deals. Inventory turns at 4.1x versus a top-quartile 5.5x+, indicating working capital tied up in slow SKUs, but this is a secondary efficiency issue distinct from the gross-margin leak. No data yet confirms whether the 38% override rate reflects genuine competitive necessity or reflexive discounting of deals that would close at list.",
+      "confidence": "MEDIUM",
+      "source": "Compensation plan review, inventory turn analysis, sales-culture assessment",
+      "isCritical": false,
+      "supportingData": {
+        "rep_comp_basis": "Revenue, not margin",
+        "inventory_turns": "4.1x",
+        "top_quartile_turns": "5.5x+",
+        "override_justification": "Unknown (competitive vs. reflexive)"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "B2B Distribution / Industrial MRO",
+    "size": "Mature family-owned ($96M revenue, 6 branches, 240 employees, 52,000 SKUs)",
+    "revenueImpactUrgency": "CRITICAL (330bps gross-margin leak has halved operating margin; automation investment and ownership transition depend on recovery)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (cash-generative but operating margin halved; investment capacity contingent on margin recovery)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "MEDIUM (240 employees but limited pricing/analytics function; pricing currently rep- and matrix-driven)",
+    "cashRunwayMonths": "N/A (profitable going concern; constraint is margin recovery, not runway)",
+    "legalComplianceSensitive": false
+  }
+}

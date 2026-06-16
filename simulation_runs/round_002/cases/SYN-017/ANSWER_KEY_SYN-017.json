@@ -1,27 +1,157 @@
 {
   "case_id": "SYN-017",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Operations)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Synthetic stress-test case SYN-017 (Marketplace / Platform): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "answer_creator": "Domain Expert (Marketplace Monetization and Take-Rate Strategy)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert segmented retention and satisfaction by seller tier and order type, then tested whether the GMV leakage was a value-prop/satisfaction decline, a buyer-demand failure, or a monetization-structure error. The concentration of leakage in large-seller repeat orders, tied to a flat take-rate, points to a strategic pricing error.",
+  "root_cause_diagnosis": "STRATEGIC_PRICING_ERROR",
+  "root_cause_description": "The flat ~12% take-rate is mispriced for the marketplace's most valuable sellers, making disintermediation the rational economic choice for them. The leakage is concentrated and structural, not a broad value-prop decline: the top 8% of sellers (61% of GMV) are routing repeat buyers off-platform (on-platform repeat rate 64%→41%, ~30% of repeat GMV gone), while small/mid sellers, who depend on marketplace demand generation, retain well and report positive satisfaction. The mechanism is the take-rate's failure to align with delivered value across the order lifecycle: the marketplace's value is high at first-order discovery and low at repeat, yet it charges the same 12% on both. For high-volume repeat sellers with direct-channel capability, paying 12% on buyers the marketplace no longer sources is uneconomic, which is exactly their top complaint (58%: 'commission too high for repeat orders'). The owner's instinct to invest broadly in seller success misallocates effort against a problem that is a pricing-structure error in one segment.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Seller NRR fell 108%→95%",
+      "Large-seller on-platform repeat rate fell 64%→41%",
+      "~30% of large-seller repeat GMV off-platform",
+      "Seller acquisition slowing"
+    ],
+    "contributing_factors": [
+      "Large sellers now have direct-channel scale and tooling",
+      "Account management has no pricing-negotiation mandate",
+      "Marketplace value concentrated at first-order discovery, weak at repeat"
+    ],
+    "true_root_cause": "A flat take-rate that does not vary by seller tier or order type is economically irrational for high-volume repeat sellers, giving them a direct incentive to disintermediate; the monetization structure, not seller satisfaction generally, is the root cause."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Design and pilot a tiered, value-aligned take-rate restructure for the large-seller segment within ~8 weeks, paired with value-added services that justify staying on-platform for repeat orders. Concretely: (1) model a volume/tier-based take-rate that reduces the marginal rate on repeat orders for high-GMV sellers (e.g., 12% on first order, stepped-down on repeat) while holding small/mid-seller economics unchanged; (2) bundle repeat-order value (financing, logistics, buyer analytics, payment guarantees) so the take-rate buys ongoing value, not just discovery; (3) pilot with the top 20-30 sellers driving the most leaked GMV, with account managers given a pricing-negotiation mandate; (4) instrument repeat-rate and retained-GMV by tier weekly. Do not change small/mid-seller pricing and do not spread seller-success headcount broadly.",
+  "action_description": "It is first because the leakage is concentrated in a segment whose economics are misaligned, and the only lever that changes a rational disintermediation decision is changing the economics. Broad seller-success investment would spend resources on small/mid sellers who are not leaving while leaving the large-seller incentive intact. A tiered take-rate plus repeat-order value directly removes the incentive to disintermediate and re-anchors the marketplace's value across the order lifecycle, protecting the GMV that gates the raise.",
+  "accepted_alternative_actions": [
+    "Run a 3-4 week take-rate elasticity and margin study by seller tier and order type FIRST to calibrate the tiered structure, provided it does not delay engaging the top leaking sellers who are actively disintermediating.",
+    "Introduce a contractual/loyalty mechanism (reduced effective rate in exchange for committed on-platform repeat volume) as an alternative or complement to a pure tier change, tested on the same large-seller pilot group."
+  ],
+  "bad_actions": [
+    "Spread seller-success/account-management headcount broadly across all 1,400 sellers: the leakage is concentrated in the top 8%, and small/mid sellers are stable and satisfied, so broad investment misallocates resources against a segment that is not the problem.",
+    "Cut the take-rate across the entire seller base to retain large sellers: this sacrifices margin on the small/mid sellers (and the demand-dependent majority) who would happily pay the current rate, to address a problem confined to large repeat sellers.",
+    "Build generic new seller features to 'improve the value prop': the large-seller complaint is explicitly commission economics on repeat orders, not feature gaps; features do not change the disintermediation math.",
+    "Attempt to contractually lock all sellers into on-platform transactions punitively: heavy-handed enforcement risks alienating the demand-dependent majority and the buyer side, damaging the two-sided network without fixing the underlying pricing misalignment."
+  ],
+  "action_constraints_respected": [
+    "Funding (24-month runway, raise gated on GMV/retention): a tiered take-rate protects the most valuable GMV and the gating metric without broad spend.",
+    "Product (tiered pricing + value-added services is 6-10 weeks): action fits the build window and uses platform capabilities that already exist.",
+    "Organizational (AM lacks pricing mandate): action explicitly grants account managers a pricing-negotiation mandate for the pilot.",
+    "Market (large sellers can disintermediate; small sellers depend on demand): action confines pricing change to the large-seller segment, preserving small/mid economics and the two-sided network."
+  ],
+  "rationale": "The decisive evidence is segmentation: leakage and dissatisfaction are concentrated in large repeat sellers while small/mid sellers are stable and satisfied, and the buyer side is healthy. That pattern, combined with a flat take-rate that ignores order type, makes the diagnosis a pricing-structure error rather than a value-prop or demand decline. The rational fix is to align the take-rate with delivered value (high at discovery, lower at repeat) for the segment that can disintermediate, removing their incentive to leave.",
+  "evidence_basis": [
+    "pricing_monetization: flat ~12% take-rate with no tier or order-type differentiation",
+    "customer_retention: large-seller repeat 64%→41%, ~30% repeat GMV off-platform, NRR 108%→95%",
+    "market_position: top 8% = 61% of GMV; large sellers have direct-channel capability, small sellers depend on demand",
+    "customer_satisfaction: large-seller top complaint (58%) is 'commission too high for repeat orders'; small/mid positive"
+  ],
+  "evidence_not_explained": [
+    "The price elasticity of the take-rate by tier is unknown, so the precise stepped-rate that retains GMV while preserving revenue must be calibrated by a short study; the diagnosis is confident about the structural error but not yet about the exact new rate."
+  ],
+  "alternative_explanations": [
+    "CUSTOMER_RETENTION_EROSION (general value-prop decline): that seller satisfaction is broadly falling. Weaker because small/mid sellers are stable and satisfied; the decline is confined to a segment and tied specifically to commission economics.",
+    "GO_TO_MARKET_MISALIGNMENT: that seller acquisition/targeting is wrong. Weaker because the acute problem is retention/leakage of existing large sellers, not the profile of newly acquired sellers; buyer demand and acquisition are stable.",
+    "OPERATIONAL_BOTTLENECK / service quality: that account management is failing large sellers. Weaker because the complaint is monetization, not service; AM coverage exists, and more service cannot change the disintermediation math."
+  ],
+  "missing_evidence": [
+    "Take-rate price elasticity by seller tier and order type",
+    "Margin contribution of value-added services if bundled to justify repeat take-rate",
+    "Feasibility of contractual/loyalty mechanisms to retain on-platform repeat volume",
+    "Competitor marketplace take-rate structures by tier"
+  ],
+  "success_metrics": [
+    "Large-seller on-platform repeat rate recovers from 41% toward 60% within two quarters of the pilot",
+    "Off-platform repeat-GMV leakage falls below 15% for the piloted sellers",
+    "Seller NRR recovers from 95% toward 105%+ without harming small/mid-seller economics",
+    "Net revenue per large seller stabilizes or grows as retained GMV offsets the lower marginal repeat rate"
+  ],
+  "expected_outcome": "If the strategic pricing error is the true root cause, a tiered take-rate plus repeat-order value should reduce the economic incentive to disintermediate, recovering large-seller repeat rates and retained GMV and lifting NRR, while small/mid economics and the buyer side remain intact. If leakage persists despite aligned pricing, the residual driver would be that large sellers no longer need the marketplace at all (a structural network-value problem), which the pilot's retained-GMV data would reveal.",
+  "automatic_fail_conditions": [
+    "Cutting the take-rate across the entire seller base when the problem is confined to large repeat sellers",
+    "Spreading seller-success headcount broadly across all sellers when leakage is concentrated in the top 8%",
+    "Diagnosing a generic value-prop or satisfaction decline despite stable, satisfied small/mid sellers",
+    "Recommending punitive contractual lock-in that risks the demand-dependent majority and the buyer side"
+  ],
+  "source_references": [
+    "Monetization model and take-rate schedule",
+    "GMV flow analysis and seller NRR cohort report",
+    "Seller concentration analysis and segmented satisfaction surveys",
+    "Buyer acquisition and demand analytics"
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "Flat ~12% take-rate with no differentiation by tier or order type", "implication": "The monetization structure ignores that marketplace value is high at discovery and low at repeat, the core pricing error."},
+      {"fact": "Large-seller on-platform repeat rate fell 64%→41% with ~30% repeat GMV off-platform", "implication": "Disintermediation is concentrated in repeat orders of the highest-value sellers, the segment for whom the flat rate is uneconomic."},
+      {"fact": "Top 8% of sellers = 61% of GMV; small/mid sellers stable and satisfied", "implication": "The problem is concentrated in a segment, not a broad value-prop decline, so the fix must be targeted."},
+      {"fact": "Large-seller top complaint (58%) is 'commission too high for repeat orders'", "implication": "Sellers themselves name the pricing structure as the issue, directly supporting a pricing-error diagnosis."},
+      {"fact": "Buyer demand and acquisition stable; value peaks at first-order discovery", "implication": "The network functions on the buyer side; the leak is sellers escaping a take-rate misaligned with repeat-order value."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "CUSTOMER_RETENTION_EROSION", "why_weaker": "Retention is stable among small/mid sellers; the decline is confined to large sellers and tied specifically to commission economics, not broad dissatisfaction."},
+      {"alternate": "GO_TO_MARKET_MISALIGNMENT", "why_weaker": "The acute issue is leakage of existing high-value sellers, not the profile of newly acquired sellers; buyer demand and acquisition are healthy."},
+      {"alternate": "OPERATIONAL_BOTTLENECK", "why_weaker": "The complaint is monetization, not service quality; account-management coverage exists and more service cannot change the disintermediation economics."}
+    ],
+    "first_action_justification": "Because the leakage is a rational response to a misaligned take-rate concentrated in large repeat sellers, the only lever that changes the decision is restructuring the economics for that segment; a tiered take-rate plus repeat-order value removes the incentive to disintermediate.",
+    "constraints_effect_on_action": "The raise being gated on GMV/retention makes protecting top-seller GMV paramount, so the action targets the large-seller segment rather than cutting rates broadly; the 6-10 week build window and existing platform capability make a tiered-pricing pilot feasible, and account managers must be granted the pricing-negotiation mandate the org currently lacks."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses growth/demand issue"
+      "criterion": "Does the engine diagnose STRATEGIC_PRICING_ERROR (flat take-rate misaligned with repeat-order value for large sellers) rather than a generic value-prop/satisfaction decline?",
+      "rubric_10": "Diagnoses STRATEGIC_PRICING_ERROR and ties it to concentrated large-seller repeat disintermediation, the flat 12% rate, and the explicit commission complaint, while citing stable small/mid sellers.",
+      "rubric_8": "Diagnoses a monetization/pricing root cause with evidence but underweights one signal (e.g., the order-type dimension).",
+      "rubric_6": "Identifies large-seller leakage but is ambiguous about whether the cause is pricing, service, or value-prop.",
+      "rubric_4": "Accepts the owner's framing and centers generic seller satisfaction or value-prop decline.",
+      "rubric_2": "Diagnoses a buyer-demand or acquisition problem despite healthy buyer side.",
+      "rubric_0": "Diagnosis unrelated to the evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic"
+      "criterion": "Does the engine prioritize a tiered/value-aligned take-rate restructure for the large-seller segment over broad seller-success spend or feature build?",
+      "rubric_10": "Recommends a tiered take-rate pilot (lower marginal repeat rate for large sellers) plus repeat-order value-added services, leaving small/mid pricing unchanged.",
+      "rubric_8": "Recommends a pricing/monetization restructure but with weaker targeting or no value-add bundling.",
+      "rubric_6": "Recommends pricing work but mixes in broad seller-success spend.",
+      "rubric_4": "Recommends broad seller-success headcount or generic features as primary.",
+      "rubric_2": "Recommends a base-wide take-rate cut.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect two-sided marketplace reality where GMV concentration and disintermediation by large sellers gate the raise?",
+      "rubric_10": "Action protects concentrated GMV and the two-sided network by targeting the large-seller segment while preserving small/mid economics.",
+      "rubric_6": "Action is marketplace-relevant but generic about the disintermediation/concentration dynamic.",
+      "rubric_2": "Action loosely related to the context.",
+      "rubric_0": "Action irrelevant or harmful to the network."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 24-month runway, the GMV/retention-gated raise, the 6-10 week pricing build, and the AM mandate gap?",
+      "rubric_10": "Targets the large-seller segment, fits the build window, grants AM a pricing mandate, and protects the gating metric without broad spend.",
+      "rubric_6": "Respects most constraints but proposes some broad spend or ignores the AM mandate.",
+      "rubric_2": "Proposes base-wide cuts or broad headcount that strain economics.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-017 metrics?",
+      "rubric_10": "Every claim traces to data: flat 12% rate, large-seller repeat 64%→41%, ~30% off-platform, NRR 108%→95%, top 8% = 61% GMV, 58% commission complaint.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence justified given segmented retention/satisfaction and the explicit pricing complaint?",
+      "rubric_10": "HIGH well-calibrated: GMV-flow segmentation, concentration data, and the commission complaint converge on a pricing error.",
+      "rubric_6": "Confidence defensible but acknowledges unknown elasticity as residual uncertainty about the exact new rate.",
+      "rubric_2": "Confidence asserted without grounding.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe for the two-sided network (no base-wide margin cut, no punitive lock-in)?",
+      "rubric_10": "Action is a targeted, pilotable pricing change that protects small/mid economics and the buyer side.",
+      "rubric_6": "Action mostly safe but includes one element needing justification.",
+      "rubric_2": "Action risks margin or network harm.",
+      "rubric_0": "Action high-risk (base-wide cut or punitive enforcement)."
     }
   },
-  "creation_methodology": "Expert analysis of SYNTHETIC case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

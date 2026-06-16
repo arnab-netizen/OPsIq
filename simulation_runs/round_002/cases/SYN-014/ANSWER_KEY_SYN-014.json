@@ -1,27 +1,155 @@
 {
   "case_id": "SYN-014",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Operations)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Synthetic stress-test case SYN-014 (Fintech / Payments): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "answer_creator": "Domain Expert (B2B Fintech Go-To-Market and Expansion Revenue)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert decomposed NRR into gross retention versus expansion, located the entire decline in the expansion component, then tested whether the lost expansion was demand-side (customers won't expand), product-side (modules not ready), price-side (competitors winning), or motion-side (no one sells expansion). The evidence isolates the motion.",
+  "root_cause_diagnosis": "GO_TO_MARKET_MISALIGNMENT",
+  "root_cause_description": "The company's go-to-market is structurally incapable of expanding accounts. NRR fell 110%→100% entirely through lost expansion: gross retention is stable at 94%, so customers are not leaving; they simply stop growing. The cause is organizational, not market or product. All 12 reps carry new-logo quota only, CS is success-only with no expansion target, and there are zero account-management/expansion-quota holders. Consequently only ~30% of AP customers have ever been pitched a second module, and cross-sell penetration is low (payouts 22%, cards 9%, FX 6%) despite live modules, high satisfaction (NPS 44), and QBR-recorded demand. Competitive take-rate pressure is real but confined to the top 10% highest-volume prospects, not the base, so the owner's blanket-price-cut instinct addresses a narrow front while leaving the structural expansion gap untouched. The misalignment is between a 'land' motion the company has and the 'expand' motion it lacks.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "NRR fell 110%→100% over four quarters",
+      "Expansion bookings dropped 38%→19% of total bookings",
+      "Low cross-sell attach (payouts 22%, cards 9%, FX 6%)"
+    ],
+    "contributing_factors": [
+      "Competitor take-rate discounting in the top 10% volume tier",
+      "3-week customer-side integration effort discourages unowned expansion",
+      "CS not measured or compensated on expansion"
+    ],
+    "true_root_cause": "There is no go-to-market motion that owns and drives account expansion; the company sells new logos well but has no structure, quota, or pipeline to expand existing customers into available modules."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Stand up a structured expansion motion within 60 days without a blanket price cut. Concretely: (1) create an expansion-quota function by converting 2-3 existing reps (or designating named account managers) onto an expansion-only quota tied to second-module attach and NRR; (2) build a 90-day cross-sell pipeline targeting the ~70% of AP customers never pitched a second module, prioritized by QBR-expressed interest and payment volume, with a concrete attach goal (payouts 22%→35%, cards 9%→18% in the targeted segment); (3) give CS an expansion assist role (lead identification and warm handoff) with a shared metric, not a full quota; (4) instrument an expansion pipeline and NRR-bridge dashboard reviewed weekly. Reserve any take-rate concession exclusively for the top 10% highest-volume competitive deals, handled deal-by-deal, not company-wide.",
+  "action_description": "It is first because the entire NRR shortfall is expansion, and expansion cannot improve while no one owns it; building the motion is the only lever that moves the gated Series B metric within two quarters. A blanket take-rate cut would hit 35% of revenue across the whole base to chase losses confined to 10% of prospects, compressing margin and still leaving expansion un-driven. The motion uses existing modules and existing headcount, so it is fast and runway-safe.",
+  "accepted_alternative_actions": [
+    "Run a 3-week cross-sell propensity analysis FIRST (attach and expansion-likelihood by customer size and payment volume) to target the motion, provided it does not delay launching the expansion pipeline past the current quarter.",
+    "Pilot the expansion motion on a single high-propensity segment (e.g., mid-volume payouts non-attachers) for 30 days to validate conversion before scaling quota across the team."
+  ],
+  "bad_actions": [
+    "Cut take-rates across the entire base to match entrants: the price losses are confined to the top 10% volume tier, so a blanket cut sacrifices margin on 35% of revenue from the whole base to defend a narrow segment, and it does nothing to fix the missing expansion motion.",
+    "Build new cross-sell modules or features: the modules already exist and are live with high satisfaction; the bottleneck is commercial motion, so engineering investment would not raise attach rates.",
+    "Treat the NRR decline as a churn/retention crisis and pour resources into save plays: gross retention is healthy at 94%, so a retention program targets a problem that does not exist and misses the expansion gap entirely.",
+    "Hire a large new-logo sales team to outgrow the NRR problem: more logos without an expansion motion just enlarges a base that does not expand, worsening the NRR optics the raise is gated on."
+  ],
+  "action_constraints_respected": [
+    "Funding (26-month runway, $480k/month, raise gated on NRR): action redeploys existing reps and avoids margin-destroying price cuts, directly improving the gated NRR metric.",
+    "Product (modules live, 3-week integration): action sells existing modules and folds integration support into the motion rather than building anything new.",
+    "Organizational (no expansion function today): action explicitly creates the missing expansion-quota structure using current headcount.",
+    "Market (entrant discounting in top tier): action confines price concessions to the top 10% volume deals, protecting the 35% take-rate line on the broad base."
+  ],
+  "rationale": "Decomposing NRR is decisive: stable gross retention (94%) plus collapsing expansion bookings (38%→19%) means the loss is purely failure-to-expand. Layer in zero expansion-quota holders and only 30% of customers ever pitched a second module, and the cause is unambiguously a missing go-to-market motion, not market demand, product gaps, or price. The fix is to build the motion that converts existing demand and existing modules into expansion revenue, which is exactly the metric gating Series B.",
+  "evidence_basis": [
+    "customer_retention: NRR 110%→100% with gross retention stable at 94% (decline is all expansion)",
+    "go_to_market: 0 expansion-quota holders; only ~30% of AP customers ever pitched a second module",
+    "product_adoption: modules live, NPS 44 stable, QBR-expressed interest with no follow-through pipeline",
+    "market_position: price losses confined to top 10% volume prospects; new-logo win rate stable ~31%"
+  ],
+  "evidence_not_explained": [
+    "The exact conversion rate the new expansion motion will achieve is unknown because there is no historical expansion pipeline to baseline against; the action therefore includes a pilot to establish it rather than assuming a figure."
+  ],
+  "alternative_explanations": [
+    "STRATEGIC_PRICING_ERROR: that take-rates are mispriced versus entrants. Weaker because price losses are confined to the top 10% volume tier and the broad base shows no elevated price-driven loss; a pricing fix cannot explain expansion collapse across the whole base.",
+    "CUSTOMER_RETENTION_EROSION: that the base is decaying. Weaker because gross retention is stable at 94%; customers are not leaving, they are failing to grow.",
+    "DEMAND_FORECASTING_MISMATCH: that market demand for the modules is weak. Weaker because QBRs record module interest and NPS is healthy at 44; demand exists but is never converted due to the absent motion."
+  ],
+  "missing_evidence": [
+    "Cross-sell propensity by customer size and payment volume to target the motion precisely",
+    "Module-level margin contribution to sequence which modules to push first",
+    "Quantified take-rate elasticity in the top-tier segment to size the deal-by-deal concession envelope"
+  ],
+  "success_metrics": [
+    "Expansion bookings recover from 19% toward 30%+ of total bookings within two quarters",
+    "NRR inflects upward from 100% toward 108-110% within two renewal cycles",
+    "Second-module attach in the targeted segment rises (payouts 22%→35%, cards 9%→18%)",
+    "An expansion pipeline exists and is tracked weekly, with coverage of at least 3x the expansion-quota target"
+  ],
+  "expected_outcome": "If the missing go-to-market motion is the true root cause, attach rates and expansion bookings should climb as the pipeline against the ~70% never-pitched base converts, lifting NRR within two cycles and supporting the Series B raise, all while preserving take-rate margin on the broad base. If attach rates stay flat despite a staffed, quota-backed motion, the residual constraint would be genuine demand or pricing in specific modules, which the propensity analysis would then localize.",
+  "automatic_fail_conditions": [
+    "Recommending a company-wide take-rate cut as the primary action when price losses are confined to the top 10% of prospects",
+    "Diagnosing the case as churn/retention erosion when gross retention is stable at 94%",
+    "Recommending new module or feature development when the modules are already live and demanded",
+    "Proposing to scale new-logo acquisition as the fix for an expansion (NRR) problem"
+  ],
+  "source_references": [
+    "NRR cohort report and bookings ledger (new vs expansion)",
+    "Sales compensation plans and CRM pipeline analysis",
+    "QBR notes and product analytics (module attach)",
+    "Win/loss analysis and competitive deal notes"
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "NRR fell 110%→100% while gross retention held at 94%", "implication": "The decline is entirely lost expansion, not churn, pointing at the expand motion rather than retention."},
+      {"fact": "0 expansion-quota holders; only ~30% of AP customers ever pitched a second module", "implication": "No one in the organization owns or drives expansion, the structural root cause of stalled NRR."},
+      {"fact": "Modules live, NPS 44, QBR-expressed interest, but no follow-through pipeline", "implication": "Demand and product readiness both exist; the missing element is the commercial motion to convert them."},
+      {"fact": "Competitive price losses confined to top 10% highest-volume prospects", "implication": "Pricing pressure is narrow and segment-specific, not the broad-base driver of the NRR collapse."},
+      {"fact": "Revenue mix 65% subscription / 35% take-rate at 68% margin", "implication": "A blanket take-rate cut would damage a large revenue line to address a narrow problem, confirming it is the wrong lever."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "STRATEGIC_PRICING_ERROR", "why_weaker": "Price losses occur only in the top 10% volume tier; the broad base shows no price-driven loss, so mispricing cannot explain base-wide expansion collapse."},
+      {"alternate": "CUSTOMER_RETENTION_EROSION", "why_weaker": "Gross retention is stable at 94%, so customers are not churning; the problem is failure to grow accounts, not loss of them."},
+      {"alternate": "DEMAND_FORECASTING_MISMATCH", "why_weaker": "QBRs record module demand and NPS is healthy; appetite exists but is never converted because the expansion motion is absent."}
+    ],
+    "first_action_justification": "Because the entire NRR shortfall is expansion and no one owns expansion, the only action that moves the gated Series B metric within two quarters is building the expansion motion (quota, pipeline, CS assist) against existing modules and existing demand.",
+    "constraints_effect_on_action": "The raise being gated on NRR makes margin-destroying blanket price cuts self-defeating, so concessions are confined to top-tier competitive deals; the 26-month runway and lack of an expansion function push the action toward redeploying existing reps rather than hiring, and the 3-week integration effort is absorbed into the motion rather than solved with engineering."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses growth/demand issue"
+      "criterion": "Does the engine diagnose GO_TO_MARKET_MISALIGNMENT (missing expansion motion) by decomposing NRR into stable retention plus collapsed expansion?",
+      "rubric_10": "Diagnoses GO_TO_MARKET_MISALIGNMENT and explicitly attributes the NRR decline to absent expansion structure (0 quota holders, 30% ever pitched), rejecting the owner's price framing.",
+      "rubric_8": "Diagnoses an expansion-motion/GTM root cause with evidence but underweights one factor (e.g., does not decompose NRR explicitly).",
+      "rubric_6": "Identifies the NRR/expansion problem but is ambiguous about whether the cause is motion, pricing, or demand.",
+      "rubric_4": "Accepts the owner's framing and centers competitive pricing as the root.",
+      "rubric_2": "Diagnoses churn/retention erosion despite stable 94% gross retention.",
+      "rubric_0": "Diagnosis unrelated to the evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic"
+      "criterion": "Does the engine prioritize building an expansion motion over a blanket price cut, new module build, or new-logo scaling?",
+      "rubric_10": "Recommends standing up an expansion-quota function and cross-sell pipeline against the never-pitched base within ~60 days, confining price concessions to the top tier.",
+      "rubric_8": "Recommends an expansion-focused commercial action but with weaker structure (e.g., no quota or pipeline instrumentation).",
+      "rubric_6": "Recommends expansion work but mixes in broad price cuts or feature build.",
+      "rubric_4": "Recommends a company-wide price cut or new module development as primary.",
+      "rubric_2": "Recommends scaling new-logo acquisition to fix NRR.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect a hybrid SaaS+payments reality where NRR gates the raise and take-rate margin must be protected?",
+      "rubric_10": "Action centers on the NRR-gated raise and protects the 35% take-rate line by confining concessions to the top tier.",
+      "rubric_6": "Action is expansion-relevant but generic about the payments/NRR-gating context.",
+      "rubric_2": "Action loosely related to the fintech context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 26-month runway, the no-expansion-function reality, and live-module status?",
+      "rubric_10": "Redeploys existing reps, avoids margin-destroying cuts, sells existing modules, and is runway-neutral.",
+      "rubric_6": "Respects most constraints but proposes some incremental hiring or spend.",
+      "rubric_2": "Strains runway or proposes broad margin cuts.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-014 metrics?",
+      "rubric_10": "Every claim traces to data: NRR 110%→100%, gross retention 94%, expansion bookings 38%→19%, 0 quota holders, attach 22%/9%/6%, price losses in top 10%.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to specific numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence justified given the NRR decomposition and structural evidence?",
+      "rubric_10": "HIGH well-calibrated: the NRR bridge and absent expansion function converge unambiguously on motion.",
+      "rubric_6": "Confidence defensible but acknowledges unknown future conversion rate as residual uncertainty.",
+      "rubric_2": "Confidence asserted without grounding.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action low-risk and margin-protective (no broad price cut, no runway-burning hires)?",
+      "rubric_10": "Action redeploys existing staff, protects margin, and is reversible/pilotable.",
+      "rubric_6": "Action mostly safe but includes one cost item needing justification.",
+      "rubric_2": "Action introduces meaningful margin or runway risk.",
+      "rubric_0": "Action high-risk (broad price cut or large hiring gamble)."
     }
   },
-  "creation_methodology": "Expert analysis of SYNTHETIC case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

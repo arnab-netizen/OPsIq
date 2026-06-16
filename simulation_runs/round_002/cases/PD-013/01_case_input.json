@@ -1,10 +1,134 @@
 {
   "caseId": "PD-013",
   "caseType": "PUBLIC_DATASET",
-  "industry": "Healthcare / Hospital Network",
+  "industry": "Healthcare / Multi-Hospital Health System",
+  "businessModel": "Not-for-profit integrated delivery network operating acute-care hospitals and ambulatory/outpatient clinics; revenue driven by inpatient admissions, outpatient procedures, and externally-set payer reimbursement (Medicare, Medicaid, commercial contracts)",
+  "businessStage": "Mature, Margin Under Pressure with Covenant/Rating Risk",
+  "sourceNote": "Derived from SEC 10-K and not-for-profit hospital bond-disclosure (EMMA/MSRB continuing-disclosure) filing patterns for multi-hospital health systems (FY2024-FY2025). Financial structure reconstructed from audited consolidated financial statements, annual bond-disclosure operating data, and rating-agency methodology commentary. All evidence from publicly observable disclosure patterns. No proprietary internal data. No answer-key content included.",
   "ownerIntake": {
-    "businessType": "Mid-size hospital network (5 hospitals, 50 outpatient clinics), $1.8B revenue (public data from SEC),  EBITDA margin declining",
-    "stage": "Net patient revenue flat YoY, operating expenses rising (labor, supplies), admissions declining 3% YoY, outpatient volume +2% YoY. Margin pressure.",
-    "ownerGoal": "Return to sustainable profitability; current trajectory unsustainable"
+    "businessType": "Not-for-profit regional health system. Operates 5 acute-care hospitals and 50 outpatient/ambulatory clinics across a multi-county service area. ~$1.8B net patient revenue. Tax-exempt municipal bonds outstanding with rate covenants and a maintained credit rating. Governed by a community board; revenue overwhelmingly third-party (Medicare/Medicaid/commercial), so reimbursement rates are externally set rather than priced by the system.",
+    "stage": "FY2025: Net patient revenue $1,800M (flat YoY vs $1,790M FY2024, +0.6%). Total operating expense $1,665M (up from $1,575M FY2024, +5.7%). EBITDA $135M (7.5% margin) vs $215M FY2024 (12.0% margin) — a 450 bps margin compression. Labor expense $900M (up from $810M, +11.1%), of which contract/agency nursing $140M (up from $70M, +100%). Medical supplies & pharmacy $396M (up from $360M, +10%). Inpatient admissions -3% YoY; outpatient volume +2% YoY.",
+    "ownerGoal": "Restore EBITDA margin above the 8% covenant/rating threshold within ~90 days of board-decision execution and onto a path back toward double-digit margin, without breaching safe nurse-staffing ratios, degrading quality/patient-safety metrics, or triggering a rating downgrade.",
+    "ownerConstraints": [
+      "Covenant/rating constraint: Municipal bond rate covenants and the current investment-grade rating are at risk if EBITDA margin remains below 8%. A downgrade raises future borrowing cost and may trip continuing-disclosure scrutiny. Board must act within ~90 days.",
+      "Reimbursement constraint: Payer rates (Medicare, Medicaid, commercial contracts) are externally set or contractually fixed. The system cannot unilaterally raise prices to recover margin; commercial contract renegotiation is annual and slow.",
+      "Safe-staffing / regulatory constraint: Nurse-to-patient staffing ratios are governed by state regulation, accreditation (Joint Commission), and union agreements. Across-the-board headcount cuts that breach safe ratios are legally and clinically prohibited.",
+      "Mission / not-for-profit constraint: As a tax-exempt charitable system, it must maintain community-benefit obligations, charity care, and essential service lines (including unprofitable but essential ones such as ED and behavioral health) — limiting pure service-line exit.",
+      "Workforce constraint: An acute regional nursing shortage drives reliance on contract/agency staff; abrupt elimination of agency nurses without a permanent-hire pipeline risks bed closures and admission diversion.",
+      "Quality constraint: Cost actions cannot degrade publicly reported quality, readmission, or patient-safety metrics that influence value-based reimbursement and reputation."
+    ],
+    "immediateConcern": "EBITDA margin fell 450 bps in one fiscal year (12.0% to 7.5%) while net patient revenue stayed flat. The board fears the margin is now structurally below the 8% level that protects bond covenants and the credit rating. Management is unsure whether the driver is a cost-structure/throughput problem (agency labor and supply cost inflation against falling inpatient volume) or a revenue/pricing problem, and must present a credible recovery plan to the board within 90 days.",
+    "availableData": [
+      "Consolidated financials FY2024-FY2025: Net patient revenue ($1,790M → $1,800M), total operating expense ($1,575M → $1,665M), EBITDA ($215M → $135M), EBITDA margin (12.0% → 7.5%) from audited statements and bond continuing-disclosure operating data.",
+      "Labor cost detail: Total labor $810M → $900M (+11.1%); contract/agency nursing $70M → $140M (+100%); employed salaries/wages/benefits as the remainder, from operating-expense schedules.",
+      "Non-labor cost detail: Medical supplies & pharmacy $360M → $396M (+10%); other operating expense from supplemental schedules.",
+      "Volume statistics: Inpatient admissions -3% YoY; outpatient/ambulatory visit volume +2% YoY; case-mix index roughly stable, from bond-disclosure utilization tables.",
+      "Capital/liquidity context: Days cash on hand, debt-service coverage ratio, and outstanding tax-exempt debt balance from continuing-disclosure filings; covenant threshold near 8% operating EBITDA margin.",
+      "Payer mix summary: Approximate Medicare/Medicaid/commercial split (rates externally set); net revenue flat indicates static rates and mix, from disclosure tables."
+    ],
+    "unavailableData": [
+      "Unit-level (per-hospital and per-clinic) productivity and worked-hours-per-adjusted-patient-day detail (not in public disclosures).",
+      "Contract/agency nurse hourly bill-rate vs equivalent employed-FTE fully-loaded cost by facility (internal staffing-vendor data).",
+      "Service-line-level contribution margin (e.g., orthopedics vs behavioral health vs ED) at the procedure level (internal cost accounting).",
+      "Supply formulary and GPO contract pricing detail by category to isolate price inflation vs utilization (internal procurement data).",
+      "Nurse vacancy, turnover, and time-to-fill metrics by facility needed to size a permanent-hire ramp."
+    ],
+    "timeHorizon": "~90 days to a board decision on cutting agency staffing vs restructuring vs accepting a downgrade; 12-18 months to demonstrate margin recovery above the 8% covenant threshold.",
+    "riskAppetite": "LOW-MEDIUM (not-for-profit board with covenant/rating exposure; must avoid actions that breach safe staffing, harm quality, or signal distress to bondholders and rating agencies)"
+  },
+  "clientContext": {
+    "industry": "Healthcare / Multi-Hospital Health System",
+    "size": "large not-for-profit system ($1.8B net patient revenue, 5 hospitals, 50 outpatient clinics)",
+    "revenueImpactUrgency": "HIGH (sub-8% EBITDA margin threatens bond covenants and credit rating; 90-day board-decision pressure)"
+  },
+  "businessProblem": "A $1.8B not-for-profit, 5-hospital, 50-clinic health system has seen EBITDA margin collapse from 12.0% (FY2024) to 7.5% (FY2025), a 450 basis point compression, while net patient revenue stayed essentially flat ($1,790M → $1,800M, +0.6%). Total operating expense rose $90M (+5.7%) against only $10M of revenue growth. The cost growth is concentrated in labor — total labor up $90M (+11.1%) driven heavily by contract/agency nursing doubling from $70M to $140M — and in medical supplies & pharmacy, up $36M (+10%). At the same time, inpatient admissions fell 3% YoY (the higher-revenue, higher-fixed-cost setting) while outpatient volume grew only 2%. Reimbursement rates are externally set by Medicare, Medicaid, and commercial contracts, so the flat revenue reflects static rates and payer mix, not a pricing decision the system controls. The board faces a covenant/rating threshold near 8% EBITDA margin and must decide within ~90 days whether to cut agency staffing, restructure, or accept a downgrade. The core diagnostic question: is this margin erosion a cost-structure and labor-throughput problem (controllable operationally), a pricing/strategy problem, or a demand/forecasting problem — and what first action restores margin without breaching safe nurse-staffing ratios or harming quality?",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "EBITDA fell from $215M (FY2024) to $135M (FY2025), a -$80M (-37%) decline, while net patient revenue was essentially flat ($1,790M → $1,800M, +0.6%). EBITDA margin compressed from 12.0% to 7.5% — a 450 basis point decline that pushes the system below the ~8% level protecting bond covenants and the credit rating. Because revenue grew only ~$10M while operating expense grew ~$90M, the margin loss is driven by the cost side, not the revenue side.",
+      "confidence": "HIGH",
+      "source": "Audited consolidated financial statements and bond continuing-disclosure (EMMA/MSRB) operating data, FY2024-FY2025",
+      "isCritical": true,
+      "supportingData": {
+        "net_patient_revenue_fy2025": "$1,800M",
+        "net_patient_revenue_fy2024": "$1,790M",
+        "revenue_growth_pct": "+0.6%",
+        "ebitda_fy2025": "$135M",
+        "ebitda_fy2024": "$215M",
+        "ebitda_delta": "-$80M",
+        "ebitda_margin_fy2025": "7.5%",
+        "ebitda_margin_fy2024": "12.0%",
+        "ebitda_margin_decline_bps": 450,
+        "total_opex_fy2025": "$1,665M",
+        "total_opex_fy2024": "$1,575M",
+        "opex_growth": "+$90M (+5.7%)"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Total labor expense rose from $810M to $900M (+$90M, +11.1%), and the entire labor increase is more than accounted for by contract/agency nursing, which doubled from $70M to $140M (+$70M, +100%). Agency nurses typically bill at a large premium to an equivalent employed FTE, so this $70M increase is the single largest controllable lever in the cost structure. The reliance on premium contract labor — rather than a permanent workforce — is the dominant signal of an operational/throughput cost problem.",
+      "confidence": "HIGH",
+      "source": "Operating-expense schedules in audited statements and bond-disclosure supplemental data",
+      "isCritical": true,
+      "supportingData": {
+        "labor_fy2025": "$900M",
+        "labor_fy2024": "$810M",
+        "labor_growth": "+$90M (+11.1%)",
+        "agency_nursing_fy2025": "$140M",
+        "agency_nursing_fy2024": "$70M",
+        "agency_nursing_growth": "+$70M (+100%)",
+        "agency_share_of_labor_increase": "~78% of the $90M labor increase",
+        "interpretation": "Premium contract labor is the largest single controllable cost lever"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Medical supplies & pharmacy expense rose from $360M to $396M (+$36M, +10%), outpacing the ~0.6% revenue growth and broadly exceeding general inflation. Combined with the labor increase, supplies inflation accounts for the remainder of the $90M total opex growth, confirming the margin loss is concentrated in input-cost inflation and utilization, not in price/rate erosion.",
+      "confidence": "HIGH",
+      "source": "Audited consolidated statements (operating-expense detail), FY2024-FY2025",
+      "isCritical": true,
+      "supportingData": {
+        "supplies_pharmacy_fy2025": "$396M",
+        "supplies_pharmacy_fy2024": "$360M",
+        "supplies_growth": "+$36M (+10%)",
+        "revenue_growth_for_comparison": "+0.6%",
+        "combined_with_labor": "$90M labor + $36M supplies, net of other-opex movements, reconciles to +$90M total opex"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Inpatient admissions declined 3% YoY while outpatient/ambulatory volume grew 2% YoY. Inpatient is the higher-revenue, higher-fixed-cost setting; falling admissions spread fixed hospital costs over fewer cases, hurting unit economics, while the outpatient growth (the structurally lower-cost, growing setting) shows demand is NOT collapsing. Net patient revenue stayed flat despite the admission decline because externally-set rates and payer mix were static and outpatient growth offset inpatient loss. This rules out a demand-collapse or pricing-error story and points to a throughput/cost-structure problem.",
+      "confidence": "MEDIUM",
+      "source": "Bond-disclosure utilization tables (admissions, outpatient visits, case-mix index), FY2024-FY2025",
+      "isCritical": true,
+      "supportingData": {
+        "inpatient_admissions_yoy": "-3%",
+        "outpatient_volume_yoy": "+2%",
+        "case_mix_index": "approximately stable",
+        "net_revenue_yoy": "flat (+0.6%)",
+        "interpretation": "Demand is shifting outpatient, not disappearing; flat revenue implies static externally-set rates/mix"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "With EBITDA margin at 7.5%, the system is below the ~8% covenant/rating threshold. Rating-agency methodology weights operating margin and debt-service coverage heavily; a sustained sub-8% margin risks a downgrade that would raise future tax-exempt borrowing cost and could pressure debt-service-coverage covenants. This converts an operating problem into a balance-sheet and covenant problem on a ~90-day board clock.",
+      "confidence": "HIGH",
+      "source": "Continuing-disclosure filings (covenant terms, debt-service coverage ratio, days cash on hand) and rating-agency methodology commentary",
+      "isCritical": true,
+      "supportingData": {
+        "ebitda_margin_fy2025": "7.5%",
+        "covenant_rating_threshold": "~8%",
+        "gap_to_threshold_bps": "~50 bps below",
+        "consequence": "downgrade risk raises borrowing cost; potential debt-service-coverage covenant pressure",
+        "decision_clock_days": 90
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (large system with bond-market access but constrained by covenant/rating pressure and not-for-profit reserves; discretionary spend on diagnostics is available, large restructuring requires board approval)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (large workforce but acute nurse shortage and agency dependence; a permanent-hire ramp is constrained by the regional labor market and union agreements)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

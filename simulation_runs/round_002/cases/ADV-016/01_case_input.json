@@ -1,10 +1,103 @@
 {
   "caseId": "ADV-016",
   "caseType": "ADVERSARIAL",
-  "industry": "Staffing",
+  "industry": "Staffing & Recruitment Services",
+  "businessModel": "Contingent and temporary staffing, placement-fee and markup-on-bill-rate revenue",
+  "businessStage": "Mature mid-size agency, recent revenue slowdown",
+  "sourceNote": "Adversarial case designed to test diagnostic rigor under a persuasive owner narrative. A recent slowdown is attributed to a temporary external cause, while internal productivity and channel data that could indicate a structural shift remain un-examined. The case tests whether the engine treats 'temporary' as proven or as a hypothesis to be tested. No diagnosis or label is embedded in the inputs.",
   "ownerIntake": {
-    "businessType": "Staffing firm, $25M revenue, 10% growth, margins stable at 12%",
-    "stage": "Trap: Recency bias. Management attributes recent slowdown to 'temporary macro headwinds' (plausible) without investigating utilization or recruiter productivity by cohort/channel. Overlooking that slowdown might be structural.",
-    "ownerGoal": "Must diagnose: is slowdown temporary or structural?"
+    "businessType": "Mid-size staffing agency placing light-industrial and clerical temp/contract workers for regional employers across several branches. ~180 internal staff including recruiters and account managers. Founded 2006.",
+    "stage": "$25.0M revenue, ~10% YoY growth historically, gross margin (spread) stable ~12%. Last two quarters: revenue growth decelerated to ~2% and gross profit dollars flat. EBITDA margin held ~6%. Order fill rate and recruiter productivity reported only at the agency-wide blended level.",
+    "ownerGoal": "Return to ~10% growth within 12 months while preserving margin and avoiding branch closures or recruiter layoffs.",
+    "ownerConstraints": [
+      "People constraint: recruiters are the revenue engine; management will not cut recruiter headcount and wants to protect morale during the slowdown.",
+      "Branch constraint: a multi-branch footprint with fixed lease and overhead costs; closing branches is politically and contractually difficult.",
+      "Client constraint: revenue is relationship-driven with regional employers; management does not want to appear to be pulling back during a downturn.",
+      "Capital constraint: privately held, modest cash buffer; cannot fund a large turnaround program.",
+      "Governance constraint: the leadership team has already told the board the slowdown is 'temporary macro headwinds' and budgeted next year for a rebound."
+    ],
+    "immediateConcern": "CEO framing: 'The last two quarters slowed down, but this is temporary macro headwinds - hiring across our region softened and it will bounce back, like it always has. We have already told the board to expect a rebound and budgeted for it. The right move is to hold the team together, keep our recruiters and branches intact, and ride it out. I do not want to overreact to a temporary dip.'",
+    "availableData": [
+      "Revenue $25.0M, growth decelerated from ~10% to ~2% over the last two quarters; gross spread stable ~12%; EBITDA ~6%.",
+      "Recruiter productivity (placements/revenue per recruiter) reported agency-wide only; it has NOT been split by branch, by recruiter tenure cohort, or by client/industry channel.",
+      "Order fill rate (filled vs received job orders) reported blended; not broken out by branch or job category.",
+      "Job-order volume RECEIVED from clients has held roughly flat over the slowdown, while fill rate appears to have slipped - suggesting orders exist but are being converted less, not that demand vanished. This was noted in ops data but not analyzed.",
+      "Recruiter mix shifted: ~30% of recruiters have <12 months tenure after a hiring push 18 months ago; ramp/productivity of this cohort not measured separately.",
+      "Two competitor agencies opened local branches in the past year; whether they are winning the agency's job orders has not been investigated.",
+      "Average days-to-fill has lengthened over the same period; cause (candidate supply, recruiter productivity, or client-side delays) not diagnosed."
+    ],
+    "unavailableData": [
+      "Recruiter productivity and fill rate split by branch, recruiter-tenure cohort, and client/industry channel.",
+      "Job-order win/loss vs the new competitor branches (are orders being lost or just unfilled?).",
+      "Ramp curve and productivity of the <12-month recruiter cohort vs tenured recruiters.",
+      "Candidate-supply/applicant-flow trend to test whether days-to-fill is a supply problem or a productivity problem.",
+      "External regional labor-market benchmark confirming demand actually softened for comparable agencies."
+    ],
+    "timeHorizon": "12 months to reaccelerate; next-year budget already assumes rebound",
+    "riskAppetite": "LOW-TO-MEDIUM (conservative, protective of team and branches)"
+  },
+  "businessProblem": "A staffing agency's growth decelerated from ~10% to ~2% over two quarters. Leadership attributes it to temporary macro headwinds and has budgeted for a rebound. Competing hypotheses: (1) the slowdown is genuinely a temporary regional demand dip that will revert; (2) the slowdown is structural - job orders are still arriving but being converted less (fill rate slipping, days-to-fill lengthening), which points to recruiter productivity, the large under-ramped junior-recruiter cohort, or competitive displacement by the new local competitor branches, none of which a rebound will fix; (3) a combination. The key disconfirming signal - flat received order volume with a slipping fill rate - is present in ops data but unanalyzed, and productivity/fill have not been disaggregated.",
+  "evidence": [
+    {
+      "dimension": "demand_signal",
+      "finding": "Job-order volume RECEIVED from clients has held roughly flat through the slowdown while the fill rate slipped. If demand had genuinely softened, received orders would fall; flat orders with lower fill suggests the agency is converting existing demand less effectively - which is not a 'demand headwind' pattern. This was noted in ops data but not analyzed.",
+      "confidence": "HIGH",
+      "source": "Order intake / fulfillment logs",
+      "isCritical": true,
+      "supportingData": {
+        "orders_received_trend": "roughly flat",
+        "fill_rate_trend": "slipping",
+        "pattern": "demand present, conversion down",
+        "analyzed": false
+      }
+    },
+    {
+      "dimension": "workforce_productivity",
+      "finding": "Recruiter productivity is reported agency-wide only, never split by branch or tenure. ~30% of recruiters have <12 months tenure after an 18-month-ago hiring push; an under-ramped junior cohort can depress blended productivity and fill rate independently of demand. The junior-cohort ramp has not been measured separately.",
+      "confidence": "MEDIUM",
+      "source": "Recruiter performance data (blended)",
+      "isCritical": true,
+      "supportingData": {
+        "junior_recruiter_share": "30%",
+        "productivity_split_by_tenure": false,
+        "days_to_fill_trend": "lengthening"
+      }
+    },
+    {
+      "dimension": "competitive_position",
+      "finding": "Two competitor agencies opened local branches in the past year. Whether they are winning the agency's job orders (competitive displacement) versus orders simply going unfilled has not been investigated. This distinguishes a structural share-loss story from a temporary-demand story.",
+      "confidence": "MEDIUM",
+      "source": "Market observation",
+      "isCritical": true,
+      "supportingData": {
+        "new_competitor_branches": 2,
+        "win_loss_investigated": false
+      }
+    },
+    {
+      "dimension": "financial_trend",
+      "finding": "Growth decelerated 10% -> 2% with stable 12% spread and 6% EBITDA. The stable margin makes the slowdown look benign, but margin stability does not distinguish a temporary demand dip from a structural conversion/competitive problem - both can present with flat margin in the short run.",
+      "confidence": "HIGH",
+      "source": "Financial statements",
+      "isCritical": false,
+      "supportingData": {
+        "growth_prior": "10%",
+        "growth_recent": "2%",
+        "spread": "12%",
+        "ebitda": "6%"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Staffing & Recruitment",
+    "size": "$25.0M revenue, ~180 internal staff, multi-branch",
+    "revenueImpactUrgency": "MEDIUM-HIGH (a structural slowdown mis-budgeted as temporary would miss next-year plan and erode the franchise)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (privately held, modest buffer)",
+    "timeHorizonDays": 365,
+    "staffCapacity": "MEDIUM (ops/finance analysts available; no recruiter cuts)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
   }
 }

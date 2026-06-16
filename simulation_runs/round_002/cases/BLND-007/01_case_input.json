@@ -1,10 +1,147 @@
 {
   "caseId": "BLND-007",
   "caseType": "BLIND_OUTCOME",
-  "industry": "E-commerce / Apparel",
+  "industry": "E-Commerce / Apparel",
+  "businessModel": "Direct-to-consumer (D2C) apparel brand selling owned-design clothing online with a small retail footprint; mix of full-price and seasonal markdown sales",
+  "businessStage": "Profitable growth stage, founder-controlled, no institutional pressure to sell",
+  "sourceNote": "Blind-outcome case designed to test forward-looking strategic decision quality. The company must choose its next geographic expansion among three viable options. Scoring assesses whether the engine's reasoning is sound given only the information knowable at decision time. The actual outcome (which expansion succeeded, failed, or was deferred) is withheld from this input and recorded only in the answer key for reference. All figures are realistic and representative.",
   "ownerIntake": {
-    "businessType": "D2C apparel brand, $25M revenue, 30% growth, facing critical decision on next market expansion (US, Europe, Asia)",
-    "stage": "Must choose: expand domestically (proven market, limited TAM), enter Europe (larger TAM, higher CAC), or Asia (largest TAM, cultural/operational risk)",
-    "ownerGoal": "Decide expansion strategy; outcome will determine growth trajectory for next 3-5 years"
+    "businessType": "D2C apparel brand founded 2017, selling womenswear and unisex basics direct online plus 3 owned showrooms in the domestic market. Roughly 480,000 lifetime customers, ~140,000 active buyers in the trailing 12 months. Design and merchandising owned in-house; manufacturing outsourced to 6 contract factories across two countries.",
+    "stage": "Trailing-12-month revenue $25M, growing ~30% YoY (down from ~45% YoY two years ago). Gross margin 58%. EBITDA margin 9% ($2.25M). Domestic market is ~80% of revenue; remaining ~20% is incidental cross-border orders fulfilled from the domestic warehouse at high shipping cost. Headcount 95.",
+    "ownerGoal": "Sustain 25-30%+ annual growth for the next 3 years and roughly double revenue to ~$50M while preserving the brand's premium-but-accessible positioning and current profitability, by choosing the next major market to enter.",
+    "ownerConstraints": [
+      "Capital constraint: $6M of internally generated cash plus a $4M undrawn revolving facility; founder will not raise dilutive equity in the next 18 months, so total expansion budget is capped near $8-10M including working-capital build.",
+      "Margin protection constraint: Will not accept an expansion that drags blended EBITDA margin below ~5% for more than 12 months; the brand must remain profitable through the move.",
+      "Operational constraint: Single domestic 3PL warehouse near capacity (88% utilization); international fulfillment requires either a local 3PL contract or a new node, each with 4-7 month standup plus localization (returns, duties, sizing).",
+      "Brand constraint: Premium-accessible positioning and sizing fit are core; the team has limited evidence on how the brand and fit translate to non-domestic body-size distributions and style preferences.",
+      "Team constraint: Lean leadership; no in-house international operations, customs, or local-market marketing expertise. Any market entered needs a dedicated GM hire and local marketing partner."
+    ],
+    "immediateConcern": "Domestic new-customer acquisition is getting more expensive (paid CAC up ~35% over 18 months) and the founder believes domestic TAM at the brand's price point is finite. The founder group must pick the next growth market within roughly one quarter so merchandising, fulfillment localization, and the FY budget can be locked. Three candidate paths are on the table and resources allow committing meaningfully to only one as the primary bet.",
+    "availableData": [
+      "Revenue $25M TTM; YoY growth 30% (was 45% two years ago); gross margin 58%; EBITDA margin 9%",
+      "Domestic blended CAC $62 (paid CAC $88), trailing AOV $115, repeat-purchase rate 41% within 12 months, first-order contribution margin ~$24",
+      "Cross-border (incidental) orders: ~20% of revenue, AOV $134, but contribution margin ~$6 due to international shipping and a ~22% return rate vs ~14% domestic",
+      "Domestic market share estimated ~1.1% of a ~$2.3B addressable premium-accessible apparel segment; trailing 18 months show domestic active-buyer growth decelerating to ~12%",
+      "Europe interest signal: unsolicited cross-border European orders growing ~50% YoY off a small base, concentrated in 3 countries; domestic-equivalent ad CPMs in those markets benchmarked 20-40% higher",
+      "Asia interest signal: largest absolute search/social interest volume, but observed cross-border return rate from the region ~31% and sizing complaints elevated; payment, duties, and counterfeit-risk landscape more complex"
+    ],
+    "unavailableData": [
+      "True localized CAC and payback by candidate market (no in-market paid-acquisition test has been run; benchmarks are external estimates)",
+      "Localized contribution margin after duties, local 3PL, returns, and FX at scale (current cross-border economics are distorted by domestic-warehouse shipping)",
+      "Whether the brand's sizing/fit and style resonate with local body-size distributions and seasonal preferences in each candidate market",
+      "Realistic local repeat-purchase and retention curves (incidental cross-border buyers are not representative of a deliberately acquired local cohort)",
+      "Competitive intensity and incumbent loyalty at the brand's price point in each candidate market"
+    ],
+    "timeHorizon": "One quarter (90 days) to commit the primary expansion path so FY merchandising buys, fulfillment localization, and the operating budget can be finalized",
+    "riskAppetite": "MEDIUM (founder-controlled, profitable; willing to invest for growth but unwilling to risk insolvency or sustained losses, and unwilling to dilute)"
+  },
+  "businessProblem": "A profitable $25M D2C apparel brand growing ~30% YoY faces decelerating domestic acquisition (paid CAC +35% over 18 months, active-buyer growth down to ~12%) and a finite domestic TAM at its price point. To sustain growth toward ~$50M it must choose its next primary expansion market within 90 days, funded from a capped ~$8-10M non-dilutive budget and constrained by a near-full domestic warehouse, no in-house international operations, and unproven fit of its sizing and positioning abroad. Three options compete: (A) deepen the proven domestic market (lowest execution risk but limited remaining TAM), (B) enter Europe (larger addressable TAM, demonstrated organic pull in 3 countries, but higher benchmarked CAC and unproven localized economics), or (C) enter Asia (largest absolute interest and TAM, but elevated return/sizing risk and operational/regulatory complexity). The central question is which expansion's unit economics and operational fit are most defensible given what is actually known, versus what must be tested before any irreversible merchandising and fulfillment commitments are locked.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Core business is healthy but the growth engine is getting more expensive. Domestic blended CAC is $62 (paid CAC $88), up ~35% over 18 months, while AOV is $115 and first-order contribution margin is ~$24, implying payback is increasingly carried by the 41% repeat rate rather than the first order. EBITDA margin is 9% with only ~$8-10M of non-dilutive capital available, so an expansion that runs at a loss for long would breach the margin-protection constraint and exhaust the budget.",
+      "confidence": "HIGH",
+      "source": "Internal finance and marketing-mix reporting, trailing 18-month CAC tracking",
+      "isCritical": true,
+      "supportingData": {
+        "domestic_blended_cac": "$62",
+        "domestic_paid_cac": "$88",
+        "cac_increase_18mo": "+35%",
+        "aov": "$115",
+        "first_order_contribution_margin": "$24",
+        "repeat_rate_12mo": "41%",
+        "ebitda_margin": "9%",
+        "non_dilutive_budget": "$8-10M"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Domestic share is ~1.1% of a ~$2.3B premium-accessible segment, and domestic active-buyer growth has decelerated to ~12%. There is remaining headroom domestically in absolute terms, but the founder's thesis is that incremental domestic customers are increasingly expensive and lower-intent. The choice is therefore not 'is there any domestic room' but 'where does the next dollar of acquisition earn the best return.'",
+      "confidence": "MEDIUM",
+      "source": "Third-party market sizing, internal cohort acquisition trends",
+      "isCritical": true,
+      "supportingData": {
+        "domestic_share": "1.1%",
+        "domestic_addressable_segment": "$2.3B",
+        "domestic_active_buyer_growth": "12%",
+        "remaining_domestic_headroom": "present but rising cost per incremental buyer"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Incidental cross-border demand is a real but ambiguous signal. European cross-border orders are growing ~50% YoY off a small base concentrated in 3 countries with AOV $134, while Asian cross-border interest is the largest in absolute volume. However, both are currently fulfilled from the domestic warehouse, so their contribution margin (~$6) and return rates (Europe-region elevated, Asia-region ~31%) are distorted and not representative of what a deliberately acquired, locally fulfilled cohort would look like.",
+      "confidence": "MEDIUM",
+      "source": "E-commerce order analytics, returns data by destination region",
+      "isCritical": true,
+      "supportingData": {
+        "europe_cross_border_growth": "~50% YoY (small base, 3 countries)",
+        "europe_cross_border_aov": "$134",
+        "asia_cross_border_interest": "largest absolute volume",
+        "asia_region_return_rate": "~31%",
+        "domestic_return_rate": "~14%",
+        "cross_border_contribution_margin": "~$6 (distorted by domestic-warehouse shipping)"
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Operational readiness differs sharply by option. Deepening domestic requires no new fulfillment node and reuses proven logistics. Europe requires a local 3PL contract, duties/returns localization, and sizing validation (4-7 month standup). Asia adds payment-method fragmentation, duties and counterfeit-risk complexity, and the highest observed sizing/return friction. The single domestic warehouse is at 88% utilization, so domestic deepening also eventually needs capacity, but on a longer fuse than international standup.",
+      "confidence": "HIGH",
+      "source": "Operations and 3PL capacity review, fulfillment localization assessment",
+      "isCritical": false,
+      "supportingData": {
+        "domestic_warehouse_utilization": "88%",
+        "international_node_standup": "4-7 months",
+        "europe_readiness": "moderate (localization required)",
+        "asia_readiness": "low (payments, duties, counterfeit, sizing)"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "No in-market acquisition test has been run in any candidate geography, so localized CAC, payback, contribution margin after duties/3PL/returns, and local retention curves are all unknown. External CPM benchmarks (European markets 20-40% higher) and distorted cross-border economics are the only signals, and they are insufficient to choose confidently among three options that each demand a multi-quarter, partly irreversible merchandising and fulfillment commitment.",
+      "confidence": "HIGH",
+      "source": "Marketing analytics gap assessment, FP&A scenario notes",
+      "isCritical": true,
+      "supportingData": {
+        "in_market_test_run": "none",
+        "europe_cpm_benchmark": "20-40% higher than domestic",
+        "localized_payback_known": "no",
+        "local_retention_curves_known": "no"
+      }
+    }
+  ],
+  "strategicOptions": [
+    {
+      "optionId": "Option_A_Deepen_Domestic",
+      "description": "Concentrate the expansion budget on the proven domestic market: add new categories/price tiers, expand the showroom footprint, and invest in retention and referral to lift repeat rate above 41%, accepting that incremental CAC is rising and absolute TAM is finite.",
+      "rationale": "Lowest execution risk and reuses proven logistics, sizing, and brand. Appropriate if the true constraint is monetizing existing demand better rather than chasing new geographies with unknown economics.",
+      "implementationRisk": "LOW-MEDIUM (proven operations and brand; main risk is that rising domestic CAC and a finite TAM cap growth below the 25-30% target)",
+      "timelineIfChosen": "Results visible in 2-3 quarters; lower ceiling on growth rate"
+    },
+    {
+      "optionId": "Option_B_Enter_Europe",
+      "description": "Make Europe the primary expansion bet: stand up a local 3PL node, localize duties/returns/sizing, hire a regional GM, and launch paid acquisition in the 3 countries already showing organic pull, targeting a larger premium-accessible TAM than domestic.",
+      "rationale": "Demonstrated organic cross-border pull plus a larger addressable market. Appropriate if localized economics prove out and the brand's fit translates, justifying the higher benchmarked CAC.",
+      "implementationRisk": "MEDIUM-HIGH (higher benchmarked CAC, unproven localized contribution margin and retention, 4-7 month operational standup consuming much of the capped budget)",
+      "timelineIfChosen": "9-12 months to validate localized unit economics at meaningful volume"
+    },
+    {
+      "optionId": "Option_C_Enter_Asia",
+      "description": "Make Asia the primary expansion bet: prioritize the largest absolute interest pool, build local payments/duties/fulfillment capability, and address sizing/returns, accepting greater operational and regulatory complexity in exchange for the largest TAM.",
+      "rationale": "Largest addressable market and highest absolute interest. Appropriate only if sizing/return friction and operational complexity can be controlled enough to reach defensible contribution margin.",
+      "implementationRisk": "HIGH (highest observed return/sizing friction at ~31%, payment fragmentation, duties and counterfeit risk, weakest internal capability, heaviest demand on the capped budget)",
+      "timelineIfChosen": "12-18 months to validate; highest variance of the three"
+    }
+  ],
+  "clientContext": {
+    "industry": "E-Commerce / Apparel (D2C)",
+    "size": "growth-stage ($25M TTM revenue, 9% EBITDA, 95 staff, ~140k active buyers, founder-controlled)",
+    "revenueImpactUrgency": "HIGH (domestic acquisition cost rising and TAM finite; the expansion choice made this quarter sets merchandising buys, fulfillment localization, and the multi-year growth trajectory)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM ($8-10M non-dilutive cap including working-capital build; no equity raise within 18 months)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "LOW-MEDIUM (lean leadership, no in-house international operations or local marketing; each new market needs a GM hire and local partner)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

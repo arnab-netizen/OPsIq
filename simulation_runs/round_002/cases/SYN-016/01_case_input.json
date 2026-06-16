@@ -2,9 +2,112 @@
   "caseId": "SYN-016",
   "caseType": "SYNTHETIC",
   "industry": "Supply Chain / Logistics SaaS",
+  "businessModel": "B2B supply-chain visibility platform (multi-carrier tracking, exception management, analytics) sold to mid-market shippers and 3PLs; annual subscriptions priced on shipment volume and seats.",
+  "businessStage": "Post-Series A, Growth Stage",
+  "sourceNote": "Synthetic stress-test case engineered to stress the engine's ability to recognize a TRUST_QUALITY_CRISIS arising from product complexity and onboarding failure, rather than a demand or pricing problem. The owner frames it as 'product fit and customer success.' The evidence shows customers cannot operationalize the product, lose trust during onboarding, and churn before reaching value. Tests recognition of a usability/trust failure distinct from market demand. Not historical; metrics representative.",
   "ownerIntake": {
-    "businessType": "Supply chain visibility platform, $5M ARR, 25% growth (slowing from 40%), churn 5% quarterly",
-    "stage": "Product adoption slow (customer feedback: too complex), support burden high, utilization per customer low",
-    "ownerGoal": "Improve product fit and customer success"
+    "businessType": "Supply-chain visibility platform (multi-carrier tracking, exception management, predictive ETA, analytics) for mid-market shippers and third-party logistics providers. Founded 2021, Series A $12M (2023). Annual subscriptions on shipment volume + seats. Current ARR $5.0M, 25% YoY growth (down from 40%), 95 customers.",
+    "stage": "ARR $5.0M, 25% YoY growth (decelerating from 40%). Quarterly logo churn 5% (high). NRR 96%. Gross margin 70%. CAC payback 17 months. Onboarding takes a median 13 weeks to first operational use. Only 34% of contracted features are ever activated. Support tickets per customer are 2.4x the SaaS benchmark. Cash runway 18 months.",
+    "ownerGoal": "Improve product fit and customer success so adoption rises, churn falls below 3% quarterly, and growth reaccelerates toward 35%+ within 12-15 months.",
+    "ownerConstraints": [
+      "Funding constraint: $12M Series A, 18-month runway at $310k/month burn; cannot fund a large professional-services org or a full product rebuild without risking the next raise.",
+      "Product constraint: the platform is powerful but configuration-heavy; standing up carrier integrations and exception rules requires data mapping that customers struggle to complete; a guided-onboarding/simplification effort is 8-12 weeks of product+engineering work.",
+      "Organizational constraint: 40 staff (12 engineering, 8 sales, 6 implementation/onboarding, 6 support, rest G&A). Onboarding team is overwhelmed; support is in constant firefighting.",
+      "Market constraint: demand for supply-chain visibility is strong and growing post-disruption; competitors with simpler, narrower tools are winning the same buyers on ease-of-use.",
+      "Commercial constraint: most churn happens in the first 6 months, before customers reach operational value; expansion is impossible when base features are not even activated."
+    ],
+    "immediateConcern": "Churn is high (5% quarterly) and growth has slowed to 25%, but demand for visibility tooling is strong. The owner suspects 'product fit' and wants to invest in customer success headcount and possibly new features. However, the deeper pattern is that customers cannot operationalize the product: median onboarding is 13 weeks, only 34% of contracted features ever get activated, support tickets run 2.4x benchmark, and most churn occurs in the first 6 months before value is realized. Early customers describe the product as 'too complex to stand up.' The owner must decide within the next month whether to add CS/services headcount (treating the symptom) or fix the onboarding/usability failure at its source before the next cohort of new customers churns out.",
+    "availableData": [
+      "Financial: ARR $5.0M, 25% YoY growth (was 40%), gross margin 70%, CAC payback 17 months, burn $310k/month, runway 18 months",
+      "Retention: quarterly logo churn 5%, NRR 96%; ~70% of churn occurs within the first 6 months (pre-value)",
+      "Adoption: median time-to-operational-use 13 weeks; only 34% of contracted features ever activated; 41% of accounts never complete carrier-integration setup",
+      "Support: tickets per customer 2.4x SaaS benchmark; top ticket categories are setup/configuration (38%) and data mapping (27%)",
+      "Onboarding: 6-person implementation team carrying 9 active onboardings each; onboarding NPS 12 (very low); setup abandonment rate 22%",
+      "Market/competitive: visibility demand growing; simpler competitors winning ease-of-use comparisons; new-logo win rate stable at 26%"
+    ],
+    "unavailableData": [
+      "Which specific configuration steps cause the most abandonment (no funnel instrumentation in onboarding)",
+      "Activation-to-retention correlation quantified by feature",
+      "Willingness of customers to pay for guided/done-for-you onboarding",
+      "Comparative onboarding time of the simpler competitors"
+    ],
+    "timeHorizon": "12-15 months to reaccelerate growth; the first-6-month churn means each new cohort is at risk within one quarter, so the fix is urgent",
+    "riskAppetite": "MEDIUM (must protect runway; tempted to throw services headcount at a problem that is rooted in product usability)"
+  },
+  "businessProblem": "A supply-chain visibility SaaS is decelerating (40%→25% growth) with high quarterly churn (5%) despite strong, growing market demand. The owner suspects product fit and wants to add customer-success/services headcount. But the evidence describes a usability and trust failure during onboarding: median time-to-operational-use is 13 weeks, only 34% of contracted features are ever activated, 41% of accounts never finish carrier-integration setup, support tickets run 2.4x benchmark (dominated by setup and data-mapping issues), onboarding NPS is 12, setup abandonment is 22%, and ~70% of churn occurs in the first 6 months before customers reach value. Customers buy in (win rate stable at 26%) but cannot operationalize the product and lose trust before realizing value. With 18 months of runway and first-cohort churn hitting within a quarter, the owner must decide whether to staff around the problem or fix the onboarding/usability failure at its source.",
+  "evidence": [
+    {
+      "dimension": "product_adoption",
+      "finding": "Customers cannot operationalize the product: median time-to-operational-use is 13 weeks, only 34% of contracted features are ever activated, and 41% of accounts never complete carrier-integration setup. The platform's value is gated behind configuration work most customers cannot finish, so contracted value is never realized.",
+      "confidence": "HIGH",
+      "source": "Onboarding milestone tracker, product activation analytics",
+      "isCritical": true,
+      "supportingData": {
+        "median_ttv_weeks": 13,
+        "features_activated_pct": "34%",
+        "never_complete_integration_pct": "41%"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Quarterly logo churn is high at 5% and ~70% of it occurs within the first 6 months, before customers reach operational value. NRR is 96% (slightly negative net). The churn is front-loaded and value-gated, the signature of an onboarding/usability failure rather than a long-tenure satisfaction decline.",
+      "confidence": "HIGH",
+      "source": "Churn ledger with tenure breakdown, NRR cohort report",
+      "isCritical": true,
+      "supportingData": {
+        "quarterly_logo_churn": "5%",
+        "churn_in_first_6_months": "~70%",
+        "nrr": "96%"
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Support tickets per customer run 2.4x the SaaS benchmark, dominated by setup/configuration (38%) and data mapping (27%). Onboarding NPS is 12 (very low) and setup abandonment is 22%. The product is experienced as too complex to stand up, eroding trust during the very first interactions.",
+      "confidence": "HIGH",
+      "source": "Support ticketing analytics, onboarding NPS survey",
+      "isCritical": true,
+      "supportingData": {
+        "tickets_vs_benchmark": "2.4x",
+        "ticket_setup_config_pct": "38%",
+        "ticket_data_mapping_pct": "27%",
+        "onboarding_nps": 12,
+        "setup_abandonment_pct": "22%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Market demand for supply-chain visibility is strong and growing post-disruption, and new-logo win rate is stable at 26%, so the company is not failing to acquire or facing collapsing demand. However, simpler, narrower competitors are winning ease-of-use comparisons, indicating that usability, not capability, is the competitive battleground.",
+      "confidence": "MEDIUM",
+      "source": "Win/loss notes, market demand indicators",
+      "isCritical": false,
+      "supportingData": {
+        "new_logo_win_rate": "26% (stable)",
+        "demand_trend": "growing",
+        "competitor_advantage": "ease-of-use"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "The 6-person implementation team carries 9 active onboardings each and support is in constant firefighting. Adding services headcount would relieve pressure temporarily but scales linearly with a defect that lives in product complexity; cost would rise with every new customer rather than the product becoming self-serviceable.",
+      "confidence": "MEDIUM",
+      "source": "Implementation capacity model, support workload data",
+      "isCritical": false,
+      "supportingData": {
+        "onboardings_per_implementer": 9,
+        "implementation_team_size": 6
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Supply Chain / Logistics SaaS",
+    "size": "post-series-a ($5.0M ARR, 40 employees, 95 customers)",
+    "revenueImpactUrgency": "HIGH (front-loaded churn means each new cohort is at risk within a quarter; growth is decelerating despite strong demand)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (Series A, 18-month runway, $310k/month burn)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "LOW-MEDIUM (40 staff; implementation and support already overwhelmed)",
+    "cashRunwayMonths": 18,
+    "legalComplianceSensitive": false
   }
 }

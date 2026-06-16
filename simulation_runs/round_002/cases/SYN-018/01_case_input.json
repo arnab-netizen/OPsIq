@@ -2,9 +2,115 @@
   "caseId": "SYN-018",
   "caseType": "SYNTHETIC",
   "industry": "Analytics / Business Intelligence",
+  "businessModel": "B2B analytics/BI SaaS sold to mid-market and enterprise data teams; annual subscriptions with a mandatory professional-services implementation (data modeling, connector setup, dashboard build) before go-live.",
+  "businessStage": "Series B, Growth Stage",
+  "sourceNote": "Synthetic stress-test case engineered to stress the engine's ability to recognize an OPERATIONAL_BOTTLENECK in the implementation/delivery function, distinct from a product-usability (trust) failure or a demand problem. The owner frames it as 'time-to-value and customer success.' The evidence shows implementations are queued and resource-constrained in a specialized delivery team, not that the product is unusable. Tests the engine's ability to localize a throughput/capacity bottleneck. Not historical; metrics representative.",
   "ownerIntake": {
-    "businessType": "Analytics platform, $9M ARR, 35% growth, but implementation time extending (customer ROI realization slow)",
-    "stage": "Time-to-value increasing, competitive pressure from larger BI vendors, net revenue retention 102%",
-    "ownerGoal": "Improve time-to-value and customer success"
+    "businessType": "B2B analytics/BI platform for mid-market and enterprise data teams. Founded 2018, total raised $48M (Series B). Annual subscriptions plus a mandatory implementation (data modeling, connector setup, dashboard build) before go-live. Current ARR $9.0M, 35% YoY growth, 120 customers, average ACV $75k.",
+    "stage": "ARR $9.0M, 35% YoY growth. NRR 102%. Gross retention 95%. Implementation time-to-go-live extended from 8 weeks to 19 weeks over the past year. A backlog of 28 customers is waiting to start or finish implementation. The implementation/services team is 9 people, fully booked 14 weeks out. Customer satisfaction with the product post-go-live is high; dissatisfaction is concentrated in the waiting/implementation phase. Cash runway 22 months.",
+    "ownerGoal": "Reduce time-to-value, clear the implementation backlog, and lift NRR/expansion; reach $16M ARR within 18 months while protecting the post-go-live satisfaction that drives expansion.",
+    "ownerConstraints": [
+      "Funding constraint: $48M raised, 22-month runway; board wants efficient growth, so unbounded services hiring is discouraged, but the backlog is throttling realized revenue.",
+      "Product constraint: the product itself is well-regarded once live; connector/data-modeling steps in implementation are partly manual and could be templatized/automated with 6-10 weeks of product+tooling work.",
+      "Organizational constraint: 95 staff (24 engineering, 22 sales, 9 implementation/services, 14 customer success, rest G&A). Sales is closing deals faster than implementation can deliver, widening the backlog.",
+      "Market constraint: larger BI vendors compete, but the company wins on product; deals are not lost on capability. The risk is that the implementation delay damages references and slows expansion.",
+      "Commercial constraint: revenue recognition and expansion both wait on go-live; a 19-week implementation means cash and NRR lag bookings by nearly five months, and the backlog compounds as sales outpaces delivery."
+    ],
+    "immediateConcern": "Time-to-go-live has more than doubled (8→19 weeks), a 28-customer implementation backlog has formed, and the 9-person services team is booked 14 weeks out. The owner suspects 'time-to-value' and customer-success problems and is considering broad CS investment or product changes. But the product is well-regarded post-go-live (satisfaction high, NRR 102%); dissatisfaction is concentrated specifically in the waiting/implementation phase, and sales is closing faster than delivery can absorb. This is a throughput/capacity bottleneck in a specialized delivery function, compounded by partly manual implementation steps. The owner must decide within the next month whether to keep selling at the current pace (worsening the backlog), expand services capacity, or automate the bottleneck steps before delayed go-lives damage references and stall expansion.",
+    "availableData": [
+      "Financial: ARR $9.0M, 35% YoY growth, average ACV $75k, gross margin 76%, runway 22 months",
+      "Retention: NRR 102%, gross retention 95%; post-go-live product satisfaction high (CSAT 8.4/10)",
+      "Delivery: time-to-go-live 8→19 weeks over 12 months; backlog of 28 customers; services team 9 people booked 14 weeks out",
+      "Bottleneck composition: data-modeling and connector setup account for ~60% of implementation hours and are partly manual; dashboard build ~25%; training ~15%",
+      "Phase satisfaction: implementation-phase NPS 18 (low) vs post-go-live NPS 52 (high); dissatisfaction concentrated pre-go-live",
+      "Pipeline: sales bookings up 40% YoY; new starts outpace go-lives by ~3 per month, widening the backlog"
+    ],
+    "unavailableData": [
+      "Per-step implementation cycle-time breakdown with bottleneck-resource utilization",
+      "Automation feasibility and ROI for the manual data-modeling/connector steps",
+      "Throughput gain from templatizing common connector/data-model patterns",
+      "Revenue and NRR impact quantified per week of go-live delay"
+    ],
+    "timeHorizon": "18 months to $16M ARR; the backlog compounds monthly, so the delivery decision is urgent",
+    "riskAppetite": "MEDIUM (board wants efficient growth; tempted to either over-hire services or slow sales, when the bottleneck may be addressable through process/automation)"
+  },
+  "businessProblem": "A Series B analytics/BI SaaS has seen implementation time-to-go-live more than double (8→19 weeks), forming a 28-customer backlog, with the 9-person services team booked 14 weeks out. The owner suspects a time-to-value/customer-success problem and considers broad CS investment or product changes. But the product is well-regarded post-go-live (CSAT 8.4, post-go-live NPS 52, NRR 102%); dissatisfaction is concentrated specifically in the waiting/implementation phase (implementation NPS 18). Sales bookings are up 40% and new starts outpace go-lives by ~3 per month, widening the backlog, while ~60% of implementation hours sit in partly-manual data-modeling and connector setup. This is a throughput/capacity bottleneck in a specialized delivery function, compounded by manual steps, that delays revenue recognition and expansion (both wait on go-live) by nearly five months. With 22 months of runway and a board demanding efficient growth, the owner must decide whether to keep selling at pace (worsening the backlog), add services capacity, or automate the bottleneck steps.",
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Implementation time-to-go-live more than doubled from 8 to 19 weeks over 12 months, a 28-customer backlog has formed, and the 9-person services team is fully booked 14 weeks out. New implementation starts outpace go-lives by ~3 per month, so the backlog compounds. This is a delivery-throughput bottleneck in a capacity-constrained specialized team.",
+      "confidence": "HIGH",
+      "source": "Implementation project tracker, services capacity model, backlog report",
+      "isCritical": true,
+      "supportingData": {
+        "ttv_prior_weeks": 8,
+        "ttv_current_weeks": 19,
+        "backlog_customers": 28,
+        "services_team_size": 9,
+        "booked_out_weeks": 14,
+        "net_backlog_growth_per_month": 3
+      }
+    },
+    {
+      "dimension": "process_design",
+      "finding": "Data-modeling and connector setup account for ~60% of implementation hours and are partly manual; dashboard build is ~25% and training ~15%. The bottleneck is concentrated in a small set of manual, repeatable steps that are strong candidates for templatization/automation, which could lift throughput without proportional headcount.",
+      "confidence": "MEDIUM",
+      "source": "Implementation time-tracking by phase, services process review",
+      "isCritical": true,
+      "supportingData": {
+        "data_modeling_connector_hours_share": "~60%",
+        "dashboard_build_share": "~25%",
+        "training_share": "~15%",
+        "manual_steps": "data modeling, connector setup"
+      }
+    },
+    {
+      "dimension": "customer_satisfaction",
+      "finding": "Dissatisfaction is phase-specific: implementation-phase NPS is 18 (low) while post-go-live NPS is 52 (high) and CSAT is 8.4/10. Customers are unhappy waiting to go live, not with the product once they do. This localizes the problem to the implementation/delivery phase, not product usability or value.",
+      "confidence": "HIGH",
+      "source": "Phase-segmented NPS/CSAT surveys",
+      "isCritical": true,
+      "supportingData": {
+        "implementation_phase_nps": 18,
+        "post_go_live_nps": 52,
+        "post_go_live_csat": "8.4/10"
+      }
+    },
+    {
+      "dimension": "go_to_market",
+      "finding": "Sales bookings are up 40% YoY and the company wins on product capability, not losing deals to larger BI vendors. However, sales is closing faster than implementation can deliver, so demand is healthy and the constraint is downstream in delivery, not acquisition. The mismatch between sales velocity and delivery throughput is widening the backlog.",
+      "confidence": "MEDIUM",
+      "source": "Sales bookings data, win/loss notes",
+      "isCritical": false,
+      "supportingData": {
+        "bookings_yoy": "+40%",
+        "deals_lost_on_capability": "low",
+        "sales_vs_delivery_mismatch": "sales outpaces delivery"
+      }
+    },
+    {
+      "dimension": "unit_economics",
+      "finding": "Revenue recognition and expansion both wait on go-live, so a 19-week implementation makes cash and NRR lag bookings by nearly five months. Gross margin is healthy at 76% and NRR is 102%, but the backlog is suppressing realized revenue and delaying the expansion that NRR depends on.",
+      "confidence": "MEDIUM",
+      "source": "Finance revenue-recognition model, NRR cohort report",
+      "isCritical": false,
+      "supportingData": {
+        "go_live_to_revenue_lag_weeks": 19,
+        "gross_margin": "76%",
+        "nrr": "102%"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Analytics / Business Intelligence",
+    "size": "Series B ($9.0M ARR, 95 employees, 120 customers, ACV $75k)",
+    "revenueImpactUrgency": "HIGH (backlog compounds monthly, delaying revenue recognition and expansion and threatening references)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (well-funded, 22-month runway, board wants efficient growth)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "MEDIUM (95 staff; services team of 9 is the binding constraint)",
+    "cashRunwayMonths": 22,
+    "legalComplianceSensitive": false
   }
 }

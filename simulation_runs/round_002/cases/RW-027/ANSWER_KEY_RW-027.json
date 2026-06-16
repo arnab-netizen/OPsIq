@@ -1,0 +1,141 @@
+{
+  "case_id": "RW-027",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (CPG Food & Beverage Finance / Gross-to-Net & Trade Management)",
+  "creation_methodology": "Expert analysis of a refrigerated CPG scale-up's gross-to-net economics. Reconciled invoiced revenue ($14.2M) to net revenue ($9.8M) to true contribution (11% blended). Decomposed the -800bps contribution decline against the door expansion (1,300 to 2,400), trade-spend doubling (9% to 18%), $0.62/unit refrigerated freight, and 7% spoilage. Compared channel contribution (DTC 44% vs. retail 4%) to isolate where value is created vs. destroyed. Diagnosed the root cause as a unit-economics breakdown in the retail channel driven by subsidized, low-velocity distribution — not a demand, product-quality, or brand problem (DTC economics remain healthy).",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "The company is buying revenue at a structural loss in its retail channel. Each incremental retail door is added with slotting and free-fill, then sustained with escalating trade promotion (now 18% of invoiced retail revenue), and burdened with $0.62/unit refrigerated freight and 7% spoilage from 90-day code life colliding with slow velocity. The result is a retail contribution margin of just 4% versus 44% on DTC, and a blended contribution margin that has fallen from 19% to 11% precisely as the door count nearly doubled. The 41% invoiced-revenue growth is therefore vanity growth: the gap between $14.2M invoiced and $9.8M net revenue ($4.4M of gross-to-net deductions) is the value being given away. The root cause is not weak demand (DTC subscribers and repeat rates are stable, DTC contribution is 44%), not product quality, and not a pricing-list error per se — it is that the retail unit economics do not work at the velocities the newer doors are achieving, and the company has scaled distribution faster than per-door economics can support. Critically, the company cannot yet see which SKUs and which door cohorts are below breakeven velocity because it has no SKU-level or door-level contribution reporting.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Burn at an all-time high ($420k/month) despite 41% revenue growth",
+      "Blended contribution margin fell from 19% to 11% in twelve months",
+      "Retail contribution margin of only 4% versus DTC 44%",
+      "7.4 months of runway with a conditional bridge"
+    ],
+    "contributing_factors": [
+      "Trade spend doubling from 9% to 18% of invoiced retail revenue to defend shelf space",
+      "$0.62/unit refrigerated freight and 7% spoilage from 90-day code life and slow velocity",
+      "Slotting/free-fill on rapid door expansion (1,300 to 2,400 doors)",
+      "No SKU-level or door-level contribution reporting, so loss-making distribution is invisible",
+      "12-month shelf and promo commitments at ~600 national doors limiting near-term exit"
+    ],
+    "true_root_cause": "The retail channel's per-door, per-SKU unit economics are negative at achieved velocities: distribution was scaled faster than each door could earn its trade, freight, and spoilage load, so growth consumes rather than generates contribution. It is a root cause (not a symptom) because the margin collapse, the burn, and the runway risk all flow from one structural fact — revenue is being bought below its fully-loaded cost in retail — and fixing surface symptoms (raising more capital, cutting headcount) would not stop the bleed while the loss-making doors and SKUs remain on shelf."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Run a 3-week door-and-SKU contribution teardown using existing data (the 2-person FP&A team plus the trade, freight, and returns ledgers already on hand). Build a fully-loaded contribution P&L for every SKU and every door cohort (by retailer and by tenure), subtracting trade spend, slotting amortization, $0.62/unit freight, and attributed spoilage. Establish the breakeven velocity threshold (units/store/week) at which a door covers its trade+freight+spoilage load, then segment all 2,400 doors into above-breakeven (keep/grow), marginal (fix or re-promote), and below-breakeven (planned exit at the next reset or contract expiry). Identify which of the 9 SKUs are contribution-negative after deductions. Deliverable in 3 weeks: a ranked margin-recovery plan that the founder can present to investors inside the 60-day window — no shelf exits or price changes executed until the teardown identifies the specific loss-makers.",
+  "action_description": "This is the FIRST action because the founder is currently flying blind: there is no SKU-level or door-level contribution view, so any immediate retreat, SKU cut, or price hike would be guessing and could breach the 600-door commitments or trip co-pack minimums. The teardown is fast (3 weeks, fits the 60-day investor window), costs nothing external (uses existing staff and ledgers, respecting the 7.4-month runway), and is non-destructive. It converts an undifferentiated 'retail loses money' conclusion into a surgical plan that protects above-breakeven doors and the healthy 44% DTC channel while excising the specific loss-makers — exactly the credible margin story the bridge requires.",
+  "accepted_alternative_actions": [
+    "Trade-spend ROI and velocity audit first: analyze lift-per-promotional-dollar by retailer and SPSW by door, then reallocate or withdraw promo from doors where promoted volume is non-incremental — acceptable because it attacks the largest contribution leak (trade 9%->18%) with the same diagnostic-before-action discipline.",
+    "Build a gross-to-net bridge and channel-level fully-loaded P&L (DTC vs. retail vs. Amazon) as the first deliverable, quantifying the $4.4M invoiced-to-net gap by driver before any operational change — acceptable because it directly produces the investor margin narrative and frames where to cut."
+  ],
+  "bad_actions": [
+    "Raising the bridge or cutting headcount to extend runway without fixing per-door economics — wrong because it funds continued below-cost selling; the company would burn the bridge and return to the same margin collapse.",
+    "Exiting the retail channel wholesale or slashing all trade spend immediately — wrong for THIS case because some doors are above breakeven and the 600 national doors carry 12-month commitments with penalties; an indiscriminate retreat destroys profitable distribution and triggers contract penalties.",
+    "Raising list price across all 9 SKUs to lift reported gross margin — wrong because the problem is gross-to-net deductions and low velocity, not list price; a price hike would further depress velocity in already-slow doors, worsening spoilage and trade-frequency demands.",
+    "Pouring more capital into DTC paid acquisition to grow the 44%-margin channel — wrong as a FIRST move because it ignores the active retail bleed, raises CAC against a flat subscriber base, and does not address the loss-making doors already on shelf."
+  ],
+  "action_constraints_respected": [
+    "Cash: 3-week teardown uses the existing 2-person FP&A team and ledgers already on hand — zero external spend against the 7.4-month runway.",
+    "Timeline: 3 weeks delivers the margin-recovery plan well inside the 60-day investor bridge window.",
+    "Contracts: diagnosis-first sequencing avoids any shelf exit or promo change before the 600-door 12-month commitments and co-pack 8,000-unit minimums are factored into the plan."
+  ],
+  "rationale": "The decisive fork is whether to act now (retreat, cut, or reprice) or diagnose first. The evidence points clearly at a retail unit-economics breakdown: contribution collapsed in lock-step with door expansion and trade-spend doubling, while the DTC channel the company controls remains at 44% with stable demand. But the company lacks the SKU- and door-level granularity to know which specific doors and SKUs are below breakeven. Acting without that view risks breaching shelf commitments and killing profitable distribution. The teardown is the only first move that is fast, free, non-destructive, and directly produces the investor-ready margin story — making it superior to capital-raising, blanket retail retreat, or pricing changes.",
+  "evidence_basis": [
+    "financial_health: invoiced revenue +41% to $14.2M but net revenue only $9.8M and blended contribution fell 19%->11% — revenue bought with margin.",
+    "unit_economics: retail contribution 4% vs. DTC 44%, with door count nearly doubling 1,300->2,400 over the same period the margin eroded.",
+    "operational_efficiency: trade spend 9%->18%, freight $0.62/unit, spoilage 7% from 90-day code life — the specific drivers of the gross-to-net gap.",
+    "market_position: DTC subscribers flat at 9,000 with 44% contribution and stable repeat — demand and product are healthy, isolating the problem to retail economics."
+  ],
+  "evidence_not_explained": [
+    "The exact distribution of loss across SKUs and door cohorts is unknown until the teardown runs — the diagnosis identifies the channel and mechanism but not yet the specific loss-makers.",
+    "Whether any portion of trade-promoted volume is incremental (true lift) versus pure subsidy of base volume cannot be confirmed without the lift-per-dollar analysis."
+  ],
+  "alternative_explanations": [
+    "GO_TO_MARKET_MISALIGNMENT (wrong channel strategy entirely): weaker here because DTC works at 44% and some retail doors are likely above breakeven; the issue is economics-by-door, not a wholesale channel mismatch — the fix is rationalization, not abandoning retail.",
+    "DEMAND_FORECASTING_MISMATCH (overproduction causing spoilage): weaker because spoilage is tied to slow velocity in newer doors and 90-day code life, not to a forecasting/production overrun; co-pack runs are made-to-order against minimums, and DTC demand is stable.",
+    "CASH_RUNWAY_CRISIS (the core problem is liquidity): this is a downstream symptom, not the root — the 7.4-month runway is the consequence of below-cost selling; financing without fixing economics would not resolve the contribution collapse."
+  ],
+  "missing_evidence": [
+    "Units/store/week velocity by retailer and door tenure to set the breakeven threshold and segment the 2,400 doors.",
+    "SKU-level contribution after trade, freight, and spoilage to identify contribution-negative SKUs among the 9.",
+    "Trade-spend lift-per-dollar by retailer to separate incremental from subsidized volume.",
+    "Spoilage attribution by door/region/SKU to confirm whether velocity or distribution overreach drives the 7% returns."
+  ],
+  "success_metrics": [
+    "Fully-loaded contribution P&L exists for all 9 SKUs and all 2,400 doors within 3 weeks.",
+    "Breakeven velocity threshold defined and every door classified keep/fix/exit.",
+    "Identified loss-making doors and SKUs sized at a contribution-recovery value sufficient to move blended CM toward 20%.",
+    "Investor-ready margin-recovery plan delivered inside the 60-day bridge window with no breach of shelf or co-pack commitments."
+  ],
+  "expected_outcome": "The teardown will show that a minority of fast-velocity doors and 3-5 SKUs carry healthy contribution, while a large tail of recently added low-velocity natural-channel doors (and 2-3 contribution-negative SKUs) destroy the blend through trade, freight, and spoilage. Acting on this — sunsetting below-breakeven doors at the next reset/contract expiry, pulling non-incremental promo, and rationalizing loss-making SKUs at co-pack run boundaries — lifts blended contribution back toward and past 20%, gives investors a credible path, and unlocks the bridge without sacrificing the healthy DTC channel or breaching the 600-door commitments.",
+  "automatic_fail_conditions": [
+    "Recommends raising capital, cutting headcount, or otherwise extending runway as the FIRST action without addressing the negative per-door retail economics.",
+    "Recommends exiting all retail or zeroing trade spend immediately, ignoring above-breakeven doors and the 600-door 12-month commitments with penalties.",
+    "Diagnoses the case as a demand, brand, or product-quality problem despite DTC contribution of 44% with stable subscribers and repeat rates.",
+    "Recommends an across-the-board list-price increase to fix a gross-to-net (trade/freight/spoilage) and velocity problem."
+  ],
+  "source_references": [
+    "Refrigerated CPG beverage gross-to-net patterns analogous to public disclosures and trade-press coverage of the Califia Farms / High Brew / Chameleon Cold-Brew challenger cohort.",
+    "SPINS/IRI natural-channel velocity benchmarks (units/store/week) and refrigerated SKU breakeven-velocity conventions.",
+    "CPG trade-spend management benchmarks (trade as % of gross sales, slotting/free-fill amortization, lift-per-promotional-dollar analysis).",
+    "Refrigerated DSD/LTL freight and short-code spoilage benchmarks for 90-day code-life beverages."
+  ],
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does the engine diagnose UNIT_ECONOMICS_BREAKDOWN driven by negative per-door retail economics, not a demand/brand/pricing-list problem?",
+      "rubric_10": "Diagnoses UNIT_ECONOMICS_BREAKDOWN: revenue is bought below fully-loaded cost in retail (CM 4% vs. DTC 44%); contribution fell 19%->11% in lock-step with the 1,300->2,400 door expansion and trade 9%->18%, with freight and 7% spoilage compounding it.",
+      "rubric_8": "Identifies that retail unit economics are negative and dragging the blend, even if not labeled exactly UNIT_ECONOMICS_BREAKDOWN.",
+      "rubric_6": "Notes the contribution-margin collapse and trade-spend bloat but is vague on whether the cause is channel economics vs. demand.",
+      "rubric_4": "Focuses on top-line growth or pricing without isolating the gross-to-net/per-door economics.",
+      "rubric_2": "Attributes the problem to weak demand or product despite the healthy 44% DTC channel.",
+      "rubric_0": "Misses the margin collapse entirely or offers an unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does the engine recommend a fast, non-destructive SKU/door contribution teardown (breakeven velocity segmentation) before any retreat, cut, or price change?",
+      "rubric_10": "Recommends a ~3-week fully-loaded SKU-and-door contribution teardown using existing FP&A/ledgers, defining breakeven velocity and classifying all 2,400 doors keep/fix/exit before acting.",
+      "rubric_8": "Recommends a contribution/trade-ROI or channel P&L diagnostic before structural action.",
+      "rubric_6": "Recommends some analysis but pairs it with premature action or omits the velocity/breakeven framing.",
+      "rubric_4": "Jumps to cutting trade, exiting doors, or raising price with thin analysis.",
+      "rubric_2": "Recommends capital raise or headcount cuts as the primary first move.",
+      "rubric_0": "Recommends an action that breaches commitments or accelerates the bleed."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect refrigerated-CPG scale-up reality (gross-to-net, slotting, code-life spoilage, co-pack minimums, bridge window)?",
+      "rubric_10": "Action is specific to refrigerated CPG: trade spend, slotting amortization, $0.62 freight, 90-day code-life spoilage, co-pack minimums, and the 60-day bridge are all reflected.",
+      "rubric_6": "Action is relevant to a CPG margin problem but generic on the refrigerated/trade specifics.",
+      "rubric_2": "Action could apply to any company with thin margins.",
+      "rubric_0": "Action is irrelevant to the context."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect 7.4-month runway, 2-person FP&A, 60-day window, and the 600-door 12-month shelf commitments?",
+      "rubric_10": "Uses existing staff/ledgers (no external cost), delivers in 3 weeks inside the 60-day window, and explicitly sequences around the 600-door commitments and co-pack minimums.",
+      "rubric_6": "Respects the major constraints with minor tension.",
+      "rubric_2": "Largely ignores runway, staffing, or contract constraints.",
+      "rubric_0": "Action is infeasible or breaches the shelf/co-pack commitments."
+    },
+    "evidence_traceability": {
+      "criterion": "Are the diagnosis claims traceable to the case numbers?",
+      "rubric_10": "Traces invoiced $14.2M vs. net $9.8M, CM 19%->11%, retail 4% vs. DTC 44%, doors 1,300->2,400, trade 9%->18%, freight $0.62, spoilage 7%.",
+      "rubric_6": "Cites the main metrics with some inference.",
+      "rubric_2": "Minimal traceability to the specific figures.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence in the diagnosis (with acknowledged uncertainty on the specific loss-makers) appropriate?",
+      "rubric_10": "HIGH confidence on the mechanism (retail unit-economics breakdown) is justified by the tight co-movement of margin, doors, and trade, while correctly flagging that the specific loss-making SKUs/doors await the teardown.",
+      "rubric_6": "Confidence is broadly reasonable but conflates certainty about the mechanism with certainty about the specific fixes.",
+      "rubric_2": "Confidence is poorly calibrated to the evidence.",
+      "rubric_0": "Confidence is inverted relative to the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action non-destructive (diagnose before exiting doors, cutting trade, or repricing)?",
+      "rubric_10": "Action is diagnostic and reversible; no shelf exits, promo cuts, or price changes are executed before loss-makers are identified.",
+      "rubric_0": "Action executes irreversible retreats, trade cuts, or price changes without diagnosis, risking penalties and loss of profitable distribution."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

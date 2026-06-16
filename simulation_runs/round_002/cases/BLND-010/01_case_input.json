@@ -2,9 +2,142 @@
   "caseId": "BLND-010",
   "caseType": "BLIND_OUTCOME",
   "industry": "Professional Services / Consulting",
+  "businessModel": "Boutique management-consulting firm billing senior expertise on time-and-materials and fixed-fee engagements to mid-market and enterprise clients; partner-led delivery, project-based revenue",
+  "businessStage": "Established, profitable, partner-owned, growth plateauing; evaluating a strategic direction for the next phase",
+  "sourceNote": "Blind-outcome case designed to test forward-looking strategic decision quality at a growth-direction fork. The firm must choose among three viable strategies to break a growth plateau. Scoring assesses whether the engine's reasoning is sound given only what is knowable at decision time; the actual outcome (which strategy was chosen and how it performed) is withheld from this input and recorded only in the answer key for reference. Figures are realistic and representative.",
   "ownerIntake": {
-    "businessType": "Boutique consulting firm, $20M revenue, 15% EBITDA margin, growth plateauing",
-    "stage": "Choice: (A) consolidate (acquire smaller competitors, build scale, target Series B for growth), (B) specialize deeper (focus on niche, build thought leadership, accept slower growth), (C) pivot to services (add implementation/managed services to consulting, higher margin)",
-    "ownerGoal": "Decide strategic direction; outcome will determine firm trajectory for next decade"
+    "businessType": "Boutique management-consulting firm, founded 2011, ~6 equity partners plus ~95 consultants/staff. Sells strategy and operational-improvement advisory to mid-market and enterprise clients across a handful of industry verticals. Revenue is project-based; reputation is partner-driven and referral-led.",
+    "stage": "Revenue $20M, growth slowed to ~6% YoY (was ~18% three years ago). EBITDA margin 15% ($3M). Utilization ~68% (target 75%+). Average billing rate flat for two years. Repeat-client revenue ~55% of total; top 10 clients ~45% of revenue. ~120 total headcount.",
+    "ownerGoal": "Break the growth plateau and durably raise both growth and margin over a 3-5 year horizon while protecting the partners' reputation and quality, choosing among scaling via acquisition, deepening into a niche, or extending into higher-margin implementation/managed services; partners want a clear direction within ~one quarter to set the next fiscal-year plan and partner compensation model.",
+    "ownerConstraints": [
+      "Partner-capacity constraint: The 6 partners are already near full delivery load; any strategy requiring significant new partner time (selling, integrating, or managing a new line) competes directly with billable work and current margin.",
+      "Capital constraint: Self-funded with ~$2.5M cash and conservative partners; an acquisition-led roll-up would require outside growth capital (Option A references a Series B-style raise), which dilutes partner control and changes governance.",
+      "Talent constraint: Growth is gated by senior-consultant hiring in a tight market; utilization is below target (68%) yet senior capacity to staff larger or different work is the binding constraint.",
+      "Reputation/quality constraint: The firm's brand rests on senior, high-touch delivery; any move that dilutes quality or over-leverages junior staff risks the referral engine that drives ~55% repeat revenue.",
+      "Decision-window constraint: Partners want a committed direction within ~one quarter to lock the FY plan, hiring, and a revised partner-compensation model aligned to the chosen strategy."
+    ],
+    "immediateConcern": "Growth has plateaued (18% -> 6% YoY) with flat billing rates and sub-target utilization (68%), and the partners are at delivery capacity. They must choose a direction within roughly one quarter: (A) consolidate by acquiring smaller competitors to build scale (likely requiring outside growth capital and a Series B-style raise), (B) specialize deeper into a defensible niche to command pricing power and thought leadership (slower top-line growth but higher rates), or (C) pivot to add implementation/managed services alongside advisory to capture higher-margin, more recurring revenue. It is not yet clear whether the plateau is a pricing/positioning problem, a market-demand problem, or a delivery-model problem, and that diagnosis should determine which strategy fits.",
+    "availableData": [
+      "Revenue $20M; growth ~6% YoY (was ~18% three years ago); EBITDA margin 15%; utilization ~68% (target 75%+)",
+      "Pricing: average billing rate flat for ~2 years; win rate on competitive proposals ~32%; ~20% of losses cite price, ~35% cite 'lacked specific industry depth/proof'",
+      "Client mix: repeat-client revenue ~55%; top 10 clients ~45% of revenue; net revenue per client roughly flat",
+      "Margin structure: advisory gross margin ~38%; partners near full utilization; leverage ratio (junior:senior) lower than larger competitors",
+      "Option references: an identified acquisition target list of 2-3 sub-$5M boutiques (Option A); a niche vertical where the firm already wins ~50% of proposals and has 3 marquee references (Option B); recurring managed-services pilots requested by 2 existing clients (Option C)",
+      "Market: overall advisory demand growing modestly; clients increasingly asking for help executing recommendations, not just producing them"
+    ],
+    "unavailableData": [
+      "True driver of the plateau: how much is pricing/positioning (winnable at higher rates), how much is demand softness, and how much is delivery-capacity/model constraint",
+      "Willingness-to-pay and pricing power in the candidate niche if the firm specialized and invested in thought leadership",
+      "Unit economics and margin of a managed-services line at scale (the pilots are too small to be representative; staffing model, churn, and gross margin unknown)",
+      "Integration economics and cultural fit of the acquisition targets, and the real terms/dilution of the outside growth capital required",
+      "Whether sub-target utilization (68%) reflects a demand/sales-pipeline gap or a partner-bandwidth/staffing-mix problem"
+    ],
+    "timeHorizon": "~One quarter (90 days) to commit a direction and set the FY plan, hiring, and partner-compensation model; 3-5 years for the strategy to play out",
+    "riskAppetite": "MEDIUM-LOW (conservative, self-funded partners protective of reputation, control, and current profitability; wary of dilution and quality dilution)"
+  },
+  "businessProblem": "A profitable $20M boutique consulting firm has hit a growth plateau (18% -> 6% YoY) with flat billing rates, sub-target utilization (~68%), and partners at full delivery capacity. To durably raise growth and margin it must choose a direction within ~90 days among (A) consolidating via acquisitions of smaller competitors to build scale (requiring outside growth capital and dilution), (B) specializing deeper into a defensible niche to win pricing power and thought leadership (slower top-line but higher rates), or (C) pivoting to add implementation/managed services for higher-margin, more recurring revenue (new delivery model and unproven economics). The choice is partly irreversible (a capital raise and roll-up, a brand repositioning, or a delivery-model build all reshape the firm and its partner-compensation model), and it is not yet established whether the plateau is fundamentally a pricing/positioning problem, a demand problem, or a delivery-capacity/model problem - which is precisely what should determine the right strategy.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "The plateau is most visibly a pricing/yield problem, not a cost or demand collapse. Revenue growth fell from ~18% to ~6% while the average billing rate has been flat for two years and net revenue per client is roughly flat; meanwhile loss analysis shows ~35% of competitive losses cite 'lacked specific industry depth/proof' versus only ~20% citing price. This pattern - flat rates plus depth-driven losses - points to under-monetized, insufficiently differentiated positioning rather than a market that has stopped buying.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "Financial reporting, win/loss analysis, billing-rate history",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_growth_now": "6% YoY",
+        "revenue_growth_3yr_ago": "18% YoY",
+        "billing_rate_trend": "flat 2 years",
+        "win_rate": "32%",
+        "loss_reason_depth": "35%",
+        "loss_reason_price": "20%",
+        "net_rev_per_client": "roughly flat"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "There is a concrete, defensible niche signal. In one industry vertical the firm already wins ~50% of proposals (vs ~32% overall) and holds 3 marquee references, and the market is increasingly asking firms to help execute recommendations, not just produce them. This suggests differentiated depth commands both higher win rates and likely higher rates, but the firm has not tested its willingness-to-pay or pricing power if it leaned fully into specialization.",
+      "confidence": "MEDIUM",
+      "source": "Proposal-win analytics by vertical, client-demand signals",
+      "isCritical": true,
+      "supportingData": {
+        "niche_win_rate": "~50%",
+        "overall_win_rate": "~32%",
+        "marquee_references": "3",
+        "demand_shift": "clients want execution help, not just advice"
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Delivery capacity and model are a binding constraint that shapes which strategy is feasible. Utilization is below target (68%) yet the 6 partners are near full load and the junior:senior leverage ratio is lower than larger competitors, so the firm cannot simply 'sell more' of the current model without either raising leverage (quality risk) or adding senior capacity (tight market). It is not yet known whether the 68% utilization reflects a sales-pipeline gap or a partner-bandwidth/staffing-mix problem, which matters for all three options.",
+      "confidence": "MEDIUM",
+      "source": "Utilization tracking, staffing-model review",
+      "isCritical": true,
+      "supportingData": {
+        "utilization": "68%",
+        "utilization_target": "75%+",
+        "partner_load": "near full",
+        "leverage_ratio": "below larger competitors"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "The referral/repeat engine is healthy and is the asset most at risk from a poorly chosen strategy. Repeat-client revenue is ~55% and top 10 clients are ~45% of revenue, and two existing clients have requested recurring managed-services pilots. This shows client trust and an organic pull toward execution/managed services, but it also means concentration and brand-quality risk: a roll-up that dilutes culture, or a managed-services pivot with weak unit economics, could damage the referral engine that sustains the firm.",
+      "confidence": "MEDIUM",
+      "source": "Client revenue analysis, inbound service requests",
+      "isCritical": false,
+      "supportingData": {
+        "repeat_revenue_share": "55%",
+        "top10_concentration": "45%",
+        "managed_services_pilot_requests": "2 existing clients"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "The economics that would decide between the options are unquantified. The pricing power achievable through specialization, the at-scale gross margin and staffing model of a managed-services line, and the integration economics/dilution of an acquisition roll-up are all unknown; the managed-services 'evidence' is two small pilots, and the niche pricing power is inferred from win rate, not tested. No option can be ranked on financial merit yet.",
+      "confidence": "HIGH",
+      "source": "FP&A gap assessment, pilot economics review",
+      "isCritical": true,
+      "supportingData": {
+        "niche_pricing_power_tested": "no",
+        "managed_services_margin_at_scale": "unknown",
+        "acquisition_integration_economics": "unknown",
+        "outside_capital_terms": "unknown"
+      }
+    }
+  ],
+  "strategicOptions": [
+    {
+      "optionId": "Option_A_Consolidate_Acquire",
+      "description": "Pursue scale by acquiring 2-3 sub-$5M boutique competitors, funded by an outside growth raise (Series B-style), to build size, broaden capabilities, and increase market presence.",
+      "rationale": "Fastest route to top-line scale and broader capability. Best if the plateau is fundamentally a scale/market-presence problem and integration can be executed without diluting the brand and culture that drive referrals.",
+      "implementationRisk": "HIGH (requires outside capital and partner dilution/governance change, heavy partner time for integration against full delivery load, cultural and quality-dilution risk to the referral engine)",
+      "timelineIfChosen": "12-24 months to raise, acquire, and integrate"
+    },
+    {
+      "optionId": "Option_B_Specialize_Niche",
+      "description": "Specialize deeper into the defensible vertical where the firm already wins ~50% of proposals, investing in thought leadership and proof, repricing for depth, and accepting slower overall top-line growth in exchange for higher rates and win rates.",
+      "rationale": "Directly addresses the depth-driven losses and flat pricing, and is the lowest-capital, most-control-preserving path. Best if the plateau is a positioning/pricing-power problem and the niche willingness-to-pay supports premium rates.",
+      "implementationRisk": "MEDIUM (narrows the addressable market and forgoes some breadth; pricing power is inferred from win rate, not yet tested; slower headline growth may concern partners)",
+      "timelineIfChosen": "6-12 months to reposition and prove premium pricing"
+    },
+    {
+      "optionId": "Option_C_Add_Managed_Services",
+      "description": "Extend into implementation/managed services alongside advisory to capture higher-margin, more recurring revenue, building a new delivery model and leverage structure to serve the growing client demand for execution help.",
+      "rationale": "Aligns with the observed client pull toward execution and could add recurring, higher-leverage revenue. Best if the managed-services unit economics and staffing model prove out at scale without harming advisory quality.",
+      "implementationRisk": "HIGH (new delivery model and leverage structure, unproven at-scale margin and churn, partner-bandwidth demand to stand up, risk of distracting from or diluting the advisory brand)",
+      "timelineIfChosen": "9-18 months to build and validate the managed-services economics"
+    }
+  ],
+  "clientContext": {
+    "industry": "Professional Services / Consulting (boutique advisory)",
+    "size": "established boutique ($20M revenue, 15% EBITDA, ~120 staff, 6 equity partners, self-funded)",
+    "revenueImpactUrgency": "MEDIUM-HIGH (no crisis, but a multi-year growth plateau with flat pricing; the direction chosen this quarter reshapes hiring, partner compensation, and the firm's trajectory)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (~$2.5M cash, self-funded; the roll-up option requires dilutive outside capital)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (~120 staff but 6 partners near full load; senior hiring is the binding constraint)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
   }
 }

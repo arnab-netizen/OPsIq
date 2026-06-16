@@ -1,10 +1,115 @@
 {
   "caseId": "SYN-015",
   "caseType": "SYNTHETIC",
-  "industry": "Cybersecurity",
+  "industry": "Cybersecurity (Cloud Security)",
+  "businessModel": "B2B cloud security SaaS (cloud posture management + workload protection) sold to mid-market and lower-enterprise security teams; annual subscriptions, sales-led motion.",
+  "businessStage": "Series B, Late Growth Stage",
+  "sourceNote": "Synthetic stress-test case engineered to stress the engine's ability to recognize a DEMAND_FORECASTING_MISMATCH: a company whose growth plan assumed continued category expansion, but where the addressable demand in its current ICP is saturating and the budget cycle is shifting. The owner frames it as 'sales efficiency and differentiation.' Tests whether the engine resists the internal-execution framing and recognizes a demand/market-sizing problem. Not historical; metrics representative.",
   "ownerIntake": {
-    "businessType": "Cloud security platform, $10M ARR, 40% growth, but customer acquisition slowing (sales cycle extending)",
-    "stage": "Competitive landscape crowded, product feature parity increasing, sales efficiency declining",
-    "ownerGoal": "Improve sales efficiency and market differentiation"
+    "businessType": "Cloud security platform (cloud security posture management + workload protection) for mid-market and lower-enterprise security teams. Founded 2018, total raised $55M (Series B 2023). Annual subscriptions, sales-led. Current ARR $10.0M, 40% YoY growth (decelerating from 70% two years ago), 140 customers.",
+    "stage": "ARR $10.0M, 40% YoY growth (down from 70% then 55%). Net retention healthy at 116%; gross retention 97%. New-logo bookings flat YoY despite a 35% larger sales team. Sales cycle extended from 95 to 165 days. Win rate fell from 28% to 18%. Pipeline conversion declining at the top of funnel. Cash runway 30 months.",
+    "ownerGoal": "Restore new-logo growth and sales efficiency; reach $20M ARR within 18 months to support an eventual Series C or exit.",
+    "ownerConstraints": [
+      "Funding constraint: $55M raised, 30-month runway; board expects efficient growth, so adding more reps without fixing efficiency is discouraged.",
+      "Product constraint: platform is feature-complete versus the mid-market ICP; building enterprise-grade features (identity, multi-cloud governance) for up-market is a 2-3 quarter effort.",
+      "Organizational constraint: 90 staff (28 engineering, 30 go-to-market including 18 quota reps, 12 customer success, rest G&A). Sales team grew 35% in the last year with flat output.",
+      "Market constraint: the mid-market cloud-security category has matured; most target accounts in the current ICP already have a CSPM solution, and three large platform vendors now bundle CSPM into broader suites at low incremental price.",
+      "Commercial constraint: budget for standalone cloud-security tools in the mid-market is consolidating into platform suites; security buyers increasingly prefer consolidation over best-of-breed point tools."
+    ],
+    "immediateConcern": "New-logo growth has stalled (bookings flat YoY) even though the sales team grew 35%, the sales cycle has lengthened from 95 to 165 days, and win rate dropped from 28% to 18%. The owner believes the sales org is inefficient and the product has lost differentiation, and wants to hire more senior reps and add features. But retention is excellent (NRR 116%, gross 97%), which contradicts a product-quality story; the deceleration tracks a maturing mid-market where most ICP accounts already own a CSPM tool and budgets are consolidating into bundled platforms. The owner must decide in the next quarter whether to keep scaling the current ICP sales motion or re-aim demand generation at a different segment/use case before the board reviews efficiency.",
+    "availableData": [
+      "Financial: ARR $10.0M, 40% YoY growth (was 70%→55%→40%), gross margin 79%, burn supports 30-month runway",
+      "Retention: NRR 116%, gross retention 97% (both healthy and stable)",
+      "Acquisition: new-logo bookings flat YoY despite 35% larger sales team; sales cycle 95→165 days; win rate 28%→18%",
+      "Pipeline: top-of-funnel lead-to-opportunity conversion down 30%; MQL volume down 20% YoY in current ICP segment",
+      "Market: ~78% of current-ICP target accounts already have a CSPM solution (third-party estimate); 3 large platform vendors now bundle CSPM",
+      "Competitive: losses increasingly to 'platform consolidation' (62% of recent losses) rather than head-to-head feature comparison (21%)"
+    ],
+    "unavailableData": [
+      "Quantified total addressable market remaining in the current ICP after saturation",
+      "Win-rate and cycle by segment (mid-market vs lower-enterprise vs new verticals)",
+      "Willingness-to-pay for best-of-breed vs bundled platform among current ICP buyers",
+      "Demand signal in adjacent segments or use cases not yet targeted"
+    ],
+    "timeHorizon": "18 months to $20M ARR; the demand/segment decision must be made within one quarter to re-aim pipeline generation",
+    "riskAppetite": "MEDIUM (board wants efficient growth; the owner is tempted toward expensive sales hiring and feature investment that may not address a demand-sizing issue)"
+  },
+  "businessProblem": "A Series B cloud-security SaaS has decelerated from 70% to 40% growth with new-logo bookings flat YoY despite a 35% larger sales team, a sales cycle stretched from 95 to 165 days, and win rate falling from 28% to 18%. The owner reads this as sales inefficiency and lost differentiation and wants to hire senior reps and add features. But retention is excellent (NRR 116%, gross 97%), undercutting a product-quality narrative, and the deceleration mirrors a maturing market: roughly 78% of current-ICP accounts already own a CSPM tool, MQL volume in that segment is down 20%, and 62% of recent losses are to 'platform consolidation' rather than feature comparison. The growth plan assumed continued category expansion that is no longer there. With 30 months of runway and a board demanding efficient growth, the owner must decide within a quarter whether to keep scaling into a saturating ICP or re-aim demand at a different segment or use case.",
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "The current mid-market ICP is saturating: a third-party estimate indicates ~78% of target accounts already have a CSPM solution, and MQL volume in this segment is down 20% YoY. Three large platform vendors now bundle CSPM into broader suites, shifting buyer preference toward consolidation. The pool of un-penetrated, in-budget demand in the current ICP is shrinking.",
+      "confidence": "MEDIUM",
+      "source": "Third-party market estimate, marketing MQL analytics, competitive landscape review",
+      "isCritical": true,
+      "supportingData": {
+        "icp_accounts_already_with_cspm": "~78%",
+        "mql_volume_yoy": "-20%",
+        "bundling_vendors": 3
+      }
+    },
+    {
+      "dimension": "go_to_market",
+      "finding": "New-logo bookings are flat YoY despite a 35% larger sales team, the sales cycle extended from 95 to 165 days, and win rate fell from 28% to 18%. Top-of-funnel lead-to-opportunity conversion is down 30%. Adding capacity produced no incremental output, indicating the constraint is upstream demand, not rep productivity per se.",
+      "confidence": "HIGH",
+      "source": "CRM bookings and conversion data, sales capacity model",
+      "isCritical": true,
+      "supportingData": {
+        "bookings_yoy": "flat",
+        "sales_team_growth": "+35%",
+        "sales_cycle_prior_days": 95,
+        "sales_cycle_current_days": 165,
+        "win_rate_prior": "28%",
+        "win_rate_current": "18%",
+        "tofu_conversion_change": "-30%"
+      }
+    },
+    {
+      "dimension": "competitive_dynamics",
+      "finding": "Recent losses are increasingly attributed to 'platform consolidation' (62% of losses) rather than head-to-head feature comparison (21%). Buyers are not rejecting the product on capability; they are choosing to consolidate cloud security into broader platforms they already own. This is a demand/budget-allocation shift, not a feature gap.",
+      "confidence": "MEDIUM",
+      "source": "Win/loss analysis, loss-reason coding",
+      "isCritical": true,
+      "supportingData": {
+        "loss_reason_consolidation": "62%",
+        "loss_reason_feature": "21%",
+        "loss_reason_price": "17%"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Retention is excellent and stable: NRR 116%, gross retention 97%. Existing customers value and expand on the product, which contradicts a product-quality or differentiation-collapse explanation for the new-logo stall. The problem is in finding new in-budget demand, not in the product's value to those who buy it.",
+      "confidence": "HIGH",
+      "source": "NRR cohort report, gross retention ledger",
+      "isCritical": true,
+      "supportingData": {
+        "nrr": "116%",
+        "gross_retention": "97%"
+      }
+    },
+    {
+      "dimension": "unit_economics",
+      "finding": "Gross margin is healthy at 79% and runway is 30 months, so the business is not in an economics crisis; however, CAC per new logo has risen sharply because a larger team is closing the same number of deals over longer cycles, which is the efficiency symptom the board is watching.",
+      "confidence": "MEDIUM",
+      "source": "Finance CAC and efficiency model",
+      "isCritical": false,
+      "supportingData": {
+        "gross_margin": "79%",
+        "runway_months": 30,
+        "cac_trend": "rising (flat output, larger team, longer cycle)"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Cybersecurity (Cloud Security)",
+    "size": "Series B ($10.0M ARR, 90 employees, 140 customers)",
+    "revenueImpactUrgency": "HIGH (new-logo stall threatens the $20M ARR plan and board efficiency review)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (well-funded, 30-month runway, but board demands efficient growth)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (90 staff; sales already grew 35% with flat output)",
+    "cashRunwayMonths": 30,
+    "legalComplianceSensitive": true
   }
 }

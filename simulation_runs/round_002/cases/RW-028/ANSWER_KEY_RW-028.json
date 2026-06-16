@@ -1,0 +1,141 @@
+{
+  "case_id": "RW-028",
+  "answer_creator": "Domain Expert (Home-Services Operations / PE Buy-and-Build Integration)",
+  "answer_creation_date": "2026-06-16",
+  "creation_methodology": "Expert analysis of a PE-backed home-services rollup's post-acquisition operating decay. Separated acquired growth (+52% consolidated) from organic growth (+3% same-branch) to rule out a demand story. Benchmarked the binding operating metric — technician billable utilization at 58% vs. 70-75% — and revenue per truck ($367k vs. $430k prior, $525k top-quartile) to locate lost capacity. Traced the utilization loss to the integration gap (3 of 6 branches on separate dispatch software, no unified scheduling, no normalized KPI scorecard) and the dispersion in membership attachment (41% vs. <12%). Diagnosed an operational bottleneck in dispatch/scheduling and capacity utilization, not acquisition dilution or pricing.",
+  "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK",
+  "root_cause_description": "The platform is destroying its own productivity in post-acquisition operations: technician billable utilization has fallen to 58% (vs. 70-75% benchmark) and revenue per truck has dropped from $430k to $367k because dispatching and scheduling are fragmented and undisciplined across branches. Three of six acquired branches still run separate field-service software with no unified scheduling and no normalized KPI scorecard, so the platform cannot balance load, fill idle technician hours, enforce jobs-per-day discipline, or smooth demand across branches. The result is the same trucks and technicians producing far less billable output. This is an integration-execution failure, not acquisition dilution (the question of whether bought businesses were inherently weak is unresolved but secondary — the binding constraint is throughput per truck), and not a pricing or demand problem (organic same-branch revenue is positive at +3%; the issue is capacity left on the table, not lost demand). The low membership attachment at acquired branches (<12% vs. 41%) compounds the bottleneck by leaving shoulder-season capacity idle, but it too is a controllable operational discipline. The 350bps EBITDA-margin erosion flows directly from spreading the fixed cost of trucks, technicians, and overhead across too few billable hours.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Consolidated EBITDA margin down 350bps (13% to 9.5%) despite 52% revenue growth",
+      "Revenue per truck fell from $430k to $367k",
+      "Organic same-branch growth nearly flat at +3%",
+      "Leverage at 4.6x with a recap thesis at risk"
+    ],
+    "contributing_factors": [
+      "Three of six acquired branches on separate dispatch software with no unified scheduling or cross-branch capacity view",
+      "No normalized branch-level KPI scorecard (utilization, jobs/tech/day, first-time-fix, callbacks not comparable)",
+      "Membership-plan attachment as low as <12% at acquired branches vs. 41% on platform, leaving demand lumpy and shoulder-season capacity idle",
+      "Thin integration team (2 leads for 6 bolt-ons) and semi-autonomous branch managers under earn-outs limiting standardization",
+      "Tight technician labor market (9-week time-to-fill) making it impossible to grow out of the problem by hiring"
+    ],
+    "true_root_cause": "A dispatch/scheduling and capacity-utilization bottleneck created by failed operational integration: billable hours per technician are well below benchmark because the platform cannot see or balance capacity across fragmented, non-standardized branches. It is the root cause (not a symptom) because the margin erosion, the revenue-per-truck decline, and the recap risk all reduce to one fact — installed labor and fleet capacity are under-utilized — and they cannot be fixed by more acquisitions, price increases, or refinancing while utilization stays at 58%."
+  },
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Stand up a normalized branch-level operating scorecard and a 4-week dispatch-utilization diagnostic across all 11 branches before any software migration or pricing move. Using data extractable from each system today (timecards, work orders, dispatch logs — even where systems differ), compute for every branch: technician billable utilization, jobs per tech per day, drive-time, first-time-fix rate, callback rate, average ticket, and membership attachment. Rank branches and isolate where the 58% blended utilization is lost (which branches, which crews, shoulder-season idle hours vs. peak overflow). Identify the 3-4 quick-win scheduling levers (load-balancing across nearby branches, dispatch board discipline, membership-call prioritization) implementable without the full software migration, and quantify the EBITDA recovery from moving utilization toward 68-70%. Deliverable in 4 weeks: a branch-ranked utilization-recovery plan that sequences quick operational wins ahead of, and de-risks, any platform-wide dispatch-software consolidation.",
+  "action_description": "This is the FIRST action because the platform currently has no normalized cross-branch view, so it cannot tell whether the 58% utilization is a few bad branches or a systemic discipline gap — and committing first to an expensive, multi-month dispatch-software migration (the tempting move) would be guessing and could destabilize semi-autonomous branches still in earn-out. The scorecard/diagnostic is fast (4 weeks), uses data already captured, and respects the thin integration team. It both produces the recap-credible margin-recovery story and correctly sequences cheap scheduling-discipline wins ahead of the costly system consolidation, converting a vague 'integration is hard' conclusion into branch-specific actions.",
+  "accepted_alternative_actions": [
+    "Run a dispatch-discipline pilot at the 2-3 lowest-utilization branches (standardized scheduling board, drive-time optimization, membership-call prioritization) for 30 days, measure the utilization lift, then scale the playbook — acceptable because it tests the operational fix cheaply before platform-wide investment and respects earn-out autonomy.",
+    "Launch a membership-attachment standardization sprint at the <12% branches (call-script, technician incentive, and offer parity with the 41% platform branches) to smooth shoulder-season demand and lift utilization — acceptable as a high-leverage operational lever, though slightly narrower than the full diagnostic."
+  ],
+  "bad_actions": [
+    "Greenlighting a full platform-wide dispatch-software migration as the first move — wrong for THIS case because it is expensive and multi-month, the integration team is only 2 people, branches are semi-autonomous under earn-outs, and the diagnostic to know which branches and levers matter has not been run; migration is a later step, not the first.",
+    "Acquiring more bolt-ons to grow EBITDA into the recap — wrong because organic utilization is the broken lever; adding branches at 58% utilization dilutes margin further and increases integration debt under 4.6x leverage.",
+    "Raising prices/labor rates across all branches to lift revenue per truck — wrong because the revenue-per-truck shortfall is a billable-hours (utilization) problem, not a pricing problem; a price shock during earn-outs risks demand loss and does not fill idle capacity.",
+    "Mass-hiring technicians to add capacity — wrong because utilization is already only 58%; adding heads with a 9-week time-to-fill worsens the fixed-cost-per-billable-hour problem rather than fixing throughput."
+  ],
+  "action_constraints_respected": [
+    "Staffing: the 4-week diagnostic uses data already captured and the existing 2-lead integration team plus branch data owners — no migration burden up front.",
+    "Earn-outs/autonomy: a scorecard and pilot respect semi-autonomous branch managers and avoid a disruptive system change during active earn-out periods.",
+    "Leverage/recap timing: cheap, fast operational levers begin EBITDA recovery within the 90-day window so margin improvement is demonstrably underway before the 12-15 month recap."
+  ],
+  "rationale": "The decisive fork is whether to spend first on a platform-wide software migration (or more M&A, or pricing) versus diagnosing where billable capacity is actually lost. The evidence isolates the binding constraint as utilization (58% vs. 70-75%) and revenue per truck ($367k vs. $430k), with the mechanism being fragmented, non-standardized dispatch across acquired branches. Because the platform has no normalized cross-branch view, any large capital commitment is premature. The scorecard/diagnostic plus quick scheduling wins is faster, cheaper, reversible, and directly targets the metric that drives the 350bps margin gap — making it superior to migration-first, acquisition, pricing, or hiring.",
+  "evidence_basis": [
+    "operational_efficiency: billable utilization 58% vs. 70-75% benchmark and revenue per truck $367k vs. $430k prior — capacity, not demand or price, is the lost lever.",
+    "operational_efficiency: 3 of 6 acquired branches on separate dispatch software, no unified scheduling, no normalized KPI scorecard — the structural integration gap behind lost capacity.",
+    "financial_health: consolidated +52% but organic +3% with EBITDA 13%->9.5% — growth is acquired while per-truck efficiency erodes, the signature of integration drag.",
+    "customer_retention: membership attachment 41% vs. <12% across branches — a controllable operational lever that compounds idle shoulder-season capacity."
+  ],
+  "evidence_not_explained": [
+    "Whether any EBITDA dilution is genuine acquisition-quality (structurally weaker bought businesses) versus pure integration-execution cannot be separated until the normalized branch scorecard exists.",
+    "The precise share of lost utilization attributable to dispatch fragmentation vs. low membership attachment vs. shoulder-season seasonality awaits the branch-level diagnostic."
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN (the acquired businesses are inherently unprofitable): weaker because organic same-branch revenue is positive (+3%) and the deficit is in billable hours per truck, not in per-job economics; utilization recovery, not a structural economics fix, is indicated.",
+    "STRATEGIC_PRICING_ERROR (under-pricing depresses revenue per truck): weaker because the gap is throughput (utilization 58%) rather than ticket size; raising price would not fill idle technician hours and risks demand loss during earn-outs.",
+    "DEMAND_FORECASTING_MISMATCH (demand shortfall causing idle trucks): weaker because demand is healthy where membership attachment is high (41% platform branches) and organic revenue is growing; the idle capacity tracks scheduling fragmentation, not absent demand."
+  ],
+  "missing_evidence": [
+    "Normalized branch-level scorecard: utilization, jobs/tech/day, drive-time, first-time-fix, callback, average ticket, membership attachment across all 11 branches.",
+    "Dispatch/idle-hour analysis distinguishing shoulder-season idle capacity from peak-season overflow by branch.",
+    "Concentration of EBITDA dilution: is it 2-3 branches or systemic, to settle the acquisition-quality vs. integration-execution question.",
+    "Membership-plan economics by branch: recurring revenue, demand-smoothing, and replacement-lead conversion from plan members."
+  ],
+  "success_metrics": [
+    "Normalized utilization and dispatch scorecard live for all 11 branches within 4 weeks.",
+    "Lost-utilization sources ranked by branch with quantified EBITDA recovery from moving blended utilization to 68-70%.",
+    "Quick-win scheduling levers piloted with a measured utilization lift at the lowest branches within 90 days.",
+    "Credible path to 13%+ EBITDA margin and $450k+ revenue per truck demonstrably underway before the recap is marketed."
+  ],
+  "expected_outcome": "The diagnostic will show that the bulk of lost utilization is concentrated in the acquired branches on separate dispatch software and those with sub-12% membership attachment, where idle shoulder-season hours and undisciplined scheduling depress billable output. Implementing standardized dispatch discipline, cross-branch load-balancing, and membership-attachment parity lifts blended utilization from 58% toward 68-70% and revenue per truck toward $450k, recovering most of the 350bps margin gap and supporting the recap — without a premature, destabilizing software migration or further leverage-financed acquisitions.",
+  "automatic_fail_conditions": [
+    "Recommends a full platform-wide dispatch-software migration as the FIRST action before any branch-level utilization diagnostic.",
+    "Recommends more bolt-on acquisitions to grow EBITDA while branch utilization sits at 58%.",
+    "Diagnoses the case as a pricing problem and recommends across-the-board price/labor-rate increases to lift revenue per truck.",
+    "Recommends mass technician hiring to add capacity when utilization is only 58%."
+  ],
+  "source_references": [
+    "PE home-services buy-and-build integration patterns analogous to platforms such as Wrench Group, Apex Service Partners, and Sila Services.",
+    "Residential HVAC/plumbing operating benchmarks: technician billable utilization (70-75%), revenue per truck (top-quartile ~$525k), first-time-fix and callback conventions.",
+    "ServiceTitan and field-service management consolidation case patterns in multi-branch home-services rollups.",
+    "Membership/maintenance-plan attachment benchmarks and their demand-smoothing and replacement-conversion effects."
+  ],
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does the engine diagnose an OPERATIONAL_BOTTLENECK in dispatch/scheduling and technician utilization, not acquisition dilution or pricing?",
+      "rubric_10": "Diagnoses OPERATIONAL_BOTTLENECK: 58% utilization vs. 70-75% and $367k vs. $430k revenue per truck driven by fragmented dispatch (3 of 6 branches on separate software, no unified scheduling/scorecard); margin erosion is lost billable capacity, not demand or price.",
+      "rubric_8": "Identifies that post-acquisition operational/scheduling integration is the binding constraint, even if not labeled exactly OPERATIONAL_BOTTLENECK.",
+      "rubric_6": "Notes weak utilization/margin but is vague on whether the cause is integration execution vs. acquisition quality.",
+      "rubric_4": "Attributes the decline mainly to pricing or acquisition mix without isolating utilization/dispatch.",
+      "rubric_2": "Diagnoses a demand problem despite positive organic growth and healthy high-attachment branches.",
+      "rubric_0": "Misses the utilization/margin collapse or offers an unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does the engine recommend a fast branch-level utilization/dispatch diagnostic and scorecard before a software migration, pricing change, or more M&A?",
+      "rubric_10": "Recommends a ~4-week normalized branch scorecard + dispatch-utilization diagnostic across all 11 branches, isolating lost capacity and sequencing quick scheduling wins ahead of any platform-wide migration.",
+      "rubric_8": "Recommends an operational diagnostic or low-branch pilot before structural capital commitment.",
+      "rubric_6": "Recommends some analysis but couples it with premature migration or omits the utilization framing.",
+      "rubric_4": "Jumps to a software migration, pricing change, or hiring with thin analysis.",
+      "rubric_2": "Recommends more acquisitions or refinancing as the primary first move.",
+      "rubric_0": "Recommends an action that destabilizes earn-out branches or worsens the bottleneck."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect PE home-services rollup reality (utilization, dispatch fragmentation, membership attachment, earn-outs, recap timing)?",
+      "rubric_10": "Action is specific to a residential HVAC/plumbing rollup: billable utilization, revenue per truck, dispatch software fragmentation, membership attachment, earn-out autonomy, and the recap window are all reflected.",
+      "rubric_6": "Action is relevant to a margin problem but generic on the home-services/integration specifics.",
+      "rubric_2": "Action could apply to any company with margin pressure.",
+      "rubric_0": "Action is irrelevant to the context."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 2-lead integration team, semi-autonomous earn-out branches, 4.6x leverage, and 90-day/recap timing?",
+      "rubric_10": "Uses already-captured data and the thin integration team, avoids a disruptive migration during earn-outs, and begins margin recovery within 90 days ahead of the 12-15 month recap.",
+      "rubric_6": "Respects the major constraints with minor tension.",
+      "rubric_2": "Largely ignores staffing, earn-out, or leverage constraints.",
+      "rubric_0": "Action is infeasible or destabilizes earn-out branches."
+    },
+    "evidence_traceability": {
+      "criterion": "Are the diagnosis claims traceable to the case numbers?",
+      "rubric_10": "Traces utilization 58% vs. 70-75%, revenue per truck $367k vs. $430k vs. $525k, consolidated +52% vs. organic +3%, EBITDA 13%->9.5%, 3-of-6 branches on separate software, membership 41% vs. <12%.",
+      "rubric_6": "Cites the main metrics with some inference.",
+      "rubric_2": "Minimal traceability to the specific figures.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MEDIUM-HIGH confidence appropriate given clear utilization evidence but unresolved acquisition-quality-vs-execution attribution?",
+      "rubric_10": "MEDIUM-HIGH is justified: the utilization bottleneck is strongly evidenced, while the split between acquisition quality and integration execution and the per-branch concentration await the scorecard.",
+      "rubric_6": "Confidence is broadly reasonable but conflates the well-evidenced mechanism with the unresolved attribution.",
+      "rubric_2": "Confidence is poorly calibrated to the evidence.",
+      "rubric_0": "Confidence is inverted relative to the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action non-destructive (diagnose and pilot before migration, pricing shock, or mass hiring during earn-outs)?",
+      "rubric_10": "Action is diagnostic/pilot-based and reversible; no platform-wide migration, price shock, or mass hiring is executed before the utilization sources are identified.",
+      "rubric_0": "Action commits to an irreversible migration, pricing shock, or mass hiring without diagnosis, risking earn-out destabilization."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

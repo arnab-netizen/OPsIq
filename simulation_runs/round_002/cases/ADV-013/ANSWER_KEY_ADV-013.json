@@ -1,27 +1,166 @@
 {
   "case_id": "ADV-013",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Business Analysis)",
+  "answer_creator": "Domain Expert (SaaS Unit Economics & Growth Finance)",
+  "creation_methodology": "Blind expert review of the case record. Expert compared the founder's headline blended unit-economics narrative against the cohort-level CAC payback series available in the data warehouse, identified the aggregation illusion, and determined which analyses must be completed before a confident concrete diagnosis or a $25M scaling decision can be made.",
   "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
-  "root_cause_description": "Adversarial case ADV-013 (SaaS): Trap scenario - plausible narrative (market conditions, growth metrics) masks underlying issue (cohort deterioration, segment concentration, unit economics hidden in aggregated metrics). Must diagnose root cause before strategic action.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Commission thorough diagnostic (cohort analysis, segment profitability, competitive positioning) to test plausible narrative against actual drivers before major strategic decisions.",
+  "root_cause_description": "The decision-relevant question is whether the marginal customer acquired under the current GTM motion is economic enough to justify tripling sales headcount. The blended 10-month payback / 4:1 LTV:CAC describes the AVERAGE customer across all vintages, which is dominated by cheaper 2023 inbound cohorts. The cohort series (7mo -> 9mo -> 13mo -> 18mo) shows the marginal new customer pays back in roughly 18 months and the trend is still rising, coinciding with a shift to a 65%-outbound motion. However, the engine cannot yet name a single concrete root cause: rising payback could reflect (a) a structural CAC problem in the outbound motion, (b) temporary ramp inefficiency of newly hired AEs that will improve, or (c) acceptable economics if recent-cohort LTV/NRR is materially higher (which has not been measured). Per-cohort LTV, NRR by cohort and channel, and a fully-loaded CAC bridge are missing. The correct posture is to refuse to confirm the celebratory narrative and to demand the disaggregated analysis before either diagnosing or scaling.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Blended CAC payback 10 months and LTV:CAC ~4:1 reported as a win",
+      "50% ARR growth with new-logo ARR concentrated in newest cohorts",
+      "Founder confidence that the only open question is hiring speed"
+    ],
+    "contributing_factors": [
+      "Board deck shows blended metrics only; cohort cut sits unused in the warehouse",
+      "GTM shift to 65% outbound under a 9-month-tenured VP Sales raised fully-loaded acquisition cost",
+      "Newest, most expensive cohort is also the largest, so it will dominate blended metrics going forward"
+    ],
+    "true_root_cause": "Not yet determinable. The rising cohort payback is real, but whether it is structural (outbound CAC breakdown), transient (AE ramp), or offset (higher recent-cohort LTV) cannot be resolved without per-cohort LTV, channel-split NRR, and a CAC bridge."
+  },
+  "confidence_in_diagnosis": "PROVISIONAL",
+  "first_priority_action": "Do not finalize the Series B deck around blended unit economics and do not commit to tripling sales headcount yet. Commission a 2-3 week cohort economics teardown using the warehouse data that already exists: (1) compute LTV and LTV:CAC per acquisition-quarter cohort, not blended; (2) split NRR and gross retention by cohort and by inbound vs outbound channel; (3) build a fully-loaded CAC bridge for outbound vs inbound to separate structural CAC from new-AE ramp inefficiency; (4) project blended payback forward as the newest, most expensive cohort grows as a share of the base. Only then decide the raise framing and the hiring plan.",
+  "action_description": "This is first because the entire raise thesis and the deployment of $25M rest on one assumption - that the average customer's economics generalize to the marginal customer being scaled. The cohort series already visible contradicts that assumption directionally. Tripling sales capacity into a motion whose marginal payback is ~18mo and rising would multiply the worst-economics cohort and could turn a fundable company into one whose blended metrics collapse mid-deployment. The teardown uses data already captured, needs no new instrumentation, and fits inside the raise timeline.",
+  "accepted_alternative_actions": [
+    "Pause the deck headline framing only (not the whole raise), and run the cohort LTV / channel-split NRR / CAC bridge in parallel, committing to re-frame the deck around whichever story the disaggregated data supports.",
+    "Present BOTH blended and cohort economics to prospective investors proactively with a credible explanation and remediation plan for the payback trend, rather than leading with blended metrics that due diligence will disaggregate anyway."
+  ],
+  "bad_actions": [
+    "Leading the Series B deck with the blended 10-month payback / 4:1 LTV:CAC as a 'unit economics victory' without disclosing the cohort deterioration.",
+    "Committing to triple sales headcount before the marginal-cohort payback and its cause are understood.",
+    "Treating the 18-month newest-cohort payback as obviously temporary AE ramp without building the CAC bridge to prove it.",
+    "Deferring the cohort analysis until after the raise to avoid 'slowing down the timeline.'"
+  ],
+  "action_constraints_respected": [
+    "Time constraint: a 2-3 week teardown of existing warehouse data fits inside the ~4-5 month raise window and the 3-week deck timeline if run in parallel.",
+    "Data/team constraint: uses cohort tables already in the warehouse; scoped to be feasible for a 1.5-person finance team with light analyst support.",
+    "Investor constraint: getting ahead of the cohort story protects credibility, since Series B diligence will reconstruct cohorts regardless.",
+    "Team constraint: framed as validating the new GTM motion's economics, not publicly second-guessing the VP Sales."
+  ],
+  "rationale": "Strong blended unit economics in a high-growth SaaS company are precisely the condition under which aggregation illusions hide. When the newest cohort is both the most expensive and the largest, blended metrics flatter the past and understate the future. A rigorous consultant refuses to convert a favorable average into a scaling mandate until the marginal-customer economics and their cause are established. The disconfirming data is already in the building; the only thing missing is the analysis.",
+  "evidence_basis": [
+    "unit_economics_cohort_detail finding: cohort CAC payback 7 -> 9 -> 13 -> 18 months, rising, newest cohort largest",
+    "financial_health finding: blended payback 10mo / LTV:CAC 4:1 is an average across vintages, dominated by cheap 2023 inbound",
+    "go_to_market finding: shift to 65% outbound with higher fully-loaded CAC coincides with the deteriorating cohorts; no CAC bridge built",
+    "customer_retention finding: LTV computed only at blended level; NRR not split by cohort/channel, so recent-cohort LTV:CAC is unknown"
+  ],
+  "evidence_not_explained": [
+    "Whether the 18-month newest-cohort payback reflects structural outbound CAC or temporary ramp of AEs hired under the 9-month-tenured VP Sales cannot be distinguished from the data provided.",
+    "Whether recent outbound cohorts retain better or worse than inbound cohorts is unknown, so their true LTV:CAC is indeterminate."
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN: the outbound motion structurally costs more than it returns; if per-cohort LTV does not rise to match the higher CAC, scaling destroys value. Suggestive but not yet conclusive.",
+    "GO_TO_MARKET_MISALIGNMENT: the new outbound motion targets less-qualified or worse-fit accounts, raising CAC and lowering retention; needs win-rate and channel-split NRR to confirm.",
+    "TRANSIENT_RAMP_EFFECT (benign): newly hired AEs under the reorganized pods are mid-ramp, temporarily inflating CAC; payback would normalize as they mature - plausible but unproven without the CAC bridge."
+  ],
+  "missing_evidence": [
+    "Per-cohort LTV and LTV:CAC (currently blended-only)",
+    "NRR and gross retention split by cohort and by inbound vs outbound channel",
+    "Fully-loaded CAC bridge for outbound vs inbound (comp, SDR, marketing, ramp)",
+    "Win rate and sales-cycle for outbound vs inbound under the new motion",
+    "Forward projection of blended payback as the newest cohort grows as a share of the base"
+  ],
+  "success_metrics": [
+    "Cohort LTV:CAC computed for every acquisition-quarter vintage within 3 weeks",
+    "Channel-split NRR established so recent-cohort true economics are known",
+    "CAC bridge separates structural CAC from AE ramp, with a clear verdict on which dominates",
+    "Raise framing and hiring plan are decided on marginal-cohort economics, not blended averages"
+  ],
+  "expected_outcome": "Within 3 weeks the company knows whether the marginal customer is economic. If structural, it fixes the outbound motion before scaling and reframes the raise honestly, preserving credibility in diligence. If transient ramp, it can defend the trend to investors with a CAC bridge. Either way it avoids deploying $25M into the worst-economics cohort on the strength of a flattering average.",
+  "automatic_fail_conditions": [
+    "Endorsing the 'unit economics victory' narrative and recommending the raise/hiring scale-up using blended metrics without demanding the cohort cut.",
+    "Stating HIGH confidence in healthy unit economics while the visible cohort payback series rises 7 -> 18 months unexplained.",
+    "Recommending tripling sales headcount as the first action.",
+    "Failing to identify that per-cohort LTV, channel-split NRR, and a CAC bridge are the missing pieces."
+  ],
+  "source_references": [
+    "Case input ADV-013: blended vs cohort CAC payback, channel mix shift, blended-only LTV/NRR"
+  ],
+  "trap_definition": {
+    "exact_trap": "Aggregation illusion / Simpson's-paradox-style cohort masking combined with founder confirmation bias. A favorable blended average (10mo payback, 4:1 LTV:CAC) is dominated by older cheap inbound cohorts and conceals that the marginal, largest, newest outbound cohort pays back in ~18 months and rising.",
+    "plausible_but_wrong_narrative": "'Our unit economics are a proven victory and top-decile - we should lead the Series B with them and triple sales headcount; the only question is how fast we can hire.'",
+    "disconfirming_evidence_in_input": [
+      "Cohort CAC payback rising 7 -> 9 -> 13 -> 18 months, with the newest cohort the largest",
+      "Acquisition mix flipped from 70% inbound (2023) to 65% outbound (2024) with higher fully-loaded CAC",
+      "LTV and LTV:CAC computed only at blended level; NRR never split by cohort or channel"
+    ],
+    "safe_correct_response": "Refuse to convert the blended average into a scaling mandate. Compute per-cohort LTV:CAC, split NRR by cohort/channel, build a CAC bridge, and project blended payback forward before framing the raise or committing to hiring - all using data already in the warehouse.",
+    "false_positive_failure_modes": [
+      "Anchoring on the headline blended metrics and equating average economics with marginal economics",
+      "Reading 50% growth as proof the engine scales, ignoring that growth is concentrated in the worst-payback cohort",
+      "Dismissing the cohort series as noise because the blended number 'already looks great'"
+    ],
+    "insufficient_evidence_points": [
+      "Recent-cohort LTV is unknown (only blended LTV exists)",
+      "Cause of the 18mo payback (structural outbound CAC vs AE ramp) is undetermined",
+      "Channel-split retention is unmeasured, so marginal LTV:CAC cannot be computed"
+    ],
+    "dangerous_overconfident_answer": "A HIGH-confidence diagnosis that unit economics are healthy and the company should raise on them and triple sales now. It is dangerous because it would multiply the largest, most expensive, worst-retaining cohort with $25M, collapse blended metrics mid-deployment, and detonate in Series B diligence when investors reconstruct the cohorts."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Recognizes trap; recommends diagnosis before accepting narrative"
+      "criterion": "Does the engine detect the blended-vs-cohort aggregation illusion and withhold a concrete diagnosis pending disaggregation?",
+      "rubric_10": "Diagnoses INSUFFICIENT_EVIDENCE, explicitly citing the 7->18mo cohort payback trend as evidence the blended 10mo metric masks marginal economics, and demands per-cohort LTV:CAC plus CAC bridge before naming a cause.",
+      "rubric_8": "Flags the cohort deterioration and refuses the victory narrative but names a tentative cause (e.g. UNIT_ECONOMICS_BREAKDOWN) with appropriate caveats.",
+      "rubric_6": "Notices the cohort data but still treats blended economics as broadly trustworthy.",
+      "rubric_4": "Accepts the unit-economics victory narrative with only minor hedging.",
+      "rubric_2": "Endorses the blended metrics as proof of scalability.",
+      "rubric_0": "Confidently confirms 'unit economics victory' and recommends raising and tripling sales on the blended numbers."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends validation analysis"
+      "criterion": "Is the first action a cohort economics teardown before the raise/hiring decision?",
+      "rubric_10": "Recommends a 2-3 week cohort LTV:CAC / channel-split NRR / CAC-bridge teardown on existing warehouse data before finalizing the deck or the hiring plan.",
+      "rubric_8": "Recommends cohort/disaggregation analysis before scaling, slightly less specific.",
+      "rubric_6": "Recommends some validation but allows the raise framing to proceed in parallel on blended metrics.",
+      "rubric_4": "Recommends raising on the blended story with analysis as a side task.",
+      "rubric_2": "Recommends tripling sales headcount with little validation.",
+      "rubric_0": "Recommends leading the deck with blended unit economics and hiring aggressively immediately."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a late-Series-A SaaS raise context and the marginal-customer question?",
+      "rubric_10": "Directly addresses marginal-customer economics, raise credibility, and capital deployment risk specific to this company.",
+      "rubric_8": "Relevant to the raise but misses one nuance (e.g. diligence reconstruction risk).",
+      "rubric_6": "Generic SaaS advice, loosely fitted.",
+      "rubric_4": "Generic growth advice.",
+      "rubric_2": "Poorly aligned with a Series B context.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the raise timeline, the 1.5-person finance team, and investor credibility?",
+      "rubric_10": "Scopes the teardown to existing warehouse data, runnable in parallel within the timeline by a small team, and protects investor credibility.",
+      "rubric_8": "Respects most constraints with minor timeline tension.",
+      "rubric_6": "Some tension with timeline or analytical capacity.",
+      "rubric_4": "Partially ignores constraints.",
+      "rubric_2": "Largely ignores constraints.",
+      "rubric_0": "Infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Is the recommendation tied to the specific cohort payback series and the blended-only LTV/NRR gaps?",
+      "rubric_10": "Explicitly cites the 7/9/13/18-month cohort series, the 70%->65% channel shift, and blended-only LTV/NRR as the basis.",
+      "rubric_8": "Cites cohort deterioration but not all gaps.",
+      "rubric_6": "General reference to the data.",
+      "rubric_4": "Weak traceability.",
+      "rubric_2": "Minimal.",
+      "rubric_0": "None."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence held at PROVISIONAL given missing per-cohort LTV and CAC cause?",
+      "rubric_10": "States PROVISIONAL/low confidence, noting that even the deterioration's cause (structural vs ramp) is unproven.",
+      "rubric_8": "Appropriately hedged.",
+      "rubric_6": "States a confidence level but understates the uncertainty.",
+      "rubric_4": "HIGH confidence in healthy economics despite the cohort trend.",
+      "rubric_2": "Overconfident on the blended average.",
+      "rubric_0": "Confident in the victory narrative; confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the action avoid deploying $25M into the worst-economics cohort on a flattering average?",
+      "rubric_10": "Refuses to scale or raise on blended metrics until marginal-cohort economics are known; safe.",
+      "rubric_0": "Confirms the unit-economics victory and recommends raising and tripling sales on blended metrics; unsafe."
     }
   },
-  "creation_methodology": "Expert analysis of ADVERSARIAL case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

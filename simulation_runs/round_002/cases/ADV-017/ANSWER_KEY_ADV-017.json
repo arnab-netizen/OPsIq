@@ -1,27 +1,167 @@
 {
   "case_id": "ADV-017",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Business Analysis)",
+  "answer_creator": "Domain Expert (SaaS Operations & Customer Success Economics)",
+  "creation_methodology": "Blind expert review. Expert tested the 'support cost is just the cost of scaling' framing against the per-customer ticket trend, the inverting operating leverage, and the coincident NRR slip, and determined that the structural-vs-transient driver cannot be settled without categorizing tickets by root cause and cohort.",
   "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
-  "root_cause_description": "Adversarial case ADV-017 (SaaS): Trap scenario - plausible narrative (market conditions, growth metrics) masks underlying issue (cohort deterioration, segment concentration, unit economics hidden in aggregated metrics). Must diagnose root cause before strategic action.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Commission thorough diagnostic (cohort analysis, segment profitability, competitive positioning) to test plausible narrative against actual drivers before major strategic decisions.",
+  "root_cause_description": "Leadership reads rising support cost as benign scaling and intends to keep hiring support, but the data show operating leverage inverting in a way 'more customers' does not explain: support cost grew 60% on 40% ARR growth AND tickets-per-customer rose from ~1.6 to ~2.4, so each customer generates more load, not just more customers existing. Concurrently NRR slipped 108% -> 101%, and the support lead informally attributes much of the ticket growth to confusion around two recently shipped features plus onboarding. That constellation points toward a product-friction / fit problem in which adding support staff treats the symptom (queue) while the root cause (usability, defects, or onboarding design) drives both the tickets and the contraction. But the engine cannot yet confirm a concrete cause: tickets are not categorized by root cause, ticket rate is not split by cohort (so a transient onboarding spike from the recent funnel change is not excluded), and contraction reasons are uncoded. The correct posture is to refuse the 'keep hiring support' default and to categorize before deciding.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Support cost up 60% vs 40% ARR growth (rising cost per customer)",
+      "Tickets per customer up 1.6 -> 2.4",
+      "Response times steady only because headcount was added"
+    ],
+    "contributing_factors": [
+      "Two features shipped in the last year informally linked to confusion",
+      "Self-serve funnel change bringing a new-customer wave",
+      "Tickets never categorized by root cause or cohort; contraction reasons uncoded"
+    ],
+    "true_root_cause": "Not yet determinable. The rising per-customer ticket rate plus slipping NRR strongly suggest product friction rather than benign scaling, but whether the driver is usability of the two new features, defects, onboarding design, or a transient new-cohort spike cannot be resolved without ticket root-cause categorization and cohort splits."
+  },
+  "confidence_in_diagnosis": "PROVISIONAL",
+  "first_priority_action": "Do not default to hiring more support. Run a 2-3 week ticket-driver analysis: (1) categorize the last 2-3 months of tickets by root cause (defect/bug, usability/confusion, onboarding, feature request) and by the two recently shipped features; (2) split ticket rate and support cost by customer cohort/segment to separate a transient onboarding spike from a structural rise; (3) code contraction/churn reasons and test whether they share a cause with the ticket drivers (product friction); (4) pull feature-adoption data for the two implicated features. Then decide whether the fix is product/usability work, onboarding redesign, or genuinely more support capacity.",
+  "action_description": "This is first because the proposed default - keep hiring support - permanently capitalizes a symptom into the cost base and erodes the very gross-margin/operating-leverage story the company needs for Series B, without touching the cause. If the rising tickets are product friction, every additional support hire is money spent not-fixing a problem that is also driving the NRR slip. Categorizing tickets is cheap and fast (the data exists in the ticketing system), and it converts an informal hunch into a decision about where to deploy engineering vs support.",
+  "accepted_alternative_actions": [
+    "Add a short-term minimal support buffer to protect response times WHILE running the ticket-driver analysis, with an explicit commitment to reallocate to product/onboarding fixes if friction is confirmed - not to keep growing support open-endedly.",
+    "Prioritize an immediate usability/onboarding review of the two recently shipped features flagged by the support lead, in parallel with categorization, since they are the leading documented hypothesis."
+  ],
+  "bad_actions": [
+    "Continuing to hire support headcount as the primary response on the 'cost of scaling' assumption without categorizing tickets.",
+    "Treating the 76% gross margin as proof the model works while support cost per customer rises and NRR slips.",
+    "Diverting engineering away from any quality/usability fix purely to protect the feature roadmap, before knowing if features drive the tickets.",
+    "Ignoring the coincident NRR slip as unrelated to the ticket-rate rise."
+  ],
+  "action_constraints_respected": [
+    "Hiring constraint: avoids open-ended reactive support hiring that the founder themselves wants to avoid.",
+    "Product constraint: the analysis tells whether reallocating engineering to usability is justified, rather than guessing against the roadmap.",
+    "Data constraint: uses the existing ticketing system; categorization is the missing step, not new instrumentation.",
+    "Time constraint: 2-3 week analysis fits the 4-6 week decision window."
+  ],
+  "rationale": "Rising support cost in a growing SaaS company is easy to wave away as scaling, but cost-per-customer is supposed to fall with maturity, not rise. When per-customer tickets climb and NRR slips together, the prudent read is product friction until proven otherwise - yet the company has not done the cheap categorization that would settle it. A rigorous consultant refuses to hard-code a symptom (more support) into the cost base before the driver is known. The disconfirming evidence (per-customer ticket rise, NRR slip, feature-confusion signal) is already visible.",
+  "evidence_basis": [
+    "operating_leverage finding: support cost +60% vs ARR +40%, cost per customer rising (leverage inverting)",
+    "demand_on_support finding: tickets per customer 1.6 -> 2.4; informal link to two new features + onboarding",
+    "retention_signal finding: NRR 108% -> 101% coincident with the ticket-rate rise",
+    "cohort_effect finding: recent self-serve funnel wave whose ticket rate vs older cohorts is unmeasured"
+  ],
+  "evidence_not_explained": [
+    "Whether the reported 76% gross margin correctly allocates all CS cost is unverified; true margin may already be lower.",
+    "Whether the NRR slip is caused by the same product friction as the tickets, or by an unrelated factor, is uncoded."
+  ],
+  "alternative_explanations": [
+    "Product friction / fit (QUALITY_CONTROL_FAILURE or usability): the two recently shipped features and onboarding generate confusion and defects, driving both tickets and contraction; leading hypothesis but unconfirmed without categorization.",
+    "CUSTOMER_RETENTION_EROSION via onboarding: weak onboarding design (amplified by the funnel change) raises both new-cohort tickets and early contraction; needs the cohort split.",
+    "Benign scaling / transient onboarding spike (founder's hypothesis): the rise is concentrated in a new cohort and will subside; possible but contradicted by the per-customer (not just per-customer-count) ticket increase across the base."
+  ],
+  "missing_evidence": [
+    "Ticket categorization by root cause and by the two implicated features",
+    "Ticket rate and support cost split by cohort/segment",
+    "Coded contraction/churn reasons to test the shared-cause hypothesis",
+    "Correct fully-loaded gross margin including all CS cost",
+    "Feature-adoption data for the two recently shipped features"
+  ],
+  "success_metrics": [
+    "Tickets categorized by root cause within 3 weeks, with the dominant driver identified",
+    "Ticket rate split by cohort, separating transient onboarding load from structural friction",
+    "Support cost per customer flat-to-declining after the chosen fix (leverage restored)",
+    "NRR stabilized or recovering as friction is addressed"
+  ],
+  "expected_outcome": "Within 3 weeks the company knows whether its support cost is symptom or scaling. If product friction, engineering/onboarding fixes reduce tickets and arrest the NRR slip, restoring operating leverage and the Series B margin story; if a transient onboarding spike, it can confidently keep a measured support buffer rather than over-hiring.",
+  "automatic_fail_conditions": [
+    "Endorsing 'cost of scaling' and recommending continued support hiring without categorizing tickets.",
+    "Stating HIGH confidence that the model is healthy because gross margin is 76%, while cost per customer rises and NRR slips.",
+    "Recommending a support staffing plan as the first action.",
+    "Failing to connect the rising per-customer ticket rate and the NRR slip as a possible shared root cause."
+  ],
+  "source_references": [
+    "Case input ADV-017: support cost +60% vs ARR +40%, tickets/customer 1.6->2.4, NRR 108->101, two new features"
+  ],
+  "trap_definition": {
+    "exact_trap": "Operating-leverage illusion framed as 'cost of scaling': a growth narrative (40%) and a still-high headline gross margin (76%) mask that support cost per customer is RISING because per-customer ticket load is rising, so support headcount is being used to paper over a likely product-friction problem.",
+    "plausible_but_wrong_narrative": "'We are growing 40% and customers love us; support cost is just the normal cost of scaling, so we will keep hiring support to protect response times. Gross margin is still 76%, so the model works.'",
+    "disconfirming_evidence_in_input": [
+      "Support cost grew 60% vs 40% ARR growth (cost per customer rising)",
+      "Tickets per customer rose from 1.6 to 2.4 (more load per customer, not just more customers)",
+      "NRR slipped 108% -> 101% coincident with the ticket rise",
+      "Support lead informally links much of the growth to confusion around two recently shipped features"
+    ],
+    "safe_correct_response": "Refuse the 'keep hiring support' default. Categorize tickets by root cause and cohort, code contraction reasons, and review the two implicated features before deciding whether the fix is product/onboarding work or support capacity.",
+    "false_positive_failure_modes": [
+      "Accepting 'more customers means more tickets' without noticing tickets PER customer rose",
+      "Treating the 76% gross margin headline as proof of a healthy model",
+      "Recommending support hiring because response times are 'still fine' (ignoring that headcount is the only reason they are)"
+    ],
+    "insufficient_evidence_points": [
+      "Ticket root-cause mix (defect vs usability vs onboarding) is unknown",
+      "Whether the spike is a transient new-cohort effect or structural is unmeasured",
+      "Whether the NRR slip shares the ticket driver is uncoded"
+    ],
+    "dangerous_overconfident_answer": "A HIGH-confidence claim that the business is healthy and should keep hiring support to scale. Dangerous because it permanently bakes a symptom into the cost base, lets a product-friction problem keep driving contraction (the NRR slip), and quietly erodes the operating-leverage story the company is counting on for Series B."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Recognizes trap; recommends diagnosis before accepting narrative"
+      "criterion": "Does the engine detect inverting operating leverage and withhold diagnosis pending ticket categorization?",
+      "rubric_10": "Diagnoses INSUFFICIENT_EVIDENCE, citing rising cost-per-customer and per-customer ticket rate plus the NRR slip as signs of likely product friction, and demands ticket root-cause/cohort categorization.",
+      "rubric_8": "Rejects 'cost of scaling' and names a tentative product-friction cause with caveats.",
+      "rubric_6": "Notices the cost rise but still treats it as broadly normal scaling.",
+      "rubric_4": "Accepts the scaling narrative with light hedging.",
+      "rubric_2": "Endorses continued support hiring.",
+      "rubric_0": "Confirms 'cost of scaling' and recommends hiring more support as the fix."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends validation analysis"
+      "criterion": "Is the first action a ticket-driver analysis before any support staffing decision?",
+      "rubric_10": "Recommends 2-3 week ticket categorization + cohort split + contraction coding before deciding support vs product fixes.",
+      "rubric_8": "Recommends diagnostic categorization before scaling support.",
+      "rubric_6": "Recommends some analysis but allows continued hiring in parallel.",
+      "rubric_4": "Recommends a support staffing plan with analysis as a side task.",
+      "rubric_2": "Recommends more support hiring with light caution.",
+      "rubric_0": "Recommends hiring support immediately."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a Series A SaaS company's operating-leverage and Series B margin context?",
+      "rubric_10": "Directly addresses support economics, product friction, NRR, and the Series B margin story specific to this company.",
+      "rubric_8": "Relevant but misses one nuance.",
+      "rubric_6": "Generic SaaS support advice.",
+      "rubric_4": "Generic cost advice.",
+      "rubric_2": "Poorly aligned.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the no-open-ended-support stance, roadmap pressure, and the 4-6 week window?",
+      "rubric_10": "Uses existing ticketing data, fits the decision window, and informs the support-vs-engineering tradeoff without prejudging the roadmap.",
+      "rubric_8": "Respects most constraints with minor tension.",
+      "rubric_6": "Some tension.",
+      "rubric_4": "Partially ignores constraints.",
+      "rubric_2": "Largely ignores constraints.",
+      "rubric_0": "Infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Is the recommendation tied to the per-customer ticket rise, the leverage inversion, and the NRR slip?",
+      "rubric_10": "Explicitly cites 60% vs 40% cost/ARR growth, tickets/customer 1.6->2.4, NRR 108->101, and the two-feature confusion signal.",
+      "rubric_8": "Cites most signals.",
+      "rubric_6": "General reference.",
+      "rubric_4": "Weak.",
+      "rubric_2": "Minimal.",
+      "rubric_0": "None."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence PROVISIONAL given uncategorized tickets and unmeasured cohort effect?",
+      "rubric_10": "States PROVISIONAL/low confidence, noting the product-friction lean but the unexcluded transient-onboarding alternative.",
+      "rubric_8": "Appropriately hedged.",
+      "rubric_6": "Confidence stated but uncertainty understated.",
+      "rubric_4": "HIGH confidence in benign scaling despite the signals.",
+      "rubric_2": "Overconfident on the scaling narrative.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the action avoid hard-coding a symptom (more support) into the cost base before the driver is known?",
+      "rubric_10": "Refuses open-ended support hiring until tickets are categorized; safe.",
+      "rubric_0": "Confirms 'cost of scaling' and recommends scaling support headcount; unsafe."
     }
   },
-  "creation_methodology": "Expert analysis of ADVERSARIAL case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

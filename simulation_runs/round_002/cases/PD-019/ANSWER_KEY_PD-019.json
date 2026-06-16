@@ -1,27 +1,181 @@
 {
   "case_id": "PD-019",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Public Dataset Analysis)",
+  "answer_creator": "Domain Expert (Asset-Based Trucking / Freight Margin Recovery)",
+  "creation_methodology": "Blind review: Expert analyzed public-style carrier disclosures independently. Diagnosed root cause through multi-dimensional evidence (EBITDA margin 11.0%→8.0%, operating ratio 91%→94%, cost-per-mile inflation in fuel +15% and driver wages +12%, revenue-per-mile decline 3.6% to $1.60, flat volumes ~500M miles). Confirmed the break is in per-mile unit economics (unit cost outrunning unit revenue), not demand or a deliberate pricing-structure error.",
   "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
-  "root_cause_description": "Public dataset case PD-019 (Transportation / Logistics): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
-  "confidence_in_diagnosis": "MEDIUM-HIGH",
-  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "root_cause_description": "The carrier's per-mile unit economics have broken down: cost per mile is rising faster than revenue per mile. Fuel cost per mile rose 15% to $0.40 (+$0.052/mi) and driver wages/benefits per mile rose 12% to $0.62 (+$0.066/mi), together adding ~$0.118/mile of cost on ~500M miles, about +$59M of cost year over year. At the same time revenue per mile fell 3.6% to $1.60 (from $1.66, -$0.06/mi, ~-$30M) because a soft, competitive freight market caps base rates and the fuel surcharge lags the index and under-recovers — especially on the ~30% spot book that carries little surcharge. The net effect is a 300 bps deterioration in operating ratio (91%→94%) and a 300 bps collapse in EBITDA margin (11.0%→8.0%, $87.1M→$64M). Crucially, volumes are roughly flat (revenue $800M vs $792M, ~500M miles), so this is not a demand problem and not a deliberate mispricing of a fixed price list — there is a functioning spot market and rate flexibility. The marginal mile simply no longer covers its incremental cost the way it did, because unit cost outran unit revenue. That is a genuine UNIT_ECONOMICS_BREAKDOWN.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin fell 300 bps from 11.0% to 8.0% (EBITDA $87.1M→$64M).",
+      "Operating ratio deteriorated from 91% to 94%, nearing the lender covenant threshold.",
+      "Owner anxiety about bid season and the annual lender review within ~90 days."
+    ],
+    "contributing_factors": [
+      "Fuel cost per mile +15% (to $0.40) with a fuel-surcharge formula that lags the index and does not fully pass through, especially on spot freight.",
+      "Driver wages/benefits per mile +12% (to $0.62) driven by a tight CDL labor market and retention needs.",
+      "Soft, oversupplied freight market compressing base rates and revenue per mile (-3.6% to $1.60).",
+      "Fixed equipment-lease commitments and contract-rate lock-in that prevent fast cost or revenue correction."
+    ],
+    "root_cause": "Per-mile unit economics have broken: combined cost-per-mile inflation (~+$0.118/mi from fuel and wages) exceeds the revenue-per-mile decline (-$0.06/mi), so contribution per mile has compressed and the operating ratio has risen — a cost-per-unit-of-output vs revenue-per-unit-of-output breakdown, not a volume or list-pricing problem."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Run a focused cost-per-mile and lane/customer freight-profitability diagnostic (6-week project, ~$60-90k or an internal pricing/FP&A team sprint) to rebuild contribution margin per lane and per customer and pinpoint where the per-mile break is concentrated. Specifically: (1) decompose cost per mile by component (fuel, driver, maintenance, equipment, insurance) and revenue per mile by customer/lane/contract-vs-spot; (2) compute the fuel-surcharge recovery ratio (surcharge collected vs incremental fuel cost) by account to size the under-recovery and identify surcharge re-rate targets at the next bid; (3) rank lanes/customers by contribution per mile to identify the bottom decile that is value-destructive (revenue per mile below loaded cost per mile) for shedding or re-rating at bid season; (4) quantify empty-mile/deadhead percentage, tractor utilization, and driver productivity to find non-rate margin recovery (every point of empty-mile reduction lifts revenue per total mile); (5) build a fleet right-sizing sensitivity (lease roll-off schedule) so the carrier knows how much fixed cost can come out if unprofitable volume is shed. Output: a ranked action set — surcharge re-rate, lane/customer shedding, utilization improvement, and a fleet sizing decision — sequenced to land before bid season and the lender review (~90 days) and to move the operating ratio back off the covenant line.",
+  "action_description": "This is first priority because the operating ratio is nearing a covenant limit and bid season is ~90 days out, but the carrier cannot act safely without knowing where on the network the per-mile economics break. Cutting driver pay, chasing cheap freight to fill trucks, or slashing maintenance would all be reflexive moves that worsen this specific case. The diagnostic converts a blunt 300-bps margin problem into targeted levers — surcharge re-rate, bottom-decile lane/customer shedding, empty-mile/utilization gains, and a lease-aware fleet sizing decision — that can be committed at the bid table and presented to the lender. At ~6 weeks it fits inside the 90-day window with time left to execute.",
+  "accepted_alternative_actions": [
+    "Fuel-surcharge program re-rating and contract-renewal repricing: rebuild the surcharge formula to track the pump with less lag and extend coverage to as much of the spot/contract book as the market allows, and reprice the lowest-contribution contracts at the next bid cycle. Accepted because it directly attacks the revenue-per-mile-vs-fuel-cost gap without unilaterally raising base rates in a soft market; should be informed by the recovery-ratio diagnostic.",
+    "Network/utilization optimization to cut empty miles and raise loaded miles per truck per day: improve load matching, backhaul density, and driver productivity to raise revenue per total mile and spread fixed cost over more loaded miles. Accepted as a parallel non-rate lever that lifts contribution per mile without touching driver pay or shedding strategic customers."
+  ],
+  "bad_actions": [
+    "Cut driver wages/benefits to claw back the +12% increase. Wrong for THIS case: the CDL labor market is tight and the raise was made to retain drivers; cutting pay would spike turnover, raise recruiting/training cost, idle trucks, and depress utilization — raising effective cost per mile and worsening the operating ratio, the opposite of the goal.",
+    "Chase low-rate freight to keep trucks full. Wrong for THIS case: volumes are already roughly flat and the problem is contribution per mile, not empty trucks. Booking freight at rates below loaded cost per mile (revenue/mile already only $1.60 vs rising cost/mile) adds unprofitable miles and accelerates margin and operating-ratio deterioration.",
+    "Defer maintenance to cut the $0.18/mile maintenance line. Wrong for THIS case: deferring maintenance creates DOT/CSA safety and out-of-service risk, raises breakdown and downtime cost, and harms driver retention — trading a small near-term cost reduction for larger safety, compliance, and reliability costs that hit the operating ratio later.",
+    "Take on incremental debt or a large capex fleet refresh to 'grow out' of the margin problem. Wrong for THIS case: the operating ratio is nearing a covenant limit ahead of the lender review; adding leverage or fixed cost before fixing per-mile economics increases covenant breach risk and does nothing about the unit-cost-vs-unit-revenue gap."
+  ],
+  "action_constraints_respected": [
+    "Competitive spot rates cap pricing: the diagnostic targets surcharge recovery and bottom-decile lane/customer profitability rather than across-the-board rate hikes, so it works within a soft market.",
+    "Fuel-surcharge lag: the recovery-ratio analysis is explicitly designed to size and fix surcharge under-recovery at the next bid cycle.",
+    "Driver shortage/retention: no action touches driver pay; productivity and utilization levers protect retention.",
+    "Equipment lease commitments: fleet right-sizing is modeled against the lease roll-off schedule so only feasible, penalty-aware reductions are proposed.",
+    "Customer contracts: rate corrections are sequenced to the bid cycle, not forced mid-term.",
+    "Covenant pressure / ~90-day timeline: the 6-week diagnostic and sequenced levers are designed to move the operating ratio before the lender review without large discretionary capital outlays."
+  ],
+  "rationale": "Three diagnoses compete: UNIT_ECONOMICS_BREAKDOWN (cost per mile outran revenue per mile), STRATEGIC_PRICING_ERROR (rates set wrong), and DEMAND_FORECASTING_MISMATCH (volume too low for the cost base). The evidence points to unit economics: volumes and miles are flat (so demand is intact), and the carrier has spot-market and bid-cycle rate flexibility (so this is not a frozen-list mispricing) — yet the operating ratio rose 300 bps because fuel (+$0.052/mi) and driver wages (+$0.066/mi) outran the -$0.06/mi revenue-per-mile decline. The first move is therefore not a blunt cost cut or a rate gamble but a diagnostic that localizes the break (which lanes, which customers, how much surcharge under-recovery, how many empty miles) so surcharge re-rating, lane/customer shedding, utilization gains, and lease-aware fleet sizing can be sequenced before bid season and the lender review.",
+  "evidence_basis": [
+    "financial_health: EBITDA margin 11.0%→8.0% (300 bps, $87.1M→$64M) and operating ratio 91%→94% on essentially flat revenue ($792M→$800M) — costs grew faster than revenue.",
+    "operational_efficiency: cost per mile rose via fuel +15% to $0.40 (+$0.052/mi) and driver wages +12% to $0.62 (+$0.066/mi), ~+$0.118/mi and ~+$59M on 500M miles.",
+    "market_position: revenue per mile fell 3.6% to $1.60 (from $1.66) in a soft market with lagging, under-recovering fuel surcharge, especially on the ~30% spot book.",
+    "operational_efficiency: total miles ~500M and revenue flat confirm stable volume, isolating the break to per-mile contribution (cost-per-mile increase exceeds revenue-per-mile decline)."
+  ],
+  "evidence_not_explained": [
+    "The split of the revenue-per-mile decline between base-rate erosion and fuel-surcharge under-recovery is not separable from public data; the recovery-ratio diagnostic is required to apportion it. This does not change the UNIT_ECONOMICS_BREAKDOWN diagnosis — both mechanisms compress contribution per mile — but it determines how much can be recovered via surcharge re-rating vs lane shedding."
+  ],
+  "alternative_explanations": [
+    "STRATEGIC_PRICING_ERROR: that the carrier simply priced freight wrong. Weaker because there is a functioning spot market and annual bid cycle giving real rate flexibility — the rates are market-driven, not a frozen mispriced list. The -$0.06/mi revenue decline is smaller than the +$0.118/mi cost increase, so the break is driven by unit cost outrunning unit revenue, not by a deliberate pricing-structure mistake. (Distinct from PD-014/PD-018 pricing-structure cases.)",
+    "DEMAND_FORECASTING_MISMATCH: that volume fell below the cost base. Weaker because miles (~500M) and revenue ($800M vs $792M) are roughly flat — loads and volumes are stable. The margin broke per mile, not per load count, so there is no demand/capacity mismatch to forecast around.",
+    "OPERATIONAL_BOTTLENECK: that a capacity or throughput constraint is the cause. Weaker because trucks are moving freight at stable volume; the issue is the economics of each mile, not a throughput choke point — though empty-mile/utilization improvement is a legitimate secondary lever surfaced by the diagnostic."
+  ],
+  "missing_evidence": [
+    "Lane-level and customer-level contribution margin per mile (to identify the value-destructive bottom decile for shedding or re-rating).",
+    "Fuel-surcharge recovery ratio by account (surcharge collected vs incremental fuel cost) to size under-recovery and surcharge re-rate targets.",
+    "Empty-mile/deadhead percentage and tractor/driver utilization by region (to size non-rate margin recovery).",
+    "Equipment lease roll-off schedule and early-termination penalties (to model feasible fleet right-sizing)."
+  ],
+  "success_metrics": [
+    "Diagnostic complete within 6 weeks: cost per mile decomposed by component and revenue/contribution per mile rebuilt by lane, customer, and contract-vs-spot.",
+    "Surcharge under-recovery quantified by account and a re-rate proposal prepared for the next bid cycle.",
+    "Bottom-decile (value-destructive) lanes/customers identified with a shed-or-re-rate decision and quantified operating-ratio impact.",
+    "Operating ratio improvement path to below ~92% (toward 91%) and EBITDA margin recovery path toward ~10-11% modeled and sequenced to land before the lender review.",
+    "Empty-mile / utilization improvement target set (e.g., reduce deadhead by 1-2 points) with quantified revenue-per-total-mile uplift."
+  ],
+  "expected_outcome": "If UNIT_ECONOMICS_BREAKDOWN is correct and the diagnostic is executed well: (1) within 6 weeks, a ranked view of where the per-mile break concentrates (specific lanes/customers, surcharge under-recovery, empty miles); (2) within ~90 days, committed actions at bid season — fuel-surcharge re-rate, bottom-decile lane/customer shedding or repricing, and utilization improvements — that begin moving the operating ratio off the covenant line; (3) a lease-aware fleet right-sizing decision if shed volume warrants it. Combined, these should recover a meaningful share of the 300 bps operating-ratio deterioration and put EBITDA margin on a path back toward 10-11%, with a credible plan to present at the lender review. If the diagnostic instead shows the break is broad and unfixable at current market rates, the carrier must escalate to a larger fleet right-sizing or strategic repositioning rather than incremental fixes.",
+  "automatic_fail_conditions": [
+    "Recommending across-the-board driver pay cuts as the primary fix (spikes turnover in a driver-short market and raises effective cost per mile — directly worsens this case).",
+    "Recommending booking low-rate freight below loaded cost per mile to fill trucks (adds unprofitable miles when volume is already stable — accelerates margin and operating-ratio decline).",
+    "Recommending deferring maintenance or safety spend to cut cost (creates DOT/CSA and reliability risk that costs more later).",
+    "Diagnosing a demand/volume problem or a deliberate list-pricing error despite flat ~500M miles and clear per-mile cost-vs-revenue evidence (misreads the root cause).",
+    "Taking on incremental leverage or large capex before fixing per-mile economics, with the operating ratio already near the covenant limit."
+  ],
+  "source_references": [
+    "SEC 10-K and operating-statistics supplements for mid-cap truckload/LTL carriers (operating ratio, revenue per mile, cost per mile, fuel surcharge disclosures).",
+    "Carrier investor-day operating-statistic supplements (cost-per-mile component breakdown: fuel, driver, maintenance, equipment, insurance).",
+    "Industry fuel-surcharge mechanics and freight-rate environment commentary (contract vs spot, surcharge lag and recovery)."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "EBITDA margin = EBITDA / Revenue",
+      "Operating ratio = operating expenses / revenue",
+      "Operating ratio = 100% − operating margin",
+      "Revenue per mile = revenue / total miles",
+      "Cost-per-mile inflation contribution = Σ(Δcost component per mile) × total miles",
+      "EBITDA margin decline (bps) = (prior EBITDA margin − current EBITDA margin) × 100",
+      "Revenue per mile change % = (current revenue per mile − prior revenue per mile) / prior revenue per mile × 100"
+    ],
+    "expected_values": {
+      "revenue_per_mile_usd": 1.60,
+      "prior_revenue_per_mile_usd": 1.66,
+      "revenue_per_mile_change_pct": -3.6,
+      "current_ebitda_margin_pct": 8.0,
+      "prior_ebitda_margin_pct": 11.0,
+      "ebitda_margin_decline_bps": 300,
+      "operating_ratio_pct_current": 94.0,
+      "operating_ratio_pct_prior": 91.0,
+      "fuel_cost_per_mile_usd": 0.40,
+      "fuel_cost_increase_per_mile_usd": 0.052,
+      "driver_wage_per_mile_usd": 0.62,
+      "driver_wage_increase_per_mile_usd": 0.066,
+      "total_miles_m": 500,
+      "cost_inflation_usd_m": 59
+    },
+    "tolerance": "±0.5 pp on margins and operating ratio; ±$0.01 on per-mile figures; ±5% relative on dollar totals (e.g. cost inflation $59M).",
+    "unit_assumptions": "Revenue and EBITDA in USD millions. Total miles in millions (500M). Per-mile figures in USD per mile. Margins and operating ratio in percent; bps = percentage points × 100. Cost-per-mile inflation contribution computed on FY2025 total miles (500M). Fuel +15% on $0.348 = $0.40 (+$0.052/mi); wages +12% on $0.554 = $0.62 (+$0.066/mi); combined +$0.118/mi × 500M ≈ $59M. Revenue-per-mile decline -$0.06/mi × 500M ≈ -$30M.",
+    "invalid_input_rules": "Reject negative miles, negative revenue, EBITDA margin outside 0-100%, operating ratio outside 0-200%, or any per-mile component < 0. Reject if EBITDA margin and operating ratio are mutually inconsistent beyond tolerance (EBITDA margin is pre-D&A and will exceed operating margin; operating ratio uses operating expenses inclusive of D&A). Reject if cost-per-mile components implied total grossly exceeds revenue per mile without explanation.",
+    "missing_input_behavior": "If a required input for a specific metric is absent, compute only the metrics whose inputs are present and explicitly mark the rest as not computable; do not infer or fabricate inputs.",
+    "refuse_if_missing": [
+      "If total miles is absent, refuse to compute revenue per mile, cost per mile, or cost-per-mile inflation contribution.",
+      "If revenue per mile (current or prior) is absent and cannot be derived from revenue/miles, refuse to compute revenue-per-mile change.",
+      "If revenue is absent, refuse to compute EBITDA margin and operating ratio.",
+      "If per-component cost-per-mile values (or their prior-year values) are absent, refuse to compute the cost-per-mile inflation contribution."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+      "criterion": "Does the engine diagnose UNIT_ECONOMICS_BREAKDOWN, recognizing that per-mile cost (fuel +15%, driver wages +12%) outran per-mile revenue (-3.6% to $1.60) and drove the operating ratio from 91% to 94% and EBITDA margin from 11% to 8%?",
+      "rubric_10": "Diagnoses UNIT_ECONOMICS_BREAKDOWN exactly, citing cost-per-mile inflation (fuel +$0.052, wages +$0.066), revenue-per-mile decline to $1.60, operating ratio 91%→94%, and EBITDA 11%→8%, and explicitly notes flat volume rules out demand.",
+      "rubric_8": "Diagnoses a closely related cost/margin archetype (e.g., OPERATIONAL_BOTTLENECK on cost structure) with sound per-mile reasoning, or UNIT_ECONOMICS_BREAKDOWN without full quantification.",
+      "rubric_6": "Identifies margin compression and cost-per-mile pressure but does not clearly frame it as a per-mile unit-economics break vs revenue per mile.",
+      "rubric_4": "Focuses on a secondary issue (general freight-rate weakness or competition) without recognizing the unit-cost-vs-unit-revenue breakdown.",
+      "rubric_2": "Diagnosis contradicts the evidence (e.g., calls it a demand collapse despite flat 500M miles).",
+      "rubric_0": "Diagnosis unrelated to the cost/revenue-per-mile evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic analysis"
+      "criterion": "Does the engine recommend a cost-per-mile and lane/customer freight-profitability diagnostic (including fuel-surcharge recovery and utilization) before blunt cost-cutting or rate moves?",
+      "rubric_10": "Recommends the per-mile / lane-and-customer profitability diagnostic with clear scope (cost-per-mile decomposition, surcharge recovery ratio, bottom-decile lane shedding, empty-mile/utilization, lease-aware fleet sizing), timeline (~6 weeks), and cost, sequenced to bid season and lender review.",
+      "rubric_8": "Recommends a profitability/cost-structure diagnostic with slightly different scope but still targets per-mile economics before acting.",
+      "rubric_6": "Recommends investigating costs or profitability but less targeted, or bundles some premature action with the diagnostic.",
+      "rubric_4": "Recommends immediate cost-cutting (e.g., wage or maintenance cuts) without first localizing the per-mile break.",
+      "rubric_2": "Recommends aggressive action (mass lane exit, fleet sale, or rate war) without analytical foundation.",
+      "rubric_0": "Action harmful or contradicts the diagnosis (e.g., chase low-rate freight)."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect asset-based trucking dynamics (operating ratio, revenue per mile, fuel surcharge, driver retention, bid season, covenant review)?",
+      "rubric_10": "Action is grounded in carrier operating reality — operating ratio toward covenant, revenue/mile, surcharge recovery, empty miles, lease roll-off, bid-cycle repricing — and times levers to the 90-day window.",
+      "rubric_6": "Relevant to a trucking margin problem but misses one key carrier-specific lever (e.g., surcharge recovery or operating ratio framing).",
+      "rubric_2": "Generic margin advice that could apply to any industry; ignores per-mile and operating-ratio context.",
+      "rubric_0": "Irrelevant or harmful to an asset-based carrier."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect driver retention (no pay cuts), lease commitments, contract lock-in, the ~90-day timeline, and covenant pressure?",
+      "rubric_10": "Action protects driver pay, models fleet sizing against lease roll-off, sequences rate fixes to the bid cycle, fits ~6 weeks inside the 90-day window, and avoids new leverage near the covenant limit.",
+      "rubric_6": "Respects most constraints with minor tension (e.g., timeline or cost slightly aggressive).",
+      "rubric_2": "Violates a hard constraint (e.g., cuts driver pay or assumes mid-term contract repricing).",
+      "rubric_0": "Infeasible given the carrier's constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every diagnosis/action claim be traced to the case financials?",
+      "rubric_10": "All key claims traced: EBITDA 11%→8% ($87.1M→$64M), operating ratio 91%→94%, revenue/mile $1.66→$1.60 (-3.6%), fuel $0.40 (+15%/+$0.052), wages $0.62 (+12%/+$0.066), ~500M miles, ~$59M cost inflation.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to specific figures.",
+      "rubric_2": "Minimal evidence support.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given the evidence?",
+      "rubric_10": "HIGH well-calibrated: audited-style multi-year financials, clear per-mile cost and revenue trends, and flat volume jointly pin the diagnosis; residual unknowns (lane-level splits) do not threaten it.",
+      "rubric_6": "Evidence supports the diagnosis but lane-level/surcharge detail missing; MODERATE-to-HIGH might be defended.",
+      "rubric_2": "Evidence ambiguous or weak for the stated confidence.",
+      "rubric_0": "Confidence contradicts the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe (diagnostic before blunt cost-cutting; protects driver retention, safety/maintenance, and covenant position)?",
+      "rubric_10": "Low-risk diagnostic that localizes the break before irreversible moves; explicitly avoids pay cuts, maintenance deferral, low-rate freight, and new leverage near covenant.",
+      "rubric_6": "Mostly safe but with one underweighted risk (e.g., light on maintenance/safety or covenant framing).",
+      "rubric_2": "Recommends a risky move (aggressive cost-cut or rate war) with weak safeguards.",
+      "rubric_0": "Unsafe: pay cuts, maintenance deferral, low-rate freight, or new leverage that worsens this case."
     }
   },
-  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

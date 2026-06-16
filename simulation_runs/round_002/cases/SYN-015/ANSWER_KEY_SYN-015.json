@@ -1,27 +1,157 @@
 {
   "case_id": "SYN-015",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Operations)",
+  "answer_creator": "Domain Expert (Cybersecurity Go-To-Market and Market Sizing)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert tested whether the new-logo stall was caused by internal sales execution, product differentiation, pricing, or external demand availability. By cross-referencing flat output against a 35% larger team, MQL decline, ICP saturation, and consolidation-driven loss reasons, the diagnosis converges on a demand/market-sizing mismatch rather than an execution failure.",
   "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Synthetic stress-test case SYN-015 (Cybersecurity): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "root_cause_description": "The company's growth plan assumed continued expansion of standalone cloud-security demand in its current mid-market ICP, but that demand has saturated and is consolidating into bundled platforms. The evidence rules out the owner's execution/differentiation framing: a 35% larger sales team produced flat bookings (so capacity is not the binding constraint), retention is excellent (NRR 116%, gross 97%, so the product is not failing), and only 21% of losses are feature-driven versus 62% attributed to 'platform consolidation.' Meanwhile ~78% of current-ICP accounts already own a CSPM tool and MQL volume is down 20%. The growth shortfall is therefore an addressable-demand problem: the company is fishing in a pond that is nearly empty and where remaining buyers prefer to consolidate. The cure is re-aiming demand generation at under-served segments/use cases (e.g., lower-enterprise multi-cloud governance, regulated verticals, or a workload-protection wedge), not hiring more reps or matching features.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "New-logo bookings flat YoY",
+      "Sales cycle stretched 95→165 days",
+      "Win rate fell 28%→18%",
+      "Rising CAC per logo"
+    ],
+    "contributing_factors": [
+      "35% larger sales team chasing a static demand pool",
+      "Three platform vendors bundling CSPM",
+      "Top-of-funnel conversion down 30% and MQLs down 20%"
+    ],
+    "true_root_cause": "Addressable in-budget demand in the current ICP has saturated and is consolidating into bundled platforms; the growth plan's demand assumptions no longer hold, so the company must re-aim at fresh demand rather than work the exhausted segment harder."
+  },
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Run a focused 4-6 week demand and segment re-sizing study before any sales hiring or feature build, then re-aim pipeline generation on its findings. Concretely: (1) size remaining un-penetrated, in-budget demand in the current mid-market ICP versus 2-3 adjacent segments/use cases (lower-enterprise multi-cloud governance, regulated verticals, workload-protection-led entry); (2) compute win rate, cycle length, and consolidation-loss share by segment from existing CRM data; (3) test messaging and demand signal in the two highest-potential adjacent segments with a small marketing pilot; (4) decide where to re-aim demand generation and quota allocation. Hold sales headcount and the up-market feature roadmap until the study identifies where in-budget demand actually exists.",
+  "action_description": "It is first because the binding constraint is upstream demand, and any action that does not first establish where in-budget demand exists will waste the board's patience and runway. Hiring reps or building enterprise features now would commit 2-3 quarters and significant cost to assumptions the evidence already contradicts. A short, internal-data-led re-sizing study is cheap, fast, and directly determines whether to keep working the current ICP, re-aim at adjacent segments, or pursue an up-market product investment with evidence.",
+  "accepted_alternative_actions": [
+    "Reallocate existing pipeline-generation spend toward the two most promising adjacent segments on a 60-day test while completing the re-sizing study, provided the reallocation is reversible and tracked.",
+    "Stand up a 'consolidation play' competitive motion (positioning best-of-breed depth against bundled-suite shallowness) for the subset of ICP accounts not yet consolidated, run in parallel as a holdout test against the re-aim hypothesis."
+  ],
+  "bad_actions": [
+    "Hire more senior sales reps to fix the stall: the team already grew 35% with flat output, proving capacity is not the constraint; more reps against a saturated ICP raises CAC and worsens the efficiency metric the board is watching.",
+    "Commit a 2-3 quarter enterprise-feature build to 'restore differentiation': only 21% of losses are feature-driven and retention is excellent, so the product is not the problem; the build would consume runway against a misdiagnosis.",
+    "Cut price to win consolidation deals: 62% of losses are about buyers consolidating into platforms they already own, not price; discounting would erode the 79% margin without changing the consolidation decision.",
+    "Push the existing sales team to work the current ICP harder with higher quotas: the pond is ~78% penetrated with MQLs down 20%, so intensifying effort on exhausted demand burns morale and yields diminishing returns."
+  ],
+  "action_constraints_respected": [
+    "Funding (30-month runway, board wants efficient growth): a 4-6 week internal study is low-cost and directly answers the efficiency question before any expensive commitment.",
+    "Product (up-market features are a 2-3 quarter build): action defers the build until demand evidence justifies it, avoiding premature roadmap commitment.",
+    "Organizational (sales grew 35% with flat output): action holds headcount and reallocates existing capacity rather than adding more.",
+    "Market (ICP saturating, consolidation): action explicitly evaluates adjacent segments and a consolidation counter-play instead of doubling down on the exhausted ICP."
+  ],
+  "rationale": "The decisive signal is that a 35% larger sales team produced flat bookings while retention stayed excellent, which eliminates both execution-capacity and product-quality explanations. Combined with ICP saturation (~78% penetrated), falling MQLs (-20%), and consolidation-driven losses (62%), the only explanation that fits all the evidence is that the demand assumptions underpinning the growth plan no longer hold. The correct first move is therefore to re-establish where real, in-budget demand exists before allocating any capital to sales or product.",
+  "evidence_basis": [
+    "go_to_market: 35% larger team, flat bookings, cycle 95→165 days, win rate 28%→18%, TOFU conversion -30%",
+    "market_position: ~78% of ICP already has CSPM, MQLs -20%, 3 bundling vendors",
+    "competitive_dynamics: 62% of losses to platform consolidation vs 21% feature",
+    "customer_retention: NRR 116%, gross 97% (rules out product-quality cause)"
+  ],
+  "evidence_not_explained": [
+    "The precise remaining TAM in the current ICP and the demand depth of adjacent segments are unknown; the diagnosis identifies saturation and consolidation but the re-sizing study is required to quantify where to re-aim, which is why the first action is diagnostic rather than a committed pivot."
+  ],
+  "alternative_explanations": [
+    "GO_TO_MARKET_MISALIGNMENT (execution/motion): that the sales motion is mis-run. Weaker because the motion historically worked (28% win rate, 95-day cycle) and degraded in lockstep with demand saturation, not a process change; adding capacity changed nothing.",
+    "TRUST_QUALITY_CRISIS / product differentiation loss: that the product fell behind. Weaker because retention is excellent (NRR 116%) and only 21% of losses are feature-based; customers who buy stay and expand.",
+    "STRATEGIC_PRICING_ERROR: that price is wrong. Weaker because losses are dominated by consolidation (62%), not price (17%); buyers are changing how they buy, not what they will pay."
+  ],
+  "missing_evidence": [
+    "Quantified remaining TAM in the current ICP after saturation",
+    "Win rate, cycle, and consolidation-loss share broken out by segment",
+    "Demand signal (search, intent, MQL response) in candidate adjacent segments",
+    "Best-of-breed vs bundled willingness-to-pay among current buyers"
+  ],
+  "success_metrics": [
+    "A segment-level demand map exists within 6 weeks ranking remaining in-budget demand across current ICP and 2-3 adjacencies",
+    "A re-aim decision (hold / shift segment / up-market build) is made with quantified demand evidence",
+    "Pipeline generation reallocated produces higher lead-to-opportunity conversion than the current ICP baseline in the test segment",
+    "New-logo bookings reaccelerate without net sales-headcount increase, improving CAC efficiency"
+  ],
+  "expected_outcome": "If the demand-sizing mismatch is the true root cause, the study should reveal that remaining current-ICP demand is thin and consolidating while one or more adjacent segments show fresher, less-consolidated demand. Re-aiming pipeline generation there should restore conversion and bookings without more reps. If the study instead shows ample un-penetrated current-ICP demand, the diagnosis would shift toward a motion/execution problem and the response would change accordingly, but the flat output against a 35% larger team makes that unlikely.",
+  "automatic_fail_conditions": [
+    "Recommending more sales hiring as the primary action when a 35% larger team already produced flat output",
+    "Committing to a multi-quarter enterprise-feature build to 'restore differentiation' when retention is excellent and feature losses are only 21%",
+    "Diagnosing a product-quality or retention crisis despite NRR 116% and gross retention 97%",
+    "Recommending price cuts to win consolidation deals that are driven by buyer platform-consolidation, not price"
+  ],
+  "source_references": [
+    "CRM bookings, conversion, and capacity data",
+    "Marketing MQL analytics and third-party market estimate",
+    "Win/loss analysis with loss-reason coding",
+    "NRR cohort report and finance efficiency model"
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "35% larger sales team produced flat new-logo bookings", "implication": "Sales capacity is not the constraint; the constraint is upstream demand availability."},
+      {"fact": "~78% of current-ICP accounts already own a CSPM tool and MQLs are down 20%", "implication": "The addressable demand pool in the current segment is saturating, the core of a demand-forecasting mismatch."},
+      {"fact": "62% of losses cite platform consolidation vs 21% feature", "implication": "Buyers are reallocating budget to bundled platforms; demand is shifting, not the product failing."},
+      {"fact": "NRR 116% and gross retention 97%", "implication": "The product delivers value to those who buy it, ruling out a differentiation/quality root cause."},
+      {"fact": "Sales cycle 95→165 days and win rate 28%→18%", "implication": "Deals are harder because fewer in-budget buyers remain, a downstream symptom of demand saturation."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "GO_TO_MARKET_MISALIGNMENT", "why_weaker": "The motion previously worked and degraded alongside demand saturation; adding 35% more capacity changed nothing, so the cause is external demand, not internal motion."},
+      {"alternate": "TRUST_QUALITY_CRISIS", "why_weaker": "NRR 116% and gross retention 97% show the product is valued; only 21% of losses are feature-driven."},
+      {"alternate": "STRATEGIC_PRICING_ERROR", "why_weaker": "Losses are dominated by consolidation (62%), not price (17%); buyers are changing purchasing structure, not balking at price."}
+    ],
+    "first_action_justification": "Because the binding constraint is upstream demand and the evidence already contradicts capacity and product explanations, the first action must be a fast, low-cost re-sizing study to locate fresh in-budget demand before any rep hiring or feature build is committed.",
+    "constraints_effect_on_action": "The board's efficient-growth mandate and the 2-3 quarter cost of up-market features make a cheap diagnostic study the only responsible first step; the fact that sales already grew 35% with flat output forbids more hiring, pushing the action toward reallocating existing demand-generation capacity into tested adjacent segments."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses growth/demand issue"
+      "criterion": "Does the engine diagnose DEMAND_FORECASTING_MISMATCH (saturating/consolidating demand) rather than the owner's sales-efficiency/differentiation framing?",
+      "rubric_10": "Diagnoses DEMAND_FORECASTING_MISMATCH and ties it to flat output despite a 35% larger team, ICP saturation (~78%), and consolidation losses (62%), while citing healthy retention to rule out product causes.",
+      "rubric_8": "Diagnoses a demand/market-sizing root cause with evidence but underweights one signal (e.g., omits the retention contradiction).",
+      "rubric_6": "Identifies the new-logo stall but is ambiguous about whether the cause is demand, execution, or product.",
+      "rubric_4": "Accepts the owner's framing and centers sales inefficiency or lost differentiation.",
+      "rubric_2": "Diagnoses a product-quality crisis despite NRR 116%.",
+      "rubric_0": "Diagnosis unrelated to the evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic"
+      "criterion": "Does the engine prioritize a demand/segment re-sizing study before hiring reps or building features?",
+      "rubric_10": "Recommends a 4-6 week demand re-sizing study across current ICP and adjacencies, holding headcount and roadmap until evidence justifies a re-aim.",
+      "rubric_8": "Recommends a demand/segment analysis before commitment but with weaker scope or sequencing.",
+      "rubric_6": "Recommends analysis but mixes in premature hiring or feature build.",
+      "rubric_4": "Recommends hiring reps or building features as primary.",
+      "rubric_2": "Recommends price cuts to win consolidation deals.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect a maturing-category cybersecurity context where consolidation reshapes demand and the board demands efficiency?",
+      "rubric_10": "Action centers on relocating in-budget demand and on the efficiency mandate, addressing consolidation directly.",
+      "rubric_6": "Action is demand-relevant but generic about the cybersecurity consolidation dynamic.",
+      "rubric_2": "Action loosely related to the context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 30-month runway, efficient-growth mandate, and the 2-3 quarter cost of up-market features?",
+      "rubric_10": "Uses a low-cost internal study, holds headcount, and defers the feature build until justified.",
+      "rubric_6": "Respects most constraints but proposes some premature spend.",
+      "rubric_2": "Proposes hiring or feature commitments that strain efficiency.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-015 metrics?",
+      "rubric_10": "Every claim traces to data: flat bookings vs +35% team, cycle 95→165, win 28%→18%, ICP 78% penetrated, MQLs -20%, consolidation losses 62%, NRR 116%.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MEDIUM-HIGH confidence appropriate given strong execution/retention signals but estimated market data?",
+      "rubric_10": "MEDIUM-HIGH well-calibrated: the internal signals are strong, but the market-saturation figure is a third-party estimate, justifying a diagnostic-first action.",
+      "rubric_6": "Confidence defensible but does not acknowledge the estimated nature of the TAM data.",
+      "rubric_2": "Confidence asserted without grounding.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action low-risk (cheap diagnostic before capital-intensive commitments)?",
+      "rubric_10": "Action is a low-cost, reversible study that prevents premature hiring or roadmap commitment.",
+      "rubric_6": "Action mostly safe but includes one cost item needing justification.",
+      "rubric_2": "Action commits meaningful capital before evidence.",
+      "rubric_0": "Action high-risk (large hiring or multi-quarter build on assumption)."
     }
   },
-  "creation_methodology": "Expert analysis of SYNTHETIC case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

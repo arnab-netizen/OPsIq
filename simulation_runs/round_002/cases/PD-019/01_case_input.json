@@ -1,10 +1,128 @@
 {
   "caseId": "PD-019",
   "caseType": "PUBLIC_DATASET",
-  "industry": "Transportation / Logistics",
+  "industry": "Trucking / Freight Logistics (Truckload / LTL Carrier)",
+  "businessModel": "Asset-based over-the-road freight carrier (owned and leased tractor/trailer fleet, company drivers plus limited owner-operators) serving contract and spot freight customers",
+  "businessStage": "Mature, mid-cap, profitability under pressure (margin compression)",
+  "sourceNote": "Derived from SEC 10-K disclosure patterns for mid-cap truckload/LTL carriers, including operating ratio, revenue-per-mile, cost-per-mile, and fuel-surcharge metrics. Financial structure modeled on audited annual reports, quarterly operating statistics, and investor-day operating-statistic supplements for publicly traded asset-based carriers. All figures illustrative of public disclosure patterns; no proprietary internal data and no answer-key content included.",
   "ownerIntake": {
-    "businessType": "Mid-cap trucking/logistics company, $800M revenue, EBITDA margin 8%, declining from 11%",
-    "stage": "Fuel costs +15%, driver wages +12%, freight rates pressured by competition. Margin collapse.",
-    "ownerGoal": "Address cost structure and operational efficiency"
+    "businessType": "Asset-based truckload and LTL freight carrier. Mid-cap, ~$800M annual revenue. Operates a fleet of ~5,500 tractors and ~18,000 trailers across a national lane network. ~6,000 employees including ~5,000 drivers. Revenue split roughly 70% dedicated/contract freight and 30% spot market. Fuel surcharge programs apply to most contract lanes but with a recovery lag and incomplete pass-through on spot freight.",
+    "stage": "FY2025: Revenue $800M (up ~1% from $792M FY2024, essentially flat). Total miles 500M. Revenue per mile $1.60 (down from $1.66 in FY2024, -3.6%). EBITDA $64M, EBITDA margin 8.0% (down from $87.1M / 11.0% in FY2024, a 300 bps decline). Operating ratio (operating expenses / revenue) 94% in FY2025, up from 91% in FY2024 (300 bps deterioration). Cost-per-mile components FY2025: fuel $0.40 (up from $0.348, +15%), driver wages and benefits $0.62 (up from $0.554, +12%), maintenance $0.18, equipment/depreciation $0.16, insurance/other $0.20.",
+    "ownerGoal": "Restore EBITDA margin toward 11% (operating ratio back below 91%) and stabilize per-mile contribution before the upcoming contract bid season and the annual lender covenant review (~90 days out). Decide whether to shed unprofitable lanes/customers, re-rate the fuel surcharge, or right-size the fleet.",
+    "ownerConstraints": [
+      "Competitive spot rates cap pricing: the freight market is soft and oversupplied; competitors are bidding aggressively, so the carrier cannot unilaterally raise contract or spot rates without losing volume to lower-cost bidders.",
+      "Fuel-surcharge lag and under-recovery: contract fuel surcharge formulas reset against a national index and lag real pump prices; spot freight carries little or no surcharge, so the +15% fuel increase is only partially recovered.",
+      "Driver shortage and retention: the labor market for qualified CDL drivers is tight; wages were raised +12% specifically to retain drivers. Cutting driver pay would spike turnover, increase recruiting/training cost, and idle trucks.",
+      "Equipment lease commitments: a large share of the tractor/trailer fleet is under multi-year leases with fixed payments and early-termination penalties, limiting how quickly the fleet can be right-sized to reduce fixed cost.",
+      "Customer contracts: dedicated/contract freight is under annual rate agreements that cannot be repriced mid-term; rate corrections are only possible at the next bid cycle, constraining near-term revenue-per-mile recovery.",
+      "Covenant pressure: operating ratio is approaching a lender covenant threshold ahead of the annual review, limiting appetite for large discretionary capital outlays."
+    ],
+    "immediateConcern": "Margin is compressing on every mile. Fuel cost per mile rose 15% and driver wages per mile rose 12%, while revenue per mile fell 3.6% in a soft, competitive freight market where the fuel surcharge does not fully pass through. The operating ratio has climbed from 91% to 94% and is nearing the lender covenant limit. The owner needs to know, before bid season and the lender review (~90 days), whether the problem is fixable through lane/customer profitability surgery and surcharge re-rating, or whether the fleet must be right-sized.",
+    "availableData": [
+      "Revenue: $800M FY2025 vs $792M FY2024 (annual income statement and operating-statistics supplement).",
+      "Total miles: 500M FY2025 (operating statistics).",
+      "Revenue per mile: $1.60 FY2025 vs $1.66 FY2024 (-3.6%), disclosed in operating-statistics supplement.",
+      "Cost-per-mile components FY2025: fuel $0.40 (+15% from $0.348), driver wages and benefits $0.62 (+12% from $0.554), maintenance $0.18, equipment/depreciation $0.16, insurance/other $0.20.",
+      "Operating ratio: 94% FY2025 vs 91% FY2024 (operating expenses / revenue).",
+      "EBITDA and EBITDA margin: $64M / 8.0% FY2025 vs $87.1M / 11.0% FY2024.",
+      "Fuel cost inflation +15% and driver wage inflation +12% year over year (cost-line disclosures and management commentary).",
+      "Revenue mix: ~70% dedicated/contract, ~30% spot; fuel-surcharge coverage by lane type."
+    ],
+    "unavailableData": [
+      "Lane-level and customer-level profitability (contribution margin per lane and per account is not disclosed in public filings).",
+      "Empty-mile / deadhead percentage and tractor utilization by region (not separately disclosed).",
+      "Fuel-surcharge recovery ratio by customer (actual surcharge collected vs incremental fuel cost) at the account level.",
+      "Driver turnover, recruiting, and training cost detail by terminal (proprietary HR data).",
+      "Equipment lease-by-lease terms, early-termination penalties, and residual values (not itemized publicly)."
+    ],
+    "timeHorizon": "~90 days (decision required before the contract bid season and the annual lender covenant review).",
+    "riskAppetite": "MEDIUM (margin recovery is urgent and operating ratio is nearing a covenant limit, but driver retention and customer relationships must be protected; cannot take actions that spike turnover or shed strategic volume recklessly)."
+  },
+  "businessProblem": "A mid-cap asset-based trucking carrier with ~$800M revenue has seen EBITDA margin fall from 11.0% (FY2024) to 8.0% (FY2025), a 300 bps decline, with the operating ratio deteriorating from 91% to 94% and nearing a lender covenant threshold. Volumes are roughly stable (total miles ~500M, revenue essentially flat at $800M vs $792M), so this is not a demand collapse. Instead, the economics of the marginal mile have broken down: cost per mile is rising fast (fuel +15% to $0.40/mi, driver wages +12% to $0.62/mi) while revenue per mile is falling (down 3.6% to $1.60 from $1.66) in a soft, competitive freight market where the fuel surcharge lags and under-recovers, especially on spot freight. The core challenge before the ~90-day bid season and lender review: is the margin decline a unit-cost-vs-unit-revenue breakdown that can be fixed by shedding unprofitable lanes/customers, re-rating the fuel surcharge, and improving utilization/driver productivity — or is it a broad pricing-strategy problem or a demand-mismatch problem? The carrier must diagnose precisely and act before bid commitments and the covenant test lock in the current trajectory.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "EBITDA margin declined from 11.0% (FY2024, $87.1M on $792M) to 8.0% (FY2025, $64M on $800M), a 300 bps compression, even though revenue was essentially flat (+1%). The operating ratio (operating expenses / revenue) deteriorated from 91% to 94%, a 300 bps increase, indicating that operating costs grew materially faster than revenue.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K income statement and operating-statistics supplement (FY2024, FY2025)",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_fy2025": "$800M",
+        "revenue_fy2024": "$792M",
+        "ebitda_fy2025": "$64M",
+        "ebitda_fy2024": "$87.1M",
+        "ebitda_margin_fy2025": "8.0%",
+        "ebitda_margin_fy2024": "11.0%",
+        "ebitda_margin_decline_bps": 300,
+        "operating_ratio_fy2025": "94%",
+        "operating_ratio_fy2024": "91%"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Cost per mile rose sharply in the two largest variable cost lines. Fuel per mile increased 15% to $0.40 (from $0.348), adding ~$0.052/mile. Driver wages and benefits per mile increased 12% to $0.62 (from $0.554), adding ~$0.066/mile. Combined, the two lines added ~$0.118/mile of cost on 500M miles, roughly +$59M of cost year over year. Other cost-per-mile lines: maintenance $0.18, equipment/depreciation $0.16, insurance/other $0.20.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K cost-line disclosures and operating-statistics supplement (FY2024, FY2025)",
+      "isCritical": true,
+      "supportingData": {
+        "fuel_cpm_fy2025": "$0.40",
+        "fuel_cpm_fy2024": "$0.348",
+        "fuel_cpm_increase_pct": "+15%",
+        "fuel_cpm_increase_usd": "$0.052",
+        "driver_wage_cpm_fy2025": "$0.62",
+        "driver_wage_cpm_fy2024": "$0.554",
+        "driver_wage_cpm_increase_pct": "+12%",
+        "driver_wage_cpm_increase_usd": "$0.066",
+        "maintenance_cpm": "$0.18",
+        "equipment_depreciation_cpm": "$0.16",
+        "insurance_other_cpm": "$0.20",
+        "total_miles": "500M",
+        "combined_cost_inflation": "~$59M"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Revenue per mile fell 3.6% to $1.60 (from $1.66) in a soft, oversupplied freight market. Competitive spot rates are pressuring pricing and the contract fuel surcharge under-recovers: spot freight (~30% of revenue) carries little surcharge and contract surcharge formulas lag the pump. The carrier cannot raise rates unilaterally without ceding volume, so revenue per mile is being squeezed from both base rate and incomplete fuel pass-through.",
+      "confidence": "HIGH",
+      "source": "Operating-statistics supplement (revenue per mile), management commentary on freight-rate environment and fuel-surcharge recovery",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_per_mile_fy2025": "$1.60",
+        "revenue_per_mile_fy2024": "$1.66",
+        "revenue_per_mile_change_pct": "-3.6%",
+        "revenue_per_mile_change_usd": "-$0.06",
+        "spot_share_of_revenue": "~30%",
+        "contract_share_of_revenue": "~70%",
+        "fuel_surcharge": "lagging index, incomplete pass-through, minimal on spot"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Volumes are roughly stable: total miles ~500M and revenue essentially flat at $800M vs $792M (+1%). This rules out a demand-collapse explanation. The deterioration is concentrated in the gap between revenue per mile ($1.60) and rising cost per mile; the marginal mile now contributes far less, with the combined fuel+wage cost increase (~$0.118/mile) exceeding the revenue-per-mile decline (-$0.06/mile), so contribution per mile has compressed even before fixed costs.",
+      "confidence": "MEDIUM",
+      "source": "Operating-statistics supplement (total miles, revenue), derived contribution-per-mile analysis",
+      "isCritical": true,
+      "supportingData": {
+        "total_miles_fy2025": "500M",
+        "revenue_fy2025": "$800M",
+        "revenue_fy2024": "$792M",
+        "volume_trend": "roughly flat",
+        "revenue_per_mile_decline_usd": "-$0.06",
+        "cost_per_mile_increase_fuel_plus_wages_usd": "+$0.118",
+        "implication": "contribution per mile compressed; unit cost outran unit revenue"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Trucking / Freight Logistics",
+    "size": "mid-cap (public-style disclosure, ~$800M revenue, ~6,000 employees, ~5,500 tractors)",
+    "revenueImpactUrgency": "HIGH (operating ratio nearing lender covenant limit; decision required before bid season and annual lender review within ~90 days)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (asset-based carrier with capital-markets and lender access, but covenant pressure and lease commitments limit discretionary spend)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (large workforce but driver capacity constrained by a tight CDL labor market; analytical/pricing team available for a focused diagnostic)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

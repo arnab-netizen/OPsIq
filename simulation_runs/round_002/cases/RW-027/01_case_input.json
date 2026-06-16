@@ -1,0 +1,108 @@
+{
+  "caseId": "RW-027",
+  "caseType": "REAL_WORLD",
+  "industry": "Consumer Packaged Goods / Specialty Food & Beverage",
+  "businessModel": "Branded refrigerated cold-brew and functional coffee beverage maker selling DTC, regional grocery, and national natural-channel retail",
+  "businessStage": "Scale-up, Series A funded, transitioning from DTC-led to retail-led distribution",
+  "sourceNote": "Real-world pattern from emerging refrigerated CPG beverage brands (mirrors public disclosures and trade-press patterns from refrigerated coffee/functional-beverage challengers such as the Califia/High Brew/Chameleon cohort). Reflects the documented CPG scale-up trap where reported retail revenue grows fast but gross-to-net erosion from trade spend, slotting, refrigerated freight, spoilage, and broker fees collapses contribution margin. Metrics reflect typical natural-channel refrigerated SKU economics and IRI/SPINS-style velocity benchmarks.",
+  "ownerIntake": {
+    "businessType": "Refrigerated cold-brew and adaptogen-functional coffee brand, founded 2019. 9 SKUs in 12oz and 32oz refrigerated formats. $14.2M gross (invoiced) revenue TTM. 38 employees. Distribution: ~2,400 retail doors (natural channel + regional conventional grocery), DTC subscription (~9,000 active subscribers), and Amazon. Co-packed at two refrigerated facilities; no owned manufacturing.",
+    "stage": "Scale-up Series A ($11M raised 2022): Invoiced revenue $14.2M TTM growing 41% YoY, but net revenue (after trade/returns/slotting) only $9.8M. Reported gross margin on invoiced basis 34%, but true contribution margin after trade spend, freight, and spoilage is 11% and falling (was 19% twelve months ago, -800bps). Monthly burn $420k. Cash on hand $3.1M. DTC contribution margin 44%; retail contribution margin now 4%.",
+    "ownerGoal": "Reach contribution-margin breakeven (>20% blended contribution margin) and a defensible path to profitability within 9 months to unlock a $6M bridge/Series A extension from existing investors.",
+    "ownerConstraints": [
+      "Cash runway 7.4 months at current $420k/month burn; bridge financing is conditional on a credible margin-recovery plan.",
+      "Trade spend has grown to 18% of invoiced retail revenue (slotting, scan-down promos, free-fill), versus 9% twelve months ago; two national retailers demand 15%+ promotional frequency to retain shelf space.",
+      "Refrigerated DSD/LTL freight runs $0.62/unit and spoilage/short-code returns are 7% of retail shipments due to 90-day code life and slow velocity in newer doors.",
+      "Co-pack minimum runs are 8,000 units/SKU; cannot economically reduce SKU count below current run minimums without renegotiation.",
+      "Founder has signed 12-month shelf commitments with two national natural retailers (~600 doors) that carry guaranteed promo calendars and cannot be exited without penalty until Q1 next year.",
+      "Team is lean (38 people, only 2 in finance/FP&A); no SKU-level or door-level contribution reporting exists today."
+    ],
+    "immediateConcern": "Invoiced revenue is up 41% YoY but the company is burning faster than ever and true contribution margin has fallen from 19% to 11% in twelve months. The founder cannot tell whether the brand is fundamentally unprofitable, whether specific channels/SKUs/doors are dragging the blend, or whether trade spend is buying unprofitable distribution. Investors will not release the bridge without a credible margin story within 60 days.",
+    "availableData": [
+      "Invoiced revenue $14.2M TTM (+41% YoY), net revenue $9.8M, blended contribution margin 11% (down from 19%), DTC CM 44%, retail CM 4%",
+      "Trade spend 18% of invoiced retail revenue (up from 9%), slotting amortization $310k TTM, freight $0.62/unit, spoilage/returns 7% of retail shipments",
+      "Door count ~2,400 (up from 1,300 a year ago), DTC subscribers ~9,000 (flat), Amazon ~11% of revenue",
+      "Monthly burn $420k, cash $3.1M, co-pack run minimum 8,000 units/SKU, 9 SKUs"
+    ],
+    "unavailableData": [
+      "Door-level velocity: units sold per store per week (SPSW) by retailer and door cohort — needed to know which doors are below the breakeven velocity threshold",
+      "SKU-level true contribution after trade, freight, and spoilage — which of the 9 SKUs are margin-positive vs. negative",
+      "Channel-level fully-loaded P&L — true DTC vs. retail vs. Amazon contribution net of fulfillment, ad spend (CAC), and trade",
+      "Trade-spend ROI: lift per promotional dollar by retailer; whether promoted volume is incremental or merely subsidized base",
+      "Spoilage attribution: which doors/regions/SKUs generate short-code returns, and whether velocity or distribution overreach is the cause"
+    ],
+    "timeHorizon": "60 days (investor bridge decision window; the founder must present a credible contribution-margin recovery plan before cash falls below 6 months of runway)",
+    "riskAppetite": "LOW (7.4 months of runway, conditional bridge; founder cannot afford a wrong-channel bet or destructive shelf exit that triggers penalties)"
+  },
+  "businessProblem": "A refrigerated cold-brew CPG brand is growing invoiced revenue 41% YoY while its true contribution margin has collapsed from 19% to 11% in twelve months, and burn is at an all-time high with 7.4 months of runway. Reported (invoiced) gross margin of 34% masks a much weaker net picture once trade spend (now 18% of retail revenue), refrigerated freight, slotting, and 7% spoilage are subtracted, leaving retail contribution at just 4% versus DTC at 44%. The founder must determine whether the business is fundamentally unprofitable, whether the retail channel as a whole destroys value, or whether a specific subset of SKUs and low-velocity doors is dragging an otherwise viable blend — before committing to any retail retreat, SKU rationalization, or price action that could breach shelf commitments or co-pack minimums.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Invoiced revenue grew 41% YoY to $14.2M, but net revenue is only $9.8M and true blended contribution margin fell from 19% to 11% over twelve months (-800bps) even as the top line accelerated. The divergence between invoiced growth and contribution decline indicates revenue is being bought with margin, not earned through profitable demand.",
+      "confidence": "HIGH",
+      "source": "Management P&L, gross-to-net reconciliation, trailing-twelve-month financials",
+      "isCritical": true,
+      "supportingData": {
+        "invoiced_revenue_ttm": "$14.2M",
+        "net_revenue_ttm": "$9.8M",
+        "yoy_invoiced_growth": "+41%",
+        "blended_contribution_margin_now": "11%",
+        "blended_contribution_margin_prior": "19%",
+        "cm_erosion": "-800bps"
+      }
+    },
+    {
+      "dimension": "unit_economics",
+      "finding": "Channel contribution margins diverge sharply: DTC contribution is 44% while retail contribution is just 4%. Retail doors grew from 1,300 to 2,400 in twelve months — nearly all of the contribution erosion coincides with the door expansion, and the new doors are concentrated in the lower-velocity natural channel.",
+      "confidence": "HIGH",
+      "source": "Channel P&L breakdown, distribution expansion log",
+      "isCritical": true,
+      "supportingData": {
+        "dtc_contribution_margin": "44%",
+        "retail_contribution_margin": "4%",
+        "door_count_now": "2400",
+        "door_count_prior": "1300",
+        "amazon_share_of_revenue": "11%"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Trade spend has doubled from 9% to 18% of invoiced retail revenue in twelve months, refrigerated freight is $0.62/unit, and spoilage/short-code returns run 7% of retail shipments due to 90-day code life colliding with slow velocity in newer doors. There is no door-level velocity or SKU-level contribution reporting to attribute where the spend and spoilage are concentrated.",
+      "confidence": "HIGH",
+      "source": "Trade-spend ledger, freight invoices, returns/credits log, FP&A note on reporting gaps",
+      "isCritical": true,
+      "supportingData": {
+        "trade_spend_pct_now": "18%",
+        "trade_spend_pct_prior": "9%",
+        "freight_per_unit": "$0.62",
+        "spoilage_returns_pct": "7%",
+        "code_life_days": "90"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "DTC subscriber base is flat at ~9,000 and DTC contribution remains strong at 44%, indicating brand demand and product quality are healthy where the brand controls economics. NPS and repeat rates on DTC are stable. The deterioration is therefore not a demand or product-quality problem; it tracks the shift in revenue mix toward subsidized retail distribution.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "DTC subscription analytics, repeat-purchase cohort data",
+      "isCritical": false,
+      "supportingData": {
+        "dtc_subscribers": "9000",
+        "dtc_subscriber_trend": "Flat",
+        "dtc_contribution_margin": "44%",
+        "dtc_repeat_rate": "Stable"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "CPG / Refrigerated Food & Beverage",
+    "size": "Scale-up ($14.2M invoiced revenue, 38 people, 2,400 doors, $11M raised)",
+    "revenueImpactUrgency": "CRITICAL (contribution-margin collapse with 7.4 months runway; bridge financing conditional on margin recovery)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (7.4 months runway, $3.1M cash, conditional bridge only)",
+    "timeHorizonDays": 60,
+    "staffCapacity": "LOW (38 people, only 2 in finance/FP&A; no door- or SKU-level reporting)",
+    "cashRunwayMonths": 7,
+    "legalComplianceSensitive": false
+  }
+}

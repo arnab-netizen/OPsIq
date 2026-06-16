@@ -1,10 +1,129 @@
 {
   "caseId": "PD-014",
   "caseType": "PUBLIC_DATASET",
-  "industry": "Aerospace / Defense Contractor",
+  "industry": "Aerospace & Defense Manufacturing",
+  "businessModel": "Tier-1 Government & Prime Contractor Supplier (Fixed-Price and Cost-Plus Programs)",
+  "businessStage": "Mature, Margin Compression Under Locked Contract Book",
+  "sourceNote": "Derived from SEC 10-K filing patterns for mid-cap aerospace & defense tier-1 suppliers, including contract-mix and backlog disclosures. Financial structure reconstructed from audited annual report patterns, segment contract-type disclosures (firm-fixed-price vs cost-plus), backlog and book-to-bill metrics, and MD&A commentary on input-cost inflation. All figures are illustrative-but-consistent reconstructions from public disclosure conventions. No proprietary internal data. No answer-key content included.",
   "ownerIntake": {
-    "businessType": "Mid-cap aerospace supplier, $2.1B revenue, EBITDA margin 8%, declining from 10%",
-    "stage": "Supply chain inflation (materials +12%), labor +8%, pricing power limited by government contracts (fixed-price). Margin compression.",
-    "ownerGoal": "Address margin pressure and cost structure misalignment"
+    "businessType": "Mid-cap aerospace & defense contractor and tier-1 supplier to U.S. and allied government programs and prime contractors. Public company. Primary products: precision structural assemblies, propulsion components, and mission subsystems sold under multi-year government and prime-contractor programs. Revenue model: ~70% firm-fixed-price (FFP) multi-year contracts, ~30% cost-plus or contracts with escalation clauses. Approximately 6,500 employees.",
+    "stage": "FY2025: Revenue $2,100M (up from $2,040M FY2024, +2.9% YoY on program ramp). EBITDA $168M, EBITDA margin 8.0% (down from $204M / 10.0% in FY2024, a 200 bps decline). Contract mix: ~70% revenue ($1,470M) firm-fixed-price multi-year without economic price adjustment (EPA) clauses; ~30% ($630M) cost-plus or escalating. Materials cost FY2025 $735M (35% of revenue), up +12% YoY like-for-like. Direct labor FY2025 $546M (26% of revenue), up +8% YoY. Backlog $5.6B (2.7x revenue). Book-to-bill 1.1.",
+    "ownerGoal": "Restore EBITDA margin toward 10% and protect program profitability across the remaining multi-year backlog, while setting disciplined pricing for the next bid cycle. CEO must decide within ~120 days whether to file Requests for Equitable Adjustment (REAs) and how to price upcoming FFP bids before the re-pricing window closes.",
+    "ownerConstraints": [
+      "Contractual constraint: Firm-fixed-price multi-year contracts cannot be reopened unilaterally. Price relief requires negotiated change orders, REAs, or contractually grounded claims; unilateral price increases would constitute breach.",
+      "Regulatory constraint: Subject to DFARS, FAR, and U.S. government contracting compliance, including TINA/certified cost-or-pricing data rules and CAS. Any pricing adjustment or claim must be fully compliant and documented.",
+      "Strategic constraint: Cannot walk away from strategic programs. Several FFP contracts are tied to flagship platforms central to customer relationships and future award eligibility; abandonment would forfeit positioning and incur termination liability.",
+      "Competitive constraint: High recompete risk. An aggressive pricing posture or perceived non-performance jeopardizes follow-on awards and re-compete outcomes on multi-billion-dollar program franchises.",
+      "Quality/safety constraint: Defense and flight-critical work is governed by AS9100, customer source inspection, and airworthiness requirements. Labor and material reductions cannot compromise quality, safety, or first-article conformance.",
+      "Capital/financial constraint: Investment-grade balance sheet must be preserved; major restructuring or write-downs would signal program distress to customers and investors."
+    ],
+    "immediateConcern": "EBITDA margin fell 200 bps (10.0% to 8.0%) in a single year despite revenue growth and a strong $5.6B backlog. Materials are up 12% and labor up 8%, but roughly 70% of revenue sits in firm-fixed-price multi-year contracts priced before the inflation surge and lacking economic price adjustment (EPA) clauses, so cost increases cannot be passed through. Demand is healthy (book-to-bill 1.1), so the compression is not a demand or volume problem. The CEO must decide next-cycle bid pricing and whether to pursue REAs within ~120 days before the re-pricing window closes and before bidding additional FFP work that could lock in more underpriced backlog.",
+    "availableData": [
+      "Contract mix by type: ~70% of revenue ($1,470M) firm-fixed-price multi-year without EPA clauses; ~30% ($630M) cost-plus or with escalation clauses (segment/contract-type disclosure, MD&A)",
+      "Income statement: Revenue FY2025 $2,100M vs FY2024 $2,040M; EBITDA FY2025 $168M (8.0% margin) vs FY2024 $204M (10.0% margin); 200 bps margin decline",
+      "Materials cost FY2025 $735M = 35% of revenue, up +12% YoY on a like-for-like basis (cost of sales schedules, MD&A inflation commentary)",
+      "Direct labor cost FY2025 $546M = 26% of revenue, up +8% YoY (cost of sales schedules, collective bargaining / wage disclosures)",
+      "Backlog $5.6B (2.7x revenue) and book-to-bill 1.1, indicating strong demand and a large locked book of future-period FFP work",
+      "Program structure: multi-year award terms, remaining performance obligations, and re-pricing / option-year windows from contract disclosures"
+    ],
+    "unavailableData": [
+      "Contract-by-contract EPA clause language and exact pass-through eligibility (proprietary contract terms not in public filings)",
+      "Program-level (contract-level) gross margin and the specific FFP contracts that are underwater (public filings aggregate by segment)",
+      "Strength of REA / claims position per contract (requires legal review of change-order history, government-caused delay, and constructive change facts)",
+      "Forward input-cost hedging positions and supplier contract terms for materials (not publicly disclosed)",
+      "Internal labor productivity and overhead absorption detail by program (not disclosed)"
+    ],
+    "timeHorizon": "~120 days (next-cycle bid pricing decisions and REA filing window before re-pricing/option windows close)",
+    "riskAppetite": "LOW-MEDIUM (governed defense contractor; compliance, program continuity, and customer relationships constrain aggressive moves; margin recovery must be contractually and regulatorily defensible)"
+  },
+  "businessProblem": "A mid-cap aerospace & defense contractor with $2.1B revenue has seen EBITDA margin compress 200 basis points in one year (10.0% to 8.0%, EBITDA $204M to $168M) despite revenue growth and a strong $5.6B backlog (2.7x revenue, book-to-bill 1.1). Input costs have surged: materials +12% (to $735M, 35% of revenue) and labor +8% (to $546M, 26% of revenue). The structural issue is that approximately 70% of revenue ($1,470M) is concentrated in firm-fixed-price multi-year government and prime contracts that were priced before the inflation surge and that lack economic price adjustment (EPA) clauses. On this book, input-cost inflation cannot be passed through, while only the ~30% cost-plus/escalating book ($630M) recovers cost increases. Demand is strong and the backlog is full, so this is not a demand, volume, or market-share problem, and operational efficiency is not the identified gap. The central question is whether the margin decline is a structural pricing/contracting problem, a unit-economics/operations problem, or an operational bottleneck. The CEO must decide, within ~120 days, how to price next-cycle FFP bids and whether to file Requests for Equitable Adjustment (REAs) on existing contracts before the re-pricing window closes and before bidding additional FFP work that could lock in further underpriced backlog.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "EBITDA margin declined 200 bps from 10.0% (FY2024) to 8.0% (FY2025), with EBITDA falling from $204M to $168M (-$36M) even though revenue grew from $2,040M to $2,100M (+2.9%). Margin contracted while volume rose, indicating a profitability-per-dollar problem rather than a demand problem. Applying the FY2024 margin to FY2025 revenue would have implied ~$210M EBITDA, versus $168M actual, a ~$42M margin drag.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K income statement and segment disclosures (FY2024, FY2025); MD&A margin bridge",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_fy2025_usd_m": 2100,
+        "revenue_fy2024_usd_m": 2040,
+        "ebitda_fy2025_usd_m": 168,
+        "ebitda_fy2024_usd_m": 204,
+        "ebitda_margin_fy2025_pct": 8.0,
+        "ebitda_margin_fy2024_pct": 10.0,
+        "margin_decline_bps": 200,
+        "implied_ebitda_drag_usd_m": 42
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Approximately 70% of revenue ($1,470M) is firm-fixed-price (FFP) multi-year contracts without economic price adjustment (EPA) clauses; only ~30% ($630M) is cost-plus or carries escalation. On the FFP book, input-cost inflation cannot be passed through to the customer, so all material and labor inflation on that revenue compresses margin directly. The ~30% cost-reimbursable/escalating book recovers most cost increases, concentrating the entire inflation impact on the FFP portfolio.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K contract-type / segment disclosures and remaining performance obligation schedules",
+      "isCritical": true,
+      "supportingData": {
+        "ffp_revenue_share_pct": 70,
+        "ffp_revenue_usd_m": 1470,
+        "cost_plus_escalating_share_pct": 30,
+        "cost_plus_escalating_usd_m": 630,
+        "epa_clause_on_ffp": "absent or weak"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Materials cost rose to $735M (35% of revenue) up +12% YoY like-for-like, and direct labor rose to $546M (26% of revenue) up +8% YoY. The increases are input-price driven (commodity and wage inflation), not efficiency-driven: there is no disclosed deterioration in productivity, scrap, rework, or throughput. The cost increase is being absorbed because contract prices on the FFP book are fixed, not because operations became less efficient.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K cost-of-sales schedules; MD&A inflation and wage commentary",
+      "isCritical": true,
+      "supportingData": {
+        "materials_cost_usd_m": 735,
+        "materials_pct_of_revenue": 35,
+        "materials_inflation_pct": 12,
+        "labor_cost_usd_m": 546,
+        "labor_pct_of_revenue": 26,
+        "labor_inflation_pct": 8,
+        "efficiency_deterioration_disclosed": "none"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Backlog stands at $5.6B (2.7x annual revenue) with book-to-bill of 1.1, indicating strong, growing demand and a deep book of future-period work. The company is not losing orders or market share; on the contrary, it continues to win work. This rules out a demand-shortfall or market-decline explanation and indicates the locked backlog itself carries the embedded pricing exposure: future periods will recognize revenue at pre-inflation fixed prices on the FFP portion of backlog.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K backlog and book-to-bill disclosures; investor presentation order metrics",
+      "isCritical": true,
+      "supportingData": {
+        "backlog_usd_b": 5.6,
+        "backlog_to_revenue_x": 2.7,
+        "book_to_bill": 1.1,
+        "demand_signal": "strong"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Estimating the inflation impact attributable to the FFP book: of the $735M materials cost, ~70% ($514.5M) supports FFP revenue; the embedded +12% inflation on that base is ~$61.7M. Of the $546M labor, ~70% ($382.2M) supports FFP revenue; the embedded +8% inflation is ~$30.6M. Combined, ~$92M of input inflation is attributable to the no-EPA FFP book and is structurally unrecoverable through pricing. Net realized EBITDA drag (~$42M) is smaller than gross inflation because the ~30% cost-plus/escalating book recovers its share and revenue growth provides partial absorption, but the unrecovered FFP inflation is the dominant driver of the 200 bps compression.",
+      "confidence": "MEDIUM",
+      "source": "Derived from disclosed cost mix and contract-type split (10-K); estimation, not a single reported figure",
+      "isCritical": true,
+      "supportingData": {
+        "ffp_materials_base_usd_m": 514.5,
+        "ffp_materials_inflation_usd_m": 61.7,
+        "ffp_labor_base_usd_m": 382.2,
+        "ffp_labor_inflation_usd_m": 30.6,
+        "est_unrecovered_ffp_inflation_usd_m": 92,
+        "net_realized_ebitda_drag_usd_m": 42
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Aerospace & Defense Manufacturing",
+    "size": "mid-cap (public, $2.1B revenue, ~6,500 employees)",
+    "revenueImpactUrgency": "HIGH (margin compression on a multi-year locked backlog will persist and compound across future periods unless pricing and claims posture are addressed before re-pricing windows close)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH (investment-grade public contractor with capital-markets access, but spending and pricing constrained by board oversight and government contracting compliance)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "HIGH (~6,500 employees including contracts, pricing, and legal functions; but specialized REA/claims and pricing capacity is finite)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

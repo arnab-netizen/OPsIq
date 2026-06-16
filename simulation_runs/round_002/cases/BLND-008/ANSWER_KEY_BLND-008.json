@@ -1,27 +1,159 @@
 {
   "case_id": "BLND-008",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Strategic Decision-Making)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Blind-outcome case BLND-008 (SaaS / Vertical Software): Forward-looking strategic decision with uncertain outcomes. Multiple viable options; diagnosis should identify which option aligns with root-cause drivers and constraints.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to clarify market dynamics, competitive positioning, and business model constraints before major strategic choice. Recommend data gathering on option-specific risks.",
+  "answer_creator": "Domain Expert (SaaS M&A / Corporate Development)",
+  "creation_methodology": "Blind review: Expert analyzed the M&A-fork scenario without knowing which path was chosen or how it resolved. Assessed what decision-grade evidence is required before any irreversible commitment within the exclusivity window, and scored on reasoning quality rather than on matching the hidden outcome.",
+  "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
+  "root_cause_description": "The correct pre-decision posture is to recognize that the choice is currently undecidable at a responsible level: the realized value of accepting (Option A) cannot be compared to the value of declining (Options B/C) because the offer's cash/stock/earn-out structure, the verified standalone trajectory and probability of reaching the $30M+ ARR premium-multiple tier, the durability/concentration of the 112% NRR, and the Option C financing/integration economics are all unquantified. The business has no operational defect driving the decision; the binding gap is decision-grade information. The disciplined move is to use the exclusivity window to convert the headline and the standalone case into comparable, structure-adjusted numbers and to surface investor/key-person reservation values before signing or passing.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "An attractive but verbally indicated ~$80-95M offer with unfinalized structure",
+      "Growth decelerating from ~50% to ~35% YoY",
+      "Board/investor non-alignment on price floor and standalone plan"
+    ],
+    "contributing_factors": [
+      "Sub-scale ARR ($12M) sitting below the $30M+ tier where premium multiples appear",
+      "Key-person concentration in the founder and two engineers affecting both M&A retention and standalone execution",
+      "$4M cash and ~breakeven operations making Option C unfundable without external financing"
+    ],
+    "true_root_cause": "Absence of decision-grade evidence: the offer structure, the risk-adjusted standalone value, the durability of retention, and the Option C financing/synergy economics are unknown, so no option can be responsibly chosen until that gap is closed within the window."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Use the exclusivity window to run a parallel, time-boxed decision package before signing or declining: (1) demand a written structured term sheet and model the risk-adjusted value of the offer under realistic cash/stock/earn-out and earn-out-achievability scenarios; (2) build a verified standalone DCF/scenario with an explicit probability of reaching the $30M+ ARR tier and the capital required; (3) run diligence-grade NRR/churn cohort analysis to test durability and concentration; (4) obtain investor and key-employee reservation values (price floor and retention terms). Only then choose, with a defined walk-away floor.",
+  "action_description": "This is first because the entire decision turns on comparisons that do not yet exist: a verbal headline is not a value, and an unverified standalone forecast is not a counterfactual. Building the structured term sheet, the standalone scenario, the cohort analysis, and the reservation values converts three incomparable options into a single risk-adjusted comparison and protects against the dominant failure mode (signing into a weak earn-out/illiquid-stock structure or passing on a strong offer on optimism). It fits the ~45-day window because these are analyses, not new capital deployments, and it keeps every option open until the floor is known.",
+  "accepted_alternative_actions": [
+    "Enter exclusivity conditionally to obtain the written structured term sheet while explicitly reserving the right to walk if the realized structure falls below a pre-agreed risk-adjusted floor, treating exclusivity as a diligence step rather than a commitment to sign.",
+    "Recommend Option A as the likely best path IF the engine first conditions it on completing the structure model, standalone scenario, and reservation-value work and on the structure clearing the defined floor (i.e., decision-with-conditions, not a blind yes).",
+    "Defer Option C explicitly: keep it as a fallback only if the offer is declined and financing can be secured on fair terms, rather than pursuing it inside the offer window."
+  ],
+  "bad_actions": [
+    "Signing/accepting the offer on the verbal ~$80-95M headline before the cash/stock/earn-out structure, earn-out achievability, and acquirer stock basis are known.",
+    "Declining the offer outright on standalone optimism without a verified standalone forecast or probability of reaching the $30M+ tier.",
+    "Launching the Option C acquisition during the exclusivity window despite having no committed financing, unverified synergies, and a lean team.",
+    "Proceeding without surfacing Series A reservation values and the liquidation-preference math, risking an investor block or misaligned price floor mid-process."
+  ],
+  "action_constraints_respected": [
+    "Offer-window constraint: All four workstreams are analyses that fit inside the ~45-day window and preserve optionality rather than consuming it.",
+    "Investor-alignment constraint: Explicitly surfaces Series A reservation values and liquidation-preference math before any commitment.",
+    "Capital constraint: Avoids committing the $4M cash or an unfunded Option C acquisition before financing is secured.",
+    "Key-person constraint: Includes key-employee retention terms in the decision package, recognizing their effect on both M&A and standalone value."
+  ],
+  "rationale": "Each option is best only under a different unverified belief: A under 'realized structure is strong and standalone is risky', B under 'standalone scaling probability is high enough to forgo a strong offer', C under 'financing and synergies are obtainable'. Because the structure, standalone case, retention durability, and financing are all unknown, choosing now is a coin flip on irreversible terms. Building the decision package is the highest-expected-value action: it is cheap, fits the window, resolves the exact unknowns separating the options, and protects against both over-accepting and over-declining.",
+  "evidence_basis": [
+    "financial_health: $12M ARR, 35% growth, 79% margin, 112% NRR, ~breakeven, $4M cash; comps 6-9x sub-scale vs 10-14x above ~$30M ARR; verbal $80-95M headline with unfinalized structure",
+    "financial_health (gap): offer structure not finalized, standalone forecast unverified, earn-out achievability unmodeled, acquirer stock basis unknown",
+    "market_position: 1,900 of 180,000 locations, 2-3 entrenched incumbents, acquirer controls a large channel into the same buyer",
+    "customer_retention: 112% NRR / 9% logo churn but cohort durability and concentration unverified; expansion <15% of ARR",
+    "quality_delivery: Option C target $3M ARR at $14-18M ask, different stack, financing required"
+  ],
+  "evidence_not_explained": [
+    "Whether the 112% NRR is durable across cohorts or concentrated in a few large accounts cannot be resolved without diligence-grade cohort data.",
+    "Whether the acquirer's indicated headline would survive into a written term sheet at comparable value is unknown until structure is provided."
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: one could argue decelerating growth (50%->35%) signals an over-forecast standalone path; relevant context but rejected as the governing driver because the binding issue is missing decision-grade evidence on offer structure and standalone probability, not a demand-model error per se.",
+    "GOVERNANCE_COMPLIANCE_FAILURE: investor non-alignment on price floor could be framed as governance; rejected as primary because it is a contributing factor that the decision package directly addresses (surfacing reservation values), not the root driver of the choice.",
+    "UNIT_ECONOMICS_BREAKDOWN: rejected outright because unit economics are healthy (LTV/CAC ~3.4x, 16-month payback, 79% margin); there is no economics breakdown driving the decision."
+  ],
+  "missing_evidence": [
+    "Written structured term sheet with cash/stock/earn-out split, earn-out targets, escrow/indemnities, and acquirer stock liquidity/valuation basis",
+    "Verified standalone scenario with durable growth rate, probability of reaching $30M+ ARR, and capital required",
+    "Diligence-grade NRR/churn cohorts testing durability and account concentration",
+    "Investor and key-employee reservation values (walk-away floor and retention terms); Option C financing terms and verified synergies"
+  ],
+  "success_metrics": [
+    "Risk-adjusted offer value modeled under realistic structure scenarios within the exclusivity window",
+    "Verified standalone scenario with explicit probability of reaching the $30M+ tier and capital plan completed",
+    "Cohort-level NRR/churn durability and concentration quantified",
+    "A defined walk-away floor and investor/key-person reservation values agreed before any signature or decline"
+  ],
+  "expected_outcome": "Within the ~45-day window the company holds a single risk-adjusted comparison across the three paths and an agreed walk-away floor, enabling a defensible accept/decline decision (or a conditional exclusivity entry) rather than a blind commitment. If the structured offer clears the floor it can be accepted with confidence; if not, the company declines having quantified the standalone alternative instead of guessing.",
+  "automatic_fail_conditions": [
+    "Recommends accepting/signing the offer before the cash/stock/earn-out structure and earn-out achievability are known",
+    "Recommends declining outright with no verified standalone forecast or scaling probability",
+    "Recommends launching the Option C acquisition during the window with no committed financing",
+    "Ignores Series A reservation values / liquidation preference when recommending a course of action"
+  ],
+  "source_references": [
+    "01_case_input.json BLND-008: ownerIntake.availableData, ownerConstraints, evidence[financial_health x2, market_position, customer_retention, quality_delivery], strategicOptions"
+  ],
+  "blind_structure": {
+    "hidden_outcome": "REFERENCE ONLY, NOT FOR SCORING: After building the decision package, the company entered exclusivity, negotiated a higher cash component and a softened earn-out, and accepted the acquisition at a structure clearing its agreed floor; the founder and two key engineers signed 2-year retention terms and the earn-out was largely achieved. This outcome is recorded only for later validation and must not influence scoring of the engine's pre-decision reasoning.",
+    "pre_outcome_correct_decision": "Use the exclusivity window to build a decision package (structured term sheet + risk-adjusted model, verified standalone scenario, cohort durability analysis, investor/key-person reservation values) and a walk-away floor, then decide; do not sign or decline on the verbal headline or on standalone optimism.",
+    "knowable_before_outcome": [
+      "Healthy standalone profile but sub-scale ARR relative to the $30M+ premium-multiple tier",
+      "Verbal $80-95M headline with unfinalized structure and earn-out/stock risk",
+      "Comparable multiples (6-9x sub-scale vs 10-14x at scale) and acquirer's channel/competitive dual role",
+      "Unverified NRR durability/concentration and Option C's financing dependence",
+      "Investor liquidation preference and key-person concentration"
+    ],
+    "hindsight_trap": "Knowing the M&A was accepted and the earn-out paid out could tempt a scorer to reward 'accept now' and penalize the diligence-first / decision-package answer. The pre-outcome facts did not guarantee a strong realized structure; accepting blind was not the sound move even though the deal happened to close well.",
+    "scoring_without_leaking_outcome": "Score only on whether the engine recognized the evidence gap as the governing constraint, used the window to quantify and compare the options, protected against both over-accepting and over-declining, and respected investor/capital/key-person constraints. Do NOT award or deduct points based on whether the engine selected the option that the hidden outcome shows was chosen."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses market/strategic drivers"
+      "criterion": "Does the engine recognize that the decision is currently evidence-limited (offer structure, standalone value, retention durability, financing all unquantified) rather than driven by an operational defect?",
+      "rubric_10": "Diagnoses INSUFFICIENT_EVIDENCE: states the value of accepting cannot be compared to declining until structure, standalone probability, cohort durability, and reservation values are quantified.",
+      "rubric_8": "Identifies the key unknowns and that more analysis is required before choosing, with slightly imprecise framing.",
+      "rubric_6": "Notes some unknowns but partly treats one option as clearly correct.",
+      "rubric_4": "Picks a path while underweighting the missing structure/standalone evidence.",
+      "rubric_2": "Diagnoses a defect not supported by the data (e.g., unit-economics breakdown).",
+      "rubric_0": "Diagnosis unrelated to the decision."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic before major decision"
+      "criterion": "Does the engine recommend the soundest pre-outcome step: build the decision package and walk-away floor within the window before signing or declining (or enter exclusivity conditionally as a diligence step)?",
+      "rubric_10": "Recommends the parallel decision package (structured term sheet + risk-adjusted model, verified standalone scenario, cohort analysis, reservation values) and a defined floor before committing to Option A, B, or C.",
+      "rubric_8": "Recommends substantial diligence/analysis before committing, with minor omissions.",
+      "rubric_6": "Recommends some analysis but leans toward a path without the full package.",
+      "rubric_4": "Endorses one option with only light validation.",
+      "rubric_2": "Recommends signing or declining on the verbal headline/optimism.",
+      "rubric_0": "Recommends an action that breaks constraints (e.g., unfunded Option C now) or harms stakeholders."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a Series A vertical-SaaS company facing a real exclusivity window with investor and key-person dynamics?",
+      "rubric_10": "Reflects M&A realities: structure-over-headline, liquidation preference, earn-out/stock risk, key-person retention, and the ~45-day window.",
+      "rubric_8": "Relevant with a minor missed nuance.",
+      "rubric_6": "Relevant but somewhat generic.",
+      "rubric_4": "Generic; could apply to any company.",
+      "rubric_2": "Poorly aligned with the M&A context.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the exclusivity window, investor alignment, $4M cash limit, and key-person concentration?",
+      "rubric_10": "Fits the ~45-day window, surfaces reservation values, avoids committing cash/unfunded Option C, and accounts for key-person retention.",
+      "rubric_8": "Respects major constraints with minor tension.",
+      "rubric_6": "Mostly respects constraints; some unaddressed.",
+      "rubric_4": "Partially violates a constraint (e.g., timeline or capital).",
+      "rubric_2": "Severely violates constraints.",
+      "rubric_0": "Action infeasible under the constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to BLND-008 specifics (ARR/growth/NRR, comp multiples, verbal headline, financing gap, key-person concentration)?",
+      "rubric_10": "Cites $12M ARR/35% growth/112% NRR, 6-9x vs 10-14x comps, the unfinalized $80-95M structure, the $4M cash limit, and the key-person concentration.",
+      "rubric_8": "Traces primary claims with minor inference.",
+      "rubric_6": "Main reasoning supported; some claims loose.",
+      "rubric_4": "Limited traceability.",
+      "rubric_2": "Minimal direct support.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence high in the diagnosis (evidence gap) but appropriately reserved on option ranking?",
+      "rubric_10": "Confident that the decision is evidence-limited while explicitly declining to rank options until the package is built.",
+      "rubric_8": "Reasonable calibration with slight overstatement on one option.",
+      "rubric_6": "Some calibration but over-commits to a path.",
+      "rubric_4": "Overconfident in accept or decline without analysis.",
+      "rubric_2": "Confidence largely unsupported.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the engine avoid committing to an irreversible capital-event decision without the warranted analysis?",
+      "rubric_10": "Does not sign/accept on a verbal headline, does not decline on optimism, and does not launch an unfunded acquisition; keeps options open via the decision package and floor.",
+      "rubric_0": "Commits to signing, declining, or the Option C acquisition with no structure/standalone/financing validation."
     }
   },
-  "creation_methodology": "Expert analysis of BLIND_OUTCOME case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

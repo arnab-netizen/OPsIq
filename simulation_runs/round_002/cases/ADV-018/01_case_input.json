@@ -1,10 +1,103 @@
 {
   "caseId": "ADV-018",
   "caseType": "ADVERSARIAL",
-  "industry": "Manufacturing",
+  "industry": "Industrial Manufacturing (Components)",
+  "businessModel": "B2B contract manufacturing, volume supply agreements with discount tiers",
+  "businessStage": "Mature manufacturer, flat growth",
+  "sourceNote": "Adversarial case designed to test diagnostic rigor under a persuasive owner narrative. A healthy blended gross margin sits alongside heavy customer concentration and visible discounting to the largest accounts, with no per-customer profitability ever computed. The case tests whether the engine accepts the blended margin as proof of customer-mix health or demands per-account economics. No diagnosis or label is embedded in the inputs.",
   "ownerIntake": {
-    "businessType": "Industrial manufacturer, $120M revenue, flat growth, but selling top 3 customers at discount pricing",
-    "stage": "Trap: Customer concentration (top 3 = 45% revenue) masked by healthy gross margin numbers (top customers are lower-margin but not obviously so). Sales team optimizing for volume/top-customer relationships without measuring profitability per customer.",
-    "ownerGoal": "Must diagnose: is customer mix optimal, or is concentration in low-margin customers driving profitability issue?"
+    "businessType": "Manufacturer of precision industrial components supplying OEMs across automotive, equipment, and appliance sectors. ~600 employees, two plants. Revenue from long-term volume supply agreements, several with tiered volume discounts. Founded 1994.",
+    "stage": "$120M revenue, roughly flat YoY. Blended gross margin a healthy ~26%. Top 3 customers account for ~45% of revenue, all on negotiated volume-discount pricing. Operating margin ~9%. Per-customer / per-product-line profitability (after fully-allocated cost to serve) has never been computed.",
+    "ownerGoal": "Defend and modestly grow operating profit over 18-24 months and decide whether to pursue an even larger volume agreement with the #1 customer (which would push top-3 concentration above 50%).",
+    "ownerConstraints": [
+      "Customer constraint: the top 3 customers are anchor relationships; the sales organization is heavily oriented to protecting and growing them, and losing one would idle significant plant capacity.",
+      "Capacity constraint: two plants with high fixed cost; utilization depends on the large-volume contracts, creating pressure to accept discounts to keep lines full.",
+      "Pricing constraint: the largest customers have negotiating leverage and expect annual price concessions; walking away from volume is culturally unthinkable to the sales team.",
+      "Costing constraint: the company uses a plant-wide overhead allocation; it does not have activity-based or per-customer cost-to-serve costing, so it cannot see margin by account.",
+      "Decision constraint: a board decision on the expanded #1-customer agreement is expected within 8 weeks."
+    ],
+    "immediateConcern": "CEO framing: 'Our blended gross margin is a healthy 26% and the top 3 customers are the backbone of the business - they keep the plants full and the relationships are rock solid. The natural next step is to lock in an even bigger volume agreement with our #1 customer to secure capacity for years. Yes, the big accounts get volume discounts, but that is just how this industry works and the blended margin proves it all works. I want to grow with our best customers.'",
+    "availableData": [
+      "Revenue $120M, flat YoY; blended gross margin ~26%; operating margin ~9%.",
+      "Top 3 customers ~45% of revenue, all on tiered volume-discount pricing; the #1 customer alone is ~22%.",
+      "Average selling price to the top 3 is materially below the company average; smaller accounts pay closer to list and appear to carry higher gross margin per unit.",
+      "Cost is allocated plant-wide; there is NO per-customer or per-product-line profitability, and NO activity-based cost-to-serve (setup, expedite, custom tooling, payment terms, returns) for the large accounts.",
+      "The top 3 accounts demand more customization, shorter lead times, and longer payment terms than smaller accounts - all cost-to-serve drivers that the plant-wide allocation hides.",
+      "The #1 customer has requested deeper discounts in the proposed expanded agreement in exchange for higher committed volume.",
+      "Smaller and mid-tier accounts (the other 55% of revenue) have been receiving less sales attention as the team focuses on the top 3."
+    ],
+    "unavailableData": [
+      "Per-customer gross and operating margin after fully-allocated, activity-based cost to serve.",
+      "Cost-to-serve quantification for the top 3 (setup/changeover, expedite, custom tooling, extended terms, returns).",
+      "Margin contribution of the smaller/mid-tier accounts that are being under-served.",
+      "Break-even and contribution analysis showing whether discounted top-3 volume covers its fully-loaded cost or merely its variable cost.",
+      "Capacity-cost attribution: how much fixed plant cost is genuinely 'kept full' by the top 3 vs allocated to them."
+    ],
+    "timeHorizon": "18-24 months for profit defense; board decision on the expanded #1 agreement in 8 weeks",
+    "riskAppetite": "LOW-MEDIUM (conservative manufacturer, capacity- and relationship-protective)"
+  },
+  "businessProblem": "A manufacturer with a healthy 26% blended gross margin is considering an expanded, deeper-discounted volume agreement with its #1 customer that would push top-3 concentration above 50%. Competing hypotheses: (1) the blended margin proves the customer mix is healthy and growing with the best customers is sound; (2) the blended margin masks that the heavily discounted, high-cost-to-serve top-3 accounts may be substantially less profitable - or even unprofitable on a fully-loaded basis - than the smaller accounts that subsidize the blend, so deepening discounts and concentration could erode profit and increase fragility; (3) a mix. The discounting and the higher cost-to-serve of the big accounts are visible, but per-customer profitability has never been computed because the company allocates overhead plant-wide.",
+  "evidence": [
+    {
+      "dimension": "customer_concentration",
+      "finding": "Top 3 customers are ~45% of revenue (the #1 alone ~22%), all on negotiated volume discounts. The proposed expanded agreement with the #1 customer would push concentration above 50% at deeper discounts. High concentration plus deepening discounts increases both margin risk and fragility (loss of one account idles plant capacity).",
+      "confidence": "HIGH",
+      "source": "Revenue-by-customer records",
+      "isCritical": true,
+      "supportingData": {
+        "top_3_share": "45%",
+        "top_1_share": "22%",
+        "post_deal_concentration": ">50%",
+        "pricing": "volume-discounted"
+      }
+    },
+    {
+      "dimension": "pricing_vs_cost",
+      "finding": "Average selling price to the top 3 is materially below the company average, and these accounts demand more customization, shorter lead times, and longer payment terms - all cost-to-serve drivers. The plant-wide overhead allocation spreads these costs evenly, hiding that the big accounts likely consume more cost per dollar of revenue than the smaller accounts do.",
+      "confidence": "HIGH",
+      "source": "Pricing schedules + operations records",
+      "isCritical": true,
+      "supportingData": {
+        "top3_asp_vs_avg": "materially below",
+        "cost_to_serve_drivers": ["customization", "short lead times", "extended terms"],
+        "costing_method": "plant-wide allocation (no per-customer)"
+      }
+    },
+    {
+      "dimension": "profitability_visibility",
+      "finding": "Per-customer and per-product-line profitability have never been computed; there is no activity-based cost-to-serve. The 26% blended gross margin therefore cannot tell whether the discounted top-3 volume covers its fully-loaded cost or merely its variable cost while the smaller accounts subsidize the blend. The decision to deepen discounts is being made without this visibility.",
+      "confidence": "HIGH",
+      "source": "Finance / costing system",
+      "isCritical": true,
+      "supportingData": {
+        "per_customer_margin_computed": false,
+        "activity_based_costing": false,
+        "blended_gross_margin": "26%"
+      }
+    },
+    {
+      "dimension": "neglected_segment",
+      "finding": "The smaller and mid-tier accounts (the other 55% of revenue) pay closer to list, appear to carry higher per-unit margin, and are receiving less sales attention as the organization concentrates on the top 3. If these accounts are the true profit engine, the strategy of deepening focus and discounts on the top 3 may be optimizing for revenue at the expense of profit.",
+      "confidence": "MEDIUM",
+      "source": "Sales coverage + pricing data",
+      "isCritical": true,
+      "supportingData": {
+        "smaller_account_share": "55%",
+        "smaller_account_pricing": "near list",
+        "sales_attention": "declining for smaller accounts"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Industrial Manufacturing",
+    "size": "$120M revenue, ~600 employees, two plants",
+    "revenueImpactUrgency": "HIGH (an 8-week board decision would deepen discounts and push concentration above 50% without per-customer profitability data)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (established manufacturer, capacity-cost-heavy)",
+    "timeHorizonDays": 600,
+    "staffCapacity": "MEDIUM (finance/cost-accounting team available to build cost-to-serve)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
   }
 }

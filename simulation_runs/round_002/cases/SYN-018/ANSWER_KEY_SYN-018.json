@@ -1,27 +1,157 @@
 {
   "case_id": "SYN-018",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Operations)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Synthetic stress-test case SYN-018 (Analytics / Business Intelligence): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "answer_creator": "Domain Expert (Professional Services Delivery and Implementation Operations)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert tested whether the extended time-to-value was caused by product usability, demand, or delivery throughput, by examining phase-segmented satisfaction, the implementation backlog dynamics, and where implementation hours concentrate. Phase-specific dissatisfaction plus a compounding backlog in a capacity-constrained team localize the cause to a delivery bottleneck.",
+  "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK",
+  "root_cause_description": "The constraint is a delivery-throughput bottleneck in the implementation/services function, not a product or demand problem. Time-to-go-live more than doubled (8→19 weeks), a 28-customer backlog formed, and the 9-person services team is booked 14 weeks out, with new starts outpacing go-lives by ~3 per month so the backlog compounds. Crucially, satisfaction is phase-specific: implementation-phase NPS is 18 while post-go-live NPS is 52 and CSAT is 8.4, so customers are unhappy waiting, not with the product. Demand is healthy (bookings +40%, deals won on product), which means sales is closing faster than delivery can absorb. The bottleneck is concentrated in a small set of partly-manual, repeatable steps: data-modeling and connector setup consume ~60% of implementation hours. Because revenue recognition and expansion both wait on go-live, the bottleneck suppresses realized revenue and the NRR-driving expansion by nearly five months. The fix is to raise delivery throughput, primarily by automating/templatizing the manual bottleneck steps and re-sequencing the queue, not by broad CS investment, product changes, or slowing sales.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Time-to-go-live 8→19 weeks",
+      "28-customer implementation backlog",
+      "Implementation-phase NPS 18",
+      "Revenue/NRR lagging bookings by ~5 months"
+    ],
+    "contributing_factors": [
+      "Sales bookings +40% outpacing delivery by ~3 starts/month",
+      "Partly-manual data-modeling and connector setup (~60% of hours)",
+      "Services team of 9 booked 14 weeks out"
+    ],
+    "true_root_cause": "Implementation delivery throughput cannot keep pace with bookings because the highest-volume steps (data modeling, connector setup) are manual and capacity-bound, creating a compounding bottleneck that delays go-live, revenue, and expansion."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Run an 8-week implementation-throughput program that automates the bottleneck steps and re-sequences the backlog, while temporarily right-sizing the sales-to-delivery pace. Concretely: (1) templatize and partly automate the data-modeling and connector setup that consume ~60% of hours (pre-built connector templates, reusable data-model patterns for the top source systems), targeting a 30-40% reduction in hours per implementation; (2) split the services workflow so a lighter-weight 'standard' track handles common patterns and a high-touch track handles complex ones, lifting throughput per implementer; (3) re-sequence the 28-customer backlog by go-live readiness and expansion value, and add a small surge of contract implementation capacity strictly to clear the backlog (not permanent over-hiring); (4) set a temporary sales-start cadence aligned to delivery throughput until the backlog is cleared. Instrument per-step cycle time and backlog burn-down weekly.",
+  "action_description": "It is first because the bottleneck compounds monthly and directly suppresses recognized revenue and expansion; the only durable lever is raising throughput, and since ~60% of hours sit in manual repeatable steps, automation/templatization yields the largest, most efficient gain. Broad CS investment misallocates spend (customers are satisfied post-go-live), product changes are unnecessary (the product wins), and simply slowing sales sacrifices healthy demand. A temporary contract surge clears the existing backlog without permanent over-hiring the board would resist.",
+  "accepted_alternative_actions": [
+    "Run a 2-3 week per-step cycle-time and automation-ROI study FIRST to target the highest-leverage automation, provided it does not delay backlog re-sequencing and the surge to clear at-risk go-lives.",
+    "Stand up a customer-led 'self-serve preparation' track (guided data readiness and connector prep before the services engagement) to offload front-end hours from the bottleneck team, run alongside the automation effort."
+  ],
+  "bad_actions": [
+    "Invest broadly in customer-success headcount to fix 'time-to-value': customers are highly satisfied post-go-live (NPS 52, CSAT 8.4); the dissatisfaction is pre-go-live throughput, so CS investment misses the bottleneck entirely.",
+    "Permanently over-hire the services team to brute-force the backlog: the board wants efficient growth, and a permanent headcount jump scales cost linearly with a process that is ~60% automatable; it inflates delivery cost without fixing the manual-step root cause.",
+    "Change or rebuild the product to 'reduce time-to-value': the product is well-regarded once live and wins deals; the delay is in delivery, not the product, so product rework wastes engineering on a misdiagnosis.",
+    "Slow or freeze sales as the primary response: demand is healthy (+40% bookings won on product); throttling sales sacrifices growth to accommodate a delivery constraint that is addressable through throughput gains."
+  ],
+  "action_constraints_respected": [
+    "Funding (22-month runway, efficient-growth mandate): automation plus a temporary contract surge avoids permanent over-hiring while clearing the backlog.",
+    "Product (connector/data-modeling automatable in 6-10 weeks): action fits the build window and targets the exact manual steps.",
+    "Organizational (services team of 9 is the binding constraint): action raises throughput per implementer via tracks and templates rather than only adding people.",
+    "Commercial (revenue/NRR wait on go-live): action accelerates go-lives, pulling forward recognized revenue and expansion."
+  ],
+  "rationale": "The phase-segmented satisfaction (implementation NPS 18 vs post-go-live NPS 52) is decisive: it proves customers value the product and are frustrated only by the wait, which localizes the problem to delivery. Combined with a compounding backlog, a capacity-bound services team, and ~60% of hours in manual repeatable steps, the diagnosis is an operational throughput bottleneck. The efficient fix is to automate the manual steps and re-sequence the queue, raising throughput without the linear cost the board rejects, which simultaneously pulls forward the revenue and expansion the backlog is suppressing.",
+  "evidence_basis": [
+    "operational_efficiency: TTV 8→19 weeks, 28-customer backlog, services booked 14 weeks out, backlog growing ~3/month",
+    "process_design: data-modeling/connector setup ~60% of hours and partly manual",
+    "customer_satisfaction: implementation NPS 18 vs post-go-live NPS 52, CSAT 8.4",
+    "go_to_market: bookings +40%, deals won on product, sales outpacing delivery"
+  ],
+  "evidence_not_explained": [
+    "The exact per-step cycle times and the achievable automation throughput gain are not yet instrumented, so the program begins with a short cycle-time/automation-ROI study; the diagnosis is confident about the bottleneck location but not yet about the precise throughput uplift."
+  ],
+  "alternative_explanations": [
+    "TRUST_QUALITY_CRISIS (product usability): that the product is too hard to use. Weaker because post-go-live NPS is 52 and CSAT 8.4; once live, customers are satisfied, so the product is not the problem.",
+    "GO_TO_MARKET_MISALIGNMENT: that sales is selling to the wrong customers. Weaker because deals are won on product and demand is healthy; the mismatch is sales velocity vs delivery throughput, not customer fit.",
+    "CUSTOMER_RETENTION_EROSION: that the base is decaying. Weaker because gross retention is 95% and NRR 102%; the issue is delayed go-live and suppressed expansion, not churn of live customers."
+  ],
+  "missing_evidence": [
+    "Per-step implementation cycle-time breakdown with bottleneck-resource utilization",
+    "Automation feasibility and ROI for the manual data-modeling/connector steps",
+    "Throughput gain from templatizing common connector/data-model patterns",
+    "Quantified revenue/NRR impact per week of go-live delay"
+  ],
+  "success_metrics": [
+    "Time-to-go-live falls from 19 weeks toward 10 weeks within the program plus one cohort",
+    "Hours per implementation drop 30-40% via automation/templatization of the ~60% manual steps",
+    "The 28-customer backlog burns down to near zero within two quarters and net backlog growth turns non-positive",
+    "Recognized revenue and expansion pull forward as go-lives accelerate; implementation-phase NPS rises from 18 toward 40+"
+  ],
+  "expected_outcome": "If the operational bottleneck is the true root cause, automating the manual data-modeling/connector steps and splitting delivery tracks should raise throughput, shrink the backlog, and cut time-to-go-live, pulling forward recognized revenue and the expansion NRR depends on, while post-go-live satisfaction remains high. If throughput does not improve despite automation, the residual constraint would be deeper (e.g., customer-side data readiness), which the per-step cycle-time study would localize.",
+  "automatic_fail_conditions": [
+    "Recommending broad customer-success investment when dissatisfaction is confined to the pre-go-live phase and post-go-live satisfaction is high",
+    "Recommending product changes/rebuild when the product wins deals and satisfies live customers",
+    "Recommending permanent large-scale services over-hiring against a process that is ~60% automatable",
+    "Diagnosing churn or GTM misalignment despite healthy retention and product-won deals"
+  ],
+  "source_references": [
+    "Implementation project tracker and services capacity model",
+    "Implementation time-tracking by phase and process review",
+    "Phase-segmented NPS/CSAT surveys",
+    "Sales bookings data and finance revenue-recognition model"
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "Time-to-go-live more than doubled (8→19 weeks) with a 28-customer backlog growing ~3/month", "implication": "Delivery throughput cannot keep pace with intake, the definition of a compounding operational bottleneck."},
+      {"fact": "Implementation-phase NPS 18 vs post-go-live NPS 52 and CSAT 8.4", "implication": "Dissatisfaction is confined to the wait, localizing the problem to delivery rather than the product."},
+      {"fact": "Data-modeling and connector setup are ~60% of hours and partly manual", "implication": "The bottleneck sits in repeatable manual steps that are automatable, pointing to a throughput fix, not headcount."},
+      {"fact": "Bookings up 40% and deals won on product", "implication": "Demand is healthy; the constraint is downstream in delivery, not acquisition or product capability."},
+      {"fact": "Revenue and NRR lag bookings by ~5 months because they wait on go-live", "implication": "The bottleneck directly suppresses recognized revenue and expansion, making throughput the priority lever."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "TRUST_QUALITY_CRISIS", "why_weaker": "Post-go-live NPS 52 and CSAT 8.4 show the product is valued once live; the friction is the wait, not usability."},
+      {"alternate": "GO_TO_MARKET_MISALIGNMENT", "why_weaker": "Deals are won on product and demand is healthy; the mismatch is sales velocity vs delivery throughput, not customer fit."},
+      {"alternate": "CUSTOMER_RETENTION_EROSION", "why_weaker": "Gross retention 95% and NRR 102% indicate live customers stay and expand; the issue is delayed go-live, not churn."}
+    ],
+    "first_action_justification": "Because the bottleneck compounds monthly and ~60% of implementation hours are manual and repeatable, the highest-leverage first action is automating those steps and re-sequencing the backlog to raise throughput, with a temporary surge to clear the existing queue.",
+    "constraints_effect_on_action": "The board's efficient-growth mandate forbids permanent over-hiring, so the action favors automation and delivery-track redesign plus a temporary contract surge; the 6-10 week automation window makes the throughput fix feasible, and because revenue/NRR wait on go-live, accelerating delivery is also the fastest revenue lever."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses growth/demand issue"
+      "criterion": "Does the engine diagnose OPERATIONAL_BOTTLENECK in delivery (implementation throughput) rather than a product/usability or demand cause?",
+      "rubric_10": "Diagnoses OPERATIONAL_BOTTLENECK and ties it to the compounding backlog, phase-specific dissatisfaction (NPS 18 vs 52), and the ~60% manual-step concentration, while citing healthy demand and product satisfaction.",
+      "rubric_8": "Diagnoses a delivery/throughput root cause with evidence but underweights one signal (e.g., the manual-step concentration).",
+      "rubric_6": "Identifies the time-to-value problem but is ambiguous about whether the cause is delivery, product, or staffing.",
+      "rubric_4": "Accepts the owner's framing and centers generic customer success or product time-to-value.",
+      "rubric_2": "Diagnoses a product-usability crisis despite high post-go-live satisfaction.",
+      "rubric_0": "Diagnosis unrelated to the evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic"
+      "criterion": "Does the engine prioritize raising delivery throughput (automation/templatization + backlog re-sequencing) over broad CS hiring, product rework, or freezing sales?",
+      "rubric_10": "Recommends an 8-week throughput program automating the ~60% manual steps, splitting delivery tracks, and clearing the backlog with a temporary surge.",
+      "rubric_8": "Recommends a delivery-throughput action but with weaker scope (e.g., automation without backlog re-sequencing).",
+      "rubric_6": "Recommends throughput work but mixes in broad CS hiring or product changes.",
+      "rubric_4": "Recommends broad CS investment or product rework as primary.",
+      "rubric_2": "Recommends freezing sales as the main response.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect a services-led BI reality where go-live gates revenue and expansion, and the board demands efficient growth?",
+      "rubric_10": "Action centers on pulling forward go-live-gated revenue/expansion via efficient throughput gains, not linear-cost hiring.",
+      "rubric_6": "Action is delivery-relevant but generic about the revenue-recognition/expansion linkage.",
+      "rubric_2": "Action loosely related to the context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 22-month runway, efficient-growth mandate, the services-team constraint, and the 6-10 week automation window?",
+      "rubric_10": "Uses automation plus a temporary surge, avoids permanent over-hiring, and fits the build window.",
+      "rubric_6": "Respects most constraints but proposes some permanent hiring.",
+      "rubric_2": "Proposes large permanent services hiring or product rebuild that strains efficiency.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-018 metrics?",
+      "rubric_10": "Every claim traces to data: TTV 8→19 weeks, backlog 28, booked 14 weeks out, ~60% manual hours, NPS 18 vs 52, bookings +40%.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence justified given backlog dynamics and phase-segmented satisfaction?",
+      "rubric_10": "HIGH well-calibrated: backlog data, phase NPS split, and hour-composition converge on a delivery bottleneck.",
+      "rubric_6": "Confidence defensible but acknowledges missing per-step cycle-time data as residual uncertainty about the throughput gain.",
+      "rubric_2": "Confidence asserted without grounding.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action low-risk and efficient (no linear-cost over-hiring, no needless product rebuild, no demand sacrifice)?",
+      "rubric_10": "Action raises throughput efficiently with a temporary surge, preserving demand and product.",
+      "rubric_6": "Action mostly safe but includes one cost item needing justification.",
+      "rubric_2": "Action introduces meaningful cost or growth-sacrifice risk.",
+      "rubric_0": "Action high-risk (permanent over-hiring or product-rebuild gamble)."
     }
   },
-  "creation_methodology": "Expert analysis of SYNTHETIC case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

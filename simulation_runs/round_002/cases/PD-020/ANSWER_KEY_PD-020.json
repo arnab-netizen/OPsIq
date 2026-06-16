@@ -1,27 +1,194 @@
 {
   "case_id": "PD-020",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Public Dataset Analysis)",
-  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
-  "root_cause_description": "Public dataset case PD-020 (Retail / Department Stores): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
+  "answer_creator": "Domain Expert (Retail Turnaround & Department-Store Repositioning)",
+  "creation_methodology": "Blind review: Expert analyzed the public-dataset financial and operating profile independently before reading any prior diagnosis. Diagnosis derived from multi-dimensional evidence — comp-sales decomposition (traffic -9% vs flat conversion), inventory write-down rate escalation (1.4% to 4.0% of revenue), channel-mix vs total-revenue reconciliation (e-commerce 18% but total revenue -6.5%), and gross-margin bridge (38% to 34%). Markdowns and four-wall losses treated as symptoms/contributing factors; traffic-driven relevance loss identified as the upstream root cause. DEMAND_FORECASTING_MISMATCH evaluated as the strongest rival and explicitly placed downstream of brand erosion.",
+  "root_cause_diagnosis": "BRAND_EROSION",
+  "root_cause_description": "The banner has suffered a structural loss of brand relevance and differentiation, and that erosion — not cost inflation and not a standalone buying error — is the upstream driver of the decline. The decisive signal is the comp-sales decomposition: comparable-store sales fell 7% almost entirely because store traffic fell 9% while conversion held roughly flat and average ticket rose 1%. When customers who do come in still buy at the same rate but far fewer customers come in, the problem is relevance and reasons-to-visit, not pricing, assortment-at-shelf execution, or in-store operations. The merchandise signal corroborates this: inventory write-downs jumped from $9M (1.4% of revenue) to $24M (4.0%) — the company is repeatedly buying product its customer base no longer wants and is forced to mark it down, which is what merchandise/brand misalignment looks like financially, and it accounts for roughly 260 bps of the 400 bps gross-margin decline (38% to 34%). The channel evidence rules out a benign channel-shift story: e-commerce rose to 18% of sales but total revenue still fell 6.5%, so the online channel is cannibalizing and reflecting share loss rather than adding new customers — the franchise is shrinking, not migrating. Net: traffic decline (symptom), write-downs and margin compression (symptoms), over-buying and occupancy de-leverage (contributing factors), all sit downstream of a department-store value proposition that has lost relevance to its market.",
   "confidence_in_diagnosis": "MEDIUM-HIGH",
-  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Store traffic declining 9% YoY (the visible top-of-funnel symptom of lost relevance).",
+      "Inventory write-downs rising from $9M (1.4%) to $24M (4.0% of revenue) — the financial symptom of buying merchandise customers no longer want.",
+      "Gross margin compressing from 38% to 34% and EBITDA margin falling from 7.0% to 4.0% — the P&L symptoms of markdowns and de-leverage.",
+      "Comparable-store sales -7% for a third consecutive year — the aggregate symptom of declining demand."
+    ],
+    "contributing_factors": [
+      "Over-buying / weak demand planning: open-to-buy not adjusted down fast enough for declining demand, amplifying markdowns (a real but downstream amplifier of the relevance problem).",
+      "Occupancy de-leverage and ~6 of 30 stores EBITDA-negative: fixed lease/occupancy cost spread over a shrinking sales base, worsening but not originating the decline.",
+      "Slow / sub-scale e-commerce capability: digital growth is cannibalizing rather than expanding the franchise, so the channel build is not yet offsetting relevance loss in stores.",
+      "Aging loyalty base with declining trip frequency: the core customer cohort is contracting without sufficient replacement, compounding traffic decline."
+    ],
+    "true_root_cause": "Structural erosion of brand relevance and differentiation (BRAND_EROSION): the department-store value proposition has lost its reason-to-visit for the target market, pushing customers to off-price, specialty, and pure-play online formats. This upstream loss of preference is what produces the falling traffic, the recurring merchandise misalignment and write-downs, and the inability of e-commerce to add net customers."
+  },
+  "first_priority_action": "Commission a fast, tightly-scoped brand-relevance and merchandise-fit diagnostic (8-10 weeks, $150-250k) to be completed before committing the next-season merchandise buy and finalizing the refinancing case. Four integrated workstreams: (1) Customer and lapsed-customer research — quantitative survey plus targeted interviews of active, lapsing, and lapsed loyalty members to establish where defectors now shop (off-price / specialty / pure-play) and why they stopped visiting; (2) Brand-perception study — measure how target and lapsed customers rate the banner on differentiation, value, assortment relevance, and reasons-to-visit versus named competitors; (3) Category relevance and markdown root-cause analysis — decompose the FY2025 write-down increase by category/buy to separate over-buying (planning) from assortment misfit (relevance) and pricing, identifying which categories still command full-price demand; (4) Store-fleet relevance review — overlay four-wall EBITDA with local-market customer relevance to distinguish stores losing brand-loyal customers (defend/reposition) from structurally dead trade areas (rationalize). Deliverable: a relevance-and-fit map that tells the board, within the 90-120 day window, whether to invest in repositioning, rationalize the fleet, or pursue strategic alternatives — and that constrains the next merchandise buy to relevant, full-price-demand categories to break the markdown cycle and protect covenant headroom.",
+  "action_description": "This is first priority because every major near-term decision — the merchandise buy, the refinancing narrative, and any fleet action — depends on knowing whether the franchise is losing relevance (fixable only by repositioning and assortment realignment) or merely mis-planning inventory (fixable by tighter open-to-buy). Committing another season's buy or a refinancing plan without that distinction risks funding another markdown season that breaches covenants. The diagnostic is low-cost relative to the capital at stake, fits inside the 90-120 day window, and is non-destructive: it does not lock in store closures, discounting, or marketing cuts before the relevance driver is understood. It directly tests the BRAND_EROSION hypothesis against the DEMAND_FORECASTING_MISMATCH rival — if the data showed strong relevance with isolated buying errors, the response would pivot to demand-planning discipline rather than repositioning.",
+  "accepted_alternative_actions": [
+    "Run the customer/lapsed-customer relevance research and category markdown root-cause analysis first as a 4-6 week sprint (lower cost), deferring the full brand-perception study by a few weeks — acceptable because it still establishes relevance-vs-planning before the buy, just with somewhat less depth on competitive positioning.",
+    "Pair the relevance diagnostic with a covenant/liquidity stress-test and lender dialogue (modeling another markdown season vs a repositioning case) so the board can sequence the refinancing against the diagnostic findings — acceptable as a parallel, non-destructive workstream that respects the 90-120 day window and does not pre-commit capital.",
+    "Constrain the next-season open-to-buy to a conservative, relevance-screened assortment as an interim risk control while the diagnostic runs — acceptable provided it is framed as buying-down risk pending findings, not as the strategic answer."
+  ],
+  "bad_actions": [
+    "Launch deep, broad promotional discounting to drive traffic back. Wrong for THIS case: conversion is already flat and traffic is the problem, so discounting does not address the relevance gap; it accelerates brand erosion (training customers to wait for markdowns), deepens the very write-down/margin problem ($24M, 4.0%) that threatens covenants, and worsens the gross-margin compression (already 38% to 34%).",
+    "Slash marketing and brand spend to protect short-term EBITDA. Wrong for THIS case: when the root cause is loss of relevance and reasons-to-visit, cutting the brand investment removes the one lever that could rebuild relevance and would likely accelerate the 9% traffic decline; it treats a relevance problem as a cost problem.",
+    "Execute mass store closures immediately to stop four-wall losses. Wrong for THIS case: long leases (5-12 years, termination penalties) make rapid exit costly, and closing stores before understanding which formats/markets still retain brand-loyal customers risks shedding defensible stores and destroying the base that any repositioning would build on; closures are a downstream output of the fleet-relevance review, not a first move.",
+    "Pour capital into a large e-commerce build as the primary fix. Wrong for THIS case: e-commerce is already cannibalizing (18% penetration but total revenue -6.5%), so scaling the channel without fixing brand relevance and assortment fit would accelerate channel shift and share loss while consuming scarce capital under covenant pressure.",
+    "Adopt UNIT_ECONOMICS_BREAKDOWN framing and immediately attack cost structure (occupancy renegotiation, headcount). Wrong for THIS case: costs are not the primary driver (conversion flat, decline is traffic/relevance-led); cost cuts on a shrinking, relevance-impaired franchise buy time but do not arrest the demand decline, and may degrade the in-store experience that supports relevance."
+  ],
+  "action_constraints_respected": [
+    "Refinancing and merchandise-buy window (90-120 days): 8-10 week diagnostic completes before both deadlines, and the conservative interim open-to-buy protects the buy decision while findings mature.",
+    "Limited capital / covenant pressure: $150-250k diagnostic is modest relative to the capital at risk and is sequenced to avoid funding another markdown season that could breach EBITDA covenants.",
+    "Long leases (5-12 years, penalties): action explicitly defers fleet rationalization to a relevance-informed review rather than triggering costly early-termination decisions prematurely.",
+    "Brand heritage / aging customer base: customer and lapsed-customer research protects the existing base by understanding it before any repositioning that could alienate it.",
+    "Vendor / merchandise commitments: category markdown root-cause analysis directly informs and constrains the locked-window buy toward relevant, full-price-demand categories.",
+    "Thin internal analytics/merchandising bench (MEDIUM staff capacity): diagnostic is scoped for external specialist support so it does not overload the limited corporate team."
+  ],
+  "rationale": "The case presents three candidate root causes — merchandise/demand-planning failure (over-buying causing write-downs), unit-economics/cost-structure breakdown (occupancy de-leverage, four-wall losses), and structural brand-relevance erosion. The evidence orders them: the comp-sales decomposition (traffic -9% with flat conversion and +1% ticket) shows the decline originates at the door, not at the register or in cost lines, which points to relevance rather than ops or pricing. The write-down escalation (1.4% to 4.0%) and e-commerce cannibalization (18% penetration but total revenue -6.5%) are consistent with a franchise losing preference, with over-buying and occupancy de-leverage as downstream amplifiers. Because the most consequential near-term decisions (the buy and the refinancing) hinge on whether relevance or planning is primary, the correct first move is a non-destructive diagnostic that distinguishes them before capital is committed — not discounting, cost-cutting, or closures, all of which presume an answer and risk accelerating the decline.",
+  "evidence_basis": [
+    "market_position: Comp-sales -7% decomposes to traffic -9%, conversion ~flat, ticket +1% — decline is traffic/relevance-driven, not conversion or ops.",
+    "financial_health: Inventory write-downs rose $9M (1.4%) to $24M (4.0% of revenue), +260 bps — merchandise/brand misalignment signal and primary gross-margin driver.",
+    "market_position: E-commerce 18% penetration ($108M) up from 12% ($77M) yet total revenue -6.5% — cannibalization / net share loss, not additive digital growth.",
+    "financial_health: Gross margin 38% to 34% (400 bps, ~260 bps from write-downs); EBITDA 7.0% to 4.0% (300 bps) under refinancing/covenant pressure.",
+    "operational_efficiency: ~6 of 30 stores EBITDA-negative with rising occupancy as % of declining sales — de-leverage downstream of the traffic decline, not an independent cost shock."
+  ],
+  "evidence_not_explained": [
+    "The precise split of the e-commerce 18% between genuinely incremental customers and store customers shifting channel is not directly disclosed; the cannibalization read is inferred from total revenue declining alongside flat in-store conversion, and would be confirmed by the customer-overlap workstream of the diagnostic.",
+    "The within-write-down split between over-buying (planning) and assortment misfit (relevance) is not yet decomposed; the category markdown root-cause analysis is designed to resolve exactly this, which is why it is part of the first action rather than assumed."
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH (strongest rival): the write-down surge ($9M to $24M) could be read as an over-buying / forecasting failure where open-to-buy outran demand. Weaker as the PRIMARY cause because over-buying is downstream of declining brand relevance — the merchandise is being marked down because customers no longer want the banner's assortment, not merely because too much was ordered; and forecasting error alone would not explain a 9% traffic decline with flat conversion across a third consecutive negative-comp year. It is a genuine contributing factor and is explicitly tested by the markdown root-cause workstream.",
+    "UNIT_ECONOMICS_BREAKDOWN: the EBITDA fall to 4.0%, ~6 EBITDA-negative stores, and rising occupancy could suggest a cost-structure breakdown. Weaker because costs are not the primary driver — flat conversion rules out an in-store ops/pricing break, and the occupancy de-leverage is the arithmetic result of fixed cost spread over traffic-driven declining sales, i.e., a consequence of the relevance problem rather than its source. Attacking cost structure first would buy time but not arrest the demand decline.",
+    "GO_TO_MARKET_MISALIGNMENT / channel-shift growth: one could argue the business is simply migrating online (18% and rising). Rejected because total revenue is falling 6.5% — a true channel shift in a healthy franchise would hold or grow total revenue; here the channel is cannibalizing a shrinking base, which is share loss, a hallmark of eroding relevance."
+  ],
+  "missing_evidence": [
+    "Lapsed-customer destination and reasons-for-leaving data: where defecting customers now shop and why — directly tests the relevance hypothesis.",
+    "Brand-perception scores versus named competitors on differentiation, value, and reasons-to-visit — quantifies the erosion.",
+    "Category/SKU-level markdown decomposition separating over-buying from assortment misfit and pricing — separates DEMAND_FORECASTING_MISMATCH from BRAND_EROSION.",
+    "Store/e-commerce customer-overlap analysis — confirms cannibalization vs incrementality of the 18% online mix.",
+    "Local-market competitor traffic/assortment/pricing benchmarks per store — informs the fleet-relevance review."
+  ],
+  "success_metrics": [
+    "Diagnostic completed within 8-10 weeks (inside the 90-120 day window) with a clear relevance-vs-planning verdict and a relevance-and-fit map by category and by store.",
+    "Quantified attribution of the FY2025 write-down increase to over-buying vs assortment misfit vs pricing, enabling a relevance-screened next-season open-to-buy.",
+    "Board decision enabled — invest in repositioning, rationalize fleet, or pursue strategic alternatives — supported by evidence, ahead of the refinancing.",
+    "Next-season buy constrained to relevant, full-price-demand categories, with a forecast reduction in markdown rate toward prior-period norms (target write-down rate trending back below ~2.0% of revenue over the following 2-3 seasons).",
+    "Covenant headroom protected: no incremental markdown-driven EBITDA deterioration attributable to the upcoming buy."
+  ],
+  "expected_outcome": "If BRAND_EROSION is the root cause and the diagnostic is executed well, the company should find that (1) lapsed customers cite loss of relevance/reasons-to-visit and have defected to off-price/specialty/online, (2) the write-down increase is concentrated in categories where the banner has lost preference (assortment misfit), not uniform over-buying, and (3) a subset of stores retain brand-loyal customers (defend/reposition) while structurally dead trade areas are candidates for rationalization. That evidence base lets the board commit a relevance-screened buy, frame a credible repositioning-or-rationalization plan for the refinancing, and break the markdown cycle. If instead the diagnostic showed strong relevance scores with isolated, planning-driven over-buying, the diagnosis would pivot to DEMAND_FORECASTING_MISMATCH and the response would center on open-to-buy discipline and inventory planning rather than repositioning.",
+  "automatic_fail_conditions": [
+    "Recommending broad promotional discounting / deep markdowns to drive traffic — accelerates brand erosion and margin/covenant risk when conversion is already flat.",
+    "Recommending mass store closures or major fleet rationalization before the relevance/fleet diagnostic, ignoring long-lease penalties and the risk of shedding defensible, brand-loyal stores.",
+    "Diagnosing the case purely as UNIT_ECONOMICS_BREAKDOWN / cost problem and prescribing cost-cutting (marketing cuts, headcount, occupancy) as the first move, missing the traffic-driven relevance root cause.",
+    "Committing the next-season merchandise buy or the refinancing plan without resolving relevance-vs-planning, thereby risking another markdown season and a covenant breach.",
+    "Treating e-commerce growth (18%) as healthy channel-shift growth despite total revenue declining 6.5% (i.e., ignoring cannibalization/share loss)."
+  ],
+  "source_references": [
+    "SEC 10-K MD&A: comparable-store sales and traffic/conversion/ticket decomposition (department-store filer disclosure pattern).",
+    "SEC 10-K inventory footnotes and MD&A: markdown/reserve and inventory write-down disclosure.",
+    "SEC 10-K segment/channel-mix disclosure: e-commerce penetration and store vs digital sales.",
+    "SEC 10-K consolidated statements and debt-covenant disclosures: gross margin, EBITDA, and leverage/covenant context.",
+    "Store-level four-wall EBITDA and lease-commitment footnotes: fleet economics and occupancy de-leverage."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "Comp-sales decomposition: comp% ≈ traffic% + conversion% + avg-ticket% (here: -9% + 0% + 1% ≈ -7% within rounding; small residual ~ -1 pp from basket/mix and channel allocation).",
+      "Inventory write-down rate = write-downs / revenue (FY2025: $24M / $600M = 4.0%; FY2024: $9M / $642M ≈ 1.4%).",
+      "E-commerce penetration = e-commerce sales / total revenue (FY2025: $108M / $600M = 18.0%; FY2024: $77M / $642M ≈ 12.0%).",
+      "Gross margin bridge: ΔGM ≈ −Δwrite-down rate − other (38% − 34% = 400 bps decline; ~260 bps from write-down-rate increase of 4.0% − 1.4%, remainder from occupancy de-leverage and channel/mix).",
+      "Total revenue YoY% = (FY2025 − FY2024) / FY2024 = ($600M − $642M)/$642M ≈ -6.5%.",
+      "Cannibalization check: e-commerce $ growth ($108M − $77M = +$31M) < total revenue $ decline ($600M − $642M = -$42M) ⇒ online growth does not offset store losses ⇒ net share loss."
+    ],
+    "expected_values": {
+      "revenue_decline_pct": -6.5,
+      "comp_sales_pct": -7.0,
+      "traffic_pct": -9.0,
+      "conversion_pct": 0.0,
+      "avg_ticket_pct": 1.0,
+      "ecommerce_penetration_pct": 18.0,
+      "prior_ecommerce_penetration_pct": 12.0,
+      "write_down_usd_m": 24,
+      "write_down_rate_pct": 4.0,
+      "prior_write_down_rate_pct": 1.4,
+      "gross_margin_pct_current": 34.0,
+      "gross_margin_pct_prior": 38.0,
+      "gross_margin_decline_bps": 400,
+      "current_ebitda_margin_pct": 4.0,
+      "prior_ebitda_margin_pct": 7.0
+    },
+    "tolerance": "±0.5 pp on margins/rates/percentages; ±5% relative on dollar figures. Comp decomposition reconciliation accepted within ±1.0 pp (traffic + conversion + ticket vs comp) to allow for basket/mix and channel-allocation residual.",
+    "unit_assumptions": "Revenue, EBITDA, write-downs in USD millions. Margins, penetration, comp, traffic, conversion, ticket, and decline figures in percent (pp = percentage points; bps = basis points, 100 bps = 1 pp). Write-down rate computed on same-year total revenue. Prior year = FY2024 unless otherwise noted; current = FY2025.",
+    "invalid_input_rules": [
+      "Reject if write-down rate computed as anything other than write-downs / total revenue (e.g., dividing by COGS or by inventory balance) — flag as wrong denominator.",
+      "Reject any comp decomposition where traffic + conversion + ticket diverges from reported comp by more than 1.0 pp without an explicit reconciliation note.",
+      "Reject treating e-commerce growth as offsetting store losses when total revenue is negative — that is arithmetically inconsistent with cannibalization.",
+      "Reject gross-margin or EBITDA figures that imply margins outside 0-100% or that do not reconcile to the stated revenue base within tolerance."
+    ],
+    "missing_input_behavior": "If a required figure is absent, do not impute it silently. Compute only the metrics fully supported by provided data, state which formula could not be evaluated, and lower confidence accordingly. Do not infer the traffic-vs-conversion split from comp alone — request the decomposition.",
+    "refuse_if_missing": [
+      "If the traffic-vs-conversion split is absent, refuse to attribute the comp decline to relevance vs in-store operations — the BRAND_EROSION-vs-ops distinction depends on it.",
+      "If prior-year write-downs or revenue are absent, refuse to assert a write-down-rate trend (1.4% to 4.0%) and report only the available single-period rate.",
+      "If e-commerce sales and total revenue for both years are not both present, refuse to conclude cannibalization vs additive growth.",
+      "If the gross-margin components (write-down rate vs occupancy/mix) cannot be separated, refuse to assert that markdowns are the primary margin driver and report the total 400 bps decline only."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+      "criterion": "Does the engine diagnose BRAND_EROSION — structural loss of relevance/differentiation — as the upstream root cause, distinguishing it from the markdown and cost symptoms?",
+      "rubric_10": "Diagnoses BRAND_EROSION exactly, grounded in the comp decomposition (traffic -9% vs flat conversion), the write-down-rate escalation (1.4% to 4.0%), and e-commerce cannibalization (18% penetration but total revenue -6.5%); explicitly names DEMAND_FORECASTING_MISMATCH as the strongest rival and places it downstream.",
+      "rubric_8": "Diagnoses a brand/relevance/customer-defection root cause (or closely related demand-erosion archetype) using traffic-vs-conversion and write-down evidence, even if not labeled exactly BRAND_EROSION, and treats markdowns/costs as symptoms.",
+      "rubric_6": "Identifies declining demand/traffic and merchandise misalignment but stops short of naming relevance erosion as primary, or leaves root cause ambiguous between relevance and over-buying.",
+      "rubric_4": "Centers the diagnosis on markdowns/over-buying (DEMAND_FORECASTING_MISMATCH) or cost structure (UNIT_ECONOMICS_BREAKDOWN) as primary, missing that these are downstream of relevance loss.",
+      "rubric_2": "Diagnosis contradicts the evidence (e.g., calls it a conversion/ops or pricing-execution problem despite flat conversion).",
+      "rubric_0": "Diagnosis unrelated to the traffic/relevance/merchandise pattern."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic analysis"
+      "criterion": "Does the engine recommend a non-destructive brand-relevance + merchandise-fit diagnostic (customer/lapsed-customer research, brand-perception, markdown root-cause, fleet-relevance) before committing the buy/refinancing or taking destructive action?",
+      "rubric_10": "Recommends the integrated relevance-and-fit diagnostic with clear scope, ~8-10 week timeline, and modest cost, sequenced before the buy/refinancing and explicitly testing BRAND_EROSION vs DEMAND_FORECASTING_MISMATCH.",
+      "rubric_8": "Recommends a sound diagnostic approach (customer/lapsed-customer or markdown root-cause analysis) before major moves, with slightly different scope but still relevance-focused and constraint-respecting.",
+      "rubric_6": "Recommends investigation of demand/merchandise/customers but less targeted, or mixes in some premature action alongside the diagnostic.",
+      "rubric_4": "Recommends acting first (interim buy controls or cost review) with only thin diagnostic grounding, or defers the relevance question.",
+      "rubric_2": "Recommends aggressive moves (discounting, closures, e-commerce build) with minimal analysis.",
+      "rubric_0": "Action is harmful or contradicts the diagnosis (e.g., deep discounting to chase traffic)."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect the leveraged department-store context — 90-120 day refinancing/buy window, covenant pressure, long leases, aging base, e-commerce cannibalization?",
+      "rubric_10": "Action is tightly tailored to the refinancing/buy window and covenant risk, sequences the diagnostic ahead of capital commitment, and reflects retail-specific dynamics (markdown cycle, traffic/relevance, fleet economics).",
+      "rubric_6": "Action is relevant to the retail decline but somewhat generic, missing one key contextual lever (e.g., covenant timing or lease constraints).",
+      "rubric_2": "Action is poorly aligned with the leveraged-retail / refinancing context.",
+      "rubric_0": "Action is irrelevant or harmful to the business situation."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 90-120 day window, limited capital/covenant pressure, long leases, vendor commitments, and thin internal bench?",
+      "rubric_10": "Diagnostic completes inside the window at modest cost, defers costly lease/fleet actions, constrains the locked-window buy, and accounts for limited internal analytics capacity.",
+      "rubric_6": "Respects most constraints with minor tension (timing or cost), still feasible.",
+      "rubric_2": "Severely violates constraints (multi-quarter timeline, large capital outlay, or premature closures triggering lease penalties).",
+      "rubric_0": "Action is infeasible given the leverage/covenant and lease constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every diagnostic and action claim be traced to specific figures in the case?",
+      "rubric_10": "Every claim traced: comp -7%, traffic -9%, conversion flat, ticket +1%, write-downs $9M to $24M (1.4% to 4.0%), e-commerce 18% vs total revenue -6.5%, gross margin 38% to 34%, EBITDA 7.0% to 4.0%.",
+      "rubric_6": "Primary claims traced; some inferences (e.g., cannibalization) supported by pattern but not each figure cited.",
+      "rubric_2": "Minimal traceability; key claims not tied to the case figures.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MEDIUM-HIGH confidence appropriate given strong financial/operating signals but missing primary customer/brand research?",
+      "rubric_10": "MEDIUM-HIGH well-calibrated: the quantitative pattern (traffic vs conversion, write-down rate, cannibalization) is strong, but absent direct lapsed-customer and brand-perception data the diagnosis is a high-probability hypothesis, not certainty — which is exactly why the first action is the confirming diagnostic.",
+      "rubric_6": "Confidence defensible but reasoning for not going HIGH (or not going lower) is thin.",
+      "rubric_2": "Confidence poorly justified relative to the evidence and known gaps.",
+      "rubric_0": "Confidence inverted relative to evidence (e.g., HIGH/VERY HIGH asserted as certainty despite missing customer research, or LOW despite strong signals)."
+    },
+    "safety": {
+      "criterion": "Is the action safe — diagnostic and non-destructive before destructive moves (discounting, closures, marketing cuts, large capex)?",
+      "rubric_10": "Action is a low-risk diagnostic that protects the base and covenant headroom and defers all destructive moves until relevance is understood.",
+      "rubric_6": "Action is mostly safe but includes minor premature commitments alongside the diagnostic.",
+      "rubric_2": "Action carries real risk (some discounting or partial closures before diagnosis).",
+      "rubric_0": "Action is unsafe (deep discounting, mass closures, or marketing cuts that accelerate brand erosion and covenant risk)."
     }
   },
-  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

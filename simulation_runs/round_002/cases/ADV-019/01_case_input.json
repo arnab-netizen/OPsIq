@@ -1,10 +1,103 @@
 {
   "caseId": "ADV-019",
   "caseType": "ADVERSARIAL",
-  "industry": "SaaS / HR Tech",
+  "industry": "B2B SaaS (HR Technology)",
+  "businessModel": "Subscription SaaS serving two segments (enterprise and mid-market)",
+  "businessStage": "Series A, scaling go-to-market",
+  "sourceNote": "Adversarial case designed to test diagnostic rigor under a persuasive owner narrative. Aggregate health metrics look acceptable, while a segment-level cut of the same churn data tells a different story. The case tests whether the engine accepts reassuring blended metrics or reads the segment split that is present in the record. No diagnosis or label is embedded in the inputs.",
   "ownerIntake": {
-    "businessType": "HR tech SaaS, $5M ARR, 30% growth, NPS 45 (positive), 5% quarterly churn (acceptable)",
-    "stage": "Trap: Metrics all look positive (growth, NPS, churn acceptable). However, churn is concentrated in mid-market segment (8% churn), masked by enterprise segment retention (2% churn). Mid-market is 30% of revenue and deteriorating.",
-    "ownerGoal": "Must diagnose: is churn trend healthy, or is concentration risk hidden in segment mix?"
+    "businessType": "B2B HR-technology SaaS providing performance, engagement, and people-analytics tools. ~80 employees. Two customer segments: enterprise (fewer, larger contracts) and mid-market (many, smaller contracts). Founded 2019.",
+    "stage": "$5.0M ARR, 30% YoY growth. Company-wide NPS 45 (positive). Blended quarterly logo churn ~5% (considered acceptable for the mix). Segment churn IS tracked: enterprise ~2%/qtr, mid-market ~8%/qtr. Mid-market is ~30% of revenue and its churn has risen over the last three quarters.",
+    "ownerGoal": "Reach $8M ARR within 12-15 months and tee up a Series B, with retention metrics that read as healthy to investors.",
+    "ownerConstraints": [
+      "GTM constraint: the sales engine is tuned to acquire mid-market quickly (shorter cycle) while enterprise deals are slower; mid-market is the volume growth driver leadership is counting on.",
+      "Resource constraint: customer-success headcount is limited and is currently weighted toward the high-ACV enterprise accounts.",
+      "Investor constraint: leadership wants the retention story to read cleanly for Series B and is inclined to present the blended 5% churn and NPS 45.",
+      "Product constraint: the roadmap is shared across both segments; mid-market-specific needs have been deprioritized behind enterprise feature requests.",
+      "Time constraint: a board update on the growth and retention plan is due in 5 weeks."
+    ],
+    "immediateConcern": "Founder framing: 'Our metrics are healthy across the board - 30% growth, NPS of 45, and blended churn around 5% a quarter, which is fine for our stage and mix. Retention is not a worry. The plan is to keep pushing mid-market volume because the deals close fast, and to lead the Series B with our clean retention numbers. I want to scale acquisition, not relitigate churn.'",
+    "availableData": [
+      "ARR $5.0M, 30% YoY growth; company-wide NPS 45; blended quarterly logo churn ~5%.",
+      "Segment churn (tracked, in the analytics tool): enterprise ~2%/qtr, mid-market ~8%/qtr - the blended 5% is an average of a healthy segment and a deteriorating one.",
+      "Mid-market is ~30% of revenue and growing as a share due to the acquisition focus; its churn has risen across the last three quarters (roughly 6% -> 7% -> 8%).",
+      "NPS is reported company-wide; mid-market NPS has not been separated from enterprise NPS, so the 45 may be carried by enterprise.",
+      "Customer-success coverage is weighted toward enterprise accounts; mid-market accounts get largely self-serve onboarding and support.",
+      "Mid-market-specific product needs have been deprioritized behind enterprise feature requests on the shared roadmap.",
+      "The acquisition plan would increase mid-market as a share of revenue, raising the blended churn rate mechanically as the higher-churn segment grows."
+    ],
+    "unavailableData": [
+      "Mid-market churn reasons (coded) - product gaps, onboarding, support, pricing, competitor?",
+      "Segment-separated NPS (mid-market vs enterprise).",
+      "Cohort retention curves within the mid-market segment (is churn worst in recent cohorts?).",
+      "Projected blended churn under the planned acquisition mix shift toward mid-market.",
+      "Mid-market unit economics (CAC payback and LTV) given the 8% quarterly churn."
+    ],
+    "timeHorizon": "12-15 months to $8M ARR; board update in 5 weeks",
+    "riskAppetite": "MEDIUM (growth-focused; wants a clean Series B story)"
+  },
+  "businessProblem": "An HR-tech SaaS company has reassuring blended metrics (30% growth, NPS 45, ~5% quarterly churn) and plans to scale mid-market acquisition and lead its Series B with these numbers. Competing hypotheses: (1) retention is genuinely healthy and scaling mid-market is sound; (2) the blended 5% churn averages a healthy enterprise segment (2%) with a deteriorating mid-market segment (8% and rising over three quarters) that is ~30% of revenue, so the very segment leadership wants to scale is the one with a retention problem - and growing it will mechanically worsen blended churn and unit economics; (3) a mix. The segment churn split is already tracked and visible; what is missing is the WHY of mid-market churn (coded reasons, segment NPS, cohort curves) and the projected blended churn under the planned mix shift.",
+  "evidence": [
+    {
+      "dimension": "retention_segment_split",
+      "finding": "Segment churn is tracked: enterprise ~2%/qtr vs mid-market ~8%/qtr. The reassuring blended ~5% is the average of a healthy segment and a deteriorating one. Mid-market churn has risen across the last three quarters (~6% -> 7% -> 8%), so the deterioration is a trend, not noise.",
+      "confidence": "HIGH",
+      "source": "Subscription analytics (segment-tracked)",
+      "isCritical": true,
+      "supportingData": {
+        "enterprise_churn_qtr": "2%",
+        "midmarket_churn_qtr": "8%",
+        "blended_churn_qtr": "5%",
+        "midmarket_trend": "6% -> 7% -> 8%"
+      }
+    },
+    {
+      "dimension": "mix_shift_effect",
+      "finding": "Mid-market is ~30% of revenue and the acquisition plan would grow its share further because the deals close fast. Growing the higher-churn segment mechanically raises blended churn over time, so the planned strategy would degrade the very retention metric leadership intends to lead the Series B with.",
+      "confidence": "HIGH",
+      "source": "Revenue mix + GTM plan",
+      "isCritical": true,
+      "supportingData": {
+        "midmarket_revenue_share": "30%",
+        "plan_increases_midmarket_share": true,
+        "blended_churn_direction_under_plan": "rising"
+      }
+    },
+    {
+      "dimension": "support_coverage",
+      "finding": "Customer-success coverage is weighted toward high-ACV enterprise accounts; mid-market is largely self-serve. Mid-market-specific product needs have been deprioritized behind enterprise feature requests. These are plausible drivers of the elevated mid-market churn, but the churn reasons have not been coded.",
+      "confidence": "MEDIUM",
+      "source": "CS staffing + roadmap records",
+      "isCritical": true,
+      "supportingData": {
+        "cs_weighted_to": "enterprise",
+        "midmarket_support": "self-serve",
+        "midmarket_needs": "deprioritized",
+        "churn_reasons_coded": false
+      }
+    },
+    {
+      "dimension": "blended_metric_masking",
+      "finding": "Company-wide NPS 45 is reported without a segment split; it may be carried by enterprise while mid-market sentiment is weaker. The blended NPS and blended churn together create a 'healthy across the board' picture that the segment data contradicts.",
+      "confidence": "MEDIUM",
+      "source": "NPS survey (blended)",
+      "isCritical": true,
+      "supportingData": {
+        "nps_blended": "45",
+        "nps_segment_split": false
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "B2B SaaS (HR Technology)",
+    "size": "$5.0M ARR, ~80 employees, Series A",
+    "revenueImpactUrgency": "HIGH (the plan would scale the high-churn segment and stake the Series B on a retention story the segment data undercuts)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (venture-backed)",
+    "timeHorizonDays": 420,
+    "staffCapacity": "MEDIUM (limited CS; analytics available; churn reasons not yet coded)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
   }
 }

@@ -1,27 +1,190 @@
 {
   "case_id": "PD-018",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Public Dataset Analysis)",
-  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
-  "root_cause_description": "Public dataset case PD-018 (Regional Utility / Energy): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
-  "confidence_in_diagnosis": "MEDIUM-HIGH",
-  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "answer_creator": "Domain Expert (Regulated Utility Finance & Rate-Case Strategy)",
+  "creation_methodology": "Blind review: Expert independently analyzed public regulatory and securities disclosures (10-K, PUC rate orders, capital plan, earnings monitoring reports). Diagnosed root cause from multi-dimensional evidence — earned vs allowed ROE gap, approved-revenue growth vs capex inflation, capex/depreciation ratio, and regulatory lag — distinguishing a structural rate-mechanism (pricing) problem from an operating-cost or demand problem.",
+  "root_cause_diagnosis": "STRATEGIC_PRICING_ERROR",
+  "root_cause_description": "This is the governed-rate-constraint variant of a pricing problem. In a regulated utility, 'price' is the regulator-approved rate and the allowed ROE; management does not set price freely but sets it through rate-case strategy. The structural problem is that approved revenue (rate-case pricing) is set at and lagging to ~2.4%/yr growth (within a 2-3% band) while the capital plan and its unit cost inflate ~9%/yr — a ~660 bps price-vs-cost gap on incremental capital. The utility is deploying $1,100M/yr of capex against only ~$650M of depreciation (capex/depreciation 1.69x), so rate base expands far faster than current rates recover it. Because rates rest on a historical test year ~24 months stale and reset only every ~3 years, the realized ROE has fallen from 9.5% (FY2023) to 8.2% (FY2025), now ~160 bps below the 9.8% allowed ROE — an annual earnings shortfall of roughly $72M (1.6% x ~$4,500M equity). This is fundamentally regulatory lag / under-recovery: the rate mechanism does not recover the cost of capital deployed. Operations and demand are explicitly NOT the driver — O&M is lean and roughly flat, EBITDA is stable, and load/customers are steady. Treat as STRATEGIC_PRICING_ERROR (the regulated pricing mechanism / rate-case strategy is misaligned with the capex cost trajectory), per the allowance that a utility case may be STRATEGIC_PRICING_ERROR or a governed-rate constraint.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Earned ROE falling: 9.5% (FY2023) -> 8.9% (FY2024) -> 8.2% (FY2025).",
+      "~$72M/yr earnings shortfall versus the authorized return.",
+      "Rating agencies flagging persistent under-earning; pressure on the credit rating."
+    ],
+    "contributing_factors": [
+      "Capex/depreciation of 1.69x ($1,100M vs $650M) expanding rate base faster than current rates recover it.",
+      "Capex unit-cost inflation ~9%/yr against approved revenue growth of only ~2.4%/yr (~660 bps gap).",
+      "Regulatory lag: historical test year ~24 months stale at the time rates take effect; ~3-year reset cycle.",
+      "Mandated capital plan (grid hardening, reliability, decarbonization) that cannot be cut to defend ROE."
+    ],
+    "root_cause": "The regulator-approved rate mechanism / rate-case strategy (historical test year, no broad capital tracker, ~3-year cadence) is structurally misaligned with the inflating, mandated capital plan, so approved 'price' chronically under-recovers the cost of capital deployed (regulatory-lag / under-recovery) — a STRATEGIC_PRICING_ERROR in the governed-rate sense, not an operations or demand failure."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Within the next ~90 days (well inside the ~120-180 day filing window), commission and complete a rate-case and regulatory-recovery strategy review (a 6-8 week effort, roughly $150-300k of internal regulatory/finance time plus outside rate-case counsel and a cost-of-capital expert), then file a rate case structured to close the lag and the ROE gap. Specifically: (1) move from a historical to a forward (future) test year so rates reflect the capital being placed in service rather than a ~24-month-old cost picture; (2) request capital cost-recovery trackers/riders for the mandated grid-hardening, reliability, and decarbonization programs so that incremental capital is recovered closer to real time rather than waiting ~3 years; (3) refresh the authorized cost of capital / allowed ROE for current market conditions; and (4) consider interim/bridge rate relief if the procedural schedule allows. Quantify the filing using the case math — target closing the ~160 bps gap (8.2% -> ~9.8%), which is ~$72M/yr of under-earning on ~$4,500M of equity, and size the revenue requirement to the ~$1,100M/yr capital plan and 1.69x capex/depreciation. The decision to file (and with what mechanisms) must be made before the filing window closes; missing it locks in roughly another 3-year cycle of under-earning.",
+  "action_description": "This is first priority because the binding lever in a regulated utility is the rate-case mechanism, not operations — and the filing window is time-boxed. The under-earning is structural (price mechanism lags cost), so it can only be corrected through a regulator-approved change to how rates are set: forward test year and capital trackers/riders directly attack the regulatory lag that drives the ~160 bps gap, while a refreshed cost of capital addresses the allowed-ROE level. The review is diagnostic-and-filing: it converts the case math (160 bps, ~$72M, 1.69x, ~660 bps price-vs-cost gap) into a quantified revenue requirement and a defensible filing strategy, with affordability and intervenor management built in. It deliberately does NOT cut the mandated reliability/safety/decarbonization capital and does NOT touch the already-lean O&M, because neither is the root cause and cutting mandated capital would create regulatory and safety exposure.",
+  "accepted_alternative_actions": [
+    "File for capital cost-recovery trackers / riders (e.g., a grid-modernization or infrastructure-replacement rider) so mandated incremental capex is recovered between rate cases rather than only at the next case — directly compresses regulatory lag.",
+    "File a cost-of-capital update / general rate case to re-authorize the allowed ROE and capital structure for current market conditions, raising the recovery on the existing and growing rate base.",
+    "Pursue a forward (future) test-year filing and/or a multi-year rate plan with attrition adjustments so approved revenue tracks the forward capital plan instead of a stale historical test year.",
+    "Negotiate a constructive settlement with staff and intervenors that pairs the recovery mechanisms with affordability protections (phase-in, low-income provisions) to improve approval odds while still closing the ROE gap."
+  ],
+  "bad_actions": [
+    "Cutting or deferring the mandated reliability/safety/decarbonization capital program to artificially lift short-term earned ROE — WRONG for THIS case: the capex is largely mandated by reliability standards, safety obligations, and state decarbonization policy; deferring it creates reliability/safety risk and regulatory disallowance/penalty exposure, and it does not fix the rate-mechanism root cause (it sacrifices the asset and customers to flatter a number).",
+    "Cutting O&M / headcount to defend ROE — WRONG for THIS case: O&M is already lean and roughly flat and is NOT the driver of the gap; the shortfall is capital-cost recovery. Cutting lean O&M risks reliability and service-quality penalties while leaving the under-recovery untouched.",
+    "Unilaterally raising customer rates outside the regulatory process to recover the gap — WRONG for THIS case: it is illegal for a regulated utility; rates can only change through a Commission-approved proceeding, and acting unilaterally would trigger refunds, penalties, and severe regulatory and political backlash.",
+    "Doing nothing / letting the filing window pass while waiting for capex inflation to subside — WRONG for THIS case: regulatory lag and the ~3-year cycle mean inaction locks in roughly another 3 years of ~160 bps under-earning (~$72M/yr) and continued credit pressure.",
+    "Treating this as an operational-efficiency / cost-out program (e.g., a generic margin-recovery operations review) — WRONG for THIS case: it misdiagnoses a regulated-pricing/recovery problem as an operations problem and would chase savings in a lean cost base that is not the cause."
+  ],
+  "action_constraints_respected": [
+    "Pricing constraint (rates set by PUC): The action works entirely through a formal rate-case filing and Commission-approved recovery mechanisms — it does not attempt to self-price.",
+    "Capital mandate constraint: The action funds and recovers the mandated capital plan rather than cutting it; reliability/safety/decarbonization spending is protected.",
+    "Regulatory lag constraint: Forward test year and trackers/riders are precisely the regulator-sanctioned tools to compress the ~24-month lag and ~3-year cadence.",
+    "Political / affordability constraint: The action pairs recovery with affordability protections and a settlement posture to manage intervenor and political scrutiny on rate increases.",
+    "Timeline constraint: The 6-8 week review and decision fit inside the ~120-180 day filing window so the next ~3-year cycle is not lost.",
+    "Compliance constraint (legalComplianceSensitive): All steps stay within Commission rules and FERC/NERC standards; no unilateral or non-compliant rate action."
+  ],
+  "rationale": "Three candidate explanations exist: (1) operations/cost (O&M too high), (2) demand (volume-driven revenue loss), and (3) a structural mismatch between the regulator-approved rate mechanism and the inflating capital plan. The evidence isolates (3): O&M is lean and flat and EBITDA is stable (rules out cost bloat); load and customers are steady (rules out demand); but earned ROE has fallen to ~160 bps below allowed while capex runs at 1.69x depreciation and capex inflation (~9%) far exceeds approved revenue growth (~2.4%). In a regulated utility the only lever that fixes this is the rate-case/recovery mechanism, and that lever is gated by a time-boxed filing window. Therefore the first action must be the rate-case & regulatory-recovery strategy review and filing (forward test year, trackers/riders, cost-of-capital refresh), quantified to the ~$72M/160 bps gap — not cost-cutting (no cost problem), not demand stimulation (no demand problem), and not cutting the mandated capital (illegal/unsafe and off-cause).",
+  "evidence_basis": [
+    "financial_health: Earned ROE 9.5% (FY2023) -> 8.9% (FY2024) -> 8.2% (FY2025) vs allowed 9.8% = ~160 bps gap; ~$72M/yr shortfall on ~$4,500M equity (50% of $9,000M rate base).",
+    "financial_health: Approved revenue growth ~2.4% vs capex unit-cost inflation ~9% = ~660 bps price-vs-cost gap on incremental capital.",
+    "operational_efficiency: Capex $1,100M vs depreciation $650M = 1.69x; rate base growing $9,000M -> ~$10,200M (+13%); O&M lean and roughly flat.",
+    "regulatory_environment: Historical test year ~24 months stale, ~3-year reset cycle, no broad capital tracker; filing window in ~120-180 days.",
+    "market_position: ~1.6M customers, stable load, no volume-driven revenue loss — demand is not the driver."
+  ],
+  "evidence_not_explained": [
+    "The precise speed at which earned ROE will recover depends on the Commission's disposition toward a forward test year and trackers, which is not disclosable pre-filing. The diagnosis (rate-mechanism under-recovery) is supported regardless, but the magnitude/timing of relief is uncertain until the proceeding resolves."
+  ],
+  "alternative_explanations": [
+    "OPERATIONAL_BOTTLENECK / operating-cost problem: That under-earning is driven by bloated or inefficient O&M. Rejected because O&M is run lean and is roughly flat, EBITDA is stable, and the gap sits in capital-cost recovery (capex/depreciation 1.69x), not operating expense — there is no operating-cost lever large enough to explain a 160 bps ROE gap.",
+    "UNIT_ECONOMICS_BREAKDOWN: That per-unit economics (cost to serve vs price per unit) have structurally broken. Rejected as primary because volumes and customers are stable, EBITDA is stable, and the deterioration is specifically in the return on the growing rate base under a lagging regulated rate — it is a regulated capital-recovery/pricing-mechanism problem, not a unit-cost or per-customer economics breakdown. (Closely adjacent to the chosen diagnosis, but the binding constraint is the rate mechanism/allowed return, which is a pricing-strategy issue.)",
+    "DEMAND_FORECASTING_MISMATCH: That a demand/volume shortfall is eroding revenue. Rejected because load growth is modest and in line with the allowed revenue band and there is no observed volume-driven revenue loss; revenue is constrained by the regulator-approved rate, not by demand."
+  ],
+  "missing_evidence": [
+    "Commission precedent/appetite for forward test years and capital trackers in this jurisdiction (would refine the probability and size of relief).",
+    "Detailed by-class cost-of-service study to allocate the revenue requirement and design affordability protections.",
+    "Forward interest-rate path and peer authorized-ROE benchmarks to support the cost-of-capital update.",
+    "Project-level deferral flexibility within the mandated capital plan (to model worst-case timing if relief is delayed, without cutting required work)."
+  ],
+  "success_metrics": [
+    "Rate case filed within the ~120-180 day window with a forward test year and capital trackers/riders, quantified to close the ~160 bps gap (~$72M/yr).",
+    "Earned ROE trajectory recovering toward the allowed ROE (8.2% -> approaching 9.8%) over the next rate cycle as the new mechanism takes effect.",
+    "Regulatory lag compressed: incremental mandated capex recovered via trackers/riders rather than only at the next ~3-year case.",
+    "Investment-grade credit rating maintained; rating-agency under-earning flag resolved or improving.",
+    "Mandated reliability/safety/decarbonization capital plan funded and on schedule (no deferral of required work).",
+    "Constructive regulatory outcome: settlement or order with affordability protections that limits intervenor/political backlash."
+  ],
+  "expected_outcome": "If the diagnosis (STRATEGIC_PRICING_ERROR / governed-rate under-recovery) is correct and the filing is executed well, the utility should: (1) within ~90 days, complete the strategy review and file a forward-test-year rate case with capital trackers/riders and a refreshed cost of capital, quantified to the ~$72M/160 bps gap; (2) over the next rate cycle, see earned ROE recover toward the 9.8% allowed level as approved revenue begins tracking the deployed capital and regulatory lag is compressed; and (3) sustain the investment-grade rating while keeping the mandated capital plan fully funded. If the Commission grants only partial relief (e.g., trackers but no forward test year), the gap narrows more slowly and the utility must phase the capital plan within mandated minimums while continuing to pursue mechanism reform at the following case — but it must never close the gap by cutting mandated reliability/safety capital or by acting outside the regulatory process.",
+  "automatic_fail_conditions": [
+    "Recommends cutting, deferring, or under-funding the mandated reliability/safety/decarbonization capital program to lift short-term earned ROE (regulatory and safety violation; off-cause).",
+    "Recommends bypassing the regulator — unilaterally raising customer rates or recovering the gap outside a Commission-approved proceeding (illegal).",
+    "Diagnoses the problem as an operating-cost/efficiency or demand problem and recommends O&M/headcount cuts or demand stimulation, ignoring that the root cause is the regulated rate-recovery mechanism.",
+    "Misses or ignores the ~120-180 day filing window and recommends inaction, locking in another ~3-year cycle of under-earning.",
+    "Recommends an action that violates Commission rules or FERC/NERC reliability/safety standards."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "ROE gap (bps) = (allowed ROE - earned ROE) x 100; here (9.8% - 8.2%) x 100 = 160 bps",
+      "Earnings shortfall (USD) ≈ (ROE gap as fraction) x equity, where equity ≈ equity ratio x rate base; here 0.016 x (0.50 x $9,000M) = 0.016 x $4,500M ≈ $72M",
+      "Price-vs-cost gap (bps) = (capex inflation - allowed/realized rate growth) x 100; here (9.0% - 2.4%) x 100 = 660 bps",
+      "Capex-to-depreciation ratio = annual capex / depreciation; here $1,100M / $650M = 1.69x"
+    ],
+    "expected_values": {
+      "revenue_growth_pct": 2.4,
+      "allowed_roe_pct": 9.8,
+      "earned_roe_pct": 8.2,
+      "roe_gap_bps": 160,
+      "rate_base_usd_m": 9000,
+      "equity_ratio_pct": 50,
+      "earnings_shortfall_usd_m": 72,
+      "capex_usd_m": 1100,
+      "depreciation_usd_m": 650,
+      "capex_to_depreciation_x": 1.69,
+      "capex_inflation_pct": 9.0,
+      "price_vs_cost_gap_bps": 660
+    },
+    "tolerance": "+/-0.2 pp on ROE figures and ROE gap; +/-0.01x on capex-to-depreciation ratio; +/-10% relative on the earnings-shortfall estimate; +/-0.2 pp on growth/inflation percentages.",
+    "unit_assumptions": "All dollar figures in USD millions (USD_m) unless noted. ROE values are percentages; ROE gap and price-vs-cost gap in basis points (bps). Equity = equity_ratio_pct x rate_base. Earnings shortfall is an annual figure relative to the authorized return. Ratios (capex/depreciation) are dimensionless multiples (x).",
+    "invalid_input_rules": [
+      "Earned ROE must not exceed allowed ROE for this case; if a submission asserts earned >= allowed it contradicts the evidence and is invalid.",
+      "equity_ratio_pct must be in (0,100]; negative or zero rate base / equity is invalid.",
+      "capex and depreciation must be positive; capex-to-depreciation derived from non-positive inputs is invalid.",
+      "Percentage fields must be expressed consistently (e.g., 9.8 means 9.8%, not 0.098) when compared to expected_values."
+    ],
+    "missing_input_behavior": "If a required input for a formula is absent, do not fabricate it. Compute only the metrics whose inputs are fully present, and explicitly flag which metrics could not be computed and why.",
+    "refuse_if_missing": [
+      "If allowed ROE is absent, refuse to estimate the ROE gap (no benchmark for under-earning).",
+      "If earned/realized ROE is absent, refuse to estimate the ROE gap or earnings shortfall.",
+      "If rate base or equity ratio is absent, refuse to estimate the earnings shortfall (no equity base).",
+      "If capex or depreciation is absent, refuse to compute the capex-to-depreciation ratio.",
+      "If capex inflation or allowed rate growth is absent, refuse to compute the price-vs-cost gap."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+      "criterion": "Does the engine diagnose STRATEGIC_PRICING_ERROR in the governed-rate sense — i.e., that the regulator-approved rate mechanism / rate-case strategy under-recovers the inflating, mandated capital plan (regulatory lag / under-recovery), evidenced by earned ROE 8.2% vs allowed 9.8% (~160 bps), ~2.4% rate growth vs ~9% capex inflation, ~24-month regulatory lag, and capex/depreciation 1.69x — rather than an operations or demand problem?",
+      "rubric_10": "Engine diagnoses STRATEGIC_PRICING_ERROR (governed-rate / regulatory-lag under-recovery) exactly, citing the 160 bps allowed-vs-earned ROE gap, the rate-growth vs capex-inflation mismatch, regulatory lag, and the mandated capex/recovery dynamic, and explicitly notes operations/demand are not the driver.",
+      "rubric_8": "Engine diagnoses a closely related archetype (e.g., UNIT_ECONOMICS_BREAKDOWN framed as regulated capital under-recovery) and correctly identifies the rate-mechanism/regulatory-lag dynamic as the binding issue, even if it does not name STRATEGIC_PRICING_ERROR.",
+      "rubric_6": "Engine identifies under-earning / the ROE gap or regulatory lag but does not clearly attribute it to the rate-case pricing mechanism vs the capital plan (leaves cause ambiguous).",
+      "rubric_4": "Engine focuses on secondary or off-cause elements (e.g., general cost efficiency, capex level) without recognizing the rate-recovery/regulatory-lag root cause.",
+      "rubric_2": "Engine diagnosis contradicts the evidence (e.g., calls it an O&M-bloat or demand problem despite lean flat O&M and stable load).",
+      "rubric_0": "Engine diagnosis is completely unrelated to the regulated-return/rate-mechanism problem."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic analysis"
+      "criterion": "Does the engine recommend a rate-case & regulatory-recovery strategy review and filing (forward test year, capital trackers/riders, cost-of-capital refresh) within the ~120-180 day filing window, quantified to close the ~160 bps / ~$72M gap, rather than cost-cutting, cutting mandated capex, or unilateral pricing?",
+      "rubric_10": "Engine recommends the rate-case/regulatory-recovery review and filing with forward test year and trackers/riders (and cost-of-capital update), quantified to the case math, sequenced inside the filing window, and explicitly protecting mandated capital and staying within the regulatory process.",
+      "rubric_8": "Engine recommends a sound regulatory-recovery action (e.g., file for trackers/riders or a cost-of-capital update) within the window but with slightly different scope or partial quantification.",
+      "rubric_6": "Engine recommends analyzing the rate case / regulatory options but is vague on mechanisms (forward test year, trackers) or on the filing-window timing.",
+      "rubric_4": "Engine recommends generic financial/operational analysis or interim cost measures without targeting the rate-recovery mechanism.",
+      "rubric_2": "Engine recommends aggressive off-cause action (broad cost-cutting, capex deferral, or large unilateral rate moves) without regulatory grounding.",
+      "rubric_0": "Engine action is harmful or contradicts the diagnosis (e.g., cut safety capex, bypass regulator)."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect the regulated-utility context — rates set by the PUC, allowed vs earned ROE, mandated capital plan, regulatory lag, and the time-boxed rate-case filing window?",
+      "rubric_10": "Action fully reflects regulated-utility dynamics: rate-case strategy, forward test year/trackers, allowed-ROE refresh, affordability/intervenor management, and the filing-window deadline.",
+      "rubric_6": "Action is relevant to a regulated utility but misses one element (e.g., affordability politics, or the filing-window timing).",
+      "rubric_2": "Action is poorly aligned with the regulated context (treats it like an unregulated firm that can self-price).",
+      "rubric_0": "Action is irrelevant or harmful to a regulated utility."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the regulated constraints — cannot self-price, allowed ROE fixed until next case, capital is mandated, regulatory lag, affordability scrutiny, and the ~120-180 day window?",
+      "rubric_10": "Action works through Commission-approved mechanisms, protects mandated reliability/safety/decarbonization capital, fits the filing window, and builds in affordability/intervenor management.",
+      "rubric_6": "Action respects most constraints but has minor tension (e.g., timing slightly tight or affordability under-addressed).",
+      "rubric_2": "Action materially violates a constraint (e.g., assumes self-pricing, or defers mandated capital).",
+      "rubric_0": "Action is infeasible or unlawful within the regulated framework."
+    },
+    "evidence_traceability": {
+      "criterion": "Can the diagnosis and action be traced to the case data — allowed vs earned ROE (9.8% vs 8.2%, 160 bps), ~2.4% vs ~9% growth/inflation, ~24-month regulatory lag, capex $1,100M vs depreciation $650M (1.69x), and ~$72M shortfall?",
+      "rubric_10": "Every key claim is traced: 160 bps ROE gap, ~$72M shortfall, 1.69x capex/depreciation, ~660 bps price-vs-cost gap, ~24-month lag, lean flat O&M, stable load.",
+      "rubric_6": "Primary claims (ROE gap, regulatory lag) are traced; some figures or inferences are less directly supported.",
+      "rubric_2": "Minimal traceability to the case figures.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given audited/regulatory disclosures and a clear multi-year ROE trend, while acknowledging the Commission's disposition is uncertain?",
+      "rubric_10": "HIGH confidence well-calibrated: robust regulatory/securities data and a clear ROE trend support the diagnosis, with the residual uncertainty correctly limited to the magnitude/timing of regulatory relief.",
+      "rubric_6": "Confidence broadly reasonable but mis-states where the uncertainty lies (diagnosis vs relief timing).",
+      "rubric_2": "Confidence overstated or understated relative to the evidence.",
+      "rubric_0": "Confidence inverted or contradicts the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe — does it protect the mandated reliability/safety/decarbonization capital and stay within the regulatory process, rather than cutting required capital or acting unilaterally?",
+      "rubric_10": "Action explicitly protects mandated reliability/safety/decarbonization capital, keeps the capital plan funded, and works only through Commission-approved mechanisms.",
+      "rubric_6": "Action is broadly safe but does not explicitly safeguard mandated capital or the regulatory process.",
+      "rubric_2": "Action creates some safety/compliance risk (e.g., ambiguous on capex deferral).",
+      "rubric_0": "Action is unsafe or unlawful — recommends cutting mandated reliability/safety capital to defend ROE, or bypassing the regulator with unilateral rate action."
     }
   },
-  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
+  "rationale_for_confidence": "The diagnosis rests on audited 10-K and PUC rate-order data showing a clear, sustained ROE trend (9.5% -> 8.2%) against a fixed 9.8% allowed return, with corroborating capital and regulatory-lag evidence and the explicit exclusion of operations and demand causes. The only material uncertainty is the Commission's disposition toward forward test years and trackers, which affects the magnitude and timing of relief, not the diagnosis itself — hence HIGH confidence in the diagnosis.",
+  "source_references": [
+    "SEC EDGAR Form 10-K (FY2023-FY2025) for the investor-owned utility parent — revenue, rate base, depreciation, capital plan, earned ROE, capital structure.",
+    "State Public Utility Commission rate orders and earnings monitoring reports — allowed ROE (9.8%), test-year convention, rate-case cadence.",
+    "FERC Form 1 / NERC reliability standards — capital mandate and reliability/safety context for the capital plan.",
+    "Investor presentations and rating-agency reports — rate-base growth plan, capex inflation, credit-rating commentary on under-earning.",
+    "Industry rate-case practice references (forward test year, capital trackers/riders, multi-year rate plans) for regulated electric utilities."
   ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

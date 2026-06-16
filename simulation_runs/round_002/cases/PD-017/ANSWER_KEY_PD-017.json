@@ -1,27 +1,171 @@
 {
   "case_id": "PD-017",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Public Dataset Analysis)",
-  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
-  "root_cause_description": "Public dataset case PD-017 (Business Services / Staffing): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
+  "answer_creator": "Domain Expert (Staffing / Cyclical Labor Services)",
+  "creation_methodology": "Blind review: expert analyzed the constructed public-disclosure dataset independently. Diagnosed the root cause through multi-dimensional evidence — EBITDA margin decline 8.0%->6.0% against decelerating revenue, perm placement -8% and orders -6% leading indicators, internal headcount +4% added ahead of demand, and 150 bps gross-spread compression from unrecovered wage inflation. Distinguished the leading demand-cycle signal from the contributing spread-compression signal before assigning the diagnosis.",
+  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "root_cause_description": "A staffing firm's revenue is highly demand-cyclical, and this firm has sized its fixed recruiter/branch capacity to a demand forecast that is now rolling over. The leading indicators of the staffing cycle have already turned: permanent / direct-hire placement revenue is down -8% YoY (the canary, because perm hiring is discretionary and contracts first), client orders are down -6% YoY, and temp hours per week are trending -2% sequentially. Against this softening demand, the firm continued to add fixed capacity — internal recruiter/branch headcount grew +4% — and SG&A (~13.5% of revenue, largely fixed) was sized during the prior high-growth expansion (+12%), so it does not flex down as utilization falls. The result is operating de-leverage that, together with 150 bps of gross-spread compression (gross margin 21.0%->19.5% as +6% pay-rate inflation outran +3.5% bill-rate increases, leaving ~250 bps unrecovered on the temp book), drove EBITDA margin from 8.0% to 6.0% (200 bps) even though headline revenue still grew +5%. The leading driver is the capacity/cost base being out of step with a decelerating demand cycle (DEMAND_FORECASTING_MISMATCH), not a structural pricing-design error.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptom": "EBITDA margin fell 200 bps (8.0% -> 6.0%) in one year and revenue growth decelerated from +12% to +5%. These are the visible outcomes leadership is reacting to, not the cause.",
+    "contributing_factor": "Gross-spread compression of 150 bps (21.0% -> 19.5%): worker pay-rate inflation (+6%) outran bill-rate increases (+3.5%), leaving ~250 bps of unrecovered wage inflation on the temp book because clients resist full pass-through. This is a real, partly controllable pressure, but it is roughly three-quarters of the margin decline and is itself worsened by weaker order volume reducing pricing leverage.",
+    "root_cause": "The firm sized largely fixed recruiter/branch capacity to a demand forecast that is rolling over. Perm placement -8%, orders -6%, and temp hours -2% sequentially are all leading signals of a softening cycle, yet internal headcount grew +4% (capacity ahead of demand). Fixed SG&A de-leverages as utilization falls. This demand-forecasting mismatch between committed capacity and a decelerating demand cycle is the leading driver of the EBITDA decline."
+  },
   "confidence_in_diagnosis": "MEDIUM-HIGH",
-  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "first_priority_action": "Commission a 4-6 week demand-sensing and capacity right-sizing review (estimated $80-120k, internal FP&A plus a small external staffing-sector advisory cell) to be completed before the next quarter's capacity decision. Scope: (1) Segment branches and verticals by trailing and forward order trend, temp-hours trend, and recruiter utilization to separate genuinely softening books from stable/growing ones; (2) Model recruiter/branch utilization against orders to identify where the +4% headcount addition is now stranded versus where capacity should be held for rebound; (3) Build a 12-month demand-scenario plan (base / downturn / rebound) anchored on the perm-placement and orders leading indicators, with explicit trigger thresholds for a phased hiring freeze and selective branch right-sizing; (4) Set bill-rate discipline by client segment to recover the ~250 bps of unrecovered wage inflation where elasticity allows. Deliver a board-ready decision memo recommending a phased capacity action (freeze-first, targeted right-size second, protect rebound-critical recruiters) rather than an across-the-board cut, so the CEO can commit a defensible call within the 90-day window.",
+  "action_description": "This is first priority because the CEO faces a largely irreversible capacity decision within 90 days and currently cannot distinguish a controllable spread problem from a softening demand cycle. The review is diagnostic and low-regret: it produces, before the decision deadline, a segmented view of which branches/verticals are actually rolling over (so cuts are targeted, not indiscriminate), trigger thresholds tied to the perm/orders leading indicators (so the firm acts on signal not panic), and a bill-rate recovery plan for the spread leg. It explicitly protects rebound-critical recruiter capacity, which cannot be rebuilt quickly. At $80-120k and 4-6 weeks it fits the budget band and the 90-day decision window, and it prevents both failure modes — over-building into a downturn and gutting the capacity needed for recovery.",
+  "accepted_alternative_actions": [
+    "Implement an immediate, reversible internal-hiring freeze (stop the +4% headcount growth) while the segmented demand-sensing review runs, so the firm stops adding fixed capacity against falling orders without yet making any irreversible cuts. Acceptable because it directly halts the capacity-ahead-of-demand dynamic at near-zero downside and preserves optionality.",
+    "Stand up a leading-indicator dashboard and trigger framework (perm-placement growth, orders growth, temp-hours sequential trend, recruiter utilization by branch) tied to pre-agreed phased-capacity triggers, paired with a targeted bill-rate recovery program. Acceptable because it institutionalizes demand sensing and addresses the contributing spread compression, though it is slightly less complete than the full segmentation review for the immediate 90-day decision."
+  ],
+  "bad_actions": [
+    "Mass, across-the-board recruiter/branch layoffs to defend margin immediately. Wrong for this case: it would gut the rebound-critical recruiter capacity that takes 6-12 months to rebuild, treats a cyclically lumpy and concentrated demand softening as uniform, and risks leaving the firm unable to fill orders when the cycle turns — converting a margin dip into permanent share loss.",
+    "Cut bill rates to chase order volume in a softening market. Wrong for this case: the temp book is already losing 250 bps to unrecovered wage inflation; cutting bill rates widens spread compression precisely where the firm is weakest, and chasing volume in a demand-led downturn destroys margin without restoring demand the firm does not control.",
+    "Continue adding internal capacity (hold or extend the +4% hiring) on the assumption that +5% revenue growth proves demand is healthy. Wrong for this case: it ignores the leading indicators (perm -8%, orders -6%, hours -2% sequential) that point to revenue rolling over, and compounds the capacity-ahead-of-demand mismatch that is the root cause.",
+    "Treat the decline as a pure pricing/unit-economics fix and re-engineer the bill-rate model firm-wide while ignoring the demand cycle. Wrong for this case: spread compression is a contributing factor (~150 bps) but the leading driver is decelerating demand against fixed capacity; a pricing-only response leaves the firm over-built into a downturn."
+  ],
+  "action_constraints_respected": [
+    "90-day decision window: the 4-6 week review completes well inside the quarter, giving the CEO a board-ready memo before the capacity decision is due.",
+    "Capacity / rebound constraint: the recommended output is a phased, targeted action that explicitly protects rebound-critical recruiters rather than an across-the-board cut.",
+    "Bill-rate constraint: the bill-rate recovery component is segment-by-elasticity, not a blanket increase, respecting client budget and competitive limits.",
+    "Fixed-commitment constraint: branch right-sizing is informed by lease timing and order trend by branch, not an immediate blanket closure.",
+    "Budget band (MEDIUM): $80-120k diagnostic fits discretionary spend and is small relative to the $90M EBITDA at stake."
+  ],
+  "rationale": "The 200 bps EBITDA decline has three candidate root causes: (1) a softening demand cycle the fixed cost base has not adjusted to, (2) gross-spread compression from unrecovered wage inflation, and (3) a structural pricing-design error. The evidence points to (1) as the leading driver: the staffing-cycle leading indicators have all turned negative (perm placement -8%, orders -6%, temp hours -2% sequential) while the firm added +4% internal capacity, i.e., capacity committed to a forecast that is rolling over. Spread compression (150 bps) is real and contributing but is itself partly demand-linked (weaker volume reduces bill-rate leverage). The correct first move is therefore not an immediate cut or a pricing-only reengineering, but a fast, segmented demand-sensing and capacity right-sizing review that lets the CEO make the irreversible capacity call on signal, targeted by branch/vertical, while recovering spread where elasticity allows.",
+  "evidence_basis": [
+    "financial_health: EBITDA margin fell from 8.0% ($114.3M) to 6.0% ($90M), a 200 bps decline, while revenue grew +5.0% to $1,500M and growth decelerated from +12% to +5% — cost base not adjusting to slowing top line.",
+    "market_position: permanent placement revenue -8% YoY ($300M) and client orders -6% YoY, with temp hours -2% sequentially — the staffing cycle's leading indicators are turning negative.",
+    "operational_efficiency: internal recruiter/branch headcount +4% against orders -6% and revenue +5%, with SG&A ~13.5% of revenue largely fixed — capacity added ahead of and against decelerating demand, producing operating de-leverage.",
+    "financial_health: gross margin compressed 150 bps (21.0% -> 19.5%) as +6% pay-rate inflation outran +3.5% bill-rate increases, leaving ~250 bps unrecovered on the temp book — a contributing pressure on EBITDA."
+  ],
+  "evidence_not_explained": [
+    "The firm added +4% internal headcount while orders were already -6%; the public data does not disclose the internal demand forecast that justified the build, so it is unclear whether this was lagged planning, an explicit bet on rebound, or accountability weakness in capacity planning. The demand-sensing review is designed to surface which, but the assignment cannot be made from disclosed data alone.",
+    "How much of the 150 bps spread compression is structurally unrecoverable (true client budget ceilings) versus simply un-pushed bill-rate increases is not separable from public data; segment-level elasticity is required."
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN: the diagnosis could be read as deteriorating unit economics, since gross spread compressed 150 bps from +6% pay vs +3.5% bill inflation. Weaker as the PRIMARY diagnosis because the leading signal is demand deceleration (perm -8%, orders -6%, hours -2% sequential) against fixed capacity, not a structural breakdown in the per-unit spread model; the spread leg is a contributing factor (~150 of 200 bps) and is itself partly worsened by falling volume reducing pricing leverage.",
+    "STRATEGIC_PRICING_ERROR: the diagnosis could be read as a bill-rate / pricing-structure error, since bill rates lagged pay rates by 250 bps. Weaker because the firm is a price-taker against client budgets and competition in a softening market — the bill-rate lag is largely a symptom of weakening demand reducing pricing power, not a deliberate mispricing of the offer; fixing pricing alone leaves the firm over-built into a downturn.",
+    "OPERATIONAL_BOTTLENECK: the +4% headcount and SG&A de-leverage could be read as an internal efficiency/productivity problem. Weaker because utilization is falling due to declining orders (external demand), not an internal throughput constraint; the bottleneck framing would prescribe productivity fixes that do not address the capacity-vs-demand mismatch."
+  ],
+  "missing_evidence": [
+    "Branch- and vertical-level order, temp-hours, and recruiter-utilization trends to determine where demand is actually softening versus stable, so right-sizing can be targeted rather than across-the-board.",
+    "Forward client order pipeline and large-client commitments, especially for the concentrated light-industrial/logistics accounts whose volume is most cyclically sensitive.",
+    "Bill-rate elasticity by client segment, to quantify how much of the 250 bps unrecovered wage inflation is genuinely recoverable.",
+    "The internal demand forecast and capacity-planning assumptions that justified the +4% headcount add, to distinguish lagged planning from an explicit rebound bet."
+  ],
+  "success_metrics": [
+    "Capacity-vs-demand alignment: by end of the 4-6 week review, branches/verticals segmented by order trend and recruiter utilization, with a phased capacity plan and explicit leading-indicator trigger thresholds delivered before the 90-day decision deadline.",
+    "EBITDA margin stabilization: arrest the decline and begin recovery toward 7%+ over the following 12 months by aligning fixed cost to demand and recovering bill-rate spread where elasticity allows.",
+    "Spread recovery: close part of the 250 bps unrecovered wage-inflation gap on the temp book through segment-targeted bill-rate discipline, with gross margin recovering toward 20%+.",
+    "Rebound capacity preserved: retention of rebound-critical recruiters in stable/growing verticals maintained through any right-sizing, measured by recruiter retention and fill-rate in those verticals.",
+    "Decision discipline: capacity actions are triggered by the leading-indicator dashboard (perm, orders, hours, utilization) rather than ad hoc, evidenced by documented trigger-based decisions."
+  ],
+  "expected_outcome": "If DEMAND_FORECASTING_MISMATCH is the root cause and the demand-sensing/right-sizing review is executed well, the firm should: (1) within 4-6 weeks have a segmented, signal-driven view distinguishing genuinely softening branches/verticals from stable ones and a phased capacity plan with trigger thresholds, enabling a defensible CEO decision inside the 90-day window; (2) implement a hiring freeze immediately and selectively right-size the most-softened, lease-flexible branches while protecting rebound-critical recruiters; (3) recover part of the spread through segment-targeted bill-rate discipline; (4) over the following 12 months arrest the EBITDA-margin slide and begin recovery toward 7%+, positioned to scale capacity back up quickly if the perm/orders leading indicators turn positive. If the review instead shows demand is stable and the decline is purely spread-driven, the firm pivots to a pricing/unit-economics response rather than a capacity action.",
+  "automatic_fail_conditions": [
+    "Recommending immediate across-the-board recruiter/branch layoffs that destroy rebound-critical capacity, treating a cyclically lumpy, concentrated demand softening as uniform.",
+    "Recommending bill-rate cuts to chase volume in a softening market, which worsens the already-compressed spread (250 bps unrecovered) without restoring demand.",
+    "Ignoring the leading indicators (perm -8%, orders -6%, temp hours -2% sequential) and continuing to add internal capacity on the basis that +5% headline revenue growth proves demand is healthy.",
+    "Calling the demand cycle (up or down) without the orders trend or permanent-placement trend in evidence, i.e., asserting a downturn or rebound with no leading-indicator support."
+  ],
+  "source_references": [
+    "Constructed from SEC 10-K disclosure patterns for mid/large commercial staffing firms (temp/perm revenue mix, gross-spread, orders and temp-hours operating metrics, internal headcount, SG&A).",
+    "Staffing-sector cyclical playbook: permanent/direct-hire placement as a leading indicator of hiring demand; bill-pay spread dynamics under wage inflation.",
+    "Standard operating-leverage and capacity-planning analysis for fixed-cost, demand-cyclical services businesses."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "EBITDA margin = EBITDA / Revenue",
+      "EBITDA margin decline (bps) = (prior EBITDA margin% - current EBITDA margin%) x 100",
+      "Revenue growth % = (current revenue - prior revenue) / prior revenue x 100",
+      "Gross spread compression (bps) = (prior GM% - current GM%) x 100",
+      "Unrecovered wage inflation (bps) = (pay-rate inflation% - bill-rate inflation%) x 100",
+      "Capacity-vs-demand gap = internal headcount growth% - orders growth%",
+      "Perm revenue growth % = (current perm revenue - prior perm revenue) / prior perm revenue x 100"
+    ],
+    "expected_values": {
+      "revenue_growth_pct": 5.0,
+      "current_ebitda_margin_pct": 6.0,
+      "prior_ebitda_margin_pct": 8.0,
+      "ebitda_margin_decline_bps": 200,
+      "gross_margin_pct_current": 19.5,
+      "gross_margin_pct_prior": 21.0,
+      "spread_compression_bps": 150,
+      "pay_rate_inflation_pct": 6.0,
+      "bill_rate_inflation_pct": 3.5,
+      "unrecovered_wage_bps": 250,
+      "perm_revenue_growth_pct": -8.0,
+      "orders_growth_pct": -6.0,
+      "internal_headcount_growth_pct": 4.0,
+      "capacity_vs_demand_gap_pp": 10.0
+    },
+    "tolerance": "+/-0.5 pp on margin/percentage-point values; +/-5% relative on growth rates",
+    "unit_assumptions": "Revenue and EBITDA in USD millions. Margins and growth rates in percent. Compression/decline expressed in basis points (1 pp = 100 bps). Rate inflation figures are YoY percent changes. Headcount and orders growth are YoY percent changes. Capacity-vs-demand gap expressed in percentage points.",
+    "invalid_input_rules": "Reject if EBITDA margin is computed as anything other than EBITDA/Revenue; reject if bps conversions do not use 1 pp = 100 bps; reject if perm/temp revenue components do not reconcile to total revenue within rounding (1,200 + 300 = 1,500); reject negative or >100% margins; reject if EBITDA margin decline is not (prior - current).",
+    "missing_input_behavior": "If a required figure (revenue, EBITDA, gross margin, perm revenue, orders trend, pay/bill rate inflation, internal headcount growth) is absent, compute only the metrics fully supported by available inputs and explicitly flag the missing figure; do not impute or assume the demand direction.",
+    "refuse_if_missing": [
+      "If the orders trend is absent, refuse to characterize the demand cycle (cannot call a downturn or rebound).",
+      "If the permanent-placement trend is absent, refuse to assert the leading-indicator signal, since perm placement is the canary for cyclical demand.",
+      "If both internal headcount growth and orders growth are absent, refuse to assert a capacity-vs-demand mismatch.",
+      "If pay-rate and bill-rate inflation are not both present, refuse to quantify unrecovered wage inflation."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+      "criterion": "Does the engine diagnose DEMAND_FORECASTING_MISMATCH — fixed recruiter/branch capacity sized to a demand forecast that is rolling over — using the leading indicators (perm -8%, orders -6%, temp hours -2% sequential) and capacity ahead of demand (headcount +4%)?",
+      "rubric_10": "Diagnoses DEMAND_FORECASTING_MISMATCH exactly, citing the leading-indicator turn (perm -8%, orders -6%, hours -2% sequential) and capacity-ahead-of-demand (+4% headcount vs -6% orders) as the leading driver, and correctly relegates the 150 bps spread compression to a contributing factor.",
+      "rubric_8": "Diagnoses a closely related capacity/demand-mismatch archetype (e.g., OPERATIONAL capacity overbuild against softening demand) with sound use of the leading indicators, even if not named exactly DEMAND_FORECASTING_MISMATCH.",
+      "rubric_6": "Identifies the demand softening or the capacity/cost-base de-leverage but does not clearly establish the capacity-vs-demand mismatch as the primary driver; may over-weight spread compression.",
+      "rubric_4": "Diagnoses UNIT_ECONOMICS_BREAKDOWN or STRATEGIC_PRICING_ERROR as primary (spread/bill-rate) without recognizing the leading demand-cycle signal (perm -8%, orders -6%).",
+      "rubric_2": "Diagnosis contradicts the evidence (e.g., asserts demand is healthy because revenue grew +5%, ignoring perm -8% / orders -6%).",
+      "rubric_0": "Diagnosis is unrelated to demand, capacity, or margin (e.g., a product or trust-quality diagnosis)."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic analysis"
+      "criterion": "Does the engine recommend a fast demand-sensing and capacity right-sizing review (segment by order trend, model utilization vs orders, set trigger thresholds, bill-rate discipline) before the irreversible capacity decision, rather than an immediate cut or pricing-only fix?",
+      "rubric_10": "Recommends a 4-6 week demand-sensing / capacity right-sizing review with clear scope (branch/vertical segmentation, utilization-vs-orders model, scenario triggers, segment bill-rate discipline), cost, and a phased action that protects rebound-critical recruiters, fitting the 90-day window.",
+      "rubric_8": "Recommends a diagnostic capacity/demand review before acting, with slightly different scope or missing one element (e.g., omits bill-rate discipline) but still sound and constraint-respecting.",
+      "rubric_6": "Recommends investigation of demand/capacity or costs but loosely targeted; may bundle some irreversible action alongside the diagnostic work.",
+      "rubric_4": "Recommends immediate broad cost-cutting (headcount/branch reduction) without first segmenting which books are actually softening.",
+      "rubric_2": "Recommends aggressive irreversible action (mass layoffs, blanket bill-rate cuts) without analytical foundation.",
+      "rubric_0": "Recommended action is harmful or contradicts the diagnosis (e.g., add more capacity into the downturn)."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect the commercial-staffing, cyclical context (perm as leading indicator, bill-pay spread, rebound-capacity value, 90-day irreversible decision)?",
+      "rubric_10": "Action is clearly staffing-cycle-aware: uses perm/orders/hours leading indicators, protects rebound-critical recruiter capacity, addresses spread, and frames the 90-day capacity decision.",
+      "rubric_6": "Action is relevant to a margin-decline situation but somewhat generic; misses one or more staffing-specific nuances (perm leading indicator, rebound-capacity value).",
+      "rubric_2": "Action is poorly aligned with the cyclical staffing context or ignores the irreversible-capacity dynamic.",
+      "rubric_0": "Action is irrelevant or harmful to the business."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 90-day decision window, the MEDIUM budget band, the bill-rate ceiling, lease commitments, and the do-not-over-cut rebound constraint?",
+      "rubric_10": "Action completes inside the 90-day window at a budget proportionate to MEDIUM band, uses segment-targeted (not blanket) bill-rate and branch moves, and explicitly protects rebound-critical recruiters.",
+      "rubric_6": "Action mostly respects constraints with minor tension in timing or scope of cuts.",
+      "rubric_2": "Action severely violates constraints (over-cuts recruiters, blanket bill-rate changes, or misses the 90-day window).",
+      "rubric_0": "Action is infeasible given the stated constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every claim in the diagnosis and action be traced to specific case evidence (EBITDA 8%->6%, perm -8%, orders -6%, hours -2% sequential, headcount +4%, spread 21.0%->19.5%, pay +6% vs bill +3.5%)?",
+      "rubric_10": "Every claim traceable: 200 bps EBITDA decline, perm -8%, orders -6%, hours -2% sequential, headcount +4%, 150 bps spread compression, and 250 bps unrecovered wage inflation all cited.",
+      "rubric_6": "Main diagnosis supported; some claims or inferences not directly tied to the figures.",
+      "rubric_2": "Minimal traceability to the case data.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MEDIUM-HIGH confidence appropriate given a clear leading-indicator pattern but missing branch/vertical-level and forward-pipeline detail?",
+      "rubric_10": "MEDIUM-HIGH is well-calibrated: the leading-indicator turn and capacity-ahead-of-demand pattern are clear, but branch-level and forward-pipeline detail are missing, so confidence in the pattern (not the precise capacity action) is appropriate.",
+      "rubric_6": "Confidence is defensible but reasoning for it is thin, or HIGH is asserted despite the missing branch/pipeline detail.",
+      "rubric_2": "Confidence is poorly calibrated to the evidence (e.g., VERY HIGH with no branch-level data, or LOW despite clear leading indicators).",
+      "rubric_0": "Confidence is inverted relative to the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe — diagnostic and phased before the irreversible capacity decision, protecting rebound capacity and avoiding spread-destroying moves?",
+      "rubric_10": "Action is low-regret: hiring freeze plus segmented diagnostic before any irreversible cut, protects rebound-critical recruiters, and avoids bill-rate cuts that worsen spread.",
+      "rubric_6": "Action is mostly safe but bundles some irreversible step or under-specifies protection of rebound capacity.",
+      "rubric_2": "Action carries meaningful risk (broad cuts or blanket pricing moves with limited analysis).",
+      "rubric_0": "Action is high-risk: mass layoffs or bill-rate cuts into a downturn without analysis."
     }
   },
-  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

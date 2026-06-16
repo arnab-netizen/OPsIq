@@ -1,0 +1,104 @@
+{
+  "caseId": "RW-028",
+  "caseType": "REAL_WORLD",
+  "industry": "Home Services / Residential HVAC & Plumbing (PE-backed multi-branch rollup)",
+  "businessModel": "Private-equity-backed buy-and-build rollup of residential HVAC, plumbing, and electrical service-and-replacement companies operating as a multi-branch platform",
+  "businessStage": "Mid-rollup (platform + 6 bolt-on acquisitions), scaling toward a leveraged recapitalization",
+  "sourceNote": "Real-world pattern from the PE-driven home-services consolidation wave (mirrors public patterns from platforms in the residential HVAC/plumbing rollup space such as the Wrench Group / Apex / Sila cohort and franchise-adjacent operators). Reflects the well-documented post-acquisition integration trap where consolidated revenue grows via M&A but same-branch operating metrics — technician billable utilization, dispatch efficiency, first-time-fix rate, and membership-plan attachment — deteriorate as branches run on disparate dispatch software and uneven scheduling discipline. Metrics reflect typical residential service-and-replacement KPIs (revenue per truck, billable utilization, callback rates).",
+  "ownerIntake": {
+    "businessType": "PE-backed residential home-services platform: HVAC, plumbing, and electrical service and replacement. Platform company plus 6 bolt-on acquisitions across 4 metros. 11 branches, 340 employees, 185 service trucks/technicians, ~$68M consolidated revenue TTM. Sponsor acquired the platform in 2022; bolt-ons closed over the last 20 months.",
+    "stage": "Consolidated revenue $68M TTM, up 52% YoY — but almost all growth is acquired, not organic (organic same-branch revenue +3%). Consolidated EBITDA margin 9.5%, down from 13% at platform acquisition (-350bps). Average revenue per truck $367k/year (down from $430k pre-rollup; industry top-quartile ~$525k). Technician billable utilization 58% (industry benchmark 70-75%). Net leverage 4.6x EBITDA; recap targeted in 12-15 months.",
+    "ownerGoal": "Restore consolidated EBITDA margin to 13%+ and revenue per truck to $450k+ within 12 months to support a leveraged recapitalization at a 9x+ EBITDA multiple.",
+    "ownerConstraints": [
+      "Net leverage 4.6x EBITDA; the recap and the sponsor's return thesis depend on EBITDA-margin recovery within 12-15 months, not just more acquisitions.",
+      "Three of the six acquired branches still run their original, separate dispatch/field-service software (different from the platform's ServiceTitan instance); no unified scheduling or capacity view across branches.",
+      "Skilled-technician labor market is tight: average 9-week time-to-fill for a senior HVAC technician; cannot simply hire utilization up.",
+      "Membership/maintenance-plan attachment varies wildly by branch (platform branches 41% of customers on plans; two acquired branches under 12%), driving inconsistent recurring demand and winter/summer demand smoothing.",
+      "Seasonality: HVAC demand peaks in summer/winter; shoulder seasons show idle technician capacity, magnifying utilization gaps.",
+      "Integration team is thin (2 ops integration leads for 6 bolt-ons); branch managers retain significant autonomy per acquisition earn-out agreements running another 6-14 months."
+    ],
+    "immediateConcern": "Consolidated revenue is up 52% but EBITDA margin has fallen 350bps and revenue per truck dropped from $430k to $367k since the rollup began. The sponsor cannot tell whether the margin decline is dilution from buying lower-quality businesses, a pricing problem, or a post-acquisition operational integration failure. With the recap window opening in 12-15 months, the team must identify the highest-leverage fix before committing capital to either more acquisitions, a pricing overhaul, or a costly software migration.",
+    "availableData": [
+      "Consolidated revenue $68M TTM (+52% YoY), organic same-branch +3%, EBITDA margin 9.5% (down from 13%), 11 branches, 185 trucks",
+      "Revenue per truck $367k (down from $430k pre-rollup; top-quartile ~$525k), technician billable utilization 58% (benchmark 70-75%)",
+      "Membership-plan attachment: platform branches 41%, two acquired branches <12%; first-time-fix and callback rates tracked inconsistently across branches",
+      "Three acquired branches on separate dispatch software; 9-week time-to-fill for senior HVAC techs; net leverage 4.6x"
+    ],
+    "unavailableData": [
+      "Branch-level operating P&L and KPI scorecard: revenue per truck, billable utilization, first-time-fix, and callback rate normalized across all 11 branches",
+      "Dispatch/scheduling efficiency: jobs per tech per day, drive-time, and idle-capacity hours by branch — needed to locate where utilization is lost",
+      "Whether the EBITDA dilution is concentrated in specific acquired branches or spread evenly (acquisition-quality vs. integration-execution question)",
+      "Membership-plan economics by branch: recurring revenue, demand-smoothing effect, and replacement-lead conversion from plan members",
+      "Pricing/labor-rate consistency across branches and whether discounting or low ticket sizes explain low revenue per truck"
+    ],
+    "timeHorizon": "90 days to diagnose and begin remediation (recap window opens in 12-15 months; margin recovery must be demonstrably underway before the sponsor markets the recap)",
+    "riskAppetite": "MEDIUM-LOW (4.6x leverage and a recap thesis dependent on margin recovery; sponsor cannot afford a costly mis-sequenced software migration or a destabilizing pricing shock during earn-out periods)"
+  },
+  "businessProblem": "A PE-backed residential home-services rollup has grown consolidated revenue 52% through acquisition while EBITDA margin fell 350bps and revenue per truck dropped from $430k to $367k. Organic same-branch revenue is nearly flat (+3%) and technician billable utilization sits at 58% versus a 70-75% benchmark. Management must determine whether the margin erosion is acquisition dilution (bought weaker businesses), a pricing/labor-rate problem, or a post-acquisition operational-integration failure in dispatching and capacity utilization — before deciding among more acquisitions, a pricing overhaul, or an expensive platform-wide dispatch-software migration, all under 4.6x leverage and active earn-out constraints.",
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Technician billable utilization is 58% against a 70-75% industry benchmark, and revenue per truck fell from $430k pre-rollup to $367k (top-quartile operators reach ~$525k). The same trucks and technicians are producing materially less billable output post-rollup, indicating capacity is being lost in scheduling/dispatch rather than in demand or pricing.",
+      "confidence": "HIGH",
+      "source": "Fleet and labor reporting, technician timecards, industry KPI benchmarks",
+      "isCritical": true,
+      "supportingData": {
+        "billable_utilization": "58%",
+        "benchmark_utilization": "70-75%",
+        "revenue_per_truck_now": "$367k",
+        "revenue_per_truck_prior": "$430k",
+        "top_quartile_revenue_per_truck": "$525k"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Three of six acquired branches still run their original, separate dispatch/field-service software, with no unified scheduling or cross-branch capacity view. There is no normalized branch-level KPI scorecard, so dispatch efficiency (jobs/tech/day, drive-time, idle hours) cannot be compared across branches. This is a structural integration gap that prevents the platform from balancing load and enforcing scheduling discipline.",
+      "confidence": "HIGH",
+      "source": "IT systems inventory, integration team notes, ops review",
+      "isCritical": true,
+      "supportingData": {
+        "branches_on_separate_software": "3 of 6 acquired",
+        "unified_scheduling": "None",
+        "normalized_branch_kpi_scorecard": "Does not exist"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Consolidated revenue grew 52% YoY but organic same-branch revenue grew only 3%, while EBITDA margin fell from 13% to 9.5% (-350bps). Growth is almost entirely acquired, and profitability per dollar of revenue is deteriorating — the platform is getting bigger but less efficient, consistent with integration drag rather than healthy organic scaling.",
+      "confidence": "HIGH",
+      "source": "Consolidated and segment financials, M&A contribution analysis",
+      "isCritical": true,
+      "supportingData": {
+        "consolidated_revenue_growth": "+52%",
+        "organic_same_branch_growth": "+3%",
+        "ebitda_margin_now": "9.5%",
+        "ebitda_margin_prior": "13%",
+        "net_leverage": "4.6x"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Membership/maintenance-plan attachment varies extremely by branch: platform branches at 41% of customers, two acquired branches under 12%. Plan members provide recurring demand, demand-smoothing across shoulder seasons, and higher replacement-lead conversion. Low-attachment branches therefore have lumpier demand and lower utilization — but plan attachment is an operational discipline, not a demand-quality problem.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "Membership program data by branch, recurring-revenue analysis",
+      "isCritical": false,
+      "supportingData": {
+        "plan_attachment_platform_branches": "41%",
+        "plan_attachment_low_branches": "<12%",
+        "plan_member_demand_effect": "Smooths shoulder-season utilization"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Home Services / Residential HVAC & Plumbing (PE rollup)",
+    "size": "Mid-rollup ($68M revenue, 340 employees, 185 trucks, 11 branches)",
+    "revenueImpactUrgency": "CRITICAL (EBITDA-margin recovery is the gating condition for a 9x+ recap under 4.6x leverage)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (PE-backed with capital available, but disciplined by 4.6x leverage and recap-return math)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "LOW (2 ops integration leads for 6 bolt-ons; branch managers semi-autonomous under earn-outs)",
+    "cashRunwayMonths": "N/A (cash-generative platform; constraint is leverage and recap timing, not runway)",
+    "legalComplianceSensitive": false
+  }
+}

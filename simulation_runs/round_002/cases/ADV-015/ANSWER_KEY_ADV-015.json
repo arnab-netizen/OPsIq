@@ -1,27 +1,166 @@
 {
   "case_id": "ADV-015",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Business Analysis)",
-  "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
-  "root_cause_description": "Adversarial case ADV-015 (E-commerce): Trap scenario - plausible narrative (market conditions, growth metrics) masks underlying issue (cohort deterioration, segment concentration, unit economics hidden in aggregated metrics). Must diagnose root cause before strategic action.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Commission thorough diagnostic (cohort analysis, segment profitability, competitive positioning) to test plausible narrative against actual drivers before major strategic decisions.",
+  "answer_creator": "Domain Expert (D2C Growth & Contribution Economics)",
+  "creation_methodology": "Blind expert review. Expert read the contribution economics underneath the 35% growth headline: spend growth vs revenue growth, CAC trend against AOV and margin, and the cohort repeat-purchase decline. Because three independent signals converge against the marginal customer, the expert assigned a concrete root cause while still requiring the founder to STOP scaling and quantify per-cohort contribution before deploying more capital.",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "The 35% revenue growth is being purchased at deteriorating economics, and three visible signals converge on this conclusion rather than one ambiguous one: (1) marketing spend grew ~117% to deliver ~35% revenue growth, so acquisition efficiency is collapsing; (2) blended CAC rose ~60% ($38->$61) against a flat $72 AOV at 60% margin, leaving first-order contribution negative before shipping and returns - the marginal customer loses money on the first order; (3) the repeat-purchase rate that is supposed to rescue that negative first order is itself falling every cohort (42%->35%->28%), so customers cost more and are worth less simultaneously. This is a unit-economics breakdown masked by top-line growth, not healthy momentum. The diagnosis is concrete because the disconfirming signals are convergent and visible. It is NOT held at full confidence, however, because the precise magnitude - per-cohort contribution margin and forward LTV - has not been computed, and marginal CAC at doubled spend is unmodeled; those quantify the breakdown but do not change its direction.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "35% revenue growth presented as proof the brand is 'on fire'",
+      "Rising new-customer revenue share, shrinking repeat-customer share",
+      "Founder confidence that 'growth solves everything'"
+    ],
+    "contributing_factors": [
+      "Spend doubled to produce 35% growth (efficiency collapse)",
+      "~80% acquisition concentration in two saturating paid channels with rising CPMs",
+      "Per-cohort contribution margin never computed, so the breakdown stayed invisible"
+    ],
+    "true_root_cause": "Unit-economics breakdown: marginal CAC has risen above first-order gross profit while repeat-purchase (the only mechanism that makes a negative first order profitable) declines every vintage, so growth-funded acquisition is destroying contribution rather than compounding it."
+  },
+  "confidence_in_diagnosis": "MODERATE-TO-HIGH",
+  "first_priority_action": "STOP the plan to double paid acquisition spend. Before any capital is deployed, compute per-cohort contribution margin and payback fully loaded (CAC + COGS + shipping + returns + discounts) and project cohort LTV using the declining repeat-purchase trend; model marginal CAC at the proposed doubled spend level in the two saturating channels. Use the result to set a CAC ceiling tied to proven contribution, fix retention/repeat economics, and only then decide on scaling or fundraising. Do not raise on the growth rate alone.",
+  "action_description": "This is first because the founder is about to double spend - into the same saturating channels - on customers who already appear to lose money on the first order and repeat less each cohort, with only ~9 months of runway. Doubling spend would accelerate cash burn while worsening blended economics, and a growth round raised on the top-line rate would unravel in diligence once contribution is examined. The cohort table already exists; computing fully-loaded per-cohort contribution is fast and decisive, and it converts a directional diagnosis into an actionable CAC ceiling.",
+  "accepted_alternative_actions": [
+    "Hold spend flat (not double) while running the per-cohort contribution and marginal-CAC analysis, then reallocate budget toward retention and higher-LTV channels once the CAC ceiling is known.",
+    "Pivot the immediate priority to repeat-purchase recovery (lifecycle, product/assortment, post-purchase experience) to lift cohort LTV before scaling acquisition, since retention is the lever that makes the first order profitable."
+  ],
+  "bad_actions": [
+    "Doubling paid acquisition spend to chase the $12M target on the strength of the 35% growth rate.",
+    "Raising a growth round positioned on the growth rate without disclosing the CAC and repeat-purchase deterioration.",
+    "Treating the CAC increase as 'just the cost of scaling' and ignoring the negative first-order contribution.",
+    "Pushing more budget into the two saturating channels without modeling marginal CAC."
+  ],
+  "action_constraints_respected": [
+    "Cash constraint: stopping the spend doubling protects the ~9-month runway instead of accelerating burn into negative-contribution customers.",
+    "Data constraint: the cohort table already exists; fully-loaded per-cohort contribution is computable quickly with the small analytics function.",
+    "Channel constraint: modeling marginal CAC respects the founder's reluctance to diversify by quantifying the cost of not diversifying.",
+    "Brand constraint: protecting contribution preserves the fundability of the brand story rather than risking a failed diligence."
+  ],
+  "rationale": "Top-line growth is the most seductive headline in D2C precisely because it can be bought. Here three independent signals - spend outpacing revenue, CAC exceeding first-order gross profit, and declining cohort repeat-purchase - point the same direction, so the breakdown is diagnosable, not merely suspected. But the correct first move is still to STOP scaling and quantify the breakdown, because the danger is not the diagnosis being wrong, it is the founder deploying scarce cash to amplify it.",
+  "evidence_basis": [
+    "growth_vs_spend finding: spend +117% to buy +35% revenue (efficiency collapse)",
+    "acquisition_cost finding: CAC $38->$61 vs flat $72 AOV at 60% margin -> negative first-order contribution",
+    "retention_cohort finding: 12-month repeat-purchase 42%->35%->28%, declining every vintage",
+    "channel_concentration finding: 80% from two saturating channels, marginal CAC likely above blended"
+  ],
+  "evidence_not_explained": [
+    "Whether the repeat-purchase decline is a product/assortment problem, a paid-customer-quality problem, or a post-purchase experience problem is not yet distinguishable.",
+    "Return/refund rate by cohort is unknown, so the true first-order loss could be larger than the gross-margin estimate implies."
+  ],
+  "alternative_explanations": [
+    "Healthy growth/momentum (founder's hypothesis): scaling spend compounds growth - contradicted by spend outpacing revenue and declining repeat-purchase, so judged unlikely.",
+    "CUSTOMER_RETENTION_EROSION as the primary lever: if the breakdown is driven mainly by falling repeat-purchase rather than CAC, the fix is retention-first; plausible and partially overlapping, to be resolved by per-cohort LTV decomposition."
+  ],
+  "missing_evidence": [
+    "Per-cohort contribution margin and payback (fully loaded)",
+    "Cohort LTV projection using the declining repeat-purchase trend",
+    "Return/refund rate by cohort and channel",
+    "Organic vs paid customer repeat-quality comparison",
+    "Marginal CAC at doubled spend in the two saturating channels"
+  ],
+  "success_metrics": [
+    "Fully-loaded per-cohort contribution computed within 2-3 weeks",
+    "A CAC ceiling set against proven cohort contribution, enforced on spend",
+    "Repeat-purchase rate for new cohorts stabilized or rising",
+    "Blended contribution margin (not just revenue) improving before any spend scale-up"
+  ],
+  "expected_outcome": "Stopping the spend doubling preserves runway and prevents amplifying loss-making acquisition. Quantifying per-cohort contribution yields a defensible CAC ceiling and shifts effort to repeat-purchase recovery, which is the lever that makes the first order profitable. The company can then scale or raise on demonstrated contribution rather than on a growth rate that diligence would deflate.",
+  "automatic_fail_conditions": [
+    "Endorsing the plan to double paid acquisition spend on the strength of 35% growth.",
+    "Treating rising CAC as a benign cost of scaling while ignoring negative first-order contribution.",
+    "Recommending raising on the growth rate without addressing the CAC/repeat deterioration.",
+    "Failing to require per-cohort contribution and forward LTV before any scaling decision."
+  ],
+  "source_references": [
+    "Case input ADV-015: spend vs revenue growth, CAC vs AOV/margin, cohort repeat-purchase 42/35/28, channel concentration"
+  ],
+  "trap_definition": {
+    "exact_trap": "Growth-headline anchoring: a strong top-line growth rate (35%) anchors attention and frames bought growth as healthy momentum, hiding that acquisition cost and cohort repeat-purchase are moving the opposite way so the marginal customer is unprofitable.",
+    "plausible_but_wrong_narrative": "'We grew 35% to $8M and the brand is on fire - double down on paid acquisition, hit $12M, and raise on the growth story. Growth solves everything.'",
+    "disconfirming_evidence_in_input": [
+      "Marketing spend grew ~117% to deliver ~35% revenue growth",
+      "CAC rose ~60% to $61 against a flat $72 AOV at 60% margin (negative first-order contribution)",
+      "12-month repeat-purchase declined every cohort (42% -> 35% -> 28%)",
+      "80% of new customers from two saturating channels with rising CPMs"
+    ],
+    "safe_correct_response": "STOP the spend doubling, compute fully-loaded per-cohort contribution and forward LTV, model marginal CAC at scale, set a contribution-based CAC ceiling, and prioritize repeat-purchase recovery before scaling or raising.",
+    "false_positive_failure_modes": [
+      "Anchoring on the 35% growth rate as proof of health",
+      "Reading rising CAC as a normal, acceptable cost of scaling",
+      "Assuming repeats will eventually rescue first-order losses despite the declining cohort trend"
+    ],
+    "insufficient_evidence_points": [
+      "Exact per-cohort contribution margin and payback are uncomputed",
+      "Forward cohort LTV under the declining repeat trend is unquantified",
+      "Marginal CAC at doubled spend is unmodeled"
+    ],
+    "dangerous_overconfident_answer": "A HIGH-confidence endorsement to double ad spend and raise on the growth rate. Dangerous because it amplifies negative-contribution acquisition with ~9 months of runway, accelerates cash burn, and stakes a fundraise on a top-line number that contribution-level diligence would dismantle."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Recognizes trap; recommends diagnosis before accepting narrative"
+      "criterion": "Does the engine read contribution economics under the growth headline and diagnose a unit-economics breakdown (not healthy growth)?",
+      "rubric_10": "Diagnoses UNIT_ECONOMICS_BREAKDOWN (or equivalently refuses the growth narrative pending per-cohort contribution), citing spend>revenue growth, CAC>first-order gross profit, and declining repeat-purchase.",
+      "rubric_8": "Identifies deteriorating economics and refuses the scale-up but labels it loosely or as INSUFFICIENT_EVIDENCE with strong directional reasoning.",
+      "rubric_6": "Notices CAC/repeat issues but still treats growth as broadly healthy.",
+      "rubric_4": "Accepts the growth narrative with light hedging.",
+      "rubric_2": "Endorses scaling spend with minor caveats.",
+      "rubric_0": "Confirms 'growth solves everything' and recommends doubling spend and raising on the growth rate."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends validation analysis"
+      "criterion": "Is the first action to STOP scaling spend and compute per-cohort contribution before deploying capital?",
+      "rubric_10": "Recommends halting the spend doubling and computing fully-loaded per-cohort contribution + forward LTV + marginal CAC, then setting a CAC ceiling.",
+      "rubric_8": "Recommends holding spend and running contribution analysis before scaling.",
+      "rubric_6": "Recommends some analysis but allows partial scale-up in parallel.",
+      "rubric_4": "Recommends scaling with monitoring.",
+      "rubric_2": "Recommends doubling spend with light caution.",
+      "rubric_0": "Recommends doubling spend immediately."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a cash-constrained D2C brand dependent on repeat purchases?",
+      "rubric_10": "Directly addresses CAC ceiling, repeat-purchase recovery, channel saturation, and runway specific to this brand.",
+      "rubric_8": "Relevant but misses one nuance.",
+      "rubric_6": "Generic D2C advice.",
+      "rubric_4": "Generic growth advice.",
+      "rubric_2": "Poorly aligned.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect ~9-month runway, channel concentration, and small analytics capacity?",
+      "rubric_10": "Protects runway by halting the spend doubling, uses the existing cohort table, and models marginal CAC in the concentrated channels.",
+      "rubric_8": "Respects most constraints with minor tension.",
+      "rubric_6": "Some tension.",
+      "rubric_4": "Partially ignores constraints.",
+      "rubric_2": "Largely ignores constraints.",
+      "rubric_0": "Infeasible (e.g. doubling spend with 9 months cash)."
+    },
+    "evidence_traceability": {
+      "criterion": "Is the diagnosis tied to spend-vs-revenue, CAC-vs-AOV/margin, and the cohort repeat-purchase decline?",
+      "rubric_10": "Explicitly cites the +117% spend / +35% revenue gap, $38->$61 CAC vs $72 AOV, and 42/35/28 repeat-purchase trend.",
+      "rubric_8": "Cites most signals.",
+      "rubric_6": "General reference.",
+      "rubric_4": "Weak.",
+      "rubric_2": "Minimal.",
+      "rubric_0": "None."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence MODERATE-TO-HIGH (direction clear, magnitude uncomputed) rather than HIGH in healthy growth?",
+      "rubric_10": "Asserts the breakdown with appropriate confidence while flagging that per-cohort contribution magnitude is still uncomputed.",
+      "rubric_8": "Reasonably calibrated.",
+      "rubric_6": "Confidence stated but mis-sized.",
+      "rubric_4": "HIGH confidence that growth is healthy despite contrary signals.",
+      "rubric_2": "Overconfident on the growth narrative.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the action avoid deploying scarce cash to amplify loss-making acquisition?",
+      "rubric_10": "Halts the spend doubling pending contribution proof; safe.",
+      "rubric_0": "Confirms growth narrative and recommends doubling spend on negative-contribution customers; unsafe."
     }
   },
-  "creation_methodology": "Expert analysis of ADVERSARIAL case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

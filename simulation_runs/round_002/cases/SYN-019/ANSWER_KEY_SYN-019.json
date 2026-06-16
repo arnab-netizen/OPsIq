@@ -1,27 +1,158 @@
 {
   "case_id": "SYN-019",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Operations)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Synthetic stress-test case SYN-019 (Collaboration / Productivity): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "answer_creator": "Domain Expert (Product-Led Adoption and UX Strategy)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert distinguished broad-base in-account adoption decay from acquisition, onboarding-throughput, and pricing explanations by examining the active-seat trend against feature growth, the power-user vs broad-base engagement split, and the support-theme composition. Usability-driven abandonment among non-power users, coinciding with feature bloat, points to a daily-use trust/quality failure.",
+  "root_cause_diagnosis": "TRUST_QUALITY_CRISIS",
+  "root_cause_description": "The product has become too complex to use, so the broad licensed user base abandons it in daily use, collapsing in-account adoption and seizing the seat-expansion engine. This is a usability/trust failure expressed through engagement, distinct from an onboarding-throughput problem: active adoption (weekly active / licensed seats) fell from 62% to 38% over 18 months in lockstep with a 3x increase in feature count, median clicks-to-core-task rose 40%, and only 11 of 60+ features drive 80% of usage. Power users (top 15%) stay highly engaged while the broad base disengages, and new seats reach active use only 29% of the time within 60 days, the classic signature of complexity that punishes non-power users. Support tickets per seat are up 55% with 'too complicated' (34%) and 'can't find feature' (28%) dominating, confirming the friction is usability/discoverability, not capability or reliability. Because expansion requires growing active seats, a 38% active rate makes seat expansion impossible, which is exactly why NRR fell 118%→104% while gross retention held at 96%. The owner's cultural default of shipping more features is the very mechanism that caused the crisis; the cure is to simplify and re-surface core workflows for the broad base, not add features.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "In-account active adoption fell 62%→38%",
+      "NRR fell 118%→104% as seat expansion stalled",
+      "Support tickets per seat up 55%",
+      "New seats activate only 29% within 60 days"
+    ],
+    "contributing_factors": [
+      "Feature count tripled in two years (bloat)",
+      "Median clicks-to-core-task up 40% (buried workflows)",
+      "Product culture rewarding feature shipping over adoption outcomes",
+      "Employees defaulting to simpler tools for daily work"
+    ],
+    "true_root_cause": "Feature bloat and UX complexity make the product hard to use for the broad (non-power) user base, who abandon daily use; this erodes in-account adoption and trust and makes seat expansion impossible."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Launch a 10-14 week 'simplify-for-adoption' product effort focused on the broad user base, with a hard freeze on net-new feature shipping during the effort. Concretely: (1) instrument the broad-base adoption funnel to identify where non-power users drop off and which buried core workflows to surface; (2) ship progressive disclosure and role-based default views that foreground the 11 features driving 80% of usage and hide rarely-used ones (without removing them, preserving enterprise dependencies); (3) rebuild the top 3-5 core workflows to cut clicks-to-core-task back toward prior levels and add in-product guidance for new seats; (4) tie product-team goals to active-adoption outcomes rather than features shipped, for the duration. Pilot on a cohort of accounts with the steepest adoption decline and measure weekly active-seat recovery before broad rollout.",
+  "action_description": "It is first because seat expansion (and the Series-C-gating NRR) is mathematically blocked while only 38% of licensed seats are active, and the only lever that lifts broad adoption is reducing the complexity that drives non-power users away. Shipping more features, the cultural default, is the cause of the decay and would deepen it. A simplification effort with a feature freeze directly reverses the mechanism, and pinning product goals to adoption outcomes prevents the culture from reintroducing bloat. Removing features outright is avoided to protect enterprise contractual dependencies; hiding/de-emphasizing them achieves the usability gain safely.",
+  "accepted_alternative_actions": [
+    "Run a 2-3 week broad-base adoption-funnel and workflow-friction study FIRST to target the simplification precisely, provided it does not delay the feature freeze that stops further bloat.",
+    "Stand up an in-product onboarding/guidance layer (contextual tips, role-based first-run flows) for new seats as a fast partial win while the deeper simplification ships, targeting the 29% 60-day activation rate."
+  ],
+  "bad_actions": [
+    "Ship new expansion features to drive growth: the product is already bloated (11 of 60+ features drive 80% of usage) and feature growth is the cause of the adoption collapse; more features deepen the complexity that is killing daily use.",
+    "Invest in sales to upsell more seats: accounts will not buy seats they cannot get users to adopt at 38% active; pushing seat sales without fixing adoption inflates licensed-but-inactive seats and worsens the active-seat ratio.",
+    "Treat the NRR decline as a churn problem and launch retention saves: gross retention is healthy at 96%; the decline is failure-to-expand from low adoption, so retention saves target a problem that does not exist.",
+    "Rip out low-usage features to simplify quickly: this risks breaking enterprise contractual dependencies and power-user workflows; the safe path is progressive disclosure and de-emphasis, not removal."
+  ],
+  "action_constraints_respected": [
+    "Funding (28-month runway, Series C gated on NRR/seat expansion): a simplification effort directly targets the gating metric without large new spend.",
+    "Product (simplification is 10-14 weeks; removal risks enterprise dependencies): action fits the window and uses progressive disclosure rather than removing features.",
+    "Organizational (culture biased to shipping features): action imposes a feature freeze and ties product goals to adoption outcomes for the duration.",
+    "Commercial (expansion requires active seats): action lifts active adoption first so seat expansion becomes possible."
+  ],
+  "rationale": "The decisive pattern is the broad-base adoption collapse (62%→38%) moving inversely with a 3x feature increase, while power users stay engaged and support tickets are dominated by 'too complicated' and 'can't find feature.' That is a usability/trust failure for non-power users, not onboarding throughput, demand, or pricing. Because seat expansion is impossible at 38% active, restoring broad adoption through simplification is the only action that can re-open the expansion engine and the Series-C-gating NRR.",
+  "evidence_basis": [
+    "product_adoption: active adoption 62%→38%, new-seat 60-day activation 29%, power users engaged vs broad base disengaging",
+    "quality_delivery: feature count 3x, clicks-to-core-task +40%, 11 of 60+ features drive 80% of usage",
+    "customer_retention: NRR 118%→104% with gross retention 96% (decline is failure-to-expand)",
+    "customer_satisfaction: tickets per seat +55%, themes 'too complicated' (34%) and 'can't find feature' (28%)"
+  ],
+  "evidence_not_explained": [
+    "The specific buried workflows whose surfacing would most lift broad adoption are not yet identified, so the effort begins with a short funnel study; the diagnosis is confident about complexity as the cause but not yet about the precise simplification sequence."
+  ],
+  "alternative_explanations": [
+    "OPERATIONAL_BOTTLENECK (onboarding throughput): that implementations/onboarding are queued. Weaker because the decay is ongoing in-account daily-use disengagement across the installed base over 18 months, not a delivery-queue delay; power users in the same accounts stay engaged.",
+    "GO_TO_MARKET_MISALIGNMENT: that the wrong customers are acquired. Weaker because gross retention is 96% and accounts bought correctly; the failure is users abandoning the product after purchase due to complexity.",
+    "CUSTOMER_RETENTION_EROSION (churn): that the base is leaving. Weaker because gross retention is healthy; the loss is failure to expand seats, driven by low active adoption, not logo churn."
+  ],
+  "missing_evidence": [
+    "Per-feature adoption/abandonment funnel for the broad (non-power) user base",
+    "Which buried core workflows, surfaced, would most lift broad adoption",
+    "Quantified link between active-seat % and seat-expansion/renewal outcomes",
+    "Enterprise contractual dependencies on specific low-usage features"
+  ],
+  "success_metrics": [
+    "In-account active adoption recovers from 38% toward 60% in the pilot cohort within two quarters",
+    "New-seat 60-day activation rises from 29% toward 55%; clicks-to-core-task return toward prior levels",
+    "NRR recovers from 104% toward 115% as seat expansion resumes; gross retention stays >=96%",
+    "Support tickets per seat fall, with 'too complicated' and 'can't find feature' themes declining materially"
+  ],
+  "expected_outcome": "If the daily-use trust/quality failure from complexity is the true root cause, simplifying and surfacing core workflows should recover broad-base active adoption, which re-opens seat expansion and lifts NRR toward the Series-C target, while power users are unaffected and enterprise dependencies are preserved. If adoption does not recover despite reduced complexity, the residual driver would be genuine competitive displacement in daily use, which the broad-base funnel data would then localize.",
+  "automatic_fail_conditions": [
+    "Recommending new feature development to drive expansion when feature bloat is the cause of the adoption collapse",
+    "Recommending more seat-sales/upsell when accounts cannot activate the seats they already license (38% active)",
+    "Diagnosing a churn/retention crisis despite healthy 96% gross retention",
+    "Recommending wholesale feature removal that risks enterprise contractual dependencies instead of safe de-emphasis"
+  ],
+  "source_references": [
+    "Product usage analytics (active/licensed seats) and cohort activation tracking",
+    "Product telemetry (clicks-to-task, feature usage) and design audit",
+    "NRR cohort report and seat-expansion bookings analysis",
+    "Support ticket analytics with theme coding"
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "Active adoption fell 62%→38% as feature count tripled", "implication": "Adoption decays inversely with added complexity, the core of a usability/trust failure in daily use."},
+      {"fact": "Power users stay engaged while the broad base disengages; new seats activate only 29% in 60 days", "implication": "Complexity punishes non-power users specifically, abandoning the product after purchase."},
+      {"fact": "Clicks-to-core-task up 40% and 11 of 60+ features drive 80% of usage", "implication": "Core workflows are buried under bloat, the concrete usability mechanism."},
+      {"fact": "Support themes 'too complicated' (34%) and 'can't find feature' (28%)", "implication": "Friction is usability/discoverability, not capability or reliability, confirming a complexity-driven trust failure."},
+      {"fact": "NRR fell 118%→104% with gross retention 96%", "implication": "Expansion stalled because seats cannot be added when adoption is 38%, tying the trust failure directly to the gating metric."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "OPERATIONAL_BOTTLENECK", "why_weaker": "This is ongoing in-account daily-use disengagement over 18 months, not a delivery/onboarding queue; power users in the same accounts remain engaged."},
+      {"alternate": "GO_TO_MARKET_MISALIGNMENT", "why_weaker": "Gross retention is 96% and accounts bought correctly; the failure is post-purchase abandonment from complexity, not wrong-customer acquisition."},
+      {"alternate": "CUSTOMER_RETENTION_EROSION", "why_weaker": "Logos are not churning (96% gross retention); the loss is failure to expand seats driven by low active adoption."}
+    ],
+    "first_action_justification": "Because seat expansion is mathematically blocked at 38% active adoption and feature bloat is the cause of the decay, the first action must be a simplification effort with a feature freeze that restores broad-base usability, re-opening the expansion engine that gates Series C.",
+    "constraints_effect_on_action": "The Series-C gating on NRR/seat expansion makes restoring active adoption the priority; the enterprise-dependency risk of removing features pushes the action toward progressive disclosure rather than deletion; and the feature-shipping culture is countered by a freeze and adoption-outcome goals for the duration of the 10-14 week effort."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses growth/demand issue"
+      "criterion": "Does the engine diagnose TRUST_QUALITY_CRISIS as complexity-driven in-account adoption decay, rather than onboarding throughput, demand, or churn?",
+      "rubric_10": "Diagnoses TRUST_QUALITY_CRISIS and ties it to the 62%->38% active-adoption collapse against 3x feature growth, the power-user/broad-base split, and complexity-themed tickets, while citing healthy gross retention.",
+      "rubric_8": "Diagnoses a usability/adoption quality root cause with evidence but underweights one signal (e.g., the feature-usage concentration).",
+      "rubric_6": "Identifies the adoption problem but is ambiguous about whether the cause is complexity, onboarding, or demand.",
+      "rubric_4": "Accepts the owner's framing loosely and proposes new features for expansion.",
+      "rubric_2": "Diagnoses a churn crisis despite healthy gross retention.",
+      "rubric_0": "Diagnosis unrelated to the evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic"
+      "criterion": "Does the engine prioritize a simplification/adoption effort with a feature freeze over shipping features, upselling seats, or retention saves?",
+      "rubric_10": "Recommends a 10-14 week simplify-for-adoption effort with a feature freeze, progressive disclosure, and adoption-outcome goals, piloted on the steepest-decline cohort.",
+      "rubric_8": "Recommends a simplification/adoption action but with weaker scope (e.g., no feature freeze or no progressive-disclosure approach).",
+      "rubric_6": "Recommends simplification but mixes in new feature build or seat-upsell.",
+      "rubric_4": "Recommends shipping new features or upselling seats as primary.",
+      "rubric_2": "Recommends retention saves for a non-churn problem.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect a seat-based collaboration reality where active adoption gates seat expansion and the Series-C NRR target?",
+      "rubric_10": "Action centers on restoring active adoption to re-open seat expansion and the gating NRR, protecting enterprise dependencies.",
+      "rubric_6": "Action is adoption-relevant but generic about the seat-expansion/NRR linkage.",
+      "rubric_2": "Action loosely related to the context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 28-month runway, the 10-14 week simplification window, enterprise dependencies, and the feature-shipping culture?",
+      "rubric_10": "Uses progressive disclosure (not removal), fits the window, imposes a feature freeze, and reorients product goals to adoption.",
+      "rubric_6": "Respects most constraints but proposes some feature removal or ignores the culture issue.",
+      "rubric_2": "Proposes actions that risk enterprise dependencies or strain the window.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-019 metrics?",
+      "rubric_10": "Every claim traces to data: active adoption 62%->38%, feature count 3x, clicks +40%, 11/60+ features = 80% usage, new-seat 29% activation, NRR 118%->104%, tickets +55%.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence justified given the adoption/complexity/support convergence?",
+      "rubric_10": "HIGH well-calibrated: usage analytics, telemetry, and ticket themes converge on complexity-driven adoption decay.",
+      "rubric_6": "Confidence defensible but acknowledges missing broad-base funnel data as residual uncertainty about the fix sequence.",
+      "rubric_2": "Confidence asserted without grounding.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe (no feature removal that breaks enterprise contracts, no inflating inactive seats)?",
+      "rubric_10": "Action uses progressive disclosure and a pilot, preserving dependencies and power-user workflows.",
+      "rubric_6": "Action mostly safe but includes one element needing justification.",
+      "rubric_2": "Action risks breaking dependencies or inflating inactive seats.",
+      "rubric_0": "Action high-risk (wholesale removal or aggressive upsell of unadopted seats)."
     }
   },
-  "creation_methodology": "Expert analysis of SYNTHETIC case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

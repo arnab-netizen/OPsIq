@@ -1,27 +1,159 @@
 {
   "case_id": "BLND-010",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Strategic Decision-Making)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Blind-outcome case BLND-010 (Professional Services / Consulting): Forward-looking strategic decision with uncertain outcomes. Multiple viable options; diagnosis should identify which option aligns with root-cause drivers and constraints.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to clarify market dynamics, competitive positioning, and business model constraints before major strategic choice. Recommend data gathering on option-specific risks.",
+  "answer_creator": "Domain Expert (Professional-Services Strategy / Pricing)",
+  "creation_methodology": "Blind review: Expert analyzed the growth-direction scenario without knowing which strategy the firm chose or how it performed. Identified the underlying driver of the plateau, defined the validation required before committing to a partly irreversible direction, and scored on reasoning quality rather than on matching the hidden outcome.",
+  "root_cause_diagnosis": "STRATEGIC_PRICING_ERROR",
+  "root_cause_description": "The driver behind the plateau is that the firm is under-monetizing differentiated expertise: billing rates have been flat for two years while a disproportionate share of competitive losses (~35%) cite a lack of specific industry depth/proof rather than price (~20%), and in the one vertical where the firm has genuine depth it wins ~50% of proposals versus ~32% overall. This is a positioning-and-pricing problem - the firm captures neither the win-rate nor the rate premium its expertise could command - not primarily a scale problem (Option A) or a delivery-model gap (Option C). The right strategy should be the one that converts proven depth into pricing power; the candidate options must be evaluated against whether they fix the pricing/positioning under-monetization, and the niche pricing power is currently inferred from win rate but not yet tested.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Growth fell from ~18% to ~6% YoY",
+      "Sub-target utilization (~68% vs 75%+) with partners near full load",
+      "Flat average billing rate for two years and ~32% overall win rate"
+    ],
+    "contributing_factors": [
+      "Lower junior:senior leverage than larger competitors, capping capacity at current quality",
+      "Client demand shifting toward execution/managed services that the firm does not yet offer",
+      "Client concentration (top 10 ~45%) and reliance on a partner-driven referral engine"
+    ],
+    "true_root_cause": "Differentiated expertise is under-monetized: the firm has not converted its proven industry depth into higher win rates and premium pricing, so the plateau is fundamentally a pricing/positioning error rather than a scale or delivery-model deficiency."
+  },
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Before committing to a direction, run a 4-6 week pricing-and-positioning validation focused on the depth-driven loss pattern: (1) a structured win/loss and willingness-to-pay study in the vertical where the firm already wins ~50%, testing whether repositioning and proof can lift rates and win rate; (2) a diagnostic on whether the 68% utilization is a pipeline/demand gap or a partner-bandwidth/staffing-mix problem; (3) light validation of the two managed-services pilots' true unit economics. Use the results to select the strategy that best converts proven depth into pricing power, treating Option B (specialize) as the working hypothesis to confirm or reject.",
+  "action_description": "This is first because all three options implicitly bet on a different diagnosis of the plateau, and the strongest available evidence points to under-monetized depth, which is cheap and fast to test directly. A 4-6 week pricing/positioning and utilization diagnostic resolves whether the firm can win the rate and win-rate premium its expertise implies - which would favor specialization - or whether the constraint is demand/pipeline or delivery model, which would shift the choice. It avoids committing the partners to a dilutive roll-up or a new delivery line before confirming the cheaper, control-preserving lever (pricing/positioning) is exhausted, and it fits inside the 90-day decision window.",
+  "accepted_alternative_actions": [
+    "Recommend Option B (specialize into the niche) as the working direction IF the engine conditions it on the willingness-to-pay/win-loss validation and frames it as the lowest-capital, control-preserving response to the depth-driven losses and flat pricing.",
+    "Recommend a staged sequence: fix pricing/positioning first (Option B) to lift margin and rates, then evaluate managed services (Option C) as a follow-on once advisory pricing power is proven, rather than building a new delivery model immediately.",
+    "Recommend explicitly deferring or rejecting the acquisition roll-up (Option A) pending validation, on the grounds that scale does not address the diagnosed pricing/positioning root cause and introduces dilution and quality-dilution risk."
+  ],
+  "bad_actions": [
+    "Committing to the acquisition roll-up and an outside capital raise (Option A) before testing whether the cheaper pricing/positioning lever resolves the plateau, accepting dilution and culture risk to chase scale that does not address the root cause.",
+    "Standing up a managed-services line (Option C) firm-wide on the basis of two small pilots with unknown at-scale margin, churn, and staffing model.",
+    "Trying to 'sell more' of the current model to fix the 6% growth without addressing flat pricing or the binding partner/leverage capacity constraint.",
+    "Committing to any direction on the inferred (untested) niche pricing power, treating a high win rate as proof of willingness-to-pay without validation."
+  ],
+  "action_constraints_respected": [
+    "Partner-capacity constraint: A 4-6 week diagnostic uses limited partner time versus the heavy load of integrating acquisitions or building a managed-services line.",
+    "Capital constraint: Validates the lowest-capital lever (pricing/positioning) before considering a dilutive outside raise.",
+    "Reputation/quality constraint: Tests pricing power and positioning without over-leveraging junior staff or diluting the referral-driving brand.",
+    "Decision-window constraint: The 4-6 week diagnostic fits inside the ~90-day window, leaving time to set the FY plan and partner-compensation model around the validated direction."
+  ],
+  "rationale": "Each option is best only under a different diagnosis: A under 'the plateau is a scale problem', B under 'it is a pricing/positioning problem', C under 'it is a delivery-model gap'. The available evidence (flat rates, depth-driven losses, ~50% niche win rate) most strongly supports the pricing/positioning diagnosis, but the niche pricing power is inferred, not tested, and the managed-services economics are unproven. A short pricing/positioning and utilization diagnostic is the highest-expected-value first move: it confirms or refutes the leading hypothesis cheaply, preserves partner control and capital, and fits the decision window before any partly irreversible commitment.",
+  "evidence_basis": [
+    "financial_health: growth 18%->6%, flat billing rate for 2 years, ~32% win rate, losses 35% depth vs 20% price, flat net revenue per client",
+    "market_position: ~50% win rate in the niche vs ~32% overall, 3 marquee references, demand shifting toward execution",
+    "quality_delivery: 68% utilization below 75%+ target, partners near full load, low junior:senior leverage",
+    "customer_retention: ~55% repeat revenue, top 10 ~45% concentration, 2 managed-services pilot requests",
+    "financial_health (gap): niche pricing power untested, managed-services at-scale margin unknown, acquisition integration/dilution unknown"
+  ],
+  "evidence_not_explained": [
+    "Whether the sub-target 68% utilization reflects a demand/pipeline gap or a partner-bandwidth/staffing-mix problem cannot be resolved without the utilization diagnostic.",
+    "Whether the depth-driven loss pattern would translate into realized higher rates (vs just higher win rates) requires a willingness-to-pay test, not just win/loss data."
+  ],
+  "alternative_explanations": [
+    "GO_TO_MARKET_MISALIGNMENT: the depth-driven losses could be framed as a sales/positioning misalignment; closely related and partially correct, but rejected as the precise label because the binding lever is under-priced/under-monetized expertise (a pricing error) rather than a fundamentally wrong target market or channel.",
+    "OPERATIONAL_BOTTLENECK: partner-capacity and low leverage could be read as the root cause; relevant but rejected as primary because utilization is below target (capacity is not fully consumed) and the clearer signal is pricing/positioning, not throughput exhaustion.",
+    "DEMAND_FORECASTING_MISMATCH: the plateau might be a softening-demand story; rejected as primary because advisory demand is growing modestly and losses are attributed to depth, not absent demand."
+  ],
+  "missing_evidence": [
+    "Validated willingness-to-pay and realized pricing power in the candidate niche if the firm specialized and invested in proof",
+    "Diagnosis of whether 68% utilization is a pipeline/demand gap or a partner-bandwidth/staffing-mix issue",
+    "At-scale unit economics, staffing model, and churn for a managed-services line (the pilots are too small)",
+    "Integration economics, cultural fit, and dilution/terms of the acquisition roll-up and its outside capital"
+  ],
+  "success_metrics": [
+    "Win/loss and willingness-to-pay study completed within ~6 weeks, quantifying achievable rate and win-rate lift in the niche",
+    "Utilization root cause classified (pipeline vs bandwidth/staffing) with an actionable implication",
+    "Managed-services pilot economics characterized well enough to accept or defer Option C",
+    "A direction selected within ~90 days with the FY plan and partner-compensation model aligned to validated evidence"
+  ],
+  "expected_outcome": "Within ~6 weeks the partners hold evidence on whether proven depth can be repriced for premium rates and higher win rates, what is driving sub-target utilization, and whether managed services is economically real, enabling a defensible direction within the 90-day window. If the pricing/positioning hypothesis confirms, specialization (and repricing) is the funded direction with managed services sequenced later; if it refutes, the partners pivot to the option the data actually supports - having avoided a premature dilutive roll-up or delivery-model build.",
+  "automatic_fail_conditions": [
+    "Recommends committing to the acquisition roll-up and an outside dilutive raise before validating the cheaper pricing/positioning lever",
+    "Recommends standing up a firm-wide managed-services line on the basis of two small pilots with unknown at-scale economics",
+    "Recommends committing to a direction on untested (inferred) niche pricing power",
+    "Recommends a strategy that relies on over-leveraging junior staff in a way that risks the quality/referral engine"
+  ],
+  "source_references": [
+    "01_case_input.json BLND-010: ownerIntake.availableData, ownerConstraints, evidence[financial_health x2, market_position, quality_delivery, customer_retention], strategicOptions"
+  ],
+  "blind_structure": {
+    "hidden_outcome": "REFERENCE ONLY, NOT FOR SCORING: A 5-week win/loss and willingness-to-pay study confirmed clients would pay a ~12-18% premium for proof-backed depth in the firm's strongest vertical; the partners specialized (Option B), repriced engagements, lifted the niche win rate and average rate, and margin expanded from 15% toward ~21% over two years, after which they added a small managed-services offering for two anchor clients as a sequenced follow-on. The acquisition roll-up was rejected. This outcome is recorded only for later validation and must not influence scoring of the engine's pre-decision reasoning.",
+    "pre_outcome_correct_decision": "Run a short pricing/positioning and utilization diagnostic to confirm whether proven depth can be repriced for premium rates and higher win rates, then commit to the strategy the evidence supports (most likely specialization/repricing), rather than committing to a dilutive roll-up or a new delivery model blind.",
+    "knowable_before_outcome": [
+      "Flat billing rates for two years and growth falling from 18% to 6%",
+      "Loss pattern weighted to depth (~35%) over price (~20%) and ~50% niche win rate",
+      "Sub-target utilization (68%) with partners near full load and low leverage",
+      "Conservative, self-funded partners protective of control and the referral engine",
+      "Untested niche pricing power and unproven managed-services economics"
+    ],
+    "hindsight_trap": "Knowing specialization succeeded and margin expanded could tempt a scorer to reward 'pick specialize now' and penalize the diagnostic-first answer. The pre-outcome facts made specialization the leading hypothesis but its pricing power was unproven; committing blind - or committing to the wrong option - was the real risk, and the diagnostic is what de-risked the choice.",
+    "scoring_without_leaking_outcome": "Score only on whether the engine identified under-monetized expertise (a pricing/positioning error) as the governing driver, validated the leading lever before a partly irreversible commitment, respected the capital/partner-capacity/reputation constraints, and reasoned from the depth-driven loss and win-rate evidence. Do NOT award or deduct points based on whether the engine named the strategy that the hidden outcome shows succeeded."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses market/strategic drivers"
+      "criterion": "Does the engine identify under-monetized/under-differentiated expertise (a pricing/positioning error) as the driver of the plateau, rather than a pure scale or delivery-model gap?",
+      "rubric_10": "Diagnoses STRATEGIC_PRICING_ERROR: flat rates plus depth-driven losses and a strong niche win rate indicate the firm fails to convert proven depth into pricing power.",
+      "rubric_8": "Identifies pricing/positioning under-monetization as central with slightly imprecise labeling.",
+      "rubric_6": "Notes pricing or positioning issues but blends with generic growth-strategy talk.",
+      "rubric_4": "Treats the plateau mainly as a scale or capacity problem, underweighting the pricing signal.",
+      "rubric_2": "Diagnoses a driver unsupported by the data (e.g., demand collapse).",
+      "rubric_0": "Diagnosis unrelated to the plateau."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic before major decision"
+      "criterion": "Does the engine recommend the soundest pre-outcome step: a short pricing/positioning and utilization diagnostic before committing to Option A, B, or C (or specialization conditioned on that validation)?",
+      "rubric_10": "Recommends a 4-6 week win/loss + willingness-to-pay study and utilization diagnostic, with managed-services pilot validation, before committing - or recommends Option B explicitly conditioned on that validation.",
+      "rubric_8": "Recommends validating pricing power/positioning before committing, with minor omissions.",
+      "rubric_6": "Recommends some analysis but leans toward an option without the validation.",
+      "rubric_4": "Endorses one strategy (e.g., roll-up or managed services) with only light validation.",
+      "rubric_2": "Recommends committing to a dilutive roll-up or new delivery line with no validation.",
+      "rubric_0": "Recommends an action that breaks constraints (e.g., quality-diluting leverage) or harms the firm."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a self-funded, partner-led boutique consultancy protective of reputation and control?",
+      "rubric_10": "Reflects professional-services realities: partner capacity, pricing power, utilization/leverage, referral-engine protection, and the FY/partner-comp planning window.",
+      "rubric_8": "Relevant with a minor missed nuance.",
+      "rubric_6": "Relevant but somewhat generic.",
+      "rubric_4": "Generic; could apply to any firm.",
+      "rubric_2": "Poorly aligned with the consulting-firm context.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect partner capacity, the capital/dilution limit, reputation/quality, and the ~90-day decision window?",
+      "rubric_10": "Uses limited partner time, validates the lowest-capital lever before any raise, protects quality/referrals, and fits the 90-day window.",
+      "rubric_8": "Respects major constraints with minor tension.",
+      "rubric_6": "Mostly respects constraints; some unaddressed.",
+      "rubric_4": "Partially violates a constraint (e.g., partner capacity or dilution).",
+      "rubric_2": "Severely violates constraints.",
+      "rubric_0": "Action infeasible under the constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to BLND-010 specifics (flat rates, depth-vs-price losses, niche win rate, utilization, pilot count)?",
+      "rubric_10": "Cites flat 2-year rates, 35% depth vs 20% price losses, ~50% niche vs ~32% overall win rate, 68% utilization, and the 2 managed-services pilots.",
+      "rubric_8": "Traces primary claims with minor inference.",
+      "rubric_6": "Main reasoning supported; some claims loose.",
+      "rubric_4": "Limited traceability.",
+      "rubric_2": "Minimal direct support.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence appropriate: leading toward the pricing diagnosis while reserving option-ranking until the niche pricing power is tested?",
+      "rubric_10": "Confident in the pricing/positioning diagnosis while explicitly flagging that the niche pricing power is inferred, not tested, before ranking options.",
+      "rubric_8": "Reasonable calibration with slight overstatement.",
+      "rubric_6": "Some calibration but over-commits to a strategy.",
+      "rubric_4": "Overconfident in one option without validation.",
+      "rubric_2": "Confidence largely unsupported.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the engine avoid committing to an irreversible, high-risk direction (dilutive roll-up or unproven managed-services build) without the warranted validation?",
+      "rubric_10": "Does not commit to the roll-up/raise or a firm-wide managed-services line without validation; favors the cheaper, reversible pricing/positioning test first.",
+      "rubric_0": "Commits to the dilutive roll-up or a firm-wide managed-services pivot with no validation of economics."
     }
   },
-  "creation_methodology": "Expert analysis of BLIND_OUTCOME case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

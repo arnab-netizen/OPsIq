@@ -1,10 +1,133 @@
 {
   "caseId": "PD-016",
   "caseType": "PUBLIC_DATASET",
-  "industry": "Homebuilder",
+  "industry": "Residential Homebuilding / Real Estate Development",
+  "businessModel": "Regional Production Homebuilder (Land Acquisition, Development, and Home Construction for Sale)",
+  "businessStage": "Mature, Cyclical Downturn Onset",
+  "sourceNote": "Derived from SEC 10-K disclosure patterns for regional public homebuilders, including orders, backlog, absorption, lot-supply, and gross-margin reporting. Financial figures reconstructed from typical annual report and quarterly homebuilding operating metrics (homes closed, net new orders, average selling price, cancellation rate, community count, sales pace, owned-and-optioned lot position, and homebuilding gross margin). All evidence reflects publicly disclosed operating-metric categories. No proprietary internal data. No answer-key content included.",
   "ownerIntake": {
-    "businessType": "Regional homebuilder, $1.2B revenue, housing starts declining, margins compressing",
-    "stage": "Land costs rising, labor shortage driving wages up, pricing limited by market softness",
-    "ownerGoal": "Improve operational efficiency and margin recovery"
+    "businessType": "Regional production homebuilder operating across multiple metropolitan submarkets. Builds primarily move-up and entry-level single-family homes for sale. Revenue model: home closing revenue (sale of completed homes), supported by a land pipeline of owned and optioned lots developed into active selling communities. Vertically integrates land acquisition, lot development, and construction; subcontracts trades. ~2,400 homes closed annually across roughly 80-85 active communities.",
+    "stage": "FY2025: Home closing revenue $1,200M (down 4.8% from $1,260M FY2024). Homes closed 2,400 (down from 2,520 FY2024) at average selling price (ASP) $500k (flat YoY). Net new orders 2,150 (down from 2,500 prior year), so orders are now running below closings. Absorption pace 2.4 homes per community per month (down from 3.2). Homebuilding gross margin 18.0% (down from 22.0%, a 400 bps decline). Land/lot cost per home $150k (up from $130k, +15.4%); direct construction labor +9% YoY; price concessions/incentives ~3% of ASP ($15k/home) up from ~1%. Spec (unsold, started) inventory 620 homes vs. ~380 in a normal pace environment. Owned-and-optioned land pipeline ~9,000 lots (~3.75 years of supply at the current closing pace). Cancellation rate 22% (up from 14%).",
+    "ownerGoal": "Protect cash and margin through a softening housing cycle and decide, before the next land-bank funding cycle and board meeting (~90 days out), how to right-size the starts pace, spec inventory, and land pipeline to actual demand without permanently impairing pricing, community values, or future growth optionality.",
+    "ownerConstraints": [
+      "Land already optioned or owned represents largely sunk or committed capital: walking optioned lots forfeits non-refundable deposits, and owned land cannot be exited quickly without impairment.",
+      "Market softness caps price: local resale and competitor inventory limit list prices, so the builder cannot raise ASP to offset land and labor inflation.",
+      "Mortgage-rate sensitivity: buyer demand and cancellation rates move sharply with mortgage rates; incentive needs (rate buydowns) escalate as rates rise.",
+      "Labor shortage: trade-labor availability is constrained and wages are rising ~9% YoY, so cycle times and direct costs cannot be quickly compressed.",
+      "Cannot fire-sale standing inventory without impairing appraisal comps and the backlog: deep public price cuts would reset comparable values across active communities and trigger further cancellations from in-backlog buyers.",
+      "Land-bank and revolver covenants and the upcoming board funding decision constrain how much new land spend can be committed while inventory is elevated."
+    ],
+    "immediateConcern": "Capital is increasingly tied up in unsold spec homes and a multi-year land pipeline while demand is softening. Net new orders (2,150) have fallen below homes closed (2,400), so backlog is shrinking; absorption has dropped from 3.2 to 2.4 homes per community per month; cancellations have risen from 14% to 22%; and spec inventory has built to 620 homes against a normal level near 380. Gross margin has compressed 400 bps (22% to 18%) as incentives rose to ~3% of ASP and land cost per home rose 15%. The owner must decide within roughly 90 days whether to slow starts, walk option lots (forfeiting deposits), or increase incentives, before the next land-bank funding commitment and board meeting.",
+    "availableData": [
+      "Homes closed and average selling price: 2,400 homes closed FY2025 (vs 2,520 FY2024) at ASP $500k (flat), home closing revenue $1,200M (vs $1,260M).",
+      "Net new orders and cancellation rate: 2,150 net new orders FY2025 (down from 2,500); cancellation rate 22% (up from 14%).",
+      "Absorption / sales pace: 2.4 homes per community per month FY2025 (down from 3.2), across ~80-85 active communities.",
+      "Spec (unsold) inventory: 620 started-but-unsold homes vs. ~380 in a normal-pace environment.",
+      "Land position: owned-and-optioned pipeline ~9,000 lots, ~3.75 years of supply at the current closing pace.",
+      "Homebuilding gross margin: 18.0% FY2025 (down from 22.0% FY2024); land/lot cost per home $150k (up from $130k); direct construction labor +9%; incentives ~3% of ASP ($15k/home, up from ~1%).",
+      "Backlog trend: net new orders below closings (2,150 vs 2,400) indicating a shrinking backlog quarter over quarter."
+    ],
+    "unavailableData": [
+      "Community-level absorption, margin, and spec exposure broken out by individual subdivision (only blended company metrics disclosed).",
+      "Buyer-level mortgage qualification, rate-lock, and credit data underlying cancellations (not disclosed).",
+      "Non-refundable deposit amounts and walk-away economics by individual land option contract.",
+      "Forward demand by submarket (traffic, qualified-buyer pipeline, competitor incentive levels) at a granular level.",
+      "Detailed direct-cost build-up (per-trade labor and material cost curves) below the aggregate construction-cost line."
+    ],
+    "timeHorizon": "~90 days (decision required before next land-bank funding commitment and board meeting; FY guidance and starts plan for next two quarters at stake)",
+    "riskAppetite": "MEDIUM-LOW (cyclical downturn onset; owner prioritizes cash preservation and avoiding impairment of comps/backlog over chasing volume)"
+  },
+  "clientContext": {
+    "industry": "Residential Homebuilding / Real Estate Development",
+    "size": "regional production homebuilder ($1.2B home closing revenue, ~2,400 homes/yr, ~80-85 communities)",
+    "revenueImpactUrgency": "HIGH (capital tied up in elevated spec inventory and a 3.75-year land pipeline while orders fall below closings; near-term funding and starts decisions imminent)"
+  },
+  "businessProblem": "A regional homebuilder generating $1.2B in home closing revenue committed land, lots, and a construction pipeline sized for a higher-volume forecast, but demand has softened: net new orders fell to 2,150 against 2,400 homes closed (orders now below closings, so backlog is shrinking), absorption dropped from 3.2 to 2.4 homes per community per month, and the cancellation rate rose from 14% to 22%. As a result, unsold spec inventory has built to 620 homes versus a normal level near 380, and the owned-and-optioned land pipeline stands at ~9,000 lots (about 3.75 years of supply at the current pace). Margin pressure is compounding: homebuilding gross margin fell 400 bps (22% to 18%) as land cost per home rose 15% (to $150k) and labor rose 9%, while market softness caps price and forces incentives up to ~3% of ASP ($15k/home). The core question: is this a volume/demand-to-supply commitment problem (the company built and optioned ahead of demand that did not materialize), a unit-cost problem (land and labor inflation eroding margin), or a pricing-structure problem (mispriced relative to the market)? The owner must decide within ~90 days, before the next land-bank funding cycle and board meeting, whether to slow starts, walk option lots (forfeiting deposits), or raise incentives, while capital is increasingly locked in spec and land.",
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "Net new orders fell to 2,150 in FY2025 from 2,500 the prior year, while homes closed were 2,400. Orders are now running below closings (book-to-build 0.90), meaning backlog is shrinking. Cancellation rate rose to 22% from 14%, indicating buyers are walking from contracts as conditions soften. This is a demand-side deterioration: order intake and contract retention are falling faster than the company is delivering homes.",
+      "confidence": "HIGH",
+      "source": "Homebuilder operating-metrics disclosure (net new orders, cancellation rate, homes closed) per 10-K/10-Q patterns",
+      "isCritical": true,
+      "supportingData": {
+        "net_new_orders_fy2025": 2150,
+        "net_new_orders_fy2024": 2500,
+        "homes_closed_fy2025": 2400,
+        "book_to_build_ratio": 0.90,
+        "cancellation_rate_fy2025": "22%",
+        "cancellation_rate_fy2024": "14%"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Absorption pace dropped to 2.4 homes per community per month from 3.2, a 25% decline, while spec (started-but-unsold) inventory rose to 620 homes against a normal level near 380 - roughly 240 excess specs, or ~3.1 months of supply at the current closing rate. The company started and carried homes for a faster sales pace than the market is delivering, so unsold standing inventory is accumulating and absorbing cash and carry cost.",
+      "confidence": "HIGH",
+      "source": "Community count, absorption pace, and unsold-inventory disclosure per homebuilder operating metrics",
+      "isCritical": true,
+      "supportingData": {
+        "absorption_fy2025": "2.4 per community/month",
+        "absorption_fy2024": "3.2 per community/month",
+        "spec_homes_fy2025": 620,
+        "spec_homes_normal": 380,
+        "excess_specs": 240,
+        "months_spec_supply": 3.1
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "The owned-and-optioned land pipeline stands at ~9,000 lots, equal to about 3.75 years of supply at the current 2,400-home pace - an elevated position for a softening market. Much of this land is committed: optioned lots carry non-refundable deposits and owned lots cannot be exited without impairment. Capital is locked in a multi-year pipeline that was sized to a higher forecast than current demand supports.",
+      "confidence": "HIGH",
+      "source": "Owned-and-optioned lot disclosure and years-of-supply computation per homebuilder reporting",
+      "isCritical": true,
+      "supportingData": {
+        "land_pipeline_lots": 9000,
+        "annual_closings": 2400,
+        "lot_supply_years": 3.75,
+        "lot_position": "owned + optioned (deposits at risk on options)"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Homebuilding gross margin fell to 18.0% from 22.0% (400 bps). The decline is driven roughly half by rising price concessions/incentives (now ~3% of ASP, $15k/home, up from ~1%) reflecting market softness, and the remainder by land cost inflation (land per home $150k, up 15.4% from $130k) and direct construction labor up 9%. ASP held flat at $500k because market softness caps price, so cost inflation and incentives could not be passed through.",
+      "confidence": "HIGH",
+      "source": "Homebuilding gross-margin and cost-per-home disclosure per 10-K patterns",
+      "isCritical": true,
+      "supportingData": {
+        "gross_margin_fy2025": "18.0%",
+        "gross_margin_fy2024": "22.0%",
+        "margin_decline_bps": 400,
+        "land_cost_per_home_fy2025": "$150k",
+        "land_cost_per_home_fy2024": "$130k",
+        "construction_labor_growth": "+9%",
+        "incentive_pct_of_asp_fy2025": "3%",
+        "incentive_pct_of_asp_fy2024": "1%",
+        "incentive_per_home": "$15k",
+        "asp": "$500k (flat)"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Home closing revenue declined 4.8% to $1,200M from $1,260M as homes closed fell to 2,400 from 2,520 at a flat $500k ASP. The revenue decline is entirely volume-driven (fewer closings), not price-driven, consistent with a demand shortfall rather than a pricing collapse - the company is delivering into a thinner order book while carrying inventory and land built for higher volume.",
+      "confidence": "HIGH",
+      "source": "Home closing revenue, homes closed, and ASP disclosure per homebuilder reporting",
+      "isCritical": false,
+      "supportingData": {
+        "revenue_fy2025": "$1,200M",
+        "revenue_fy2024": "$1,260M",
+        "revenue_change": "-4.8%",
+        "homes_closed_fy2025": 2400,
+        "homes_closed_fy2024": 2520,
+        "asp_fy2025": "$500k",
+        "asp_fy2024": "$500k"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (large balance sheet but capital tied up in spec and land; land-bank covenants and board funding decision constrain new spend)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (division/community teams in place, but redeploying starts and land strategy requires coordinated land, construction, and sales decisions)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

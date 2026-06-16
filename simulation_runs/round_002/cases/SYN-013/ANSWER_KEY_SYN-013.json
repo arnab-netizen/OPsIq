@@ -1,27 +1,157 @@
 {
   "case_id": "SYN-013",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Operations)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Synthetic stress-test case SYN-013 (SaaS / HR Tech): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "answer_creator": "Domain Expert (B2B SaaS Retention and Customer Success)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert deliberately set aside the owner's 'unit economics and differentiation' framing and traced the churn, NRR, NPS, module-adoption, and time-to-value evidence to its source. Diagnosis was selected by testing which single root cause best explains the full evidence set, then stress-testing against rival diagnoses.",
+  "root_cause_diagnosis": "CUSTOMER_RETENTION_EROSION",
+  "root_cause_description": "The installed base is decaying because customers are not realizing the value of the suite they bought. Logo churn doubled (2%→4%/quarter) and NRR fell (108%→101%) while new-business win rate (24%) and sales cycle (~70 days) held steady, which localizes the failure to post-sale value realization rather than acquisition or competitiveness. The mechanism is concrete: 47-day time-to-first-value (vs 21-day target), single-module concentration (recruitment 88%, onboarding 41%, performance 19%; 1.4 of 3 modules active), 38% QBR completion, and CSM overload at 80 accounts each. Single-module accounts churn ~3x multi-module accounts, so weak onboarding and expansion engagement both drive churn up and pull NRR down. The owner's stated 'rising CAC / lost differentiation' is a downstream symptom: CAC payback stretched to 19 months mainly because LTV per logo shrank as retention eroded, not because acquisition broke.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Quarterly logo churn doubled 2%→4%",
+      "NPS fell 38→27",
+      "CAC payback extended 14→19 months",
+      "NRR slipped 108%→101%"
+    ],
+    "contributing_factors": [
+      "47-day time-to-first-value vs 21-day target",
+      "CSM overload at 80 accounts each (vs 40-50 healthy)",
+      "QBR completion only 38%",
+      "Bundled-suite competitors visible at renewal raising the bar"
+    ],
+    "true_root_cause": "Post-sale value realization is failing: slow onboarding and single-module stagnation prevent customers from reaching and expanding value, so retention erodes before the competitive or pricing factors the owner blames ever decide the outcome."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Stand up a 90-day retention-recovery program targeted at the next-two-quarter renewal cohort (~35% of the base). Three concrete workstreams: (1) cut time-to-first-value from 47 to <25 days by re-sequencing onboarding around a single fast 'first hire processed' milestone and assigning a named onboarding owner per new account; (2) launch a second-module activation play on the ~60% of accounts that are single-module, prioritized by renewal date, with a target of moving onboarding adoption 41%→60% and performance 19%→30% in the cohort; (3) reduce effective CSM load on at-risk renewals by temporarily reassigning 2 support staff into a renewal-save pod so each CSM covers <50 at-risk accounts. Instrument a weekly at-risk renewal dashboard (TTFV, modules-active, QBR-done, renewal-likelihood). No new hiring, no discounting, no module rebuild in this window.",
+  "action_description": "It is first because ~35% of the base renews in the next two quarters and churn is already doubling; the only lever that moves a renewal-window outcome in 90 days is value realization on accounts that already exist. Rebuilding the performance module (10-14 weeks) or discounting would not change near-term renewals and would burn scarce runway and engineering capacity on the owner's misdiagnosis. Fixing onboarding speed and second-module activation directly attacks the ~3x churn differential between single- and multi-module accounts.",
+  "accepted_alternative_actions": [
+    "Run a 3-4 week renewal-cohort cohort analysis FIRST (by module-count, TTFV band, and CSM) to size the save list before deploying the pod, provided it does not delay the renewal-window intervention past the first at-risk renewals.",
+    "Re-tier CS coverage by renewal date and health score (digital-led for healthy, high-touch save pod for at-risk) instead of a flat 80-account model, achieving the same effective-load reduction without temporary reassignment."
+  ],
+  "bad_actions": [
+    "Discount renewals to defend the base: only 14% of churn cites price, so discounting subsidizes accounts that are actually leaving over unrealized value, destroys gross margin (74%), and trains the base to expect concessions without fixing adoption.",
+    "Greenlight a 10-14 week performance-module rebuild to reach feature parity: it spends the entire renewal window and most engineering capacity on a parity narrative the evidence does not support, and delivers nothing before the heavy renewals hit.",
+    "Increase acquisition spend to outgrow churn: win rate and sales cycle are stable, so the funnel is not broken; pouring cash into a leaky bucket worsens CAC payback (already 19 months) and accelerates runway depletion.",
+    "Hire 3 new CSMs immediately: the 20-month runway and Series-B efficiency expectation make a permanent headcount jump premature before the save pod proves the load/value hypothesis."
+  ],
+  "action_constraints_respected": [
+    "Funding (20-month runway, $360k/month): program uses internal reassignment and process change, no new hiring or discounting, so burn is unchanged.",
+    "Product (module rework 10-14 weeks): action deliberately avoids engineering rebuild and instead drives adoption of modules that already exist.",
+    "Organizational (CS binding at 80 accounts/CSM): action temporarily reallocates 2 support staff to drop effective at-risk load below 50, respecting the real constraint.",
+    "Commercial (35% renewing in 2 quarters): action is sequenced by renewal date so effort lands before churn is locked in."
+  ],
+  "rationale": "The decisive evidence is the divergence between a stable front-of-funnel (24% win rate, 70-day cycle) and a deteriorating installed base (churn 2%→4%, NRR 108%→101%), combined with churn exit reasons dominated by unrealized value (55%) over price (14%). That pattern is definitional CUSTOMER_RETENTION_EROSION driven by value-realization failure. The correct response is to convert existing single-module customers into realized, multi-module value before they renew, which both lifts retention and restores NRR/expansion, which in turn repairs the CAC-payback symptom the owner is fixated on.",
+  "evidence_basis": [
+    "customer_retention: churn 2%→4%, NRR 108%→101%, exit reasons 55% low-value vs 14% price",
+    "product_adoption: 1.4 of 3 modules active; single-module accounts churn ~3x multi-module",
+    "customer_success: TTFV 47 vs 21 days, QBR completion 38%, 80 accounts/CSM",
+    "market_position: win rate 24% and sales cycle ~70 days both stable, localizing failure to post-sale"
+  ],
+  "evidence_not_explained": [
+    "The 23% of churned logos citing 'switched to bundled suite' is partly genuine competitive loss; the diagnosis treats it as accelerated by low realized value (customers with no switching cost stay only if value is realized), but a minority may be true feature-parity losses not addressable by the retention program alone."
+  ],
+  "alternative_explanations": [
+    "GO_TO_MARKET_MISALIGNMENT: that the company is acquiring the wrong segment. Weaker here because win rate and sales cycle are stable and acquisition is not the leak; the failure is concentrated post-sale in accounts already won.",
+    "STRATEGIC_PRICING_ERROR / pricing pressure: only 14% of churn cites price and competitors are at list parity, not undercutting; discounting would address a symptom that is not the dominant driver.",
+    "UNIT_ECONOMICS_BREAKDOWN: CAC payback did extend to 19 months, but the driver is shrinking LTV from churn/NRR decay rather than a structural acquisition-cost or gross-margin break (margin healthy at 74%), making it a symptom rather than the root."
+  ],
+  "missing_evidence": [
+    "Cohort retention curves by acquisition channel and customer size to confirm the value-realization mechanism is uniform across the base",
+    "Quantified switching costs and willingness-to-pay versus the bundled suites to size the irreducible competitive-loss share",
+    "Root-cause breakdown of why onboarding takes 47 days (implementation steps, data migration, customer-side delays)"
+  ],
+  "success_metrics": [
+    "Time-to-first-value reduced from 47 to <25 days for the renewal cohort within 90 days",
+    "Modules-active per account in the cohort rises from 1.4 toward 2.0; onboarding adoption 41%→60%, performance 19%→30%",
+    "Quarterly logo churn stabilizes at or below 3% and NRR recovers toward 105% within two renewal windows",
+    "QBR completion on at-risk renewals rises from 38% to >75%; renewal rate on the targeted cohort exceeds prior-period baseline"
+  ],
+  "expected_outcome": "If retention erosion via value realization is the true root cause, the renewal-cohort program should arrest the churn climb within the first renewal window and begin recovering NRR as second-module activation lands, with NPS recovering as time-to-value drops. CAC payback improves as LTV per logo rises. If churn does not respond despite improved TTFV and module adoption, the residual loss is genuine competitive displacement, and the company would then justify targeted performance-module investment with evidence rather than assumption.",
+  "automatic_fail_conditions": [
+    "Diagnosing the case as a pricing/discounting problem and recommending renewal discounts as the primary action",
+    "Recommending increased acquisition spend or new-logo growth to offset churn while the installed base leaks",
+    "Committing engineering to a multi-week performance-module rebuild as the first action before any retention intervention",
+    "Ignoring the renewal-window timing and proposing only long-horizon strategy with no 90-day retention lever"
+  ],
+  "source_references": [
+    "Billing churn ledger and NRR cohort report",
+    "Product usage analytics (module adoption)",
+    "CS onboarding milestone tracker and QBR log",
+    "Churn exit-survey transcripts (22 logos)"
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "Logo churn rose 2%→4%/quarter while win rate (24%) and sales cycle (~70 days) stayed flat", "implication": "The failure is in keeping customers, not acquiring them, pointing to retention erosion rather than GTM or competitiveness collapse."},
+      {"fact": "Exit surveys cite 'didn't get full value/low adoption' 55% vs 'price' 14%", "implication": "Customers leave over unrealized value, not headline price, ruling out a pricing-led diagnosis."},
+      {"fact": "Only 1.4 of 3 modules active; single-module accounts churn ~3x multi-module", "implication": "Stalled value expansion inside accounts is the direct mechanism of churn and NRR decline."},
+      {"fact": "Time-to-first-value 47 days vs 21-day target with 80 accounts/CSM and 38% QBR completion", "implication": "Under-resourced, slow post-sale engagement prevents value realization, the operational driver of retention erosion."},
+      {"fact": "CAC payback stretched 14→19 months while gross margin stayed 74%", "implication": "Worsening economics is downstream of shrinking LTV from churn, a symptom, not the root cause."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "STRATEGIC_PRICING_ERROR", "why_weaker": "Only 14% of churn cites price and competitors sit at list parity; the dominant 55% low-value reason and stable win rate contradict a pricing root cause."},
+      {"alternate": "GO_TO_MARKET_MISALIGNMENT", "why_weaker": "Acquisition metrics (win rate, cycle, lead volume) are stable, so the company is not systematically attracting the wrong segment; the leak is post-sale."},
+      {"alternate": "UNIT_ECONOMICS_BREAKDOWN", "why_weaker": "Gross margin is healthy (74%) and CAC payback deteriorated chiefly because LTV fell from churn, making economics a consequence rather than the origin."}
+    ],
+    "first_action_justification": "With ~35% of the base renewing in two quarters and churn already doubling, the only lever that changes near-term outcomes is accelerating value realization on existing accounts; a renewal-cohort retention program directly attacks the 3x single-module churn differential within the available window.",
+    "constraints_effect_on_action": "The 20-month runway and Series-B efficiency pressure forbid discounting or new hiring, so the action relies on process redesign (faster TTFV), activation plays on existing modules, and temporary internal reassignment of 2 support staff rather than capital-intensive moves; the 10-14 week module-rework constraint forces the action to use modules that already exist instead of building parity."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses growth/demand issue"
+      "criterion": "Does the engine diagnose CUSTOMER_RETENTION_EROSION driven by post-sale value-realization failure, rather than accepting the owner's pricing/differentiation framing?",
+      "rubric_10": "Diagnoses CUSTOMER_RETENTION_EROSION and explicitly ties it to low-value exit reasons (55%), single-module churn (3x), and 47-day TTFV, while rejecting the owner's pricing narrative.",
+      "rubric_8": "Diagnoses a retention/value-realization root cause with sound evidence but underweights one mechanism (e.g., omits TTFV or NRR linkage).",
+      "rubric_6": "Identifies churn as the core problem but is ambiguous about whether it is value realization, pricing, or competition.",
+      "rubric_4": "Accepts the owner's framing and centers competitive differentiation or unit economics as the root.",
+      "rubric_2": "Diagnoses pricing and recommends discounting, contradicting the 14% price exit reason.",
+      "rubric_0": "Diagnosis unrelated to retention or evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic"
+      "criterion": "Does the engine prioritize a renewal-window value-realization/retention program over feature rebuild, discounting, or acquisition?",
+      "rubric_10": "Recommends a 90-day renewal-cohort program (TTFV acceleration + second-module activation + at-risk CS load reduction) sequenced by renewal date.",
+      "rubric_8": "Recommends a retention/CS-focused action targeting value realization but with weaker sequencing or instrumentation.",
+      "rubric_6": "Recommends retention work but mixes in parallel feature build or acquisition spend.",
+      "rubric_4": "Recommends feature parity work or discounting as the primary action.",
+      "rubric_2": "Recommends acquisition growth or aggressive hiring to outrun churn.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect Series-A SaaS reality where renewal-window retention and NRR gate Series B?",
+      "rubric_10": "Action is explicitly built around the 35% renewing in two quarters and the NRR/Series-B narrative.",
+      "rubric_6": "Action is retention-relevant but generic about renewal timing or Series-B implications.",
+      "rubric_2": "Action loosely related to the SaaS context.",
+      "rubric_0": "Action irrelevant or harmful to a growth-stage SaaS."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 20-month runway, CSM overload, and 10-14 week module-rework cost?",
+      "rubric_10": "No new hiring or discounting; uses internal reassignment and process change; avoids engineering rebuild in the window.",
+      "rubric_6": "Respects most constraints but proposes some incremental spend or hiring.",
+      "rubric_2": "Proposes actions that strain runway or ignore CS capacity.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-013 metrics?",
+      "rubric_10": "Every claim traces to data: churn 2%→4%, NRR 108%→101%, exit 55%/14%, modules 1.4/3, TTFV 47 vs 21, 80 accounts/CSM.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to specific numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence justified given multi-source convergence?",
+      "rubric_10": "HIGH well-calibrated: churn ledger, usage analytics, CS metrics, and exit surveys converge on value realization.",
+      "rubric_6": "Confidence defensible but acknowledges the 23% competitor-bundle exit share as residual uncertainty.",
+      "rubric_2": "Confidence asserted without grounding.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action low-risk and non-destructive (no discounting spiral, no runway-burning rebuild)?",
+      "rubric_10": "Action is a contained, reversible CS/process program with no margin or runway damage.",
+      "rubric_6": "Action mostly safe but includes one cost item needing justification.",
+      "rubric_2": "Action introduces meaningful margin or runway risk.",
+      "rubric_0": "Action high-risk (discount spiral, large hiring, or rebuild gamble)."
     }
   },
-  "creation_methodology": "Expert analysis of SYNTHETIC case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

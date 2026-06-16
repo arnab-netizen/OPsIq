@@ -1,27 +1,178 @@
 {
   "case_id": "PD-013",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Public Dataset Analysis)",
-  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
-  "root_cause_description": "Public dataset case PD-013 (Healthcare / Hospital Network): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
-  "confidence_in_diagnosis": "MEDIUM-HIGH",
-  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "answer_creator": "Domain Expert (Hospital Operations & Margin Recovery, Not-for-Profit Health Systems)",
+  "creation_methodology": "Blind review: Expert independently analyzed the system's FY2024-FY2025 public financial and operating disclosures. Diagnosed root cause through multi-dimensional decomposition of the 450 bps EBITDA margin compression: flat net patient revenue against +$90M operating-expense growth, with the increase concentrated in contract/agency nursing (+100%) and medical supplies & pharmacy (+10%), while inpatient admissions fell 3% and outpatient volume grew 2%. Confirmed the margin loss is cost-side and operationally controllable, not a pricing or demand-forecasting failure (rates are externally set; outpatient demand is growing).",
+  "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK",
+  "root_cause_description": "The margin collapse is an operational cost-structure and throughput problem, not a pricing or demand problem. Net patient revenue was essentially flat ($1,790M → $1,800M, +0.6%) while total operating expense rose $90M (+5.7%) to $1,665M, compressing EBITDA from $215M (12.0% margin) to $135M (7.5% margin) — a 450 basis point decline. The cost growth is overwhelmingly labor: total labor rose $90M (+11.1%), and contract/agency nursing alone doubled from $70M to $140M (+$70M, +100%), accounting for ~78% of the entire labor increase. Agency nurses bill at a steep premium over equivalent employed FTEs, so this contract-labor premium is the single largest controllable lever. Medical supplies & pharmacy added a further $36M (+10%), well above the ~0.6% revenue growth. Simultaneously, inpatient admissions fell 3% YoY — the high-fixed-cost setting — spreading fixed hospital costs over fewer cases, while outpatient volume grew 2%, demonstrating that demand is shifting, not disappearing. Because reimbursement rates are externally set (Medicare/Medicaid/commercial) and flat revenue reflects static rates and payer mix, the system cannot price its way out. The root cause is therefore an operational bottleneck: an over-reliance on premium agency staffing and uncontrolled supply/utilization cost against a softening inpatient throughput base — all operationally controllable without raising prices.",
+  "confidence_in_diagnosis": "HIGH",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin compressed 450 bps (12.0% -> 7.5%); EBITDA down $80M ($215M -> $135M)",
+      "Total operating expense up $90M (+5.7%) against essentially flat net patient revenue (+0.6%)",
+      "Inpatient admissions down 3% YoY, de-leveraging the high-fixed-cost inpatient setting"
+    ],
+    "contributing_factors": [
+      "Medical supplies & pharmacy up $36M (+10%), well above revenue growth",
+      "Admissions -3% spreading fixed hospital costs over fewer inpatient cases while outpatient shifts +2%",
+      "Externally set reimbursement rates (Medicare/Medicaid/commercial) leaving no pricing offset"
+    ],
+    "true_root_cause": "An operational bottleneck: over-reliance on premium contract/agency nursing (doubled from $70M to $140M, +100%, ~78% of the $90M labor increase) plus uncontrolled supply/utilization cost against a softening inpatient throughput base -- a cost-structure and throughput problem that is operationally controllable without raising prices, not a pricing or demand failure."
+  },
+  "first_priority_action": "Commission an 8-10 week labor-productivity and agency-staffing-reduction diagnostic across all 5 hospitals (cost ~$300-500k, or staffed largely by an internal performance-management office plus a targeted external workforce-analytics partner). Scope: (1) Quantify the contract/agency-vs-employed-FTE fully-loaded cost premium by facility and unit, sizing the recoverable portion of the $70M agency increase. (2) Measure worked-hours-per-adjusted-patient-day and nurse productivity by unit against MGMA/industry benchmarks to find over-reliance and scheduling inefficiency, strictly within state safe-staffing ratios and union agreements. (3) Model a permanent-hire / float-pool / internal-agency ramp with vacancy, turnover, and time-to-fill data to replace premium agency hours without breaching ratios or closing beds. (4) Run a parallel supply/pharmacy cost workstream against GPO contract benchmarks to isolate price inflation vs utilization in the $36M supply increase. Deliverable: a quantified margin-recovery plan with phased agency-reduction targets, a hiring-ramp schedule, and supply-cost actions, sized to move EBITDA margin back above the 8% covenant threshold, ready for the board within the 90-day decision window.",
+  "action_description": "This is the first-priority action because the dominant, most controllable driver of the 450 bps compression is premium contract-labor cost (+$70M), and reducing it safely requires quantifying the agency premium and building a permanent-staffing replacement plan before cutting — a blind agency cut would breach safe nurse-staffing ratios, force bed closures, divert admissions, and worsen both margin and quality. The diagnostic produces board-ready, covenant-relevant targets inside the 90-day clock at a cost that is trivial relative to the $70M lever, and it sequences the safe path: measure the premium and productivity, build the hiring ramp, then phase down agency reliance — rather than reacting with across-the-board layoffs or futile price moves.",
+  "accepted_alternative_actions": [
+    "Stand up a dedicated internal float pool / internal staffing agency and an accelerated permanent-nurse recruitment-and-retention program (sign-on/retention incentives, residency-to-hire pipeline) as the operational mechanism to retire premium agency hours over 2-3 quarters — acceptable because it directly attacks the +$70M agency lever while protecting safe staffing ratios, though it should be sized by the diagnostic first.",
+    "Launch a supply-chain and pharmacy cost-reduction program against GPO/benchmark pricing (formulary optimization, contract renegotiation, utilization/standardization review) to recover part of the $36M (+10%) supply increase — acceptable as a parallel workstream because it targets the second-largest controllable cost driver, though it is smaller than the agency lever and should not be the sole first action."
+  ],
+  "bad_actions": [
+    "Across-the-board headcount or nurse layoffs to cut labor cost: wrong for THIS case because the labor increase is premium AGENCY cost, not employed-FTE excess; cutting employed nurses would breach state safe nurse-staffing ratios, accreditation standards, and union agreements, force bed closures and admission diversion, degrade quality/value-based reimbursement, and likely INCREASE agency reliance — worsening the very root cause.",
+    "Raising prices / charge-master increases to restore margin: wrong because reimbursement is externally set by Medicare/Medicaid and contractually fixed by commercial payers; flat net revenue reflects static rates and mix, so unilateral price increases cannot be realized and would not move net patient revenue, while signaling distress.",
+    "Exiting or closing the unprofitable inpatient service lines tied to the 3% admission decline (e.g., ED, behavioral health) to 'stop the bleeding': wrong because these are mission-essential, community-benefit obligations of a tax-exempt system, closing them risks the charitable status and access mandates, and the admission softness is a throughput/cost-allocation issue (demand is shifting outpatient, +2%), not a service-line viability failure.",
+    "Immediate large-scale capital/restructuring borrowing to bridge the margin gap: wrong because adding debt while EBITDA margin is sub-8% worsens debt-service coverage and accelerates the very downgrade the board is trying to avoid; it treats a covenant symptom without fixing the operational cost driver."
+  ],
+  "action_constraints_respected": [
+    "Covenant/rating constraint (90-day board clock, ~8% margin threshold): The 8-10 week diagnostic delivers board-ready, quantified margin-recovery targets within the 90-day window and sequences actions to move EBITDA margin back above 8%.",
+    "Reimbursement constraint (rates externally set): The action targets the cost side (agency premium, productivity, supply cost) and does not assume any unilateral price increase.",
+    "Safe-staffing / regulatory constraint: All productivity and agency-reduction modeling is bounded by state nurse-to-patient ratios, Joint Commission standards, and union agreements; agency hours are retired only as permanent capacity replaces them.",
+    "Mission / not-for-profit constraint: No exit of essential community service lines; the plan preserves access and community-benefit obligations.",
+    "Workforce constraint (nurse shortage): The hiring/float-pool ramp is sized from vacancy, turnover, and time-to-fill data so agency reduction never outpaces permanent replacement, avoiding bed closures.",
+    "Quality constraint: Cost actions are screened against publicly reported quality, readmission, and patient-safety metrics to protect value-based reimbursement and reputation."
+  ],
+  "rationale": "The 450 bps margin compression decomposes almost entirely to the cost side: revenue grew ~$10M while opex grew ~$90M. Within opex, contract/agency nursing (+$70M, +100%) is the single largest and most controllable lever, with supplies (+$36M, +10%) second. Reimbursement is externally set, so pricing is not available; outpatient demand is growing (+2%), so this is not a demand-forecasting failure; the 3% admission decline is a throughput/fixed-cost-absorption issue, not a market collapse. The correct first move is a diagnostic that sizes the agency premium and builds a safe permanent-staffing replacement plan, because the highest-impact action (retiring premium agency hours) is dangerous if executed without first protecting safe staffing ratios. All downstream actions — float pool, recruitment, supply renegotiation, phased agency reduction — flow from this diagnostic.",
+  "evidence_basis": [
+    "financial_health finding: EBITDA fell $215M → $135M (-$80M, -37%) on flat revenue ($1,790M → $1,800M), margin 12.0% → 7.5% (-450 bps); opex grew +$90M vs revenue +$10M, proving a cost-side driver.",
+    "operational_efficiency finding: Total labor +$90M (+11.1%), with contract/agency nursing +$70M (+100%, $70M → $140M) accounting for ~78% of the labor increase — the dominant controllable lever and signature of an operational/throughput cost problem.",
+    "operational_efficiency finding: Medical supplies & pharmacy +$36M (+10%, $360M → $396M), far outpacing +0.6% revenue growth, the second cost driver.",
+    "market_position finding: Inpatient admissions -3% (high-fixed-cost setting) vs outpatient +2% (growing) with stable case-mix and flat revenue, indicating demand is shifting not disappearing and rates/mix are static — ruling out pricing and demand-forecasting root causes.",
+    "financial_health finding: 7.5% margin sits ~50 bps below the ~8% covenant/rating threshold, converting the operating problem into covenant/rating risk on a 90-day clock."
+  ],
+  "evidence_not_explained": [
+    "The exact split of the $90M labor increase between agency premium price (higher bill rate per hour) versus agency volume (more agency hours) is not separable from public data; the diagnostic's facility-level worked-hours and bill-rate analysis is required to apportion it. Either way it reinforces OPERATIONAL_BOTTLENECK rather than a pricing or demand cause.",
+    "The split of the $36M supply increase between unit-price inflation and utilization growth cannot be isolated from public disclosures and requires the GPO/benchmark supply workstream; it does not change the cost-side diagnosis."
+  ],
+  "alternative_explanations": [
+    "STRATEGIC_PRICING_ERROR: That margin fell because the system is under-priced or mis-priced its services. Rejected because hospital reimbursement is externally set by Medicare/Medicaid and contractually fixed by commercial payers; net patient revenue is flat with static rates and payer mix, so there is no discretionary pricing lever and the margin loss originates entirely on the cost side (+$90M opex vs +$10M revenue), not in pricing.",
+    "DEMAND_FORECASTING_MISMATCH: That the system over-built capacity for demand that did not materialize. Rejected because total demand is NOT down — outpatient volume grew +2% and net revenue is flat; only inpatient admissions softened -3%, which spreads fixed cost over fewer cases (a throughput/cost-absorption effect) rather than a forecasting failure. The cost growth is in agency labor and supplies, which is an operational-control problem, not a misforecast of demand.",
+    "UNIT_ECONOMICS_BREAKDOWN: That per-case economics structurally broke. Considered but rejected as PRIMARY because the deterioration is concentrated in a specific, controllable input (premium agency staffing, +$70M) against static externally-set rates, rather than a broad structural decline in per-unit profitability; once agency reliance and supply cost are normalized, the underlying unit economics (12.0% prior-year margin) are intact — pointing to an operational bottleneck rather than a fundamental unit-economics break."
+  ],
+  "missing_evidence": [
+    "Facility- and unit-level contract/agency-vs-employed-FTE fully-loaded cost premium and worked-hours-per-adjusted-patient-day, to size the recoverable portion of the $70M agency increase.",
+    "Nurse vacancy, turnover, and time-to-fill metrics by facility, to size a safe permanent-hire / float-pool ramp that retires agency hours without breaching staffing ratios.",
+    "Supply/pharmacy spend broken into unit-price inflation vs utilization against GPO benchmarks, to target the $36M increase.",
+    "Service-line and inpatient-vs-outpatient contribution margin detail, to confirm the 3% admission decline is a fixed-cost-absorption effect rather than a service-line viability problem.",
+    "Covenant and debt-service-coverage exact thresholds and headroom, to calibrate how far above 8% the recovery plan must land."
+  ],
+  "success_metrics": [
+    "Diagnostic completion within 8-10 weeks: quantified agency-premium by facility, productivity vs benchmark, and a phased agency-reduction plan with a permanent-hire ramp, delivered inside the 90-day board window.",
+    "Agency cost reduction trajectory: a credible plan to retire a defined share of the $70M agency increase over 2-3 quarters without any breach of safe nurse-staffing ratios or bed closures.",
+    "EBITDA margin recovery: a modeled path back above the 8% covenant/rating threshold and toward double-digit margin, validated against debt-service-coverage covenants.",
+    "Supply cost recovery: identified, benchmark-supported actions recovering a defined portion of the $36M supply increase via formulary and contract renegotiation.",
+    "Quality protection: no degradation in publicly reported quality, readmission, or patient-safety metrics throughout execution."
+  ],
+  "expected_outcome": "If OPERATIONAL_BOTTLENECK is correct and the diagnostic is executed well, the system should, within 8-10 weeks, have a board-ready plan that sizes the recoverable agency premium (a large share of the $70M increase) and a safe permanent-staffing ramp, plus supply-cost actions against the $36M increase. Executing the phased agency reduction and supply program over 2-3 quarters should restore EBITDA margin above the 8% covenant threshold and back toward double digits without breaching safe staffing ratios, closing essential service lines, or raising (externally-set) prices. If the diagnostic instead reveals that agency reliance is structurally unavoidable given the regional nurse shortage, the system would need a longer-horizon workforce-development and care-model redesign (e.g., shifting more volume to the growing, lower-cost outpatient setting) rather than near-term agency elimination.",
+  "automatic_fail_conditions": [
+    "Recommends across-the-board layoffs or nurse headcount cuts that breach state safe nurse-staffing ratios, accreditation standards, or union agreements.",
+    "Recommends raising prices / charge-master increases to recover margin, ignoring that reimbursement is externally set and net revenue is rate/mix-static.",
+    "Diagnoses a pricing or demand-forecasting root cause (e.g., STRATEGIC_PRICING_ERROR or DEMAND_FORECASTING_MISMATCH) despite +2% outpatient growth, flat revenue, and the cost-side ($90M opex vs $10M revenue) evidence.",
+    "Recommends closing or exiting mission-essential community service lines (ED, behavioral health) tied to the 3% admission decline, jeopardizing tax-exempt/community-benefit obligations.",
+    "Recommends new large-scale borrowing or restructuring that worsens debt-service coverage while margin is sub-8%, accelerating downgrade risk."
+  ],
+  "source_references": [
+    "Audited consolidated financial statements (FY2024-FY2025): net patient revenue, total operating expense, EBITDA, labor and supply detail.",
+    "Not-for-profit hospital bond continuing-disclosure (EMMA/MSRB) operating data: utilization (admissions, outpatient visits, case-mix index), days cash on hand, debt-service coverage, covenant terms.",
+    "Rating-agency not-for-profit healthcare methodology commentary: weighting of operating EBITDA margin and debt-service coverage in rating outcomes.",
+    "Industry workforce and cost benchmarks (e.g., MGMA productivity, GPO supply pricing) used to frame the diagnostic, not to assert internal values."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "EBITDA margin = EBITDA / Net patient revenue",
+      "ΔEBITDA decomposition = ΔRevenue − ΔOpex",
+      "EBITDA margin decline (bps) = (prior EBITDA margin − current EBITDA margin) × 10000",
+      "Contract labor premium = agency cost − equivalent-FTE employed cost (for the same nursing hours)",
+      "Labor expense growth % = (current labor − prior labor) / prior labor",
+      "Supplies growth % = (current supplies − prior supplies) / prior supplies"
+    ],
+    "expected_values": {
+      "current_ebitda_margin_pct": 7.5,
+      "prior_ebitda_margin_pct": 12.0,
+      "ebitda_margin_decline_bps": 450,
+      "ebitda_delta_usd_m": -80,
+      "opex_growth_usd_m": 90,
+      "revenue_growth_usd_m": 10,
+      "contract_labor_increase_usd_m": 70,
+      "labor_expense_growth_pct": 11.1,
+      "supplies_growth_pct": 10.0
+    },
+    "tolerance": "±0.5 percentage points on margins; ±5% relative on dollar figures; ±10 bps on the margin-decline computation given rounding of the underlying margins.",
+    "unit_assumptions": "All dollar figures in USD millions; fiscal-year basis (FY2024 prior, FY2025 current); percentages as stated; EBITDA computed before interest, taxes, depreciation, and amortization on net patient revenue.",
+    "invalid_input_rules": "Reject as invalid any input where: EBITDA margin is computed on gross/charges rather than net patient revenue; opex growth and revenue growth do not reconcile with the stated EBITDA delta (ΔEBITDA must equal ΔRevenue − ΔOpex = $10M − $90M = -$80M); or agency cost is double-counted outside the $900M total labor figure.",
+    "missing_input_behavior": "If a required figure is absent, refuse to compute the dependent metric and state the gap rather than imputing a value. Do not infer EBITDA from revenue alone or assume a margin.",
+    "refuse_if_missing": [
+      "If net patient revenue is absent, refuse to compute EBITDA margin rather than guess.",
+      "If EBITDA (or the opex needed to derive it) is absent, refuse to compute margin or margin decline.",
+      "If prior-year EBITDA margin is absent, refuse to compute the bps decline.",
+      "If equivalent-FTE employed cost for the agency hours is absent, refuse to assert a precise contract-labor premium and flag it as requiring the facility-level diagnostic."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+      "criterion": "Does the engine diagnose OPERATIONAL_BOTTLENECK — a cost-structure/labor-throughput problem driven by contract/agency nursing and supply inflation against falling inpatient admissions — rather than a pricing or demand cause?",
+      "rubric_10": "Diagnoses OPERATIONAL_BOTTLENECK exactly, citing contract/agency nursing +100% ($70M → $140M) as the dominant lever, supplies +10%, the 450 bps margin compression on flat revenue, and the -3% admissions / +2% outpatient throughput dynamic.",
+      "rubric_8": "Diagnoses a closely related cost-structure archetype (e.g., UNIT_ECONOMICS_BREAKDOWN focused on the agency-labor and supply cost drivers) with sound evidence on the 450 bps compression and contract-labor lever.",
+      "rubric_6": "Identifies margin compression and rising labor/supply cost but does not clearly center the contract/agency-nursing throughput bottleneck as the primary, controllable driver.",
+      "rubric_4": "Focuses on secondary issues (admission decline as a demand problem, or general 'cost control') without recognizing the agency-staffing operational bottleneck against externally-set rates.",
+      "rubric_2": "Diagnoses a pricing or demand-forecasting cause that contradicts the +2% outpatient growth, flat revenue, and cost-side ($90M opex vs $10M revenue) evidence.",
+      "rubric_0": "Diagnosis is unrelated to the margin/cost evidence (e.g., a product or brand problem)."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic analysis"
+      "criterion": "Does the engine recommend a labor-productivity and agency-staffing-reduction diagnostic across the 5 hospitals (with a safe permanent-hire ramp and supply workstream) before cutting?",
+      "rubric_10": "Recommends an 8-10 week labor-productivity / agency-reduction diagnostic across all 5 hospitals with clear scope, ~$300-500k cost, safe-staffing-bounded agency reduction, a hiring/float-pool ramp, and a parallel supply-cost workstream, delivered inside the 90-day window.",
+      "rubric_8": "Recommends a labor/agency-cost diagnostic with a safe replacement plan but with slightly different scope, timeline, or cost, still sound and constraint-respecting.",
+      "rubric_6": "Recommends investigating labor/supply costs or margin levers, but less targeted at the agency premium or without explicitly protecting safe staffing ratios.",
+      "rubric_4": "Recommends immediate agency or headcount cuts before sizing the premium or building a permanent-staffing replacement, risking safe-ratio breach.",
+      "rubric_2": "Recommends aggressive action (broad layoffs, price increases, or service-line exit) without analytical foundation.",
+      "rubric_0": "Recommends an action that is harmful (breaches safe staffing) or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect not-for-profit hospital context — covenant/rating pressure, externally-set reimbursement, safe nurse-staffing ratios, and the 90-day board clock?",
+      "rubric_10": "Action is grounded in the not-for-profit hospital reality: covenant/rating risk at sub-8% margin, externally-set rates (no pricing lever), safe nurse-staffing ratios, agency-labor economics, and the 90-day board decision.",
+      "rubric_6": "Action is relevant to a hospital margin problem but misses one key contextual element (e.g., covenant/rating clock or the externally-set-rate constraint).",
+      "rubric_2": "Action is generic to any company with margin decline and ignores the healthcare/not-for-profit specifics.",
+      "rubric_0": "Action is irrelevant or harmful to a not-for-profit hospital system."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 90-day board clock, externally-set reimbursement, safe nurse-staffing ratios, mission/service-line obligations, and covenant/rating exposure?",
+      "rubric_10": "Action explicitly respects all major constraints: delivers within 90 days, assumes no price increase, bounds agency reduction by safe-staffing ratios and union agreements, preserves essential service lines, and protects covenant/rating standing.",
+      "rubric_6": "Action respects most constraints but has minor tension (e.g., timeline slightly tight, or supply workstream under-specified).",
+      "rubric_2": "Action violates a hard constraint (breaches safe staffing, assumes a price increase, or exits essential service lines).",
+      "rubric_0": "Action is infeasible given the covenant, staffing, and mission constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every claim be traced to the case financials — 450 bps compression, agency +100%, supplies +10%, admissions -3% / outpatient +2%, flat revenue?",
+      "rubric_10": "Every claim is traceable: EBITDA 12.0% → 7.5% (-450 bps), agency nursing $70M → $140M (+100%), supplies $360M → $396M (+10%), opex +$90M vs revenue +$10M, admissions -3% / outpatient +2% all cited.",
+      "rubric_6": "Main diagnosis is supported by the headline numbers but some claims (e.g., the agency premium or supply split) are asserted without tying to the specific figures.",
+      "rubric_2": "Minimal traceability; key claims are not tied to the case data.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given audited financials and a clear cost-side decomposition, tempered by missing facility-level detail?",
+      "rubric_10": "HIGH confidence is well-calibrated: audited multi-year financials and a clean cost-side decomposition (agency +100%, supplies +10%, flat revenue) strongly support OPERATIONAL_BOTTLENECK, with the only open questions being facility-level apportionment.",
+      "rubric_6": "Confidence is defensible but the engine overlooks that facility-level productivity/premium detail is missing, which slightly tempers certainty on the size of the lever.",
+      "rubric_2": "Confidence is poorly calibrated (e.g., VERY HIGH despite unresolved facility-level unknowns, or LOW despite robust audited evidence).",
+      "rubric_0": "Confidence is inverted relative to the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe — diagnostic and a permanent-staffing ramp before any agency cut, never breaching safe nurse-staffing ratios?",
+      "rubric_10": "Action is a low-risk diagnostic that sizes the agency premium and builds a safe permanent-staffing replacement before retiring agency hours; it never recommends cutting staff below safe nurse-staffing ratios and protects quality/patient-safety metrics.",
+      "rubric_6": "Action is broadly safe (diagnostic-first) but under-specifies the safe-staffing guardrail or the hiring-ramp sequencing.",
+      "rubric_2": "Action recommends agency or headcount reduction without first ensuring safe-ratio-compliant replacement, creating patient-safety risk.",
+      "rubric_0": "Action breaches safe nurse-staffing ratios, forces bed closures, or otherwise endangers patient safety."
     }
   },
-  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

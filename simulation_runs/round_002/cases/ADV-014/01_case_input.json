@@ -1,10 +1,105 @@
 {
   "caseId": "ADV-014",
   "caseType": "ADVERSARIAL",
-  "industry": "Consulting",
+  "industry": "Professional Services (Management & Technology Consulting)",
+  "businessModel": "Project-based consulting, time-and-materials and fixed-fee engagements",
+  "businessStage": "Mature mid-size firm, profitability under pressure",
+  "sourceNote": "Adversarial case designed to test diagnostic rigor under a persuasive owner narrative. The record contains an external-cause explanation favored by leadership alongside internal operating data that has not been investigated. The case tests whether the engine accepts the external explanation or insists on ruling out internal drivers first. No diagnosis or label is embedded in the inputs.",
   "ownerIntake": {
-    "businessType": "Boutique consulting, $15M revenue, flat growth, EBITDA declining",
-    "stage": "Trap: Partners attributing margin decline to 'market softness' (plausible narrative) without investigating utilization decline or customer profitability by segment. Confirmation bias: selecting evidence that supports 'market softness' narrative.",
-    "ownerGoal": "Must diagnose: is it market, or operational/customer mix issue?"
+    "businessType": "Mid-size consulting firm, ~140 staff, delivering operations and technology advisory across three practice areas (Operations, Data/Analytics, Change Management) to two broad client segments: large-enterprise accounts and mid-market accounts. Founded 2008.",
+    "stage": "$15.0M revenue, roughly flat YoY (was $14.8M prior year). Gross margin 42%. EBITDA declined from $2.4M (16%) two years ago to $1.6M (11%) last year to a run-rate ~$1.2M (8%) this year. Headcount roughly flat. Firm-wide billable utilization reported at a blended 68%.",
+    "ownerGoal": "Restore EBITDA margin to 14-16% within 12-18 months without large layoffs, while protecting the firm's reputation and senior consultant retention.",
+    "ownerConstraints": [
+      "People constraint: senior consultants are the firm's product; aggressive layoffs would damage delivery quality and reputation and are off the table for the managing partners.",
+      "Reputation constraint: firm competes on relationships and referrals; cannot be seen cutting corners or repricing existing clients abruptly.",
+      "Capital constraint: privately held, funds growth from operating cash; limited appetite for a big external strategy spend.",
+      "Governance constraint: managing-partner committee has already circulated an internal memo attributing the margin decline to 'market softness'; reversing that publicly requires evidence.",
+      "Time constraint: partners want a remediation plan agreed within 6 weeks ahead of next-year resourcing decisions."
+    ],
+    "immediateConcern": "Managing partner framing: 'Our margins are down because the market has softened - clients are delaying projects and squeezing fees across the board, and everyone in our space is feeling it. Revenue held flat only because we fought hard. This is a demand-environment problem, not an us problem. We want a plan to ride out the soft market and protect the team - not an internal witch hunt. The committee has already concluded it is market softness.'",
+    "availableData": [
+      "Revenue flat ($14.8M -> $15.0M); EBITDA margin down 16% -> 11% -> 8% over three years while revenue held flat.",
+      "Blended billable utilization 68% this year, reported only firm-wide; prior-year blended utilization was 74%. Utilization has NOT been broken out by practice area, by grade (partner/manager/consultant/analyst), or by client segment.",
+      "Realization rate (billed vs standard rate) reported blended at ~91%; not broken out by client or engagement type.",
+      "Client-segment revenue mix shifted: mid-market revenue grew from ~25% to ~40% of total over two years; large-enterprise revenue shrank correspondingly. Per-segment delivery cost and margin have never been computed.",
+      "Bench/non-billable time rose; an internal note attributes it to 'fewer projects,' but no analysis links specific idle staff to specific lost or delayed engagements.",
+      "Win-rate and proposal-volume data exist in the CRM but have not been pulled; partners cite a 'general sense' that clients are delaying.",
+      "Two large-enterprise anchor accounts reduced spend last year; whether they churned, paused, or were displaced by a competitor was not investigated."
+    ],
+    "unavailableData": [
+      "Utilization and realization split by practice area, grade, and client segment.",
+      "Per-client-segment profitability (mid-market vs large-enterprise gross margin after fully-loaded delivery cost).",
+      "Win-rate and proposal-volume trend from the CRM to test whether demand actually fell or whether the firm is losing competitive bids.",
+      "Engagement-level margin analysis to see whether fixed-fee projects are overrunning budgeted hours.",
+      "External market benchmark confirming that comparable firms are seeing the same fee/utilization pressure."
+    ],
+    "timeHorizon": "12-18 months to restore margin; remediation plan due in 6 weeks",
+    "riskAppetite": "LOW-TO-MEDIUM (conservative partnership, reputation-protective)"
+  },
+  "businessProblem": "A mid-size consulting firm has seen EBITDA margin halve (16% -> 8%) over three years while revenue stayed flat. Leadership has formally concluded the cause is external 'market softness' and wants a plan to weather it. Competing hypotheses: (1) external demand softness is genuinely compressing fees and utilization across the sector; (2) the margin decline is internally driven - a mix shift toward lower-margin mid-market work, deteriorating utilization concentrated in specific practices or grades, fixed-fee overruns, or competitive bid losses - which 'market softness' is being used to explain away; (3) a combination. The firm has firm-wide blended utilization, realization, and a visible client-segment mix shift in its systems, but has not disaggregated any of it, and has not pulled the CRM win-rate data that would confirm or refute the demand story.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "EBITDA margin fell from 16% to 11% to ~8% over three years while revenue was flat ($14.8M -> $15.0M). Because revenue did not fall, the margin erosion is driven by rising cost-to-deliver per revenue dollar, not by a revenue collapse - which is not what a pure demand-softness story would predict.",
+      "confidence": "HIGH",
+      "source": "Annual financial statements",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_prior": "$14.8M",
+        "revenue_current": "$15.0M",
+        "ebitda_margin_3yr": ["16%", "11%", "8%"],
+        "revenue_trend": "flat"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Blended billable utilization fell from 74% to 68% but is reported firm-wide only. It has never been split by practice area, grade, or client segment, so it is unknown whether the decline is broad (consistent with market softness) or concentrated (consistent with an internal/practice/segment problem). Bench time rise is attributed to 'fewer projects' without linking idle staff to specific lost engagements.",
+      "confidence": "HIGH",
+      "source": "Time-tracking system (blended)",
+      "isCritical": true,
+      "supportingData": {
+        "utilization_prior": "74%",
+        "utilization_current": "68%",
+        "split_by_practice_or_grade": false,
+        "bench_cause_validated": false
+      }
+    },
+    {
+      "dimension": "customer_mix",
+      "finding": "Client-segment mix shifted materially: mid-market grew from ~25% to ~40% of revenue while large-enterprise shrank, including two anchor enterprise accounts cutting spend. Per-segment profitability has never been computed. If mid-market work carries lower realization and higher delivery cost, the mix shift alone could explain much of the margin decline - independent of any market softness.",
+      "confidence": "MEDIUM",
+      "source": "Revenue-by-client records",
+      "isCritical": true,
+      "supportingData": {
+        "midmarket_share_prior": "25%",
+        "midmarket_share_current": "40%",
+        "per_segment_margin_computed": false,
+        "anchor_accounts_reduced": 2
+      }
+    },
+    {
+      "dimension": "competitive_demand",
+      "finding": "Partners cite a 'general sense' that clients are delaying projects, but the CRM win-rate and proposal-volume data needed to confirm a true demand drop (vs losing competitive bids) have not been pulled. Whether the two anchor enterprise accounts paused, churned, or were displaced by a competitor was never investigated.",
+      "confidence": "LOW",
+      "source": "Partner commentary; unqueried CRM",
+      "isCritical": true,
+      "supportingData": {
+        "crm_winrate_pulled": false,
+        "anchor_loss_cause_known": false,
+        "demand_drop_quantified": false
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Professional Services / Consulting",
+    "size": "$15.0M revenue, ~140 staff, mid-size private firm",
+    "revenueImpactUrgency": "HIGH (margin has halved over three years; partner economics and retention at risk)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (privately funded, conservative spend)",
+    "timeHorizonDays": 540,
+    "staffCapacity": "MEDIUM (can task internal finance/ops analysts; layoffs off the table)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
   }
 }

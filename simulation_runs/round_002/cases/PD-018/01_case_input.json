@@ -1,10 +1,131 @@
 {
   "caseId": "PD-018",
   "caseType": "PUBLIC_DATASET",
-  "industry": "Regional Utility / Energy",
+  "industry": "Regulated Electric Utility / Energy",
+  "businessModel": "Vertically Integrated Regulated Electric Utility (rate-regulated; revenue set by state Public Utility Commission via periodic rate cases, with allowed return on equity)",
+  "businessStage": "Mature, Capital-Intensive, Earned Return Under Pressure",
+  "sourceNote": "Derived from SEC 10-K and FERC/state-PUC rate-case disclosure patterns for regulated electric utilities, including rate base, allowed vs earned ROE, depreciation, and multi-year capex plans. Financial data reconstructed from audited annual reports, rate-case filings, and investor presentations for an investor-owned regional utility. All evidence from publicly available regulatory and securities disclosures. No proprietary internal data. No answer-key content included.",
   "ownerIntake": {
-    "businessType": "Regional utility company, $3B revenue, regulated rate environment, EBITDA stable but capex needs high",
-    "stage": "Rate growth limited by regulatory environment (avg 2-3% annually), capex inflation rising, ROE pressure",
-    "ownerGoal": "Navigate regulatory and capital constraints"
+    "businessType": "Investor-owned regional electric utility (regulated). ~$3B annual revenue, ~1.6M retail customers across a multi-county service territory. Vertically integrated: generation, transmission, and distribution. Revenue is set by the state Public Utility Commission (PUC) through periodic rate cases that establish an allowed rate of return on a regulatory-approved rate base. Public company (NYSE-listed parent). ~4,800 employees.",
+    "stage": "FY2025: Revenue $3,000M (up 2.4% from $2,930M FY2024, within PUC-allowed 2-3% rate growth band). Rate base $9,000M FY2025, planned to grow to ~$10,200M (+13%) over the multi-year capital plan horizon. Allowed ROE 9.8% (set in last rate case); earned/realized ROE 8.2% FY2025, down from 9.5% FY2023 (~160 bps of under-earning vs allowed). Annual capex $1,100M vs depreciation ~$650M (capex/depreciation 1.69x). EBITDA stable. Equity ~50% of rate base (~$4,500M). Investment-grade credit rating, but rating agencies flagging persistent under-earning.",
+    "ownerGoal": "Close the gap between earned ROE (8.2%) and allowed ROE (9.8%) and restore the realized return toward the allowed level, while continuing to fund the mandated capital plan (grid hardening, reliability, decarbonization). Sustain the investment-grade credit rating and maintain constructive regulatory and political relationships. Decide, before the next rate-case filing window, how to structure the next filing to stop locking in multi-year under-earning.",
+    "ownerConstraints": [
+      "Pricing constraint: Rates are set by the state PUC, not by management. The utility cannot self-price or unilaterally raise customer rates; any rate change requires a formal rate-case proceeding and Commission approval.",
+      "Return constraint: The allowed ROE (9.8%) is fixed until the next rate case is decided; the utility earns the realized return its rates and costs produce, not the allowed return, and cannot administratively true itself up between cases.",
+      "Capital mandate constraint: The capital plan ($1,100M/yr — grid hardening, reliability, safety, decarbonization) is largely mandated by reliability standards, safety obligations, and state decarbonization policy; it cannot simply be cut to protect short-term ROE.",
+      "Regulatory lag constraint: Rate cases are filed roughly every ~3 years using a historical test year; current rates reflect a test year ~24 months old, so approved revenue chronically trails the actual cost of capital deployed.",
+      "Political / affordability constraint: Rate increases face political and consumer-advocate scrutiny on customer affordability; large or frequent rate hikes risk regulatory and political backlash, intervenor opposition, and disallowances.",
+      "Compliance constraint: As a regulated entity, the utility must operate within Commission rules, FERC/NERC reliability standards, and state safety codes; recovery mechanisms must be regulator-approved."
+    ],
+    "immediateConcern": "Realized ROE has fallen ~130 bps over two years (9.5% FY2023 to 8.2% FY2025) and now sits ~160 bps below the 9.8% allowed ROE, while the company is deploying $1,100M/yr of capital against only ~$650M of depreciation. Approved revenue is growing 2.4%/yr while the cost of the capital being added is inflating ~9%/yr. Because rates are set on a stale (~24-month-old) test year and only reset every ~3 years, the company is structurally under-recovering its cost of capital between cases. Management must decide before the next rate-case filing window (~120-180 days) whether to file for a forward test year and/or capital cost-recovery trackers/riders; missing the window risks locking in roughly another 3-year cycle of under-earning.",
+    "availableData": [
+      "Revenue: FY2025 $3,000M, FY2024 $2,930M (+2.4% YoY), with allowed rate growth band of 2-3%/yr (10-K, PUC rate orders)",
+      "Rate base: FY2025 $9,000M, planned ~$10,200M over the capital plan horizon (+13%) (rate-case filings, investor presentations)",
+      "Allowed ROE: 9.8% authorized in the most recent rate case (PUC rate order)",
+      "Earned / realized ROE: 8.2% FY2025, 8.9% FY2024, 9.5% FY2023 (10-K, regulatory earnings monitoring reports)",
+      "Capital expenditure: $1,100M FY2025 (grid hardening, reliability, decarbonization); capex unit-cost inflation +9% YoY (10-K, capital plan disclosures, supplier cost indices)",
+      "Depreciation: ~$650M FY2025 (10-K); capex/depreciation 1.69x",
+      "Capital structure: equity ~50% of rate base (~$4,500M), investment-grade rating (10-K, rating agency reports)"
+    ],
+    "unavailableData": [
+      "The PUC's internal disposition / likelihood of approving a forward test year or specific tracker mechanisms in the next case (not disclosable pre-filing)",
+      "Detailed cost-of-service study allocations by customer class beyond the last filed case (proprietary / not yet filed)",
+      "Confidential settlement positions of intervenors and consumer advocates for the upcoming case",
+      "Forward interest-rate path and its effect on the next authorized cost of capital (market-dependent, not disclosed)",
+      "Project-by-project deferral flexibility within the mandated capital plan (internal engineering assessments not public)"
+    ],
+    "timeHorizon": "120-180 days to the next rate-case filing window decision; multi-year (~3-year) regulatory cycle for the resulting rate outcome",
+    "riskAppetite": "LOW-MEDIUM (regulated entity must protect reliability/safety compliance and credit rating; constrained by regulatory process and affordability politics; cannot pursue aggressive unilateral pricing)"
+  },
+  "businessProblem": "A regional regulated electric utility with stable ~$3B revenue and stable EBITDA is steadily under-earning its allowed return. Its earned ROE has fallen from 9.5% (FY2023) to 8.2% (FY2025), now ~160 bps below the 9.8% ROE authorized in its last rate case. The structural driver is a mismatch between the regulated pricing mechanism and the capital cost trajectory: approved revenue is permitted to grow only ~2.4%/yr (within a 2-3% band), while the company must deploy $1,100M/yr of largely mandated capital (grid hardening, reliability, decarbonization) against only ~$650M of depreciation (capex/depreciation 1.69x), and the unit cost of that capital is inflating ~9%/yr. Because rates are set via a historical test year and reset only every ~3 years, current rates reflect a cost picture ~24 months stale, so the utility chronically under-recovers the cost of capital it has already put into service (regulatory lag / under-recovery). O&M is run lean and is roughly flat, so the gap is not operating-cost bloat or a demand problem. The core question: is the realized-return erosion an operations/cost issue, a demand issue, or a structural mismatch between the regulator-approved rate mechanism and the inflating capital plan — and what should management do before the next rate-case filing window (~120-180 days) to stop locking in another multi-year cycle of under-earning?",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Earned/realized ROE declined from 9.5% (FY2023) to 8.9% (FY2024) to 8.2% (FY2025), now ~160 bps below the 9.8% allowed ROE authorized in the last rate case. With equity at ~50% of the $9,000M rate base (~$4,500M), a 160 bps under-earning implies an annual earnings shortfall of roughly 1.6% x $4,500M ≈ $72M relative to the authorized return. EBITDA is stable; the erosion is in realized return on deployed capital, not in revenue or operating profit volatility.",
+      "confidence": "HIGH",
+      "source": "SEC EDGAR 10-K (FY2023-FY2025), PUC rate orders, regulatory earnings monitoring reports",
+      "isCritical": true,
+      "supportingData": {
+        "allowed_roe": "9.8%",
+        "earned_roe_fy2025": "8.2%",
+        "earned_roe_fy2024": "8.9%",
+        "earned_roe_fy2023": "9.5%",
+        "roe_gap_bps": 160,
+        "rate_base_usd_m": 9000,
+        "equity_ratio": "50%",
+        "equity_usd_m": 4500,
+        "earnings_shortfall_usd_m": 72
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Approved/realized revenue grew 2.4% YoY (FY2024 $2,930M to FY2025 $3,000M), within the PUC-allowed 2-3% band, while the unit cost of the capital program inflated ~9% YoY. This is a ~660 bps gap between the rate at which approved revenue can grow and the rate at which the cost of the capital being added is rising — the regulated price mechanism is growing far slower than the cost it is meant to recover on incremental capital.",
+      "confidence": "HIGH",
+      "source": "SEC EDGAR 10-K, PUC rate orders, capital plan disclosures, supplier/EPC cost indices",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_fy2025_usd_m": 3000,
+        "revenue_fy2024_usd_m": 2930,
+        "revenue_growth_pct": 2.4,
+        "allowed_rate_growth_band": "2-3%",
+        "capex_inflation_pct": 9.0,
+        "price_vs_cost_gap_bps": 660
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Annual capex is $1,100M against depreciation of ~$650M, a capex/depreciation ratio of 1.69x, so the rate base is expanding far faster than recovery through current rates. The capital plan is driven by grid hardening, reliability, and decarbonization mandates and grows the rate base from $9,000M to ~$10,200M (+13%) over the plan horizon. Meanwhile O&M is run lean and is roughly flat, so the under-earning is a capital-recovery problem, not an operating-expense problem.",
+      "confidence": "HIGH",
+      "source": "SEC EDGAR 10-K, capital plan / rate-case filings, investor presentations",
+      "isCritical": true,
+      "supportingData": {
+        "capex_usd_m": 1100,
+        "depreciation_usd_m": 650,
+        "capex_to_depreciation_x": 1.69,
+        "rate_base_current_usd_m": 9000,
+        "rate_base_planned_usd_m": 10200,
+        "rate_base_growth_pct": 13,
+        "om_trend": "roughly flat / lean"
+      }
+    },
+    {
+      "dimension": "regulatory_environment",
+      "finding": "Rates are reset only every ~3 years and are based on a historical test year; current rates reflect a test year that is ~24 months old by the time they take effect. As a result, by the time rates are in effect they already understate the cost of capital deployed since the test year, producing chronic regulatory lag and under-recovery between cases. The next rate-case filing window opens in ~120-180 days; the choice of test-year convention (historical vs forward) and recovery mechanisms (trackers/riders) in that filing largely determines the realized return for the next ~3-year cycle.",
+      "confidence": "HIGH",
+      "source": "PUC rate orders, rate-case procedural schedules, 10-K regulatory discussion",
+      "isCritical": true,
+      "supportingData": {
+        "rate_case_cycle_years": 3,
+        "test_year_type": "historical",
+        "test_year_staleness_months": 24,
+        "filing_window_days": "120-180",
+        "current_mechanism": "historical test year, no broad capital tracker"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Retail demand and customer count are stable (~1.6M customers); load growth is modest and broadly in line with the 2-3% allowed revenue band. There is no evidence of a demand collapse or volume-driven revenue loss — sales volumes are steady. This rules out a demand/forecasting explanation for the return erosion and isolates the driver to the rate-versus-capital-cost mechanism.",
+      "confidence": "MEDIUM",
+      "source": "SEC EDGAR 10-K (load and customer data), PUC sales/volume reports",
+      "isCritical": false,
+      "supportingData": {
+        "retail_customers_m": 1.6,
+        "load_growth": "modest, in line with allowed revenue band",
+        "demand_trend": "stable",
+        "volume_driven_revenue_loss": "none observed"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Regulated Electric Utility / Energy",
+    "size": "large regulated utility (public-company subsidiary, ~$3B revenue, ~1.6M customers, ~4,800 employees, $9,000M rate base)",
+    "revenueImpactUrgency": "HIGH (persistent ~160 bps under-earning, ~$72M/yr earnings shortfall vs allowed, with a ~120-180 day filing window before the next ~3-year cycle locks in)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH (large regulated utility with capital-market access, but all rate/recovery changes gated by the PUC and major spending governed by the approved capital plan)",
+    "timeHorizonDays": 180,
+    "staffCapacity": "HIGH (~4,800 employees with regulatory, rates, and finance functions; but rate-case strategy requires regulatory/legal coordination and Commission process)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

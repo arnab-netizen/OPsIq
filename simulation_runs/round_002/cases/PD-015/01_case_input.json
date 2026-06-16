@@ -1,10 +1,119 @@
 {
   "caseId": "PD-015",
   "caseType": "PUBLIC_DATASET",
-  "industry": "Restaurant Chain / QSR",
+  "industry": "Restaurant / Quick-Service Restaurant (QSR)",
+  "businessModel": "Multi-unit company-operated quick-service restaurant chain (four-wall unit economics)",
+  "businessStage": "Mature, Scaled Operator with Unit-Level Margin Compression",
+  "sourceNote": "Derived from SEC 10-K and restaurant-franchise disclosure patterns for mid-cap QSR operators, including four-wall/AUV unit-economics reporting. Financial data reconstructed from average-unit-volume (AUV), restaurant-level operating margin, same-store-sales (SSS), and cost-line disclosures typical of public QSR annual reports and investor presentations. All figures illustrative and consistent with public-company QSR reporting conventions. No proprietary internal data. No answer-key content included.",
   "ownerIntake": {
-    "businessType": "Multi-unit QSR chain, 200+ locations, $850M revenue, same-store sales flat",
-    "stage": "Labor costs +10%, food costs +8%, pricing limited by competition. Unit-level profitability declining.",
-    "ownerGoal": "Stabilize unit economics and profitability"
+    "businessType": "Mid-cap quick-service restaurant operator. 200+ company-operated units across multiple regions. Limited-service format (counter/drive-thru), value-oriented menu positioning. System revenue ~$850M FY2025. Revenue model: company-operated restaurant sales (no material franchise royalty stream at this stage). Workforce predominantly hourly crew plus salaried general managers.",
+    "stage": "FY2025: System revenue $850M across 200 company-operated units (average unit volume / AUV ~$4.25M per restaurant). Average per-restaurant annual P&L: Sales $4.25M; Food & paper (COGS) 30.0% = $1.275M (up from 28.0% prior year); Labor 32.0% = $1.36M (up from 30.0% prior year); Occupancy 9.0% = $382.5k; Other operating expense 14.0% = $595k. Restaurant-level EBITDA margin 15.0% = $637.5k per unit (down from 19.0% / ~$807.5k prior year), a 400 bps decline. Same-store sales 0% YoY (menu price +2% offset by traffic -2%).",
+    "ownerGoal": "Restore restaurant-level (four-wall) EBITDA margin toward the prior ~19% range without sacrificing traffic, value positioning, or service speed/quality. CEO must decide before the next franchise/lender review (~60-90 days) whether to re-engineer the unit model, take additional price, or slow new-unit growth. A lender covenant is tied to restaurant-level margin.",
+    "ownerConstraints": [
+      "Competitive pricing cap: Menu pricing power is limited by aggressive value competition; broad price increases beyond ~2% risk traffic loss and have historically been offset roughly 1:1 by traffic decline.",
+      "Franchise / brand standards constraint: Menu, portion, packaging, and operating procedures are governed by brand standards; unit-level changes cannot violate brand consistency or quality specifications.",
+      "Minimum wage law constraint: A meaningful share of crew labor is at or near statutory minimum wage in multiple jurisdictions; wage floors are rising and cannot be reduced below legal minimums.",
+      "Value-menu commitments: Public value-menu / promotional price commitments restrict the ability to re-price entry-level items in the near term.",
+      "Speed and quality constraint: Cannot degrade drive-thru/service speed or food quality; throughput and quality are core to traffic and same-store sales, so labor cuts that slow service are off-limits.",
+      "Covenant constraint: Lender covenant tied to restaurant-level margin limits actions that would further depress near-term four-wall profitability."
+    ],
+    "immediateConcern": "Unit-level profitability is declining even though system revenue is stable. Same-store sales are flat (0%) while food costs rose ~8% and labor costs rose ~10%, compressing restaurant-level EBITDA margin from 19% to 15%. The operator cannot price its way out (competition caps menu increases at ~2%, and that increase was already offset by a 2% traffic decline). The CEO must determine whether the margin erosion is a pricing-structure problem, a demand/traffic problem, or a fundamental four-wall unit-economics problem, ahead of a covenant-relevant lender/franchise review in the next 60-90 days.",
+    "availableData": [
+      "Average unit volume (AUV): ~$4.25M per restaurant; system revenue $850M across 200 units (10-K / investor presentation patterns)",
+      "Food & paper (COGS) as % of sales: 30.0% FY2025 vs 28.0% prior year (restaurant-level P&L disclosure)",
+      "Labor as % of sales: 32.0% FY2025 vs 30.0% prior year (restaurant-level P&L disclosure)",
+      "Occupancy as % of sales: 9.0%; Other operating expense as % of sales: 14.0% (restaurant-level P&L disclosure)",
+      "Same-store sales (SSS): 0% YoY; menu price +2% offset by traffic -2% (segment / SSS bridge disclosure)",
+      "Restaurant-level EBITDA margin: 15.0% FY2025 vs 19.0% prior year (400 bps decline) (non-GAAP restaurant-level margin disclosure)",
+      "Input inflation: food cost inflation +8% YoY; labor wage inflation +10% YoY (minimum-wage increases plus scheduling/overtime)"
+    ],
+    "unavailableData": [
+      "Theoretical (ideal) vs actual food cost by unit (waste, over-portioning, yield loss not disclosed in public filings)",
+      "Unit-level labor deployment / scheduling efficiency (labor hours vs transactions by daypart, not publicly disclosed)",
+      "Item-level menu margin and menu-mix contribution (menu engineering data is proprietary)",
+      "Unit-by-unit dispersion of the 200 restaurants (range/quartiles of margin by unit not disclosed)",
+      "Daypart-level transaction counts and ticket detail (proprietary point-of-sale data)"
+    ],
+    "timeHorizon": "60-90 days (CEO decision required ahead of next franchise/lender review; covenant tied to restaurant-level margin)",
+    "riskAppetite": "MEDIUM (covenant-sensitive; must protect traffic, value positioning, and service standards while restoring four-wall margin)"
+  },
+  "clientContext": {
+    "industry": "Restaurant / QSR (multi-unit, company-operated)",
+    "size": "mid-cap (200+ units, ~$850M system revenue, AUV ~$4.25M)",
+    "revenueImpactUrgency": "HIGH (restaurant-level margin compression threatens lender covenant and franchise/lender review in 60-90 days)"
+  },
+  "businessProblem": "A 200+ unit company-operated QSR chain with ~$850M of system revenue (AUV ~$4.25M) is experiencing declining unit-level profitability despite stable system revenue. Same-store sales are flat (0% YoY): the operator took +2% of menu price, but it was fully offset by a -2% traffic decline, so there is no top-line offset to absorb cost inflation. Meanwhile food & paper (COGS) cost inflation ran +8% and labor cost inflation ran +10% (rising minimum wages plus scheduling/overtime pressure). As a result, food & paper rose from 28.0% to 30.0% of sales and labor rose from 30.0% to 32.0% of sales, while occupancy (9%) and other opex (14%) held. Restaurant-level EBITDA margin therefore fell from 19.0% to 15.0%, a 400 bps decline (~$170k of EBITDA per unit, ~$34M across the system). The core challenge: Is this a pricing-structure error (the menu is mispriced), a demand-forecasting/traffic problem (the chain mis-read demand), or a four-wall unit-economics breakdown (the per-unit cost of output has outrun sustainable contribution)? Pricing power is capped by competition and value-menu commitments; cutting labor risks slowing service and further eroding traffic and SSS. The CEO must decide—before a covenant-relevant lender/franchise review in 60-90 days—whether to re-engineer the unit model, take additional price, or slow new-unit growth.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Restaurant-level EBITDA margin declined from 19.0% (prior year) to 15.0% (FY2025), a 400 basis point compression, on flat same-store sales (0% YoY). At an AUV of $4.25M, this is a ~$170k per-unit decline in restaurant-level EBITDA (from ~$807.5k to $637.5k), or roughly $34M across the 200-unit system. Because same-store sales are flat, the entire 400 bps of margin decline is attributable to cost-line deterioration, not volume.",
+      "confidence": "HIGH",
+      "source": "SEC EDGAR 10-K restaurant-level (non-GAAP) margin disclosure and investor-presentation AUV reporting (QSR pattern)",
+      "isCritical": true,
+      "supportingData": {
+        "restaurant_level_margin_prior": "19.0%",
+        "restaurant_level_margin_fy2025": "15.0%",
+        "margin_decline_bps": 400,
+        "auv_usd": "$4.25M",
+        "per_unit_ebitda_prior": "~$807.5k",
+        "per_unit_ebitda_fy2025": "$637.5k",
+        "per_unit_ebitda_drop": "~$170k",
+        "system_ebitda_drop": "~$34M",
+        "same_store_sales": "0%"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Food & paper (COGS) rose from 28.0% to 30.0% of sales (+200 bps) and labor rose from 30.0% to 32.0% of sales (+200 bps). Combined, the two cost lines account for +400 bps of margin drag—exactly the observed restaurant-level margin decline—because same-store sales are flat and occupancy (9%) and other opex (14%) held constant. The drivers are food cost inflation of ~+8% and labor wage inflation of ~+10% (minimum-wage increases plus scheduling/overtime).",
+      "confidence": "HIGH",
+      "source": "SEC EDGAR 10-K restaurant-level P&L cost-line disclosure and commodity/wage cost commentary (QSR pattern)",
+      "isCritical": true,
+      "supportingData": {
+        "cogs_pct_prior": "28.0%",
+        "cogs_pct_fy2025": "30.0%",
+        "cogs_drag_bps": 200,
+        "labor_pct_prior": "30.0%",
+        "labor_pct_fy2025": "32.0%",
+        "labor_drag_bps": 200,
+        "occupancy_pct": "9.0%",
+        "other_opex_pct": "14.0%",
+        "food_inflation": "+8%",
+        "labor_inflation": "+10%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The operator took +2% of menu price in FY2025, but same-store sales were flat (0%) because a -2% traffic decline fully offset the price increase. Pricing power is capped by aggressive value competition and existing value-menu commitments, so additional broad price increases risk further traffic loss rather than incremental margin. There is therefore no realistic top-line lever to absorb the +8% food and +10% labor inflation in the near term.",
+      "confidence": "MEDIUM",
+      "source": "Investor-presentation SSS bridge (price vs traffic) and competitive value-menu commentary (QSR pattern)",
+      "isCritical": true,
+      "supportingData": {
+        "menu_price_taken": "+2%",
+        "traffic_change": "-2%",
+        "net_sss": "0%",
+        "pricing_cap_reason": "competitive value pricing + value-menu commitments",
+        "additional_price_risk": "further traffic loss"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Because the food and labor cost lines are reported only in aggregate (% of sales) and not split into theoretical-vs-actual food cost (waste/over-portioning) or labor-deployment efficiency, it is not yet possible to attribute the +200 bps food drag and +200 bps labor drag between pure input inflation and controllable unit-level inefficiency. Unit-by-unit dispersion across the 200 restaurants is also undisclosed, so a representative-sample four-wall diagnostic is required before any system-wide remedy.",
+      "confidence": "MEDIUM",
+      "source": "Gap between public aggregate cost-line disclosure and unit-level operational detail (QSR pattern)",
+      "isCritical": false,
+      "supportingData": {
+        "food_drag_bps": 200,
+        "labor_drag_bps": 200,
+        "missing_split": "theoretical vs actual food cost; labor hours vs transactions",
+        "unit_dispersion": "undisclosed"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (covenant-sensitive operator; can fund a representative-sample four-wall diagnostic but not large uncontrolled spend during a covenant-relevant review window)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (200-unit operations team with regional and unit-level managers; central operations/finance can support a sample diagnostic without disrupting service)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

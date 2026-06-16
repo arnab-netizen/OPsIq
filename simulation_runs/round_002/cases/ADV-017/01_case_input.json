@@ -1,10 +1,103 @@
 {
   "caseId": "ADV-017",
   "caseType": "ADVERSARIAL",
-  "industry": "SaaS",
+  "industry": "B2B SaaS (Horizontal Productivity Platform)",
+  "businessModel": "Self-serve + sales-assisted subscription SaaS",
+  "businessStage": "Series A, scaling toward Series B",
+  "sourceNote": "Adversarial case designed to test diagnostic rigor under a persuasive owner narrative. A celebrated growth rate sits alongside a support-cost line that is growing faster than revenue. The case tests whether the engine accepts 'cost of scaling' at face value or interrogates whether operating leverage is failing and why. No diagnosis or label is embedded in the inputs.",
   "ownerIntake": {
-    "businessType": "SaaS platform, $6M ARR, 40% growth, but customer support costs rising 60% YoY",
-    "stage": "Trap: Scaling success narrative ('we're growing 40%!') masks inefficiency (support costs rising 60% = support cost per customer rising). Leadership celebrating growth without recognizing operational leverage gap.",
-    "ownerGoal": "Must diagnose: is support cost rise temporary (new feature adoption) or structural (product-market fit issue)?"
+    "businessType": "B2B SaaS company offering a horizontal productivity/collaboration platform to SMB and lower-mid-market teams. ~70 employees. Mix of self-serve signups and sales-assisted deals. Founded 2020.",
+    "stage": "$6.0M ARR, 40% YoY growth (from $4.3M). Gross margin reported 76%. Support/customer-success cost grew ~60% YoY while ARR grew 40%, so support cost per customer and support cost as a % of revenue both rose. Support headcount up from 8 to 13. Ticket volume per customer rose.",
+    "ownerGoal": "Sustain 40%+ growth and reach Series B metrics within 12-15 months while keeping the gross-margin story intact for investors.",
+    "ownerConstraints": [
+      "Margin constraint: investors expect SaaS gross margin to expand with scale; a rising support cost ratio undermines the operating-leverage narrative.",
+      "Hiring constraint: support hiring is reactive to ticket backlog; leadership wants to avoid an ever-growing support team eating margin.",
+      "Product constraint: the engineering roadmap is committed to new-feature growth; reallocating to usability/quality fixes would slow the feature roadmap.",
+      "Data constraint: support costs and tickets are tracked, but tickets have NOT been categorized by root cause (bug/defect, usability/confusion, onboarding, feature request) or by customer cohort/segment.",
+      "Time constraint: leadership wants a decision on whether to keep hiring support or change course within 4-6 weeks."
+    ],
+    "immediateConcern": "Founder framing: 'We are growing 40% and customers love us. Support costs are up, sure, but that is just the cost of scaling - more customers means more tickets, it is normal. We will keep hiring support to keep response times down and protect satisfaction. Our gross margin is still 76%, so the model works. I do not see a problem here beyond staffing the queue.'",
+    "availableData": [
+      "ARR $4.3M -> $6.0M (40% growth); gross margin reported 76%; support headcount 8 -> 13.",
+      "Support/CS cost grew ~60% YoY vs 40% ARR growth, so support cost per customer rose ~14% and support % of revenue rose - operating leverage is going the wrong way.",
+      "Tickets per customer per month rose from ~1.6 to ~2.4 over the year; not just more customers, but more tickets each.",
+      "First-response and resolution times held roughly steady only because headcount was added - i.e. the team is running to stay in place.",
+      "Tickets are NOT categorized by root cause; an informal read by the support lead suggests a large and growing share relate to confusion around two features shipped in the last year, plus onboarding questions.",
+      "Net revenue retention slipped from 108% to 101% over the same period; churn/contraction reasons not coded.",
+      "A wave of new customers onboarded in the last two quarters after a self-serve funnel change; their ticket rate vs older cohorts not measured."
+    ],
+    "unavailableData": [
+      "Ticket categorization by root cause (defect vs usability/confusion vs onboarding vs feature request).",
+      "Ticket rate and support cost split by customer cohort and segment (new self-serve vs established).",
+      "Whether the NRR slip and the ticket-rate rise share a common cause (product friction driving both tickets and contraction).",
+      "True fully-loaded gross margin including all CS cost (is the reported 76% allocating support correctly?).",
+      "Product-usage/feature-adoption data for the two recently shipped features implicated in confusion."
+    ],
+    "timeHorizon": "12-15 months to Series B metrics; decision on support strategy in 4-6 weeks",
+    "riskAppetite": "MEDIUM (growth-focused but margin-sensitive for the raise)"
+  },
+  "businessProblem": "A Series A SaaS company growing ARR 40% has support costs growing 60%, so support cost per customer and as a % of revenue are rising - operating leverage is inverting. Leadership treats this as the normal cost of scaling and plans to keep hiring support. Competing hypotheses: (1) it is benign scaling and adding support headcount is the right response; (2) tickets-per-customer is rising (1.6 -> 2.4), NRR slipped (108% -> 101%), and a growing share of tickets reportedly relate to confusion around two recently shipped features and onboarding - pointing to a product-friction / fit problem where adding support treats the symptom while the root cause (usability/defects/onboarding) drives both rising tickets and contraction; (3) a transient onboarding spike from a recent self-serve funnel change that will subside. Tickets have not been categorized by root cause or cohort, so the driver is not yet established.",
+  "evidence": [
+    {
+      "dimension": "operating_leverage",
+      "finding": "Support cost grew ~60% while ARR grew 40%, so support cost per customer rose and support as a % of revenue rose. In healthy SaaS scaling, support cost per customer should be flat-to-declining as the product matures; here it is rising, indicating leverage is failing rather than 'normal scaling.'",
+      "confidence": "HIGH",
+      "source": "Financials and support cost ledger",
+      "isCritical": true,
+      "supportingData": {
+        "arr_growth": "40%",
+        "support_cost_growth": "60%",
+        "support_cost_per_customer_trend": "rising",
+        "support_headcount": "8 -> 13"
+      }
+    },
+    {
+      "dimension": "demand_on_support",
+      "finding": "Tickets per customer per month rose from ~1.6 to ~2.4 - existing customers are generating more tickets each, not merely more customers generating proportionally more tickets. Response times held steady only because headcount was added, so the team is running to stand still. An informal read attributes a growing share to confusion around two recently shipped features plus onboarding.",
+      "confidence": "MEDIUM",
+      "source": "Support ticketing system + support-lead commentary",
+      "isCritical": true,
+      "supportingData": {
+        "tickets_per_customer_prior": "1.6",
+        "tickets_per_customer_current": "2.4",
+        "categorized_by_root_cause": false,
+        "informal_attribution": "two new features + onboarding"
+      }
+    },
+    {
+      "dimension": "retention_signal",
+      "finding": "Net revenue retention slipped from 108% to 101% over the same window in which tickets-per-customer rose. Rising friction often shows up as BOTH more tickets and more contraction/churn; the two trends may share a common product-friction root cause. Contraction reasons are not coded, so the link is unconfirmed.",
+      "confidence": "MEDIUM",
+      "source": "Subscription analytics",
+      "isCritical": true,
+      "supportingData": {
+        "nrr_prior": "108%",
+        "nrr_current": "101%",
+        "contraction_reasons_coded": false
+      }
+    },
+    {
+      "dimension": "cohort_effect",
+      "finding": "A wave of new customers onboarded in the last two quarters after a self-serve funnel change. Their ticket rate vs older cohorts has not been measured. If the elevated tickets are concentrated in this new cohort, part of the spike could be transient onboarding load; if spread across cohorts, it points to a structural product-friction problem.",
+      "confidence": "MEDIUM",
+      "source": "Onboarding records",
+      "isCritical": true,
+      "supportingData": {
+        "funnel_change": true,
+        "new_cohort_ticket_rate_measured": false
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "B2B SaaS (horizontal productivity)",
+    "size": "$6.0M ARR, ~70 employees, Series A",
+    "revenueImpactUrgency": "MEDIUM-HIGH (inverting operating leverage and slipping NRR threaten the Series B margin story)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (venture-backed, margin-sensitive)",
+    "timeHorizonDays": 420,
+    "staffCapacity": "MEDIUM (support and product analysts available; ticket tagging not yet built)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
   }
 }

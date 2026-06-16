@@ -2,9 +2,147 @@
   "caseId": "BLND-008",
   "caseType": "BLIND_OUTCOME",
   "industry": "SaaS / Vertical Software",
+  "businessModel": "Vertical SaaS providing practice-management, scheduling, and patient-communication software to dental practices on annual and multi-year subscriptions; net-revenue-retention-driven recurring model",
+  "businessStage": "Venture-backed growth stage, Series A company, founder-CEO with meaningful equity, single inbound acquisition offer on the table",
+  "sourceNote": "Blind-outcome case designed to test forward-looking strategic decision quality at a capital-event fork. The company must respond to an M&A offer while weighing two alternative paths. Scoring assesses whether the engine's reasoning is sound given only what is knowable at decision time; the actual outcome (which path was chosen and how it resolved) is withheld from this input and recorded only in the answer key for reference. Figures are realistic and representative.",
   "ownerIntake": {
-    "businessType": "Vertical SaaS for dental practices, $12M ARR, 35% growth, facing M&A offer from larger platform",
-    "stage": "Choice: (A) accept M&A offer (certain outcome, capital event, limited upside), (B) continue independent (uncertain outcome, potential larger payout if reach $100M+ ARR), (C) pursue acquisition of complementary SaaS (organic growth, integration risk)",
-    "ownerGoal": "Decide M&A / growth strategy; outcome determines founder returns and company trajectory"
+    "businessType": "Vertical SaaS for dental practices, founded 2018. ~1,900 paying practice locations, average ~$525/month per location. Core product: practice management + scheduling + patient communications; adjacent modules (payments, recall/reactivation) at early attach. Founder-CEO holds ~38% equity; Series A investors hold ~45%; ESOP/team ~17%.",
+    "stage": "ARR $12M, growing ~35% YoY (was ~50% two years ago). Gross margin 79%. Net revenue retention 112%. Logo churn ~9% annual. Roughly cash-flow breakeven (slightly EBITDA-positive in recent quarters). $4M cash on balance sheet. Headcount 78.",
+    "ownerGoal": "Maximize risk-adjusted value for the founder, employees, and Series A investors over a 3-5 year horizon, and decide how to respond to an inbound acquisition offer from a larger dental-industry platform within the offer's exclusivity window.",
+    "ownerConstraints": [
+      "Offer-window constraint: The inbound offer carries a ~45-day exclusivity/decision window; a definitive yes/no on entering exclusivity is required soon, and prolonged independent due diligence is limited.",
+      "Investor-alignment constraint: Series A investors (45%) have a liquidation preference and a target return multiple; their preference may diverge from the founder's on timing and price floor.",
+      "Capital constraint: $4M cash and ~breakeven operations mean the 'acquire a complementary SaaS' path cannot be funded from cash alone; it would require a new raise or seller financing.",
+      "Concentration/market constraint: ~1,900 of an estimated ~180,000 addressable practice locations; growth depends on out-competing 2-3 entrenched incumbents and the acquirer is one of the largest channels in the category.",
+      "Key-person constraint: Founder-CEO and two early engineers hold most product and integration knowledge; retention/earn-out terms would materially affect both an M&A outcome and any organic-scale plan."
+    ],
+    "immediateConcern": "A larger dental-industry software platform has made an unsolicited acquisition offer. Management must decide within the exclusivity window whether to (A) pursue the M&A, (B) decline and continue independently toward a larger future outcome, or (C) decline and instead acquire a complementary SaaS to broaden the product and accelerate organic growth. The offer's headline value, structure (cash vs stock vs earn-out), and the company's true standalone trajectory are only partially characterized, and the board and investors are not yet aligned on a price floor or the standalone plan.",
+    "availableData": [
+      "ARR $12M; YoY growth ~35% (down from ~50% two years ago); gross margin 79%; NRR 112%; logo churn ~9%/yr; ~cash-flow breakeven; $4M cash",
+      "Inbound offer headline: roughly $80-95M enterprise value indicated verbally, structure not finalized (mix of cash, acquirer stock, and a 2-year earn-out tied to retention/cross-sell targets)",
+      "Unit economics: blended CAC payback ~16 months; gross-margin LTV/CAC ~3.4x; expansion revenue from adjacent modules growing but <15% of ARR today",
+      "Market: ~180,000 addressable locations; 2-3 entrenched incumbents with larger installed bases; the acquirer controls a large distribution channel into the same buyer",
+      "Comparable transactions: recent vertical-SaaS deals in adjacent healthcare niches priced at ~6-9x ARR for sub-scale assets and ~10-14x for assets above ~$30M ARR with >120% NRR",
+      "Complementary-SaaS target (Option C): an identified ~$3M ARR insurance-claims/billing add-on, asking ~$14-18M, with overlapping customers but a different tech stack and ~25-person team"
+    ],
+    "unavailableData": [
+      "Final, signed offer structure: precise cash/stock/earn-out split, earn-out achievability, escrow, indemnities, and the acquirer's stock liquidity/valuation basis",
+      "Verified standalone forecast: durable independent growth rate, the realistic probability of reaching $30M+ ARR (the tier where premium multiples appear), and the capital required to get there",
+      "Diligence-grade churn and NRR cohorts: whether 112% NRR is durable across cohorts or concentrated in a few large accounts, and true post-onboarding logo churn",
+      "Integration economics of the Option C target: real revenue/cost synergies, churn of its base post-acquisition, and the financing terms actually obtainable",
+      "Investor and key-employee reservation values: the price/structure below which Series A would block, and the retention terms that would keep the founder and key engineers committed"
+    ],
+    "timeHorizon": "~45 days to decide whether to enter exclusivity on the offer; 3-5 years for the standalone or acquisition paths to resolve",
+    "riskAppetite": "MEDIUM (founder open to a strong exit but also to building; investors want a defensible return and dislike binary all-or-nothing bets without analysis)"
+  },
+  "businessProblem": "A $12M ARR vertical SaaS for dental practices, growing ~35% with 112% NRR and roughly breakeven, has received an unsolicited acquisition offer from a larger industry platform at a verbally indicated ~$80-95M with an unfinalized cash/stock/earn-out structure. Within a ~45-day exclusivity window the company must choose among three paths: (A) pursue the M&A (a near-term capital event with capped, structure-dependent upside and earn-out/stock risk), (B) decline and continue independently (uncertain, potentially larger payout only if it durably scales toward $30M+ ARR where premium multiples appear, but requiring capital and execution against entrenched incumbents), or (C) decline and acquire a complementary ~$3M ARR add-on to broaden the product and accelerate organic growth (needing new financing and carrying integration risk). The decision is partly irreversible (entering exclusivity and signing terms; or passing on a willing strategic buyer) and the offer structure, the verified standalone trajectory, and investor/key-person reservation values are not yet known.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "The standalone business is healthy but sub-scale for premium M&A multiples. ARR $12M at ~35% growth, 79% gross margin, 112% NRR, and roughly breakeven with $4M cash is a fundamentally sound profile. However, comparable transactions price sub-$30M-ARR vertical-SaaS assets at ~6-9x ARR and only award ~10-14x above ~$30M ARR with >120% NRR. The indicated ~$80-95M is therefore a strong (above-comp) headline for a $12M-ARR asset, but its real value depends entirely on the unfinalized cash/stock/earn-out structure.",
+      "confidence": "HIGH",
+      "source": "Internal financials, banker comp set, offer summary",
+      "isCritical": true,
+      "supportingData": {
+        "arr": "$12M",
+        "yoy_growth": "35% (was 50% two years ago)",
+        "gross_margin": "79%",
+        "nrr": "112%",
+        "cash": "$4M",
+        "offer_headline_ev": "$80-95M (verbal, structure unfinalized)",
+        "comp_multiple_subscale": "6-9x ARR",
+        "comp_multiple_at_scale": "10-14x ARR above ~$30M ARR with >120% NRR"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The company holds ~1,900 of ~180,000 addressable locations against 2-3 entrenched incumbents, and the acquirer controls a large distribution channel into the same dental buyer. This cuts two ways: it makes the acquirer a logical strategic owner (channel + product fit) and simultaneously a formidable competitor if the company declines and the acquirer builds or buys a rival. The standalone path to the $30M+ ARR tier (where premium multiples live) is plausible but contested and capital-dependent.",
+      "confidence": "MEDIUM",
+      "source": "Market sizing, competitive intelligence, channel analysis",
+      "isCritical": true,
+      "supportingData": {
+        "current_locations": "1,900",
+        "addressable_locations": "180,000",
+        "entrenched_incumbents": "2-3",
+        "acquirer_channel": "large distribution into same buyer",
+        "scale_tier_for_premium_multiple": "$30M+ ARR"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "The decision is dominated by unresolved structure and standalone uncertainty rather than by a clear operational defect. The offer's true value cannot be compared to the standalone path until the cash/stock/earn-out split, earn-out achievability, and acquirer stock basis are known; and the standalone path's value cannot be estimated without a verified durable growth rate and the probability/capital of reaching the $30M+ tier. Neither the value of accepting nor the value of declining is currently quantified to a decision-grade level.",
+      "confidence": "HIGH",
+      "source": "Deal-structure gap assessment, FP&A standalone scenario notes",
+      "isCritical": true,
+      "supportingData": {
+        "offer_structure_finalized": "no",
+        "standalone_forecast_verified": "no",
+        "earn_out_achievability_modeled": "no",
+        "acquirer_stock_basis_known": "no"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Retention quality, which drives both the M&A multiple and the standalone trajectory, is only partially characterized. Blended NRR is 112% and logo churn ~9%/yr, which is good, but it is not yet known whether NRR is durable across cohorts or concentrated in a few large accounts, nor what true post-onboarding logo churn is. Adjacent-module expansion (<15% of ARR) is the lever both an acquirer and a standalone plan would rely on.",
+      "confidence": "MEDIUM",
+      "source": "Cohort retention review (preliminary), product-usage analytics",
+      "isCritical": true,
+      "supportingData": {
+        "blended_nrr": "112%",
+        "logo_churn": "9%/yr",
+        "expansion_share_of_arr": "<15%",
+        "cohort_durability": "unverified",
+        "concentration_risk": "unverified"
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "The Option C complementary acquisition is concrete but unfunded and unvetted. The ~$3M ARR insurance-claims/billing add-on (asking ~$14-18M) has overlapping customers but a different tech stack and a ~25-person team; with only $4M cash and ~breakeven operations, it would require a new raise or seller financing, and its real synergies, post-acquisition churn, and integration cost are unverified. It is a credible growth lever but not executable on current resources without financing and diligence.",
+      "confidence": "MEDIUM",
+      "source": "Target teaser, preliminary integration assessment, balance sheet",
+      "isCritical": false,
+      "supportingData": {
+        "target_arr": "$3M",
+        "target_ask": "$14-18M",
+        "tech_stack_fit": "different",
+        "target_headcount": "25",
+        "financing_required": "yes (raise or seller financing)"
+      }
+    }
+  ],
+  "strategicOptions": [
+    {
+      "optionId": "Option_A_Pursue_MnA",
+      "description": "Enter exclusivity and pursue the acquisition: negotiate the cash/stock/earn-out structure, founder/key-engineer retention, and protections, aiming to convert the indicated ~$80-95M headline into a defensible risk-adjusted outcome and a near-term capital event.",
+      "rationale": "Locks in an above-comp headline for a sub-scale asset, de-risks the contested standalone path, and gives the most logical strategic owner the channel-plus-product fit. Best if the realized structure is strong and the standalone path is genuinely uncertain.",
+      "implementationRisk": "MEDIUM (value depends on unfinalized structure: earn-out achievability, acquirer stock liquidity/basis, escrow/indemnities, and key-person retention; entering exclusivity forecloses other buyers for the window)",
+      "timelineIfChosen": "Sign/close within the offer process; earn-out resolves over ~2 years"
+    },
+    {
+      "optionId": "Option_B_Stay_Independent",
+      "description": "Decline and continue independently toward the $30M+ ARR tier where premium multiples (10-14x) appear, raising growth capital as needed and competing against entrenched incumbents and the (now-passed-over) acquirer.",
+      "rationale": "Preserves the largest potential payout if the company durably scales and retention proves durable. Best if the verified standalone trajectory and probability of reaching scale justify forgoing a strong present offer.",
+      "implementationRisk": "HIGH (uncertain durable growth, capital dependence, entrenched competition, risk the passed-over acquirer becomes a stronger rival; payout is back-loaded and probability-weighted)",
+      "timelineIfChosen": "3-5 years to reach the scale tier and a potential larger outcome"
+    },
+    {
+      "optionId": "Option_C_Acquire_Complementary",
+      "description": "Decline the offer and instead acquire the ~$3M ARR complementary add-on (asking ~$14-18M), financed by a new raise or seller financing, to broaden the product, lift NRR, and accelerate organic growth toward the premium-multiple tier.",
+      "rationale": "Combines independence with an inorganic accelerant and cross-sell into the overlapping base. Best if financing is obtainable on fair terms and integration synergies are real and verifiable.",
+      "implementationRisk": "HIGH (requires financing the company cannot fund from $4M cash, different tech stack, integration and post-acquisition churn risk, management bandwidth from a lean team)",
+      "timelineIfChosen": "6-12 months to close/integrate, then 2-4 years to realize accelerated trajectory"
+    }
+  ],
+  "clientContext": {
+    "industry": "SaaS / Vertical Software (dental practice management)",
+    "size": "growth-stage ($12M ARR, ~35% growth, 112% NRR, 78 staff, ~breakeven, $4M cash, Series A)",
+    "revenueImpactUrgency": "HIGH (a ~45-day exclusivity window forces a partly irreversible capital-event decision that determines founder, employee, and investor outcomes for years)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM ($4M cash, ~breakeven; any inorganic move needs external financing)",
+    "timeHorizonDays": 45,
+    "staffCapacity": "LOW-MEDIUM (78 staff, lean; key-person concentration in founder and two engineers)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

@@ -1,0 +1,109 @@
+{
+  "caseId": "RW-029",
+  "caseType": "REAL_WORLD",
+  "industry": "Veterinary Services / Multi-Site Companion-Animal Clinic Group",
+  "businessModel": "Group of companion-animal general-practice veterinary clinics offering wellness, diagnostics, surgery, and preventive-care plans, recently consolidated under a single management company",
+  "businessStage": "Mature, recently consolidated 9-clinic group post-acquisition by a regional veterinary management group",
+  "sourceNote": "Real-world pattern from the corporate consolidation of independent veterinary practices (mirrors documented patterns from consolidators such as the Mars Veterinary/VCA, NVA, and PetVet cohort, and the post-pandemic normalization of pet-care demand). Reflects the well-observed dynamic where, after a beloved founding veterinarian sells and corporate standardization is imposed, active-patient retention and visit frequency erode even as revenue per visit is pushed up — masking client attrition behind higher tickets. Metrics reflect typical companion-animal GP economics (active patients, visits per patient per year, client retention, average transaction value).",
+  "ownerIntake": {
+    "businessType": "Nine companion-animal general-practice veterinary clinics across one metro and two suburban counties, consolidated 16 months ago under a regional veterinary management company. 14 veterinarians, 96 total staff. ~$31M revenue TTM. The two flagship clinics were founded by a now-retired veterinarian with a 25-year local following; corporate standardized scheduling, pricing, protocols, and a preventive-care plan after acquisition.",
+    "stage": "Revenue $31M TTM, up 6% YoY — but that growth is entirely price-led: average transaction value (ATV) rose 14% while total patient visits fell 7% and active patients (seen in trailing 12 months) declined from 38,400 to 34,900 (-9%). Client retention (clients returning within 18 months) fell from 79% to 68%. EBITDA margin 17% (down from 21% at acquisition; deleveraging on lower visit volume). New-client acquisition flat.",
+    "ownerGoal": "Stabilize active-patient count above 36,000 and restore client retention to 75%+ within 12 months to protect the recurring-revenue base before the management company's next financing review.",
+    "ownerConstraints": [
+      "Active patients fell 9% (38,400 to 34,900) and the decline is accelerating quarter over quarter; recurring wellness revenue depends on the active base.",
+      "Two flagship clinics (45% of group revenue) lost their founding veterinarian and 3 of 6 senior associate vets within 12 months of acquisition; new hires are still building client trust.",
+      "Corporate standardization raised prices 14% and changed appointment length/scheduling (shorter slots, online-only booking), drawing client complaints about access and continuity of care.",
+      "Two new corporate-backed competitor clinics and a national telehealth/vet-membership entrant opened within 5 miles of the flagship clinics in the last year.",
+      "Online review ratings at the two flagship clinics fell from 4.7 to 4.1 stars post-acquisition, with recurring themes of 'rushed visits,' 'can't see my vet,' and 'too expensive now.'",
+      "Management company financing review in 9 months expects the recurring active-patient base to be stabilizing, not eroding."
+    ],
+    "immediateConcern": "Revenue is up 6% but it is masking a 9% decline in active patients and an 11-point drop in client retention (79% to 68%). The management company cannot tell whether clients are leaving because of price, because of the loss of the founding veterinarian and care-continuity changes, or because of new competition. With the active base eroding and a financing review in 9 months, leadership must decide whether to roll back pricing, invest in veterinarian recruiting/retention, or launch a client-winback program — without knowing which lever actually drives the attrition.",
+    "availableData": [
+      "Revenue $31M TTM (+6% YoY), ATV +14%, total visits -7%, active patients 38,400 -> 34,900 (-9%), client retention 79% -> 68%",
+      "EBITDA margin 17% (down from 21%), new-client acquisition flat, preventive-care plan enrollment data by clinic",
+      "Two flagship clinics = 45% of revenue; lost founding vet and 3 of 6 senior associates; review ratings 4.7 -> 4.1 stars with themes 'rushed visits,' 'can't see my vet,' 'too expensive now'",
+      "Two corporate competitor clinics and one telehealth/membership entrant opened within 5 miles in the last year"
+    ],
+    "unavailableData": [
+      "Attrition cohort analysis: which clients lapsed — by clinic, by tenure (legacy vs. post-acquisition), by primary-vet relationship (clients of departed vets vs. retained vets), by pet life-stage",
+      "Reason-for-leaving data: structured exit/lapsed-client survey distinguishing price, vet continuity/access, and competitive switching",
+      "Visit-frequency change by retained vs. lapsing clients: are remaining clients also visiting less (wellness deferral) or only the lapsed cohort?",
+      "Competitive switching evidence: how many lapsed clients moved to the two new clinics or the telehealth entrant, and why",
+      "Preventive-care-plan retention vs. churn by clinic and by enrolling veterinarian"
+    ],
+    "timeHorizon": "90 days to diagnose and begin intervention (active base is eroding quarterly; financing review in 9 months requires a stabilizing trend, so the driver must be identified fast)",
+    "riskAppetite": "MEDIUM-LOW (recurring active-patient base is the core asset; leadership cannot afford a mis-targeted pricing rollback that sacrifices margin without stopping attrition, nor inaction while the base erodes)"
+  },
+  "businessProblem": "A recently consolidated 9-clinic veterinary group shows 6% revenue growth that masks a 9% decline in active patients (38,400 to 34,900) and an 11-point fall in client retention (79% to 68%), with the deterioration concentrated at the two flagship clinics (45% of revenue) that lost their founding veterinarian and half their senior associates after corporate standardization raised prices 14% and shortened/centralized scheduling. Management must determine whether the attrition is driven primarily by price, by loss of veterinarian continuity and care access, or by new local competition — before choosing among a pricing rollback, veterinarian recruiting/retention investment, or a client-winback campaign, with an active base eroding quarterly and a financing review in 9 months.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Active patients (seen in the trailing 12 months) fell from 38,400 to 34,900 (-9%) and client retention dropped from 79% to 68% (-11 points), with the decline accelerating quarter over quarter. Total visits fell 7% even as revenue rose 6%, meaning the top line is propped up by higher prices, not a healthy client base — the recurring-revenue foundation is shrinking.",
+      "confidence": "HIGH",
+      "source": "Practice-management system patient and visit records, client-retention tracking",
+      "isCritical": true,
+      "supportingData": {
+        "active_patients_now": "34900",
+        "active_patients_prior": "38400",
+        "active_patient_change": "-9%",
+        "client_retention_now": "68%",
+        "client_retention_prior": "79%",
+        "visit_change": "-7%",
+        "revenue_change": "+6%"
+      }
+    },
+    {
+      "dimension": "customer_satisfaction",
+      "finding": "Online review ratings at the two flagship clinics fell from 4.7 to 4.1 stars after acquisition, with recurring themes of 'rushed visits,' 'can't see my vet,' and 'too expensive now.' These clinics lost their founding veterinarian and 3 of 6 senior associates within 12 months, and corporate shortened appointment slots and moved to online-only booking. The complaint pattern points squarely at care-continuity and access changes, alongside price.",
+      "confidence": "MEDIUM-HIGH",
+      "source": "Review-platform aggregation, complaint logs, staffing records",
+      "isCritical": true,
+      "supportingData": {
+        "rating_now": "4.1",
+        "rating_prior": "4.7",
+        "vets_lost_flagship": "founder + 3 of 6 senior associates",
+        "top_complaint_themes": "rushed visits / can't see my vet / too expensive now",
+        "scheduling_change": "shorter slots, online-only booking"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue grew 6% on a 14% ATV increase while visits fell 7%; EBITDA margin slipped from 21% to 17% as fixed clinic costs deleveraged across fewer visits. The price increase is temporarily offsetting volume loss in revenue terms, but margin is already eroding and the trend is unsustainable as the active base shrinks.",
+      "confidence": "HIGH",
+      "source": "Group financials, pricing and volume bridge",
+      "isCritical": true,
+      "supportingData": {
+        "atv_increase": "+14%",
+        "visit_change": "-7%",
+        "revenue_change": "+6%",
+        "ebitda_margin_now": "17%",
+        "ebitda_margin_prior": "21%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Two corporate-backed competitor clinics and one national telehealth/vet-membership entrant opened within 5 miles of the flagship clinics in the last year, increasing local switching options. Post-pandemic pet-care demand has also normalized industry-wide. New-client acquisition is flat, so the active-base decline is a retention problem, not a top-of-funnel acquisition problem.",
+      "confidence": "MEDIUM",
+      "source": "Local market scan, competitor openings, new-client acquisition tracking",
+      "isCritical": false,
+      "supportingData": {
+        "new_competitor_clinics": "2 within 5 miles",
+        "telehealth_membership_entrant": "1",
+        "new_client_acquisition": "Flat",
+        "demand_environment": "Post-pandemic normalization"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Veterinary Services / Companion-Animal Clinics",
+    "size": "Mature multi-site ($31M revenue, 9 clinics, 14 vets, 96 staff)",
+    "revenueImpactUrgency": "CRITICAL (recurring active-patient base eroding 9% with a financing review in 9 months)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (corporate-backed, but margin already eroding from 21% to 17%; investment must be targeted)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM-LOW (14 vets, several flagship hires still ramping; clinical staff already stretched by shorter slots)",
+    "cashRunwayMonths": "N/A (cash-generative group; constraint is the active-base trend and financing review)",
+    "legalComplianceSensitive": false
+  }
+}

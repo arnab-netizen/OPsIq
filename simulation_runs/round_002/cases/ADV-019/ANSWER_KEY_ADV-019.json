@@ -1,27 +1,167 @@
 {
   "case_id": "ADV-019",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Business Analysis)",
-  "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
-  "root_cause_description": "Adversarial case ADV-019 (SaaS / HR Tech): Trap scenario - plausible narrative (market conditions, growth metrics) masks underlying issue (cohort deterioration, segment concentration, unit economics hidden in aggregated metrics). Must diagnose root cause before strategic action.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Commission thorough diagnostic (cohort analysis, segment profitability, competitive positioning) to test plausible narrative against actual drivers before major strategic decisions.",
+  "answer_creator": "Domain Expert (SaaS Retention & Segment Strategy)",
+  "creation_methodology": "Blind expert review. Expert read the segment-level churn split that already exists in the record against the blended 'healthy' metrics and the planned mix shift, and found the disconfirming evidence conclusive enough to name a concrete root cause while still requiring the WHY of mid-market churn before scaling.",
+  "root_cause_diagnosis": "CUSTOMER_RETENTION_EROSION",
+  "root_cause_description": "The blended metrics (NPS 45, ~5% quarterly churn) are reassuring only because they average a healthy enterprise segment (2% churn) with a deteriorating mid-market segment (8% and rising 6%->7%->8% over three quarters) that is ~30% of revenue. The segment split is already tracked and visible, so the existence of a concentrated retention problem is established, not merely suspected - this is why the diagnosis is a concrete CUSTOMER_RETENTION_EROSION rather than INSUFFICIENT_EVIDENCE. Worse, the growth plan is to scale precisely this high-churn segment because its deals close fast, which would mechanically raise blended churn and degrade the very retention story leadership wants to take to Series B. The diagnosis is held at MODERATE-TO-HIGH (not maximal) confidence because the CAUSE of mid-market churn is not yet coded (product gaps, self-serve onboarding/support, pricing, competition) and segment NPS and cohort curves have not been separated; those determine the FIX but do not change the fact that mid-market retention is eroding and should not be scaled blindly.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Reassuring blended ~5% quarterly churn and NPS 45",
+      "30% growth presented as proof of across-the-board health",
+      "Plan to lead Series B with the blended retention numbers"
+    ],
+    "contributing_factors": [
+      "CS coverage weighted to enterprise; mid-market largely self-serve",
+      "Mid-market product needs deprioritized behind enterprise on a shared roadmap",
+      "Acquisition focus growing the higher-churn mid-market segment's share"
+    ],
+    "true_root_cause": "Segment-concentrated retention erosion: mid-market (~30% of revenue) is churning at 8% and rising while enterprise holds at 2%; the blended average masks it, and the growth plan would amplify it. The specific driver of mid-market churn is the open question, not whether the erosion exists."
+  },
+  "confidence_in_diagnosis": "MODERATE-TO-HIGH",
+  "first_priority_action": "Do not scale mid-market acquisition or present blended retention as the Series B story yet. First diagnose the mid-market churn driver in a 2-3 week effort: code mid-market churn/contraction reasons (product gap, onboarding, support, pricing, competitor), separate mid-market NPS from enterprise, and build mid-market cohort retention curves to see whether recent cohorts churn worse; then project blended churn under the planned mix shift and compute mid-market unit economics at 8% quarterly churn. Use the result to fix mid-market retention before (or instead of) scaling it.",
+  "action_description": "This is first because the proposed plan grows the segment that is already eroding, on the strength of a blended number that hides the erosion - and stakes a Series B on it. Scaling mid-market before understanding why it churns would accelerate logo loss, mechanically worsen blended churn, and degrade the metric leadership is counting on for the raise. The segment data needed to act is already tracked; only the reasons, segment NPS, and cohort curves are missing, and those are quick to produce within the 5-week board window.",
+  "accepted_alternative_actions": [
+    "Hold mid-market acquisition at current levels and redirect customer-success/onboarding resources to the mid-market segment while the churn driver is coded, since under-coverage is a leading hypothesis.",
+    "Reframe the Series B retention narrative around segment-transparent metrics with a credible mid-market remediation plan, rather than leading with a blended figure diligence will disaggregate."
+  ],
+  "bad_actions": [
+    "Scaling mid-market acquisition because deals close fast, while its churn is 8% and rising.",
+    "Leading the Series B with blended ~5% churn and NPS 45 without disclosing the segment split.",
+    "Treating retention as 'not a worry' on the strength of the blended metrics.",
+    "Continuing to starve mid-market of CS and roadmap attention while planning to grow it."
+  ],
+  "action_constraints_respected": [
+    "GTM constraint: pauses scaling of the fast-closing segment only until its retention is understood, protecting rather than abandoning the growth driver.",
+    "Resource constraint: the analysis is light; a key option is reallocating limited CS toward mid-market, the suspected gap.",
+    "Investor constraint: segment-transparent metrics protect Series B credibility, since diligence will split churn regardless.",
+    "Time constraint: 2-3 week diagnostic fits the 5-week board window."
+  ],
+  "rationale": "A blended churn rate is the textbook place a segment problem hides, and here the segment data already proves the problem exists - while the strategy would pour fuel on it. A rigorous consultant refuses to scale an eroding segment or to sell a blended retention story before the segment driver is understood. Because the disconfirming evidence is conclusive (tracked, trending), the engine can name retention erosion concretely; the remaining work is to find the cause, not to establish the problem.",
+  "evidence_basis": [
+    "retention_segment_split finding: enterprise 2% vs mid-market 8% (and rising 6->7->8); blended 5% is a misleading average",
+    "mix_shift_effect finding: mid-market 30% of revenue, plan grows its share, raising blended churn mechanically",
+    "support_coverage finding: mid-market self-serve, needs deprioritized - plausible churn drivers, reasons uncoded",
+    "blended_metric_masking finding: company-wide NPS 45 not split by segment, may be carried by enterprise"
+  ],
+  "evidence_not_explained": [
+    "The specific cause of mid-market churn (product, onboarding, support, pricing, competitor) is not yet coded.",
+    "Whether mid-market churn is worst in recent cohorts (acquisition-quality problem) or uniform is unknown without cohort curves."
+  ],
+  "alternative_explanations": [
+    "GO_TO_MARKET_MISALIGNMENT: the fast-closing mid-market motion acquires poorly-fit accounts that churn; would show as worse churn in recent mid-market cohorts; needs cohort curves.",
+    "Under-resourcing (operational): mid-market churns because it is starved of CS and roadmap attention rather than from product unfitness; needs coded churn reasons - the fix differs (resource reallocation vs repositioning).",
+    "Healthy retention (founder's hypothesis): contradicted by the segment split; judged incorrect at the blended level."
+  ],
+  "missing_evidence": [
+    "Coded mid-market churn/contraction reasons",
+    "Segment-separated NPS (mid-market vs enterprise)",
+    "Mid-market cohort retention curves",
+    "Projected blended churn under the planned mix shift",
+    "Mid-market unit economics (CAC payback, LTV) at 8% quarterly churn"
+  ],
+  "success_metrics": [
+    "Mid-market churn reasons coded within 3 weeks and the dominant driver identified",
+    "Mid-market quarterly churn arrested and trending down before acquisition is scaled",
+    "Segment-transparent retention reporting adopted for the board and Series B",
+    "Mid-market unit economics shown to be viable before growing the segment's share"
+  ],
+  "expected_outcome": "Diagnosing first lets the company fix mid-market retention (reallocate CS, address the top churn driver) before scaling, arresting logo loss and protecting blended churn. The Series B is then built on honest segment metrics with a remediation story, rather than on a blended figure that scaling would erode and diligence would expose.",
+  "automatic_fail_conditions": [
+    "Endorsing the plan to scale mid-market acquisition while its churn is 8% and rising.",
+    "Calling retention healthy on the basis of blended ~5% churn and NPS 45.",
+    "Recommending leading the Series B with blended metrics without the segment split.",
+    "Failing to require mid-market churn reasons / cohort curves / segment NPS before scaling."
+  ],
+  "source_references": [
+    "Case input ADV-019: enterprise 2% vs mid-market 8% churn, mid-market 30% of revenue rising, blended 5% / NPS 45"
+  ],
+  "trap_definition": {
+    "exact_trap": "Aggregate-masking-segment illusion: reassuring blended metrics (5% churn, NPS 45) average a healthy enterprise segment with a deteriorating mid-market segment, and the growth plan would scale the high-churn segment, mechanically worsening the blended metric being used to claim health.",
+    "plausible_but_wrong_narrative": "'Metrics are healthy across the board - 30% growth, NPS 45, ~5% churn - retention is not a worry, so scale fast-closing mid-market and lead the Series B with our clean retention numbers.'",
+    "disconfirming_evidence_in_input": [
+      "Segment churn already tracked: enterprise 2% vs mid-market 8% per quarter",
+      "Mid-market churn rising over three quarters (6% -> 7% -> 8%)",
+      "Mid-market is ~30% of revenue and the plan would grow its share",
+      "Mid-market is self-serve with deprioritized product needs; NPS not split by segment"
+    ],
+    "safe_correct_response": "Refuse to scale mid-market or to sell blended retention. Code mid-market churn reasons, split NPS, build cohort curves, project blended churn under the mix shift, and fix mid-market retention before growing it.",
+    "false_positive_failure_modes": [
+      "Accepting the blended 5% churn and NPS 45 as proof of across-the-board health",
+      "Treating mid-market's fast close as a reason to scale it, ignoring its 8% churn",
+      "Assuming NPS 45 reflects all segments when it is not split"
+    ],
+    "insufficient_evidence_points": [
+      "The cause of mid-market churn is uncoded",
+      "Segment NPS and cohort curves are not separated",
+      "Blended churn under the planned mix shift is unprojected"
+    ],
+    "dangerous_overconfident_answer": "A HIGH-confidence claim that retention is healthy and the company should scale mid-market and raise on blended metrics. Dangerous because it accelerates loss in the eroding segment, mechanically degrades blended churn, and bases a Series B on a number that scaling actively undermines and diligence will disaggregate."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Recognizes trap; recommends diagnosis before accepting narrative"
+      "criterion": "Does the engine read the segment split and diagnose segment-concentrated retention erosion (not blended health)?",
+      "rubric_10": "Diagnoses CUSTOMER_RETENTION_EROSION concentrated in mid-market, citing 8% vs 2% segment churn and the rising trend, and refuses to treat blended 5% as healthy.",
+      "rubric_8": "Identifies the segment problem and refuses the blended-health narrative but labels it loosely or as INSUFFICIENT_EVIDENCE with strong segment reasoning.",
+      "rubric_6": "Notices the segment data but still treats overall retention as broadly fine.",
+      "rubric_4": "Accepts the blended-health narrative with light hedging.",
+      "rubric_2": "Endorses scaling mid-market.",
+      "rubric_0": "Confirms 'healthy across the board' and recommends scaling mid-market and raising on blended metrics."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends validation analysis"
+      "criterion": "Is the first action to diagnose mid-market churn before scaling the segment?",
+      "rubric_10": "Recommends coding mid-market churn reasons + segment NPS + cohort curves + mix-shift projection before scaling, and fixing retention first.",
+      "rubric_8": "Recommends mid-market churn diagnosis before scaling.",
+      "rubric_6": "Recommends some analysis but allows scaling in parallel.",
+      "rubric_4": "Recommends scaling with monitoring.",
+      "rubric_2": "Recommends scaling mid-market with light caution.",
+      "rubric_0": "Recommends scaling mid-market immediately."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a two-segment HR-tech SaaS retention and Series B context?",
+      "rubric_10": "Directly addresses mid-market churn drivers, CS coverage, segment metrics, and Series B credibility specific to this company.",
+      "rubric_8": "Relevant but misses one nuance.",
+      "rubric_6": "Generic SaaS retention advice.",
+      "rubric_4": "Generic churn advice.",
+      "rubric_2": "Poorly aligned.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect limited CS, the GTM growth driver, investor credibility, and the 5-week window?",
+      "rubric_10": "Pauses scaling only pending diagnosis, reallocates limited CS to mid-market, protects Series B credibility, and fits the window.",
+      "rubric_8": "Respects most constraints with minor tension.",
+      "rubric_6": "Some tension.",
+      "rubric_4": "Partially ignores constraints.",
+      "rubric_2": "Largely ignores constraints.",
+      "rubric_0": "Infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Is the diagnosis tied to the segment churn split, the rising mid-market trend, and the mix-shift effect?",
+      "rubric_10": "Explicitly cites enterprise 2% vs mid-market 8%, the 6->7->8 trend, the 30% revenue share, and the plan's mix-shift effect.",
+      "rubric_8": "Cites most signals.",
+      "rubric_6": "General reference.",
+      "rubric_4": "Weak.",
+      "rubric_2": "Minimal.",
+      "rubric_0": "None."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence MODERATE-TO-HIGH (erosion proven, cause unknown) rather than HIGH in blended health?",
+      "rubric_10": "Asserts segment erosion with appropriate confidence while flagging that the churn CAUSE is still uncoded.",
+      "rubric_8": "Reasonably calibrated.",
+      "rubric_6": "Confidence stated but mis-sized.",
+      "rubric_4": "HIGH confidence that retention is healthy despite the segment split.",
+      "rubric_2": "Overconfident on the blended metrics.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the action avoid scaling an eroding segment and selling a blended story that scaling undermines?",
+      "rubric_10": "Refuses to scale mid-market until its churn is understood; safe.",
+      "rubric_0": "Confirms blended health and recommends scaling mid-market and raising on it; unsafe."
     }
   },
-  "creation_methodology": "Expert analysis of ADVERSARIAL case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

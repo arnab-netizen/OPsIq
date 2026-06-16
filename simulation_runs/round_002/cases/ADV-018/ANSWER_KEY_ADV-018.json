@@ -1,27 +1,167 @@
 {
   "case_id": "ADV-018",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Business Analysis)",
+  "answer_creator": "Domain Expert (Manufacturing Cost-to-Serve & Pricing)",
+  "creation_methodology": "Blind expert review. Expert tested the 'healthy blended margin proves the customer mix works' framing against the concentration, the discounting and cost-to-serve drivers of the top 3, and the absence of any per-customer profitability, and determined that the expanded-agreement decision cannot be made without activity-based cost-to-serve by account.",
   "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
-  "root_cause_description": "Adversarial case ADV-018 (Manufacturing): Trap scenario - plausible narrative (market conditions, growth metrics) masks underlying issue (cohort deterioration, segment concentration, unit economics hidden in aggregated metrics). Must diagnose root cause before strategic action.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Commission thorough diagnostic (cohort analysis, segment profitability, competitive positioning) to test plausible narrative against actual drivers before major strategic decisions.",
+  "root_cause_description": "The blended 26% gross margin is being used as proof that the customer mix is healthy and that deepening a discounted agreement with the #1 customer is sound, but a blended margin cannot reveal whether the discounted, high-cost-to-serve top-3 accounts are actually profitable or are being subsidized by the smaller accounts that pay near list. Three visible facts undercut the narrative: the top 3 are ~45% of revenue (the #1 alone ~22%) at below-average ASP; they demand more customization, shorter lead times, and longer terms (all cost-to-serve drivers); and the company allocates overhead plant-wide, so it has never computed margin by account. The proposed expansion would deepen discounts and push concentration above 50% - precisely the move that is dangerous if the big accounts are marginally or non-profitable on a fully-loaded basis. The engine cannot yet name a concrete root cause because per-customer cost-to-serve has not been measured: it is possible the volume genuinely covers fully-loaded cost and keeps fixed plant cost productive. The correct posture is to refuse to approve the expanded agreement until activity-based per-customer profitability is computed.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Flat revenue with a comfortable 26% blended gross margin",
+      "Top 3 customers at below-average ASP",
+      "Sales organization oriented to protecting and growing the top 3"
+    ],
+    "contributing_factors": [
+      "Plant-wide overhead allocation that hides per-account cost-to-serve",
+      "Capacity pressure to keep lines full incentivizing acceptance of discounts",
+      "Smaller, higher-margin accounts under-served and possibly subsidizing the blend"
+    ],
+    "true_root_cause": "Not yet determinable. Concentration and discounting create clear margin and fragility risk, but whether the top-3 volume is genuinely unprofitable, merely thin, or actually fine on a fully-loaded basis cannot be resolved without activity-based per-customer cost-to-serve and a contribution/break-even analysis."
+  },
+  "confidence_in_diagnosis": "PROVISIONAL",
+  "first_priority_action": "Do not approve the expanded, deeper-discounted #1-customer agreement at the upcoming board meeting. First commission a 4-6 week activity-based cost-to-serve analysis that computes fully-loaded gross and operating margin per customer (especially the top 3) including setup/changeover, expedite, custom tooling, extended payment terms, and returns; compute the margin of the smaller/mid-tier accounts; and run a contribution/break-even and capacity-cost attribution to determine whether discounted top-3 volume covers fully-loaded cost or only variable cost. Use the results to set price floors and decide the expanded agreement.",
+  "action_description": "This is first because the board is about to lock in deeper discounts and push concentration above 50% on the strength of a blended margin that structurally cannot show per-account profitability. If the top 3 are marginal or unprofitable fully-loaded, the expanded agreement would grow revenue while shrinking profit and increasing the existential risk of a single-account loss. The cost-to-serve analysis is feasible for the in-house cost-accounting team, fits inside the 8-week decision window, and converts the discount/concentration question into a priced, defensible decision with floors.",
+  "accepted_alternative_actions": [
+    "Negotiate the expanded agreement only AFTER cost-to-serve is computed, using fully-loaded per-customer margin to set a price/terms floor below which volume is declined - protecting capacity utilization without below-cost growth.",
+    "In parallel, re-resource sales coverage toward the under-served smaller/mid-tier accounts pending the analysis, since they appear to be the higher-margin segment that should not be starved."
+  ],
+  "bad_actions": [
+    "Approving the expanded deeper-discount agreement with the #1 customer on the basis of the blended 26% margin.",
+    "Treating volume-discount pricing to the top 3 as fine 'because that is how the industry works' without measuring cost-to-serve.",
+    "Continuing to shift sales attention away from the smaller accounts that may be the actual profit engine.",
+    "Using the blended margin to justify deepening concentration above 50% without a fragility/contingency assessment."
+  ],
+  "action_constraints_respected": [
+    "Customer constraint: a cost-to-serve analysis does not jeopardize the relationships; it informs the terms of growth rather than rejecting the customer.",
+    "Capacity constraint: capacity-cost attribution explicitly tests how much fixed cost the top 3 genuinely absorb, so the decision protects utilization rationally.",
+    "Costing constraint: builds the activity-based costing the company currently lacks, the precise missing capability.",
+    "Decision constraint: 4-6 week analysis fits the 8-week board window."
+  ],
+  "rationale": "A blended gross margin is the single most common place customer-level losses hide, especially under plant-wide allocation. Here the largest, most discounted, highest-cost-to-serve accounts are about to be grown further at deeper discounts, while the smaller accounts that likely carry the real margin are being starved - and no one has computed per-account profitability. A rigorous consultant refuses to approve deeper discounts and higher concentration until cost-to-serve is measured. The disconfirming evidence (below-average ASP, cost-to-serve drivers, plant-wide allocation) is already visible.",
+  "evidence_basis": [
+    "customer_concentration finding: top 3 = 45% (No.1 = 22%), expansion pushes >50% at deeper discounts",
+    "pricing_vs_cost finding: top-3 ASP below average plus customization/lead-time/terms cost drivers hidden by plant-wide allocation",
+    "profitability_visibility finding: no per-customer margin, no activity-based costing; blended 26% cannot show subsidy",
+    "neglected_segment finding: 55% smaller accounts near list, higher per-unit margin, losing sales attention"
+  ],
+  "evidence_not_explained": [
+    "Whether discounted top-3 volume covers fully-loaded cost or merely variable cost is unknown without contribution analysis.",
+    "How much fixed plant cost is genuinely 'kept full' by the top 3 versus arbitrarily allocated to them is unquantified."
+  ],
+  "alternative_explanations": [
+    "STRATEGIC_PRICING_ERROR: the top 3 are priced below fully-loaded cost-to-serve and subsidized by smaller accounts; strongly suggested by below-average ASP plus high cost-to-serve, but unproven without ABC.",
+    "Customer-concentration fragility (governance/strategic risk): even if currently profitable, pushing above 50% concentration at deeper discounts raises existential risk; a real concern independent of the margin question.",
+    "Healthy mix (CEO's hypothesis): the volume covers fully-loaded cost and productively absorbs fixed capacity cost; possible but unsupported until cost-to-serve is computed."
+  ],
+  "missing_evidence": [
+    "Per-customer fully-loaded gross and operating margin (activity-based)",
+    "Cost-to-serve quantification for the top 3 (setup, expedite, tooling, terms, returns)",
+    "Margin of the smaller/mid-tier accounts",
+    "Contribution/break-even: discounted volume vs fully-loaded vs variable cost",
+    "Capacity-cost attribution between top 3 and smaller accounts"
+  ],
+  "success_metrics": [
+    "Activity-based per-customer profitability computed within 6 weeks",
+    "Price/terms floor established for the top 3 below which volume is declined",
+    "Board decision on the expanded agreement made on fully-loaded per-account economics, not blended margin",
+    "Sales coverage rebalanced toward the higher-margin smaller accounts where warranted"
+  ],
+  "expected_outcome": "Within 6 weeks the company knows the true profitability of each large account and whether the expanded agreement adds or destroys profit. The board can approve, reprice, or decline the deal on real economics and avoid deepening discounts and concentration into a possibly loss-making, fragile position - while protecting capacity utilization deliberately rather than reflexively.",
+  "automatic_fail_conditions": [
+    "Recommending approval of the expanded deeper-discount agreement on the basis of the blended margin.",
+    "Stating HIGH confidence that the customer mix is healthy while per-customer profitability is uncomputed.",
+    "Endorsing deeper top-3 discounts/concentration without demanding activity-based cost-to-serve.",
+    "Failing to identify per-customer cost-to-serve and contribution/break-even as the missing pieces."
+  ],
+  "source_references": [
+    "Case input ADV-018: top-3 concentration at discount, cost-to-serve drivers, plant-wide allocation, neglected smaller accounts"
+  ],
+  "trap_definition": {
+    "exact_trap": "Blended-margin / aggregation illusion plus concentration blindness: a healthy company-wide gross margin (26%) hides that the largest, most discounted, highest-cost-to-serve accounts may be subsidized by smaller accounts, and the comfort of the blend masks the fragility of >45% concentration about to be deepened.",
+    "plausible_but_wrong_narrative": "'Blended margin is a healthy 26% and the top 3 keep the plants full, so lock in an even bigger discounted volume agreement with our #1 customer and grow with our best customers.'",
+    "disconfirming_evidence_in_input": [
+      "Top 3 = 45% of revenue (No.1 = 22%) at below-average ASP, with the deal pushing concentration above 50%",
+      "Top 3 demand customization, short lead times, and long payment terms (cost-to-serve drivers)",
+      "Overhead is allocated plant-wide; per-customer profitability has never been computed",
+      "Smaller accounts (55%) pay near list, carry higher per-unit margin, and are losing sales attention"
+    ],
+    "safe_correct_response": "Refuse to approve the expanded agreement until activity-based cost-to-serve yields fully-loaded per-customer profitability and a contribution/break-even analysis; set price floors and rebalance coverage based on the result.",
+    "false_positive_failure_modes": [
+      "Reading the 26% blended margin as proof every account is profitable",
+      "Accepting volume discounts as fine 'because that is how the industry works'",
+      "Equating 'keeping the plants full' with the volume being profitable"
+    ],
+    "insufficient_evidence_points": [
+      "Fully-loaded per-customer margin is uncomputed (plant-wide allocation only)",
+      "Cost-to-serve of the top 3 is unquantified",
+      "Whether discounted volume covers fully-loaded or only variable cost is unknown"
+    ],
+    "dangerous_overconfident_answer": "A HIGH-confidence recommendation to sign the bigger discounted #1-customer agreement because the blended margin is healthy. Dangerous because it could grow revenue while destroying profit (if the account is loss-making fully-loaded) and would push concentration above 50%, making the loss of a single customer an existential capacity and earnings shock."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Recognizes trap; recommends diagnosis before accepting narrative"
+      "criterion": "Does the engine see through the blended margin and withhold diagnosis pending per-customer cost-to-serve?",
+      "rubric_10": "Diagnoses INSUFFICIENT_EVIDENCE, citing concentration, below-average top-3 ASP, cost-to-serve drivers, and plant-wide allocation, and demands activity-based per-customer profitability before deciding.",
+      "rubric_8": "Rejects the blended-margin proof and names a tentative cause (pricing error / concentration risk) with caveats.",
+      "rubric_6": "Notices concentration but still treats the blended margin as broadly reassuring.",
+      "rubric_4": "Accepts the healthy-mix narrative with light hedging.",
+      "rubric_2": "Endorses growing the discounted top-3 volume.",
+      "rubric_0": "Confirms the blended margin proves health and recommends the expanded discounted agreement."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends validation analysis"
+      "criterion": "Is the first action an activity-based cost-to-serve analysis before approving the expanded agreement?",
+      "rubric_10": "Recommends a 4-6 week per-customer cost-to-serve + contribution/break-even analysis before the board decision, with price floors as output.",
+      "rubric_8": "Recommends per-account profitability analysis before deepening discounts.",
+      "rubric_6": "Recommends some analysis but lets the agreement advance in parallel.",
+      "rubric_4": "Recommends approving with monitoring.",
+      "rubric_2": "Recommends signing the deal with light caution.",
+      "rubric_0": "Recommends approving the expanded discounted agreement immediately."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a capacity-heavy manufacturer's pricing, concentration, and cost-to-serve context?",
+      "rubric_10": "Directly addresses cost-to-serve, capacity-cost attribution, concentration fragility, and price floors specific to this manufacturer.",
+      "rubric_8": "Relevant but misses one nuance.",
+      "rubric_6": "Generic manufacturing advice.",
+      "rubric_4": "Generic pricing advice.",
+      "rubric_2": "Poorly aligned.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect customer relationships, capacity utilization, costing capability, and the 8-week window?",
+      "rubric_10": "Builds the missing activity-based costing in-house, protects utilization via capacity-cost attribution, preserves relationships, and fits the window.",
+      "rubric_8": "Respects most constraints with minor tension.",
+      "rubric_6": "Some tension.",
+      "rubric_4": "Partially ignores constraints.",
+      "rubric_2": "Largely ignores constraints.",
+      "rubric_0": "Infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Is the recommendation tied to concentration, below-average ASP, cost-to-serve drivers, and plant-wide allocation?",
+      "rubric_10": "Explicitly cites the 45%/22% concentration, below-average top-3 ASP, the cost-to-serve drivers, and the plant-wide allocation gap.",
+      "rubric_8": "Cites most signals.",
+      "rubric_6": "General reference.",
+      "rubric_4": "Weak.",
+      "rubric_2": "Minimal.",
+      "rubric_0": "None."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence PROVISIONAL given uncomputed per-customer cost-to-serve?",
+      "rubric_10": "States PROVISIONAL/low confidence, noting the strong risk signal but the genuinely unknown fully-loaded account profitability.",
+      "rubric_8": "Appropriately hedged.",
+      "rubric_6": "Confidence stated but uncertainty understated.",
+      "rubric_4": "HIGH confidence in a healthy mix despite the gaps.",
+      "rubric_2": "Overconfident on the blended margin.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the action avoid deepening discounts and >50% concentration before per-account profitability is known?",
+      "rubric_10": "Refuses to approve the expanded agreement until cost-to-serve is computed; safe.",
+      "rubric_0": "Confirms the blended-margin narrative and recommends the expanded discounted agreement; unsafe."
     }
   },
-  "creation_methodology": "Expert analysis of ADVERSARIAL case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

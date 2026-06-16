@@ -1,27 +1,159 @@
 {
   "case_id": "BLND-009",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Strategic Decision-Making)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Blind-outcome case BLND-009 (Manufacturing): Forward-looking strategic decision with uncertain outcomes. Multiple viable options; diagnosis should identify which option aligns with root-cause drivers and constraints.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to clarify market dynamics, competitive positioning, and business model constraints before major strategic choice. Recommend data gathering on option-specific risks.",
+  "answer_creator": "Domain Expert (Industrial M&A / Ownership Transition)",
+  "creation_methodology": "Blind review: Expert analyzed the exit-path scenario without knowing which path the founder chose or how it resolved. Identified the underlying driver that governs achievable value and exit feasibility, defined the readiness work required before committing to any path, and scored on reasoning quality rather than on matching the hidden outcome.",
+  "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK",
+  "root_cause_description": "The driver that governs every exit path is the concentration of value-creating capability in the founder and 2-3 long-tenured leaders, with no internal successor and ~38% top-5 customer concentration held by those same people. This key-person/succession bottleneck directly suppresses transferable value: a financial buyer (Option A) discounts the multiple or demands an earn-out the founder cannot provide, a strategic buyer (Option B) prices the premium on whether the customer and aftermarket relationships survive a transition, and retaining (Option C) requires injecting a hired CEO into exactly this bottleneck. Until the business is made less dependent on the founder and key leaders, and the durability of the high-margin aftermarket stream is substantiated, no path can realize a defensible price within the founder's 24-month, no-long-earn-out constraint. The bottleneck is organizational/operational, not a demand or margin problem (earnings are healthy and the backlog is solid).",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Wide, unverified valuation range (5-7x financial vs 7-10x strategic) with no quality-of-earnings study",
+      "Founder unwilling/unable to provide a long earn-out or post-24-month operating role",
+      "Uncertainty over which exit path to choose"
+    ],
+    "contributing_factors": [
+      "Top-5 customer concentration (~38%) held by founder and senior leaders",
+      "Unsubstantiated aftermarket durability (~30% of revenue, higher margin) - contracted vs relationship-dependent unknown",
+      "Diligence-unready financials (unaudited, no QoE, incomplete aftermarket-contract documentation)"
+    ],
+    "true_root_cause": "Value-creating capability and key customer relationships are concentrated in the founder and 2-3 leaders with no successor, so transferable value and exit feasibility are constrained by a key-person/operational bottleneck that must be reduced and documented before any path can realize a defensible outcome."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Before choosing a buyer path, run a transition-readiness program in parallel with a sell-side preparation diagnostic: (1) commission a quality-of-earnings study and substantiate normalized EBITDA; (2) document and de-risk the key-person bottleneck (succession/retention plan for the 2-3 leaders, transition of top-5 customer relationships, formalize aftermarket contracts to evidence recurrence); (3) model after-tax, risk-adjusted proceeds and structure feasibility for each of A, B, and C against the founder's 24-month/no-long-earn-out and workforce/reputation constraints; then select the path with the strongest substantiated risk-adjusted outcome.",
+  "action_description": "This is first because the achievable price and the feasibility of an owner exit within 24 months are both governed by the key-person bottleneck and by earnings/aftermarket substantiation, none of which exist yet. Choosing a buyer path before reducing the bottleneck and proving the aftermarket would lock in a discounted multiple (financial), an unbankable premium (strategic), or an unfilled CEO seat (retain). The readiness work is the highest-leverage action: it raises the achievable multiple across all paths, makes the founder's exit feasible without a long earn-out, and produces the substantiated data needed to rank the three options. It fits the 3-6 month preparation window inside the 18-24 month transition horizon.",
+  "accepted_alternative_actions": [
+    "Recommend the financial-buyer path (Option A) as the likely best fit IF the engine conditions it on first completing the QoE and key-person de-risking and on structuring around the founder's no-long-earn-out constraint (e.g., professional-management bridge or rollover), rather than entering a process unprepared.",
+    "Recommend pursuing a strategic buyer (Option B) only after substantiating aftermarket durability and identifying strategics that will honor the workforce/reputation constraint, treating the premium as contingent on proven recurrence and clean diligence.",
+    "Recommend a staged approach: run the readiness program now and keep Option C (retain with a hired CEO) as the fallback if a fair, constraint-compliant sale does not materialize, rather than committing to retention by default."
+  ],
+  "bad_actions": [
+    "Launching a sale process (financial or strategic) before a quality-of-earnings study and key-person de-risking, locking in a discounted multiple and a diligence failure mid-process.",
+    "Accepting a financial-buyer structure that requires the founder to remain in daily leadership or carry a long earn-out, violating the explicit 24-month owner-availability constraint.",
+    "Selling to a strategic buyer without protections, allowing plant relocation or workforce gutting that breaches the founder's reputation/workforce constraint, purely to capture a higher headline price.",
+    "Defaulting to retain-and-run (Option C) without a hired successor plan, leaving the founder's wealth concentrated in an illiquid, key-person-dependent asset and failing the liquidity goal."
+  ],
+  "action_constraints_respected": [
+    "Owner-availability constraint: De-risking the key-person bottleneck enables an exit that does not require the founder past ~24 months or a long earn-out.",
+    "Workforce/reputation constraint: Readiness work and buyer-screening allow negotiating workforce/plant protections rather than chasing price blindly.",
+    "Valuation/clean-books constraint: The QoE and aftermarket-contract documentation directly close the diligence-readiness gap that caps the multiple.",
+    "Timing/control constraint: A 3-6 month preparation phase inside the 18-24 month horizon avoids a rushed, distress-signaling process."
+  ],
+  "rationale": "Each option is best only under a different (currently unproven) assumption about transferability and substantiation: A under 'normalized EBITDA and bottleneck risk support a clean multiple without a long earn-out', B under 'aftermarket durability and a workforce-friendly strategic exist to justify a premium', C under 'a credible CEO can be hired and liquidity can be deferred'. Because the key-person bottleneck, aftermarket durability, and earnings quality are unsubstantiated, choosing now risks a discounted or infeasible outcome. The readiness program both raises value and produces the data to rank the paths, making it the dominant first move.",
+  "evidence_basis": [
+    "financial_health: $85M revenue, ~$11M EBITDA (13%), net debt ~$8M, 7-month backlog; 5-7x vs 7-10x comps; no QoE / unaudited statements",
+    "quality_delivery: no internal successor, key relationships in founder + 2-3 leaders, top-5 concentration ~38%, no documented succession",
+    "customer_retention: aftermarket ~30% of revenue at ~28% gross vs 21% machinery, contracted-vs-relationship status unverified",
+    "market_position: financial buyer (fast, multiple, earn-out expectation), strategic (premium but relocation risk), retain (defers liquidity, needs hired CEO)",
+    "financial_health (gap): after-tax proceeds and structure feasibility under A/B/C unmodeled"
+  ],
+  "evidence_not_explained": [
+    "How much of the top-5 revenue and aftermarket margin would survive the founder's and senior leaders' departure cannot be quantified without the transferability analysis.",
+    "Whether a workforce/reputation-preserving strategic buyer actually exists in the landscape is unknown until the buyer screen is run."
+  ],
+  "alternative_explanations": [
+    "CUSTOMER_RETENTION_EROSION: top-5 concentration and aftermarket uncertainty could be framed as a retention risk; relevant but rejected as the governing driver because retention risk here is a consequence of the key-person bottleneck (relationships held by departing individuals), not independent customer churn.",
+    "STRATEGIC_PRICING_ERROR: one might argue the business under-prices its aftermarket; rejected as primary because margins are healthy and the binding issue is transferability/substantiation of value at exit, not mispricing.",
+    "DEMAND_FORECASTING_MISMATCH: rejected because demand is stable (mature, 7-month backlog); there is no forecasting error driving the decision."
+  ],
+  "missing_evidence": [
+    "Quality-of-earnings study with normalized EBITDA and working-capital adjustments to buyer standard",
+    "Transferability analysis quantifying revenue/margin at risk on founder and senior-leader departure, and top-5 relationship durability",
+    "Aftermarket durability evidence (contracted/recurring vs relationship-dependent) and contract documentation",
+    "Strategic-buyer landscape (who pays a premium, who preserves workforce/plant) and after-tax proceeds modeling under each structure"
+  ],
+  "success_metrics": [
+    "QoE completed and a substantiated normalized-EBITDA / valuation range established within the preparation window",
+    "Documented succession/retention plan reducing measurable key-person dependence and transitioning top-5 relationships",
+    "Aftermarket durability substantiated (contract coverage / recurrence evidence) to support a premium",
+    "A path selected with modeled after-tax, risk-adjusted proceeds that satisfies the 24-month/no-long-earn-out and workforce/reputation constraints"
+  ],
+  "expected_outcome": "Within 3-6 months the founder holds a diligence-ready business with a reduced key-person bottleneck, substantiated earnings and aftermarket durability, and modeled after-tax outcomes for each path, enabling selection of the exit that maximizes constraint-compliant, risk-adjusted value and supports an orderly transition inside 18-24 months. Readiness lifts the achievable multiple regardless of which buyer path is ultimately chosen.",
+  "automatic_fail_conditions": [
+    "Recommends launching a sale process before quality-of-earnings and key-person de-risking are done",
+    "Recommends a structure requiring the founder's daily leadership or a long earn-out beyond ~24 months",
+    "Recommends a strategic sale that breaches the workforce/reputation constraint purely for a higher headline price",
+    "Recommends defaulting to retain-and-run with no hired-successor plan, failing the liquidity goal"
+  ],
+  "source_references": [
+    "01_case_input.json BLND-009: ownerIntake.availableData, ownerConstraints, evidence[financial_health x2, quality_delivery, customer_retention, market_position], strategicOptions"
+  ],
+  "blind_structure": {
+    "hidden_outcome": "REFERENCE ONLY, NOT FOR SCORING: The founder ran a ~5-month readiness program (QoE, formalized aftermarket service contracts, promoted and retained two senior leaders with equity and transitioned top-5 relationships to them), which substantiated a higher normalized EBITDA, then sold to a financial buyer with a short transition and a partial equity rollover; the cleaned-up aftermarket stream and reduced key-person risk supported a multiple near the top of the financial-buyer range and the founder exited within 20 months. This outcome is recorded only for later validation and must not influence scoring of the engine's pre-decision reasoning.",
+    "pre_outcome_correct_decision": "Run a transition-readiness program (QoE + key-person de-risking + aftermarket substantiation + after-tax modeling of A/B/C) before committing to any exit path, then select the path with the strongest substantiated, constraint-compliant risk-adjusted outcome.",
+    "knowable_before_outcome": [
+      "Healthy but unaudited earnings (~$11M EBITDA) and a wide, unverified multiple range",
+      "No internal successor; key relationships and top-5 concentration (~38%) held by founder and 2-3 leaders",
+      "Higher-margin aftermarket (~30%) of unverified durability",
+      "Founder's hard 24-month / no-long-earn-out and workforce/reputation constraints",
+      "Diligence-readiness gaps (no QoE, incomplete aftermarket contracts)"
+    ],
+    "hindsight_trap": "Knowing the founder sold to a financial buyer at a strong multiple could tempt a scorer to reward 'pick the financial buyer now' and penalize the readiness-first answer. The pre-outcome facts showed an unprepared business whose multiple would have been discounted; committing to a process blind was not the sound move even though the financial-buyer path ultimately worked once readiness was done.",
+    "scoring_without_leaking_outcome": "Score only on whether the engine identified the key-person/operational bottleneck as the governing driver, required readiness/substantiation before committing to a path, respected the founder's hard constraints, and reasoned about transferable value. Do NOT award or deduct points based on whether the engine named the buyer type that the hidden outcome shows was chosen."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses market/strategic drivers"
+      "criterion": "Does the engine identify the key-person/succession bottleneck (and resulting transferability/diligence gap) as the driver governing all three exit paths?",
+      "rubric_10": "Diagnoses OPERATIONAL_BOTTLENECK: value and exit feasibility are constrained by founder/key-leader concentration, no successor, and unsubstantiated transferable value/aftermarket durability.",
+      "rubric_8": "Identifies key-person/transferability risk as central with slightly imprecise labeling.",
+      "rubric_6": "Notes succession or diligence gaps but blends with generic exit-planning talk.",
+      "rubric_4": "Treats the decision mainly as a price/multiple comparison, underweighting the bottleneck.",
+      "rubric_2": "Diagnoses a defect not supported by the data (e.g., demand or margin failure).",
+      "rubric_0": "Diagnosis unrelated to the exit decision."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic before major decision"
+      "criterion": "Does the engine recommend the soundest pre-outcome step: a transition-readiness program (QoE + key-person de-risking + aftermarket substantiation + after-tax modeling) before committing to a buyer path?",
+      "rubric_10": "Recommends the readiness program addressing earnings quality, key-person de-risking, aftermarket durability, and after-tax modeling of A/B/C, then path selection, all within the preparation window.",
+      "rubric_8": "Recommends substantial pre-process readiness work before committing, with minor omissions.",
+      "rubric_6": "Recommends some preparation but leans toward a path without de-risking the bottleneck.",
+      "rubric_4": "Endorses a buyer path with only light preparation.",
+      "rubric_2": "Recommends launching a process or selling immediately with no readiness work.",
+      "rubric_0": "Recommends an action that breaks the founder's hard constraints or harms the workforce/value."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a founder-owned mature manufacturer planning an orderly liquidity event with workforce/reputation priorities?",
+      "rubric_10": "Reflects ownership-transition realities: diligence-readiness, key-person risk, aftermarket valuation, earn-out structure, and workforce/reputation protection.",
+      "rubric_8": "Relevant with a minor missed nuance.",
+      "rubric_6": "Relevant but somewhat generic.",
+      "rubric_4": "Generic; could apply to any business sale.",
+      "rubric_2": "Poorly aligned with the founder-exit context.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 24-month/no-long-earn-out, workforce/reputation, clean-books, and timing constraints?",
+      "rubric_10": "Explicitly works within the 24-month/no-long-earn-out limit, protects workforce/reputation, closes the diligence-readiness gap, and avoids a rushed process.",
+      "rubric_8": "Respects major constraints with minor tension.",
+      "rubric_6": "Mostly respects constraints; some unaddressed.",
+      "rubric_4": "Partially violates a constraint (e.g., earn-out or timing).",
+      "rubric_2": "Severely violates constraints.",
+      "rubric_0": "Action infeasible under the constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to BLND-009 specifics (EBITDA/multiples, no successor, top-5 38%, aftermarket margin, no QoE)?",
+      "rubric_10": "Cites ~$11M EBITDA and 5-7x/7-10x comps, no successor and ~38% top-5 concentration, ~30% aftermarket at higher margin, and the missing QoE.",
+      "rubric_8": "Traces primary claims with minor inference.",
+      "rubric_6": "Main reasoning supported; some claims loose.",
+      "rubric_4": "Limited traceability.",
+      "rubric_2": "Minimal direct support.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence high on the driver (key-person bottleneck) but reserved on ranking paths before substantiation?",
+      "rubric_10": "Confident that the bottleneck governs value while declining to rank A/B/C until QoE/transferability/aftermarket data exist.",
+      "rubric_8": "Reasonable calibration with slight overstatement.",
+      "rubric_6": "Some calibration but over-commits to a path.",
+      "rubric_4": "Overconfident in one buyer path without preparation.",
+      "rubric_2": "Confidence largely unsupported.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the engine avoid committing to an irreversible exit path without the warranted readiness and within the founder's hard constraints?",
+      "rubric_10": "Does not launch a process or accept a structure before de-risking the bottleneck and substantiating earnings/aftermarket, and never breaches the 24-month/no-long-earn-out or workforce constraints.",
+      "rubric_0": "Commits to a sale process or a constraint-violating structure with no readiness work."
     }
   },
-  "creation_methodology": "Expert analysis of BLIND_OUTCOME case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

@@ -2,9 +2,133 @@
   "caseId": "PD-020",
   "caseType": "PUBLIC_DATASET",
   "industry": "Retail / Department Stores",
+  "businessModel": "Multi-Location Department-Store Retailer with Emerging Omnichannel (Store + E-commerce)",
+  "businessStage": "Mature, Structural Revenue Decline Under Refinancing Pressure",
+  "sourceNote": "Derived from SEC 10-K disclosure patterns for regional department-store retailers, including comp-sales, traffic, channel mix, gross margin, and inventory write-down reporting. Financial profile reconstructed from audited annual report patterns (FY2023-FY2025), management discussion and analysis (MD&A) sections, store-level operating disclosures, and channel-mix breakdowns typical of mid-cap department-store filers. All figures are representative of publicly disclosed reporting conventions. No proprietary internal data. No answer-key content included.",
   "ownerIntake": {
-    "businessType": "Regional department store chain, 30 locations, $600M revenue, declining, EBITDA margin 4%",
-    "stage": "Store traffic declining, e-commerce cannibalizing sales, margins compressed by inventory write-downs",
-    "ownerGoal": "Stabilize business and improve profitability"
+    "businessType": "Regional department-store retailer operating 30 full-line department stores across mid-size metropolitan and suburban markets. Merchandise mix spans apparel, footwear, home goods, beauty, and accessories. Founded as a family banner, later recapitalized; now carries leveraged-buyout-era debt. Approximately 4,800 employees (mostly hourly store associates). Channel mix: ~82% physical store sales, ~18% e-commerce. Operates under a single banner with a legacy loyalty program and an aging core customer base.",
+    "stage": "FY2025: Revenue $600M (declining, -6.5% YoY vs $642M FY2024; FY2023 was $675M — multi-year decline). Comparable-store sales -7% YoY. Store traffic -9% YoY; conversion roughly flat; average ticket +1%. E-commerce 18% of sales ($108M), up from 12% prior year, but total revenue still falling. Gross margin 34% (down from 38%). Inventory write-downs $24M in FY2025 (4.0% of revenue), up from $9M (1.4%) prior year. EBITDA $24M (4.0% margin), down from $45M (7.0% margin) prior year — a ~300 bps decline. Roughly 6 of 30 stores are EBITDA-negative on a four-wall basis. Occupancy cost rising as a percentage of declining store sales.",
+    "ownerGoal": "Stabilize the business and present a credible forward plan to the board and lender ahead of a refinancing decision and the next season's merchandise buy (both within ~90-120 days). Owner wants to know whether to invest in repositioning the banner, rationalize the store fleet, or pursue strategic alternatives — without triggering a markdown spiral that breaches debt covenants.",
+    "ownerConstraints": [
+      "Long-term mall and store leases are hard to exit: most of the 30 stores carry leases with 5-12 years of remaining term and substantial early-termination penalties, limiting fast fleet rationalization and locking in occupancy cost on declining sales.",
+      "Brand heritage and an aging core customer base: the banner has decades of regional recognition and a loyalty file skewed older; alienating the existing base while chasing younger/online customers risks accelerating the decline before any repositioning pays off.",
+      "E-commerce build cost: closing the digital-capability gap (fulfillment, site merchandising, marketing, data) requires meaningful capital and 12-24 months, competing for scarce funds against store operations and debt service.",
+      "Vendor and merchandise commitments: next season's buy must be committed within ~90-120 days; open-to-buy and vendor terms are partly locked, and several key vendors have tightened terms as performance has weakened, constraining merchandise flexibility.",
+      "Limited capital and covenant pressure: leverage is high, the refinancing window is ~90-120 days, and another heavy markdown season threatens to breach EBITDA-based covenants — restricting discretionary spend on diagnostics, capex, or repositioning.",
+      "Workforce and community footprint: ~4,800 mostly hourly employees and concentrated local employment in several markets create political and reputational constraints on rapid store closures."
+    ],
+    "immediateConcern": "Sales and margins are deteriorating together and the deterioration looks structural rather than cyclical. Comparable-store sales fell 7% while traffic fell 9% and conversion held roughly flat — customers are simply coming in less, not failing to buy once inside. E-commerce grew to 18% of sales but total revenue still fell 6.5%, so online is not offsetting store losses; it reads as cannibalization and share loss rather than additive growth. Gross margin fell from 38% to 34%, driven mostly by escalating markdowns and inventory write-downs ($9M to $24M, 1.4% to 4.0% of revenue) on merchandise the customer base no longer wants. With a refinancing and the next merchandise buy both due in ~90-120 days, management must decide whether the problem is the merchandise/buying process, the cost structure, or something more fundamental about the banner's relevance — before committing capital it cannot easily recover.",
+    "availableData": [
+      "Revenue trend (audited): FY2023 $675M, FY2024 $642M (-4.9%), FY2025 $600M (-6.5% YoY); multi-year decline.",
+      "Comparable-store sales: -7% YoY FY2025 (excludes closed/opened stores), trending negative for 3 consecutive years.",
+      "Store traffic: -9% YoY (door-counter and loyalty-scan data), versus conversion roughly flat (low-to-mid teens %, stable YoY) and average ticket +1%.",
+      "Channel mix: e-commerce 18% of sales ($108M) FY2025, up from 12% ($77M) prior year; store sales declining faster than e-commerce is growing.",
+      "Gross margin: 34% FY2025, down from 38% prior year (400 bps); merchandise margin pressured primarily by markdowns.",
+      "Inventory write-downs / markdown reserve: $24M FY2025 (4.0% of revenue), up from $9M (1.4%) prior year — disclosed in MD&A and inventory footnotes.",
+      "Store-level EBITDA: four-wall EBITDA by store available; ~6 of 30 stores EBITDA-negative; occupancy cost rising as % of store sales.",
+      "EBITDA: $24M (4.0% margin) FY2025 vs $45M (7.0%) prior year; covenant headroom narrowing.",
+      "Loyalty program data: active member count, age skew, and frequency trends (declining trips per member)."
+    ],
+    "unavailableData": [
+      "Lapsed-customer and competitive-defection research: where former customers now shop (off-price, specialty, pure-play online) and why they stopped — not currently collected.",
+      "Brand-perception / relevance study: how target and lapsed customers rate the banner on differentiation, value, assortment, and reasons-to-visit versus competitors.",
+      "Category-level and SKU-level markdown root-cause data: which categories/buys drove the write-down increase, and whether it was over-buying, assortment misfit, or pricing — public/aggregate data masks this.",
+      "Customer overlap between store and e-commerce: degree to which online sales are existing store customers shifting channel (cannibalization) versus genuinely incremental customers.",
+      "Competitor pricing, traffic, and assortment benchmarks at the local-market level for each of the 30 stores."
+    ],
+    "timeHorizon": "90-120 days (refinancing decision and next-season merchandise buy commitment), with an 18-24 month horizon for any brand repositioning or fleet rationalization to show results.",
+    "riskAppetite": "LOW-MEDIUM (high leverage and a near-term covenant/refinancing constraint force caution; cannot fund large simultaneous bets, but inaction through another markdown season is itself high-risk)."
+  },
+  "clientContext": {
+    "industry": "Retail / Department Stores",
+    "size": "mid-cap regional retailer (30 stores, ~$600M revenue, ~4,800 employees, leveraged)",
+    "revenueImpactUrgency": "HIGH (multi-year revenue decline, margin compression, and a ~90-120 day refinancing/covenant window with another markdown season threatening covenant breach)"
+  },
+  "businessProblem": "A leveraged regional department-store retailer (30 stores, $600M revenue) is in multi-year decline and must, within roughly 90-120 days, make capital-allocation decisions tied to a refinancing and the next season's merchandise buy. Revenue has fallen from $675M (FY2023) to $642M (FY2024) to $600M (FY2025, -6.5% YoY). Comparable-store sales fell 7%, driven by a 9% drop in store traffic while conversion held roughly flat and average ticket rose 1% — indicating the decline is a traffic/relevance problem, not a conversion or in-store-execution problem. E-commerce grew to 18% of sales ($108M, up from 12%), yet total revenue still declined, so the online channel is not offsetting store losses and appears to reflect cannibalization and share loss rather than additive growth. Gross margin compressed from 38% to 34%, driven primarily by escalating markdowns and inventory write-downs that rose from $9M (1.4% of revenue) to $24M (4.0%), as the company marks down merchandise its customers increasingly do not want. EBITDA fell from $45M (7.0% margin) to $24M (4.0% margin), and about 6 of 30 stores are now EBITDA-negative on a four-wall basis while occupancy cost rises as a share of declining sales. The core challenge: Is the decline driven by a merchandise/demand-planning failure (over-buying causing write-downs), by a cost-structure/unit-economics problem (occupancy and four-wall losses), or by something more fundamental — a structural loss of the banner's relevance and differentiation that is pushing customers to other formats and online? Management must diagnose the true driver before committing the merchandise buy and the refinancing case, because another markdown season could breach covenants.",
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "Comparable-store sales declined 7% YoY in FY2025, the third consecutive year of negative comps. The decline decomposes cleanly: store traffic fell 9% YoY while conversion held roughly flat (stable low-to-mid-teens %) and average ticket rose ~1%. Because conversion and ticket are stable, the comp decline is almost entirely a traffic problem — fewer customers choosing to visit — rather than a failure to convert or an in-store execution issue. This is the signature of declining demand for / relevance of the format, not an operational breakdown at the point of sale.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K MD&A comparable-store sales disclosure; store door-counter and loyalty-scan traffic data (FY2023-FY2025)",
+      "isCritical": true,
+      "supportingData": {
+        "comp_sales_yoy_pct": -7.0,
+        "store_traffic_yoy_pct": -9.0,
+        "conversion_yoy_change_pct": 0.0,
+        "average_ticket_yoy_pct": 1.0,
+        "consecutive_negative_comp_years": 3,
+        "comp_decomposition_note": "traffic -9% + conversion ~0% + ticket +1% reconciles to comp ~-7% within rounding (small residual from basket/mix)"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Inventory write-downs and markdown reserves rose from $9M (1.4% of revenue) in FY2024 to $24M (4.0% of revenue) in FY2025 — a 260 bps increase in the write-down rate and a 167% increase in absolute dollars. The escalation indicates the company is repeatedly buying merchandise that customers do not purchase at full price and is forced to mark it down. The write-down rate is the clearest financial signal that the assortment is misaligned with what the customer base wants, and it is the primary driver of the gross-margin compression.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K inventory footnotes and MD&A markdown/reserve disclosure (FY2024, FY2025)",
+      "isCritical": true,
+      "supportingData": {
+        "write_down_usd_m_fy2025": 24,
+        "write_down_usd_m_fy2024": 9,
+        "write_down_rate_pct_fy2025": 4.0,
+        "write_down_rate_pct_fy2024": 1.4,
+        "write_down_rate_increase_bps": 260,
+        "write_down_absolute_growth_pct": 167
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "E-commerce grew to 18% of sales ($108M) in FY2025, up from 12% ($77M) the prior year, yet total revenue still fell 6.5% (from $642M to $600M). Store sales declined faster than e-commerce grew, so the online channel is not offsetting store losses. Combined with flat conversion in stores, this pattern indicates net share loss and channel cannibalization — existing customers shifting some spend online while the company loses total wallet — rather than additive digital growth that expands the customer base.",
+      "confidence": "MEDIUM",
+      "source": "SEC 10-K channel-mix disclosure and MD&A (FY2024, FY2025); loyalty cross-channel data",
+      "isCritical": true,
+      "supportingData": {
+        "ecommerce_penetration_pct_fy2025": 18.0,
+        "ecommerce_penetration_pct_fy2024": 12.0,
+        "ecommerce_sales_usd_m_fy2025": 108,
+        "ecommerce_sales_usd_m_fy2024": 77,
+        "total_revenue_yoy_pct": -6.5,
+        "interpretation_note": "online +$31M did not offset store decline; total revenue -$42M ⇒ cannibalization/share loss, not additive growth"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Gross margin compressed from 38% to 34% (400 bps) in FY2025, with the majority of the decline attributable to the increase in markdowns/write-downs (write-down rate up ~260 bps, from 1.4% to 4.0% of revenue), and the remainder to occupancy de-leverage and channel/mix effects. EBITDA fell from $45M (7.0% margin) to $24M (4.0% margin), a ~300 bps decline. With high leverage and a refinancing due within 90-120 days, the EBITDA erosion is narrowing covenant headroom; another heavy markdown season threatens a covenant breach.",
+      "confidence": "HIGH",
+      "source": "SEC 10-K consolidated statements, MD&A gross-margin bridge, and debt-covenant disclosures (FY2024, FY2025)",
+      "isCritical": true,
+      "supportingData": {
+        "gross_margin_pct_fy2025": 34.0,
+        "gross_margin_pct_fy2024": 38.0,
+        "gross_margin_decline_bps": 400,
+        "write_down_driven_bps_of_gm_decline": 260,
+        "ebitda_usd_m_fy2025": 24,
+        "ebitda_margin_pct_fy2025": 4.0,
+        "ebitda_usd_m_fy2024": 45,
+        "ebitda_margin_pct_fy2024": 7.0,
+        "ebitda_margin_decline_bps": 300
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Roughly 6 of 30 stores are EBITDA-negative on a four-wall basis, and occupancy cost is rising as a percentage of declining store sales (operating de-leverage). Long lease terms (5-12 years remaining, with early-termination penalties) make rapid fleet exit costly. While the four-wall losses and occupancy de-leverage are real and worsen the financials, they are a consequence of falling store sales rather than an independent cost shock — fixed occupancy is being spread over a shrinking sales base driven by the traffic decline.",
+      "confidence": "MEDIUM",
+      "source": "Internal store-level four-wall EBITDA reporting; lease portfolio disclosures (SEC 10-K commitments footnote)",
+      "isCritical": false,
+      "supportingData": {
+        "stores_total": 30,
+        "stores_ebitda_negative": 6,
+        "lease_remaining_term_years_range": "5-12",
+        "occupancy_cost_trend": "rising as % of store sales (de-leverage)",
+        "causation_note": "four-wall losses are downstream of traffic-driven sales decline, not an independent cost event"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (high leverage and covenant pressure constrain discretionary spend; diagnostic and repositioning capital must be modest and fast-payback)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "MEDIUM (~4,800 employees, mostly hourly store associates; thin corporate/merchandising and analytics bench; limited internal capability for customer/brand research)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
   }
 }

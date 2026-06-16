@@ -1,10 +1,115 @@
 {
   "caseId": "SYN-017",
   "caseType": "SYNTHETIC",
-  "industry": "Marketplace / Platform",
+  "industry": "Marketplace / Platform (B2B)",
+  "businessModel": "B2B marketplace connecting trade buyers with suppliers; monetized via a percentage take-rate (commission) on GMV plus optional listing/promotion fees. Two-sided network.",
+  "businessStage": "Series B, Growth Stage",
+  "sourceNote": "Synthetic stress-test case engineered to stress the engine's ability to recognize a STRATEGIC_PRICING_ERROR: a marketplace whose flat commission take-rate is mispriced for its highest-GMV sellers, who can now disintermediate to owned channels. The owner frames it as 'seller value prop and retention.' The evidence shows the value-vs-take-rate ratio breaks for large sellers specifically, driving structured disintermediation. Tests recognition of a pricing/monetization structure error distinct from a generic engagement problem. Not historical; metrics representative.",
   "ownerIntake": {
-    "businessType": "B2B marketplace platform, $7M revenue (GMV-based commissions), growth 30% YoY, but seller satisfaction declining",
-    "stage": "Seller acquisition slowing, larger sellers moving to owned channels, net revenue retention 95%",
-    "ownerGoal": "Improve seller value prop and retention"
+    "businessType": "B2B wholesale marketplace connecting trade buyers with suppliers across several categories. Founded 2019, total raised $40M (Series B 2023). Monetized via a flat ~12% take-rate (commission) on GMV plus optional promotion fees. Current net revenue $7.0M (commission + fees), 30% YoY growth, GMV ~$58M annualized, ~1,400 active sellers.",
+    "stage": "Net revenue $7.0M, 30% YoY growth. NRR (seller net revenue retention) fell from 108% to 95%. Seller acquisition slowing. The top 8% of sellers generate 61% of GMV, and several large sellers have begun routing repeat buyers to their own direct channels after initial marketplace introduction. Take-rate is a flat ~12% regardless of seller size or order type. Cash runway 24 months.",
+    "ownerGoal": "Improve seller value proposition and retention, restore NRR above 105%, and slow large-seller disintermediation; reach $12M net revenue within 18 months.",
+    "ownerConstraints": [
+      "Funding constraint: $40M raised, 24-month runway; the next raise is gated on GMV growth and seller retention, so large-seller GMV leakage is strategically dangerous.",
+      "Product constraint: the platform can support tiered/volume-based take-rates and value-added services (financing, logistics, buyer analytics) but these require 6-10 weeks of product+billing work to launch.",
+      "Organizational constraint: 70 staff (20 engineering, 16 seller-success/account-management, 14 buyer growth, rest G&A); account management covers large sellers but has no pricing-negotiation mandate.",
+      "Market constraint: large sellers increasingly have the scale and tooling to run direct buyer relationships once the marketplace has introduced the buyer; small/mid sellers still depend on marketplace demand generation.",
+      "Commercial constraint: a flat 12% take-rate is cheap for low-repeat, demand-dependent small sellers but expensive for high-volume, repeat-heavy large sellers whose buyers are now 'sticky' and disintermediable."
+    ],
+    "immediateConcern": "Seller NRR has fallen 108%→95% and the largest sellers, who drive 61% of GMV, are routing repeat buyers off-platform after the first marketplace-sourced order. The owner believes seller satisfaction and the value proposition are declining and wants to invest in seller-success headcount and new seller features. But the data shows the problem is concentrated and structural: the flat 12% take-rate is economically irrational for high-volume repeat sellers, who pay 12% on buyers the marketplace no longer needs to source, giving them a clear incentive to disintermediate. Small/mid sellers, who still depend on demand generation, are not leaving. The owner must decide within the next month whether to add seller-success resources broadly or restructure take-rate/monetization for the large-seller segment before more GMV leaks off-platform.",
+    "availableData": [
+      "Financial: net revenue $7.0M (commission + fees), 30% YoY growth, GMV ~$58M annualized, take-rate flat ~12%, runway 24 months",
+      "Retention: seller NRR 108%→95%; GMV retention concentrated risk in top sellers",
+      "Concentration: top 8% of sellers = 61% of GMV; bottom 70% of sellers = 14% of GMV",
+      "Disintermediation: ~30% of large sellers' repeat-buyer GMV now flows off-platform after first marketplace order; large-seller on-platform repeat rate fell from 64% to 41%",
+      "Segmented behavior: small/mid sellers' retention and repeat rates stable; their satisfaction surveys positive; large-seller satisfaction surveys cite 'commission too high for repeat orders' (top complaint, 58%)",
+      "Buyer side: buyer demand healthy; buyer acquisition stable; marketplace's value is strongest at first-order discovery, weakest at repeat"
+    ],
+    "unavailableData": [
+      "Price elasticity of take-rate by seller tier and order type (first-order vs repeat)",
+      "Margin contribution of value-added services (financing, logistics) if bundled to justify take-rate on repeat",
+      "Contractual/technical feasibility of enforcing on-platform transactions for marketplace-sourced buyers",
+      "Competitor marketplace take-rate structures by tier"
+    ],
+    "timeHorizon": "18 months to $12M net revenue; large-seller GMV leakage compounds monthly, so the monetization decision is urgent",
+    "riskAppetite": "MEDIUM (must protect the two-sided network and small-seller economics while stopping large-seller leakage; tempted to spread effort thinly across all sellers)"
+  },
+  "businessProblem": "A B2B marketplace growing 30% is leaking its most valuable GMV: seller NRR fell from 108% to 95%, and the top 8% of sellers (61% of GMV) are routing repeat buyers off-platform after the first marketplace-sourced order (on-platform large-seller repeat rate fell 64%→41%, ~30% of their repeat GMV now off-platform). The owner reads this as declining seller satisfaction and value proposition and wants broad seller-success investment and new features. But the problem is concentrated and structural: a flat ~12% take-rate is cheap for demand-dependent small/mid sellers (whose retention and satisfaction are stable) and economically irrational for high-volume repeat sellers, who pay 12% on buyers the marketplace no longer sources, making disintermediation the rational move (their top complaint, 58%, is 'commission too high for repeat orders'). With the next raise gated on GMV/retention and 24 months of runway, the owner must decide whether to spread seller-success effort broadly or restructure monetization for the large-seller segment before more GMV leaks.",
+  "evidence": [
+    {
+      "dimension": "pricing_monetization",
+      "finding": "The take-rate is a flat ~12% regardless of seller size or order type. This is structurally mispriced: it is cheap relative to value for low-repeat, demand-dependent small sellers, but expensive for high-volume repeat sellers who pay 12% on repeat buyers the marketplace no longer needs to source. The flat rate gives large sellers a direct economic incentive to disintermediate after the first order.",
+      "confidence": "HIGH",
+      "source": "Monetization model, take-rate schedule, seller-segment revenue analysis",
+      "isCritical": true,
+      "supportingData": {
+        "take_rate": "flat ~12%",
+        "differentiation_by_tier": "none",
+        "differentiation_by_order_type": "none"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "The disintermediation is concentrated in large sellers and tied to repeat orders: large-seller on-platform repeat rate fell from 64% to 41%, and ~30% of their repeat-buyer GMV now flows off-platform. Seller NRR fell 108%→95% driven almost entirely by this leakage. Small/mid sellers' retention and repeat rates are stable.",
+      "confidence": "HIGH",
+      "source": "GMV flow analysis, seller NRR cohort report, repeat-rate tracking",
+      "isCritical": true,
+      "supportingData": {
+        "large_seller_repeat_prior": "64%",
+        "large_seller_repeat_current": "41%",
+        "repeat_gmv_off_platform": "~30%",
+        "nrr_prior": "108%",
+        "nrr_current": "95%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Top 8% of sellers generate 61% of GMV; bottom 70% generate 14%. Large sellers now have the scale and tooling to run direct buyer relationships once the marketplace introduces the buyer, while small/mid sellers still depend on marketplace demand generation. The marketplace's value is strongest at first-order discovery and weakest at repeat for large sellers specifically.",
+      "confidence": "HIGH",
+      "source": "Seller concentration analysis, seller capability survey",
+      "isCritical": true,
+      "supportingData": {
+        "top_8pct_gmv_share": "61%",
+        "bottom_70pct_gmv_share": "14%",
+        "large_seller_direct_capability": "high",
+        "small_seller_demand_dependence": "high"
+      }
+    },
+    {
+      "dimension": "customer_satisfaction",
+      "finding": "Seller satisfaction is segmented: small/mid sellers report positive satisfaction, while large sellers' top complaint (58% of large-seller responses) is 'commission too high for repeat orders.' This is a monetization-structure complaint, not a generic product or service-quality complaint, localizing the cause to pricing rather than value-prop decline.",
+      "confidence": "MEDIUM",
+      "source": "Seller satisfaction surveys segmented by tier",
+      "isCritical": false,
+      "supportingData": {
+        "large_seller_top_complaint": "commission too high for repeat orders",
+        "large_seller_complaint_share": "58%",
+        "small_seller_satisfaction": "positive"
+      }
+    },
+    {
+      "dimension": "buyer_dynamics",
+      "finding": "The buyer side is healthy: buyer demand and acquisition are stable, and the marketplace reliably delivers first-order discovery value. The leakage is not a buyer-demand failure; it is that sellers capture buyers introduced by the marketplace and route repeat business off-platform because the flat take-rate makes staying on-platform uneconomic for them.",
+      "confidence": "MEDIUM",
+      "source": "Buyer acquisition and demand analytics",
+      "isCritical": false,
+      "supportingData": {
+        "buyer_demand": "healthy",
+        "buyer_acquisition": "stable",
+        "marketplace_value_peak": "first-order discovery"
+      }
+    }
+  ],
+  "clientContext": {
+    "industry": "Marketplace / Platform (B2B)",
+    "size": "Series B ($7.0M net revenue, ~$58M GMV, 70 employees, ~1,400 sellers)",
+    "revenueImpactUrgency": "HIGH (large-seller GMV leakage compounds monthly and threatens the GMV/retention-gated raise)"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (well-funded, 24-month runway, raise gated on GMV/retention)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "MEDIUM (70 staff; account management lacks a pricing-negotiation mandate)",
+    "cashRunwayMonths": 24,
+    "legalComplianceSensitive": true
   }
 }

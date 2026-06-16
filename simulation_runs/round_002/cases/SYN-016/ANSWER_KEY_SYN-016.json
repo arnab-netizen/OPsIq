@@ -1,27 +1,157 @@
 {
   "case_id": "SYN-016",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Operations)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Synthetic stress-test case SYN-016 (Supply Chain / Logistics SaaS): Growth assumptions not matching market reality; competitive, product-market fit, or unit economics challenges.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to identify whether problem is market demand, product fit, unit economics, or competitive positioning.",
+  "answer_creator": "Domain Expert (SaaS Onboarding, Activation, and Product Usability)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert isolated the tenure profile of churn, the activation funnel, and the support-ticket composition to determine whether the failure was demand, fit, pricing, or product usability during onboarding. Front-loaded churn plus a configuration-dominated support load and a 13-week time-to-value point to a trust/quality failure at activation.",
+  "root_cause_diagnosis": "TRUST_QUALITY_CRISIS",
+  "root_cause_description": "Customers lose trust and churn during onboarding because the product is too complex to operationalize, so they never reach the value they paid for. This is a quality/trust failure at the activation stage, not a demand or fit problem: market demand is strong and growing, and new-logo win rate is stable at 26%, so customers want and buy the product. The breakdown is afterward: median time-to-operational-use is 13 weeks, only 34% of contracted features ever activate, 41% of accounts never complete carrier-integration setup, support tickets run 2.4x benchmark and are dominated by setup/config (38%) and data mapping (27%), onboarding NPS is 12, and setup abandonment is 22%. Critically, ~70% of churn occurs in the first 6 months, before value, which is the signature of an onboarding-trust collapse rather than long-tenure dissatisfaction. The owner's instinct to add services headcount treats the symptom; the cost scales linearly with a defect rooted in product complexity. The cure is to simplify and guide activation so customers reach value fast and trust the product.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Quarterly logo churn 5% with ~70% in first 6 months",
+      "Growth decelerating 40%→25%",
+      "Support tickets 2.4x benchmark",
+      "Onboarding NPS 12"
+    ],
+    "contributing_factors": [
+      "6-person implementation team at 9 onboardings each (overwhelmed)",
+      "Simpler competitors winning ease-of-use comparisons",
+      "No onboarding funnel instrumentation to localize abandonment"
+    ],
+    "true_root_cause": "Product complexity makes activation/onboarding fail: customers cannot stand up carrier integrations and exception rules, never reach operational value, and abandon, so trust collapses before value is realized."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Launch an 8-week 'time-to-value' activation overhaul aimed at getting customers operational in under 4 weeks instead of 13, attacking the product defect rather than staffing around it. Concretely: (1) instrument the onboarding funnel to identify the exact configuration steps driving the 22% abandonment (likely carrier integration and data mapping, 65% of tickets combined); (2) ship a guided setup wizard and pre-built carrier-integration/data-mapping templates for the top carriers so the 41% who never finish integration can self-complete; (3) define a single 'first operational milestone' (first live shipment tracked with exceptions) and re-sequence onboarding to reach it first; (4) run a 'rescue' sprint on the current at-risk first-6-month cohort to push them past activation. Hold net-new services hiring; redeploy 2 support staff into the activation overhaul temporarily.",
+  "action_description": "It is first because ~70% of churn is front-loaded into the pre-value window, so every new cohort is at risk within a quarter; only faster, simpler activation changes that outcome. Adding CS/services headcount scales cost linearly with a complexity defect and never makes the product self-serviceable, while a full rebuild (longer than the runway tolerates) is unnecessary when guided setup and templates can collapse time-to-value. Fixing activation simultaneously cuts the 2.4x support load, raises feature activation above 34%, and unlocks the expansion that NRR (96%) currently cannot achieve.",
+  "accepted_alternative_actions": [
+    "Run a 2-week onboarding-funnel diagnostic FIRST to pinpoint the highest-abandonment steps, then target the activation overhaul precisely, provided it does not delay the rescue sprint on the at-risk cohort.",
+    "Offer a temporary 'done-with-you' guided-activation program (using redeployed staff) for the next two cohorts while the self-serve wizard ships, as a bridge that reduces first-6-month churn immediately."
+  ],
+  "bad_actions": [
+    "Hire a large professional-services/CS team to manually onboard every customer: this scales cost linearly with a product-complexity defect, never makes the product self-serviceable, and burns the 18-month runway without fixing the root cause.",
+    "Build major new features to improve 'product fit': the product is already too feature-heavy (only 34% activated); adding capability increases complexity and worsens the activation failure.",
+    "Cut price or discount to reduce churn: churn is driven by inability to reach value in the first 6 months, not price; discounting subsidizes customers who will still abandon during setup.",
+    "Push sales to acquire more new logos to outgrow churn: with 70% first-6-month churn and stable acquisition, pouring more customers into a broken onboarding funnel just multiplies the churn and support load."
+  ],
+  "action_constraints_respected": [
+    "Funding (18-month runway, $310k/month): action uses an 8-week product effort plus internal redeployment, avoiding a costly services org or full rebuild.",
+    "Product (guided onboarding/simplification is 8-12 weeks): action fits within that window and targets configuration friction, not a ground-up rebuild.",
+    "Organizational (implementation/support overwhelmed): action temporarily redeploys 2 support staff and reduces future load by making setup self-serviceable.",
+    "Market (demand strong, competitors win on ease-of-use): action directly closes the ease-of-use gap that is the competitive battleground."
+  ],
+  "rationale": "The tenure profile is decisive: ~70% of churn occurring in the first 6 months, combined with a 13-week time-to-value, 22% setup abandonment, and a support load dominated by configuration and data mapping, is the unambiguous signature of an onboarding-trust failure caused by product complexity. Because demand is strong and acquisition is stable, the only lever that changes the outcome is making the product fast and trustworthy to operationalize, which both stops front-loaded churn and unlocks the feature activation that retention and expansion depend on.",
+  "evidence_basis": [
+    "product_adoption: 13-week time-to-value, 34% features activated, 41% never complete integration",
+    "customer_retention: 5% quarterly churn with ~70% in the first 6 months (pre-value)",
+    "quality_delivery: tickets 2.4x benchmark (setup 38%, data mapping 27%), onboarding NPS 12, abandonment 22%",
+    "market_position: demand growing, win rate stable 26%, competitors winning on ease-of-use"
+  ],
+  "evidence_not_explained": [
+    "The exact configuration steps causing abandonment are not yet instrumented, so the overhaul begins with a short funnel diagnostic; the diagnosis is confident about the category of failure (activation complexity) but not yet about which specific steps to fix first."
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: that market demand is weak. Weaker because demand is explicitly strong and growing and win rate is stable at 26%; the failure is post-sale, not in demand.",
+    "OPERATIONAL_BOTTLENECK: that the implementation team is simply under-staffed. Partly true (9 onboardings/implementer) but secondary, because the load itself stems from product complexity; more staff treats the symptom while abandonment and 13-week activation persist.",
+    "CUSTOMER_RETENTION_EROSION (general): that the base is decaying over time. Weaker because churn is front-loaded into the first 6 months, not spread across tenure; this is an activation failure, not gradual erosion."
+  ],
+  "missing_evidence": [
+    "Onboarding funnel instrumentation showing which steps drive the 22% abandonment",
+    "Quantified correlation between feature activation and retention",
+    "Comparative time-to-value of the simpler competitors",
+    "Customer willingness to pay for guided/done-for-you onboarding"
+  ],
+  "success_metrics": [
+    "Median time-to-operational-use falls from 13 weeks to under 4 weeks within the 8-week effort plus a cohort cycle",
+    "Carrier-integration completion rises from 59% to >85%; feature activation rises from 34% toward 60%",
+    "First-6-month churn share drops materially; quarterly logo churn falls below 3% within two cohorts",
+    "Support tickets per customer fall from 2.4x toward 1.3x benchmark; onboarding NPS rises from 12 toward 40+"
+  ],
+  "expected_outcome": "If the trust/quality failure at activation is the true root cause, collapsing time-to-value with guided setup and templates should sharply reduce first-6-month churn, lift feature activation, and cut the support load, with growth reaccelerating as cohorts survive and expand. If churn persists despite customers reaching operational value quickly, the residual issue would be genuine fit or competitive displacement, which the funnel and activation-retention data would then reveal.",
+  "automatic_fail_conditions": [
+    "Recommending a large professional-services/CS hiring program as the primary fix, scaling cost with the complexity defect",
+    "Recommending new feature development when only 34% of existing features are activated",
+    "Diagnosing weak market demand despite explicit strong, growing demand and stable acquisition",
+    "Recommending price cuts to reduce churn that is driven by failure to reach value, not price"
+  ],
+  "source_references": [
+    "Onboarding milestone tracker and product activation analytics",
+    "Churn ledger with tenure breakdown and NRR cohort report",
+    "Support ticketing analytics and onboarding NPS survey",
+    "Implementation capacity model and win/loss notes"
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "Median time-to-operational-use is 13 weeks and only 34% of features ever activate", "implication": "Value is gated behind configuration most customers cannot finish, the core of an activation-driven trust failure."},
+      {"fact": "~70% of churn occurs in the first 6 months, before value", "implication": "Front-loaded churn is the signature of an onboarding/usability failure, not long-tenure dissatisfaction."},
+      {"fact": "Support tickets 2.4x benchmark, dominated by setup (38%) and data mapping (27%)", "implication": "Customers are struggling specifically to stand the product up, eroding trust at first contact."},
+      {"fact": "Demand is strong and growing and win rate is stable at 26%", "implication": "Acquisition and demand are healthy; the failure is entirely post-sale in activation."},
+      {"fact": "Onboarding NPS 12 and setup abandonment 22%", "implication": "Customers experience the product as too complex to operationalize, confirming a quality/trust crisis at onboarding."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "DEMAND_FORECASTING_MISMATCH", "why_weaker": "Demand is explicitly strong and growing and win rate is stable; the failure is post-sale activation, not demand."},
+      {"alternate": "OPERATIONAL_BOTTLENECK", "why_weaker": "The implementation overload is a consequence of product complexity; adding staff treats the symptom while 13-week activation and 22% abandonment persist."},
+      {"alternate": "CUSTOMER_RETENTION_EROSION", "why_weaker": "Churn is front-loaded into the first 6 months rather than spread across tenure, making it an activation failure, not gradual erosion."}
+    ],
+    "first_action_justification": "Because ~70% of churn is pre-value and front-loaded, the only lever that changes the outcome is collapsing time-to-value through guided, simplified activation; this fixes the root product-complexity defect rather than staffing around it.",
+    "constraints_effect_on_action": "The 18-month runway forbids a costly services org or full rebuild, so the action is an 8-week activation overhaul (wizard + templates) within the product-simplification window, using temporary redeployment of 2 support staff and a rescue sprint for the at-risk cohort rather than net hiring."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses growth/demand issue"
+      "criterion": "Does the engine diagnose TRUST_QUALITY_CRISIS at activation (product too complex to operationalize) rather than weak demand or generic fit?",
+      "rubric_10": "Diagnoses TRUST_QUALITY_CRISIS and ties it to front-loaded churn (70% in 6 months), 13-week time-to-value, 22% abandonment, and config-dominated tickets, while citing strong demand to rule out a demand cause.",
+      "rubric_8": "Diagnoses an onboarding/usability quality root cause with evidence but underweights one signal (e.g., omits the tenure profile).",
+      "rubric_6": "Identifies adoption/onboarding problems but is ambiguous about whether the cause is product complexity, staffing, or demand.",
+      "rubric_4": "Accepts the owner's framing and centers generic 'product fit' or proposes more features.",
+      "rubric_2": "Diagnoses weak market demand despite strong growing demand.",
+      "rubric_0": "Diagnosis unrelated to the evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic"
+      "criterion": "Does the engine prioritize a time-to-value/activation overhaul over services hiring, new features, or discounting?",
+      "rubric_10": "Recommends an 8-week activation overhaul (funnel instrumentation, guided setup, integration templates, rescue sprint) targeting sub-4-week time-to-value.",
+      "rubric_8": "Recommends an activation/onboarding-improvement action but with weaker scope or sequencing.",
+      "rubric_6": "Recommends onboarding work but mixes in significant new hiring or feature build.",
+      "rubric_4": "Recommends scaling a services/CS org as the primary fix.",
+      "rubric_2": "Recommends new features or price cuts.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect a supply-chain SaaS reality where front-loaded churn and configuration complexity gate value, in a strong-demand market?",
+      "rubric_10": "Action centers on collapsing time-to-value and closing the ease-of-use gap that competitors exploit, addressing the first-6-month churn directly.",
+      "rubric_6": "Action is onboarding-relevant but generic about the supply-chain/activation context.",
+      "rubric_2": "Action loosely related to the context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 18-month runway, overwhelmed implementation/support, and the 8-12 week simplification window?",
+      "rubric_10": "Uses an 8-week product effort plus internal redeployment, avoids a services org or full rebuild, and reduces future load.",
+      "rubric_6": "Respects most constraints but proposes some incremental hiring.",
+      "rubric_2": "Proposes a services-org buildout or rebuild that strains runway.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-016 metrics?",
+      "rubric_10": "Every claim traces to data: 13-week TTV, 34% activation, 41% never integrate, 70% first-6-month churn, tickets 2.4x, NPS 12, abandonment 22%.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence justified given the convergent activation/churn/support evidence?",
+      "rubric_10": "HIGH well-calibrated: activation analytics, tenure-split churn, and ticket composition converge on activation complexity.",
+      "rubric_6": "Confidence defensible but acknowledges the missing funnel instrumentation as residual uncertainty about which steps to fix first.",
+      "rubric_2": "Confidence asserted without grounding.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action low-risk and non-destructive (no runway-burning services org, no complexity-adding features)?",
+      "rubric_10": "Action is a contained product/process effort using existing staff, reducing both churn and cost.",
+      "rubric_6": "Action mostly safe but includes one cost item needing justification.",
+      "rubric_2": "Action introduces meaningful runway or complexity risk.",
+      "rubric_0": "Action high-risk (large services org or full rebuild gamble)."
     }
   },
-  "creation_methodology": "Expert analysis of SYNTHETIC case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

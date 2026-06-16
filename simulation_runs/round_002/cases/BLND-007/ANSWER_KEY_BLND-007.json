@@ -1,27 +1,158 @@
 {
   "case_id": "BLND-007",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Strategic Decision-Making)",
-  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
-  "root_cause_description": "Blind-outcome case BLND-007 (E-commerce / Apparel): Forward-looking strategic decision with uncertain outcomes. Multiple viable options; diagnosis should identify which option aligns with root-cause drivers and constraints.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Diagnostic analysis to clarify market dynamics, competitive positioning, and business model constraints before major strategic choice. Recommend data gathering on option-specific risks.",
+  "answer_creator": "Domain Expert (D2C / International Expansion Strategy)",
+  "creation_methodology": "Blind review: Expert analyzed the expansion-choice scenario without knowledge of which market the company ultimately entered or how it performed. Assessed which underlying driver should govern the decision and what pre-commitment evidence is required, then defined scoring on reasoning quality rather than on matching the hidden outcome.",
+  "root_cause_diagnosis": "GO_TO_MARKET_MISALIGNMENT",
+  "root_cause_description": "The driver that should govern this decision is whether the brand's proven domestic go-to-market motion (paid acquisition economics, sizing/fit, fulfillment model, repeat behavior) actually transfers to a new geography. The company's domestic success rests on a specific GTM fit: $62 blended CAC supported by a 41% repeat rate, domestic-appropriate sizing, and a single proven warehouse. Each expansion option carries a different and unproven GTM-transfer risk: Europe shows organic pull but 20-40% higher CPMs and unknown localized payback; Asia shows the largest interest but ~31% returns and sizing mismatch signaling poor fit transfer; deepening domestic preserves GTM fit but faces a rising-CAC, finite-TAM ceiling. The decision should be governed by where the GTM motion can be made to fit profitably, which is currently unproven everywhere abroad because no in-market acquisition test has been run.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Domestic YoY growth decelerated from ~45% to ~30%",
+      "Domestic active-buyer growth down to ~12%",
+      "Paid CAC up ~35% over 18 months"
+    ],
+    "contributing_factors": [
+      "Finite domestic TAM (~1.1% of a ~$2.3B segment, but incremental buyers increasingly expensive)",
+      "Distorted cross-border economics (~$6 contribution, elevated returns) masking true localized potential",
+      "No in-house international operations or local marketing capability"
+    ],
+    "true_root_cause": "Uncertainty over whether the domestic go-to-market motion (acquisition economics, sizing/fit, fulfillment, retention) transfers profitably to any candidate geography; the brand has not validated localized GTM fit, so the expansion choice is currently a GTM-transfer bet made on distorted proxy signals."
+  },
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Run a time-boxed, capped in-market validation test in the strongest-signal geography (the 3 European countries showing organic pull) before committing the full expansion budget: a 6-8 week paid-acquisition pilot with locally fulfilled inventory measuring true localized CAC, contribution margin after duties/3PL/returns, sizing-driven return rate, and early repeat intent, run in parallel with a lightweight retention/upsell test in the domestic base to quantify the realistic ceiling of Option A.",
+  "action_description": "This is first because all three options hinge on localized GTM economics that are currently unknown, and the only signals available (distorted cross-border margins, external CPM benchmarks) cannot distinguish a winning option from a value-destroying one. A capped pilot converts an irreversible ~$8-10M, multi-quarter merchandising and fulfillment commitment into a reversible test that either validates a market's transferable economics or redirects the budget, while the parallel domestic retention test bounds the opportunity cost of not expanding. It fits inside the 90-day decision window and respects the non-dilutive budget by spending a small fraction before the large commitment.",
+  "accepted_alternative_actions": [
+    "Commit to Option A (deepen domestic) as the primary bet while running a small Europe pilot in parallel, IF the engine justifies it by the proven GTM fit, lowest execution risk, and the unproven nature of all international economics, and treats the pilot as the gate for any later international scale-up.",
+    "Sequence Europe as the lead expansion only after a successful capped pilot, explicitly making the full Europe commitment conditional on the pilot hitting pre-defined localized payback and return-rate thresholds.",
+    "Explicitly defer Asia pending sizing/fit and operational-readiness work, recognizing its highest GTM-transfer risk, while testing the lower-risk European signal first."
+  ],
+  "bad_actions": [
+    "Committing the full ~$8-10M budget to Asia now on the strength of largest-absolute-interest, ignoring the ~31% return rate, sizing mismatch, weakest internal capability, and absence of any validated localized economics.",
+    "Committing the full budget to Europe purely on the distorted ~50% cross-border order growth and external CPM benchmarks without an in-market test of localized payback and fit.",
+    "Choosing any option primarily by comparing raw TAM size while ignoring CAC, contribution margin after duties/returns, and operational readiness.",
+    "Pursuing two or three markets simultaneously, exceeding the capped non-dilutive budget and breaching the margin-protection constraint."
+  ],
+  "action_constraints_respected": [
+    "Capital constraint: A capped 6-8 week pilot consumes a small fraction of the $8-10M before any large irreversible commitment, preserving non-dilutive optionality.",
+    "Margin protection constraint: Testing localized contribution margin before scale prevents committing to a market that would drag blended EBITDA below ~5%.",
+    "Time constraint: A 6-8 week pilot fits inside the 90-day decision window, leaving time to lock FY merchandising and fulfillment for the validated path.",
+    "Operational/team constraint: A single-market pilot via a local 3PL is feasible for a lean team with one GM hire and a local partner, far less than standing up multiple geographies at once."
+  ],
+  "rationale": "The three options are each plausible only under a different (unverified) belief about GTM transfer: Asia under 'interest converts despite fit risk', Europe under 'organic pull reflects real localized economics', domestic under 'retention can be lifted enough to beat international'. Because the brand has never run an in-market acquisition test, choosing now is choosing blind on distorted proxies. A capped pilot plus a domestic retention test is the highest-expected-value action: low cost, fits the timeline, and resolves the exact uncertainty that separates the options.",
+  "evidence_basis": [
+    "financial_health: domestic CAC $62/paid $88 up 35%, AOV $115, first-order contribution ~$24, 41% repeat rate, 9% EBITDA, $8-10M non-dilutive cap",
+    "market_position: ~1.1% of ~$2.3B domestic segment with active-buyer growth down to ~12% indicating a rising-cost, finite domestic ceiling",
+    "customer_retention: distorted cross-border economics (~$6 contribution, Europe +50% YoY small base, Asia ~31% returns) that cannot be used as true localized signals",
+    "financial_health (analytics gap): no in-market acquisition test run; localized CAC, payback, and retention curves all unknown"
+  ],
+  "evidence_not_explained": [
+    "Whether the ~50% European cross-border growth reflects genuine sustainable demand or a small-base artifact cannot be determined from current data without a deliberately acquired local cohort.",
+    "Whether the elevated Asian return rate is purely sizing/fit or partly fraud/counterfeit-driven is not separable from the current order-analytics view."
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: the founder may simply be over-forecasting non-domestic demand from vanity interest metrics; plausible but rejected as the governing driver because the core uncertainty is transfer of the acquisition/fit motion, not absolute demand sizing alone.",
+    "UNIT_ECONOMICS_BREAKDOWN: rising domestic CAC could be read as a unit-economics failure; rejected as primary because domestic economics remain positive (41% repeat rate carries payback) and the decision at hand is geographic expansion, not a broken core model.",
+    "BRAND_EROSION: one could argue the brand is losing pull; rejected because domestic repeat rate (41%) and core profitability are intact, indicating no brand decay, only acquisition-cost pressure."
+  ],
+  "missing_evidence": [
+    "Localized CAC and 90-day payback from a real in-market paid test in each candidate geography",
+    "Contribution margin after duties, local 3PL, returns, and FX at representative volume",
+    "Sizing/fit validation against local body-size distributions and the resulting return rate",
+    "Realistic local repeat/retention curve from a deliberately acquired local cohort (not incidental cross-border buyers)"
+  ],
+  "success_metrics": [
+    "Pilot delivers a credible localized CAC and contribution-margin-after-returns figure within 8 weeks for at least one candidate market",
+    "Clear go/no-go thresholds defined and tested (e.g., localized payback within target and return rate within an acceptable band) before any full commitment",
+    "Domestic retention test quantifies achievable lift to repeat rate above 41%, bounding Option A's ceiling",
+    "A single primary expansion path is selected within 90 days with documented evidence, or the full commitment is consciously deferred pending one more pilot cycle"
+  ],
+  "expected_outcome": "Within ~8 weeks the company holds real localized economics for the strongest-signal market and a quantified domestic-retention ceiling, enabling a defensible choice inside the 90-day window. If the pilot validates transferable European economics, Europe becomes the funded bet; if not, the budget redirects to domestic deepening or a different test, having avoided an irreversible misallocation of the capped non-dilutive budget.",
+  "automatic_fail_conditions": [
+    "Recommends committing the full expansion budget to any single market with no in-market validation of localized economics",
+    "Selects an option primarily on raw TAM/interest size while ignoring CAC, contribution margin after returns/duties, and operational readiness",
+    "Recommends entering multiple markets simultaneously, breaching the capped non-dilutive budget and margin-protection constraint",
+    "Recommends raising dilutive equity despite the explicit 18-month no-dilution constraint"
+  ],
+  "source_references": [
+    "01_case_input.json BLND-007: ownerIntake.availableData, ownerConstraints, evidence[financial_health, market_position, customer_retention, quality_delivery], strategicOptions"
+  ],
+  "blind_structure": {
+    "hidden_outcome": "REFERENCE ONLY, NOT FOR SCORING: The company ran a capped European pilot in the 3 organic-pull countries; localized CAC came in modestly above domestic but the higher AOV and acceptable return rate produced positive contribution, and Europe was funded as the primary expansion, reaching roughly $7M of incremental revenue in the following 18 months while Asia was deliberately deferred. This outcome is recorded solely for later validation and must not be used to score the engine's pre-decision reasoning.",
+    "pre_outcome_correct_decision": "Run a capped, time-boxed in-market validation pilot in the strongest-signal geography (Europe's 3 organic-pull countries) plus a parallel domestic retention test, and make the full expansion commitment conditional on validated localized economics, rather than committing the budget blind.",
+    "knowable_before_outcome": [
+      "Domestic CAC trend (+35%), repeat rate 41%, finite domestic TAM ceiling",
+      "Distorted cross-border economics and their unreliability as localized signals",
+      "European organic pull (small base) and 20-40% higher benchmarked CPMs",
+      "Asian largest-interest but ~31% returns, sizing mismatch, and operational/regulatory complexity",
+      "Absence of any in-market acquisition test and the capped non-dilutive budget"
+    ],
+    "hindsight_trap": "Knowing Europe was funded and succeeded could tempt a scorer to reward 'pick Europe now' and penalize a pilot-first or domestic-first answer. The pre-outcome facts did not guarantee European success; committing blind was not the sound move even though Europe happened to work.",
+    "scoring_without_leaking_outcome": "Score only on whether the engine reasoned soundly from the pre-outcome facts: did it identify GTM-transfer uncertainty as the governing driver, refuse to commit the irreversible budget without localized validation, respect the budget/margin/time constraints, and pick a defensible primary or pilot path? Do NOT award or deduct points based on whether the engine named the market that the hidden outcome shows succeeded."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses market/strategic drivers"
+      "criterion": "Does the engine identify that go-to-market transfer (acquisition economics, sizing/fit, fulfillment, retention) is the governing driver of the expansion choice?",
+      "rubric_10": "Diagnoses GO_TO_MARKET_MISALIGNMENT: recognizes the proven domestic GTM motion is unvalidated abroad and that the choice hinges on where the motion can be made to fit profitably, not on raw TAM.",
+      "rubric_8": "Identifies that localized acquisition economics and fit (not absolute market size) drive the decision, with slightly imprecise labeling.",
+      "rubric_6": "Notes expansion risk and unproven economics but blends it with generic market-sizing reasoning.",
+      "rubric_4": "Treats the decision mainly as a TAM/demand-sizing question, underweighting GTM transfer.",
+      "rubric_2": "Diagnosis contradicts the evidence (e.g., calls the core model broken).",
+      "rubric_0": "Diagnosis unrelated to the expansion decision."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic before major decision"
+      "criterion": "Does the engine recommend the soundest pre-outcome decision given constraints: a capped in-market validation before committing the irreversible budget (or a justified domestic-first bet gated by a pilot)?",
+      "rubric_10": "Recommends a capped, time-boxed in-market pilot (strongest-signal market) plus a parallel domestic retention test, with explicit go/no-go thresholds, inside the 90-day window before any full commitment to Option A, B, or C.",
+      "rubric_8": "Recommends in-market validation/testing before committing, or a domestic-first bet explicitly gated on a pilot, with minor gaps in thresholds or parallelism.",
+      "rubric_6": "Recommends some analysis before deciding but leans toward committing one option without a real in-market test.",
+      "rubric_4": "Endorses one option (e.g., Europe or Asia) with only light validation.",
+      "rubric_2": "Recommends committing the full budget to an option with no validation.",
+      "rubric_0": "Recommends an action that breaks constraints or harms the business (e.g., multi-market launch, dilution)."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a profitable founder-controlled $25M D2C brand choosing a single primary expansion under a 90-day window?",
+      "rubric_10": "Action reflects D2C realities: protecting profitability, single-bet focus, fulfillment localization lead time, and the 90-day FY-lock timeline.",
+      "rubric_8": "Relevant to a growth-stage D2C brand with a minor missed nuance.",
+      "rubric_6": "Relevant but somewhat generic for any e-commerce company.",
+      "rubric_4": "Generic, could apply to any business.",
+      "rubric_2": "Poorly aligned with the D2C expansion context.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the capped non-dilutive budget, margin-protection floor, 90-day timeline, and lean-team/no-international-capability constraints?",
+      "rubric_10": "Explicitly sizes the pilot within the budget, protects the ~5% EBITDA floor, fits 90 days, and accounts for the GM-hire/local-partner requirement.",
+      "rubric_8": "Respects the major constraints with minor tension.",
+      "rubric_6": "Mostly respects constraints; some unaddressed.",
+      "rubric_4": "Partially violates a constraint (e.g., budget or timeline).",
+      "rubric_2": "Severely violates constraints.",
+      "rubric_0": "Action infeasible under the stated constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific BLND-007 figures (CAC trend, repeat rate, cross-border distortion, return rates, no test run)?",
+      "rubric_10": "Cites CAC +35%/$62, 41% repeat rate, ~31% Asia returns, distorted ~$6 cross-border contribution, and the no-in-market-test gap.",
+      "rubric_8": "Traces primary claims with minor inference.",
+      "rubric_6": "Main reasoning supported; some claims loosely tied.",
+      "rubric_4": "Limited traceability.",
+      "rubric_2": "Minimal direct support.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence calibrated to clear domestic facts but large unknowns in localized international economics?",
+      "rubric_10": "Expresses confidence in the driver (GTM-transfer uncertainty) while explicitly flagging that option ranking cannot be high-confidence until a pilot resolves localized economics.",
+      "rubric_8": "Reasonable calibration with slight over- or under-statement.",
+      "rubric_6": "Some calibration but treats option choice as more certain than the data allows.",
+      "rubric_4": "Overconfident in a specific market without validation.",
+      "rubric_2": "Confidence largely unsupported.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the engine avoid committing to an irreversible, high-risk expansion without the warranted validation?",
+      "rubric_10": "Does not commit the irreversible ~$8-10M budget to Europe or Asia (or multi-market) without a capped in-market validation; treats the commitment as reversible-by-design via pilot gating.",
+      "rubric_0": "Commits the full budget to a high-risk market (especially Asia) with no localized validation, or launches multiple markets at once."
     }
   },
-  "creation_methodology": "Expert analysis of BLIND_OUTCOME case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

@@ -1,27 +1,192 @@
 {
   "case_id": "PD-015",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Public Dataset Analysis)",
+  "answer_creator": "Domain Expert (Restaurant / QSR Four-Wall Unit Economics)",
+  "creation_methodology": "Blind review: Expert analyzed public-pattern QSR financial data independently. Constructed and reconciled the average-unit four-wall P&L (AUV $4.25M; COGS 30%, labor 32%, occupancy 9%, other opex 14%, restaurant-level margin 15%), built the same-store-sales bridge (price +2% offset by traffic -2% = 0% SSS), and bridged the 400 bps margin decline to the +200 bps COGS and +200 bps labor cost-line moves. Diagnosed root cause as four-wall unit-economics breakdown rather than a pricing-structure error or a demand-forecasting mismatch.",
   "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
-  "root_cause_description": "Public dataset case PD-015 (Restaurant Chain / QSR): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
-  "confidence_in_diagnosis": "MEDIUM-HIGH",
-  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "root_cause_description": "The four-wall (per-unit) economics of the restaurant have broken: at an AUV of ~$4.25M and flat same-store sales (0% YoY), food & paper (COGS) rose from 28.0% to 30.0% of sales and labor rose from 30.0% to 32.0% of sales, driven by ~+8% food cost inflation and ~+10% labor (minimum-wage and scheduling) inflation. Because there was no top-line offset—the +2% menu price taken was fully eaten by a -2% traffic decline—the combined +400 bps of cost-line drag flowed straight through to restaurant-level EBITDA margin, which fell from 19.0% to 15.0% (a 400 bps decline, ~$170k of EBITDA per unit and ~$34M across 200 units). This is genuinely UNIT_ECONOMICS_BREAKDOWN at the unit level: the cost of a unit's output now exceeds sustainable contribution at the achievable price and traffic. It is distinct from a pricing-structure error (the chain does hold ~2% of pricing power, but competition and value-menu commitments cap it) and distinct from a demand-forecasting mismatch (traffic is roughly flat at -2%, not collapsing or grossly mis-forecast). The margin problem must be solved primarily inside the four walls—food cost (theoretical-vs-actual waste/yield) and labor productivity/deployment—because price and traffic are constrained.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Declining unit-level profitability while system revenue is stable (~$850M).",
+      "Restaurant-level EBITDA margin down from 19% to 15% (400 bps).",
+      "Covenant pressure ahead of a 60-90 day lender/franchise review."
+    ],
+    "contributing_factors": [
+      "Food cost inflation ~+8% pushing COGS from 28% to 30% of sales (+200 bps).",
+      "Labor cost inflation ~+10% (minimum wage + scheduling/overtime) pushing labor from 30% to 32% of sales (+200 bps).",
+      "Capped pricing power (+2% taken) and -2% traffic leaving same-store sales flat, so no operating leverage to absorb cost inflation.",
+      "Undisclosed split between pure input inflation and controllable unit-level waste/labor inefficiency."
+    ],
+    "root_cause": "Four-wall unit-economics breakdown: at achievable price and traffic, per-unit cost of output (food + labor) has outrun sustainable contribution, collapsing restaurant-level margin by exactly the +400 bps of COGS+labor drag on flat SSS."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Commission a representative-sample four-wall unit-economics and cost-productivity diagnostic across ~30-40 of the 200 units (covering high/low-margin and high/low-wage-market quartiles), running ~4-6 weeks at ~$60-90k. Three workstreams: (1) Food cost / menu engineering—compute theoretical (ideal) food cost vs actual by unit to isolate waste, over-portioning, and yield loss from true commodity inflation, and rank menu items by margin and mix to identify re-engineering, portion, or spec opportunities; (2) Labor deployment / scheduling—measure labor hours vs transactions by daypart against service-speed standards to find scheduling slack and overtime without cutting below the throughput/quality floor; (3) Unit dispersion—quantify how much of the 400 bps gap is structural inflation vs controllable, and how much margin recovery is achievable per quartile. Deliver a per-unit margin-bridge and a prioritized recovery plan (food cost basis points, labor basis points, selective price/value-mix) ahead of the 60-90 day lender/franchise review, so the CEO can choose re-engineer-the-model vs take-price vs slow-growth on evidence rather than reflex.",
+  "action_description": "This is first priority because the chain cannot price its way out (competition and value-menu commitments cap menu increases at ~2%, already offset by -2% traffic) and cannot safely cut labor blindly (slower service erodes traffic and same-store sales, the covenant-relevant metric). The only durable lever is inside the four walls—food cost waste/yield and labor productivity—but the public aggregate cost lines do not separate true inflation from controllable inefficiency, and unit-to-unit dispersion is unknown. A representative-sample diagnostic produces the theoretical-vs-actual food-cost gap and labor-deployment slack needed to size achievable basis-point recovery before the CEO commits to re-engineering the model, taking price, or slowing new-unit growth. At ~$60-90k and 4-6 weeks it fits the covenant-sensitive budget and the 60-90 day decision window.",
+  "accepted_alternative_actions": [
+    "Theoretical-vs-actual food cost (waste/yield) study plus menu-engineering margin/mix analysis on a representative sample, sequenced first if food is the larger controllable gap, with labor-deployment review following—still diagnostic-before-action and within the 60-90 day window.",
+    "Labor-productivity and scheduling diagnostic (labor hours vs transactions by daypart, overtime and turnover drivers) on a representative sample, holding service-speed standards fixed, paired with a smaller food-cost scan—acceptable if labor (+200 bps, +10% inflation) is prioritized as the larger near-term lever.",
+    "Combined four-wall margin-bridge build on a representative unit sample that decomposes the 400 bps decline into inflation vs controllable food and labor, then ranks targeted interventions (procurement/spec, portion control, scheduling, selective value-mix) by basis points recoverable per unit."
+  ],
+  "bad_actions": [
+    "Take broad menu price increases beyond ~2% to restore margin. Wrong for THIS case: pricing power is competitively capped and the +2% already taken was fully offset by -2% traffic; further blunt price increases would accelerate traffic loss, depress same-store sales, and worsen the covenant-relevant restaurant-level margin rather than restore it.",
+    "Cut crew labor hours across all units to force labor back toward 30% of sales. Wrong for THIS case: labor is at the service-speed/throughput floor; cutting below it slows drive-thru/service, degrades quality, and drives further traffic and SSS loss—shrinking the denominator and deepening the unit-economics breakdown.",
+    "Close or divest underperforming units before fixing the four-wall model. Wrong for THIS case: the margin decline is system-wide cost-line inflation on flat SSS, not a few broken sites; closing units crystallizes occupancy/exit costs, reduces system EBITDA, and risks the covenant without first establishing how much of the 400 bps is recoverable inside the four walls.",
+    "Slow or freeze new-unit growth as the primary fix. Wrong for THIS case: new-unit pacing does not address the per-unit cost-of-output problem in the existing 200 units; it defers the diagnostic, leaves the 400 bps unaddressed, and does not restore restaurant-level margin in the 60-90 day window."
+  ],
+  "action_constraints_respected": [
+    "Competitive pricing cap: Action focuses on four-wall food and labor cost recovery, not broad price increases that competition and value-menu commitments would punish with traffic loss.",
+    "Speed and quality constraint: Labor workstream measures productivity against fixed service-speed/throughput standards; it does not recommend cutting labor below the quality floor.",
+    "Minimum wage / brand-standards constraints: Diagnostic targets controllable waste, yield, scheduling slack, and menu engineering within brand specs and legal wage floors—not sub-minimum wages or brand-violating menu cuts.",
+    "Covenant + timeline constraints: ~$60-90k and 4-6 weeks fits a covenant-sensitive budget and delivers the per-unit margin-bridge ahead of the 60-90 day lender/franchise review, enabling an evidence-based CEO decision."
+  ],
+  "rationale": "The margin problem has three candidate root causes: (1) pricing-structure error, (2) demand/traffic mismatch, (3) four-wall unit-economics breakdown. The arithmetic disambiguates them: same-store sales are flat (price +2%, traffic -2%), so there is no volume or demand collapse, and the chain demonstrably holds some pricing power—ruling out demand mismatch and pure pricing error as primary. The entire 400 bps margin decline maps exactly onto the +200 bps COGS and +200 bps labor cost-line moves, which is the signature of unit-economics breakdown: cost of output outrunning sustainable contribution. Because price is capped and labor cuts threaten the traffic/SSS that protects the covenant, the first move must be diagnostic—separating true inflation from controllable food waste and labor inefficiency on a representative sample—before the CEO chooses to re-engineer the model, take price, or slow growth. Cost-cutting or price moves taken before that diagnostic risk worsening the covenant-relevant metric.",
+  "evidence_basis": [
+    "financial_health finding: Restaurant-level EBITDA margin fell 19.0% to 15.0% (400 bps) on flat SSS (0%), at AUV ~$4.25M (~$170k/unit, ~$34M system EBITDA decline).",
+    "operational_efficiency finding: COGS rose 28.0% to 30.0% (+200 bps) and labor rose 30.0% to 32.0% (+200 bps); combined +400 bps equals the entire margin decline since SSS is flat and occupancy (9%) and other opex (14%) held.",
+    "market_position finding: Menu price +2% fully offset by traffic -2% (net 0% SSS); pricing capped by competition and value-menu commitments, so no top-line lever to absorb +8% food and +10% labor inflation.",
+    "operational_efficiency finding: Aggregate cost lines do not separate true inflation from controllable waste/labor inefficiency, and unit dispersion is undisclosed—necessitating a representative-sample four-wall diagnostic before any system-wide remedy."
+  ],
+  "evidence_not_explained": [
+    "The split of the +200 bps food drag and +200 bps labor drag between pure commodity/wage inflation and controllable unit-level inefficiency (waste, over-portioning, scheduling slack, overtime) is not determinable from public aggregate cost lines—this is exactly what the first-priority diagnostic resolves and is consistent with the UNIT_ECONOMICS_BREAKDOWN diagnosis.",
+    "Unit-by-unit dispersion across the 200 restaurants is undisclosed, so the share of the 400 bps that is structurally recoverable per quartile is unknown until the sample diagnostic is run."
+  ],
+  "alternative_explanations": [
+    "STRATEGIC_PRICING_ERROR: The menu could be mispriced relative to cost. Rejected as PRIMARY because the chain demonstrably holds pricing power (it took +2%), but competition and value-menu commitments cap further increases, and the +2% it did take was fully offset by -2% traffic. The problem is not that price was set wrong; it is that achievable price cannot cover the +400 bps of food/labor cost inflation. Pricing is a constraint, not the root cause.",
+    "DEMAND_FORECASTING_MISMATCH: The chain could have mis-read demand and over-built capacity/traffic assumptions. Rejected as PRIMARY because traffic is roughly flat at -2% (not collapsing or grossly mis-forecast) and same-store sales are 0%—revenue is stable. There is no demand-driven volume shortfall; the margin loss is entirely on the cost side at a stable revenue base, which is the signature of unit-economics breakdown, not a forecasting error.",
+    "OPERATIONAL_BOTTLENECK: A specific throughput constraint could be capping output. Possible but rejected as primary because system revenue and AUV are stable and SSS is flat; the issue is per-unit cost of output exceeding sustainable contribution, not a capacity ceiling on volume. (Bottleneck-style controllable inefficiency, if found, would be a contributing factor surfaced by the diagnostic, not the root cause.)"
+  ],
+  "missing_evidence": [
+    "Theoretical (ideal) vs actual food cost by unit: quantifies waste, over-portioning, and yield loss, isolating controllable food cost from true commodity inflation within the +200 bps COGS drag.",
+    "Labor hours vs transactions by daypart against service-speed standards: identifies scheduling slack and overtime that can be removed without breaching the throughput/quality floor within the +200 bps labor drag.",
+    "Item-level menu margin and mix: shows which items are margin-accretive vs dilutive and where re-engineering, portion, spec, or selective value-mix changes can recover basis points without broad price increases.",
+    "Unit-by-unit margin dispersion across the 200 restaurants: reveals how much of the 400 bps is structural vs recoverable and which quartiles to prioritize."
+  ],
+  "success_metrics": [
+    "Diagnostic completion: Representative-sample (~30-40 unit) four-wall study completed within 4-6 weeks with a per-unit margin-bridge decomposing the 400 bps decline into inflation vs controllable food and labor.",
+    "Recoverable basis points quantified: Clear estimate of achievable food-cost basis points (waste/yield) and labor basis points (scheduling/overtime) recoverable without breaching service-speed, brand, or wage constraints.",
+    "Board/lender readiness: Prioritized recovery plan and per-unit economics delivered ahead of the 60-90 day lender/franchise review, enabling an evidence-based CEO decision among re-engineer-the-model, take selective price, or slow new-unit growth.",
+    "Margin trajectory: Defined path to recover a meaningful share of the 400 bps (e.g., toward the prior ~19% range) over the following 2-4 quarters via food-cost and labor-productivity actions, with SSS held flat or improving and the covenant metric protected."
+  ],
+  "expected_outcome": "If UNIT_ECONOMICS_BREAKDOWN is correct and the diagnostic is executed well, the chain should expect: (1) within 4-6 weeks, a per-unit four-wall margin-bridge splitting the +200 bps food and +200 bps labor drag into true inflation vs controllable waste/inefficiency, with quartile-level dispersion; (2) a prioritized recovery plan targeting recoverable basis points through food-cost discipline (theoretical-vs-actual, procurement/spec, portion control, menu engineering) and labor productivity (daypart scheduling, overtime reduction) without degrading service speed or breaching wage/brand/value-menu constraints; (3) an evidence-based CEO decision ahead of the 60-90 day lender/franchise review on whether to re-engineer the unit model, take selective price/value-mix, or slow new-unit growth—with the covenant-relevant restaurant-level margin protected. If the diagnostic shows the 400 bps is overwhelmingly structural inflation with little controllable slack, the company must pursue more fundamental model re-engineering (format, menu architecture, or footprint economics) rather than incremental cost control.",
+  "automatic_fail_conditions": [
+    "Recommending broad menu price increases beyond the competitively capped ~2% as the primary fix, ignoring that the +2% already taken was fully offset by -2% traffic and that further increases would worsen traffic, SSS, and the covenant metric.",
+    "Recommending across-the-board labor cuts that breach the service-speed/throughput and quality floor, which would erode traffic and same-store sales and deepen the unit-economics breakdown.",
+    "Diagnosing the case as a pure pricing error or demand-forecasting mismatch as the PRIMARY root cause despite flat SSS (price +2%, traffic -2%) and the 400 bps margin decline mapping exactly onto the +200 bps COGS and +200 bps labor cost-line moves.",
+    "Recommending unit closures, divestitures, or a growth freeze before running the four-wall diagnostic to establish how much of the 400 bps is recoverable inside the existing units."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "Restaurant-level EBITDA margin = (Sales − Food&Paper − Labor − Occupancy − Other opex) / Sales",
+      "Margin bridge: Δmargin = −(ΔCOGS% + ΔLabor%) when same-store sales are flat (occupancy% and other opex% held constant)",
+      "Per-unit EBITDA $ change = Δmargin × AUV",
+      "Same-store sales = menu price change + traffic change (price +2% + traffic -2% = 0%)",
+      "Current restaurant-level margin = 100% − 30.0% (food) − 32.0% (labor) − 9.0% (occupancy) − 14.0% (other opex) = 15.0%",
+      "System restaurant-level EBITDA change = Per-unit EBITDA $ change × unit count (≈ $170k × 200 ≈ $34M)"
+    ],
+    "expected_values": {
+      "auv_usd_m": 4.25,
+      "current_restaurant_margin_pct": 15.0,
+      "prior_restaurant_margin_pct": 19.0,
+      "margin_decline_bps": 400,
+      "cogs_pct_current": 30.0,
+      "cogs_pct_prior": 28.0,
+      "labor_pct_current": 32.0,
+      "labor_pct_prior": 30.0,
+      "occupancy_pct": 9.0,
+      "other_opex_pct": 14.0,
+      "per_unit_ebitda_drop_usd_k": 170,
+      "per_unit_ebitda_current_usd_k": 637.5,
+      "per_unit_ebitda_prior_usd_k": 807.5,
+      "system_ebitda_drop_usd_m": 34.0,
+      "same_store_sales_pct": 0.0,
+      "menu_price_pct": 2.0,
+      "traffic_pct": -2.0,
+      "food_inflation_pct": 8.0,
+      "labor_inflation_pct": 10.0,
+      "unit_count": 200,
+      "system_revenue_usd_m": 850.0
+    },
+    "tolerance": "±0.5 pp on margins and cost-line percentages; ±5% relative on dollar figures (per-unit EBITDA, system EBITDA, AUV).",
+    "unit_assumptions": "Percentages are of restaurant-level sales (AUV). AUV expressed in USD millions; per-unit EBITDA in USD thousands; system figures in USD millions. Cost lines are food & paper (COGS), labor, occupancy, and other operating expense; restaurant-level EBITDA excludes corporate G&A, depreciation, and interest. Prior-year occupancy (9%) and other opex (14%) assumed unchanged so the full 400 bps maps to food + labor.",
+    "invalid_input_rules": [
+      "Reject any computation where food% + labor% + occupancy% + other opex% + restaurant-level margin ≠ 100% (±0.5 pp).",
+      "Reject any same-store-sales value that does not equal menu price change + traffic change (±0.1 pp).",
+      "Reject a margin decline that does not equal −(ΔCOGS% + ΔLabor%) when SSS is flat (±0.5 pp).",
+      "Reject per-unit EBITDA $ change that is not within ±5% of Δmargin × AUV.",
+      "Reject negative AUV, negative unit count, or cost-line percentages outside 0-100%."
+    ],
+    "missing_input_behavior": "If a required input (AUV, any cost-line percentage, SSS, or prior-year cost lines) is absent, do not infer it from a different metric; flag the specific missing input and refuse the dependent computation rather than guessing.",
+    "refuse_if_missing": [
+      "If AUV is absent, refuse to compute per-unit or system EBITDA dollar figures.",
+      "If any cost-line percentage (food, labor, occupancy, other opex) is absent, refuse to compute or reconcile the four-wall restaurant-level margin.",
+      "If prior-year cost-line percentages are absent, refuse to compute the margin-decline bridge (Δmargin attribution).",
+      "If menu price change or traffic change is absent, refuse to assert the same-store-sales decomposition."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+      "criterion": "Does the engine diagnose UNIT_ECONOMICS_BREAKDOWN at the four-wall level, recognizing that on flat same-store sales the 400 bps margin decline maps exactly onto the +200 bps COGS and +200 bps labor cost-line moves?",
+      "rubric_10": "Engine diagnoses UNIT_ECONOMICS_BREAKDOWN exactly, citing the four-wall mechanics: COGS 28%→30%, labor 30%→32%, restaurant-level margin 19%→15% (400 bps) on flat SSS at AUV ~$4.25M, and explains why capped pricing and the -2% traffic offset rule out a pricing or demand root cause.",
+      "rubric_8": "Engine diagnoses a closely related cost-structure/four-wall margin archetype (e.g., OPERATIONAL_BOTTLENECK on food/labor cost) with sound four-wall reasoning but slightly imprecise framing.",
+      "rubric_6": "Engine identifies margin compression or cost inflation but does not clearly localize it to four-wall unit economics as the primary diagnosis.",
+      "rubric_4": "Engine focuses on secondary issues (pricing or traffic) without recognizing the four-wall cost-of-output breakdown.",
+      "rubric_2": "Engine diagnosis contradicts the flat-SSS / 400 bps cost-line evidence (e.g., calls it a demand collapse).",
+      "rubric_0": "Engine diagnosis is unrelated to the unit-economics evidence."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic analysis"
+      "criterion": "Does the engine recommend a representative-sample four-wall diagnostic (theoretical-vs-actual food cost / menu engineering and labor deployment/scheduling) before taking price, cutting labor, or closing units?",
+      "rubric_10": "Engine recommends a representative-sample four-wall unit-economics and labor-productivity/food-cost diagnostic with clear scope (~30-40 of 200 units), timeline (4-6 weeks), and cost (~$60-90k) that respects the pricing, service-speed, wage, and covenant constraints.",
+      "rubric_8": "Engine recommends a sound diagnostic (food-cost waste/menu engineering or labor-deployment review) on a sample with slightly different scope but still diagnostic-before-action.",
+      "rubric_6": "Engine recommends investigating food or labor costs but less targeted, or mixes some remediation in before the diagnostic is complete.",
+      "rubric_4": "Engine recommends immediate cost-cutting (broad labor cuts) without first running the four-wall diagnostic.",
+      "rubric_2": "Engine recommends aggressive action (broad price increases or unit closures) without analytical foundation.",
+      "rubric_0": "Engine action is harmful or contradicts the diagnosis (e.g., price hikes plus labor cuts that hit the service floor)."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect multi-unit QSR four-wall realities (AUV, restaurant-level margin, value positioning, covenant tied to restaurant-level margin, lender/franchise review)?",
+      "rubric_10": "Action reflects QSR four-wall dynamics: AUV $4.25M, restaurant-level margin, value-menu and competitive constraints, and delivers the per-unit margin-bridge ahead of the covenant-relevant 60-90 day lender/franchise review.",
+      "rubric_6": "Action is relevant to a multi-unit margin problem but misses a QSR-specific nuance (e.g., covenant tie or value-menu cap).",
+      "rubric_2": "Action is generic and could apply to any company with margin decline, ignoring four-wall/AUV context.",
+      "rubric_0": "Action is irrelevant or harmful to the QSR business."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the competitive pricing cap, service-speed/quality floor, minimum-wage and brand standards, the covenant tied to restaurant-level margin, and the 60-90 day decision window?",
+      "rubric_10": "Action explicitly respects all key constraints: no price beyond the ~2% cap, no labor below the service-speed floor, within wage/brand/value-menu limits, fits ~$60-90k budget and delivers before the 60-90 day review while protecting the covenant metric.",
+      "rubric_6": "Action mostly respects constraints with minor tension (e.g., timeline or budget slightly stretched).",
+      "rubric_2": "Action severely violates constraints (broad price hikes, sub-floor labor cuts, or a multi-quarter timeline past the review).",
+      "rubric_0": "Action is infeasible given the covenant and operating constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every claim be traced to specific four-wall evidence?",
+      "rubric_10": "Every claim is traceable: restaurant-level margin 19%→15% (400 bps), COGS 28%→30% (+200 bps), labor 30%→32% (+200 bps), SSS 0% (price +2% / traffic -2%), AUV $4.25M, food +8% / labor +10% inflation all cited.",
+      "rubric_6": "Main diagnosis supported but some claims are not directly tied to the case figures.",
+      "rubric_2": "Minimal evidence support.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given the deterministic four-wall arithmetic?",
+      "rubric_10": "HIGH confidence well-calibrated: the 400 bps decline maps exactly onto the +200 bps COGS and +200 bps labor moves on flat SSS, a clean deterministic bridge; residual uncertainty (inflation-vs-controllable split) is correctly deferred to the diagnostic.",
+      "rubric_6": "Evidence supports the diagnosis but the unit-level inflation-vs-controllable split is unresolved; MEDIUM-HIGH might be argued.",
+      "rubric_2": "Evidence is treated as ambiguous when the arithmetic is in fact deterministic.",
+      "rubric_0": "Confidence contradicts the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe (diagnostic before price, labor, or closure decisions)?",
+      "rubric_10": "Action is a low-risk four-wall diagnostic that provides clarity before any price increase, labor cut, or unit closure; protects the service-speed floor and the covenant metric.",
+      "rubric_6": "Action is largely diagnostic but introduces some remediation risk before findings are in.",
+      "rubric_2": "Action proposes meaningful cost or price moves before diagnosis.",
+      "rubric_0": "Action recommends broad price hikes, sub-floor labor cuts, or unit closures without analysis—unsafe for the covenant."
     }
   },
-  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
+  "source_references": [
+    "SEC EDGAR 10-K filings for mid-cap company-operated QSR operators (restaurant-level / four-wall margin, AUV, and same-store-sales bridge disclosures).",
+    "Public QSR investor presentations and earnings transcripts reporting restaurant-level EBITDA margin, food & paper, labor, and occupancy cost lines as a percentage of sales.",
+    "Restaurant-industry cost commentary on food (commodity) and labor (minimum-wage and scheduling) inflation typical of FY2024-FY2025 QSR reporting.",
+    "Standard four-wall restaurant unit-economics framework (AUV, prime cost, restaurant-level operating margin, theoretical-vs-actual food cost, labor deployment)."
   ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

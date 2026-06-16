@@ -1,27 +1,193 @@
 {
   "case_id": "PD-016",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Public Dataset Analysis)",
-  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
-  "root_cause_description": "Public dataset case PD-016 (Homebuilder): Financial data from SEC filings reveals unit economics deterioration due to cost inflation outpacing pricing.",
-  "confidence_in_diagnosis": "MEDIUM-HIGH",
-  "first_priority_action": "Commission detailed financial analysis and operational efficiency review using publicly available data and industry benchmarks to identify specific levers for margin recovery.",
+  "answer_creator": "Domain Expert (Homebuilding Operations and Land/Inventory Strategy)",
+  "creation_methodology": "Blind review: Expert analyzed public homebuilder operating metrics independently. Reconciled order, closing, absorption, spec-inventory, lot-supply, cancellation, and gross-margin data. Computed book-to-build, months of spec supply, and years of lot supply deterministically before diagnosing. Distinguished demand-to-supply commitment mismatch from unit-cost and pricing-structure explanations.",
+  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "root_cause_description": "The builder committed land, lots, and a construction/spec pipeline sized to a higher-volume forecast, but actual demand fell short. The leading signals are demand-side: net new orders dropped to 2,150 versus 2,400 homes closed (book-to-build 0.90, below 1.0, so backlog is shrinking); absorption fell from 3.2 to 2.4 homes per community per month; and the cancellation rate rose from 14% to 22%. The supply commitment did not adjust: spec (unsold, started) inventory is 620 homes against a normal ~380 (~240 excess, ~3.1 months of supply), and the owned-and-optioned land pipeline is ~9,000 lots, about 3.75 years of supply at the current pace - elevated for a softening market. Gross margin compressed 400 bps (22% to 18%), with roughly half from incentives rising to ~3% of ASP ($15k/home, up from ~1%) reflecting market softness and the remainder from land cost per home up 15.4% (to $150k) and labor up 9%; ASP held flat at $500k because the market caps price. The core problem is supply (land/spec) committed to a forecast that exceeds actual demand, not a primary unit-cost or pricing-structure failure. Cost inflation is real and compounding, but it is a contributing pressure, not the strategic error - the strategic error was building and optioning ahead of demand that did not materialize.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Home closing revenue down 4.8% ($1,260M to $1,200M), entirely volume-driven (2,520 to 2,400 closings at flat $500k ASP).",
+      "Homebuilding gross margin down 400 bps (22% to 18%).",
+      "Cancellation rate up from 14% to 22%.",
+      "Cash increasingly tied up in standing spec inventory and a multi-year land pipeline."
+    ],
+    "contributing_factors": [
+      "Land cost per home up 15.4% ($130k to $150k) - genuine cost inflation pressuring margin.",
+      "Direct construction labor up 9% amid a labor shortage - genuine cost inflation.",
+      "Incentives/price concessions up to ~3% of ASP ($15k/home) from ~1% - a response to softening demand that also compresses margin.",
+      "Mortgage-rate sensitivity amplifying cancellations and required rate-buydown incentives."
+    ],
+    "root_cause": "Supply committed to forecast exceeds actual demand: orders (2,150) below closings (2,400) with book-to-build 0.90, absorption down to 2.4/community/month, spec inventory 620 vs ~380 normal, and lot pipeline ~9,000 (3.75 years). The builder optioned/owned land and started homes for a higher-volume plan than the market now supports - a demand-forecasting / supply-commitment mismatch."
+  },
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Run a 4-to-6 week demand/sales-pace and inventory-exposure review ($60-90k, internal land/sales/finance teams with limited external market input) before the ~90-day board and land-bank funding decision. Specifically: (1) Re-forecast absorption by community using current traffic, qualified-buyer pipeline, and cancellation trends, replacing the prior higher-volume forecast. (2) Right-size starts and spec to verified demand: cap new starts so spec inventory trends back toward the ~380 normal level, prioritizing completion and sale of the ~240 excess specs over new starts. (3) Re-underwrite the ~9,000-lot pipeline against the lower pace; identify optioned lots to walk or renegotiate (quantify forfeited deposits vs. carry/impairment avoided) and owned land to mothball, phase, or joint-venture. (4) Calibrate incentives to absorption per community (targeted rate buydowns where they move pace) rather than across-the-board cuts, to clear specs without resetting comps. Deliver a board-ready model showing cash freed, margin impact, and lot-position decisions for the funding meeting.",
+  "action_description": "This is first priority because the binding decision (slow starts, walk option lots forfeiting deposits, or raise incentives) is due within ~90 days at the board and land-bank funding cycle, and making it without a re-forecast risks either committing more capital into softening demand or fire-saling inventory and impairing comps. The review is diagnostic and reversible: it produces a community-level demand picture and a quantified inventory/land exposure map so the starts, spec, incentive, and lot-walk decisions are made deliberately against verified demand rather than the stale higher-volume forecast. At $60-90k and 4-6 weeks it fits inside the 90-day window and respects covenant and capital constraints.",
+  "accepted_alternative_actions": [
+    "Immediate starts moratorium on new spec in communities with absorption below ~2.0/month, paired with an expedited community-level re-forecast - acceptable because it directly halts the supply commitment into the weakest demand while the fuller review completes, provided it is data-triggered and not blanket.",
+    "Targeted lot-option re-underwriting sprint: rank all optioned takedowns by deposit-at-risk versus projected pace and margin, and renegotiate or walk the worst-underwater options before the next takedown deadline - acceptable because it addresses the committed-supply root cause and preserves cash, as long as walk decisions are quantified against forfeited deposits rather than reflexive.",
+    "Spec-aging and incentive-calibration program that clears the ~240 excess specs with community-specific incentives tied to absorption, while protecting backlog comps - acceptable as a parallel cash-and-inventory action provided it does not become an across-the-board price reset."
+  ],
+  "bad_actions": [
+    "Start MORE specs to chase volume and 'defend market share' into softening demand - wrong for this case because orders (2,150) are already below closings (2,400) and absorption has fallen to 2.4/month; adding starts deepens the supply-to-demand mismatch, raises spec well above the 620 already elevated versus ~380 normal, and burns cash exactly when demand is contracting.",
+    "Deep across-the-board public price cuts to move inventory fast - wrong because it would reset appraisal comps across all active communities, trigger further cancellations from in-backlog buyers (cancellations already at 22%), and impair the value of the entire 9,000-lot pipeline; the constraint explicitly forbids fire-saling without impairing comps.",
+    "Cut sales and marketing spend to protect near-term margin - wrong because absorption (pace) is the binding problem; reducing demand-generation when the order book is already thin accelerates the order/closing gap and worsens spec overhang, treating a demand shortfall by further suppressing demand.",
+    "Treat the problem as pure cost inflation and launch an aggressive land/labor cost-down program as the primary response - wrong because while land (+15.4%) and labor (+9%) are real pressures, the leading signal is the order/absorption collapse and spec/land overhang; a cost program does nothing about a 3.75-year lot pipeline and 240 excess specs built for a higher-volume forecast.",
+    "Commit the next scheduled land-bank takedown on plan to 'stay disciplined to the pipeline' - wrong because it pours more capital into committed supply against falling demand precisely when the book-to-build (0.90) and absorption signal the forecast was too high."
+  ],
+  "action_constraints_respected": [
+    "~90-day board / land-bank funding deadline: 4-6 week review delivers a board-ready model in time for the funding and starts decision.",
+    "Land already optioned/owned is sunk or committed: action quantifies deposit-forfeiture versus carry/impairment trade-offs rather than assuming costless exit, and phases owned land instead of dumping it.",
+    "Market softness caps price: action calibrates targeted incentives to pace rather than raising ASP, which the market will not bear.",
+    "Cannot fire-sale without impairing comps/backlog: action uses community-specific, absorption-linked incentives and spec-aging rather than across-the-board price cuts, protecting comps and the existing backlog.",
+    "Labor shortage and 9% wage inflation: action focuses on starts pace and inventory right-sizing rather than assuming cycle-time or labor-cost compression that the labor market will not allow.",
+    "Land-bank/revolver covenants and capital constraint: action reduces new commitments and frees cash from excess spec, easing rather than straining covenant headroom."
+  ],
+  "rationale": "Three candidate root causes compete: DEMAND_FORECASTING_MISMATCH (supply committed above realized demand), UNIT_ECONOMICS_BREAKDOWN (cost inflation eroding margin), and STRATEGIC_PRICING_ERROR (mispriced to market). The deterministic signals point to demand-supply mismatch as primary: book-to-build is 0.90 (orders below closings, backlog shrinking), absorption fell 25% (3.2 to 2.4), cancellations rose to 22%, spec inventory is ~240 above normal, and the lot pipeline is 3.75 years - all evidence that the company built and optioned to a forecast the market did not deliver. Cost inflation is real (land +15.4%, labor +9%) and explains part of the 400 bps margin decline, but only about half; the other half is incentives (1% to 3% of ASP), which are themselves a response to weak demand. Pricing is constrained by the market, not internally mis-set (ASP held flat; the lever buyers respond to is incentive, i.e., effective price, which the company is already using). Therefore the first action must re-establish a demand-grounded forecast and right-size committed supply (starts, spec, lots) before the funding decision - not a cost-down program (does not touch the pipeline overhang) and not a price reset (impairs comps and backlog).",
+  "evidence_basis": [
+    "market_position: Net new orders 2,150 below homes closed 2,400 (book-to-build 0.90); cancellation rate up from 14% to 22% - demand and contract retention deteriorating.",
+    "operational_efficiency: Absorption down from 3.2 to 2.4 per community/month; spec inventory 620 vs ~380 normal (~240 excess, ~3.1 months supply) - supply commitment exceeding sales pace.",
+    "financial_health: Owned-and-optioned pipeline ~9,000 lots = ~3.75 years of supply at current pace - committed land sized to a higher forecast.",
+    "financial_health: Gross margin 22% to 18% (400 bps), ~half from incentives (1% to 3% of ASP) and ~half from land (+15.4%) and labor (+9%); ASP flat at $500k - margin compression with price capped by market.",
+    "financial_health: Revenue -4.8% ($1,260M to $1,200M) is volume-driven (2,520 to 2,400 closings, flat ASP) - confirms demand shortfall, not price collapse."
+  ],
+  "evidence_not_explained": [
+    "The split of cancellations between mortgage-rate-driven buyer fallout versus buyer-side cold feet is not separable from the disclosed metrics; either way it confirms softening demand and supports DEMAND_FORECASTING_MISMATCH, but the exact mechanism would need buyer-level data."
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN: Land (+15.4%) and labor (+9%) inflation are compressing per-home margin. Weaker as the PRIMARY diagnosis because (a) the leading and largest-magnitude signal is the demand/absorption collapse and spec/land overhang, not cost structure; (b) roughly half the 400 bps margin decline is incentives, which are a demand response, not input cost; (c) a unit-cost diagnosis offers no remedy for a 3.75-year lot pipeline and 240 excess specs built to an over-forecast. Cost inflation is correctly classified as a contributing factor.",
+    "STRATEGIC_PRICING_ERROR: Homes may be mispriced for the market. Weaker because ASP held flat at $500k and the disclosed signal is that the market caps price (incentives, i.e., effective price, are already being used and rising). The problem is not an internal list-price error but that volume/orders are falling below the supply the company committed; raising or restructuring price does not address the order/absorption gap and a deep cut would impair comps and backlog."
+  ],
+  "missing_evidence": [
+    "Community-level absorption, margin, and spec exposure - to target starts cuts, incentive calibration, and lot decisions to the weakest submarkets.",
+    "Land option contract terms: non-refundable deposit amounts and takedown schedules per option - to quantify walk-versus-hold economics.",
+    "Forward demand indicators by submarket (sales-office traffic, qualified-buyer pipeline, competitor incentive levels) - to validate the re-forecast.",
+    "Buyer cancellation reasons and mortgage-rate-lock data - to separate rate-driven fallout from broader demand weakness and size incentive (rate-buydown) needs."
+  ],
+  "success_metrics": [
+    "Community-level demand re-forecast completed within 4-6 weeks, replacing the prior higher-volume forecast with current-pace absorption assumptions.",
+    "Book-to-build trending toward or above 1.0 and spec inventory trending from 620 back toward ~380 over the next 2-3 quarters as starts are right-sized.",
+    "Lot pipeline re-underwritten: years-of-supply reduced from 3.75 toward a target band via walked/renegotiated options and phased owned land, with forfeited deposits quantified against carry/impairment avoided.",
+    "Cash freed from excess spec and avoided takedowns quantified for the board; gross margin stabilized or recovering as incentive spend is targeted rather than blanket.",
+    "Board and land-bank funding decision made on the re-forecast (slow starts / walk options / calibrated incentives) within the ~90-day window."
+  ],
+  "expected_outcome": "If DEMAND_FORECASTING_MISMATCH is correct and the review is executed well: within 4-6 weeks the company has a community-level demand re-forecast and a quantified inventory/land exposure map; within the 90-day window the board approves a right-sized starts plan, a calibrated incentive program that clears excess specs without resetting comps, and a set of lot-option walks/renegotiations that free cash and reduce the pipeline below 3.75 years. Over 2-3 quarters, spec inventory moves toward ~380, book-to-build recovers toward 1.0, and margin stabilizes as incentive spend is targeted. If the re-forecast instead shows demand is stabilizing and the overhang is transient, the company avoids over-correcting (no fire sale, no excessive option walks). If it shows demand deteriorating further, the company has the framework to escalate starts cuts and option walks before more capital is committed.",
+  "automatic_fail_conditions": [
+    "Recommending MORE starts/specs to chase volume into softening demand (orders already below closings, absorption falling) - directly worsens the root cause.",
+    "Recommending deep across-the-board price cuts or a fire sale that would impair appraisal comps and the existing backlog - violates an explicit owner constraint.",
+    "Recommending cutting sales/marketing/demand-generation when absorption (pace) is the binding problem.",
+    "Diagnosing pure unit-cost inflation or a pricing-structure error as the PRIMARY root cause while ignoring the order/absorption collapse and spec/land overhang.",
+    "Committing the next land-bank takedown on the original higher-volume plan without re-forecasting demand first."
+  ],
+  "source_references": [
+    "SEC 10-K/10-Q homebuilder operating-metrics disclosure patterns: homes closed, net new orders, cancellation rate, average selling price, active community count, monthly absorption/sales pace.",
+    "Owned-and-optioned lot position and years-of-supply disclosure conventions for regional public homebuilders.",
+    "Homebuilding gross-margin and cost-per-home (land, construction, incentives) reporting conventions.",
+    "Reconstructed FY2024/FY2025 figures consistent across 01_case_input.json for PD-016."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "Book-to-build = Net new orders / Homes closed",
+      "Months of spec supply = Spec homes / (Annual closings / 12)",
+      "Lot supply years = Owned+optioned lots / Annual closings",
+      "Home gross margin = (Revenue - land - construction - incentives) / Revenue",
+      "Revenue change % = (Revenue_current - Revenue_prior) / Revenue_prior",
+      "Margin decline (bps) = (Gross margin prior - Gross margin current) * 100",
+      "Excess spec homes = Spec homes current - Spec homes normal"
+    ],
+    "expected_values": {
+      "closings": 2400,
+      "asp_usd_k": 500,
+      "net_new_orders": 2150,
+      "book_to_build": 0.90,
+      "spec_homes": 620,
+      "spec_homes_normal": 380,
+      "excess_spec_homes": 240,
+      "months_spec_supply": 3.1,
+      "lot_supply_years": 3.75,
+      "cancellation_rate_pct": 22,
+      "gross_margin_pct_current": 18.0,
+      "gross_margin_pct_prior": 22.0,
+      "margin_decline_bps": 400,
+      "incentive_per_home_usd_k": 15,
+      "land_cost_per_home_usd_k": 150,
+      "revenue_change_pct": -4.8
+    },
+    "tolerance": "Plus or minus 0.05 on ratios (book-to-build, lot supply years); plus or minus 0.5 pp on margins and cancellation rate; plus or minus 5% relative on counts (closings, orders, spec homes, lots). Months of spec supply within plus or minus 0.2 months.",
+    "unit_assumptions": "Revenue in USD millions of home closing revenue; ASP and per-home costs in USD thousands; counts are units of homes or lots; absorption is homes per active community per month; margins and cancellation rates in percent; bps = basis points (1% = 100 bps). Lot supply and months of spec supply computed at the current 2,400-home annual closing pace.",
+    "invalid_input_rules": [
+      "If net new orders exceeds homes closed but the response still claims a shrinking backlog, flag as inconsistent (book-to-build must be < 1.0 to assert shrinking backlog).",
+      "If book-to-build is computed >= 1.0 from the given inputs, the arithmetic is wrong (2150/2400 = 0.90).",
+      "If gross margin is asserted to have risen while incentives and land cost rose and ASP is flat, flag as inconsistent.",
+      "If lot supply years is computed without dividing by annual closings (e.g., dividing by monthly pace), flag as a unit error.",
+      "Negative counts, negative supply years, or margins outside 0-100% are invalid."
+    ],
+    "missing_input_behavior": "If a required metric is absent, compute only the ratios whose inputs are present and explicitly state which formulas cannot be evaluated; do not impute missing demand or inventory figures.",
+    "refuse_if_missing": [
+      "If net new orders is absent, refuse to judge demand-supply balance (book-to-build cannot be computed).",
+      "If spec home count is absent, refuse to judge inventory overhang (months of spec supply cannot be computed).",
+      "If owned+optioned lot count or annual closings is absent, refuse to judge land-pipeline exposure (lot supply years cannot be computed).",
+      "If both prior and current gross margin are absent, refuse to quantify margin compression."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses unit economics or margin issue from public data"
+      "criterion": "Does the engine diagnose DEMAND_FORECASTING_MISMATCH - supply (land/spec) committed to a forecast above realized demand - using the order/absorption collapse and spec/land overhang for THIS homebuilder?",
+      "rubric_10": "Diagnoses DEMAND_FORECASTING_MISMATCH exactly, citing orders 2,150 below closings 2,400 (book-to-build 0.90), absorption 3.2 to 2.4, cancellations 14% to 22%, spec 620 vs 380 normal, and lot supply 3.75 years; correctly classifies land/labor inflation as contributing, not root.",
+      "rubric_8": "Diagnoses a closely related demand/over-build archetype (e.g., over-supply/inventory-glut or backlog-erosion) with sound evidence (orders below closings, spec overhang, elevated lot supply), even if not named exactly DEMAND_FORECASTING_MISMATCH.",
+      "rubric_6": "Identifies the demand softening or spec/lot overhang but does not clearly establish the supply-committed-to-forecast mismatch as primary; treats it as co-equal with cost inflation.",
+      "rubric_4": "Focuses on land/labor cost inflation (UNIT_ECONOMICS_BREAKDOWN) or pricing as primary, mentioning the order/absorption/spec signals only secondarily.",
+      "rubric_2": "Diagnosis contradicts the evidence (e.g., claims demand is strong or backlog is growing despite book-to-build 0.90).",
+      "rubric_0": "Diagnosis unrelated to the demand-supply mismatch or the homebuilding metrics."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends diagnostic analysis"
+      "criterion": "Does the engine recommend a demand/sales-pace and inventory-exposure review (re-forecast absorption by community, right-size starts/spec, re-underwrite/walk optioned lots, calibrate incentives to pace) before the ~90-day funding decision?",
+      "rubric_10": "Recommends the demand re-forecast and inventory/land-exposure review with scope, timeline (4-6 weeks), and cost that fit the 90-day window, explicitly covering starts right-sizing, spec reduction toward ~380, lot-walk economics, and pace-calibrated incentives.",
+      "rubric_8": "Recommends a sound diagnostic/right-sizing approach (re-forecast plus starts/spec/lot review) with slightly different scope or sequencing but still demand-grounded and constraint-aware.",
+      "rubric_6": "Recommends investigating demand or inventory but less targeted; may bundle in some premature commitments (e.g., a set incentive level) without re-forecasting first.",
+      "rubric_4": "Recommends a cost-down or generic margin-recovery program without re-forecasting demand or right-sizing committed supply.",
+      "rubric_2": "Recommends aggressive action (more starts, deep price cuts, mass option walks) without the analytical re-forecast foundation.",
+      "rubric_0": "Action is harmful (chases volume into softening demand, fire-sales inventory) or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect regional homebuilder dynamics - starts/spec/land cadence, absorption, backlog comps, land-bank funding and board cycle?",
+      "rubric_10": "Action is grounded in homebuilding operating reality (community-level absorption, spec aging, option takedowns, comp protection) and targets the board/land-bank funding decision.",
+      "rubric_6": "Action is relevant to the homebuilder situation but misses a key lever (e.g., omits the land-pipeline/option dimension or the comp-protection constraint).",
+      "rubric_2": "Action is generic and could apply to any margin-pressured company; ignores homebuilding-specific supply/land mechanics.",
+      "rubric_0": "Action is irrelevant or harmful to a homebuilder in a softening market."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the ~90-day funding deadline, committed/sunk land (deposit forfeiture), market-capped price, no-fire-sale-without-impairing-comps, labor shortage, and covenant/capital limits?",
+      "rubric_10": "Delivers within the 90-day window; quantifies option-walk deposit forfeiture vs carry/impairment; uses targeted pace-calibrated incentives (not blanket cuts) to protect comps/backlog; eases rather than strains covenants.",
+      "rubric_6": "Respects most constraints with minor tension (e.g., timeline slightly tight or one constraint underweighted).",
+      "rubric_2": "Violates a major constraint (e.g., assumes costless land exit, or recommends across-the-board price cuts).",
+      "rubric_0": "Action is infeasible or breaches multiple hard constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every claim be traced to the disclosed homebuilder metrics?",
+      "rubric_10": "Every claim traced: book-to-build 0.90 (2,150/2,400), absorption 3.2 to 2.4, cancellations 14% to 22%, spec 620 vs 380, lot supply 3.75 years, margin 22% to 18% (400 bps), incentives 1% to 3%, land +15.4%, labor +9%, revenue -4.8%.",
+      "rubric_6": "Main diagnosis traced to orders/absorption/spec/margin data; some inferences less directly supported.",
+      "rubric_2": "Minimal traceability; key claims not tied to the case metrics.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given multiple convergent, deterministic operating metrics?",
+      "rubric_10": "HIGH is well-calibrated: orders-below-closings, falling absorption, rising cancellations, spec overhang, and elevated lot supply all converge; cost-inflation alternative is acknowledged as contributing. Confidence is in the diagnosis pattern.",
+      "rubric_6": "Confidence broadly defensible but over- or under-states certainty given missing community-level granularity.",
+      "rubric_2": "Confidence poorly calibrated to the strength of the convergent evidence.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe - a reversible re-forecast/right-sizing before irreversible commitments, avoiding volume-chasing and comp-impairing fire sales?",
+      "rubric_10": "Action is a low-risk, reversible diagnostic/right-sizing step that precedes the funding decision and explicitly avoids more starts, fire-sale pricing, and demand-suppressing cuts.",
+      "rubric_6": "Action is broadly safe but bundles one premature or partially irreversible commitment without full quantification.",
+      "rubric_2": "Action carries real risk (e.g., large unanalyzed option walks or significant blanket incentives).",
+      "rubric_0": "Action is unsafe (chases volume into softening demand or fire-sales inventory, impairing comps and backlog)."
     }
   },
-  "creation_methodology": "Expert analysis of PUBLIC_DATASET case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

@@ -1,0 +1,141 @@
+{
+  "case_id": "RW-030",
+  "answer_creator": "Domain Expert (B2B Distribution Pricing Strategy / Industrial MRO Margin Management)",
+  "answer_creation_date": "2026-06-16",
+  "creation_methodology": "Expert analysis of an industrial MRO distributor's margin leak. Confirmed the problem is margin not volume: gross margin fell 330bps (27.4% to 24.1%) on flat revenue with flat opex ratio, halving operating margin (6.1% to 3.2%). Examined pricing governance — 60% of 52,000 SKU price files stale 9+ months (incomplete cost pass-through), rep overrides on 38% of order lines with no margin floor, and a single legacy cost-plus matrix applied uniformly across commodity and proprietary SKUs. Assessed the e-commerce transparency pressure (14% of revenue) as concentrated on commodity SKUs while much of the catalog retains pricing power. Diagnosed a strategic pricing error: the absence of segmented, governed pricing combined with stale cost pass-through and undisciplined discounting is leaking margin that volume and competition alone do not explain.",
+  "root_cause_diagnosis": "STRATEGIC_PRICING_ERROR",
+  "root_cause_description": "The distributor is losing gross margin because it has no governed, segmented pricing discipline: ~60% of its 52,000 SKU price files have not been updated against vendor cost increases in 9+ months (so cost inflation is being silently absorbed rather than passed through), reps override list price on ~38% of order lines with no margin floor and a revenue-based comp incentive, and every SKU — commodity, A-brand, and proprietary — runs on the same legacy cost-plus matrix with no differentiation by competitive intensity or pricing power. The 330bps gross-margin decline on flat revenue (with flat opex ratio) proves the leak is in price-versus-cost, not volume or cost structure. E-commerce transparency (14% of revenue) intensifies price sensitivity on commodity SKUs, but the distributor's error is failing to distinguish those genuinely transparent commodities from the large differentiated/proprietary share of the catalog where it still has pricing power — so it over-discounts and matches indiscriminately while leaving margin on the table on products customers cannot easily price-shop. The root cause is a strategic pricing-and-governance failure: stale pass-through plus uncontrolled, unsegmented discounting. It is not primarily a competitive/market shift (much of the catalog retains pricing power), not a cost or volume problem (revenue and opex ratio are flat), and the inventory-turn gap (4.1x vs. 5.5x) is a separate working-capital issue, not the margin driver.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Operating margin halved from 6.1% to 3.2% on flat revenue",
+      "Blended gross margin down 330bps (27.4% to 24.1%) over 24 months",
+      "Stalled warehouse-automation investment and ownership transition awaiting margin recovery",
+      "Customers increasingly citing online prices on commodity SKUs"
+    ],
+    "contributing_factors": [
+      "60% of SKU price files stale 9+ months, leaving vendor cost increases un-passed-through",
+      "Rep overrides on 38% of order lines with no margin floor, reinforced by revenue-based comp",
+      "Single legacy cost-plus matrix with no segmentation by competitive intensity or pricing power",
+      "E-commerce transparency (14% of revenue) raising commodity-SKU price sensitivity",
+      "Possible unfavorable mix shift toward low-margin commodities (unconfirmed)"
+    ],
+    "true_root_cause": "A strategic pricing error: the absence of governed, segmented pricing — combined with incomplete cost pass-through (stale price files) and uncontrolled rep discounting — is systematically leaking gross margin. It is the root cause (not a symptom) because the entire operating-margin collapse traces to gross profit per dollar of unchanged revenue, and all of it is controllable through pricing governance and segmentation; competition and mix only set the boundary conditions within which the pricing failure operates."
+  },
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Run a 4-6 week margin-leak attribution and price-band diagnostic before changing list prices or rep comp. Using the ERP transaction history, decompose the 330bps gross-margin decline into its components: (1) cost pass-through gap from the 60% stale price files (re-cost SKUs at current vendor cost and quantify absorbed inflation), (2) discount/override leakage (price-band dispersion analysis showing how widely the same SKU is sold across customers and where the deepest unjustified discounts sit, plus whether overrides actually win business), (3) customer/product mix shift (a margin bridge separating mix from rate), and (4) competitive-matching pressure by SKU category. Simultaneously, classify the 52,000 SKUs into pricing segments — transparent commodities (defend/match), A-brand (hold), and differentiated/proprietary low-competition items (recover full margin). Deliverable in ~6 weeks: a quantified attribution of the 330bps leak and a segmented price-corridor plan with margin floors, sequenced so cost pass-through and proprietary-SKU repricing (low churn risk) lead and any commodity action is targeted, not across-the-board.",
+  "action_description": "This is the FIRST action because the four candidate leaks demand opposite fixes and the wrong move is dangerous: an across-the-board price increase would push commodity volume straight to Amazon Business/Grainger/Fastenal, while a rep-comp overhaul could trigger a sales exodus — yet the company does not yet know how much of the 330bps is stale pass-through (a near-painless fix) versus discounting versus mix versus genuine competition. The diagnostic is fast (~6 weeks, inside the 120-day window), uses transaction data the ERP already holds, and is non-destructive. It lets leadership lead with the safe, high-yield moves (correcting stale prices, recovering margin on proprietary SKUs customers cannot price-shop, and setting margin floors) before touching commodity pricing or rep comp — directly producing the margin-recovery path the automation investment and ownership transition require.",
+  "accepted_alternative_actions": [
+    "Execute an immediate stale-price-file refresh (re-cost the 60% of SKUs at current vendor cost) in parallel with launching the SKU segmentation, since incomplete cost pass-through is a low-risk, near-certain component of the leak — acceptable as a fast first win provided the broader attribution and price-band work proceed alongside before discounting/comp changes.",
+    "Build a customer/SKU price-band dispersion analysis and introduce system-enforced margin floors on rep overrides as the first governance change, then layer segmentation — acceptable because it directly caps the 38%-override leak with guardrails rather than removing rep discretion outright."
+  ],
+  "bad_actions": [
+    "Implementing an across-the-board list-price increase to recover the 330bps — wrong for THIS case because ~14% of revenue is e-commerce-exposed and commodity SKUs are directly price-comparable to Amazon Business/Grainger/Fastenal; a blanket hike drives that volume to transparent competitors and breaches the 'lose no more than 2% revenue' constraint.",
+    "Overhauling rep compensation to margin-based immediately — wrong as a first move because the sales culture resists it and a clumsy comp change risks a rep exodus; comp realignment should follow the attribution (confirming overrides are a real leak) and be paired with margin floors and segmentation, not lead.",
+    "Cutting prices further to defend volume against online competitors across the catalog — wrong because the problem is margin erosion, not volume loss (revenue is flat); broad cuts would deepen the exact leak and ignore the proprietary SKUs that retain pricing power.",
+    "Prioritizing the warehouse-automation capex or inventory-turn fix to improve margin — wrong because the 330bps leak is a gross-margin/pricing phenomenon; automation and the 4.1x-vs-5.5x turn gap address cost and working capital, not the price-versus-cost leak, and the capex is itself contingent on first restoring margin."
+  ],
+  "action_constraints_respected": [
+    "Revenue protection: leading with stale-price correction and proprietary-SKU repricing (low price-elasticity items) recovers margin while keeping commodity action targeted, respecting the 'lose no more than 2% revenue' limit.",
+    "Sales-team stability: introducing margin floors and segmentation before any comp overhaul avoids a rep exodus and works with, not against, the revenue-based culture initially.",
+    "Timeline/capacity: a ~6-week ERP-based diagnostic uses data already on hand and fits the 120-day window, leaving time to begin recovery before the automation and transition decisions."
+  ],
+  "rationale": "The decisive fork is which lever to pull — list-price increase, rep-comp overhaul, price cuts to defend volume, or governance/segmentation — each with very different risk to revenue and the sales team. The evidence is unambiguous that the problem is margin not volume (330bps gross-margin decline on flat revenue and flat opex ratio) and points at broken pricing governance (60% stale price files, 38% override rate with no floor, one undifferentiated cost-plus matrix). But the relative size of stale pass-through vs. discounting vs. mix vs. competition is not yet measured, and the safe high-yield fixes (cost correction, proprietary repricing) differ sharply from the dangerous ones (blanket hikes, comp shocks). The attribution-and-segmentation diagnostic resolves the fork cheaply, quickly, and non-destructively, and sequences the safe moves first — superior to any immediate pricing or comp action.",
+  "evidence_basis": [
+    "financial_health: gross margin 27.4%->24.1% (-330bps) on +1.5% revenue with flat opex ratio, operating margin 6.1%->3.2% — a margin (price-vs-cost) leak, not volume or cost structure.",
+    "operational_efficiency: 60% of 52,000 SKU price files stale 9+ months and rep overrides on 38% of order lines with no margin floor on a single legacy cost-plus matrix — broken pricing governance.",
+    "market_position: e-commerce 14% of revenue exposing commodity SKUs to Amazon Business/Grainger/Fastenal, while much of the catalog is differentiated/proprietary with retained pricing power — the segmentation gap.",
+    "operational_efficiency: rep comp on revenue not margin, and inventory turns 4.1x vs. 5.5x as a distinct secondary working-capital issue — context, not the margin driver."
+  ],
+  "evidence_not_explained": [
+    "The exact split of the 330bps among stale pass-through, discount leakage, mix shift, and competitive matching is unknown until the attribution runs.",
+    "Whether the 38% rep overrides genuinely win/retain business or reflexively discount deals that would close at list cannot be confirmed without override-outcome analysis."
+  ],
+  "alternative_explanations": [
+    "BRAND_EROSION / competitive displacement by e-commerce (the market has simply commoditized the distributor's value): weaker because revenue is flat (not losing volume) and a large share of the catalog is differentiated/proprietary with retained pricing power; the leak is self-inflicted pricing, not lost competitiveness.",
+    "UNIT_ECONOMICS_BREAKDOWN (the cost structure no longer supports the model): weaker because opex held flat as a percent of sales and the deterioration is entirely in gross margin/price-vs-cost, not in the cost base; it is a pricing failure, not broken unit economics.",
+    "DEMAND_FORECASTING_MISMATCH (inventory/turn problem driving the issue): weaker because the 4.1x-vs-5.5x turn gap is a working-capital matter unrelated to the gross-margin-per-dollar decline; fixing turns would not recover the 330bps."
+  ],
+  "missing_evidence": [
+    "Quantified attribution of the 330bps to stale pass-through vs. discount leakage vs. mix shift vs. competitive matching.",
+    "SKU/customer price-band dispersion showing where the deepest unjustified discounts sit and override win/loss outcomes.",
+    "A margin bridge separating customer/product mix shift from same-mix rate decline.",
+    "Competitive price-sensitivity by SKU category to classify transparent commodities vs. differentiated/proprietary items."
+  ],
+  "success_metrics": [
+    "330bps margin leak attributed by component within ~6 weeks.",
+    "52,000 SKUs classified into pricing segments with corridors and margin floors defined.",
+    "Stale price files (60% of SKUs) re-costed to current vendor cost and proprietary-SKU repricing implemented.",
+    "Blended gross margin recovering toward 26.5%+ and operating margin toward 5%+ within 12 months while losing no more than 2% of revenue."
+  ],
+  "expected_outcome": "The attribution will show that a large portion of the 330bps comes from the near-painless stale-price/cost-pass-through gap and from undisciplined discounting on SKUs that did not require it, with genuine competitive matching confined to a defined set of transparent commodities. Correcting stale prices, repricing differentiated/proprietary SKUs to recover full margin, imposing system-enforced margin floors on rep overrides, and matching only where commodities are truly price-transparent recovers most of the 330bps, lifts blended gross margin toward 26.5%+ and operating margin toward 5%+, and protects revenue (no across-the-board hike) — funding the automation investment and de-risking the ownership transition without a rep exodus.",
+  "automatic_fail_conditions": [
+    "Recommends an across-the-board list-price increase to recover the 330bps, ignoring the e-commerce-exposed commodity SKUs and the 'lose no more than 2% revenue' constraint.",
+    "Recommends an immediate margin-based rep-comp overhaul as the first action, risking a sales exodus before the override leak is even attributed.",
+    "Diagnoses the case as a volume/competition problem (BRAND_EROSION or demand loss) despite flat revenue and a pure gross-margin decline.",
+    "Recommends prioritizing the warehouse-automation capex or inventory-turn fix to address a gross-margin/pricing leak."
+  ],
+  "source_references": [
+    "Industrial-distribution competitive and digital-disruption patterns analogous to Grainger, Fastenal, MSC Industrial, and Amazon Business price transparency.",
+    "B2B distribution pricing-management benchmarks: price-band dispersion analysis, margin-floor governance, and cost-plus vs. segmented value pricing.",
+    "MRO/fastener distribution economics: blended gross margin ranges, rep-override/discount-leakage studies, and inventory-turn benchmarks (top-quartile 5.5x+).",
+    "Distributor margin-leak attribution methodology (cost pass-through gap, discount leakage, mix, competitive matching) from distribution pricing literature."
+  ],
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does the engine diagnose a STRATEGIC_PRICING_ERROR (broken pricing governance/segmentation plus stale cost pass-through), not a volume/competition or cost-structure problem?",
+      "rubric_10": "Diagnoses STRATEGIC_PRICING_ERROR: 330bps gross-margin decline on flat revenue and flat opex ratio caused by 60% stale price files, 38% rep overrides with no floor, and one undifferentiated cost-plus matrix across commodity and proprietary SKUs.",
+      "rubric_8": "Identifies broken/undisciplined pricing as the margin leak, even if not labeled exactly STRATEGIC_PRICING_ERROR.",
+      "rubric_6": "Notes the gross-margin decline but is vague on whether pricing governance, mix, or competition is the dominant driver.",
+      "rubric_4": "Attributes the decline mainly to competition or cost without isolating the pricing/governance failure.",
+      "rubric_2": "Diagnoses a volume or demand problem despite flat revenue.",
+      "rubric_0": "Misses the gross-margin leak or offers an unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does the engine recommend a margin-leak attribution and SKU price-segmentation diagnostic before changing list prices or rep comp?",
+      "rubric_10": "Recommends a ~6-week ERP-based attribution of the 330bps (stale pass-through, discount leakage, mix, competition) plus SKU segmentation with margin floors, sequencing stale-price correction and proprietary repricing ahead of any commodity action or comp change.",
+      "rubric_8": "Recommends a pricing/margin diagnostic or stale-price correction before broad pricing or comp action.",
+      "rubric_6": "Recommends some analysis but couples it with a premature price hike or comp overhaul.",
+      "rubric_4": "Jumps to an across-the-board price change or comp change with thin analysis.",
+      "rubric_2": "Recommends broad price cuts to defend volume or a comp shock as the primary first move.",
+      "rubric_0": "Recommends an action that drives volume to online competitors or triggers a rep exodus."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect industrial-distribution reality (SKU segmentation, rep overrides, cost pass-through, e-commerce transparency, family-transition context)?",
+      "rubric_10": "Action is specific to an MRO distributor: 52,000-SKU segmentation, stale price files, 38% rep overrides, e-commerce transparency vs. proprietary pricing power, and the automation/transition stakes are all reflected.",
+      "rubric_6": "Action is relevant to a margin problem but generic on the distribution-pricing specifics.",
+      "rubric_2": "Action could apply to any company with margin pressure.",
+      "rubric_0": "Action is irrelevant to the context."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 'lose no more than 2% revenue' limit, sales-culture/rep-exodus risk, limited pricing analytics, and 120-day window?",
+      "rubric_10": "Leads with revenue-safe moves (stale-price correction, proprietary repricing, margin floors), defers comp overhaul, uses existing ERP data, and fits the 120-day window while protecting revenue and the sales team.",
+      "rubric_6": "Respects the major constraints with minor tension.",
+      "rubric_2": "Largely ignores the revenue, sales-team, or capacity constraints.",
+      "rubric_0": "Action is infeasible or risks revenue loss / rep exodus."
+    },
+    "evidence_traceability": {
+      "criterion": "Are the diagnosis claims traceable to the case numbers?",
+      "rubric_10": "Traces gross margin 27.4%->24.1% (-330bps), revenue +1.5%, operating margin 6.1%->3.2%, 60% stale price files (9+ months), 38% override rate, 52,000 SKUs, e-commerce 14%, turns 4.1x vs. 5.5x.",
+      "rubric_6": "Cites the main metrics with some inference.",
+      "rubric_2": "Minimal traceability to the specific figures.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MEDIUM-HIGH confidence appropriate given clear margin-leak evidence but unattributed component split?",
+      "rubric_10": "MEDIUM-HIGH is justified: the pricing-governance failure and margin (not volume) nature are strongly evidenced, while the precise split among stale pass-through, discounting, mix, and competition awaits the attribution.",
+      "rubric_6": "Confidence is broadly reasonable but conflates the well-evidenced pricing failure with certainty about the component split.",
+      "rubric_2": "Confidence is poorly calibrated to the evidence.",
+      "rubric_0": "Confidence is inverted relative to the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action non-destructive (diagnose and lead with revenue-safe moves before broad price hikes or comp shocks)?",
+      "rubric_10": "Action is diagnostic and sequences revenue-safe corrections first; no across-the-board price hike or comp overhaul is executed before the leak is attributed.",
+      "rubric_0": "Action executes a blanket price change or comp overhaul without attribution, risking revenue loss and a rep exodus."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

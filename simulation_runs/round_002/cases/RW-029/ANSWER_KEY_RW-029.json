@@ -1,0 +1,141 @@
+{
+  "case_id": "RW-029",
+  "answer_creator": "Domain Expert (Veterinary Practice Operations / Multi-Site Consolidation & Client Retention)",
+  "answer_creation_date": "2026-06-16",
+  "creation_methodology": "Expert analysis of a post-acquisition veterinary group's client base. Decomposed the 6% revenue growth into +14% ATV and -7% visits to reveal that price is masking volume loss. Quantified the retention collapse (active patients 38,400 to 34,900, retention 79% to 68%) and localized it to the two flagship clinics (45% of revenue) that lost the founding veterinarian and half their senior associates under corporate standardization. Correlated the 4.7-to-4.1 review decline and complaint themes ('rushed visits,' 'can't see my vet,' 'too expensive now') with the scheduling and continuity changes. Diagnosed customer-retention erosion driven primarily by loss of veterinarian continuity/care access (compounded by price), not a pure pricing error or a top-of-funnel acquisition problem.",
+  "root_cause_diagnosis": "CUSTOMER_RETENTION_EROSION",
+  "root_cause_description": "The group is losing its established clients faster than revenue reveals: active patients fell 9% (38,400 to 34,900) and 18-month client retention dropped 11 points (79% to 68%), with the damage concentrated at the two flagship clinics that represent 45% of revenue. These clinics lost their 25-year founding veterinarian and 3 of 6 senior associates within a year of acquisition, after corporate standardization raised prices 14%, shortened appointment slots, and forced online-only booking. The complaint pattern ('rushed visits,' 'can't see my vet,' 'too expensive now') and the review-rating fall from 4.7 to 4.1 point to a breakdown in the veterinarian-client relationship and care continuity/access as the primary driver, with the price increase as a strong aggravating factor. Revenue still grew 6% only because the 14% ATV increase is temporarily masking a 7% visit decline — but that is a deteriorating bridge: EBITDA margin has already slipped from 21% to 17% as fixed costs deleverage across fewer visits, and the recurring active base is shrinking quarter over quarter. The root cause is not a top-of-funnel acquisition failure (new-client acquisition is flat, not collapsing) and not solely price (the strongest complaint theme is continuity/access, and the attrition tracks the vet departures and scheduling change, not just the price step). New local competition is a real accelerant but a secondary factor — clients are leaving because the trusted-vet relationship and access that defined these practices were disrupted.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Active patients down 9% and client retention down 11 points (79% to 68%)",
+      "Total visits down 7% while revenue is up 6% on price",
+      "EBITDA margin down from 21% to 17%",
+      "Flagship review ratings down from 4.7 to 4.1 stars"
+    ],
+    "contributing_factors": [
+      "14% price increase generating 'too expensive now' complaints",
+      "Shortened appointment slots and online-only booking reducing access and perceived care quality",
+      "Two new competitor clinics and a telehealth/membership entrant within 5 miles increasing switching options",
+      "New flagship veterinarians still building client trust, so departing clients are not retained by relationship",
+      "Post-pandemic normalization of pet-care demand reducing the tailwind"
+    ],
+    "true_root_cause": "Erosion of client retention driven by the loss of veterinarian continuity and care access at the flagship clinics following corporate standardization — the trusted vet-client relationships that anchored the recurring base were broken (founder + half the senior associates gone, shorter rushed visits, harder booking), and price increases compounded it. It is the root cause (not a symptom) because the active-patient decline, the visit drop, the margin slide, and the rating fall all flow from clients no longer being retained by a relationship they valued; fixing surface revenue (more price) accelerates the loss rather than stopping it."
+  },
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Run a 3-4 week lapsed-client and retention cohort analysis before any pricing rollback or marketing spend. Using the practice-management system, segment every lapsed and at-risk client by clinic, by tenure (legacy vs. post-acquisition), and crucially by primary-veterinarian relationship (clients of departed vets vs. clients of retained vets), and by preventive-care-plan status. Pair this with a short structured outreach to a sample of lapsed clients to separate the three rival drivers: price, vet continuity/access, and competitive switching. Identify whether attrition is concentrated among the departed vets' client panels (continuity problem) versus spread evenly (price problem) versus shifting to the new local entrants (competition). Deliverable in ~4 weeks: an attrition driver breakdown by clinic and vet-panel that tells leadership exactly which lever — continuity/recruiting, access/scheduling, targeted price relief, or winback — will actually stop the bleed, sequenced ahead of any group-wide price change.",
+  "action_description": "This is the FIRST action because the three plausible drivers (price, vet continuity/access, competition) call for very different and partly conflicting fixes, and the wrong one wastes the 9-month window: a group-wide 14% price rollback would sacrifice margin (already down to 17%) and might not stop attrition if the real driver is the lost vet relationship, while a recruiting push wastes money if clients are simply price-shopping. The cohort analysis is fast (~4 weeks), uses data already in the practice-management system, costs little, and is non-destructive. It converts 'clients are leaving' into 'these clients, at these clinics, for this reason,' enabling a targeted intervention (e.g., re-establishing continuity and access at the flagships, or selective price relief) before the financing review.",
+  "accepted_alternative_actions": [
+    "Launch a continuity-and-access stabilization pilot at the two flagship clinics (named-vet assignment, restored longer slots for established clients, proactive recall outreach to departed-vet panels) while measuring retention lift over 60 days — acceptable because the evidence already strongly implicates continuity/access at the 45%-of-revenue flagships, though it slightly front-runs full driver confirmation.",
+    "Conduct structured lapsed-client win-back outreach paired with a reason-for-leaving survey as the first deliverable, then target relief to the dominant stated reason — acceptable because it both gathers the diagnostic data and begins recovery, provided no group-wide price change is made before the reasons are known."
+  ],
+  "bad_actions": [
+    "Rolling back the 14% price increase across all 9 clinics immediately — wrong for THIS case because margin is already down to 17%, the dominant complaint theme is continuity/access rather than price alone, and a blanket rollback sacrifices margin group-wide (including clinics not experiencing attrition) without confirming price is the driver.",
+    "Raising prices further or adding new fees to sustain the 6% revenue growth — wrong because revenue growth is an illusion built on a shrinking base; more price accelerates the active-patient decline and deepens the retention collapse.",
+    "Launching a broad new-client acquisition/marketing campaign — wrong because new-client acquisition is flat (not the problem) and pouring clients into clinics with rushed visits and continuity gaps fills a leaking bucket while the retained-client relationship problem remains.",
+    "Cutting clinical staff or shortening slots further to defend margin against the visit decline — wrong because it worsens the exact 'rushed visits / can't see my vet' access problem driving the attrition."
+  ],
+  "action_constraints_respected": [
+    "Budget/margin: the cohort analysis uses existing practice-management data with minimal cost, avoiding a premature group-wide price rollback that would further erode the 17% margin.",
+    "Staff capacity: diagnosis does not add clinical load; any pilot is scoped to the two flagships rather than straining all 14 vets.",
+    "Timeline: ~4 weeks fits inside the 90-day window and leaves time to show a stabilizing active-base trend before the 9-month financing review."
+  ],
+  "rationale": "The decisive fork is which lever to pull: price rollback, vet recruiting/continuity, or winback/marketing — each expensive and partly mutually exclusive. The evidence strongly suggests a retention problem rooted in lost veterinarian continuity and access (attrition concentrated at the flagships that lost their founder and senior vets; complaint themes dominated by 'can't see my vet'/'rushed visits'; flat new-client acquisition ruling out a funnel problem), with price as an aggravator and competition as an accelerant. But the relative weight of these drivers is not yet measured at the client-panel level. The cohort/lapsed-client analysis is the only first move that resolves the fork cheaply, quickly, and non-destructively — superior to a margin-sacrificing price rollback, more price, acquisition marketing, or staff cuts.",
+  "evidence_basis": [
+    "customer_retention: active patients 38,400->34,900 (-9%), retention 79%->68%, visits -7% vs. revenue +6% — a shrinking base masked by price.",
+    "customer_satisfaction: flagship ratings 4.7->4.1 with 'rushed visits / can't see my vet / too expensive now' and loss of founder + 3 of 6 senior associates — continuity/access breakdown.",
+    "financial_health: ATV +14% vs. visits -7%, EBITDA 21%->17% — revenue growth is a deteriorating price bridge over volume loss.",
+    "market_position: 2 new clinics + 1 telehealth entrant within 5 miles, but new-client acquisition flat — competition is an accelerant, the problem is retention not acquisition."
+  ],
+  "evidence_not_explained": [
+    "The relative weight of price vs. continuity/access vs. competitive switching is not yet quantified; the diagnosis names continuity/access as primary but the cohort analysis is needed to confirm the split.",
+    "Whether retained clients are also reducing visit frequency (wellness deferral) or only the lapsed cohort is leaving cannot be separated without the visit-frequency-by-cohort data."
+  ],
+  "alternative_explanations": [
+    "STRATEGIC_PRICING_ERROR (the 14% increase is the sole driver of attrition): weaker because the dominant complaint theme is continuity/access ('can't see my vet'/'rushed visits'), attrition is concentrated at the clinics that lost their vets, and a pure pricing error would not track the vet departures so tightly — price is an aggravator, not the root.",
+    "GO_TO_MARKET_MISALIGNMENT / acquisition shortfall: weaker because new-client acquisition is flat, not collapsing; the deficit is in retaining existing clients, not attracting new ones.",
+    "BRAND_EROSION (general reputational decline): partially true at the flagships (rating 4.7->4.1) but it is a symptom of the continuity/access/price changes rather than an independent root cause; fixing reputation without restoring continuity and access would not hold."
+  ],
+  "missing_evidence": [
+    "Lapsed-client cohort breakdown by clinic, tenure, primary-vet relationship (departed vs. retained vets), and care-plan status.",
+    "Structured reason-for-leaving data separating price, continuity/access, and competitive switching.",
+    "Visit-frequency change among retained vs. lapsing clients to detect wellness deferral.",
+    "Where lapsed clients went (the two new clinics or telehealth entrant) and their stated reasons."
+  ],
+  "success_metrics": [
+    "Lapsed-client attrition driver breakdown by clinic and vet-panel completed within ~4 weeks.",
+    "Confirmation of whether attrition is concentrated in departed-vet panels (continuity) vs. spread (price) vs. switched to competitors.",
+    "Active-patient base stabilizing above 36,000 and retention recovering toward 75%+ within 12 months.",
+    "Stabilizing active-base trend demonstrable before the 9-month financing review without a margin-destroying group-wide price rollback."
+  ],
+  "expected_outcome": "The cohort analysis will show that attrition is heavily concentrated in the client panels of the departed founding and senior veterinarians at the two flagship clinics, with 'can't see my vet' and 'rushed visits' as leading reasons and price as a secondary irritant. Targeted intervention — re-establishing named-vet continuity and longer slots for established clients at the flagships, proactive recall and winback of departed-vet panels, and selective (not blanket) price relief where price is the confirmed reason — stabilizes the active base above 36,000 and lifts retention toward 75%+, protecting the recurring-revenue foundation ahead of the financing review without an across-the-board price rollback.",
+  "automatic_fail_conditions": [
+    "Recommends an immediate group-wide rollback of the 14% price increase before confirming price is the dominant attrition driver, sacrificing the already-eroded 17% margin.",
+    "Recommends further price increases or new fees to sustain the 6% revenue growth on a shrinking active base.",
+    "Diagnoses the problem as a new-client acquisition/marketing shortfall despite flat acquisition and an 11-point retention collapse.",
+    "Recommends cutting clinical staff or shortening appointment slots further, worsening the 'rushed visits / can't see my vet' access problem."
+  ],
+  "source_references": [
+    "Corporate veterinary consolidation patterns analogous to VCA/Mars Veterinary, NVA, and PetVet acquisitions of independent practices and post-acquisition client-retention dynamics.",
+    "Companion-animal GP economics benchmarks: active patients, visits per patient per year, client retention rates, and average transaction value.",
+    "Post-pandemic normalization of pet-care demand and its effect on visit volume.",
+    "Veterinary client-bonding and primary-veterinarian continuity research linking vet-client relationship to retention and preventive-care-plan persistence."
+  ],
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does the engine diagnose CUSTOMER_RETENTION_EROSION driven by lost veterinarian continuity/access (price as aggravator), not a pure pricing error or acquisition shortfall?",
+      "rubric_10": "Diagnoses CUSTOMER_RETENTION_EROSION: active patients -9% and retention 79%->68% concentrated at the flagships that lost the founder + 3 of 6 senior vets, with 'can't see my vet'/'rushed visits' as primary and the 14% price hike as an aggravator; revenue +6% is price masking a -7% visit decline.",
+      "rubric_8": "Identifies a client-retention/continuity problem masked by price, even if not labeled exactly CUSTOMER_RETENTION_EROSION.",
+      "rubric_6": "Notes the retention/visit decline but is vague on whether continuity, price, or competition is primary.",
+      "rubric_4": "Attributes the problem mainly to price or to acquisition/marketing without isolating retention/continuity.",
+      "rubric_2": "Diagnoses a top-of-funnel acquisition problem despite flat new-client acquisition.",
+      "rubric_0": "Misses the active-base/retention collapse or offers an unrelated diagnosis."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does the engine recommend a lapsed-client/retention cohort analysis (by clinic and vet-panel) before a pricing rollback or marketing spend?",
+      "rubric_10": "Recommends a ~4-week lapsed-client cohort analysis segmenting by clinic, tenure, and primary-vet relationship plus structured reason-for-leaving outreach, sequenced ahead of any group-wide price change.",
+      "rubric_8": "Recommends some client/attrition diagnostic before pulling a major lever.",
+      "rubric_6": "Recommends analysis but couples it with a premature price rollback or marketing push.",
+      "rubric_4": "Jumps to a price rollback, more marketing, or staffing changes with thin analysis.",
+      "rubric_2": "Recommends across-the-board price action as the primary first move.",
+      "rubric_0": "Recommends an action that worsens access or accelerates attrition."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect post-acquisition veterinary-group reality (active patients, vet continuity, care-plan retention, financing review)?",
+      "rubric_10": "Action is specific to a consolidated vet group: active-patient base, vet-client continuity, appointment-access changes, preventive-care plans, flagship concentration, and the financing review are all reflected.",
+      "rubric_6": "Action is relevant to a retention problem but generic on the veterinary/consolidation specifics.",
+      "rubric_2": "Action could apply to any company losing customers.",
+      "rubric_0": "Action is irrelevant to the context."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the eroding 17% margin, stretched clinical staff, 90-day window, and 9-month financing review?",
+      "rubric_10": "Uses existing practice-management data with minimal cost, avoids a margin-destroying blanket price rollback, does not add clinical load, and begins stabilizing the base within the 90-day window ahead of the financing review.",
+      "rubric_6": "Respects the major constraints with minor tension.",
+      "rubric_2": "Largely ignores margin, staffing, or timing constraints.",
+      "rubric_0": "Action is infeasible or sacrifices margin/access destructively."
+    },
+    "evidence_traceability": {
+      "criterion": "Are the diagnosis claims traceable to the case numbers?",
+      "rubric_10": "Traces active patients 38,400->34,900, retention 79%->68%, ATV +14% vs. visits -7% vs. revenue +6%, EBITDA 21%->17%, flagship rating 4.7->4.1, founder + 3 of 6 senior vets lost, flagships = 45% of revenue.",
+      "rubric_6": "Cites the main metrics with some inference.",
+      "rubric_2": "Minimal traceability to the specific figures.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MEDIUM-HIGH confidence appropriate given strong retention evidence but unconfirmed driver weighting?",
+      "rubric_10": "MEDIUM-HIGH is justified: the retention erosion and its flagship concentration are strongly evidenced, while the precise weight of continuity vs. price vs. competition awaits the cohort analysis.",
+      "rubric_6": "Confidence is broadly reasonable but conflates the well-evidenced retention problem with certainty about the driver split.",
+      "rubric_2": "Confidence is poorly calibrated to the evidence.",
+      "rubric_0": "Confidence is inverted relative to the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action non-destructive (diagnose before price rollback, marketing spend, or staffing/access cuts)?",
+      "rubric_10": "Action is diagnostic and reversible; no group-wide price rollback, broad marketing spend, or further access/staffing cuts are executed before the attrition driver is confirmed.",
+      "rubric_0": "Action executes an irreversible price rollback or access/staffing change without diagnosis, risking margin and worsening attrition."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

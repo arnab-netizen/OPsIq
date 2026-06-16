@@ -1,27 +1,167 @@
 {
   "case_id": "ADV-014",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Business Analysis)",
+  "answer_creator": "Domain Expert (Professional Services Economics & Operations)",
+  "creation_methodology": "Blind expert review. Expert tested leadership's pre-committed 'market softness' conclusion against the firm's own financial signature (flat revenue with halving margin) and the un-disaggregated operating data, identifying that the external explanation has not been validated and that internal drivers have not been ruled out. Determined the analyses required before any remediation plan.",
   "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
-  "root_cause_description": "Adversarial case ADV-014 (Consulting): Trap scenario - plausible narrative (market conditions, growth metrics) masks underlying issue (cohort deterioration, segment concentration, unit economics hidden in aggregated metrics). Must diagnose root cause before strategic action.",
-  "confidence_in_diagnosis": "MEDIUM",
-  "first_priority_action": "Commission thorough diagnostic (cohort analysis, segment profitability, competitive positioning) to test plausible narrative against actual drivers before major strategic decisions.",
+  "root_cause_description": "Leadership has formally pre-committed to an external cause ('market softness') and seeks a plan to ride it out, but the firm's own numbers point inward and the external story is unverified. Revenue is flat while EBITDA margin halved (16%->8%); a pure demand-softness story would more typically show falling revenue, not stable revenue with rising cost-to-deliver. The visible internal signals - utilization down 74%->68% reported only as a blend, a client mix shift toward mid-market (25%->40%) with no per-segment margin computed, and bench time attributed to 'fewer projects' without linking idle staff to lost engagements - are all consistent with an internal margin problem that has not been investigated. Crucially, the CRM win-rate/proposal data that would confirm or refute genuine demand softness has not been pulled. The correct posture is to refuse to ratify the committee's conclusion and to run the disaggregation that distinguishes external softness from internal mix/utilization/competitive drivers before designing a remediation plan.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin halved over three years",
+      "Blended utilization down 74% -> 68%",
+      "Rising bench time"
+    ],
+    "contributing_factors": [
+      "Client mix shift to mid-market (25% -> 40%) with per-segment margin never computed",
+      "Two large-enterprise anchor accounts reduced spend, cause uninvestigated",
+      "Committee memo pre-committing to 'market softness,' creating confirmation pressure"
+    ],
+    "true_root_cause": "Not yet determinable. Flat-revenue/halving-margin is the signature of an internal cost-to-deliver problem, but whether the dominant driver is mix shift, concentrated practice-level utilization decay, fixed-fee overruns, competitive bid losses, or genuine market softness cannot be resolved without disaggregating utilization/realization and computing per-segment profitability and CRM win rates."
+  },
+  "confidence_in_diagnosis": "PROVISIONAL",
+  "first_priority_action": "Do not adopt the 'market softness / ride it out' plan. Run a focused 3-4 week margin teardown using existing systems: (1) split utilization and realization by practice area, grade, and client segment to locate where the decline concentrates; (2) compute per-segment profitability (mid-market vs large-enterprise) on fully-loaded delivery cost to test whether the mix shift is the driver; (3) pull CRM win-rate and proposal-volume trends to test whether demand actually fell or whether competitive bids are being lost; (4) investigate the two anchor-account reductions (pause vs churn vs displacement). Decide the remediation plan only after the data names the dominant driver.",
+  "action_description": "This is first because the firm is about to commit a 12-18 month remediation plan to an unvalidated external cause. If the real driver is a mix shift to unprofitable mid-market work or competitive bid losses, a 'ride out the soft market' plan would protect the team while the margin keeps bleeding. The teardown uses data already in the time, billing, and CRM systems, needs no external spend, and fits inside the 6-week planning window. It also gives the committee the evidence base it said it needs to revise its memo.",
+  "accepted_alternative_actions": [
+    "Stand up the four analyses but explicitly frame them to the partner committee as validating (not attacking) the market-softness hypothesis, so the diagnosis lands without triggering the 'witch hunt' objection.",
+    "If immediate action is demanded, take only reversible no-regret steps (tighten fixed-fee scoping discipline, pause low-margin mid-market discounting) while the teardown runs, deferring any structural plan until the driver is named."
+  ],
+  "bad_actions": [
+    "Accepting the committee's 'market softness' conclusion and building a ride-it-out plan without disaggregating utilization or computing per-segment margin.",
+    "Recommending across-the-board fee increases or cost cuts before knowing which segment or practice is unprofitable.",
+    "Pursuing layoffs (explicitly off the table) as a margin fix without diagnosing where the cost-to-deliver problem sits.",
+    "Treating the anchor-account spend reductions as confirmation of soft demand without checking whether they were competitive losses."
+  ],
+  "action_constraints_respected": [
+    "Time constraint: a 3-4 week teardown of existing data fits inside the 6-week planning window.",
+    "People constraint: diagnostic-first approach avoids premature layoffs of senior consultants.",
+    "Capital constraint: uses internal finance/ops analysts and existing systems, no large external strategy spend.",
+    "Governance constraint: framed to give the partner committee the evidence it said it needs before revising its position."
+  ],
+  "rationale": "A flat-revenue, halving-margin profile is the classic fingerprint of an internal cost-to-deliver problem, yet leadership has reached for the most comfortable external explanation and pre-committed to it in a memo - textbook confirmation bias. A rigorous consultant refuses to ratify a conclusion that the firm's own un-pulled data could overturn. The disconfirming evidence (mix shift, blended-only utilization, unqueried CRM) is already in the building; only the analysis is missing.",
+  "evidence_basis": [
+    "financial_health finding: flat revenue with margin halving (16%->8%) points to cost-to-deliver, not demand collapse",
+    "operational_efficiency finding: utilization 74%->68% reported blended only, never split by practice/grade/segment",
+    "customer_mix finding: mid-market share rose 25%->40% with per-segment margin never computed",
+    "competitive_demand finding: CRM win-rate data unqueried; anchor-account loss cause uninvestigated"
+  ],
+  "evidence_not_explained": [
+    "Whether realization (91% blended) is being dragged down specifically by mid-market or fixed-fee work cannot be told from the blended figure.",
+    "Whether the two anchor enterprise accounts paused, churned, or were displaced is unknown and material to the demand-vs-competition question."
+  ],
+  "alternative_explanations": [
+    "GO_TO_MARKET_MISALIGNMENT / customer mix: the shift to lower-margin mid-market work mechanically compresses margin regardless of market conditions; strongly suggested by the 25%->40% shift but unconfirmed without per-segment economics.",
+    "OPERATIONAL_BOTTLENECK / utilization decay: the decline may be concentrated in one practice or grade (e.g. over-hired analysts on bench) rather than firm-wide; needs the disaggregated utilization cut.",
+    "External market softness (leadership's hypothesis): genuine sector-wide fee and demand pressure; possible but unsupported by any benchmark or CRM evidence and inconsistent with flat revenue."
+  ],
+  "missing_evidence": [
+    "Utilization and realization split by practice area, grade, and client segment",
+    "Per-client-segment profitability on fully-loaded delivery cost",
+    "CRM win-rate and proposal-volume trend",
+    "Engagement-level margin / fixed-fee overrun analysis",
+    "External benchmark confirming comparable firms see the same pressure"
+  ],
+  "success_metrics": [
+    "Disaggregated utilization/realization identifying where the decline concentrates within 4 weeks",
+    "Per-segment profitability computed, settling whether the mix shift is the driver",
+    "CRM win-rate trend pulled, settling whether demand fell or bids were lost",
+    "Remediation plan built on the named dominant driver, not on the market-softness assumption"
+  ],
+  "expected_outcome": "Within 4 weeks the firm knows whether the margin problem is mix, utilization, fixed-fee overruns, competitive losses, or genuine softness. Remediation then targets the actual driver - e.g. repricing or re-mixing mid-market work, fixing bench in a specific practice, or competitive repositioning - rather than passively absorbing margin loss under a comforting external story.",
+  "automatic_fail_conditions": [
+    "Ratifying the 'market softness' conclusion and recommending a ride-it-out plan without demanding disaggregation.",
+    "Stating HIGH confidence in an external demand cause while revenue is flat and internal data is un-split.",
+    "Recommending layoffs or across-the-board repricing before locating the margin driver.",
+    "Failing to identify per-segment profitability, disaggregated utilization, and CRM win-rate as the missing pieces."
+  ],
+  "source_references": [
+    "Case input ADV-014: flat revenue / halving margin, blended-only utilization, mid-market mix shift, unqueried CRM"
+  ],
+  "trap_definition": {
+    "exact_trap": "Confirmation bias toward a comfortable external cause, reinforced by a pre-committed leadership memo. The firm has decided the cause is 'market softness' and is selecting evidence that fits while leaving the disconfirming internal data un-analyzed.",
+    "plausible_but_wrong_narrative": "'Margins are down because the market softened and clients are squeezing fees across the board; we should plan to ride out the soft market and protect the team, not run an internal witch hunt.'",
+    "disconfirming_evidence_in_input": [
+      "Revenue is flat while margin halved - a cost-to-deliver signature, not a demand-collapse signature",
+      "Utilization decline reported blended only, never split by practice/grade/segment",
+      "Mid-market share rose 25%->40% with per-segment margin never computed",
+      "CRM win-rate data that would confirm a demand drop has not been pulled"
+    ],
+    "safe_correct_response": "Refuse to ratify the committee's external conclusion. Disaggregate utilization/realization, compute per-segment profitability, pull CRM win rates, and investigate the anchor-account losses before designing any remediation plan.",
+    "false_positive_failure_modes": [
+      "Accepting the partner committee's authority/memo as evidence",
+      "Reading 'flat revenue' as proof the firm 'fought hard against soft demand' rather than as a sign the problem is internal cost",
+      "Treating rising bench time as confirmation of fewer projects without linking idle staff to lost engagements"
+    ],
+    "insufficient_evidence_points": [
+      "Where utilization actually declined (which practice/grade/segment) is unknown",
+      "Mid-market vs enterprise per-segment margin is uncomputed",
+      "Whether demand fell or competitive bids were lost is unknown (CRM unqueried)"
+    ],
+    "dangerous_overconfident_answer": "A HIGH-confidence endorsement of 'market softness' with a plan to cut discretionary cost and wait out the cycle. Dangerous because if the real driver is a mix shift to unprofitable mid-market work or competitive losses, the margin continues to bleed for 12-18 months while leadership believes it is merely weathering a macro cycle."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Recognizes trap; recommends diagnosis before accepting narrative"
+      "criterion": "Does the engine resist the pre-committed external explanation and withhold diagnosis until internal drivers are ruled out?",
+      "rubric_10": "Diagnoses INSUFFICIENT_EVIDENCE, explicitly noting flat-revenue/halving-margin contradicts a pure demand story and that utilization/segment/CRM data must be disaggregated before naming a cause.",
+      "rubric_8": "Rejects the market-softness conclusion and names a tentative internal driver (mix shift or utilization) with caveats.",
+      "rubric_6": "Questions the narrative but still leans on market softness as primary.",
+      "rubric_4": "Accepts market softness with light hedging.",
+      "rubric_2": "Endorses the committee's external conclusion.",
+      "rubric_0": "Confidently confirms market softness and builds a ride-it-out plan."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends validation analysis"
+      "criterion": "Is the first action a margin teardown (disaggregated utilization + per-segment margin + CRM win rate) before remediation?",
+      "rubric_10": "Recommends the 3-4 week teardown across utilization split, per-segment profitability, and CRM win-rate before any plan.",
+      "rubric_8": "Recommends internal diagnostic before action, slightly less complete.",
+      "rubric_6": "Recommends some analysis but lets the ride-it-out plan proceed in parallel.",
+      "rubric_4": "Recommends a remediation plan with analysis as a side task.",
+      "rubric_2": "Recommends cost cuts/repricing with little diagnosis.",
+      "rubric_0": "Recommends adopting the market-softness plan immediately."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a mid-size consulting firm's margin and partnership context?",
+      "rubric_10": "Directly addresses utilization, mix, realization, and partner governance specific to this firm.",
+      "rubric_8": "Relevant but misses one nuance.",
+      "rubric_6": "Generic professional-services advice.",
+      "rubric_4": "Generic margin advice.",
+      "rubric_2": "Poorly aligned.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 6-week window, no-layoffs stance, low spend, and partner governance?",
+      "rubric_10": "Uses internal analysts and existing systems within the window, avoids premature layoffs, and frames findings for the committee.",
+      "rubric_8": "Respects most constraints with minor tension.",
+      "rubric_6": "Some tension with timeline or governance.",
+      "rubric_4": "Partially ignores constraints.",
+      "rubric_2": "Largely ignores constraints.",
+      "rubric_0": "Infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Is the recommendation tied to the flat-revenue/halving-margin signature and the un-disaggregated data?",
+      "rubric_10": "Explicitly cites flat revenue vs halving margin, blended-only utilization, the mid-market mix shift, and the unqueried CRM.",
+      "rubric_8": "Cites most of these signals.",
+      "rubric_6": "General reference.",
+      "rubric_4": "Weak.",
+      "rubric_2": "Minimal.",
+      "rubric_0": "None."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence held at PROVISIONAL given uncomputed per-segment margin and unqueried CRM?",
+      "rubric_10": "States PROVISIONAL/low confidence, noting the dominant driver is genuinely undetermined.",
+      "rubric_8": "Appropriately hedged.",
+      "rubric_6": "Confidence stated but uncertainty understated.",
+      "rubric_4": "HIGH confidence in market softness despite gaps.",
+      "rubric_2": "Overconfident on the external story.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the action avoid committing a 12-18 month plan to an unvalidated external cause?",
+      "rubric_10": "Refuses to plan around market softness until the driver is named; safe.",
+      "rubric_0": "Confirms market softness and commits a multi-year ride-it-out plan; unsafe."
     }
   },
-  "creation_methodology": "Expert analysis of ADVERSARIAL case",
-  "action_constraints_respected": [
-    "Analysis fits timeline and budget"
-  ],
-  "rationale": "Identify root cause and improvement opportunities",
-  "evidence_basis": [
-    "Financial and operational data support diagnosis"
-  ],
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }
