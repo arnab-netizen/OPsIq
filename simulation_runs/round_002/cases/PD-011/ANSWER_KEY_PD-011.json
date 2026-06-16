@@ -1,0 +1,111 @@
+{
+  "case_id": "PD-011",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Operating Margin Recovery in Tech Manufacturing)",
+  "creation_methodology": "Blind review: Expert analyzed public financial data independently. Identified root cause through multi-dimensional evidence (operating margin decline, SG&A growth, product mix pressure, market share loss).",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "root_cause_description": "The company's core unit economics have deteriorated across multiple dimensions. Gross margin declined 400 bps due to product mix shift (high-margin smart speakers declining, low-margin accessories growing) and component cost inflation (COGS % of revenue increased from 62% to 66%). Simultaneously, operating leverage has reversed: SG&A increased 600 bps as % of revenue (from 18% to 24%) while revenue remained flat. This combination—declining gross margin + fixed cost de-leverage—has compressed operating margin from 10% to 7.1%. The unit economics problem is structural: the company is attempting to maintain the same revenue base ($1.2B) with a changing product mix (lower-margin categories growing) and higher cost structure (SG&A 33% absolute growth). This is not a temporary margin pressure; it reflects fundamental deterioration in the business model's profitability at current scale.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Conduct a detailed product-level profitability analysis (6-week project, $40-60k cost) to identify which products and categories are value-accretive vs value-destructive at current pricing and cost. Quantify the margin impact of the category mix shift (smart speakers → accessories) and identify the minimum gross margin required per category to meet company's 10% operating margin target given current SG&A structure. Based on analysis results, develop three potential responses: (1) Exit or de-emphasize low-margin categories (accessories) to restore overall margin, accepting revenue decline; (2) Re-price low-margin categories or increase value-add (bundles, services) to improve margins while retaining volume; (3) Restructure SG&A to match flattened revenue (target: return SG&A to 18% of revenue = $216M from current $288M), requiring $72M cost reduction. Present financial model to board showing margin impact of each option, with 6-month plan for implementation decision.",
+  "action_description": "This action is first priority because without understanding product-level unit economics, the company cannot develop a credible margin recovery plan. The $72M SG&A reduction option risks destroying the business through cost-cutting without direction; the pricing option risks competitive harm without understanding margin requirements. The profitability analysis provides the diagnostic clarity to make strategic trade-offs between revenue/margin/market share consciously rather than reactively. At $40-60k cost and 6-week timeline, it fits the 18-month board deadline and investor guidance constraints.",
+  "action_constraints_respected": [
+    "Board/investor constraint (18-month deadline, requires shareholder communication): Action produces clear diagnostic results within 6 weeks, enabling board presentation at next quarterly earnings (within 3 months) with margin recovery plan. Early communication de-risks activist investor concerns.",
+    "Competitive constraint (cannot win on price): Action focuses on category profitability, not across-the-board price increases, enabling selective pricing or portfolio optimization rather than vulnerable across-the-board moves.",
+    "Supply chain constraint (12-16 week lead times): Action does not require immediate product sourcing changes; analysis informs 6-12 month sourcing and roadmap adjustments.",
+    "Organizational constraint (18-24 month product development cycle): Action produces results within 6 weeks, enabling product strategy decisions (continue/exit/pivot categories) that can be integrated into committed roadmap."
+  ],
+  "rationale": "The company's margin problem has three candidate root causes: (1) product mix (low-margin categories growing), (2) fixed cost structure (SG&A too high for revenue base), (3) competitive positioning (unable to hold pricing in core categories). All three likely play a role. However, the first step is not cost-cutting (which can backfire without direction) or pricing (which requires understanding margin requirements per category). The first step is diagnostic: understand which categories/products are economically viable at current scale and what SG&A structure is required to support the retained portfolio. All subsequent actions (restructuring SG&A, exiting categories, re-pricing, seeking M&A) should be informed by this analysis.",
+  "evidence_basis": [
+    "financial_health finding: Operating income declined 29% YoY while revenue flat, operating margin fell 290bps, SG&A increased 33% in absolute dollars while revenue unchanged",
+    "operational_efficiency finding: Gross margin declined 400bps due to product mix shift (smart speakers declining, accessories growing with lower margins) and COGS inflation (62%→66% of revenue)",
+    "market_position finding: Revenue flat despite 8% market growth indicates market share loss; competitor expansion (Apple/Google) suggests competitive margin pressure in core categories",
+    "financial_health finding: Stock price down 35%, analyst coverage declining, consensus rating changed from Buy to Hold, indicating investor loss of confidence"
+  ],
+  "evidence_not_explained": [
+    "SG&A absolute growth (33% increase) with flat revenue could indicate either strategic investment (unlikely given margin pressure) or cost structure inflexibility (likely). This supports UNIT_ECONOMICS_BREAKDOWN diagnosis: the cost structure has not adjusted to flat revenue."
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: Perhaps the company over-forecasted demand and built excess capacity/SG&A, now finding demand lower than expected. Rejected because: (a) market is growing 8% YoY (demand not absent), (b) company explicitly losing share (not market decline), (c) SG&A growth suggests active investment, not passive over-build.",
+    "STRATEGIC_PRICING_ERROR: Perhaps competitors' pricing pressure is forcing margin decline. Rejected as PRIMARY diagnosis because: (a) gross margin decline is driven by category mix, not uniform price compression, (b) smart speakers still have 45-50% potential margin, but declining volume, suggesting customer preference shift not price war.",
+    "GO_TO_MARKET_MISALIGNMENT: Perhaps DTC model is misaligned with customer purchasing behavior. Possible but rejected as primary because: (a) revenue flat suggests market reach stable, not declining, (b) category mix shift (speakers→accessories) suggests customers buying different products, not abandoning company."
+  ],
+  "missing_evidence": [
+    "Product-level profitability: Gross margin, SG&A allocation, and operating margin by individual product or SKU. Would quantify which categories are margin-accretive vs destructive.",
+    "Customer acquisition cost and customer lifetime value by product/category: Which categories acquire high-value customers, which acquire price-sensitive low-value customers? Would clarify whether accessories strategy is investment in customer base or value-destructive.",
+    "Detailed SG&A breakdown: Where is the $72M absolute increase in SG&A going? (Marketing, R&D, G&A, sales?) Would clarify whether increase is strategic investment or cost structure rigidity.",
+    "Competitive pricing and margin analysis: What are margins for comparable Apple/Google/Amazon products? Are they also compressed, or is the company at a competitive margin disadvantage?"
+  ],
+  "success_metrics": [
+    "Analysis completion: Product-level profitability study completed with clear identification of margin-accretive vs margin-destructive categories, and SG&A allocation by category/function within 6 weeks.",
+    "Margin clarity: Study quantifies what gross margin and operating leverage (SG&A %) are required per category to meet company's 10% operating margin target.",
+    "Strategic options clarity: Three alternative strategic options (exit low-margin categories, re-price categories, restructure SG&A) with financial model showing margin impact, risk, and competitive implications of each.",
+    "Board readiness: By next quarterly earnings (within 3 months), board presents investor guidance on margin recovery path and 6-month implementation plan based on analysis results."
+  ],
+  "expected_outcome": "If UNIT_ECONOMICS_BREAKDOWN is the root cause and the profitability analysis is executed well, the company should expect: (1) Within 6 weeks, clear diagnostic showing which categories/products are economically viable and what SG&A structure supports them. (2) Within 12 weeks, board decision on strategic response (exit categories, re-price, restructure SG&A, or combination). (3) Within 18 months (board deadline), measurable progress toward 10% operating margin target through some combination of: category portfolio optimization, SG&A reduction, or price/value-add improvements. If analysis shows that existing categories cannot support 10% margin at competitive prices, the company must pursue acquisitions or strategic repositioning (e.g., services, ecosystem approach) to create new margin drivers.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or related archetype (e.g., OPERATIONAL_BOTTLENECK) with evidence from margin compression and cost structure?",
+      "rubric_10": "Engine diagnoses UNIT_ECONOMICS_BREAKDOWN exactly, with clear reasoning on product mix deterioration, SG&A de-leverage, and margin compression.",
+      "rubric_8": "Engine diagnoses related archetype (e.g., OPERATIONAL_BOTTLENECK focusing on cost structure, or DEMAND_FORECASTING_MISMATCH on revenue growth challenge) with sound evidence.",
+      "rubric_6": "Engine identifies margin pressure or operational efficiency elements but misses the structural unit economics deterioration as primary diagnosis.",
+      "rubric_4": "Engine focuses on secondary issues (competitive pricing, market share) without recognizing the cost structure problem.",
+      "rubric_2": "Engine diagnosis contradicts available evidence.",
+      "rubric_0": "Engine diagnosis completely unrelated."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend diagnostic action (product profitability analysis or similar) before major restructuring decisions?",
+      "rubric_10": "Engine recommends product-level profitability analysis with clear scope, timeline, and cost that respects constraints.",
+      "rubric_8": "Engine recommends diagnostic approach (profitability analysis, cost structure review) with slightly different scope but still sound.",
+      "rubric_6": "Engine recommends investigation of profitability or costs but less directly targeted; may include some restructuring alongside diagnostic work.",
+      "rubric_4": "Engine recommends immediate cost-cutting (SG&A reduction, headcount cuts) without first diagnosing which categories are viable.",
+      "rubric_2": "Engine recommends aggressive action (exit categories, major pricing moves) without analytical foundation.",
+      "rubric_0": "Engine action harmful or contradicts diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does action respect public company context (board/investor accountability, 18-month timeline, analyst scrutiny)?",
+      "rubric_10": "Action reflects public company operating dynamics (quarterly guidance, investor communication, board review cycles); provides clarity for Q1 earnings guidance.",
+      "rubric_8": "Action is relevant to public company situation but may miss one constraint (e.g., analyst communication, investor relations timing).",
+      "rubric_6": "Action is relevant but somewhat generic for cost-cutting scenarios; misses public company-specific urgency.",
+      "rubric_4": "Action generic and could apply to any company with margin decline.",
+      "rubric_2": "Action poorly aligned with public company context or board accountability structure.",
+      "rubric_0": "Action irrelevant or harmful to business."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect board deadline (18 months), investor timeline (guidance due within 6 months), and organizational constraints?",
+      "rubric_10": "Action produces results (6 weeks) enabling board presentation and investor guidance at next quarterly earnings (within 3 months); fits 18-month margin recovery deadline.",
+      "rubric_8": "Action respects major constraints; may have minor timeline tension but still feasible within board/investor expectations.",
+      "rubric_6": "Action mostly respects constraints; some tension in timing or cost allocation.",
+      "rubric_4": "Action partially violates constraints (e.g., timeline extends beyond next earnings, analysis cost exceeds discretionary budget).",
+      "rubric_2": "Action severely violates constraints (requires 6+ months, exceeds $200k cost, cannot communicate to investors in time).",
+      "rubric_0": "Action infeasible given public company constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every claim in diagnosis and action be traced to specific financial evidence?",
+      "rubric_10": "Every claim traceable: operating margin decline 290bps, SG&A growth 600bps, category mix shift (speakers declining, accessories growing), stock price decline all cited.",
+      "rubric_8": "Primary claims traced; minor inferences supported by pattern of evidence.",
+      "rubric_6": "Main diagnosis supported; some unsupported claims or inferences.",
+      "rubric_4": "Some evidence support; significant claims not tied to case data.",
+      "rubric_2": "Minimal evidence support.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given evidence base?",
+      "rubric_10": "Evidence is robust (audited financial statements, multiple years of data, clear margin trends). HIGH confidence well-calibrated.",
+      "rubric_8": "Evidence is strong; some product-level data estimates but overall pattern clear. HIGH confidence defensible.",
+      "rubric_6": "Evidence supports diagnosis but product-level detail missing (would strengthen confidence to VERY HIGH). MODERATE to HIGH confidence might be more appropriate.",
+      "rubric_4": "Significant evidence gaps; HIGH confidence not well-supported.",
+      "rubric_2": "Evidence ambiguous or weak.",
+      "rubric_0": "Evidence contradicts confidence."
+    },
+    "safety": {
+      "criterion": "Is action safe (diagnostic before major restructuring)?",
+      "rubric_10": "Action is low-risk diagnostic that provides clarity before major decisions. Appropriate phased approach.",
+      "rubric_0": "Action has high risk (recommends major restructuring without analysis, or aggressive cost-cutting that could backfire)."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

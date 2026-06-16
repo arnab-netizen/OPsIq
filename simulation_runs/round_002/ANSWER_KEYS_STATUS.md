@@ -34,7 +34,7 @@
 
 | Case ID | Status | Created | Reviewed | Locked | Notes |
 |---------|--------|---------|----------|--------|-------|
-| PD-011 | PENDING | — | — | — | Awaiting case input creation and data sourcing |
+| PD-011 | CREATED | ✓ | — | — | Answer key created with detailed scoring criteria for margin recovery diagnosis |
 | PD-012 | PENDING | — | — | — | — |
 | PD-013 | PENDING | — | — | — | — |
 | PD-014 | PENDING | — | — | — | — |
@@ -45,7 +45,7 @@
 | PD-019 | PENDING | — | — | — | — |
 | PD-020 | PENDING | — | — | — | — |
 
-**Summary (PD):** 0/10 created, 0/10 reviewed, 0/10 locked
+**Summary (PD):** 1/10 created, 0/10 reviewed, 0/10 locked
 
 ---
 
@@ -53,7 +53,7 @@
 
 | Case ID | Status | Created | Reviewed | Locked | Notes |
 |---------|--------|---------|----------|--------|-------|
-| SYN-011 | PENDING | — | — | — | Awaiting case input creation |
+| SYN-011 | CREATED | ✓ | — | — | Answer key created with TRUST_QUALITY_CRISIS diagnosis and stability recovery roadmap |
 | SYN-012 | PENDING | — | — | — | — |
 | SYN-013 | PENDING | — | — | — | — |
 | SYN-014 | PENDING | — | — | — | — |
@@ -64,7 +64,7 @@
 | SYN-019 | PENDING | — | — | — | — |
 | SYN-020 | PENDING | — | — | — | — |
 
-**Summary (SYN):** 0/10 created, 0/10 reviewed, 0/10 locked
+**Summary (SYN):** 1/10 created, 0/10 reviewed, 0/10 locked
 
 ---
 
@@ -72,7 +72,7 @@
 
 | Case ID | Status | Created | Reviewed | Locked | Notes |
 |---------|--------|---------|----------|--------|-------|
-| ADV-011 | PENDING | — | — | — | Awaiting case input creation |
+| ADV-011 | CREATED | ✓ | — | — | Answer key created with INSUFFICIENT_EVIDENCE diagnosis; tests trap recognition |
 | ADV-012 | PENDING | — | — | — | — |
 | ADV-013 | PENDING | — | — | — | — |
 | ADV-014 | PENDING | — | — | — | — |
@@ -83,7 +83,7 @@
 | ADV-019 | PENDING | — | — | — | — |
 | ADV-020 | PENDING | — | — | — | — |
 
-**Summary (ADV):** 0/10 created, 0/10 reviewed, 0/10 locked
+**Summary (ADV):** 1/10 created, 0/10 reviewed, 0/10 locked
 
 ---
 
@@ -105,12 +105,12 @@
 
 | Category | Required | Created | Reviewed | Locked | % Complete |
 |----------|----------|---------|----------|--------|------------|
-| Real-World | 15 | 0 | 0 | 0 | 0% |
-| Public-Dataset | 10 | 0 | 0 | 0 | 0% |
-| Synthetic | 10 | 0 | 0 | 0 | 0% |
-| Adversarial | 10 | 0 | 0 | 0 | 0% |
+| Real-World | 15 | 1 | 0 | 0 | 6.7% |
+| Public-Dataset | 10 | 1 | 0 | 0 | 10% |
+| Synthetic | 10 | 1 | 0 | 0 | 10% |
+| Adversarial | 10 | 1 | 0 | 0 | 10% |
 | Blind-Outcome | 5 | 0 | 0 | 0 | 0% |
-| **TOTAL** | **50** | **1** | **0** | **0** | **2%** |
+| **TOTAL** | **50** | **4** | **0** | **0** | **8%** |
 
 ---
 

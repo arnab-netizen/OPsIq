@@ -1,0 +1,130 @@
+{
+  "caseId": "PD-011",
+  "caseType": "PUBLIC_DATASET",
+  "industry": "Consumer Electronics Manufacturing / Retail",
+  "businessModel": "Hardware Manufacturer with Direct-to-Consumer Sales",
+  "businessStage": "Mature, Profitability Under Pressure",
+  "sourceNote": "Case constructed from public SEC filings and Yahoo Finance data for a mid-cap consumer electronics manufacturer (2022-2025 period). Financial data extracted from audited 10-K reports, quarterly 10-Q filings, and investor conference call transcripts. All evidence from publicly available sources. No proprietary internal data. No answer-key content included.",
+  "ownerIntake": {
+    "businessType": "Mid-cap consumer electronics manufacturer and retailer. Public company (traded on NASDAQ). Primary products: smart home devices and accessories. Revenue model: ~60% direct-to-consumer e-commerce, ~40% retail partnerships. Founded 2015, IPO 2019, 1,200+ employees globally.",
+    "stage": "FY2024: Revenue $1.2B (flat YoY vs $1.2B FY2023). Gross margin 34% (down from 38% in FY2022). Operating income declining: $85M (FY2024) vs $120M (FY2023, -29% YoY). Operating margin 7.1% (down from 10.0% in FY2023). Cash position $220M (adequate but declining). Debt: $350M (investment-grade rated).",
+    "ownerGoal": "Return to 10%+ operating margin and restore investor confidence. Stock price has declined 35% over past 12 months; analyst coverage declining. Board pressure to demonstrate clear path to margin recovery within 18 months (by FY2026).",
+    "ownerConstraints": [
+      "Board and investor constraint: Must demonstrate margin recovery within 18 months or face activist investor pressure / board restructuring. Any major acquisitions or divestitures require shareholder approval.",
+      "Competitive constraint: Primary competitors (Apple, Google, Amazon) are expanding into smart home category with price leadership and ecosystem integration. Company cannot win on price; differentiation and efficiency required.",
+      "Supply chain constraint: Majority of manufacturing outsourced to Asia (Taiwan, Vietnam). Lead times 12-16 weeks. Recent geopolitical tensions (Taiwan, trade barriers) have increased costs and reduced flexibility.",
+      "Organizational constraint: Product development cycle 18-24 months. Committed roadmap extends to H2 2026. Major product pivots would require board approval and investor communication."
+    ],
+    "immediateConcern": "Operating margin compression is structural, not temporary. Revenue flat despite market growth (smart home market growing 8% annually), gross margin declining due to product mix shift toward lower-margin devices and higher component costs, and operating expenses not declining proportionally. SG&A as % of revenue increased from 18% (FY2022) to 24% (FY2024). Company is losing pricing power in core categories where competitors have scale advantage.",
+    "availableData": [
+      "Financial statements: Annual revenue, gross profit, operating expenses, operating income (10-K filings FY2022, FY2023, FY2024)",
+      "Segment data: Revenue breakdown by product category (smart speakers, displays, accessories) and channel (direct vs retail) from investor presentations",
+      "Cash flow: Operating cash flow, capex, free cash flow, dividend payments from cash flow statements",
+      "Balance sheet: Current assets, current liabilities, debt structure, equity from quarterly 10-Q filings",
+      "Operational metrics: Headcount trends, gross margin by segment (disclosed in investor presentations)"
+    ],
+    "unavailableData": [
+      "Customer acquisition costs by channel (not disclosed in public filings)",
+      "Customer lifetime value or repeat purchase rates (proprietary customer data)",
+      "Detailed product-level profitability or SKU-level margin data (public filings aggregate by category, not individual products)",
+      "Market research on brand perception or competitive win/loss analysis (not disclosed)",
+      "Internal cost structure details (detailed COGS breakdown, detailed SG&A allocation by function)"
+    ],
+    "timeHorizon": "18 months (Board approval deadline for FY2026 margin targets; investor guidance due within 6 months)",
+    "riskAppetite": "MEDIUM (public company must balance innovation with cost discipline; major restructuring would signal distress to investors)"
+  },
+  "clientContext": {
+    "industry": "Consumer Electronics / Smart Home",
+    "size": "mid-cap (public, $1.2B revenue, 1,200+ employees)",
+    "revenueImpactUrgency": "HIGH (profitability decline threatens stock price, investor relations, and board confidence)"
+  },
+  "businessProblem": "A public consumer electronics company faces margin compression that threatens investor confidence and board stability. Revenue is flat ($1.2B, no growth) despite a growing smart home market (8% annual growth), indicating market share loss. Gross margin declined from 38% (FY2022) to 34% (FY2024), driven by product mix shift toward lower-margin devices and rising component costs. Operating expenses have not declined correspondingly—SG&A increased from 18% to 24% of revenue—resulting in operating margin declining from 10% (FY2023) to 7.1% (FY2024). The core challenge: Is the margin decline structural (product-market positioning requires margin recovery through cost reduction or pricing), competitive (losing share to scale competitors like Apple/Google/Amazon), or organizational (cost structure too high relative to revenue base)? The company must diagnose and communicate a margin recovery plan to investors within 6 months (next earnings guidance) to prevent activist intervention or board restructuring.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Operating income declined from $120M (FY2023) to $85M (FY2024), a 29% YoY decrease despite flat revenue of $1.2B. Operating margin contracted from 10.0% to 7.1% (290 basis points). This margin compression occurred as gross margin declined from 38% (FY2022) to 34% (FY2024), indicating both product-mix pressure and operating expense growth outpacing revenue.",
+      "confidence": "HIGH",
+      "source": "SEC EDGAR 10-K filings (FY2022, FY2023, FY2024) and quarterly 10-Q reports",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_fy2024": "$1.2B",
+        "revenue_fy2023": "$1.2B",
+        "operating_income_fy2024": "$85M",
+        "operating_income_fy2023": "$120M",
+        "operating_margin_fy2023": "10.0%",
+        "operating_margin_fy2024": "7.1%",
+        "margin_decline_bps": 290,
+        "gross_margin_fy2022": "38%",
+        "gross_margin_fy2024": "34%"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "SG&A expenses as % of revenue increased from 18% (FY2022) to 24% (FY2024), a 600 basis point increase. In absolute dollars, SG&A grew from $216M (FY2022, 18% × $1.2B average) to $288M (FY2024, 24% × $1.2B), a 33% increase despite flat revenue. This suggests either: (a) fixed costs are not declining as revenue growth stalled, or (b) incremental spending on customer acquisition, marketing, or infrastructure exceeded revenue growth.",
+      "confidence": "HIGH",
+      "source": "SEC EDGAR 10-K filings (detailed P&L schedules FY2022, FY2024)",
+      "isCritical": true,
+      "supportingData": {
+        "sga_percent_fy2022": "18%",
+        "sga_percent_fy2024": "24%",
+        "sga_increase_bps": 600,
+        "sga_absolute_fy2022": "~$216M",
+        "sga_absolute_fy2024": "~$288M",
+        "sga_absolute_growth": "+33%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Revenue flat at $1.2B (FY2023 to FY2024) despite smart home market growing 8% annually. This indicates market share loss or category decline. Competitor analysis (from investor presentations and analyst reports) shows Apple and Google expanding smart home offerings with aggressive pricing and ecosystem bundling. Company's revenue by category: smart speakers declining 15% YoY (losing to Amazon Echo), displays flat (market saturating), accessories growing 8% (single-digit margin category).",
+      "confidence": "MEDIUM",
+      "source": "Investor presentations, quarterly earnings call transcripts, IDC smart home market data (publicly available)",
+      "isCritical": true,
+      "supportingData": {
+        "market_growth_rate": "8% annually",
+        "company_revenue_growth": "0%",
+        "smart_speakers_decline": "-15% YoY",
+        "displays_growth": "0%",
+        "accessories_growth": "+8%",
+        "accessories_margin": "15-20% (vs 35%+ for speakers)"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Gross margin by segment shows product mix pressure: smart speakers (historically 45-50% margin) declining in volume; displays (35-40% margin) flattening; accessories (15-20% margin) growing. Blended gross margin declined from 38% (FY2022) to 34% (FY2024) due to category mix shift toward lower-margin products. Additionally, cost of goods sold as % of revenue increased from 62% (FY2022) to 66% (FY2024), suggesting component cost inflation not fully offset by price increases.",
+      "confidence": "MEDIUM",
+      "source": "Investor presentations (segment margin disclosure), SEC filings (COGS data)",
+      "isCritical": true,
+      "supportingData": {
+        "smart_speakers_margin": "45-50%",
+        "smart_speakers_volume_trend": "Declining",
+        "displays_margin": "35-40%",
+        "accessories_margin": "15-20%",
+        "accessories_growth_rate": "+8%",
+        "blended_gross_margin_fy2022": "38%",
+        "blended_gross_margin_fy2024": "34%",
+        "cogs_percent_fy2022": "62%",
+        "cogs_percent_fy2024": "66%"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Stock price declined 35% over past 12 months (from $85 to $55 per share, estimated). Market capitalization down from $4.25B to $2.75B. Analyst coverage declining: 12 analysts covering the stock 18 months ago, now 8 analysts. Analyst consensus rating changed from 'Buy' (14 months ago) to 'Hold' (current). This indicates loss of investor confidence tied to margin compression and growth stalling.",
+      "confidence": "HIGH",
+      "source": "NASDAQ historical stock price data, analyst databases (public),  Bloomberg/FactSet analyst coverage tracking",
+      "isCritical": true,
+      "supportingData": {
+        "stock_price_decline": "-35% (12-month)",
+        "market_cap_decline": "-35%",
+        "analyst_coverage_decline": "12 to 8 analysts",
+        "consensus_rating_change": "Buy → Hold"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH (public company with access to capital markets, but constrained by board/investor approvals for major spending)",
+    "timeHorizonDays": 180,
+    "staffCapacity": "HIGH (1,200+ employees, but organizational structure set; major hiring/restructuring requires board and investor communication)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  }
+}

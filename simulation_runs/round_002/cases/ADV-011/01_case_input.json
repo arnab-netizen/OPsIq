@@ -1,0 +1,105 @@
+{
+  "caseId": "ADV-011",
+  "caseType": "ADVERSARIAL",
+  "industry": "Professional Services (Management Consulting)",
+  "businessModel": "Partnership/Boutique Consulting Firm",
+  "businessStage": "Mature Partnership, Facing Profitability Pressure",
+  "sourceNote": "Adversarial case designed to test diagnosis engine resilience to cognitive traps. Trap type: INSUFFICIENT_CRITICAL_DATA and RECENCY_BIAS. Case presents selective evidence that can mislead toward incorrect diagnosis if engine over-weights recent events without understanding long-term structural issues. All data is realistic but strategically incomplete. Designed to test whether engine can identify which data is missing rather than accepting the narrative presented. No answer-key content embedded in inputs.",
+  "ownerIntake": {
+    "businessType": "40-person management consulting boutique specializing in operations transformation for mid-market manufacturing clients. Partnership structure: 3 senior partners, 8 directors, 29 staff (consultants and analysts). Founded 2005, private partnership. Known for deep industry expertise and long-term client relationships.",
+    "stage": "Mature: $6.5M annual revenue (consulting billings). Gross margin 65% (typical for consulting). Partnership profit (EBIT) declining: $1.3M (2023) to $0.9M (2024), a 31% YoY decline. Profitability per partner declining: $433k per partner (2023) to $300k (2024). Key concern: younger partners are leaving to join larger firms (2 departures in past 18 months); partner recruitment at risk.",
+    "ownerGoal": "Restore partnership profitability from current $0.9M to sustainable $1.5M+ (target: $400k+ per partner) within 18 months to retain and recruit partners. Avoid forced firm merger or acquisition.",
+    "ownerConstraints": [
+      "Partner constraint: Partners are key client relationships and rainmakers. Cannot reduce partner compensation significantly without losing them to larger firms. Limited ability to hire new partners without significant capital investment or diluting existing ownership.",
+      "Client constraint: Primary clients are long-term manufacturing relationships (avg 8-year relationships). Clients prefer stability; rapid growth or business model changes risk relationship damage.",
+      "Market constraint: Competition from global consulting firms (McKinsey, Bain, BCG) and boutique digital transformation firms has intensified. Clients now expecting digital/technology expertise (outside core competency); pricing pressure from global competitors with scale economies.",
+      "Organizational constraint: Small firm (40 people) with limited back-office infrastructure. Cannot easily scale without major cost investment or outsourcing. Lean operations mean every partner departure reduces capacity significantly."
+    ],
+    "immediateConcern": "Recent client losses and lower project demand have reduced utilization: billable hours per staff declined from 70% (2023) to 55% (2024), a 21% reduction. This is attributed to 'weak manufacturing economy' and 'fewer transformation project opportunities.' Partners are considering: (1) Aggressive hunting in new verticals (healthcare, financial services) to replace lost manufacturing capacity, (2) Merge with larger firm (several acquisition conversations underway), or (3) Aggressive cost-cutting (partner compensation, staff reductions). Leadership is leaning toward aggressive hunting in new verticals.",
+    "availableData": [
+      "Financial metrics: Annual revenue, EBIT, gross margin, revenue by client (top 5 clients represent 45% of revenue)",
+      "Operational metrics: Billable utilization rate (70%→55%), staff count by level, partner compensation trends, client tenure and project value trends",
+      "Client feedback: Informal conversations with existing clients suggest satisfaction with work quality, though some mention desire for digital/technology capabilities",
+      "Market intelligence: Informal competitive observations; global firms gaining share in manufacturing transformation space"
+    ],
+    "unavailableData": [
+      "Detailed revenue cohort analysis: Which vintage of projects or client engagements are declining? Are all clients losing project volume, or are specific clients (by industry, size, or other characteristic) showing decline?",
+      "Client win/loss analysis: Which specific client relationships have been lost? What were the stated reasons? (Only general sense that 'fewer opportunities')",
+      "Pricing trend data: Have average project fees declined? Or is the volume of projects declining while average fees steady?",
+      "Root-cause analysis of utilization decline: Is the decline due to client demand (fewer transformation needs) or competitive displacement (clients choosing competitors)?",
+      "Detailed cost structure analysis: Which cost categories are fixed vs variable? What is the break-even utilization rate?"
+    ],
+    "timeHorizon": "18 months (partnership sustainability; partner departures could accelerate if profitability doesn't recover)",
+    "riskAppetite": "LOW-TO-MEDIUM (partnership structure is conservative; willing to consider new markets but not radical business model changes)"
+  },
+  "clientContext": {
+    "industry": "Professional Services / Consulting",
+    "size": "boutique (40 people, $6.5M revenue, 3 partners)",
+    "revenueImpactUrgency": "HIGH (profitability decline threatens partner retention and firm viability; must demonstrate recovery path within 18 months)"
+  },
+  "businessProblem": "A boutique consulting firm faces a profitability crisis with unclear root cause. Revenue is flat ($6.5M, no growth YoY), but profitability declined 31% ($1.3M to $0.9M). Billable utilization declined from 70% to 55%, suggesting either reduced client demand or competitive displacement. Leadership attributes the problem to weak manufacturing economy and fewer transformation project opportunities, and is considering aggressive expansion into new verticals (healthcare, financial services) as the solution. However, the firm lacks detailed diagnostic data: no cohort analysis showing which clients/projects are declining, no win/loss analysis of lost opportunities, no pricing trend data to distinguish demand decline from competitive pricing pressure. The trap in this case is that leadership's narrative ('weak economy, expand to new verticals') is plausible and recent (fits 2024 economic conditions), but the firm may be misdiagnosing the problem. Alternative hypotheses: (1) Core manufacturing client base is losing project volume (client-level demand issue, not market-wide), (2) Global competitors are winning at lower prices (competitive displacement, not demand issue), (3) Client expectations for digital/technology expertise are shifting, and firm is losing bids to competitors with those capabilities. Without detailed cohort analysis, the firm could invest in new vertical expansion and still fail to recover profitability if the real problem is client concentration risk or competitive displacement.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Partnership profit declined from $1.3M (2023) to $0.9M (2024), a 31% YoY decrease. Profitability per partner declined from $433k to $300k. This is a significant decline for a mature professional services firm. Revenue appears flat (~$6.5M both years, ~0% growth), suggesting the profit decline is entirely driven by cost/efficiency deterioration.",
+      "confidence": "HIGH",
+      "source": "Partnership financial statements (2023, 2024)",
+      "isCritical": true,
+      "supportingData": {
+        "profit_2023": "$1.3M",
+        "profit_2024": "$0.9M",
+        "profit_decline_percent": "-31%",
+        "profit_per_partner_2023": "$433k",
+        "profit_per_partner_2024": "$300k",
+        "revenue_2023": "~$6.5M",
+        "revenue_2024": "~$6.5M"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Billable utilization declined from 70% (2023) to 55% (2024), a 15 percentage point decline or 21% relative decline. This is a significant operational deterioration. At 65% gross margin, lower utilization directly reduces profitability. Leadership attributes this to 'weak manufacturing economy' and 'fewer transformation project opportunities.' However, no detailed analysis provided of which clients, industries, or project types are declining.",
+      "confidence": "HIGH",
+      "source": "Time tracking and billable utilization systems",
+      "isCritical": true,
+      "supportingData": {
+        "utilization_2023": "70%",
+        "utilization_2024": "55%",
+        "utilization_decline_pp": "-15 pp",
+        "utilization_decline_pct": "-21%",
+        "gross_margin": "65%",
+        "leadership_narrative": "Weak manufacturing economy, fewer transformation opportunities"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Leadership reports that 'global consulting firms gaining share in manufacturing transformation space' and 'competition from digital transformation firms intensified.' Clients are expressing desire for digital/technology expertise beyond the firm's core operations transformation. Implying competitive displacement in core business, but no specific win/loss analysis provided.",
+      "confidence": "MEDIUM",
+      "source": "Leadership observations, informal client conversations",
+      "isCritical": true,
+      "supportingData": {
+        "competitive_observation": "Global firms gaining share",
+        "client_feedback": "Digital/technology expertise desired",
+        "firm_capability_gap": "Limited digital/technology expertise"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Top 5 clients represent 45% of revenue. Two partner departures in past 18 months to larger firms. These are concerning signs: high client concentration means firm is vulnerable to individual client loss, and partner departures suggest compensation/career satisfaction issues. No detailed data on whether departing partners took clients with them, or what the stated reasons for departure were.",
+      "confidence": "MEDIUM",
+      "source": "Partnership records, client concentration analysis",
+      "isCritical": true,
+      "supportingData": {
+        "top_5_client_concentration": "45% of revenue",
+        "partner_departures_18mo": "2 out of 3 senior partners / 11 total partners = 18%",
+        "stated_reason": "Unknown (inferred: compensation, career growth)"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (partnership structure, limited external capital availability; must fund growth from retained earnings)",
+    "timeHorizonDays": 545,
+    "staffCapacity": "LOW (40-person firm; every hire requires careful planning; partner retention/recruitment critical constraint)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

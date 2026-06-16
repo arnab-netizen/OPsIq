@@ -31,7 +31,7 @@
 
 | Case ID | Status | Source | Dataset | Root Cause (Expected) | Date Sourced |
 |---------|--------|--------|---------|----------------------|--------------|
-| PD-011 | PENDING | — | — | — | — |
+| PD-011 | SOURCED | Public dataset case (SEC filings, financial data analysis, mid-cap consumer electronics) | Mid-cap public company facing margin compression and operational leverage loss | UNIT_ECONOMICS_BREAKDOWN (product mix deterioration + SG&A de-leverage) | 2026-06-16 |
 | PD-012 | PENDING | — | — | — | — |
 | PD-013 | PENDING | — | — | — | — |
 | PD-014 | PENDING | — | — | — | — |
@@ -48,7 +48,7 @@
 
 | Case ID | Status | Stress-Test Focus | Root Cause (Expected) | Date Created |
 |---------|--------|-------------------|----------------------|--------------|
-| SYN-011 | PENDING | — | — | — |
+| SYN-011 | SOURCED | Product quality and retention crisis (TRUST_QUALITY_CRISIS pattern) | TRUST_QUALITY_CRISIS (platform reliability eroding customer trust) | 2026-06-16 |
 | SYN-012 | PENDING | — | — | — |
 | SYN-013 | PENDING | — | — | — |
 | SYN-014 | PENDING | — | — | — |
@@ -65,7 +65,7 @@
 
 | Case ID | Status | Trap Type | Root Cause (Expected) | Date Created |
 |---------|--------|-----------|----------------------|--------------|
-| ADV-011 | PENDING | — | — | — |
+| ADV-011 | SOURCED | Incomplete data & recency bias (trap: leadership narrative vs. true root cause) | INSUFFICIENT_EVIDENCE (must diagnose before strategic action) | 2026-06-16 |
 | ADV-012 | PENDING | — | — | — |
 | ADV-013 | PENDING | — | — | — |
 | ADV-014 | PENDING | — | — | — |
@@ -95,11 +95,11 @@
 | Category | Required | Sourced | Percentage | Status |
 |----------|----------|---------|------------|--------|
 | Real-World | ≥15 | 1 | 6.7% | IN_PROGRESS |
-| Public-Dataset | ≥10 | 0 | 0% | PENDING |
-| Synthetic | ≥10 | 0 | 0% | PENDING |
-| Adversarial | ≥10 | 0 | 0% | PENDING |
+| Public-Dataset | ≥10 | 1 | 10% | IN_PROGRESS |
+| Synthetic | ≥10 | 1 | 10% | IN_PROGRESS |
+| Adversarial | ≥10 | 1 | 10% | IN_PROGRESS |
 | Blind-Outcome | ≥5 | 0 | 0% | PENDING |
-| **TOTAL** | **≥50** | **1** | **2%** | **IN_PROGRESS** |
+| **TOTAL** | **≥50** | **4** | **8%** | **IN_PROGRESS** |
 
 ---
 

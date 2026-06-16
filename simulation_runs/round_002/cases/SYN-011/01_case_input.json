@@ -1,0 +1,123 @@
+{
+  "caseId": "SYN-011",
+  "caseType": "SYNTHETIC",
+  "industry": "SaaS (Software-as-a-Service)",
+  "businessModel": "B2B SaaS Subscription with Professional Services",
+  "businessStage": "Post-Series A, Growth Stage",
+  "sourceNote": "Synthetic case created to stress-test diagnosis engine on TRUST_QUALITY_CRISIS pattern. Scenario designed with realistic SaaS metrics (ARR, churn, NPS, CAC/LTV) structured to trigger quality-related failure diagnosis. All data generated to be representative and realistic. Not a historical case. Designed to test engine's recognition of trust-erosion patterns distinct from other failure modes.",
+  "ownerIntake": {
+    "businessType": "B2B SaaS platform providing workflow automation for mid-market professional services firms (accounting, legal, consulting). Subscription model with monthly pricing ($2k-$10k/month per customer). Founded 2021, Series A funding $8M (2023). Current ARR: $4.2M, growing 25% YoY. Customer base: 180 mid-market customers.",
+    "stage": "Post-Series A growth: ARR $4.2M (25% YoY growth). Gross margin 72% (healthy for SaaS). Magic number 0.8 (revenue generated per $1 CAC; target 1.0+). CAC payback period 16 months (target <12 months). NPS 42 (target >50 for healthy SaaS). Churn rate 3% MRR (acceptable), but trend rising: was 2% MRR 6 months ago. Cash runway 24 months at current burn.",
+    "ownerGoal": "Reach Series B readiness ($10M ARR, <3% churn, NPS >55, path to profitability) within 18 months. Primary lever: improve customer retention (reduce churn from 3% to <2%) and expand NPS (42 to 55+). Series B investors will scrutinize retention metrics as indicator of product-market fit.",
+    "ownerConstraints": [
+      "Funding constraint: $8M Series A capital, 24-month runway at current burn ($400k/month). Cannot hire aggressively without jeopardizing runway. Must demonstrate path to efficiency before Series B.",
+      "Product constraint: Platform built on legacy architecture (dating to MVP phase); significant technical debt. Major feature additions require 8-12 weeks of engineering effort. Refactoring for stability/performance requires 12-16 weeks without new feature progress.",
+      "Organizational constraint: Lean team (18 people: 6 engineering, 4 sales, 4 support/operations, 2 finance/legal, 2 founding team). Product/engineering fully allocated to roadmap. Limited capacity for major platform redesign or new feature development.",
+      "Market constraint: Competitive landscape consolidating; 2 larger competitors with more feature-rich platforms entering market; customers evaluating feature parity as purchasing criteria."
+    ],
+    "immediateConcern": "NPS is low (42) and churn is rising (2%→3% MRR over 6 months). Customer interviews suggest satisfaction is high with core workflow automation features, but customers are increasingly frustrated with product reliability (uptime issues, occasional data sync failures, slow UI responsiveness). Recent incidents: 4-hour outage (data sync failure), 8-minute page load times during peak usage. These are not feature gaps but stability/reliability issues. If product reliability continues to deteriorate, churn will accelerate and Series B will become difficult.",
+    "availableData": [
+      "Financial metrics: ARR, MRR, CAC, LTV estimates, churn rate (by cohort and aggregate), payback period, gross margin, burn rate",
+      "Product metrics: Platform uptime (99.2%), incident frequency (2-3 incidents per month, avg 2-hour resolution), feature usage (workflow automation 85% adoption, newer features 20% adoption)",
+      "Customer feedback: NPS survey results (42 overall; detractor feedback focuses on reliability/performance, not features), support ticket volume (trending up 40% YoY), support resolution time (avg 24 hours, trending up)",
+      "Competitive context: 2 new entrants in market with 5-7x more funding, feature-rich platforms, 99.99% uptime SLAs"
+    ],
+    "unavailableData": [
+      "Detailed root cause analysis of reliability issues (engineering team has not done deep diagnostics)",
+      "Customer willingness-to-pay for reliability vs features (not surveyed)",
+      "Competitive feature parity analysis (subjective assessment only)",
+      "Detailed technical debt inventory (not formally documented)"
+    ],
+    "timeHorizon": "18 months (Series B readiness deadline; must demonstrate churn stabilization within 6 months to de-risk fundraising)",
+    "riskAppetite": "MEDIUM (growth-stage company must balance feature development to compete with funding-backed entrants vs. stability/reliability investment to retain existing customers)"
+  },
+  "clientContext": {
+    "industry": "SaaS / Workflow Automation",
+    "size": "post-series-a (18 employees, $4.2M ARR)",
+    "revenueImpactUrgency": "HIGH (rising churn and low NPS directly threaten Series B feasibility and unit economics; customer retention is blocking growth path)"
+  },
+  "businessProblem": "A Series A SaaS company faces a critical product quality challenge disguised as a growth plateau. Revenue growth (25% YoY) appears healthy, but underlying unit economics are deteriorating: churn is rising (2%→3% MRR, trend concerning), NPS is below healthy threshold (42 vs target 50+), and support costs are rising (40% YoY ticket increase). Customer interviews reveal that the core product (workflow automation) is valued, but product reliability issues (outages, data sync failures, slow performance) are causing churn and preventing NPS improvement. The company faces a strategic fork: (1) Invest in product stability/reliability to retain customers and improve NPS (requires 12-16 weeks engineering effort, delays new features), or (2) Invest in new features to compete with well-funded entrants (maintains feature parity but exacerbates reliability issues under load). Series B investors will evaluate this trade-off; customer churn and low NPS will signal product-market fit risk and jeopardize fundraising. The core question: How should the company balance feature development (to compete with entrants) vs stability investment (to retain customers and improve retention metrics required for Series B)?",
+  "evidence": [
+    {
+      "dimension": "quality_delivery",
+      "finding": "Platform uptime is 99.2%, below industry standard for SaaS of 99.9%+. Incident frequency: 2-3 incidents per month with average 2-hour resolution time. Recent incidents: 4-hour outage on data sync (critical workflow path), 8-minute page load times during peak usage (weekly during month-end when customers are busy). These are not rare events; customers are experiencing reliability issues monthly.",
+      "confidence": "HIGH",
+      "source": "Incident tracking system logs, platform monitoring dashboards, incident post-mortems",
+      "isCritical": true,
+      "supportingData": {
+        "platform_uptime": "99.2%",
+        "industry_standard": "99.9%+",
+        "incident_frequency": "2-3 per month",
+        "avg_resolution_time": "2 hours",
+        "recent_outage_duration": "4 hours",
+        "peak_load_response_time": "8 minutes (slow)"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Churn rate increased from 2% MRR (6 months ago) to 3% MRR (current). While 3% MRR is within SaaS norms, the trend is concerning. At 3% MRR, annualized churn is ~35%. Customer interviews (sample of 8 churned customers, 5 at-risk customers) consistently cite reliability and performance issues as switching drivers: 'We can't rely on the platform for critical workflows,' 'Page load times make it unusable during month-end,' 'We had an outage that disrupted our operations.' Feature gaps mentioned by <20% of interview subjects; reliability mentioned by >60%.",
+      "confidence": "HIGH",
+      "source": "Churn analytics platform, customer interview transcripts, exit interview data",
+      "isCritical": true,
+      "supportingData": {
+        "churn_rate_6mo_ago": "2% MRR",
+        "churn_rate_current": "3% MRR",
+        "trend": "Increasing",
+        "annualized_churn": "~35%",
+        "churned_customers_citing_reliability": ">60%",
+        "churned_customers_citing_features": "<20%"
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "NPS is 42 (low for SaaS; healthy range 40-70, world-class >70). NPS survey open-ended feedback: detractors (20% of responses) specifically mention 'product reliability,' 'system crashes,' 'performance issues during busy times.' Promoters (40%) mention 'core workflow automation features are excellent' and 'good support team,' but reliability concerns prevent them from enthusiastically recommending. The gap between feature quality (high satisfaction) and reliability (low NPS) suggests a product-quality issue, not a feature gap.",
+      "confidence": "HIGH",
+      "source": "NPS survey results and open-ended feedback analysis",
+      "isCritical": true,
+      "supportingData": {
+        "nps_score": "42",
+        "healthy_range": "40-70",
+        "detractors_percent": "20%",
+        "detractor_feedback_theme": "Reliability, crashes, performance",
+        "promoters_percent": "40%",
+        "promoters_feedback_theme": "Features good, reliability concerns"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Support ticket volume increased 40% YoY (from estimated 150 to 210 tickets/month), while customer base grew 20% YoY (180 to 150 customers). This means support tickets per customer are increasing, suggesting growing customer frustration or product issues generating more support inquiries. Average support resolution time trending up (was 16 hours, now 24 hours), indicating either more complex issues or resource constraint. Support team (4 people) is at capacity; hiring more support staff without fixing underlying product issues is treating symptom, not cause.",
+      "confidence": "HIGH",
+      "source": "Support ticketing system data (volume, resolution time trends)",
+      "isCritical": false,
+      "supportingData": {
+        "support_tickets_yoy_growth": "+40%",
+        "customer_growth": "+20%",
+        "tickets_per_customer_trend": "Increasing",
+        "avg_resolution_time_prior": "16 hours",
+        "avg_resolution_time_current": "24 hours",
+        "support_team_size": "4 people"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Two well-funded competitors entered market in past 12 months with features comparable to current product and 99.99% uptime SLAs. These entrants have $50M+ combined funding and are acquiring customers at rates suggesting competitive win-rates. Company's competitive advantage is now questioned: not feature differentiation (entrants have comparable features) and not reliability (entrants have superior uptime). Customers are in evaluation mode comparing reliability and feature parity, not choosing based on company's current strengths.",
+      "confidence": "MEDIUM",
+      "source": "Competitive intelligence, win/loss analysis (limited), customer competitive evaluations from support team",
+      "isCritical": true,
+      "supportingData": {
+        "new_competitors": "2",
+        "competitor_funding": "$50M+ combined",
+        "competitor_uptime": "99.99%",
+        "company_uptime": "99.2%",
+        "uptime_gap": "0.79 percentage points (significant in SaaS)"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (Series A funding, $400k/month burn, 24-month runway; limited discretionary spend for external tools/services)",
+    "timeHorizonDays": 180,
+    "staffCapacity": "LOW (18 total people; 6 engineering fully allocated to roadmap; limited capacity for major stability/refactoring work without reducing feature output)",
+    "cashRunwayMonths": 24,
+    "legalComplianceSensitive": false
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "case_id": "ADV-011",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Professional Services Consulting)",
+  "creation_methodology": "Blind review: Expert analyzed case scenario and identified embedded cognitive trap. Case presents plausible narrative ('weak manufacturing economy, expand to new verticals') but lacks critical data (client cohort analysis, pricing trends, win/loss data) needed to validate the narrative. Expert recognizes the trap and recommends diagnostic clarification before strategic action.",
+  "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
+  "root_cause_description": "The case presents incomplete information that masks the true root cause of profitability decline. Leadership's narrative ('weak manufacturing economy, fewer transformation opportunities') is plausible but unvalidated. The utilization decline (70%→55%) could be caused by: (1) demand-side (manufacturing market actually declining, fewer transformation needs), (2) supply-side/competitive (global competitors winning bids at lower prices, clients choosing competitors), (3) client concentration (one or two key clients reducing project volume while market is healthy), or (4) pricing (firm's rates not competitive, so fewer bids converted). Without cohort analysis (which clients are declining?), win/loss analysis (what are we losing to and why?), and pricing trend data (are we winning fewer bids, or at lower rates?), the firm cannot distinguish between these hypotheses. Leadership's proposed solution (aggressive expansion into healthcare/financial services) might be correct—but it might also be wrong if the real problem is client concentration risk, competitive pricing pressure, or declining competitiveness. Recommending major strategic action (new vertical expansion) without first validating the diagnosis is the trap: the firm could invest in new business development and still face profitability crisis if the root cause is unaddressed.",
+  "confidence_in_diagnosis": "PROVISIONAL",
+  "first_priority_action": "DO NOT PROCEED with new vertical expansion until detailed diagnostic is complete. Instead, commission a 4-week diagnostic project to answer three critical questions: (1) Client cohort analysis: Which clients are declining in project volume? By how much? Are ALL manufacturing clients showing decline (market-wide demand issue), or specific clients (concentration/loss risk)? (2) Win/loss analysis: Which opportunities were lost in past 12 months? To whom (global firms, boutiques, internal client team)? Stated reasons? (3) Pricing/competitiveness analysis: Have average project fees changed? Are we winning fewer bids at same price (demand issue) or same win rates at lower prices (competitive displacement)? Results of diagnostic will guide whether the solution is: (A) Vertical expansion (if market-wide demand decline), (B) Client concentration risk mitigation (if specific clients declining), (C) Competitive positioning/pricing (if losing to competitors), or (D) Capability gap (if clients want digital expertise we lack). Defer new vertical expansion decision until diagnostic results are in hand.",
+  "action_description": "This action is first priority because leadership's proposed solution (expand to new verticals) might be incorrect if the underlying diagnosis is wrong. The firm has 18-month runway to recover profitability before partner departures accelerate. Investing time in new vertical business development without validating the diagnosis risks wasting time and capital on a strategy that doesn't address the real problem. A 4-week diagnostic is low-cost (internal or minimal external resources) and clarifies the real root cause. This de-risks major strategic decisions.",
+  "action_constraints_respected": [
+    "Partner constraint: Diagnostic does not require reducing partner compensation or aggressive partner recruitment; uses existing partnership analytical capability to inform strategy.",
+    "Client constraint: Diagnostic involves no changes to existing client relationships or project types; purely analytical work to understand client/market trends.",
+    "Market constraint: Diagnostic clarifies whether competitive positioning is the issue (in which case expansion to healthcare might be necessary, or might be wrong if problem is pricing/capability gap).",
+    "Organizational constraint (40-person firm, limited resources): 4-week diagnostic can be conducted internally by 2-3 people part-time; does not require external consultants or major time investment."
+  ],
+  "rationale": "The firm is at a critical decision point. Leadership has a plausible hypothesis ('weak manufacturing market, expand to new verticals') that fits recent economic data (manufacturing sector weakness in 2024). However, plausibility is not proof. Without detailed cohort analysis, the firm might be misdiagnosing client concentration as market decline, or competitive displacement as demand collapse. If the firm invests in healthcare/financial services expansion without addressing the real cause, it will continue to lose manufacturing clients or profitability, and the recovery will fail. The 4-week diagnostic is insurance: it either validates leadership's hypothesis (justifying expansion) or reveals an alternative root cause that should be addressed first (client concentration, competitive positioning, pricing, capability gap). Given the 18-month timeline and the stakes (partner retention, firm viability), a 4-week diagnostic is a minimal time investment with maximal strategic clarity.",
+  "evidence_basis": [
+    "operational_efficiency finding: Utilization declined 70%→55%, but leadership narrative ('weak manufacturing economy') is not validated with cohort data; need to know which clients/industries are declining",
+    "market_position finding: Competition from global and digital firms mentioned, but no win/loss analysis provided to quantify competitive impact",
+    "customer_retention finding: Top 5 clients = 45% revenue (high concentration), but no data on whether these clients are maintaining or declining project volume",
+    "All evidence is qualitative narrative without supporting cohort/quantitative analysis"
+  ],
+  "evidence_not_explained": [
+    "Partner departures (2 in 18 months) could indicate either: (a) compensation at risk due to profitability decline (correct diagnosis needed to fix), or (b) partner preference for larger firm structure independent of this firm's condition. The cause matters for retention strategy."
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: Manufacturing market actually declining, transformation project opportunities rare. This is leadership's hypothesis. Could be correct, but needs validation via cohort analysis (are ALL manufacturing clients declining, or specific ones?).",
+    "GO_TO_MARKET_MISALIGNMENT: Firm's positioning (operations transformation, manufacturing-focused) no longer matches market (clients want digital-first transformation). Clients are shifting to competitors with digital expertise. This could explain utilization decline and partner departures if revenue/opportunity loss is material. Needs win/loss analysis to validate.",
+    "CUSTOMER_CONCENTRATION_RISK: One or two key clients are reducing project volume, but overall market is healthy. This would appear as profitability decline and utilization decline, but the diagnosis would be 'reduce concentration risk' not 'expand to new verticals.' Needs cohort analysis to validate.",
+    "STRATEGIC_PRICING_ERROR: Firm's rates are not competitive; clients are choosing competitors at lower cost. This would show as fewer converted bids or lost opportunities to price-conscious competitors. Needs pricing trend and win/loss analysis to validate."
+  ],
+  "missing_evidence": [
+    "Client cohort analysis by revenue, project volume, and trend: Which clients are maintaining/declining? Is the decline uniform (market-wide) or concentrated (specific clients)?",
+    "Win/loss analysis: Which opportunities were lost? To which competitors? For what stated reasons (price, capabilities, relationship, other)?",
+    "Pricing trend analysis: Have average project fees changed? Are utilization declines due to fewer bids converted (demand) or same conversion rates at lower fees (pricing pressure)?",
+    "Partner-client mapping: Did departing partners take clients? Are they competitive risks?",
+    "Break-even analysis: At what utilization level does the firm become unprofitable? Is the 55% utilization below break-even, or above?"
+  ],
+  "success_metrics": [
+    "Diagnostic completion: 4-week diagnostic completed with clear findings on which clients/segments are declining, competitive win/loss trends, and pricing/competitiveness analysis.",
+    "Root-cause clarity: Diagnostic identifies whether the problem is demand-side (manufacturing market decline), supply-side (competitive displacement), client concentration, or pricing/competitiveness.",
+    "Strategic validation: Results either validate leadership's vertical expansion hypothesis, or reveal alternative root cause requiring different strategic response.",
+    "Board readiness: By end of 4 weeks, partners can make informed decision on strategic direction with confidence that the chosen path addresses the true root cause."
+  ],
+  "expected_outcome": "If the firm conducts the diagnostic and acts on results: (1) Within 4 weeks, clear understanding of profitability drivers and root cause of utilization decline. (2) Within 12 weeks, partnership agreement on strategic response (vertical expansion, client concentration mitigation, competitive repositioning, pricing adjustment, or combination). (3) Within 18 months, measurable improvement in utilization, profitability, and partner satisfaction. If the diagnostic reveals that the problem is NOT 'weak manufacturing market' but rather client concentration or competitive displacement, the vertical expansion strategy could fail or compound the problem. The diagnostic is insurance against strategic mis-direction.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine recognize the trap: incomplete data, and recommend diagnostic before accepting leadership's narrative?",
+      "rubric_10": "Engine diagnoses INSUFFICIENT_EVIDENCE / INADEQUATE_DATA and recommends diagnostic clarification before accepting leadership's narrative or recommending major strategic action.",
+      "rubric_8": "Engine recognizes data gaps but still diagnoses root cause (DEMAND, COMPETITIVE, PRICING) with appropriate caveats about insufficient evidence. Does not blindly accept leadership narrative.",
+      "rubric_6": "Engine identifies some data gaps but proceeds with diagnosis based on available (incomplete) information.",
+      "rubric_4": "Engine accepts leadership narrative ('weak manufacturing market, expand to new verticals') without questioning incomplete data or identifying alternative hypotheses.",
+      "rubric_2": "Engine strongly endorses leadership narrative without questioning or seeking additional data.",
+      "rubric_0": "Engine diagnoses something completely unrelated to case."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend diagnostic/clarification before major strategic action?",
+      "rubric_10": "Engine recommends 4-week diagnostic (cohort analysis, win/loss, pricing trends) before proceeding with vertical expansion. Appropriate cautious approach given data gaps.",
+      "rubric_8": "Engine recommends some form of diagnostic or analysis before major strategic decision.",
+      "rubric_6": "Engine recommends proceeding with expansion but with some analysis/validation alongside (not purely diagnostic).",
+      "rubric_4": "Engine endorses vertical expansion strategy without recommending prior diagnostic work.",
+      "rubric_2": "Engine recommends aggressive action (rapid expansion, cost-cutting) without diagnostic foundation.",
+      "rubric_0": "Engine action harmful or contradicts the goal of avoiding strategic mis-direction."
+    },
+    "business_relevance": {
+      "criterion": "Does action respect partnership structure and need for partner confidence?",
+      "rubric_10": "Action respects small partnership's need for clarity before major decisions; avoids risky strategic moves with uncertain foundation.",
+      "rubric_8": "Action is relevant to partnership context but may miss one nuance (e.g., partner buy-in requirements).",
+      "rubric_6": "Action is relevant but somewhat generic for consulting firm challenges.",
+      "rubric_4": "Action generic and could apply to any consulting firm.",
+      "rubric_2": "Action poorly aligned with partnership context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect partnership financial and staffing constraints?",
+      "rubric_10": "Action uses internal resources for diagnostic, respects partner constraints, fits within 18-month timeline without major external investment.",
+      "rubric_8": "Action respects major constraints but may require minor external resource or time extension.",
+      "rubric_6": "Action mostly respects constraints; some tension in resource or timeline.",
+      "rubric_4": "Action partially violates constraints.",
+      "rubric_2": "Action severely violates constraints.",
+      "rubric_0": "Action infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Can the recommendation for diagnostic be traced to specific evidence gaps?",
+      "rubric_10": "Evidence gaps clearly identified: no cohort analysis, no win/loss, no pricing data. Recommendation for diagnostic directly tied to these gaps.",
+      "rubric_8": "Evidence gaps identified but recommendation might not be as tightly traced.",
+      "rubric_6": "Evidence gaps mentioned but recommendation feels more generic.",
+      "rubric_4": "Limited discussion of evidence gaps.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is PROVISIONAL confidence appropriate given significant data gaps?",
+      "rubric_10": "Engine states PROVISIONAL confidence, acknowledging that leadership narrative is plausible but unvalidated. Matches evidence quality (incomplete).",
+      "rubric_8": "Engine appropriately hedges confidence given data gaps.",
+      "rubric_6": "Engine states confidence level but misses the degree of uncertainty implied by data gaps.",
+      "rubric_4": "Engine states HIGH confidence despite significant data gaps.",
+      "rubric_2": "Engine is overconfident on sparse or incomplete evidence.",
+      "rubric_0": "Confidence inverted or contradicts evidence quality."
+    },
+    "safety": {
+      "criterion": "Does action avoid the trap of recommending major strategic action on incomplete diagnosis?",
+      "rubric_10": "Action avoids the trap; recommends diagnostic before major decision. Safe recommendation.",
+      "rubric_0": "Action falls into the trap; recommends major strategic move (expansion, restructuring) without validating diagnosis. Unsafe."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}

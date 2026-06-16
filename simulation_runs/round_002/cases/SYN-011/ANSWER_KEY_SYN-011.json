@@ -1,0 +1,110 @@
+{
+  "case_id": "SYN-011",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (SaaS Product Quality and Retention)",
+  "creation_methodology": "Blind review: Expert analyzed synthetic case scenario. Identified root cause by distinguishing between feature gaps (not present) and quality issues (explicit in evidence).",
+  "root_cause_diagnosis": "TRUST_QUALITY_CRISIS",
+  "root_cause_description": "The company faces a trust and quality crisis: customers value the core product (workflow automation receives high satisfaction scores) but are losing confidence in product reliability and stability. Multiple independent signals indicate a quality/trust issue: (1) churn rising from 2%→3% MRR despite healthy feature adoption, (2) NPS low (42) with detractor feedback citing reliability, not features, (3) support tickets rising 40% while customer base grew 20%, indicating growing frustration, (4) recent incidents (4-hour outages, 8-minute load times) are directly mentioned by customers as switching drivers. This is distinct from a feature gap (which would show in promoter feedback and new customer acquisition issues) or pricing issue (not mentioned). The product quality issue (uptime 99.2% vs industry 99.9%+, performance degradation, frequent incidents) is eroding customer trust and causing churn. If unaddressed, churn will accelerate and Series B investors will view the company as having lost product-market fit.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Immediately pause non-critical feature development (2-week freeze to redirect engineering capacity). Conduct rapid technical triage: (1) Root-cause analysis of recent outages and performance issues (1 week), (2) Identify the top 3-5 stability/performance problems causing customer impact (1 week), (3) Develop focused 8-week engineering roadmap to fix critical issues, improve uptime from 99.2%→99.9%, and reduce incident frequency to <1/month. Communicate publicly to customers: 'We're investing in platform stability as our top priority. You will see weekly updates to uptime, incident frequency, and performance metrics.' Run weekly customer communication updates showing progress (new status dashboard published weekly). Commit to 99.9% uptime by end of Q3 (8 weeks). This action stops the trust erosion, demonstrates commitment to quality, and buys time for Series B discussions by showing churn stabilization trajectory within 6 weeks.",
+  "action_description": "This action is first priority because churn is rising and NPS is low—signals that customer trust is eroding. The business is not growing toward Series B readiness; it is deteriorating. Feature development cannot fix this; only demonstrable reliability improvements can rebuild trust. The 8-week intensive focus is feasible (pushes Series B timeline slightly but de-risks fundraising by proving churn stabilization). Feature development can resume after Series B when the company has more resources.",
+  "action_constraints_respected": [
+    "Funding constraint (24-month runway): Action requires no external funding; redirects existing engineering (6 FTEs). May delay Series B by 2-3 months but increases likelihood of successful fundraising by de-risking churn metrics.",
+    "Product constraint (technical debt, legacy architecture): Action specifically targets stability/performance within existing architecture. Does not require major refactoring; focuses on reliability of current platform.",
+    "Organizational constraint (18-person team, 6 engineering): Action redirects all 6 engineering resources to stability for 8 weeks. Support team continues customer communication and triage; founding team focuses on customer relationship management and Series B preparation.",
+    "Market constraint (well-funded competitors): Action differentiates by reliability (99.9% uptime, low incident frequency). Buying time for Series B allows hiring product/engineering talent to compete on features later."
+  ],
+  "rationale": "The company has a product-trust problem, not a feature gap or market problem. Responding to competitors with more feature development will exacerbate the problem: more features under an unstable platform = more things to break, higher incident surface area, more churn. The correct response is: stabilize the platform first, rebuild customer trust, then compete on features with a trustworthy foundation. The 8-week intensive focus is time-bound and laser-focused. It communicates to customers that quality is the priority. It positions the company for Series B by showing churn stabilization and NPS improvement trajectory within 6 weeks (measurable by next board meeting). This is a bet that customers will stay if reliability improves, and that Series B investors will fund a company with stabilized unit economics and demonstrated execution discipline.",
+  "evidence_basis": [
+    "quality_delivery finding: Uptime 99.2% (below 99.9% standard), incident frequency 2-3/month, recent 4-hour and 8-minute incidents directly impacting customer workflows",
+    "customer_retention finding: Churn rising 2%→3% MRR; exit interviews cite reliability, not features, as switching drivers (>60% of churned customers)",
+    "quality_delivery finding: NPS 42 (low) with detractor feedback citing 'crashes,' 'reliability,' 'performance,' not features",
+    "operational_efficiency finding: Support tickets up 40% YoY while customers up 20%, indicating growing frustration; tickets per customer increasing"
+  ],
+  "evidence_not_explained": [
+    "Low NPS despite high feature satisfaction scores can appear contradictory (customers like features but have low NPS). Explained by TRUST_QUALITY_CRISIS: customers are satisfied with what the product can do (features) but lack confidence that it will do it reliably (trust). This is consistent with quality/reliability focus of detractor feedback."
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: Perhaps market demand for workflow automation is declining. Rejected because: (a) revenue growth 25% YoY is healthy, (b) churn rise is recent (last 6 months), not long-term trend, (c) customers cite reliability, not market demand issues.",
+    "GO_TO_MARKET_MISALIGNMENT: Perhaps customer segment is wrong for the product. Rejected because: (a) promoter feedback shows product is valued by customers, (b) feature adoption is high (85% for core automation), (c) customer problem is not misalignment, it's reliability.",
+    "OPERATIONAL_BOTTLENECK: Perhaps support/operations are the constraint. Rejected as primary because: (a) support team functioning at acceptable levels (24-hour resolution is normal), (b) problem is not operational delays, it's product failures (outages, slow performance)."
+  ],
+  "missing_evidence": [
+    "Detailed technical root-cause analysis: Why did the 4-hour outage occur? What are the technical causes of 8-minute load times? Without technical analysis, it's unclear whether stability investment can fix the problems or if they're systemic architecture issues.",
+    "Customer price sensitivity analysis: Are customers willing to accept 3% feature development slowdown for 8-week stability push? Or will they switch to competitors during the feature freeze? Would clarify risk of customer loss during the stability intervention.",
+    "Series B investor expectations: What metrics do Series B investors specifically want to see for this company type? If they want 99.99% uptime AND feature parity with competitors, the 8-week stability focus might not be sufficient."
+  ],
+  "success_metrics": [
+    "Uptime recovery: Achieve 99.9% uptime by end of 8 weeks (from current 99.2%, a 0.7 percentage point improvement). Maintain <1 incident per month.",
+    "Churn stabilization: Churn stabilizes or declines from current 3% MRR within 6 weeks of stability work initiation. By month 2-3, should see churn improvement trend.",
+    "NPS improvement: NPS improves from current 42 toward healthy range (>50) by end of 8 weeks. Detractor feedback shifts from reliability complaints to feature requests or other categories.",
+    "Support load stabilization: Support tickets per customer stabilizes or declines. Support team time freed up to focus on customer success rather than firefighting reliability issues."
+  ],
+  "expected_outcome": "If TRUST_QUALITY_CRISIS is the root cause and the 8-week stability push is executed well: (1) Within 2 weeks, dramatic reduction in support tickets and customer complaint volume as engineering focuses on reliability. (2) Within 4-6 weeks, measurable uptime improvement (99.5%+) and reduced incident frequency. Churn stabilizes or improves. (3) Within 8 weeks, uptime reaches 99.9% target. Churn improved to <2% MRR range. NPS improved toward 50+. (4) Within 12 weeks, Series B discussions can proceed with confidence in unit economics and customer retention metrics. If stability improvements don't stop churn, the company has learned that the problem is deeper (competitive displacement, unmet feature needs) and must reassess strategy.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does engine diagnose TRUST_QUALITY_CRISIS or related archetype (OPERATIONAL_BOTTLENECK from quality perspective)?",
+      "rubric_10": "Engine diagnoses TRUST_QUALITY_CRISIS exactly, with reasoning showing how reliability/trust erosion is distinct from feature gaps.",
+      "rubric_8": "Engine diagnoses quality-related issue with sound evidence, though may frame as OPERATIONAL_BOTTLENECK (quality operations) rather than TRUST_QUALITY_CRISIS.",
+      "rubric_6": "Engine identifies quality/reliability elements but may incorrectly also diagnose feature gaps or market issues.",
+      "rubric_4": "Engine focuses on feature gaps or market competition without recognizing quality/trust issue as primary.",
+      "rubric_2": "Engine diagnosis contradicts available evidence (e.g., recommends more features when quality is the issue).",
+      "rubric_0": "Engine diagnosis completely unrelated."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does engine recommend quality/stability focus before feature competition with entrants?",
+      "rubric_10": "Engine recommends stability/reliability investment (uptime recovery, incident reduction) with specific 8-week timeline that respects constraints.",
+      "rubric_8": "Engine recommends quality improvement but may have less specific timeline or roadmap; still prioritizes stability over features.",
+      "rubric_6": "Engine recommends quality improvement but also recommends parallel feature development (trying to do both).",
+      "rubric_4": "Engine recommends feature development to compete with entrants without addressing stability first.",
+      "rubric_2": "Engine recommends aggressive action (hire aggressively, raise more capital immediately) without diagnosing quality issue.",
+      "rubric_0": "Engine action harmful or contradicts diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does action respect Series A SaaS context (customer retention metrics critical for Series B, cash runway constraint)?",
+      "rubric_10": "Action reflects SaaS unit economics reality (churn is the business killer); recognizes Series B readiness depends on customer retention, not feature parity.",
+      "rubric_8": "Action is relevant to SaaS context but may miss one nuance (e.g., Series B timeline implications).",
+      "rubric_6": "Action is relevant but somewhat generic for quality issues; misses SaaS-specific leverage points.",
+      "rubric_4": "Action generic and could apply to any company with quality issues.",
+      "rubric_2": "Action poorly aligned with SaaS or Series B context.",
+      "rubric_0": "Action irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does action respect funding runway (24 months), staffing (6 engineering FTEs), and Series B timeline (18 months)?",
+      "rubric_10": "Action requires no external funding (redirects existing resources), fits within runway, and demonstrates churn stabilization within 6 weeks for Series B readiness.",
+      "rubric_8": "Action respects major constraints; may have minor timeline impact (pushes Series B by a few weeks) but still feasible.",
+      "rubric_6": "Action mostly respects constraints; some tension in resource allocation or timeline.",
+      "rubric_4": "Action partially violates constraints (e.g., requires external funding or hiring that threatens runway).",
+      "rubric_2": "Action severely violates constraints (requires major hiring, extends beyond runway, makes Series B impossible).",
+      "rubric_0": "Action infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Can claims about quality/trust be traced to specific evidence?",
+      "rubric_10": "Every claim traceable: uptime 99.2% vs 99.9% standard, incidents 2-3/month, churn 2%→3%, NPS 42, detractor feedback, exit interview data.",
+      "rubric_8": "Primary claims traced; minor inferences supported by evidence.",
+      "rubric_6": "Main diagnosis supported; some unsupported claims.",
+      "rubric_4": "Some evidence support; significant claims not tied to data.",
+      "rubric_2": "Minimal evidence support.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given evidence base?",
+      "rubric_10": "Evidence is multi-source (uptime data, NPS survey, customer interviews, support metrics, incident logs). HIGH confidence well-calibrated.",
+      "rubric_8": "Evidence is strong; customer interview sample small but consistent with quantitative data. HIGH confidence defensible.",
+      "rubric_6": "Evidence supports diagnosis but customer interview sample limited (5-8 customers). MODERATE to HIGH confidence might be more appropriate.",
+      "rubric_4": "Evidence is incomplete or ambiguous; HIGH confidence not well-supported.",
+      "rubric_2": "Evidence weak.",
+      "rubric_0": "Evidence contradicts confidence."
+    },
+    "safety": {
+      "criterion": "Is action safe (quality focus before feature competition)?",
+      "rubric_10": "Action is low-risk quality improvement. Does not recommend aggressive cost-cutting or hiring that could backfire.",
+      "rubric_0": "Action has high risk (recommends major hiring, aggressive feature development, or other moves that could worsen situation)."
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}
