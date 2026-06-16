@@ -1,0 +1,11 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Business facing performance challenge per case definition"
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [],
+  "finalFactsUsedForDiagnosis": [
+    "Business facing performance challenge per case definition"
+  ]
+}

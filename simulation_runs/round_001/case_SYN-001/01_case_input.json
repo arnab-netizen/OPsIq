@@ -1,0 +1,47 @@
+{
+  "caseId": "SYN-001",
+  "caseType": "CASE_STUDY",
+  "industry": "unknown",
+  "businessModel": "unknown",
+  "businessStage": "unknown",
+  "sourceNote": "Case input extracted from synthetic case pack (visible section only).",
+  "ownerIntake": {
+    "businessType": "SYN-001",
+    "stage": "Growth",
+    "ownerGoal": "Diagnose business challenge and recommend intervention",
+    "ownerConstraints": [],
+    "immediateConcern": "Business performance concern",
+    "availableData": [
+      "Owner-reported data"
+    ],
+    "unavailableData": [],
+    "timeHorizon": "6 months",
+    "riskAppetite": "MEDIUM"
+  },
+  "clientContext": {
+    "industry": "synthetic",
+    "size": "medium",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "Case SYN-001: Evaluate business challenge and recommend root cause and priority action.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Business facing performance challenge per case definition",
+      "confidence": "MEDIUM",
+      "source": "Case pack definition",
+      "isCritical": true,
+      "supportingData": {
+        "caseId": "SYN-001",
+        "packType": "synthetic"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 180,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

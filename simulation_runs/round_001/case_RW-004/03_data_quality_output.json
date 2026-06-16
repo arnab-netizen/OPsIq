@@ -1,0 +1,24 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Customer lifetime value at proposed pricing",
+    "Competitor response plan if threatened",
+    "Fulfillment logistics performance at scale",
+    "Retention strategy details"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Customer lifetime value at proposed pricing",
+    "Cannot conclude on: Competitor response plan if threatened",
+    "Cannot conclude on: Fulfillment logistics performance at scale",
+    "Cannot conclude on: Retention strategy details"
+  ]
+}

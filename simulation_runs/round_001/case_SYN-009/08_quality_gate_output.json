@@ -1,0 +1,16 @@
+{
+  "step": "output_quality_gate",
+  "generic_advice_detected": true,
+  "hallucination_detected": "MONITOR_REVIEW_REQUIRED",
+  "unsupported_claim_detected": "MONITOR_REVIEW_REQUIRED",
+  "false_confidence_detected": false,
+  "missing_data_ignored": false,
+  "dangerous_recommendation_detected": "MONITOR_REVIEW_REQUIRED",
+  "numbers_available": false,
+  "numbers_used": false,
+  "output_specificity_score": 6,
+  "output_usefulness_score": 9,
+  "generic_output": true,
+  "pass_gate": false,
+  "note": "hallucination/dangerous/unsupported flags require monitor (Claude) review against the locked answer key. Mechanical gate covers specificity/usefulness only."
+}

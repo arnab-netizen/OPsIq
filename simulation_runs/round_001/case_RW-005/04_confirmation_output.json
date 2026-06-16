@@ -1,0 +1,25 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "2020-2021 revenue growing rapidly at 100%+ YoY; high gross margin (40-45%) for hardware; stock price at all-time high; market value $50B+; public company with significant cash access",
+    "Production capacity is severely constrained; months-long backlog; delivery times extend for months; customer acquisition cost is low due to demand-driven model",
+    "Customer retention post-lockdown is unknown; product still new; can't project long-term churn; demographic is high-income, home workers (likely during lockdown)",
+    "Brand awareness surging and Peloton bikes are status symbol in pandemic; celebrities using Peloton; but base rate for home fitness market historically much smaller than current surge",
+    "Capex requirement significant ($300M+) for new manufacturing facility; public company with high stock price and access to capital enables aggressive investment but creates overconfidence risk"
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "What demand will look like post-pandemic (is surge temporary or permanent?)",
+    "Customer retention once lockdowns end",
+    "Comparison to pre-pandemic home fitness market size",
+    "Whether high-end fitness boom will continue after gyms reopen",
+    "Cohort retention by acquisition timing"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "2020-2021 revenue growing rapidly at 100%+ YoY; high gross margin (40-45%) for hardware; stock price at all-time high; market value $50B+; public company with significant cash access",
+    "Production capacity is severely constrained; months-long backlog; delivery times extend for months; customer acquisition cost is low due to demand-driven model",
+    "Customer retention post-lockdown is unknown; product still new; can't project long-term churn; demographic is high-income, home workers (likely during lockdown)",
+    "Brand awareness surging and Peloton bikes are status symbol in pandemic; celebrities using Peloton; but base rate for home fitness market historically much smaller than current surge",
+    "Capex requirement significant ($300M+) for new manufacturing facility; public company with high stock price and access to capital enables aggressive investment but creates overconfidence risk"
+  ]
+}

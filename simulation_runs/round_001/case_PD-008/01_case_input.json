@@ -1,0 +1,47 @@
+{
+  "caseId": "PD-008",
+  "caseType": "CASE_STUDY",
+  "industry": "unknown",
+  "businessModel": "unknown",
+  "businessStage": "unknown",
+  "sourceNote": "Case input extracted from public_dataset case pack (visible section only).",
+  "ownerIntake": {
+    "businessType": "PD-008",
+    "stage": "Growth",
+    "ownerGoal": "Diagnose business challenge and recommend intervention",
+    "ownerConstraints": [],
+    "immediateConcern": "Business performance concern",
+    "availableData": [
+      "Owner-reported data"
+    ],
+    "unavailableData": [],
+    "timeHorizon": "6 months",
+    "riskAppetite": "MEDIUM"
+  },
+  "clientContext": {
+    "industry": "public_dataset",
+    "size": "medium",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "Case PD-008: Evaluate business challenge and recommend root cause and priority action.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Business facing performance challenge per case definition",
+      "confidence": "MEDIUM",
+      "source": "Case pack definition",
+      "isCritical": true,
+      "supportingData": {
+        "caseId": "PD-008",
+        "packType": "public_dataset"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 180,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

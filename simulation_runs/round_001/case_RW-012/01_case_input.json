@@ -1,0 +1,47 @@
+{
+  "caseId": "RW-012",
+  "caseType": "CASE_STUDY",
+  "industry": "unknown",
+  "businessModel": "unknown",
+  "businessStage": "unknown",
+  "sourceNote": "Case input extracted from real_world case pack (visible section only).",
+  "ownerIntake": {
+    "businessType": "RW-012",
+    "stage": "Growth",
+    "ownerGoal": "Diagnose business challenge and recommend intervention",
+    "ownerConstraints": [],
+    "immediateConcern": "Business performance concern",
+    "availableData": [
+      "Owner-reported data"
+    ],
+    "unavailableData": [],
+    "timeHorizon": "6 months",
+    "riskAppetite": "MEDIUM"
+  },
+  "clientContext": {
+    "industry": "real_world",
+    "size": "medium",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "Case RW-012: Evaluate business challenge and recommend root cause and priority action.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Business facing performance challenge per case definition",
+      "confidence": "MEDIUM",
+      "source": "Case pack definition",
+      "isCritical": true,
+      "supportingData": {
+        "caseId": "RW-012",
+        "packType": "real_world"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 180,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

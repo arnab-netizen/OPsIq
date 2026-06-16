@@ -1,0 +1,30 @@
+{
+  "step": "failure_ticket",
+  "caseId": "PD-006",
+  "ticketId": "SIM-PD-006-001",
+  "severity": "P2",
+  "priorityRationale": "DIAGNOSIS_COVERAGE_GAP. Score: 4.1/10. Does NOT violate safety thresholds (dangerous=0, hallucination=0, false_confidence=0, leakage=0). Round may continue per stop/fix rules.",
+  "failure_type": "DIAGNOSIS_COVERAGE_GAP",
+  "affected_module": "src/services/consulting-engine/diagnosis-engine.ts",
+  "secondary_modules": [
+    "src/services/consulting-engine/intervention-design-engine.ts",
+    "src/domain/consulting-engine/types.ts"
+  ],
+  "evidence": {
+    "expected_score": "≥8.5",
+    "actual_score": 4.1,
+    "root_cause_type": "unknown",
+    "first_action": "Further root cause investigation required",
+    "status": "INSUFFICIENT_EVIDENCE"
+  },
+  "root_cause_of_failure": "Engine returned INSUFFICIENT_EVIDENCE or unknown root cause (archetype not recognized)",
+  "required_fix": "Identified in aggregated Round 1 failure pattern report. Engine fix authorization pending.",
+  "tests_needed": [
+    "Unit test: PD-006 should diagnose correctly",
+    "Regression test: existing passing cases remain unaffected",
+    "Integration test: scoring improves to ≥8.5 on representative cases"
+  ],
+  "approval_required": true,
+  "blocks_round": false,
+  "status": "OPEN_TICKETED_NOT_FIXED"
+}

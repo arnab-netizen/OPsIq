@@ -1,0 +1,30 @@
+{
+  "step": "recommendation",
+  "firstPriorityAction": "Implement complaint tracking and customer outreach",
+  "whyFirst": "Quick implementation builds momentum and shows progress",
+  "expectedImpact": "MINOR",
+  "costBand": "MINIMAL",
+  "estimatedDays": 5,
+  "ownerRole": "operations_lead",
+  "verificationMetrics": [
+    "All complaints logged and analyzed",
+    "Customer follow-up response time <24 hours",
+    "Top complaint sources identified"
+  ],
+  "failureRisks": [
+    "Complaint tracking abandoned after initial month",
+    "Follow-up feels insincere without real resolution"
+  ],
+  "fallbackPlan": "Use complaints to justify investment in full QA program or third-party quality auditing",
+  "reviewTriggers": [
+    "After first intervention completion: validate assumptions, collect outcome data",
+    "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+    "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+    "If team capacity exhausted: pause non-critical interventions",
+    "If external market changes significantly: reassess competitive positioning"
+  ],
+  "allInterventions": [
+    "Implement complaint tracking and customer outreach",
+    "Implement quality checkpoints before customer delivery"
+  ]
+}
