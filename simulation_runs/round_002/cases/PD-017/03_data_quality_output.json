@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 2,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Branch-level and vertical-level order and utilization detail (orders, fill rate, and recruiter productivity by branch/vertical are not disclosed publicly).",
+    "Client-by-client order pipeline and forward staffing commitments (proprietary, not in filings).",
+    "Worker-level redeployment and fill-time data (contingent workforce operating data not disclosed).",
+    "Forward macro/sector demand forecast used internally to justify the +4% internal hiring (internal planning assumptions not disclosed).",
+    "Detailed bill-rate elasticity by client segment (proprietary pricing data)."
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Branch-level and vertical-level order and utilization detail (orders, fill rate, and recruiter productivity by branch/vertical are not disclosed publicly).",
+    "Cannot conclude on: Client-by-client order pipeline and forward staffing commitments (proprietary, not in filings).",
+    "Cannot conclude on: Worker-level redeployment and fill-time data (contingent workforce operating data not disclosed).",
+    "Cannot conclude on: Forward macro/sector demand forecast used internally to justify the +4% internal hiring (internal planning assumptions not disclosed).",
+    "Cannot conclude on: Detailed bill-rate elasticity by client segment (proprietary pricing data)."
+  ]
+}

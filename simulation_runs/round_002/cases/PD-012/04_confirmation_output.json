@@ -1,0 +1,22 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Revenue declined from $850M (FY2023) to $800M (FY2025), a 5.9% decrease, while EBITDA margin fell from 6% to 4% (-200 bps). EBITDA fell from ~$51M to ~$32M (-37%). The margin decline outpaces the revenue decline, indicating fixed costs are not flexing down as the demand base shrinks.",
+    "Same-store sales declined approximately 4% per year over the period, indicating demand contraction at the existing footprint rather than a one-time shock. The 45-store base was sized and staffed for a higher demand level that is no longer materializing, leaving stores under-trafficked.",
+    "Inventory grew approximately 12% over two years while revenue fell 5.9%, so inventory turnover deteriorated and markdown rates rose. Buying and allocation remained planned to a higher demand forecast than the market delivered, leaving excess seasonal inventory cleared at markdown and compressing gross margin.",
+    "E-commerce is only ~14% of the chain's sales versus ~30%+ for stronger department-store peers, while off-price and online competitors (Amazon, Target, TJX) capture the mid-tier shopper. The traditional in-store demand the footprint was forecast against is migrating to channels and competitors the company under-serves."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Detailed competitive win/loss and shopper-defection data (not disclosed)",
+    "Granular customer-behavior and basket-shift analytics (proprietary)",
+    "Store-by-store contribution margin net of allocated fixed cost (aggregated in filings)",
+    "Lease-termination cost detail by location (not itemized publicly)"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Revenue declined from $850M (FY2023) to $800M (FY2025), a 5.9% decrease, while EBITDA margin fell from 6% to 4% (-200 bps). EBITDA fell from ~$51M to ~$32M (-37%). The margin decline outpaces the revenue decline, indicating fixed costs are not flexing down as the demand base shrinks.",
+    "Same-store sales declined approximately 4% per year over the period, indicating demand contraction at the existing footprint rather than a one-time shock. The 45-store base was sized and staffed for a higher demand level that is no longer materializing, leaving stores under-trafficked.",
+    "Inventory grew approximately 12% over two years while revenue fell 5.9%, so inventory turnover deteriorated and markdown rates rose. Buying and allocation remained planned to a higher demand forecast than the market delivered, leaving excess seasonal inventory cleared at markdown and compressing gross margin.",
+    "E-commerce is only ~14% of the chain's sales versus ~30%+ for stronger department-store peers, while off-price and online competitors (Amazon, Target, TJX) capture the mid-tier shopper. The traditional in-store demand the footprint was forecast against is migrating to channels and competitors the company under-serves."
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Customers cannot operationalize the product: median time-to-operational-use is 13 weeks, only 34% of contracted features are ever activated, and 41% of accounts never complete carrier-integration setup. The platform's value is gated behind configuration work most customers cannot finish, so contracted value is never realized.",
+    "Quarterly logo churn is high at 5% and ~70% of it occurs within the first 6 months, before customers reach operational value. NRR is 96% (slightly negative net). The churn is front-loaded and value-gated, the signature of an onboarding/usability failure rather than a long-tenure satisfaction decline.",
+    "Support tickets per customer run 2.4x the SaaS benchmark, dominated by setup/configuration (38%) and data mapping (27%). Onboarding NPS is 12 (very low) and setup abandonment is 22%. The product is experienced as too complex to stand up, eroding trust during the very first interactions.",
+    "Market demand for supply-chain visibility is strong and growing post-disruption, and new-logo win rate is stable at 26%, so the company is not failing to acquire or facing collapsing demand. However, simpler, narrower competitors are winning ease-of-use comparisons, indicating that usability, not capability, is the competitive battleground.",
+    "The 6-person implementation team carries 9 active onboardings each and support is in constant firefighting. Adding services headcount would relieve pressure temporarily but scales linearly with a defect that lives in product complexity; cost would rise with every new customer rather than the product becoming self-serviceable."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Which specific configuration steps cause the most abandonment (no funnel instrumentation in onboarding)",
+    "Activation-to-retention correlation quantified by feature",
+    "Willingness of customers to pay for guided/done-for-you onboarding",
+    "Comparative onboarding time of the simpler competitors"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Customers cannot operationalize the product: median time-to-operational-use is 13 weeks, only 34% of contracted features are ever activated, and 41% of accounts never complete carrier-integration setup. The platform's value is gated behind configuration work most customers cannot finish, so contracted value is never realized.",
+    "Quarterly logo churn is high at 5% and ~70% of it occurs within the first 6 months, before customers reach operational value. NRR is 96% (slightly negative net). The churn is front-loaded and value-gated, the signature of an onboarding/usability failure rather than a long-tenure satisfaction decline.",
+    "Support tickets per customer run 2.4x the SaaS benchmark, dominated by setup/configuration (38%) and data mapping (27%). Onboarding NPS is 12 (very low) and setup abandonment is 22%. The product is experienced as too complex to stand up, eroding trust during the very first interactions.",
+    "Market demand for supply-chain visibility is strong and growing post-disruption, and new-logo win rate is stable at 26%, so the company is not failing to acquire or facing collapsing demand. However, simpler, narrower competitors are winning ease-of-use comparisons, indicating that usability, not capability, is the competitive battleground.",
+    "The 6-person implementation team carries 9 active onboardings each and support is in constant firefighting. Adding services headcount would relieve pressure temporarily but scales linearly with a defect that lives in product complexity; cost would rise with every new customer rather than the product becoming self-serviceable."
+  ]
+}

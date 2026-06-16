@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Product-level profitability: Which products (pumps, valves, controls) are compressing? Which are holding margins?",
+    "Channel profitability: Are distributors more profitable than direct? Which distributors are high-margin, low-margin?",
+    "Cost structure deep dive: Where are supply costs rising fastest? Which materials, components are constrained?",
+    "Customer segmentation: Which end-market segments (oil/gas, water, chemical) are most profitable? Which are declining?",
+    "Manufacturing efficiency: Where is utilization opportunity? What is the cost of Mexico under-utilization? Consolidation impact?"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Product-level profitability: Which products (pumps, valves, controls) are compressing? Which are holding margins?",
+    "Cannot conclude on: Channel profitability: Are distributors more profitable than direct? Which distributors are high-margin, low-margin?",
+    "Cannot conclude on: Cost structure deep dive: Where are supply costs rising fastest? Which materials, components are constrained?",
+    "Cannot conclude on: Customer segmentation: Which end-market segments (oil/gas, water, chemical) are most profitable? Which are declining?",
+    "Cannot conclude on: Manufacturing efficiency: Where is utilization opportunity? What is the cost of Mexico under-utilization? Consolidation impact?"
+  ]
+}

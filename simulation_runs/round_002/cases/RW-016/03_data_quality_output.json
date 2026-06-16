@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 6,
+  "numericEvidenceCount": 1,
+  "missingDimensions": [
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Competitive detailed win/loss analysis (companies know general competitors but not detailed pricing or feature positioning)",
+    "Customer willingness-to-pay or pricing elasticity research (not commissioned)",
+    "Detailed product-level profitability (available at category level but not SKU level)",
+    "Detailed market research on e-commerce market size and share in the specialty home goods segment",
+    "Internal employee engagement data (not systematically tracked)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Competitive detailed win/loss analysis (companies know general competitors but not detailed pricing or feature positioning)",
+    "Cannot conclude on: Customer willingness-to-pay or pricing elasticity research (not commissioned)",
+    "Cannot conclude on: Detailed product-level profitability (available at category level but not SKU level)",
+    "Cannot conclude on: Detailed market research on e-commerce market size and share in the specialty home goods segment",
+    "Cannot conclude on: Internal employee engagement data (not systematically tracked)"
+  ]
+}

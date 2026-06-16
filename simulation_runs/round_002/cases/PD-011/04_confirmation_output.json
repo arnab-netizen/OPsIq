@@ -1,0 +1,25 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Operating income declined from $120M (FY2023) to $85M (FY2024), a 29% YoY decrease despite flat revenue of $1.2B. Operating margin contracted from 10.0% to 7.1% (290 basis points). This margin compression occurred as gross margin declined from 38% (FY2022) to 34% (FY2024), indicating both product-mix pressure and operating expense growth outpacing revenue.",
+    "SG&A expenses as % of revenue increased from 18% (FY2022) to 24% (FY2024), a 600 basis point increase. In absolute dollars, SG&A grew from $216M (FY2022, 18% × $1.2B average) to $288M (FY2024, 24% × $1.2B), a 33% increase despite flat revenue. This suggests either: (a) fixed costs are not declining as revenue growth stalled, or (b) incremental spending on customer acquisition, marketing, or infrastructure exceeded revenue growth.",
+    "Revenue flat at $1.2B (FY2023 to FY2024) despite smart home market growing 8% annually. This indicates market share loss or category decline. Competitor analysis (from investor presentations and analyst reports) shows Apple and Google expanding smart home offerings with aggressive pricing and ecosystem bundling. Company's revenue by category: smart speakers declining 15% YoY (losing to Amazon Echo), displays flat (market saturating), accessories growing 8% (single-digit margin category).",
+    "Gross margin by segment shows product mix pressure: smart speakers (historically 45-50% margin) declining in volume; displays (35-40% margin) flattening; accessories (15-20% margin) growing. Blended gross margin declined from 38% (FY2022) to 34% (FY2024) due to category mix shift toward lower-margin products. Additionally, cost of goods sold as % of revenue increased from 62% (FY2022) to 66% (FY2024), suggesting component cost inflation not fully offset by price increases.",
+    "Stock price declined 35% over past 12 months (from $85 to $55 per share, estimated). Market capitalization down from $4.25B to $2.75B. Analyst coverage declining: 12 analysts covering the stock 18 months ago, now 8 analysts. Analyst consensus rating changed from 'Buy' (14 months ago) to 'Hold' (current). This indicates loss of investor confidence tied to margin compression and growth stalling."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Customer acquisition costs by channel (not disclosed in public filings)",
+    "Customer lifetime value or repeat purchase rates (proprietary customer data)",
+    "Detailed product-level profitability or SKU-level margin data (public filings aggregate by category, not individual products)",
+    "Market research on brand perception or competitive win/loss analysis (not disclosed)",
+    "Internal cost structure details (detailed COGS breakdown, detailed SG&A allocation by function)"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Operating income declined from $120M (FY2023) to $85M (FY2024), a 29% YoY decrease despite flat revenue of $1.2B. Operating margin contracted from 10.0% to 7.1% (290 basis points). This margin compression occurred as gross margin declined from 38% (FY2022) to 34% (FY2024), indicating both product-mix pressure and operating expense growth outpacing revenue.",
+    "SG&A expenses as % of revenue increased from 18% (FY2022) to 24% (FY2024), a 600 basis point increase. In absolute dollars, SG&A grew from $216M (FY2022, 18% × $1.2B average) to $288M (FY2024, 24% × $1.2B), a 33% increase despite flat revenue. This suggests either: (a) fixed costs are not declining as revenue growth stalled, or (b) incremental spending on customer acquisition, marketing, or infrastructure exceeded revenue growth.",
+    "Revenue flat at $1.2B (FY2023 to FY2024) despite smart home market growing 8% annually. This indicates market share loss or category decline. Competitor analysis (from investor presentations and analyst reports) shows Apple and Google expanding smart home offerings with aggressive pricing and ecosystem bundling. Company's revenue by category: smart speakers declining 15% YoY (losing to Amazon Echo), displays flat (market saturating), accessories growing 8% (single-digit margin category).",
+    "Gross margin by segment shows product mix pressure: smart speakers (historically 45-50% margin) declining in volume; displays (35-40% margin) flattening; accessories (15-20% margin) growing. Blended gross margin declined from 38% (FY2022) to 34% (FY2024) due to category mix shift toward lower-margin products. Additionally, cost of goods sold as % of revenue increased from 62% (FY2022) to 66% (FY2024), suggesting component cost inflation not fully offset by price increases.",
+    "Stock price declined 35% over past 12 months (from $85 to $55 per share, estimated). Market capitalization down from $4.25B to $2.75B. Analyst coverage declining: 12 analysts covering the stock 18 months ago, now 8 analysts. Analyst consensus rating changed from 'Buy' (14 months ago) to 'Hold' (current). This indicates loss of investor confidence tied to margin compression and growth stalling."
+  ]
+}

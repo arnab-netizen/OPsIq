@@ -1,0 +1,24 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Validated market size and growth rate by vertical and sub-segment (no addressable-demand model)",
+    "Competitive dynamics and win/loss reasons by deal",
+    "Penetration rate of the qualified core-segment account universe",
+    "Demand signal for adjacent verticals (no in-market test run)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Validated market size and growth rate by vertical and sub-segment (no addressable-demand model)",
+    "Cannot conclude on: Competitive dynamics and win/loss reasons by deal",
+    "Cannot conclude on: Penetration rate of the qualified core-segment account universe",
+    "Cannot conclude on: Demand signal for adjacent verticals (no in-market test run)"
+  ]
+}

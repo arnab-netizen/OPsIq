@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW ($500k max technology investment)",
+    "timeHorizonDays": 730,
+    "staffCapacity": "LOW (150 people, lean operations)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

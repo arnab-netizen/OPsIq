@@ -1,0 +1,34 @@
+{
+  "step": "owner_intake",
+  "businessType": "Mid-size staffing agency placing light-industrial and clerical temp/contract workers for regional employers across several branches. ~180 internal staff including recruiters and account managers. Founded 2006.",
+  "stage": "$25.0M revenue, ~10% YoY growth historically, gross margin (spread) stable ~12%. Last two quarters: revenue growth decelerated to ~2% and gross profit dollars flat. EBITDA margin held ~6%. Order fill rate and recruiter productivity reported only at the agency-wide blended level.",
+  "ownerGoal": "Return to ~10% growth within 12 months while preserving margin and avoiding branch closures or recruiter layoffs.",
+  "ownerConstraints": [
+    "People constraint: recruiters are the revenue engine; management will not cut recruiter headcount and wants to protect morale during the slowdown.",
+    "Branch constraint: a multi-branch footprint with fixed lease and overhead costs; closing branches is politically and contractually difficult.",
+    "Client constraint: revenue is relationship-driven with regional employers; management does not want to appear to be pulling back during a downturn.",
+    "Capital constraint: privately held, modest cash buffer; cannot fund a large turnaround program.",
+    "Governance constraint: the leadership team has already told the board the slowdown is 'temporary macro headwinds' and budgeted next year for a rebound."
+  ],
+  "immediateConcern": "CEO framing: 'The last two quarters slowed down, but this is temporary macro headwinds - hiring across our region softened and it will bounce back, like it always has. We have already told the board to expect a rebound and budgeted for it. The right move is to hold the team together, keep our recruiters and branches intact, and ride it out. I do not want to overreact to a temporary dip.'",
+  "availableData": [
+    "Revenue $25.0M, growth decelerated from ~10% to ~2% over the last two quarters; gross spread stable ~12%; EBITDA ~6%.",
+    "Recruiter productivity (placements/revenue per recruiter) reported agency-wide only; it has NOT been split by branch, by recruiter tenure cohort, or by client/industry channel.",
+    "Order fill rate (filled vs received job orders) reported blended; not broken out by branch or job category.",
+    "Job-order volume RECEIVED from clients has held roughly flat over the slowdown, while fill rate appears to have slipped - suggesting orders exist but are being converted less, not that demand vanished. This was noted in ops data but not analyzed.",
+    "Recruiter mix shifted: ~30% of recruiters have <12 months tenure after a hiring push 18 months ago; ramp/productivity of this cohort not measured separately.",
+    "Two competitor agencies opened local branches in the past year; whether they are winning the agency's job orders has not been investigated.",
+    "Average days-to-fill has lengthened over the same period; cause (candidate supply, recruiter productivity, or client-side delays) not diagnosed."
+  ],
+  "unavailableData": [
+    "Recruiter productivity and fill rate split by branch, recruiter-tenure cohort, and client/industry channel.",
+    "Job-order win/loss vs the new competitor branches (are orders being lost or just unfilled?).",
+    "Ramp curve and productivity of the <12-month recruiter cohort vs tenured recruiters.",
+    "Candidate-supply/applicant-flow trend to test whether days-to-fill is a supply problem or a productivity problem.",
+    "External regional labor-market benchmark confirming demand actually softened for comparable agencies."
+  ],
+  "timeHorizon": "12 months to reaccelerate; next-year budget already assumes rebound",
+  "riskAppetite": "LOW-TO-MEDIUM (conservative, protective of team and branches)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

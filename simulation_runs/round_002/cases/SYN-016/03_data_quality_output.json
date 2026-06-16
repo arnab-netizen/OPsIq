@@ -1,0 +1,24 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 3,
+  "missingDimensions": [
+    "financial_health",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Which specific configuration steps cause the most abandonment (no funnel instrumentation in onboarding)",
+    "Activation-to-retention correlation quantified by feature",
+    "Willingness of customers to pay for guided/done-for-you onboarding",
+    "Comparative onboarding time of the simpler competitors"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Which specific configuration steps cause the most abandonment (no funnel instrumentation in onboarding)",
+    "Cannot conclude on: Activation-to-retention correlation quantified by feature",
+    "Cannot conclude on: Willingness of customers to pay for guided/done-for-you onboarding",
+    "Cannot conclude on: Comparative onboarding time of the simpler competitors"
+  ]
+}

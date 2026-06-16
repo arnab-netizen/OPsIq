@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "EBITDA margin fell from 16% to 11% to ~8% over three years while revenue was flat ($14.8M -> $15.0M). Because revenue did not fall, the margin erosion is driven by rising cost-to-deliver per revenue dollar, not by a revenue collapse - which is not what a pure demand-softness story would predict.",
+    "Blended billable utilization fell from 74% to 68% but is reported firm-wide only. It has never been split by practice area, grade, or client segment, so it is unknown whether the decline is broad (consistent with market softness) or concentrated (consistent with an internal/practice/segment problem). Bench time rise is attributed to 'fewer projects' without linking idle staff to specific lost engagements.",
+    "Client-segment mix shifted materially: mid-market grew from ~25% to ~40% of revenue while large-enterprise shrank, including two anchor enterprise accounts cutting spend. Per-segment profitability has never been computed. If mid-market work carries lower realization and higher delivery cost, the mix shift alone could explain much of the margin decline - independent of any market softness.",
+    "Partners cite a 'general sense' that clients are delaying projects, but the CRM win-rate and proposal-volume data needed to confirm a true demand drop (vs losing competitive bids) have not been pulled. Whether the two anchor enterprise accounts paused, churned, or were displaced by a competitor was never investigated."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Utilization and realization split by practice area, grade, and client segment.",
+    "Per-client-segment profitability (mid-market vs large-enterprise gross margin after fully-loaded delivery cost).",
+    "Win-rate and proposal-volume trend from the CRM to test whether demand actually fell or whether the firm is losing competitive bids.",
+    "Engagement-level margin analysis to see whether fixed-fee projects are overrunning budgeted hours.",
+    "External market benchmark confirming that comparable firms are seeing the same fee/utilization pressure."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "EBITDA margin fell from 16% to 11% to ~8% over three years while revenue was flat ($14.8M -> $15.0M). Because revenue did not fall, the margin erosion is driven by rising cost-to-deliver per revenue dollar, not by a revenue collapse - which is not what a pure demand-softness story would predict.",
+    "Blended billable utilization fell from 74% to 68% but is reported firm-wide only. It has never been split by practice area, grade, or client segment, so it is unknown whether the decline is broad (consistent with market softness) or concentrated (consistent with an internal/practice/segment problem). Bench time rise is attributed to 'fewer projects' without linking idle staff to specific lost engagements.",
+    "Client-segment mix shifted materially: mid-market grew from ~25% to ~40% of revenue while large-enterprise shrank, including two anchor enterprise accounts cutting spend. Per-segment profitability has never been computed. If mid-market work carries lower realization and higher delivery cost, the mix shift alone could explain much of the margin decline - independent of any market softness.",
+    "Partners cite a 'general sense' that clients are delaying projects, but the CRM win-rate and proposal-volume data needed to confirm a true demand drop (vs losing competitive bids) have not been pulled. Whether the two anchor enterprise accounts paused, churned, or were displaced by a competitor was never investigated."
+  ]
+}

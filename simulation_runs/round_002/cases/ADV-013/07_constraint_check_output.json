@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM ($9M cash, dependent on Series B for the growth plan)",
+    "timeHorizonDays": 150,
+    "staffCapacity": "LOW for analysis (1.5-person finance team), HIGH ambition for sales hiring",
+    "cashRunwayMonths": 20,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

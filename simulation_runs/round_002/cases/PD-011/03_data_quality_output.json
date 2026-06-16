@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 2,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Customer acquisition costs by channel (not disclosed in public filings)",
+    "Customer lifetime value or repeat purchase rates (proprietary customer data)",
+    "Detailed product-level profitability or SKU-level margin data (public filings aggregate by category, not individual products)",
+    "Market research on brand perception or competitive win/loss analysis (not disclosed)",
+    "Internal cost structure details (detailed COGS breakdown, detailed SG&A allocation by function)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Customer acquisition costs by channel (not disclosed in public filings)",
+    "Cannot conclude on: Customer lifetime value or repeat purchase rates (proprietary customer data)",
+    "Cannot conclude on: Detailed product-level profitability or SKU-level margin data (public filings aggregate by category, not individual products)",
+    "Cannot conclude on: Market research on brand perception or competitive win/loss analysis (not disclosed)",
+    "Cannot conclude on: Internal cost structure details (detailed COGS breakdown, detailed SG&A allocation by function)"
+  ]
+}

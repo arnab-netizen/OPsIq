@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (asset/labor-heavy; recap intended to address capital)",
+    "timeHorizonDays": 365,
+    "staffCapacity": "MEDIUM (finance/ops team can build the margin bridge)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

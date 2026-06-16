@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 5,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Lapsed-customer and competitive-defection research: where former customers now shop (off-price, specialty, pure-play online) and why they stopped — not currently collected.",
+    "Brand-perception / relevance study: how target and lapsed customers rate the banner on differentiation, value, assortment, and reasons-to-visit versus competitors.",
+    "Category-level and SKU-level markdown root-cause data: which categories/buys drove the write-down increase, and whether it was over-buying, assortment misfit, or pricing — public/aggregate data masks this.",
+    "Customer overlap between store and e-commerce: degree to which online sales are existing store customers shifting channel (cannibalization) versus genuinely incremental customers.",
+    "Competitor pricing, traffic, and assortment benchmarks at the local-market level for each of the 30 stores."
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Lapsed-customer and competitive-defection research: where former customers now shop (off-price, specialty, pure-play online) and why they stopped — not currently collected.",
+    "Cannot conclude on: Brand-perception / relevance study: how target and lapsed customers rate the banner on differentiation, value, assortment, and reasons-to-visit versus competitors.",
+    "Cannot conclude on: Category-level and SKU-level markdown root-cause data: which categories/buys drove the write-down increase, and whether it was over-buying, assortment misfit, or pricing — public/aggregate data masks this.",
+    "Cannot conclude on: Customer overlap between store and e-commerce: degree to which online sales are existing store customers shifting channel (cannibalization) versus genuinely incremental customers.",
+    "Cannot conclude on: Competitor pricing, traffic, and assortment benchmarks at the local-market level for each of the 30 stores."
+  ]
+}

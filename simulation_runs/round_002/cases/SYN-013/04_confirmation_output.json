@@ -1,0 +1,24 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Quarterly logo churn rose from 2% to 4% across three consecutive quarters and NRR fell from 108% to 101%. Exit surveys on 22 churned logos cite 'didn't get full value / low adoption' (55%) and 'switched to bundled suite' (23%) far ahead of explicit 'price' (14%). The dominant stated reason is unrealized value inside accounts, not headline competitive loss.",
+    "Adoption is concentrated in one module: recruitment 88%, onboarding 41%, performance 19%; the average account actively uses only 1.4 of 3 modules. Single-module accounts churn at roughly 3x the rate of multi-module accounts in the CS notes, and they generate the expansion shortfall behind the NRR decline. Customers are buying a suite but realizing a point tool.",
+    "Time-to-first-value (first hire fully processed) averages 47 days versus a 21-day target. QBR completion is 38%, and each CSM carries ~80 accounts, well above the 40-50 healthy band for this ACV. Accounts that miss early value rarely expand to a second module, and they over-index in the churn cohort.",
+    "Two larger HR suites bundle comparable modules at list-price parity and appear in renewal evaluations. Win rate on new business is stable at 24% and sales cycle is unchanged (~70 days), indicating the competitive pressure shows up at renewal/expansion, not at acquisition. This is consistent with a retention/value problem rather than a front-of-funnel competitiveness collapse.",
+    "Blended CAC rose 15% YoY to ~$22k and CAC payback extended to 19 months (from 14). The payback deterioration is driven more by shrinking NRR/expansion and rising churn (lower LTV per logo) than by acquisition cost alone; the owner's 'unit economics' framing is a downstream symptom of retention decay."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Cohort-level retention curves by acquisition channel and customer size",
+    "Quantified willingness-to-pay versus the two bundled-suite competitors",
+    "Root-cause analysis of why onboarding time-to-value is 47 days",
+    "Expansion-propensity scoring tied to multi-module adoption"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Quarterly logo churn rose from 2% to 4% across three consecutive quarters and NRR fell from 108% to 101%. Exit surveys on 22 churned logos cite 'didn't get full value / low adoption' (55%) and 'switched to bundled suite' (23%) far ahead of explicit 'price' (14%). The dominant stated reason is unrealized value inside accounts, not headline competitive loss.",
+    "Adoption is concentrated in one module: recruitment 88%, onboarding 41%, performance 19%; the average account actively uses only 1.4 of 3 modules. Single-module accounts churn at roughly 3x the rate of multi-module accounts in the CS notes, and they generate the expansion shortfall behind the NRR decline. Customers are buying a suite but realizing a point tool.",
+    "Time-to-first-value (first hire fully processed) averages 47 days versus a 21-day target. QBR completion is 38%, and each CSM carries ~80 accounts, well above the 40-50 healthy band for this ACV. Accounts that miss early value rarely expand to a second module, and they over-index in the churn cohort.",
+    "Two larger HR suites bundle comparable modules at list-price parity and appear in renewal evaluations. Win rate on new business is stable at 24% and sales cycle is unchanged (~70 days), indicating the competitive pressure shows up at renewal/expansion, not at acquisition. This is consistent with a retention/value problem rather than a front-of-funnel competitiveness collapse.",
+    "Blended CAC rose 15% YoY to ~$22k and CAC payback extended to 19 months (from 14). The payback deterioration is driven more by shrinking NRR/expansion and rising churn (lower LTV per logo) than by acquisition cost alone; the owner's 'unit economics' framing is a downstream symptom of retention decay."
+  ]
+}

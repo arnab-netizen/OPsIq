@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (well-funded, 28-month runway, Series C gated on NRR/seat expansion)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "MEDIUM (130 staff; product culture biased toward shipping features over adoption outcomes)",
+    "cashRunwayMonths": 28,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

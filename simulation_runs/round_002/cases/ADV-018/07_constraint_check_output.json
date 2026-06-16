@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (established manufacturer, capacity-cost-heavy)",
+    "timeHorizonDays": 600,
+    "staffCapacity": "MEDIUM (finance/cost-accounting team available to build cost-to-serve)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

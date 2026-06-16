@@ -1,0 +1,24 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "The take-rate is a flat ~12% regardless of seller size or order type. This is structurally mispriced: it is cheap relative to value for low-repeat, demand-dependent small sellers, but expensive for high-volume repeat sellers who pay 12% on repeat buyers the marketplace no longer needs to source. The flat rate gives large sellers a direct economic incentive to disintermediate after the first order.",
+    "The disintermediation is concentrated in large sellers and tied to repeat orders: large-seller on-platform repeat rate fell from 64% to 41%, and ~30% of their repeat-buyer GMV now flows off-platform. Seller NRR fell 108%→95% driven almost entirely by this leakage. Small/mid sellers' retention and repeat rates are stable.",
+    "Top 8% of sellers generate 61% of GMV; bottom 70% generate 14%. Large sellers now have the scale and tooling to run direct buyer relationships once the marketplace introduces the buyer, while small/mid sellers still depend on marketplace demand generation. The marketplace's value is strongest at first-order discovery and weakest at repeat for large sellers specifically.",
+    "Seller satisfaction is segmented: small/mid sellers report positive satisfaction, while large sellers' top complaint (58% of large-seller responses) is 'commission too high for repeat orders.' This is a monetization-structure complaint, not a generic product or service-quality complaint, localizing the cause to pricing rather than value-prop decline.",
+    "The buyer side is healthy: buyer demand and acquisition are stable, and the marketplace reliably delivers first-order discovery value. The leakage is not a buyer-demand failure; it is that sellers capture buyers introduced by the marketplace and route repeat business off-platform because the flat take-rate makes staying on-platform uneconomic for them."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Price elasticity of take-rate by seller tier and order type (first-order vs repeat)",
+    "Margin contribution of value-added services (financing, logistics) if bundled to justify take-rate on repeat",
+    "Contractual/technical feasibility of enforcing on-platform transactions for marketplace-sourced buyers",
+    "Competitor marketplace take-rate structures by tier"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "The take-rate is a flat ~12% regardless of seller size or order type. This is structurally mispriced: it is cheap relative to value for low-repeat, demand-dependent small sellers, but expensive for high-volume repeat sellers who pay 12% on repeat buyers the marketplace no longer needs to source. The flat rate gives large sellers a direct economic incentive to disintermediate after the first order.",
+    "The disintermediation is concentrated in large sellers and tied to repeat orders: large-seller on-platform repeat rate fell from 64% to 41%, and ~30% of their repeat-buyer GMV now flows off-platform. Seller NRR fell 108%→95% driven almost entirely by this leakage. Small/mid sellers' retention and repeat rates are stable.",
+    "Top 8% of sellers generate 61% of GMV; bottom 70% generate 14%. Large sellers now have the scale and tooling to run direct buyer relationships once the marketplace introduces the buyer, while small/mid sellers still depend on marketplace demand generation. The marketplace's value is strongest at first-order discovery and weakest at repeat for large sellers specifically.",
+    "Seller satisfaction is segmented: small/mid sellers report positive satisfaction, while large sellers' top complaint (58% of large-seller responses) is 'commission too high for repeat orders.' This is a monetization-structure complaint, not a generic product or service-quality complaint, localizing the cause to pricing rather than value-prop decline.",
+    "The buyer side is healthy: buyer demand and acquisition are stable, and the marketplace reliably delivers first-order discovery value. The leakage is not a buyer-demand failure; it is that sellers capture buyers introduced by the marketplace and route repeat business off-platform because the flat take-rate makes staying on-platform uneconomic for them."
+  ]
+}

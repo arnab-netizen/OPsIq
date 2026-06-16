@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 5,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Community-level absorption, margin, and spec exposure broken out by individual subdivision (only blended company metrics disclosed).",
+    "Buyer-level mortgage qualification, rate-lock, and credit data underlying cancellations (not disclosed).",
+    "Non-refundable deposit amounts and walk-away economics by individual land option contract.",
+    "Forward demand by submarket (traffic, qualified-buyer pipeline, competitor incentive levels) at a granular level.",
+    "Detailed direct-cost build-up (per-trade labor and material cost curves) below the aggregate construction-cost line."
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Community-level absorption, margin, and spec exposure broken out by individual subdivision (only blended company metrics disclosed).",
+    "Cannot conclude on: Buyer-level mortgage qualification, rate-lock, and credit data underlying cancellations (not disclosed).",
+    "Cannot conclude on: Non-refundable deposit amounts and walk-away economics by individual land option contract.",
+    "Cannot conclude on: Forward demand by submarket (traffic, qualified-buyer pipeline, competitor incentive levels) at a granular level.",
+    "Cannot conclude on: Detailed direct-cost build-up (per-trade labor and material cost curves) below the aggregate construction-cost line."
+  ]
+}

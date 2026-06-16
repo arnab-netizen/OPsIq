@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (limited cash ~$6M, EBITDA 8%; cannot fund large simultaneous bets)",
+    "timeHorizonDays": 360,
+    "staffCapacity": "MEDIUM (150 employees; SMB motion under-resourced)",
+    "cashRunwayMonths": 30,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

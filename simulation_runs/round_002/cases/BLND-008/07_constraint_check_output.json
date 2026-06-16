@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM ($4M cash, ~breakeven; any inorganic move needs external financing)",
+    "timeHorizonDays": 45,
+    "staffCapacity": "LOW-MEDIUM (78 staff, lean; key-person concentration in founder and two engineers)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

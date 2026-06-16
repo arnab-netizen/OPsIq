@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 3,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "operational_efficiency",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Junior consultant feedback: Why are they leaving? Compensation? Career path? Fit/culture?",
+    "Partner productivity variance: Do some partners generate higher revenue than others? What differentiates?",
+    "Client profitability: Which clients are most profitable? Are low-margin clients driving utilization down?",
+    "Market positioning: How is firm differentiated from Big Four? Why should juniors stay for partnership track?"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Junior consultant feedback: Why are they leaving? Compensation? Career path? Fit/culture?",
+    "Cannot conclude on: Partner productivity variance: Do some partners generate higher revenue than others? What differentiates?",
+    "Cannot conclude on: Client profitability: Which clients are most profitable? Are low-margin clients driving utilization down?",
+    "Cannot conclude on: Market positioning: How is firm differentiated from Big Four? Why should juniors stay for partnership track?"
+  ]
+}

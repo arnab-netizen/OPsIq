@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (profitable but capex-constrained for modernization)",
+    "timeHorizonDays": 730,
+    "staffCapacity": "MEDIUM (400 people, operations-focused)",
+    "cashRunwayMonths": "N/A (profitable, positive cash flow)",
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

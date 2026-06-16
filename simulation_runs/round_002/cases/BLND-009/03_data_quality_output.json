@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "operational_efficiency",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Substantiated quality-of-earnings: normalized EBITDA after owner add-backs, one-time items, and working-capital adjustments to buyer standard",
+    "Transferable vs key-person-dependent value: how much revenue/margin survives the founder's and senior leaders' departure, and how durable the top-5 relationships are without them",
+    "Aftermarket durability: whether the ~30% aftermarket stream is contracted/recurring or relationship-dependent and at risk in a transition",
+    "Strategic-buyer landscape: which strategics would pay a synergy premium, and whether they would preserve or relocate the plant/workforce",
+    "Owner's after-tax net proceeds and personal liquidity needs under each structure (multiple, earn-out, rollover equity, tax treatment)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Substantiated quality-of-earnings: normalized EBITDA after owner add-backs, one-time items, and working-capital adjustments to buyer standard",
+    "Cannot conclude on: Transferable vs key-person-dependent value: how much revenue/margin survives the founder's and senior leaders' departure, and how durable the top-5 relationships are without them",
+    "Cannot conclude on: Aftermarket durability: whether the ~30% aftermarket stream is contracted/recurring or relationship-dependent and at risk in a transition",
+    "Cannot conclude on: Strategic-buyer landscape: which strategics would pay a synergy premium, and whether they would preserve or relocate the plant/workforce",
+    "Cannot conclude on: Owner's after-tax net proceeds and personal liquidity needs under each structure (multiple, earn-out, rollover equity, tax treatment)"
+  ]
+}

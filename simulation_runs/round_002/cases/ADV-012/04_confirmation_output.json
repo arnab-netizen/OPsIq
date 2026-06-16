@@ -1,0 +1,22 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "ARR grew 50% YoY from $8M to $12M, an impressive headline. Over the same period, monthly churn rose from 2% to 4% -- a 100% increase in the churn rate. Net new account growth still appears healthy because acquisition is outpacing churn, but the churn trend is the opposite of what a 'product-market-fit victory' narrative implies.",
+    "Monthly churn of 4% implies roughly 39% annualized logo churn, and blended net revenue retention has slipped to ~96% (below the 100%+ that signals durable retention). The company has not produced cohort retention curves, so whether recent cohorts retain worse than older ones -- the key question for whether growth is healthy -- is unknown.",
+    "The category is dominated by Slack and Microsoft Teams, with limited differentiation and low switching costs. Rising churn in this context could reflect competitive displacement, but no win/loss analysis versus the incumbents has been produced, so the competitive contribution to churn is unmeasured.",
+    "No engagement-depth or activation metrics by cohort have been analyzed, and no churn-reason/exit-survey data exists. Whether churning accounts ever activated (onboarded to real value) or churned for reliability, usability, or unmet-value reasons is unknown -- precisely the evidence needed to tell a quality/retention problem apart from incidental churn or competitive loss."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Cohort retention curves (retention by signup cohort over time)",
+    "Churn-reason analysis / exit-survey data (why accounts are leaving)",
+    "Competitive win/loss data versus Slack and Teams",
+    "Engagement/usage-depth metrics by cohort (whether churning accounts ever activated)"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "ARR grew 50% YoY from $8M to $12M, an impressive headline. Over the same period, monthly churn rose from 2% to 4% -- a 100% increase in the churn rate. Net new account growth still appears healthy because acquisition is outpacing churn, but the churn trend is the opposite of what a 'product-market-fit victory' narrative implies.",
+    "Monthly churn of 4% implies roughly 39% annualized logo churn, and blended net revenue retention has slipped to ~96% (below the 100%+ that signals durable retention). The company has not produced cohort retention curves, so whether recent cohorts retain worse than older ones -- the key question for whether growth is healthy -- is unknown.",
+    "The category is dominated by Slack and Microsoft Teams, with limited differentiation and low switching costs. Rising churn in this context could reflect competitive displacement, but no win/loss analysis versus the incumbents has been produced, so the competitive contribution to churn is unmeasured.",
+    "No engagement-depth or activation metrics by cohort have been analyzed, and no churn-reason/exit-survey data exists. Whether churning accounts ever activated (onboarded to real value) or churned for reliability, usability, or unmet-value reasons is unknown -- precisely the evidence needed to tell a quality/retention problem apart from incidental churn or competitive loss."
+  ]
+}

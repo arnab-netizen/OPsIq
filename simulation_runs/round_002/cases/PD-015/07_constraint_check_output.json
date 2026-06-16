@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (covenant-sensitive operator; can fund a representative-sample four-wall diagnostic but not large uncontrolled spend during a covenant-relevant review window)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (200-unit operations team with regional and unit-level managers; central operations/finance can support a sample diagnostic without disrupting service)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

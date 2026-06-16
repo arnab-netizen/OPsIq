@@ -1,0 +1,186 @@
+{
+  "frozenAt": "2026-06-16T21:01:34.031Z",
+  "caseId": "SYN-019",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "INSUFFICIENT_EVIDENCE",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency",
+    "Cannot proceed with confident diagnosis. Additional investigation required."
+  ],
+  "decisionMemo": {
+    "id": "5851b08a-4e6d-4479-b57a-ceec21b6b68d",
+    "engagementId": "78b2f3cb-2e16-48a3-9b05-dad10dcba083",
+    "timestamp": "2026-06-16T21:01:34.024Z",
+    "businessProblem": "A collaboration SaaS growing 45% is seeing its expansion engine seize because users stop using the product. In-account active adoption (weekly active / licensed seats) fell from 62% to 38% over 18 months while feature count tripled; NRR fell 118%→104% as seat expansion stalled; support tickets per seat rose 55% with 'too complicated' (34%) and 'can't find feature' (28%) as top themes. Power users (top 15%) stay highly engaged, but the broad licensed base disengages, and new seats reach active use only 29% of the time within 60 days. The owner suspects simplicity and expansion problems and weighs both a simplification effort and new expansion features (the cultural default of shipping). The real pattern is a usability/trust failure inside accounts: feature bloat buries core workflows (median clicks-to-core-task up 40%; 11 of 60+ features drive 80% of usage), so non-power users abandon the product, trust in daily use erodes, and seat expansion becomes impossible. With Series C gated on NRR/seat expansion and 28 months of runway, the owner must decide whether to keep shipping features or fix the in-account adoption/trust failure.",
+    "rootCauseDiagnosis": {
+      "id": "e84bdfe1-5e86-493b-9937-1f1308be1538",
+      "type": "unknown",
+      "description": "Evidence insufficient for definitive diagnosis",
+      "mechanismDescription": "The evidence provided does not clearly match known root cause patterns.",
+      "evidenceIds": [
+        "3f310ec6-cbb1-4a11-bc79-89cfc86fe5ba",
+        "52f13adf-09df-45e6-a8c6-eb7c1adcb017",
+        "58c2c776-f6ba-4e51-8447-ce1a797a21f5",
+        "ee383860-b314-448a-a773-059d2deb0d0c",
+        "173473c2-f11e-41fe-9c4b-6d2eade577c1"
+      ],
+      "confidence": "INSUFFICIENT_EVIDENCE",
+      "alternativeExplanations": [
+        "Multiple root causes may be present",
+        "Root cause may be unique to this business"
+      ],
+      "missingEvidenceFor": [
+        "Deeper investigation required on each dimension",
+        "Customer interviews",
+        "Process observation"
+      ]
+    },
+    "diagnosisConfidence": "INSUFFICIENT_EVIDENCE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "889560fb-66fe-4fd0-86a8-9d96773d1e61",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "The evidence provided does not clearly match known root cause patterns.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "3f310ec6-cbb1-4a11-bc79-89cfc86fe5ba",
+            "52f13adf-09df-45e6-a8c6-eb7c1adcb017",
+            "58c2c776-f6ba-4e51-8447-ce1a797a21f5",
+            "ee383860-b314-448a-a773-059d2deb0d0c",
+            "173473c2-f11e-41fe-9c4b-6d2eade577c1"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH (collapsing in-account adoption stalls seat expansion and NRR, the Series-C gating metrics)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "7dcbf976-85a3-473a-8240-aedc227e4713",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "889560fb-66fe-4fd0-86a8-9d96773d1e61"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "bc27d424-d83d-41c3-88fe-9d7aaa598726",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "889560fb-66fe-4fd0-86a8-9d96773d1e61"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "889560fb-66fe-4fd0-86a8-9d96773d1e61",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "889560fb-66fe-4fd0-86a8-9d96773d1e61"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Insufficient evidence for definitive diagnosis. Recommend phase 1 investigation before committing to full intervention plan.",
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

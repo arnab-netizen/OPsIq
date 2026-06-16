@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (cash-generative but operating margin halved; investment capacity contingent on margin recovery)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "MEDIUM (240 employees but limited pricing/analytics function; pricing currently rep- and matrix-driven)",
+    "cashRunwayMonths": "N/A (profitable going concern; constraint is margin recovery, not runway)",
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

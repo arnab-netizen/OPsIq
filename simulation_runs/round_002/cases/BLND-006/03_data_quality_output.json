@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "operational_efficiency",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Detailed customer segmentation: Which customer cohorts (by acquisition source, spending pattern, tenure) have highest LTV vs highest churn? Which are most profitable?",
+    "Detailed competitor positioning: Exact pricing, retention rates, and unit economics of Rent the Runway and other competitors (proprietary)",
+    "Customer willingness-to-pay research: Would customers accept higher prices for premium curated selection, better fit guarantee, or faster fulfillment? How much more would they pay?",
+    "Detailed operational cost breakdown: Is the $12 logistics cost variable, or are there fixed facility costs that could decrease per unit with scale?",
+    "Long-term retention potential: For customers acquired in Year 1 (now 2+ year tenure), what is the actual lifetime value observed? Is the $2,800 estimate realistic or optimistic?"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Detailed customer segmentation: Which customer cohorts (by acquisition source, spending pattern, tenure) have highest LTV vs highest churn? Which are most profitable?",
+    "Cannot conclude on: Detailed competitor positioning: Exact pricing, retention rates, and unit economics of Rent the Runway and other competitors (proprietary)",
+    "Cannot conclude on: Customer willingness-to-pay research: Would customers accept higher prices for premium curated selection, better fit guarantee, or faster fulfillment? How much more would they pay?",
+    "Cannot conclude on: Detailed operational cost breakdown: Is the $12 logistics cost variable, or are there fixed facility costs that could decrease per unit with scale?",
+    "Cannot conclude on: Long-term retention potential: For customers acquired in Year 1 (now 2+ year tenure), what is the actual lifetime value observed? Is the $2,800 estimate realistic or optimistic?"
+  ]
+}

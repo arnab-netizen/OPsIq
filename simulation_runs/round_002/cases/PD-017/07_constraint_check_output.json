@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (cash-generative but margin under pressure; capital allocation focused on protecting EBITDA and preserving optionality through the cycle)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "HIGH (large internal recruiter/branch workforce, but it is the primary fixed cost and the core capacity-decision variable)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

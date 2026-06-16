@@ -1,0 +1,184 @@
+{
+  "frozenAt": "2026-06-16T21:00:56.237Z",
+  "caseId": "ADV-012",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency"
+  ],
+  "decisionMemo": {
+    "id": "253e89f3-a5e9-4226-b0c3-8d749efa2ba0",
+    "engagementId": "bd68c6dc-ec51-42b0-b4c5-94a49c477f08",
+    "timestamp": "2026-06-16T21:00:56.232Z",
+    "businessProblem": "A Series B collaboration-SaaS company is preparing to raise a Series C on a 50% YoY growth story. The headline growth is real, but monthly churn has doubled from 2% to 4% over twelve months, and net new account growth still looks healthy only because acquisition is outpacing a worsening leak. Leadership is anchored on the growth metric and confident about product-market fit, but has produced no cohort retention curves, churn-reason analysis, or win/loss data to explain the rising churn. Competing hypotheses are open: (1) growth genuinely validates product-market fit and churn is incidental; (2) a deteriorating retention/quality dynamic (onboarding, reliability, or unmet value) is causing accounts to leave and the growth headline is masking it; (3) competitive displacement by Slack/Teams. Without cohort and churn-reason analysis, the company risks raising on a metric that Series C diligence will disaggregate, and risks pouring acquisition spend into a leaking bucket.",
+    "rootCauseDiagnosis": {
+      "id": "89711623-1af2-4476-b38c-523144b14523",
+      "type": "customer_retention_erosion",
+      "description": "No systematic customer retention mechanism",
+      "mechanismDescription": "Without follow-up, loyalty program, or service innovation, customers default to shopping for best price on each transaction.",
+      "evidenceIds": [
+        "3dc61002-eaa1-4ad6-8be9-9feb5ea2f063"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "Competitors may offer better value",
+        "Service may not meet customer needs"
+      ],
+      "missingEvidenceFor": [
+        "Customer satisfaction score",
+        "Reasons customers don't return",
+        "Competitor analysis"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "a2386af4-e5ac-46ee-a3a6-2dbb648c0771",
+          "title": "Design and launch customer loyalty program",
+          "class": "RESILIENCE_PROTECTION",
+          "objective": "Create incentive for repeat business and data capture for customer relationship management",
+          "rationale": "Systematic retention mechanism replaces transactional, one-time customer model",
+          "whyThisNow": "Revenue is declining due to low repeat rate; immediate action to rebuild recurring revenue",
+          "ownerRole": "owner",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Design loyalty program structure",
+              "description": "Points-based or tiered program; benchmark against industry, competitor research",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "successCriteria": "Program design reviewed, discount budget allocated"
+            },
+            {
+              "sequence": 2,
+              "title": "Implement simple tracking system",
+              "description": "Use email or phone-based customer identification to track repeat visits",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "System tested, staff trained, can enroll customer in <30 seconds"
+            },
+            {
+              "sequence": 3,
+              "title": "Launch to current customer base",
+              "description": "Send email or in-person invitation to 50+ previous customers; track enrollment rate",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "Email sent to prior customers, enrollment rate >20%, feedback gathered"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "SIGNIFICANT",
+          "successMetrics": [
+            "Loyalty program enrollment >50% of customer base",
+            "Repeat customer rate increases to >35%",
+            "Customer lifetime value increases by 40%"
+          ],
+          "failureRisks": [
+            "Program too complex, low enrollment",
+            "Discount cost erodes margins",
+            "Customers engage for discount only, churn when offer expires"
+          ],
+          "fallbackPlan": "Pivot to referral program (existing customers get discount for bringing new customers)",
+          "evidenceBasis": [
+            "3dc61002-eaa1-4ad6-8be9-9feb5ea2f063"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 76,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 8,
+            "rationale": "Expected revenue impact: SIGNIFICANT. Urgency: CRITICAL (doubling churn under a growth headline threatens unit economics and a Series C that will be scrutinized on retention)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 7.5,
+            "rationale": "Failure risks: 3. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 5,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 4.375,
+            "rationale": "Cost band: LOW vs Expected impact: SIGNIFICANT"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "a14d90cd-4e31-458e-b2a3-b4a6088a554f",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "a2386af4-e5ac-46ee-a3a6-2dbb648c0771"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "00ba5607-a924-4dc1-afe7-e40cb5a7e71e",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "a2386af4-e5ac-46ee-a3a6-2dbb648c0771"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "a2386af4-e5ac-46ee-a3a6-2dbb648c0771",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "a2386af4-e5ac-46ee-a3a6-2dbb648c0771"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

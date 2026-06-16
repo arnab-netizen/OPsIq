@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "operational_efficiency",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Attrition cohort analysis: which clients lapsed — by clinic, by tenure (legacy vs. post-acquisition), by primary-vet relationship (clients of departed vets vs. retained vets), by pet life-stage",
+    "Reason-for-leaving data: structured exit/lapsed-client survey distinguishing price, vet continuity/access, and competitive switching",
+    "Visit-frequency change by retained vs. lapsing clients: are remaining clients also visiting less (wellness deferral) or only the lapsed cohort?",
+    "Competitive switching evidence: how many lapsed clients moved to the two new clinics or the telehealth entrant, and why",
+    "Preventive-care-plan retention vs. churn by clinic and by enrolling veterinarian"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Attrition cohort analysis: which clients lapsed — by clinic, by tenure (legacy vs. post-acquisition), by primary-vet relationship (clients of departed vets vs. retained vets), by pet life-stage",
+    "Cannot conclude on: Reason-for-leaving data: structured exit/lapsed-client survey distinguishing price, vet continuity/access, and competitive switching",
+    "Cannot conclude on: Visit-frequency change by retained vs. lapsing clients: are remaining clients also visiting less (wellness deferral) or only the lapsed cohort?",
+    "Cannot conclude on: Competitive switching evidence: how many lapsed clients moved to the two new clinics or the telehealth entrant, and why",
+    "Cannot conclude on: Preventive-care-plan retention vs. churn by clinic and by enrolling veterinarian"
+  ]
+}

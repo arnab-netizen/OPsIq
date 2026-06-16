@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 3,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Theoretical (ideal) vs actual food cost by unit (waste, over-portioning, yield loss not disclosed in public filings)",
+    "Unit-level labor deployment / scheduling efficiency (labor hours vs transactions by daypart, not publicly disclosed)",
+    "Item-level menu margin and menu-mix contribution (menu engineering data is proprietary)",
+    "Unit-by-unit dispersion of the 200 restaurants (range/quartiles of margin by unit not disclosed)",
+    "Daypart-level transaction counts and ticket detail (proprietary point-of-sale data)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Theoretical (ideal) vs actual food cost by unit (waste, over-portioning, yield loss not disclosed in public filings)",
+    "Cannot conclude on: Unit-level labor deployment / scheduling efficiency (labor hours vs transactions by daypart, not publicly disclosed)",
+    "Cannot conclude on: Item-level menu margin and menu-mix contribution (menu engineering data is proprietary)",
+    "Cannot conclude on: Unit-by-unit dispersion of the 200 restaurants (range/quartiles of margin by unit not disclosed)",
+    "Cannot conclude on: Daypart-level transaction counts and ticket detail (proprietary point-of-sale data)"
+  ]
+}

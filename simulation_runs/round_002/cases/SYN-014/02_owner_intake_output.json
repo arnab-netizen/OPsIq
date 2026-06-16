@@ -1,0 +1,32 @@
+{
+  "step": "owner_intake",
+  "businessType": "B2B payments SaaS for mid-market finance teams (AP automation + embedded payouts). Founded 2019, total raised $26M. Revenue model: per-seat software subscription plus a take-rate on processed payment volume. Current ARR $8.0M, 50% YoY growth, 310 customers.",
+  "stage": "ARR $8.0M, 50% YoY growth. Gross retention healthy at 94%. Net revenue retention fell from 110% to 100% over four quarters. Gross margin 68% (blended software + payments). New-logo win rate stable. Expansion bookings as a share of total bookings dropped from 38% to 19%. Cash runway 26 months at $480k/month burn.",
+  "ownerGoal": "Reaccelerate net revenue retention back above 110% and protect take-rate margins against larger entrants; reach Series B metrics ($15M ARR, NRR >110%) within 15 months.",
+  "ownerConstraints": [
+    "Funding constraint: $26M raised, 26-month runway at $480k/month burn; the next raise is gated on NRR re-expansion, so expansion economics are the headline metric.",
+    "Product constraint: cross-sell modules (embedded payouts, virtual cards, FX) exist and are technically live, but only ~30% of AP-automation customers have ever been pitched them; integration effort to activate a module averages 3 weeks of customer-side work.",
+    "Organizational constraint: 54 staff (14 engineering, 12 sales all on new-logo quota, 8 CS, 6 support, rest G&A). There is no account-management or expansion-sales function; CS is success-only and not quota-carrying.",
+    "Market constraint: two larger payments platforms have entered mid-market with aggressive take-rate discounts on high-volume tiers; they target the same finance-team buyer.",
+    "Commercial constraint: ~65% of revenue is software subscription and ~35% is payment take-rate; the take-rate line is where competitors compete on price."
+  ],
+  "immediateConcern": "NRR has slid 110%→100% over a year and expansion bookings collapsed from 38% to 19% of bookings, even though gross retention is healthy at 94% and new-logo acquisition is fine. The owner believes larger competitors are undercutting take-rates and pressuring pricing and wants to cut take-rates to defend volume. But the data shows the company simply is not running an expansion motion: most customers have never been offered the cross-sell modules, and there is no expansion-quota owner. The owner must decide in 30 days whether to cut take-rates company-wide or rebuild the expansion engine before the next board update on NRR.",
+  "availableData": [
+    "Financial: ARR $8.0M, 50% YoY growth, gross margin 68%, burn $480k/month, runway 26 months, revenue mix ~65% subscription / ~35% take-rate",
+    "Retention/expansion: gross retention 94% (stable), NRR 110%→100% over 4 quarters, expansion bookings 38%→19% of total bookings",
+    "Cross-sell penetration: embedded payouts attached to 22% of base, virtual cards 9%, FX 6%; ~30% of AP customers ever pitched a second module",
+    "Sales structure: 12 sales reps all on new-logo quota; 0 expansion/account-management quota holders; CS team 8, success-only, no expansion target",
+    "Win/loss: new-logo win rate stable ~31%; competitive losses on take-rate concentrated in the top 10% highest-volume prospects only",
+    "Customer signal: NPS stable at 44; product satisfaction high; QBRs show interest in additional modules but no follow-through pipeline"
+  ],
+  "unavailableData": [
+    "Cross-sell propensity model by customer size and payment volume",
+    "Quantified take-rate elasticity versus the discounting entrants",
+    "Expansion pipeline coverage (there is effectively no expansion pipeline tracked today)",
+    "Margin contribution by module (payouts vs cards vs FX)"
+  ],
+  "timeHorizon": "15 months to Series B metrics; NRR must visibly inflect within 2 quarters to support the raise",
+  "riskAppetite": "MEDIUM (must protect take-rate margin and runway while resisting a blanket price cut that would damage the 35% take-rate revenue line)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

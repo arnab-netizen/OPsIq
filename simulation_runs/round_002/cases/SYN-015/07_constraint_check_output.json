@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (well-funded, 30-month runway, but board demands efficient growth)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (90 staff; sales already grew 35% with flat output)",
+    "cashRunwayMonths": 30,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": true,
+  "legalComplianceSensitive": true
+}

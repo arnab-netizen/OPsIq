@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Support cost grew ~60% while ARR grew 40%, so support cost per customer rose and support as a % of revenue rose. In healthy SaaS scaling, support cost per customer should be flat-to-declining as the product matures; here it is rising, indicating leverage is failing rather than 'normal scaling.'",
+    "Tickets per customer per month rose from ~1.6 to ~2.4 - existing customers are generating more tickets each, not merely more customers generating proportionally more tickets. Response times held steady only because headcount was added, so the team is running to stand still. An informal read attributes a growing share to confusion around two recently shipped features plus onboarding.",
+    "Net revenue retention slipped from 108% to 101% over the same window in which tickets-per-customer rose. Rising friction often shows up as BOTH more tickets and more contraction/churn; the two trends may share a common product-friction root cause. Contraction reasons are not coded, so the link is unconfirmed.",
+    "A wave of new customers onboarded in the last two quarters after a self-serve funnel change. Their ticket rate vs older cohorts has not been measured. If the elevated tickets are concentrated in this new cohort, part of the spike could be transient onboarding load; if spread across cohorts, it points to a structural product-friction problem."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Ticket categorization by root cause (defect vs usability/confusion vs onboarding vs feature request).",
+    "Ticket rate and support cost split by customer cohort and segment (new self-serve vs established).",
+    "Whether the NRR slip and the ticket-rate rise share a common cause (product friction driving both tickets and contraction).",
+    "True fully-loaded gross margin including all CS cost (is the reported 76% allocating support correctly?).",
+    "Product-usage/feature-adoption data for the two recently shipped features implicated in confusion."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Support cost grew ~60% while ARR grew 40%, so support cost per customer rose and support as a % of revenue rose. In healthy SaaS scaling, support cost per customer should be flat-to-declining as the product matures; here it is rising, indicating leverage is failing rather than 'normal scaling.'",
+    "Tickets per customer per month rose from ~1.6 to ~2.4 - existing customers are generating more tickets each, not merely more customers generating proportionally more tickets. Response times held steady only because headcount was added, so the team is running to stand still. An informal read attributes a growing share to confusion around two recently shipped features plus onboarding.",
+    "Net revenue retention slipped from 108% to 101% over the same window in which tickets-per-customer rose. Rising friction often shows up as BOTH more tickets and more contraction/churn; the two trends may share a common product-friction root cause. Contraction reasons are not coded, so the link is unconfirmed.",
+    "A wave of new customers onboarded in the last two quarters after a self-serve funnel change. Their ticket rate vs older cohorts has not been measured. If the elevated tickets are concentrated in this new cohort, part of the spike could be transient onboarding load; if spread across cohorts, it points to a structural product-friction problem."
+  ]
+}

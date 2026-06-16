@@ -1,0 +1,30 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "operational_efficiency",
+    "quality_delivery",
+    "financial_health",
+    "process_maturity",
+    "team_capability",
+    "market_position"
+  ],
+  "unavailableDataDeclared": [
+    "A bridge decomposing the three-year EBITDA into recurring per-unit margin vs one-time cost actions (how much of the 11% is durable?).",
+    "Forward per-unit margin projection as one-time levers exhaust and labor cost per unit continues rising.",
+    "Contract-by-contract margin and the impact of capped escalators at upcoming renewals.",
+    "Automation/capex business case and its effect on per-unit cost.",
+    "Sensitivity of EBITDA to wage inflation and volume under the no-more-one-time-levers scenario."
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: A bridge decomposing the three-year EBITDA into recurring per-unit margin vs one-time cost actions (how much of the 11% is durable?).",
+    "Cannot conclude on: Forward per-unit margin projection as one-time levers exhaust and labor cost per unit continues rising.",
+    "Cannot conclude on: Contract-by-contract margin and the impact of capped escalators at upcoming renewals.",
+    "Cannot conclude on: Automation/capex business case and its effect on per-unit cost.",
+    "Cannot conclude on: Sensitivity of EBITDA to wage inflation and volume under the no-more-one-time-levers scenario."
+  ]
+}

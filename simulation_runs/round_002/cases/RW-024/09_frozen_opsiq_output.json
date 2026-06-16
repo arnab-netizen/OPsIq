@@ -1,0 +1,176 @@
+{
+  "frozenAt": "2026-06-16T21:01:22.014Z",
+  "caseId": "RW-024",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "e5bd4683-67ce-4797-ad01-27ac0a7ce851",
+    "engagementId": "f57b1c44-e909-4bb2-93e9-4f7b11287268",
+    "timestamp": "2026-06-16T21:01:22.009Z",
+    "businessProblem": "A boutique consulting firm is experiencing junior consultant turnover acceleration (10% → 18% in two years) while revenue growth stalls (8% YoY) and EBITDA margin compresses (toward 12% from 15%+). Management must determine whether turnover is driven by (1) compensation uncompetitiveness with Big Four, (2) limited partnership opportunity (only 2 out of 10 hired reach partnership), (3) suboptimal project selection/staffing (low utilization, boring projects), or (4) culture/fit issues. Without addressing turnover, the firm risks institutional knowledge loss and reduced delivery capacity.",
+    "rootCauseDiagnosis": {
+      "id": "ca5044ba-bb51-4b15-b2b4-d7318c5b4de5",
+      "type": "brand_erosion",
+      "description": "Loss of market position due to brand/reputation damage",
+      "mechanismDescription": "Customer perception of brand has shifted negative. Market position erodes as customers perceive competitors as superior or more trustworthy. Premium positioning collapses.",
+      "evidenceIds": [
+        "71e4ff9e-ef89-41d3-bc34-b2a61e3dae14"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "Actual product quality declined (not perception issue)",
+        "Competitive product innovation may be superior"
+      ],
+      "missingEvidenceFor": [
+        "Customer perception data vs actual quality",
+        "Competitive positioning analysis",
+        "Timeline of perception shift"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "b22a8206-d6d1-4164-95ca-04bf955029ab",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Customer perception of brand has shifted negative. Market position erodes as customers perceive competitors as superior or more trustworthy. Premium positioning collapses.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "71e4ff9e-ef89-41d3-bc34-b2a61e3dae14"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: CRITICAL (Junior turnover threatens delivery capability and partnership sustainability)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "b21ccd86-65a3-4157-8d2d-464e812ab800",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "b22a8206-d6d1-4164-95ca-04bf955029ab"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "c18d6c3c-3bd8-47c5-95c4-2d1912bbb610",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "b22a8206-d6d1-4164-95ca-04bf955029ab"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "b22a8206-d6d1-4164-95ca-04bf955029ab",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "b22a8206-d6d1-4164-95ca-04bf955029ab"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

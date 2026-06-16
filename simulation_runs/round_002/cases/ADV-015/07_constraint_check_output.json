@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (~$1.4M cash, ~9 months runway)",
+    "timeHorizonDays": 365,
+    "staffCapacity": "MEDIUM (small analytics function; cohort table already exists)",
+    "cashRunwayMonths": 9,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Job-order volume RECEIVED from clients has held roughly flat through the slowdown while the fill rate slipped. If demand had genuinely softened, received orders would fall; flat orders with lower fill suggests the agency is converting existing demand less effectively - which is not a 'demand headwind' pattern. This was noted in ops data but not analyzed.",
+    "Recruiter productivity is reported agency-wide only, never split by branch or tenure. ~30% of recruiters have <12 months tenure after an 18-month-ago hiring push; an under-ramped junior cohort can depress blended productivity and fill rate independently of demand. The junior-cohort ramp has not been measured separately.",
+    "Two competitor agencies opened local branches in the past year. Whether they are winning the agency's job orders (competitive displacement) versus orders simply going unfilled has not been investigated. This distinguishes a structural share-loss story from a temporary-demand story.",
+    "Growth decelerated 10% -> 2% with stable 12% spread and 6% EBITDA. The stable margin makes the slowdown look benign, but margin stability does not distinguish a temporary demand dip from a structural conversion/competitive problem - both can present with flat margin in the short run."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Recruiter productivity and fill rate split by branch, recruiter-tenure cohort, and client/industry channel.",
+    "Job-order win/loss vs the new competitor branches (are orders being lost or just unfilled?).",
+    "Ramp curve and productivity of the <12-month recruiter cohort vs tenured recruiters.",
+    "Candidate-supply/applicant-flow trend to test whether days-to-fill is a supply problem or a productivity problem.",
+    "External regional labor-market benchmark confirming demand actually softened for comparable agencies."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Job-order volume RECEIVED from clients has held roughly flat through the slowdown while the fill rate slipped. If demand had genuinely softened, received orders would fall; flat orders with lower fill suggests the agency is converting existing demand less effectively - which is not a 'demand headwind' pattern. This was noted in ops data but not analyzed.",
+    "Recruiter productivity is reported agency-wide only, never split by branch or tenure. ~30% of recruiters have <12 months tenure after an 18-month-ago hiring push; an under-ramped junior cohort can depress blended productivity and fill rate independently of demand. The junior-cohort ramp has not been measured separately.",
+    "Two competitor agencies opened local branches in the past year. Whether they are winning the agency's job orders (competitive displacement) versus orders simply going unfilled has not been investigated. This distinguishes a structural share-loss story from a temporary-demand story.",
+    "Growth decelerated 10% -> 2% with stable 12% spread and 6% EBITDA. The stable margin makes the slowdown look benign, but margin stability does not distinguish a temporary demand dip from a structural conversion/competitive problem - both can present with flat margin in the short run."
+  ]
+}

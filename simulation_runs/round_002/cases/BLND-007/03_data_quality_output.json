@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "operational_efficiency",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "True localized CAC and payback by candidate market (no in-market paid-acquisition test has been run; benchmarks are external estimates)",
+    "Localized contribution margin after duties, local 3PL, returns, and FX at scale (current cross-border economics are distorted by domestic-warehouse shipping)",
+    "Whether the brand's sizing/fit and style resonate with local body-size distributions and seasonal preferences in each candidate market",
+    "Realistic local repeat-purchase and retention curves (incidental cross-border buyers are not representative of a deliberately acquired local cohort)",
+    "Competitive intensity and incumbent loyalty at the brand's price point in each candidate market"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: True localized CAC and payback by candidate market (no in-market paid-acquisition test has been run; benchmarks are external estimates)",
+    "Cannot conclude on: Localized contribution margin after duties, local 3PL, returns, and FX at scale (current cross-border economics are distorted by domestic-warehouse shipping)",
+    "Cannot conclude on: Whether the brand's sizing/fit and style resonate with local body-size distributions and seasonal preferences in each candidate market",
+    "Cannot conclude on: Realistic local repeat-purchase and retention curves (incidental cross-border buyers are not representative of a deliberately acquired local cohort)",
+    "Cannot conclude on: Competitive intensity and incumbent loyalty at the brand's price point in each candidate market"
+  ]
+}

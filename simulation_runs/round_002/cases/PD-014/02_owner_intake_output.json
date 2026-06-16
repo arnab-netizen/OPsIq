@@ -1,0 +1,34 @@
+{
+  "step": "owner_intake",
+  "businessType": "Mid-cap aerospace & defense contractor and tier-1 supplier to U.S. and allied government programs and prime contractors. Public company. Primary products: precision structural assemblies, propulsion components, and mission subsystems sold under multi-year government and prime-contractor programs. Revenue model: ~70% firm-fixed-price (FFP) multi-year contracts, ~30% cost-plus or contracts with escalation clauses. Approximately 6,500 employees.",
+  "stage": "FY2025: Revenue $2,100M (up from $2,040M FY2024, +2.9% YoY on program ramp). EBITDA $168M, EBITDA margin 8.0% (down from $204M / 10.0% in FY2024, a 200 bps decline). Contract mix: ~70% revenue ($1,470M) firm-fixed-price multi-year without economic price adjustment (EPA) clauses; ~30% ($630M) cost-plus or escalating. Materials cost FY2025 $735M (35% of revenue), up +12% YoY like-for-like. Direct labor FY2025 $546M (26% of revenue), up +8% YoY. Backlog $5.6B (2.7x revenue). Book-to-bill 1.1.",
+  "ownerGoal": "Restore EBITDA margin toward 10% and protect program profitability across the remaining multi-year backlog, while setting disciplined pricing for the next bid cycle. CEO must decide within ~120 days whether to file Requests for Equitable Adjustment (REAs) and how to price upcoming FFP bids before the re-pricing window closes.",
+  "ownerConstraints": [
+    "Contractual constraint: Firm-fixed-price multi-year contracts cannot be reopened unilaterally. Price relief requires negotiated change orders, REAs, or contractually grounded claims; unilateral price increases would constitute breach.",
+    "Regulatory constraint: Subject to DFARS, FAR, and U.S. government contracting compliance, including TINA/certified cost-or-pricing data rules and CAS. Any pricing adjustment or claim must be fully compliant and documented.",
+    "Strategic constraint: Cannot walk away from strategic programs. Several FFP contracts are tied to flagship platforms central to customer relationships and future award eligibility; abandonment would forfeit positioning and incur termination liability.",
+    "Competitive constraint: High recompete risk. An aggressive pricing posture or perceived non-performance jeopardizes follow-on awards and re-compete outcomes on multi-billion-dollar program franchises.",
+    "Quality/safety constraint: Defense and flight-critical work is governed by AS9100, customer source inspection, and airworthiness requirements. Labor and material reductions cannot compromise quality, safety, or first-article conformance.",
+    "Capital/financial constraint: Investment-grade balance sheet must be preserved; major restructuring or write-downs would signal program distress to customers and investors."
+  ],
+  "immediateConcern": "EBITDA margin fell 200 bps (10.0% to 8.0%) in a single year despite revenue growth and a strong $5.6B backlog. Materials are up 12% and labor up 8%, but roughly 70% of revenue sits in firm-fixed-price multi-year contracts priced before the inflation surge and lacking economic price adjustment (EPA) clauses, so cost increases cannot be passed through. Demand is healthy (book-to-bill 1.1), so the compression is not a demand or volume problem. The CEO must decide next-cycle bid pricing and whether to pursue REAs within ~120 days before the re-pricing window closes and before bidding additional FFP work that could lock in more underpriced backlog.",
+  "availableData": [
+    "Contract mix by type: ~70% of revenue ($1,470M) firm-fixed-price multi-year without EPA clauses; ~30% ($630M) cost-plus or with escalation clauses (segment/contract-type disclosure, MD&A)",
+    "Income statement: Revenue FY2025 $2,100M vs FY2024 $2,040M; EBITDA FY2025 $168M (8.0% margin) vs FY2024 $204M (10.0% margin); 200 bps margin decline",
+    "Materials cost FY2025 $735M = 35% of revenue, up +12% YoY on a like-for-like basis (cost of sales schedules, MD&A inflation commentary)",
+    "Direct labor cost FY2025 $546M = 26% of revenue, up +8% YoY (cost of sales schedules, collective bargaining / wage disclosures)",
+    "Backlog $5.6B (2.7x revenue) and book-to-bill 1.1, indicating strong demand and a large locked book of future-period FFP work",
+    "Program structure: multi-year award terms, remaining performance obligations, and re-pricing / option-year windows from contract disclosures"
+  ],
+  "unavailableData": [
+    "Contract-by-contract EPA clause language and exact pass-through eligibility (proprietary contract terms not in public filings)",
+    "Program-level (contract-level) gross margin and the specific FFP contracts that are underwater (public filings aggregate by segment)",
+    "Strength of REA / claims position per contract (requires legal review of change-order history, government-caused delay, and constructive change facts)",
+    "Forward input-cost hedging positions and supplier contract terms for materials (not publicly disclosed)",
+    "Internal labor productivity and overhead absorption detail by program (not disclosed)"
+  ],
+  "timeHorizon": "~120 days (next-cycle bid pricing decisions and REA filing window before re-pricing/option windows close)",
+  "riskAppetite": "LOW-MEDIUM (governed defense contractor; compliance, program continuity, and customer relationships constrain aggressive moves; margin recovery must be contractually and regulatorily defensible)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

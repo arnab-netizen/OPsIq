@@ -1,0 +1,21 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Growth decelerating (15% YoY current vs. 25% growth two years ago) while margins compressing (15% EBITDA vs. 18%). Revenue per recruiter declining 12% (from $340k to $300k) in two years, suggesting either recruiter productivity falling or bench time increasing. Salary costs rising 18% in 18 months, outpacing revenue growth.",
+    "Utilization declining from 82% to 78%, suggesting increased bench time. Recruiter turnover rising to 20% annually (from 12% two years ago), indicating talent retention challenge. Productivity decline could be due to recruiter churn (less experienced team), market conditions (harder to place), or client demand softening.",
+    "Tech hiring (45% of revenue) growing 18% YoY (healthy), but fintech (40% of revenue) growing only 8% (slower), reflecting macro sensitivity. Executive search premium segment, but junior-mid placement (65% of core) more competitive. Competitive pressure from tech companies hiring directly and larger recruiting firms consolidating."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Detailed segment profitability: Which verticals (fintech, tech, other) are most profitable? Which are declining?",
+    "Recruiter productivity breakdown: Which recruiters are performing above/below $300k average? What are the best performers doing differently?",
+    "Client win/loss: Which clients increasing/decreasing placement volume? Why?",
+    "Product diversification potential: What adjacent services (coaching, outplacement, advisory) could add margin?",
+    "Competitive positioning: How are larger recruiting firms more efficient? What can we learn?"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Growth decelerating (15% YoY current vs. 25% growth two years ago) while margins compressing (15% EBITDA vs. 18%). Revenue per recruiter declining 12% (from $340k to $300k) in two years, suggesting either recruiter productivity falling or bench time increasing. Salary costs rising 18% in 18 months, outpacing revenue growth.",
+    "Utilization declining from 82% to 78%, suggesting increased bench time. Recruiter turnover rising to 20% annually (from 12% two years ago), indicating talent retention challenge. Productivity decline could be due to recruiter churn (less experienced team), market conditions (harder to place), or client demand softening.",
+    "Tech hiring (45% of revenue) growing 18% YoY (healthy), but fintech (40% of revenue) growing only 8% (slower), reflecting macro sensitivity. Executive search premium segment, but junior-mid placement (65% of core) more competitive. Competitive pressure from tech companies hiring directly and larger recruiting firms consolidating."
+  ]
+}

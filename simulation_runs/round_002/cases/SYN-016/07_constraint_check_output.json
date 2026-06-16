@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (Series A, 18-month runway, $310k/month burn)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "LOW-MEDIUM (40 staff; implementation and support already overwhelmed)",
+    "cashRunwayMonths": 18,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (privately held, modest buffer)",
+    "timeHorizonDays": 365,
+    "staffCapacity": "MEDIUM (ops/finance analysts available; no recruiter cuts)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

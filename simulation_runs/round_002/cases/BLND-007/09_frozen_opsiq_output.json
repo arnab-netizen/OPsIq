@@ -1,0 +1,178 @@
+{
+  "frozenAt": "2026-06-16T21:01:04.320Z",
+  "caseId": "BLND-007",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency"
+  ],
+  "decisionMemo": {
+    "id": "fd250980-cad2-4357-b97f-c472e05e7d30",
+    "engagementId": "19dbad92-4287-429e-a551-cff89b0c50d8",
+    "timestamp": "2026-06-16T21:01:04.315Z",
+    "businessProblem": "A profitable $25M D2C apparel brand growing ~30% YoY faces decelerating domestic acquisition (paid CAC +35% over 18 months, active-buyer growth down to ~12%) and a finite domestic TAM at its price point. To sustain growth toward ~$50M it must choose its next primary expansion market within 90 days, funded from a capped ~$8-10M non-dilutive budget and constrained by a near-full domestic warehouse, no in-house international operations, and unproven fit of its sizing and positioning abroad. Three options compete: (A) deepen the proven domestic market (lowest execution risk but limited remaining TAM), (B) enter Europe (larger addressable TAM, demonstrated organic pull in 3 countries, but higher benchmarked CAC and unproven localized economics), or (C) enter Asia (largest absolute interest and TAM, but elevated return/sizing risk and operational/regulatory complexity). The central question is which expansion's unit economics and operational fit are most defensible given what is actually known, versus what must be tested before any irreversible merchandising and fulfillment commitments are locked.",
+    "rootCauseDiagnosis": {
+      "id": "08a194ed-803f-4149-b351-2d973e26b581",
+      "type": "unit_economics_breakdown",
+      "description": "Unit profitability collapse due to margin compression or fixed-cost burden",
+      "mechanismDescription": "Per-unit contribution has become negative or margins have compressed. Fixed-cost burden grows faster than revenue. Expansion to new units/segments unprofitable.",
+      "evidenceIds": [
+        "6016120f-40a3-4a69-af61-6539523b5df2",
+        "8fc0de99-9d03-49a1-9fbc-5d3230198f14"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "Temporary cost inflation (commodity price spike) may recover",
+        "Scale benefits may kick in with volume growth"
+      ],
+      "missingEvidenceFor": [
+        "Unit contribution margin by segment/location",
+        "Cost structure breakdown (COGS vs OpEx)",
+        "Projection when scale achieves breakeven"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "e5cb591f-8c3d-401d-80f9-ad3d483f96ae",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Per-unit contribution has become negative or margins have compressed. Fixed-cost burden grows faster than revenue. Expansion to new units/segments unprofitable.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "6016120f-40a3-4a69-af61-6539523b5df2",
+            "8fc0de99-9d03-49a1-9fbc-5d3230198f14"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH (domestic acquisition cost rising and TAM finite; the expansion choice made this quarter sets merchandising buys, fulfillment localization, and the multi-year growth trajectory)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "ff06ac40-d20a-4acc-8a3d-223692e93680",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "e5cb591f-8c3d-401d-80f9-ad3d483f96ae"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "b19df520-fd00-456b-a1ff-f422020e4e51",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "e5cb591f-8c3d-401d-80f9-ad3d483f96ae"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "e5cb591f-8c3d-401d-80f9-ad3d483f96ae",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "e5cb591f-8c3d-401d-80f9-ad3d483f96ae"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

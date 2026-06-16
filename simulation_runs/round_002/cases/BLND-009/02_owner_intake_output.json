@@ -1,0 +1,33 @@
+{
+  "step": "owner_intake",
+  "businessType": "Privately held industrial equipment manufacturer, founded 1994, single founder-owner holds ~100% equity. ~$85M revenue: ~70% engineered-to-order machinery, ~30% aftermarket parts and service. ~310 employees across one main plant and two satellite service depots. ~40-year reputation, long-tenured engineering and sales relationships.",
+  "stage": "Revenue $85M, roughly flat-to-low-single-digit growth (mature). EBITDA ~$11M (13% margin). Aftermarket carries higher margin (~28% gross) than new machinery (~21% gross). Net debt modest (~$8M). Order backlog ~7 months. Customer concentration: top 5 customers ~38% of revenue.",
+  "ownerGoal": "Achieve a liquidity event that fairly values the business, protects the workforce and 40-year reputation, and lets the 64-year-old founder transition out of day-to-day leadership within ~18-24 months; choose between selling to a financial buyer, selling to a strategic buyer, or retaining ownership and running for cash flow.",
+  "ownerConstraints": [
+    "Owner-availability constraint: Founder will not commit to an earn-out or operating role beyond ~24 months; any path depending on his continued daily leadership past that is unacceptable.",
+    "Workforce/reputation constraint: Founder places high weight on protecting the ~310 employees and the brand; an outcome that gutted the workforce or relocated the plant would be heavily discounted even at a higher price.",
+    "Succession constraint: There is no ready internal CEO successor; senior engineering and key customer relationships are concentrated in the founder and 2-3 long-tenured leaders.",
+    "Valuation/clean-books constraint: Financials are reliable but not audited to PE/strategic diligence standard; quality-of-earnings, customer-contract documentation, and aftermarket-revenue durability are not yet substantiated for a buyer.",
+    "Control/timing constraint: Founder wants a defensible valuation but will not run a rushed process that signals distress to customers, competitors, or the workforce."
+  ],
+  "immediateConcern": "The 64-year-old founder wants liquidity and an orderly transition within ~18-24 months but has no internal successor and depends heavily on a few long-tenured people. He must choose a path: (A) sell to a financial/PE buyer (faster, more standardized process, but typically valued on EBITDA multiple and may require an earn-out or management retention he cannot personally provide), (B) sell to a strategic buyer (a larger manufacturer or channel that could pay a premium for synergies but may integrate/relocate and is harder to source), or (C) retain ownership and run for cash flow with a hired professional manager (preserves control and reputation but defers liquidity and concentrates the founder's wealth in an illiquid, key-person-dependent asset). The business's transferable value, the durability of its aftermarket stream, and the depth of its key-person dependence are not yet substantiated to buyer-diligence standard.",
+  "availableData": [
+    "Revenue $85M (flat-to-low-single-digit growth); EBITDA ~$11M (13% margin); net debt ~$8M; backlog ~7 months",
+    "Segment margins: aftermarket ~28% gross vs new machinery ~21% gross; aftermarket ~30% of revenue",
+    "Customer concentration: top 5 customers ~38% of revenue; relationships largely held by founder and 2-3 senior leaders",
+    "Comparable transactions: industrial-equipment makers of this size sell at ~5-7x EBITDA to financial buyers; strategic buyers have paid ~7-10x for assets with durable aftermarket and clean diligence",
+    "Workforce: ~310 employees, low turnover, deep tacit process knowledge; no documented succession plan",
+    "Diligence readiness: no recent quality-of-earnings study, no audited statements, aftermarket-contract documentation incomplete"
+  ],
+  "unavailableData": [
+    "Substantiated quality-of-earnings: normalized EBITDA after owner add-backs, one-time items, and working-capital adjustments to buyer standard",
+    "Transferable vs key-person-dependent value: how much revenue/margin survives the founder's and senior leaders' departure, and how durable the top-5 relationships are without them",
+    "Aftermarket durability: whether the ~30% aftermarket stream is contracted/recurring or relationship-dependent and at risk in a transition",
+    "Strategic-buyer landscape: which strategics would pay a synergy premium, and whether they would preserve or relocate the plant/workforce",
+    "Owner's after-tax net proceeds and personal liquidity needs under each structure (multiple, earn-out, rollover equity, tax treatment)"
+  ],
+  "timeHorizon": "18-24 months to complete a transition; ~3-6 months to choose a path and prepare for a process",
+  "riskAppetite": "LOW-MEDIUM (founder wants a fair, defensible outcome and is averse to distress signaling or workforce harm; not seeking to maximize price at all costs)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

@@ -1,0 +1,28 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "operational_efficiency",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Detailed churn cohort analysis: Which cohorts are churning (by acquisition source, customer size, vertical, tenure)?",
+    "Win/loss analysis for churned customers: Stated reasons for churn (product fit, pricing, feature gap, competitive switching)?",
+    "Expansion data by customer segment: Which segments expand, which stay flat, which churn?",
+    "Competitive win/loss: How often losing deals to specific competitors? Product vs. pricing vs. go-to-market?",
+    "Usage cohort analysis: Correlation between usage patterns and churn risk?"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Detailed churn cohort analysis: Which cohorts are churning (by acquisition source, customer size, vertical, tenure)?",
+    "Cannot conclude on: Win/loss analysis for churned customers: Stated reasons for churn (product fit, pricing, feature gap, competitive switching)?",
+    "Cannot conclude on: Expansion data by customer segment: Which segments expand, which stay flat, which churn?",
+    "Cannot conclude on: Competitive win/loss: How often losing deals to specific competitors? Product vs. pricing vs. go-to-market?",
+    "Cannot conclude on: Usage cohort analysis: Correlation between usage patterns and churn risk?"
+  ]
+}

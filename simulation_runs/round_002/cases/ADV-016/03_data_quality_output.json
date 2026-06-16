@@ -1,0 +1,30 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 1,
+  "missingDimensions": [
+    "customer_retention",
+    "operational_efficiency",
+    "quality_delivery",
+    "financial_health",
+    "process_maturity",
+    "team_capability",
+    "market_position"
+  ],
+  "unavailableDataDeclared": [
+    "Recruiter productivity and fill rate split by branch, recruiter-tenure cohort, and client/industry channel.",
+    "Job-order win/loss vs the new competitor branches (are orders being lost or just unfilled?).",
+    "Ramp curve and productivity of the <12-month recruiter cohort vs tenured recruiters.",
+    "Candidate-supply/applicant-flow trend to test whether days-to-fill is a supply problem or a productivity problem.",
+    "External regional labor-market benchmark confirming demand actually softened for comparable agencies."
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Recruiter productivity and fill rate split by branch, recruiter-tenure cohort, and client/industry channel.",
+    "Cannot conclude on: Job-order win/loss vs the new competitor branches (are orders being lost or just unfilled?).",
+    "Cannot conclude on: Ramp curve and productivity of the <12-month recruiter cohort vs tenured recruiters.",
+    "Cannot conclude on: Candidate-supply/applicant-flow trend to test whether days-to-fill is a supply problem or a productivity problem.",
+    "Cannot conclude on: External regional labor-market benchmark confirming demand actually softened for comparable agencies."
+  ]
+}

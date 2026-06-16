@@ -1,0 +1,25 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 1,
+  "missingDimensions": [
+    "operational_efficiency",
+    "financial_health",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Per-feature adoption and abandonment funnel for the broad (non-power) user base",
+    "Which buried core workflows, if surfaced, would most lift broad adoption",
+    "Quantified link between active-seat % and seat-expansion/renewal outcomes",
+    "Enterprise contractual dependencies on specific lower-usage features"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Per-feature adoption and abandonment funnel for the broad (non-power) user base",
+    "Cannot conclude on: Which buried core workflows, if surfaced, would most lift broad adoption",
+    "Cannot conclude on: Quantified link between active-seat % and seat-expansion/renewal outcomes",
+    "Cannot conclude on: Enterprise contractual dependencies on specific lower-usage features"
+  ]
+}

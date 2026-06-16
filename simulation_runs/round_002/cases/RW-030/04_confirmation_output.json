@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Blended gross margin fell from 27.4% to 24.1% (-330bps) over 24 months while revenue stayed roughly flat (+1.5%) and operating expenses held flat as a percent of sales — so operating margin dropped from 6.1% to 3.2%. The deterioration is entirely a margin (price-versus-cost) phenomenon, not a volume or cost-structure problem: the same revenue is yielding far less gross profit per dollar.",
+    "Pricing governance is broken: ~60% of the 52,000 SKU price files have not been updated against vendor cost increases in 9+ months, so cost inflation is being absorbed rather than passed through, and reps override list price on ~38% of order lines with no margin floor. There is a single legacy cost-plus matrix applied uniformly across commodity, A-brand, and proprietary SKUs, with no segmentation by competitive intensity or pricing power.",
+    "E-commerce has grown to ~14% of revenue and exposes the catalog to direct price comparison with Amazon Business, Grainger, and Fastenal, increasing customer price sensitivity specifically on commodity SKUs. However, a large share of the 52,000-SKU catalog is differentiated, application-specific, or proprietary, where pricing power remains — the distributor is not distinguishing between the two when it discounts or matches.",
+    "Reps are compensated on revenue, not margin, and sales culture resists changes seen as limiting their ability to win deals. Inventory turns at 4.1x versus a top-quartile 5.5x+, indicating working capital tied up in slow SKUs, but this is a secondary efficiency issue distinct from the gross-margin leak. No data yet confirms whether the 38% override rate reflects genuine competitive necessity or reflexive discounting of deals that would close at list."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Margin-leak attribution: how much of the 330bps decline is stale price files (cost pass-through gap) vs. rep discounting vs. mix shift vs. e-commerce matching",
+    "SKU-level price-band dispersion: how widely the same SKU is sold across customers, and which SKUs/customers carry the deepest unjustified discounts",
+    "Customer/product-mix bridge: did the customer or product mix shift toward lower-margin commodity SKUs, or did margin on the same mix fall?",
+    "Competitive price-sensitivity by SKU category: which SKUs are genuinely price-transparent commodities vs. differentiated/proprietary items with pricing power",
+    "Rep-override outcomes: do overrides actually win/retain business, or do reps discount deals that would have closed at list?"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Blended gross margin fell from 27.4% to 24.1% (-330bps) over 24 months while revenue stayed roughly flat (+1.5%) and operating expenses held flat as a percent of sales — so operating margin dropped from 6.1% to 3.2%. The deterioration is entirely a margin (price-versus-cost) phenomenon, not a volume or cost-structure problem: the same revenue is yielding far less gross profit per dollar.",
+    "Pricing governance is broken: ~60% of the 52,000 SKU price files have not been updated against vendor cost increases in 9+ months, so cost inflation is being absorbed rather than passed through, and reps override list price on ~38% of order lines with no margin floor. There is a single legacy cost-plus matrix applied uniformly across commodity, A-brand, and proprietary SKUs, with no segmentation by competitive intensity or pricing power.",
+    "E-commerce has grown to ~14% of revenue and exposes the catalog to direct price comparison with Amazon Business, Grainger, and Fastenal, increasing customer price sensitivity specifically on commodity SKUs. However, a large share of the 52,000-SKU catalog is differentiated, application-specific, or proprietary, where pricing power remains — the distributor is not distinguishing between the two when it discounts or matches.",
+    "Reps are compensated on revenue, not margin, and sales culture resists changes seen as limiting their ability to win deals. Inventory turns at 4.1x versus a top-quartile 5.5x+, indicating working capital tied up in slow SKUs, but this is a secondary efficiency issue distinct from the gross-margin leak. No data yet confirms whether the 38% override rate reflects genuine competitive necessity or reflexive discounting of deals that would close at list."
+  ]
+}

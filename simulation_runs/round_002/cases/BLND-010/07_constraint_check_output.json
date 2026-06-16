@@ -1,0 +1,23 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [
+    {
+      "type": "ORGANIZATIONAL",
+      "description": "No customer relationship management system or loyalty program infrastructure",
+      "severity": "MEDIUM",
+      "blocksActions": [
+        "retention_focus",
+        "relationship_marketing"
+      ]
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (~$2.5M cash, self-funded; the roll-up option requires dilutive outside capital)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (~120 staff but 6 partners near full load; senior hiring is the binding constraint)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": true,
+  "legalComplianceSensitive": false
+}

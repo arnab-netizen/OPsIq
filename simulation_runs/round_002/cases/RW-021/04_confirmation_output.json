@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "EBITDA margin declined 240bps in 24 months (18% → 15.6%), gross margin down 400bps (46% → 42%). Revenue flat while costs rising, suggesting pricing not keeping pace with cost inflation. Operating leverage negative: costs growing faster than volume.",
+    "Supply costs rising 15-20% (semiconductors, raw materials) while supply volumes down due to shortages. Freight costs +12%. These are pass-through cost pressures, not operational inefficiency. However, pricing power limited: OEM customers have multi-year contracts with 5% annual cap on price adjustments; distributors will source elsewhere if prices rise too much.",
+    "Manufacturing utilization imbalanced: US plants 85%, Mexico plant 65%. Mexico plant underutilized due to logistics/tariff costs. Consolidation opportunity exists but requires capex and operational disruption. Current footprint consuming overhead costs without full utilization benefit.",
+    "Demand environment flat: oil/gas stable, water/chemical slight growth. Competition commodity-like; limited pricing power. Distributors (88% of revenue) price-sensitive; direct customers (12%) have long-term contracts with price caps. No pricing relief available in near term."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Product-level profitability: Which products (pumps, valves, controls) are compressing? Which are holding margins?",
+    "Channel profitability: Are distributors more profitable than direct? Which distributors are high-margin, low-margin?",
+    "Cost structure deep dive: Where are supply costs rising fastest? Which materials, components are constrained?",
+    "Customer segmentation: Which end-market segments (oil/gas, water, chemical) are most profitable? Which are declining?",
+    "Manufacturing efficiency: Where is utilization opportunity? What is the cost of Mexico under-utilization? Consolidation impact?"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "EBITDA margin declined 240bps in 24 months (18% → 15.6%), gross margin down 400bps (46% → 42%). Revenue flat while costs rising, suggesting pricing not keeping pace with cost inflation. Operating leverage negative: costs growing faster than volume.",
+    "Supply costs rising 15-20% (semiconductors, raw materials) while supply volumes down due to shortages. Freight costs +12%. These are pass-through cost pressures, not operational inefficiency. However, pricing power limited: OEM customers have multi-year contracts with 5% annual cap on price adjustments; distributors will source elsewhere if prices rise too much.",
+    "Manufacturing utilization imbalanced: US plants 85%, Mexico plant 65%. Mexico plant underutilized due to logistics/tariff costs. Consolidation opportunity exists but requires capex and operational disruption. Current footprint consuming overhead costs without full utilization benefit.",
+    "Demand environment flat: oil/gas stable, water/chemical slight growth. Competition commodity-like; limited pricing power. Distributors (88% of revenue) price-sensitive; direct customers (12%) have long-term contracts with price caps. No pricing relief available in near term."
+  ]
+}

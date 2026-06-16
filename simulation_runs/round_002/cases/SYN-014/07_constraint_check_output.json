@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (well-funded, 26-month runway, but next raise gated on NRR)",
+    "timeHorizonDays": 180,
+    "staffCapacity": "MEDIUM (54 staff; no dedicated expansion function exists today)",
+    "cashRunwayMonths": 26,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

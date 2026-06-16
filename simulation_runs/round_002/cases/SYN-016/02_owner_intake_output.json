@@ -1,0 +1,32 @@
+{
+  "step": "owner_intake",
+  "businessType": "Supply-chain visibility platform (multi-carrier tracking, exception management, predictive ETA, analytics) for mid-market shippers and third-party logistics providers. Founded 2021, Series A $12M (2023). Annual subscriptions on shipment volume + seats. Current ARR $5.0M, 25% YoY growth (down from 40%), 95 customers.",
+  "stage": "ARR $5.0M, 25% YoY growth (decelerating from 40%). Quarterly logo churn 5% (high). NRR 96%. Gross margin 70%. CAC payback 17 months. Onboarding takes a median 13 weeks to first operational use. Only 34% of contracted features are ever activated. Support tickets per customer are 2.4x the SaaS benchmark. Cash runway 18 months.",
+  "ownerGoal": "Improve product fit and customer success so adoption rises, churn falls below 3% quarterly, and growth reaccelerates toward 35%+ within 12-15 months.",
+  "ownerConstraints": [
+    "Funding constraint: $12M Series A, 18-month runway at $310k/month burn; cannot fund a large professional-services org or a full product rebuild without risking the next raise.",
+    "Product constraint: the platform is powerful but configuration-heavy; standing up carrier integrations and exception rules requires data mapping that customers struggle to complete; a guided-onboarding/simplification effort is 8-12 weeks of product+engineering work.",
+    "Organizational constraint: 40 staff (12 engineering, 8 sales, 6 implementation/onboarding, 6 support, rest G&A). Onboarding team is overwhelmed; support is in constant firefighting.",
+    "Market constraint: demand for supply-chain visibility is strong and growing post-disruption; competitors with simpler, narrower tools are winning the same buyers on ease-of-use.",
+    "Commercial constraint: most churn happens in the first 6 months, before customers reach operational value; expansion is impossible when base features are not even activated."
+  ],
+  "immediateConcern": "Churn is high (5% quarterly) and growth has slowed to 25%, but demand for visibility tooling is strong. The owner suspects 'product fit' and wants to invest in customer success headcount and possibly new features. However, the deeper pattern is that customers cannot operationalize the product: median onboarding is 13 weeks, only 34% of contracted features ever get activated, support tickets run 2.4x benchmark, and most churn occurs in the first 6 months before value is realized. Early customers describe the product as 'too complex to stand up.' The owner must decide within the next month whether to add CS/services headcount (treating the symptom) or fix the onboarding/usability failure at its source before the next cohort of new customers churns out.",
+  "availableData": [
+    "Financial: ARR $5.0M, 25% YoY growth (was 40%), gross margin 70%, CAC payback 17 months, burn $310k/month, runway 18 months",
+    "Retention: quarterly logo churn 5%, NRR 96%; ~70% of churn occurs within the first 6 months (pre-value)",
+    "Adoption: median time-to-operational-use 13 weeks; only 34% of contracted features ever activated; 41% of accounts never complete carrier-integration setup",
+    "Support: tickets per customer 2.4x SaaS benchmark; top ticket categories are setup/configuration (38%) and data mapping (27%)",
+    "Onboarding: 6-person implementation team carrying 9 active onboardings each; onboarding NPS 12 (very low); setup abandonment rate 22%",
+    "Market/competitive: visibility demand growing; simpler competitors winning ease-of-use comparisons; new-logo win rate stable at 26%"
+  ],
+  "unavailableData": [
+    "Which specific configuration steps cause the most abandonment (no funnel instrumentation in onboarding)",
+    "Activation-to-retention correlation quantified by feature",
+    "Willingness of customers to pay for guided/done-for-you onboarding",
+    "Comparative onboarding time of the simpler competitors"
+  ],
+  "timeHorizon": "12-15 months to reaccelerate growth; the first-6-month churn means each new cohort is at risk within one quarter, so the fix is urgent",
+  "riskAppetite": "MEDIUM (must protect runway; tempted to throw services headcount at a problem that is rooted in product usability)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

@@ -1,0 +1,31 @@
+{
+  "step": "owner_intake",
+  "businessType": "D2C fashion company offering subscription rental service with optional purchase option. Founded 2019, Series B funding $15M (2024). Monthly subscribers: 22,000 paying members. Revenue model: 60% subscription revenue ($2M/month), 40% purchase/sales revenue ($1.3M/month). Target demographic: women 25-40, disposable income $50k+.",
+  "stage": "Series B growth: Total revenue $3.3M/month ($40M ARR). Gross margin 48% (after COGS and logistics). Unit economics: CAC $45, LTV estimate $2,800 (62-month payback). Churn rate 5% monthly (elevated for subscription). Burn rate $400k/month (cash runway 37 months at current rate with $15M raised capital). Customer acquisition growth 15% MoM but slowing (was 25% MoM 6 months ago).",
+  "ownerGoal": "Reach sustainable unit economics and Series C readiness ($100M+ valuation trajectory) within 24 months. Series B investors expect path to profitability and deceleration of burn rate.",
+  "ownerConstraints": [
+    "Capital constraint: $15M Series B capital, $400k/month burn, 37-month runway. Must demonstrate path to profitability or lower burn before Series C conversations. Cannot sustain current burn indefinitely.",
+    "Unit economics constraint: CAC $45, LTV $2,800 (62-month payback) is acceptable but not exceptional. Must improve payback to <50 months or increase LTV to sustain growth at current CAC.",
+    "Operational constraint: Subscription logistics (inventory management, rental fulfillment, cleaning/repair cycle) are capital and labor intensive. Warehouse footprint is already constrained at current scale. Expansion requires new facilities (3-6 month lead time, $2-3M capex per facility).",
+    "Market constraint: Competition from both established luxury rental services (Rent the Runway, Le Tote) and emerging resale/subscription hybrid models (Depop, Poshmark adding rental). Market consolidation risk: larger players could dominate with capital advantage.",
+    "Team constraint: Lean team (35 people). Founding team focused on product and customer. Limited operations and CFO resources for major financial/strategic pivots."
+  ],
+  "immediateConcern": "Customer acquisition growth decelerating (25% MoM down to 15% MoM) while churn rate rising (was 4% MoM 6 months ago, now 5% MoM). Company is at a strategic inflection: (1) continue aggressive growth acquisition (requires increased marketing spend, faster burn, Series C timing uncertain), (2) optimize existing customer base (reduce churn, increase LTV through upsells, lower burn), or (3) reposition toward premium/profitable segment (shift customer acquisition target, likely slower overall growth but better unit economics). CEO must choose direction and communicate to investors before Series C conversations begin.",
+  "availableData": [
+    "Financial metrics: Monthly revenue ($3.3M = $2M subscription + $1.3M sales), gross margin 48%, CAC estimate $45 (based on marketing spend / new customers), LTV estimate $2,800, churn rate 5% MoM, burn rate $400k/month, cash runway 37 months",
+    "Customer metrics: 22,000 monthly subscribers, customer acquisition growth 15% MoM (declining from 25%), churn 5% MoM (trending up), repeat purchase rate on rentals 72%, NPS 48 (neutral)",
+    "Operational metrics: Logistics cost per rental ~$12 (pickup/cleaning/return), average rental value $45, average purchase order value $80, warehouse utilization 85%, inventory turnover 4.2x per month",
+    "Market data: Competitor Rent the Runway raised $70M Series C (2023), growing 30% YoY; Depop + Poshmark expanding rental. Market estimated $5B TAM growing 15% annually"
+  ],
+  "unavailableData": [
+    "Detailed customer segmentation: Which customer cohorts (by acquisition source, spending pattern, tenure) have highest LTV vs highest churn? Which are most profitable?",
+    "Detailed competitor positioning: Exact pricing, retention rates, and unit economics of Rent the Runway and other competitors (proprietary)",
+    "Customer willingness-to-pay research: Would customers accept higher prices for premium curated selection, better fit guarantee, or faster fulfillment? How much more would they pay?",
+    "Detailed operational cost breakdown: Is the $12 logistics cost variable, or are there fixed facility costs that could decrease per unit with scale?",
+    "Long-term retention potential: For customers acquired in Year 1 (now 2+ year tenure), what is the actual lifetime value observed? Is the $2,800 estimate realistic or optimistic?"
+  ],
+  "timeHorizon": "90 days (Series C conversations likely to begin within 3 months; must have clear strategic direction and financial narrative by then)",
+  "riskAppetite": "MEDIUM-HIGH (Series B company willing to take growth risk, but Series B investors expect clear path to profitability)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

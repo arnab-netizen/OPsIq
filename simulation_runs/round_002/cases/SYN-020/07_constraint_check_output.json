@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (only 16-month runway at $560k/month burn despite total raised; economics gate the next raise)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (100 staff; sales-engineering and implementation are expensive and consumed by long cycles/complex deployments)",
+    "cashRunwayMonths": 16,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

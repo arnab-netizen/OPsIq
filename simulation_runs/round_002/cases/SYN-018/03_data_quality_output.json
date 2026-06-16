@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 3,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "financial_health",
+    "process_maturity",
+    "team_capability",
+    "market_position"
+  ],
+  "unavailableDataDeclared": [
+    "Per-step implementation cycle-time breakdown with bottleneck-resource utilization",
+    "Automation feasibility and ROI for the manual data-modeling/connector steps",
+    "Throughput gain from templatizing common connector/data-model patterns",
+    "Revenue and NRR impact quantified per week of go-live delay"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Per-step implementation cycle-time breakdown with bottleneck-resource utilization",
+    "Cannot conclude on: Automation feasibility and ROI for the manual data-modeling/connector steps",
+    "Cannot conclude on: Throughput gain from templatizing common connector/data-model patterns",
+    "Cannot conclude on: Revenue and NRR impact quantified per week of go-live delay"
+  ]
+}

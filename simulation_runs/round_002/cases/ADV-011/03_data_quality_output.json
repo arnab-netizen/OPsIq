@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Detailed revenue cohort analysis: Which vintage of projects or client engagements are declining? Are all clients losing project volume, or are specific clients (by industry, size, or other characteristic) showing decline?",
+    "Client win/loss analysis: Which specific client relationships have been lost? What were the stated reasons? (Only general sense that 'fewer opportunities')",
+    "Pricing trend data: Have average project fees declined? Or is the volume of projects declining while average fees steady?",
+    "Root-cause analysis of utilization decline: Is the decline due to client demand (fewer transformation needs) or competitive displacement (clients choosing competitors)?",
+    "Detailed cost structure analysis: Which cost categories are fixed vs variable? What is the break-even utilization rate?"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Detailed revenue cohort analysis: Which vintage of projects or client engagements are declining? Are all clients losing project volume, or are specific clients (by industry, size, or other characteristic) showing decline?",
+    "Cannot conclude on: Client win/loss analysis: Which specific client relationships have been lost? What were the stated reasons? (Only general sense that 'fewer opportunities')",
+    "Cannot conclude on: Pricing trend data: Have average project fees declined? Or is the volume of projects declining while average fees steady?",
+    "Cannot conclude on: Root-cause analysis of utilization decline: Is the decline due to client demand (fewer transformation needs) or competitive displacement (clients choosing competitors)?",
+    "Cannot conclude on: Detailed cost structure analysis: Which cost categories are fixed vs variable? What is the break-even utilization rate?"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Blended ARR grows 22% with EBITDA only 8%; the growth is carried by the SMB segment (+28%) which is under-monetized, while the higher-ARPU large-group segment grows just 5%. NRR is 98% blended, below the >105% bar investors expect at Series B, indicating weak expansion rather than a logo-churn problem (churn 2%).",
+    "Logo retention is strong (2% quarterly churn) but expansion is weak, especially in SMB (segment NRR ~99%). The company keeps customers but does not grow them, which is a go-to-market/monetization signal, not a satisfaction or quality failure.",
+    "Single-customer concentration (300-office DSO = 12% of ARR, top 10 = 35%) with annual renewal and pricing leverage creates a real downside risk, but the DSO segment is only growing 5% — chasing more large-group concentration would worsen risk and offers limited growth.",
+    "Sales and product are optimized for large multi-location deals; SMB self-serve onboarding and packaging are underdeveloped, which plausibly explains low SMB ARPU and expansion despite strong SMB logo growth."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "ARPU, CAC, payback, and LTV broken out by segment (SMB vs mid-market vs DSO) and acquisition channel.",
+    "Expansion mechanics: which modules/seats drive expansion in each segment and why SMB expansion is low.",
+    "Win/loss and pricing-elasticity data for the SMB segment (would higher ARPU/packaging hold?).",
+    "True cost-to-serve and support load per segment (SMB volume vs DSO complexity).",
+    "Pipeline coverage and conversion by segment to size a credible diversification plan."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Blended ARR grows 22% with EBITDA only 8%; the growth is carried by the SMB segment (+28%) which is under-monetized, while the higher-ARPU large-group segment grows just 5%. NRR is 98% blended, below the >105% bar investors expect at Series B, indicating weak expansion rather than a logo-churn problem (churn 2%).",
+    "Logo retention is strong (2% quarterly churn) but expansion is weak, especially in SMB (segment NRR ~99%). The company keeps customers but does not grow them, which is a go-to-market/monetization signal, not a satisfaction or quality failure.",
+    "Single-customer concentration (300-office DSO = 12% of ARR, top 10 = 35%) with annual renewal and pricing leverage creates a real downside risk, but the DSO segment is only growing 5% — chasing more large-group concentration would worsen risk and offers limited growth.",
+    "Sales and product are optimized for large multi-location deals; SMB self-serve onboarding and packaging are underdeveloped, which plausibly explains low SMB ARPU and expansion despite strong SMB logo growth."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Invoiced revenue grew 41% YoY to $14.2M, but net revenue is only $9.8M and true blended contribution margin fell from 19% to 11% over twelve months (-800bps) even as the top line accelerated. The divergence between invoiced growth and contribution decline indicates revenue is being bought with margin, not earned through profitable demand.",
+    "Channel contribution margins diverge sharply: DTC contribution is 44% while retail contribution is just 4%. Retail doors grew from 1,300 to 2,400 in twelve months — nearly all of the contribution erosion coincides with the door expansion, and the new doors are concentrated in the lower-velocity natural channel.",
+    "Trade spend has doubled from 9% to 18% of invoiced retail revenue in twelve months, refrigerated freight is $0.62/unit, and spoilage/short-code returns run 7% of retail shipments due to 90-day code life colliding with slow velocity in newer doors. There is no door-level velocity or SKU-level contribution reporting to attribute where the spend and spoilage are concentrated.",
+    "DTC subscriber base is flat at ~9,000 and DTC contribution remains strong at 44%, indicating brand demand and product quality are healthy where the brand controls economics. NPS and repeat rates on DTC are stable. The deterioration is therefore not a demand or product-quality problem; it tracks the shift in revenue mix toward subsidized retail distribution."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Door-level velocity: units sold per store per week (SPSW) by retailer and door cohort — needed to know which doors are below the breakeven velocity threshold",
+    "SKU-level true contribution after trade, freight, and spoilage — which of the 9 SKUs are margin-positive vs. negative",
+    "Channel-level fully-loaded P&L — true DTC vs. retail vs. Amazon contribution net of fulfillment, ad spend (CAC), and trade",
+    "Trade-spend ROI: lift per promotional dollar by retailer; whether promoted volume is incremental or merely subsidized base",
+    "Spoilage attribution: which doors/regions/SKUs generate short-code returns, and whether velocity or distribution overreach is the cause"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Invoiced revenue grew 41% YoY to $14.2M, but net revenue is only $9.8M and true blended contribution margin fell from 19% to 11% over twelve months (-800bps) even as the top line accelerated. The divergence between invoiced growth and contribution decline indicates revenue is being bought with margin, not earned through profitable demand.",
+    "Channel contribution margins diverge sharply: DTC contribution is 44% while retail contribution is just 4%. Retail doors grew from 1,300 to 2,400 in twelve months — nearly all of the contribution erosion coincides with the door expansion, and the new doors are concentrated in the lower-velocity natural channel.",
+    "Trade spend has doubled from 9% to 18% of invoiced retail revenue in twelve months, refrigerated freight is $0.62/unit, and spoilage/short-code returns run 7% of retail shipments due to 90-day code life colliding with slow velocity in newer doors. There is no door-level velocity or SKU-level contribution reporting to attribute where the spend and spoilage are concentrated.",
+    "DTC subscriber base is flat at ~9,000 and DTC contribution remains strong at 44%, indicating brand demand and product quality are healthy where the brand controls economics. NPS and repeat rates on DTC are stable. The deterioration is therefore not a demand or product-quality problem; it tracks the shift in revenue mix toward subsidized retail distribution."
+  ]
+}

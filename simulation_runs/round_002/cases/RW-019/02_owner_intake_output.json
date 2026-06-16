@@ -1,0 +1,31 @@
+{
+  "step": "owner_intake",
+  "businessType": "B2B SaaS serving construction and engineering firms with AI-powered project planning and risk forecasting. Founded 2018, Series A funding $8M (2023). Current 280 customers, $3.2M ARR, 45% YoY growth.",
+  "stage": "Growth stage Series A: Monthly recurring revenue $267k, gross margin 68%, CAC $2,100, LTV $28,000 (11-month payback), churn rate 6% quarterly. Burn rate $180k/month. Cash runway 22 months.",
+  "ownerGoal": "Achieve PMF validation (>10% qualified expansion ARR from existing customers) and Series B readiness within 18 months.",
+  "ownerConstraints": [
+    "Customer concentration: Top 5 customers = 32% of ARR. Loss of any top customer would trigger 15%+ revenue cliff.",
+    "Unit economics not yet proven at scale: CAC $2,100 assumes 11-month payback, but that assumes zero expansion and benchmark churn. Actual cohort data still building.",
+    "Sales cycle: 4-6 months from prospecting to close. Pipeline visibility limited; forecasting challenging for Series B readiness.",
+    "Team constraint: 18 people. Product team small relative to customer support burden from concentrated base.",
+    "Market timing: Construction tech adoption accelerating post-COVID, but market still heterogeneous; buyer consolidation pressure increasing."
+  ],
+  "immediateConcern": "Churn accelerating unexpectedly. Q2 quarterly churn was 4%, Q3 was 6%. Simultaneously, expansion ARR (upsells to existing customers) is 8% of revenue but declining relative to new customer acquisition. Net revenue retention ~95% (unhealthy for SaaS). Must understand churn driver before Series B positioning.",
+  "availableData": [
+    "Financial: $3.2M ARR, 45% YoY growth, gross margin 68%, CAC $2,100, LTV $28,000, churn 6% quarterly, expansion ARR $260k/quarter",
+    "Customer: 280 customers, top 5 = 32% of ARR, average customer tenure 18 months, NPS 38 (moderate)",
+    "Product: Feature set mature (planning, risk, collaboration, reporting), used 3-5 days/week by average customer, user adoption strong (85% DAU among paying accounts)",
+    "Market: Construction industry adoption of SaaS increasing 20% YoY, competitive landscape includes Procore (public, $10B+), Touchplan (private, ~$500M), and niche players"
+  ],
+  "unavailableData": [
+    "Detailed churn cohort analysis: Which cohorts are churning (by acquisition source, customer size, vertical, tenure)?",
+    "Win/loss analysis for churned customers: Stated reasons for churn (product fit, pricing, feature gap, competitive switching)?",
+    "Expansion data by customer segment: Which segments expand, which stay flat, which churn?",
+    "Competitive win/loss: How often losing deals to specific competitors? Product vs. pricing vs. go-to-market?",
+    "Usage cohort analysis: Correlation between usage patterns and churn risk?"
+  ],
+  "timeHorizon": "90 days (Series B fund-raising cycle begins in Q1; must clarify churn driver and expansion opportunity before investor conversations)",
+  "riskAppetite": "MEDIUM (Series A company wants growth but Series A investors expect clear path to unit economics; churn acceleration is red flag)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

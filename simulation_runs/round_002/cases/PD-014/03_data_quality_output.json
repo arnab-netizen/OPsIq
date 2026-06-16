@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 5,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Contract-by-contract EPA clause language and exact pass-through eligibility (proprietary contract terms not in public filings)",
+    "Program-level (contract-level) gross margin and the specific FFP contracts that are underwater (public filings aggregate by segment)",
+    "Strength of REA / claims position per contract (requires legal review of change-order history, government-caused delay, and constructive change facts)",
+    "Forward input-cost hedging positions and supplier contract terms for materials (not publicly disclosed)",
+    "Internal labor productivity and overhead absorption detail by program (not disclosed)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Contract-by-contract EPA clause language and exact pass-through eligibility (proprietary contract terms not in public filings)",
+    "Cannot conclude on: Program-level (contract-level) gross margin and the specific FFP contracts that are underwater (public filings aggregate by segment)",
+    "Cannot conclude on: Strength of REA / claims position per contract (requires legal review of change-order history, government-caused delay, and constructive change facts)",
+    "Cannot conclude on: Forward input-cost hedging positions and supplier contract terms for materials (not publicly disclosed)",
+    "Cannot conclude on: Internal labor productivity and overhead absorption detail by program (not disclosed)"
+  ]
+}

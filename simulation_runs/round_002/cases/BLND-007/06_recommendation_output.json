@@ -1,0 +1,27 @@
+{
+  "step": "recommendation",
+  "firstPriorityAction": "Further root cause investigation required",
+  "whyFirst": "Quick implementation builds momentum and shows progress",
+  "expectedImpact": "MINOR",
+  "costBand": "LOW",
+  "estimatedDays": 8,
+  "ownerRole": "consultant",
+  "verificationMetrics": [
+    "Root cause confidence increases to HIGH",
+    "Interventions designed with >80% confidence"
+  ],
+  "failureRisks": [
+    "Investigation reveals multiple root causes requiring different solutions"
+  ],
+  "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+  "reviewTriggers": [
+    "After first intervention completion: validate assumptions, collect outcome data",
+    "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+    "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+    "If team capacity exhausted: pause non-critical interventions",
+    "If external market changes significantly: reassess competitive positioning"
+  ],
+  "allInterventions": [
+    "Further root cause investigation required"
+  ]
+}

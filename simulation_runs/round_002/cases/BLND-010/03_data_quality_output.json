@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "operational_efficiency",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "True driver of the plateau: how much is pricing/positioning (winnable at higher rates), how much is demand softness, and how much is delivery-capacity/model constraint",
+    "Willingness-to-pay and pricing power in the candidate niche if the firm specialized and invested in thought leadership",
+    "Unit economics and margin of a managed-services line at scale (the pilots are too small to be representative; staffing model, churn, and gross margin unknown)",
+    "Integration economics and cultural fit of the acquisition targets, and the real terms/dilution of the outside growth capital required",
+    "Whether sub-target utilization (68%) reflects a demand/sales-pipeline gap or a partner-bandwidth/staffing-mix problem"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: True driver of the plateau: how much is pricing/positioning (winnable at higher rates), how much is demand softness, and how much is delivery-capacity/model constraint",
+    "Cannot conclude on: Willingness-to-pay and pricing power in the candidate niche if the firm specialized and invested in thought leadership",
+    "Cannot conclude on: Unit economics and margin of a managed-services line at scale (the pilots are too small to be representative; staffing model, churn, and gross margin unknown)",
+    "Cannot conclude on: Integration economics and cultural fit of the acquisition targets, and the real terms/dilution of the outside growth capital required",
+    "Cannot conclude on: Whether sub-target utilization (68%) reflects a demand/sales-pipeline gap or a partner-bandwidth/staffing-mix problem"
+  ]
+}

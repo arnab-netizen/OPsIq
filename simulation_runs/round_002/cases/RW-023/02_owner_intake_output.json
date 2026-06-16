@@ -1,0 +1,31 @@
+{
+  "step": "owner_intake",
+  "businessType": "Third-party logistics provider serving retail, CPG, and e-commerce customers. 28 warehouses across Southeast US, 400 employees, $92M annual revenue. EBITDA margin 12% ($11M), down from 14% (three years ago). Profit pressure from e-commerce customer growth (higher operational complexity, lower margins vs. traditional retail) and rising labor costs.",
+  "stage": "Mature profitable: EBITDA $11M (12% margin), operating cash flow strong $9M, return on assets 6.3% (below peer median 8%). Customer concentration risk: top 3 customers = 28% of revenue. Margin compression driven by (1) shift to e-commerce customers (lower margins), (2) labor inflation (+12% in 24 months), (3) automation capex requirements.",
+  "ownerGoal": "Return EBITDA to 15%+ margin within 24 months through operational efficiency and customer mix optimization.",
+  "ownerConstraints": [
+    "Labor market: Warehouse staffing tight; wages +12% in 24 months. Automation capex required to reduce labor dependency, but ROI uncertain.",
+    "Customer mix shift: E-commerce customers (38% of revenue) require higher service complexity (faster fulfillment, returns handling) at lower margins (8-10% vs. retail 15-18%). Traditional retail shrinking.",
+    "Automation capex: Modern 3PL requires significant capex (robotics, WMS upgrades). Estimated $8-12M to upgrade 28 warehouses. Current cash flow cannot support full modernization.",
+    "Competitive dynamics: Amazon Logistics, national 3PLs entering regional markets, competing on price and technology. Regional 3PLs consolidating. Scale matters for profitability.",
+    "Economic sensitivity: Retail/e-commerce volume sensitive to economic cycles; FY2025 e-commerce growth 8% (vs. 15% historical average)."
+  ],
+  "immediateConcern": "EBITDA margin eroding (14% → 12% in 3 years) while revenue growing slowly (5% YoY current vs. 12% three years ago). Growth slowing and margins compressing = profitability squeeze. Net income declining despite revenue growth. Must determine whether problem is structural (customer mix shift to lower-margin e-commerce) or operational (labor cost inflation, underutilized capacity).",
+  "availableData": [
+    "Financial: $92M revenue (+5% YoY), EBITDA $11M (12% margin, down from 14%), OCF $9M, ROA 6.3%, customer concentration 28% (top 3)",
+    "Operational: 28 warehouses, 400 employees, labor cost +12% in 24 months, utilization 72% (capacity available), automation gap vs. competitors",
+    "Customer: E-commerce 38% of revenue (8-10% margin), traditional retail 62% (15-18% margin), top 3 customers 28% of revenue, growth 5% YoY",
+    "Competitive: Regional market consolidating, national players entering, e-commerce growth at 8% YoY (below historical 15%)"
+  ],
+  "unavailableData": [
+    "Customer-level profitability: Exact margin by customer; which customers are profitable vs. marginal?",
+    "Service cost analysis: Detailed cost to serve for e-commerce vs. retail customers; what drives complexity?",
+    "Capacity utilization detail: Which warehouses are underutilized? Opportunities for consolidation or exit?",
+    "Automation ROI: What is the actual capex and payback for warehouse automation?",
+    "Competitive win/loss: Which customers are switching to competitors? Why?"
+  ],
+  "timeHorizon": "24 months (owner exit planning; need clear profitability path)",
+  "riskAppetite": "MEDIUM (profitable but not growth-oriented; owner looking toward exit)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

@@ -1,0 +1,23 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [
+    {
+      "type": "ORGANIZATIONAL",
+      "description": "No customer relationship management system or loyalty program infrastructure",
+      "severity": "MEDIUM",
+      "blocksActions": [
+        "retention_focus",
+        "relationship_marketing"
+      ]
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (Series B capital $15M, but burn rate high; limited discretionary spending without impact on runway)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (35 people, lean team; major product/operational pivots require external hires or rapid reallocation)",
+    "cashRunwayMonths": 37,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": true,
+  "legalComplianceSensitive": false
+}

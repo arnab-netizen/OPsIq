@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Restaurant-level EBITDA margin declined from 19.0% (prior year) to 15.0% (FY2025), a 400 basis point compression, on flat same-store sales (0% YoY). At an AUV of $4.25M, this is a ~$170k per-unit decline in restaurant-level EBITDA (from ~$807.5k to $637.5k), or roughly $34M across the 200-unit system. Because same-store sales are flat, the entire 400 bps of margin decline is attributable to cost-line deterioration, not volume.",
+    "Food & paper (COGS) rose from 28.0% to 30.0% of sales (+200 bps) and labor rose from 30.0% to 32.0% of sales (+200 bps). Combined, the two cost lines account for +400 bps of margin drag—exactly the observed restaurant-level margin decline—because same-store sales are flat and occupancy (9%) and other opex (14%) held constant. The drivers are food cost inflation of ~+8% and labor wage inflation of ~+10% (minimum-wage increases plus scheduling/overtime).",
+    "The operator took +2% of menu price in FY2025, but same-store sales were flat (0%) because a -2% traffic decline fully offset the price increase. Pricing power is capped by aggressive value competition and existing value-menu commitments, so additional broad price increases risk further traffic loss rather than incremental margin. There is therefore no realistic top-line lever to absorb the +8% food and +10% labor inflation in the near term.",
+    "Because the food and labor cost lines are reported only in aggregate (% of sales) and not split into theoretical-vs-actual food cost (waste/over-portioning) or labor-deployment efficiency, it is not yet possible to attribute the +200 bps food drag and +200 bps labor drag between pure input inflation and controllable unit-level inefficiency. Unit-by-unit dispersion across the 200 restaurants is also undisclosed, so a representative-sample four-wall diagnostic is required before any system-wide remedy."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Theoretical (ideal) vs actual food cost by unit (waste, over-portioning, yield loss not disclosed in public filings)",
+    "Unit-level labor deployment / scheduling efficiency (labor hours vs transactions by daypart, not publicly disclosed)",
+    "Item-level menu margin and menu-mix contribution (menu engineering data is proprietary)",
+    "Unit-by-unit dispersion of the 200 restaurants (range/quartiles of margin by unit not disclosed)",
+    "Daypart-level transaction counts and ticket detail (proprietary point-of-sale data)"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Restaurant-level EBITDA margin declined from 19.0% (prior year) to 15.0% (FY2025), a 400 basis point compression, on flat same-store sales (0% YoY). At an AUV of $4.25M, this is a ~$170k per-unit decline in restaurant-level EBITDA (from ~$807.5k to $637.5k), or roughly $34M across the 200-unit system. Because same-store sales are flat, the entire 400 bps of margin decline is attributable to cost-line deterioration, not volume.",
+    "Food & paper (COGS) rose from 28.0% to 30.0% of sales (+200 bps) and labor rose from 30.0% to 32.0% of sales (+200 bps). Combined, the two cost lines account for +400 bps of margin drag—exactly the observed restaurant-level margin decline—because same-store sales are flat and occupancy (9%) and other opex (14%) held constant. The drivers are food cost inflation of ~+8% and labor wage inflation of ~+10% (minimum-wage increases plus scheduling/overtime).",
+    "The operator took +2% of menu price in FY2025, but same-store sales were flat (0%) because a -2% traffic decline fully offset the price increase. Pricing power is capped by aggressive value competition and existing value-menu commitments, so additional broad price increases risk further traffic loss rather than incremental margin. There is therefore no realistic top-line lever to absorb the +8% food and +10% labor inflation in the near term.",
+    "Because the food and labor cost lines are reported only in aggregate (% of sales) and not split into theoretical-vs-actual food cost (waste/over-portioning) or labor-deployment efficiency, it is not yet possible to attribute the +200 bps food drag and +200 bps labor drag between pure input inflation and controllable unit-level inefficiency. Unit-by-unit dispersion across the 200 restaurants is also undisclosed, so a representative-sample four-wall diagnostic is required before any system-wide remedy."
+  ]
+}

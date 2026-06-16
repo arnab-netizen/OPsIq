@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (corporate-backed, but margin already eroding from 21% to 17%; investment must be targeted)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM-LOW (14 vets, several flagship hires still ramping; clinical staff already stretched by shorter slots)",
+    "cashRunwayMonths": "N/A (cash-generative group; constraint is the active-base trend and financing review)",
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

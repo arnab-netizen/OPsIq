@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (profitable but margin-constrained; limited discretionary spending)",
+    "timeHorizonDays": 540,
+    "staffCapacity": "MEDIUM (150 people, but high turnover consuming management attention)",
+    "cashRunwayMonths": "N/A (profitable, positive cash flow)",
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

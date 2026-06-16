@@ -1,0 +1,20 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Revenue flat at $28M (0% growth for 3 consecutive years) while labor costs increased 8% annually, compressing EBITDA margin from 10% (2022) to 8% (2024).",
+    "Rework and revisions consuming 15% of labor hours (2024) vs 8% (2022), indicating quality or coordination issues. Likely driven by legacy CAD systems and lack of BIM coordination.",
+    "Top 10 clients = 35% of revenue, indicating concentration risk. Commercial/industrial construction market declining; client decision timelines extending from 12 months to 18+ months."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Detailed employee skill inventory and career paths",
+    "BIM adoption readiness assessment",
+    "Competitive win/loss data at project level",
+    "Market sizing for digital/AI-assisted design services"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Revenue flat at $28M (0% growth for 3 consecutive years) while labor costs increased 8% annually, compressing EBITDA margin from 10% (2022) to 8% (2024).",
+    "Rework and revisions consuming 15% of labor hours (2024) vs 8% (2022), indicating quality or coordination issues. Likely driven by legacy CAD systems and lack of BIM coordination.",
+    "Top 10 clients = 35% of revenue, indicating concentration risk. Commercial/industrial construction market declining; client decision timelines extending from 12 months to 18+ months."
+  ]
+}

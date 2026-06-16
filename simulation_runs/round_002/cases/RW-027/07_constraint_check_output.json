@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (7.4 months runway, $3.1M cash, conditional bridge only)",
+    "timeHorizonDays": 60,
+    "staffCapacity": "LOW (38 people, only 2 in finance/FP&A; no door- or SKU-level reporting)",
+    "cashRunwayMonths": 7,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

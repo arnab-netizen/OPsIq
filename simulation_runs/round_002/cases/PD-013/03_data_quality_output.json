@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 2,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Unit-level (per-hospital and per-clinic) productivity and worked-hours-per-adjusted-patient-day detail (not in public disclosures).",
+    "Contract/agency nurse hourly bill-rate vs equivalent employed-FTE fully-loaded cost by facility (internal staffing-vendor data).",
+    "Service-line-level contribution margin (e.g., orthopedics vs behavioral health vs ED) at the procedure level (internal cost accounting).",
+    "Supply formulary and GPO contract pricing detail by category to isolate price inflation vs utilization (internal procurement data).",
+    "Nurse vacancy, turnover, and time-to-fill metrics by facility needed to size a permanent-hire ramp."
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Unit-level (per-hospital and per-clinic) productivity and worked-hours-per-adjusted-patient-day detail (not in public disclosures).",
+    "Cannot conclude on: Contract/agency nurse hourly bill-rate vs equivalent employed-FTE fully-loaded cost by facility (internal staffing-vendor data).",
+    "Cannot conclude on: Service-line-level contribution margin (e.g., orthopedics vs behavioral health vs ED) at the procedure level (internal cost accounting).",
+    "Cannot conclude on: Supply formulary and GPO contract pricing detail by category to isolate price inflation vs utilization (internal procurement data).",
+    "Cannot conclude on: Nurse vacancy, turnover, and time-to-fill metrics by facility needed to size a permanent-hire ramp."
+  ]
+}

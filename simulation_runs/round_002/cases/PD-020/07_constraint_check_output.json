@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (high leverage and covenant pressure constrain discretionary spend; diagnostic and repositioning capital must be modest and fast-payback)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "MEDIUM (~4,800 employees, mostly hourly store associates; thin corporate/merchandising and analytics bench; limited internal capability for customer/brand research)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

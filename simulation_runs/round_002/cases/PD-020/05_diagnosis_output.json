@@ -1,0 +1,16 @@
+{
+  "step": "diagnosis",
+  "rootCauseType": "unit_economics_breakdown",
+  "description": "Unit profitability collapse due to margin compression or fixed-cost burden",
+  "mechanism": "Per-unit contribution has become negative or margins have compressed. Fixed-cost burden grows faster than revenue. Expansion to new units/segments unprofitable.",
+  "confidence": "HIGH",
+  "rejectedHypotheses": [
+    "Temporary cost inflation (commodity price spike) may recover",
+    "Scale benefits may kick in with volume growth"
+  ],
+  "missingEvidence": [
+    "Unit contribution margin by segment/location",
+    "Cost structure breakdown (COGS vs OpEx)",
+    "Projection when scale achieves breakeven"
+  ]
+}

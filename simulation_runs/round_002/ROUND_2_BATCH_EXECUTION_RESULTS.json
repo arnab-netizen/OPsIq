@@ -1,0 +1,499 @@
+{
+  "batch_execution_summary": {
+    "timestamp": "2026-06-16T21:01:00.193Z",
+    "total_cases": 50,
+    "executed": 50,
+    "passed": 33,
+    "passed_rate": 0.66,
+    "failed": 17,
+    "failed_rate": 0.34,
+    "elapsed_minutes": 0.7
+  },
+  "case_results": {
+    "ADV-011": {
+      "caseId": "ADV-011",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-011\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-012": {
+      "caseId": "ADV-012",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-012\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-013": {
+      "caseId": "ADV-013",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-013\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-014": {
+      "caseId": "ADV-014",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-014\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-015": {
+      "caseId": "ADV-015",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-015\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-016": {
+      "caseId": "ADV-016",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-016\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-017": {
+      "caseId": "ADV-017",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-017\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-018": {
+      "caseId": "ADV-018",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-018\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-019": {
+      "caseId": "ADV-019",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-019\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "ADV-020": {
+      "caseId": "ADV-020",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"ADV-020\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "BLND-006": {
+      "caseId": "BLND-006",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"BLND-006\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "BLND-007": {
+      "caseId": "BLND-007",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"BLND-007\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "BLND-008": {
+      "caseId": "BLND-008",
+      "status": "SUCCESS",
+      "root_cause": "customer_retention_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Design and launch customer loyalty program",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "BLND-009": {
+      "caseId": "BLND-009",
+      "status": "SUCCESS",
+      "root_cause": "brand_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "BLND-010": {
+      "caseId": "BLND-010",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-011": {
+      "caseId": "PD-011",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-012": {
+      "caseId": "PD-012",
+      "status": "SUCCESS",
+      "root_cause": "demand_forecasting_mismatch",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-013": {
+      "caseId": "PD-013",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-014": {
+      "caseId": "PD-014",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-015": {
+      "caseId": "PD-015",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-016": {
+      "caseId": "PD-016",
+      "status": "SUCCESS",
+      "root_cause": "demand_forecasting_mismatch",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-017": {
+      "caseId": "PD-017",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-018": {
+      "caseId": "PD-018",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-019": {
+      "caseId": "PD-019",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "PD-020": {
+      "caseId": "PD-020",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-016": {
+      "caseId": "RW-016",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-017": {
+      "caseId": "RW-017",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-018": {
+      "caseId": "RW-018",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-019": {
+      "caseId": "RW-019",
+      "status": "PROVISIONAL",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "PROVISIONAL",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-020": {
+      "caseId": "RW-020",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "HIGH",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-021": {
+      "caseId": "RW-021",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-022": {
+      "caseId": "RW-022",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-023": {
+      "caseId": "RW-023",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-024": {
+      "caseId": "RW-024",
+      "status": "SUCCESS",
+      "root_cause": "brand_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-025": {
+      "caseId": "RW-025",
+      "status": "EXECUTION_ERROR",
+      "error": "Error: Command failed: npx tsx --tsconfig simulation_runner/tsconfig.json simulation_runner/run-case.ts \"RW-025\" --round 002 --force 2>&1",
+      "artifacts_written": false
+    },
+    "RW-026": {
+      "caseId": "RW-026",
+      "status": "SUCCESS",
+      "root_cause": "customer_retention_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Design and launch customer loyalty program",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-027": {
+      "caseId": "RW-027",
+      "status": "SUCCESS",
+      "root_cause": "demand_forecasting_mismatch",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-028": {
+      "caseId": "RW-028",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-029": {
+      "caseId": "RW-029",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "RW-030": {
+      "caseId": "RW-030",
+      "status": "SUCCESS",
+      "root_cause": "unit_economics_breakdown",
+      "confidence": "MODERATE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "SYN-011": {
+      "caseId": "SYN-011",
+      "status": "SUCCESS",
+      "root_cause": "customer_retention_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Design and launch customer loyalty program",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "SYN-012": {
+      "caseId": "SYN-012",
+      "status": "SUCCESS",
+      "root_cause": "customer_retention_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Design and launch customer loyalty program",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "SYN-013": {
+      "caseId": "SYN-013",
+      "status": "SUCCESS",
+      "root_cause": "customer_retention_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Design and launch customer loyalty program",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "SYN-014": {
+      "caseId": "SYN-014",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "root_cause": "unknown",
+      "confidence": "INSUFFICIENT_EVIDENCE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 6,
+      "usefulness_score": 9,
+      "pass_gate": false,
+      "artifacts_written": true
+    },
+    "SYN-015": {
+      "caseId": "SYN-015",
+      "status": "PROVISIONAL",
+      "root_cause": "go_to_market_misalignment",
+      "confidence": "PROVISIONAL",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "SYN-016": {
+      "caseId": "SYN-016",
+      "status": "SUCCESS",
+      "root_cause": "customer_retention_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Design and launch customer loyalty program",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    },
+    "SYN-017": {
+      "caseId": "SYN-017",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "root_cause": "unknown",
+      "confidence": "INSUFFICIENT_EVIDENCE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 6,
+      "usefulness_score": 9,
+      "pass_gate": false,
+      "artifacts_written": true
+    },
+    "SYN-018": {
+      "caseId": "SYN-018",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "root_cause": "unknown",
+      "confidence": "INSUFFICIENT_EVIDENCE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 6,
+      "usefulness_score": 9,
+      "pass_gate": false,
+      "artifacts_written": true
+    },
+    "SYN-019": {
+      "caseId": "SYN-019",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "root_cause": "unknown",
+      "confidence": "INSUFFICIENT_EVIDENCE",
+      "first_action": "Further root cause investigation required",
+      "specificity_score": 6,
+      "usefulness_score": 9,
+      "pass_gate": false,
+      "artifacts_written": true
+    },
+    "SYN-020": {
+      "caseId": "SYN-020",
+      "status": "SUCCESS",
+      "root_cause": "customer_retention_erosion",
+      "confidence": "MODERATE",
+      "first_action": "Design and launch customer loyalty program",
+      "specificity_score": 10,
+      "usefulness_score": 10,
+      "pass_gate": true,
+      "artifacts_written": true
+    }
+  }
+}

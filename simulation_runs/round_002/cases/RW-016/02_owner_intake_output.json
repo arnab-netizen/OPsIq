@@ -1,0 +1,29 @@
+{
+  "step": "owner_intake",
+  "businessType": "Mid-market specialty home goods retailer with 42 physical locations in major US markets and growing e-commerce presence. Products focus on high-quality home furnishings and décor with price points 20-30% above mass-market competitors. Founded 1998, family-owned, known for curated selection and customer service.",
+  "stage": "Revenue stable at $185M (2024, flat YoY). Gross margin 38% (declining from 42% in 2022). EBITDA margin 6.2% (down from 9.1% in 2022). Employee count 380 (stable). Cash position $12M. No debt. Customer base: 65% repeat customers, avg customer lifetime value $4,200.",
+  "ownerGoal": "Stabilize profitability and return to 8%+ EBITDA margin within 18 months without major cost cuts or price increases. Evaluate whether e-commerce expansion can offset physical store margin pressure.",
+  "ownerConstraints": [
+    "Budget constraint: $2.5M available for strategic initiatives (cannot allocate >$1.5M to any single initiative without board approval). No capacity for major capital expenditure.",
+    "Organizational constraint: Existing team is primarily retail-operations focused. Limited in-house e-commerce and digital marketing expertise. Would need to hire or outsource capabilities.",
+    "Time constraint: Board review on strategic direction scheduled for Q3 2025 (7 months). Must present clear profitability path before then.",
+    "Supply chain constraint: 60% of inventory sourced from international suppliers with 8-12 week lead times. Limited agility to shift product mix quickly."
+  ],
+  "immediateConcern": "Profitability decline is accelerating. Over the past 2 years, gross margin declined 400 basis points while EBITDA margin contracted 290 basis points. Physical store traffic down 12% YoY despite stable customer count, suggesting lower visit frequency. E-commerce is growing (18% YoY) but at lower average order value than in-store, and customer acquisition costs in digital channels are rising. Owner concerned that current trajectory will miss 8% EBITDA target and board will demand aggressive restructuring (store closures, headcount cuts).",
+  "availableData": [
+    "Financial metrics: Annual revenue and margin trends (2021-2024), quarterly EBITDA, cost structure breakdown (COGS, labor, occupancy, marketing), cash flow statement",
+    "Operational metrics: Store-level traffic counts, average transaction value by channel (in-store vs e-commerce), inventory turnover, promotional intensity, customer acquisition cost by channel, repeat purchase rate by cohort",
+    "Customer data: Customer satisfaction scores (NPS 62, down from 68 in 2022), customer churn rate (8% annually, up from 5% in 2022), average order value by tenure cohort, purchase frequency by customer segment"
+  ],
+  "unavailableData": [
+    "Competitive detailed win/loss analysis (companies know general competitors but not detailed pricing or feature positioning)",
+    "Customer willingness-to-pay or pricing elasticity research (not commissioned)",
+    "Detailed product-level profitability (available at category level but not SKU level)",
+    "Detailed market research on e-commerce market size and share in the specialty home goods segment",
+    "Internal employee engagement data (not systematically tracked)"
+  ],
+  "timeHorizon": "7 months (Board review Q3 2025 with strategic direction decision required)",
+  "riskAppetite": "MEDIUM (family business wants to preserve legacy retail operations but recognizes need for innovation; willing to invest in capabilities but not to completely pivot away from core business)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

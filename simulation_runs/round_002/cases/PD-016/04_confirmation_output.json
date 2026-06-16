@@ -1,0 +1,25 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Net new orders fell to 2,150 in FY2025 from 2,500 the prior year, while homes closed were 2,400. Orders are now running below closings (book-to-build 0.90), meaning backlog is shrinking. Cancellation rate rose to 22% from 14%, indicating buyers are walking from contracts as conditions soften. This is a demand-side deterioration: order intake and contract retention are falling faster than the company is delivering homes.",
+    "Absorption pace dropped to 2.4 homes per community per month from 3.2, a 25% decline, while spec (started-but-unsold) inventory rose to 620 homes against a normal level near 380 - roughly 240 excess specs, or ~3.1 months of supply at the current closing rate. The company started and carried homes for a faster sales pace than the market is delivering, so unsold standing inventory is accumulating and absorbing cash and carry cost.",
+    "The owned-and-optioned land pipeline stands at ~9,000 lots, equal to about 3.75 years of supply at the current 2,400-home pace - an elevated position for a softening market. Much of this land is committed: optioned lots carry non-refundable deposits and owned lots cannot be exited without impairment. Capital is locked in a multi-year pipeline that was sized to a higher forecast than current demand supports.",
+    "Homebuilding gross margin fell to 18.0% from 22.0% (400 bps). The decline is driven roughly half by rising price concessions/incentives (now ~3% of ASP, $15k/home, up from ~1%) reflecting market softness, and the remainder by land cost inflation (land per home $150k, up 15.4% from $130k) and direct construction labor up 9%. ASP held flat at $500k because market softness caps price, so cost inflation and incentives could not be passed through.",
+    "Home closing revenue declined 4.8% to $1,200M from $1,260M as homes closed fell to 2,400 from 2,520 at a flat $500k ASP. The revenue decline is entirely volume-driven (fewer closings), not price-driven, consistent with a demand shortfall rather than a pricing collapse - the company is delivering into a thinner order book while carrying inventory and land built for higher volume."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Community-level absorption, margin, and spec exposure broken out by individual subdivision (only blended company metrics disclosed).",
+    "Buyer-level mortgage qualification, rate-lock, and credit data underlying cancellations (not disclosed).",
+    "Non-refundable deposit amounts and walk-away economics by individual land option contract.",
+    "Forward demand by submarket (traffic, qualified-buyer pipeline, competitor incentive levels) at a granular level.",
+    "Detailed direct-cost build-up (per-trade labor and material cost curves) below the aggregate construction-cost line."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Net new orders fell to 2,150 in FY2025 from 2,500 the prior year, while homes closed were 2,400. Orders are now running below closings (book-to-build 0.90), meaning backlog is shrinking. Cancellation rate rose to 22% from 14%, indicating buyers are walking from contracts as conditions soften. This is a demand-side deterioration: order intake and contract retention are falling faster than the company is delivering homes.",
+    "Absorption pace dropped to 2.4 homes per community per month from 3.2, a 25% decline, while spec (started-but-unsold) inventory rose to 620 homes against a normal level near 380 - roughly 240 excess specs, or ~3.1 months of supply at the current closing rate. The company started and carried homes for a faster sales pace than the market is delivering, so unsold standing inventory is accumulating and absorbing cash and carry cost.",
+    "The owned-and-optioned land pipeline stands at ~9,000 lots, equal to about 3.75 years of supply at the current 2,400-home pace - an elevated position for a softening market. Much of this land is committed: optioned lots carry non-refundable deposits and owned lots cannot be exited without impairment. Capital is locked in a multi-year pipeline that was sized to a higher forecast than current demand supports.",
+    "Homebuilding gross margin fell to 18.0% from 22.0% (400 bps). The decline is driven roughly half by rising price concessions/incentives (now ~3% of ASP, $15k/home, up from ~1%) reflecting market softness, and the remainder by land cost inflation (land per home $150k, up 15.4% from $130k) and direct construction labor up 9%. ASP held flat at $500k because market softness caps price, so cost inflation and incentives could not be passed through.",
+    "Home closing revenue declined 4.8% to $1,200M from $1,260M as homes closed fell to 2,400 from 2,520 at a flat $500k ASP. The revenue decline is entirely volume-driven (fewer closings), not price-driven, consistent with a demand shortfall rather than a pricing collapse - the company is delivering into a thinner order book while carrying inventory and land built for higher volume."
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "step": "owner_intake",
+  "businessType": "B2B SaaS company offering a horizontal productivity/collaboration platform to SMB and lower-mid-market teams. ~70 employees. Mix of self-serve signups and sales-assisted deals. Founded 2020.",
+  "stage": "$6.0M ARR, 40% YoY growth (from $4.3M). Gross margin reported 76%. Support/customer-success cost grew ~60% YoY while ARR grew 40%, so support cost per customer and support cost as a % of revenue both rose. Support headcount up from 8 to 13. Ticket volume per customer rose.",
+  "ownerGoal": "Sustain 40%+ growth and reach Series B metrics within 12-15 months while keeping the gross-margin story intact for investors.",
+  "ownerConstraints": [
+    "Margin constraint: investors expect SaaS gross margin to expand with scale; a rising support cost ratio undermines the operating-leverage narrative.",
+    "Hiring constraint: support hiring is reactive to ticket backlog; leadership wants to avoid an ever-growing support team eating margin.",
+    "Product constraint: the engineering roadmap is committed to new-feature growth; reallocating to usability/quality fixes would slow the feature roadmap.",
+    "Data constraint: support costs and tickets are tracked, but tickets have NOT been categorized by root cause (bug/defect, usability/confusion, onboarding, feature request) or by customer cohort/segment.",
+    "Time constraint: leadership wants a decision on whether to keep hiring support or change course within 4-6 weeks."
+  ],
+  "immediateConcern": "Founder framing: 'We are growing 40% and customers love us. Support costs are up, sure, but that is just the cost of scaling - more customers means more tickets, it is normal. We will keep hiring support to keep response times down and protect satisfaction. Our gross margin is still 76%, so the model works. I do not see a problem here beyond staffing the queue.'",
+  "availableData": [
+    "ARR $4.3M -> $6.0M (40% growth); gross margin reported 76%; support headcount 8 -> 13.",
+    "Support/CS cost grew ~60% YoY vs 40% ARR growth, so support cost per customer rose ~14% and support % of revenue rose - operating leverage is going the wrong way.",
+    "Tickets per customer per month rose from ~1.6 to ~2.4 over the year; not just more customers, but more tickets each.",
+    "First-response and resolution times held roughly steady only because headcount was added - i.e. the team is running to stay in place.",
+    "Tickets are NOT categorized by root cause; an informal read by the support lead suggests a large and growing share relate to confusion around two features shipped in the last year, plus onboarding questions.",
+    "Net revenue retention slipped from 108% to 101% over the same period; churn/contraction reasons not coded.",
+    "A wave of new customers onboarded in the last two quarters after a self-serve funnel change; their ticket rate vs older cohorts not measured."
+  ],
+  "unavailableData": [
+    "Ticket categorization by root cause (defect vs usability/confusion vs onboarding vs feature request).",
+    "Ticket rate and support cost split by customer cohort and segment (new self-serve vs established).",
+    "Whether the NRR slip and the ticket-rate rise share a common cause (product friction driving both tickets and contraction).",
+    "True fully-loaded gross margin including all CS cost (is the reported 76% allocating support correctly?).",
+    "Product-usage/feature-adoption data for the two recently shipped features implicated in confusion."
+  ],
+  "timeHorizon": "12-15 months to Series B metrics; decision on support strategy in 4-6 weeks",
+  "riskAppetite": "MEDIUM (growth-focused but margin-sensitive for the raise)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

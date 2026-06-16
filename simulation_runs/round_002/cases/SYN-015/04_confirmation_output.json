@@ -1,0 +1,24 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "The current mid-market ICP is saturating: a third-party estimate indicates ~78% of target accounts already have a CSPM solution, and MQL volume in this segment is down 20% YoY. Three large platform vendors now bundle CSPM into broader suites, shifting buyer preference toward consolidation. The pool of un-penetrated, in-budget demand in the current ICP is shrinking.",
+    "New-logo bookings are flat YoY despite a 35% larger sales team, the sales cycle extended from 95 to 165 days, and win rate fell from 28% to 18%. Top-of-funnel lead-to-opportunity conversion is down 30%. Adding capacity produced no incremental output, indicating the constraint is upstream demand, not rep productivity per se.",
+    "Recent losses are increasingly attributed to 'platform consolidation' (62% of losses) rather than head-to-head feature comparison (21%). Buyers are not rejecting the product on capability; they are choosing to consolidate cloud security into broader platforms they already own. This is a demand/budget-allocation shift, not a feature gap.",
+    "Retention is excellent and stable: NRR 116%, gross retention 97%. Existing customers value and expand on the product, which contradicts a product-quality or differentiation-collapse explanation for the new-logo stall. The problem is in finding new in-budget demand, not in the product's value to those who buy it.",
+    "Gross margin is healthy at 79% and runway is 30 months, so the business is not in an economics crisis; however, CAC per new logo has risen sharply because a larger team is closing the same number of deals over longer cycles, which is the efficiency symptom the board is watching."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Quantified total addressable market remaining in the current ICP after saturation",
+    "Win-rate and cycle by segment (mid-market vs lower-enterprise vs new verticals)",
+    "Willingness-to-pay for best-of-breed vs bundled platform among current ICP buyers",
+    "Demand signal in adjacent segments or use cases not yet targeted"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "The current mid-market ICP is saturating: a third-party estimate indicates ~78% of target accounts already have a CSPM solution, and MQL volume in this segment is down 20% YoY. Three large platform vendors now bundle CSPM into broader suites, shifting buyer preference toward consolidation. The pool of un-penetrated, in-budget demand in the current ICP is shrinking.",
+    "New-logo bookings are flat YoY despite a 35% larger sales team, the sales cycle extended from 95 to 165 days, and win rate fell from 28% to 18%. Top-of-funnel lead-to-opportunity conversion is down 30%. Adding capacity produced no incremental output, indicating the constraint is upstream demand, not rep productivity per se.",
+    "Recent losses are increasingly attributed to 'platform consolidation' (62% of losses) rather than head-to-head feature comparison (21%). Buyers are not rejecting the product on capability; they are choosing to consolidate cloud security into broader platforms they already own. This is a demand/budget-allocation shift, not a feature gap.",
+    "Retention is excellent and stable: NRR 116%, gross retention 97%. Existing customers value and expand on the product, which contradicts a product-quality or differentiation-collapse explanation for the new-logo stall. The problem is in finding new in-budget demand, not in the product's value to those who buy it.",
+    "Gross margin is healthy at 79% and runway is 30 months, so the business is not in an economics crisis; however, CAC per new logo has risen sharply because a larger team is closing the same number of deals over longer cycles, which is the efficiency symptom the board is watching."
+  ]
+}

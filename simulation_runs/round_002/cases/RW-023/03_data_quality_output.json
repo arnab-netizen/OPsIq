@@ -1,0 +1,29 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 3,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "operational_efficiency",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability",
+    "market_position"
+  ],
+  "unavailableDataDeclared": [
+    "Customer-level profitability: Exact margin by customer; which customers are profitable vs. marginal?",
+    "Service cost analysis: Detailed cost to serve for e-commerce vs. retail customers; what drives complexity?",
+    "Capacity utilization detail: Which warehouses are underutilized? Opportunities for consolidation or exit?",
+    "Automation ROI: What is the actual capex and payback for warehouse automation?",
+    "Competitive win/loss: Which customers are switching to competitors? Why?"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Customer-level profitability: Exact margin by customer; which customers are profitable vs. marginal?",
+    "Cannot conclude on: Service cost analysis: Detailed cost to serve for e-commerce vs. retail customers; what drives complexity?",
+    "Cannot conclude on: Capacity utilization detail: Which warehouses are underutilized? Opportunities for consolidation or exit?",
+    "Cannot conclude on: Automation ROI: What is the actual capex and payback for warehouse automation?",
+    "Cannot conclude on: Competitive win/loss: Which customers are switching to competitors? Why?"
+  ]
+}

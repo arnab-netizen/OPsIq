@@ -1,0 +1,16 @@
+{
+  "step": "diagnosis",
+  "rootCauseType": "go_to_market_misalignment",
+  "description": "Go-to-market strategy misaligned with customer needs or channel efficacy",
+  "mechanism": "Customer acquisition cost rising or channel becoming ineffective. Marketing reaches wrong segment or channel saturation. GTM timing may be misaligned with market readiness.",
+  "confidence": "PROVISIONAL",
+  "rejectedHypotheses": [
+    "Product may be uncompetitive (not a GTM issue)",
+    "Market saturation may be industry-wide trend"
+  ],
+  "missingEvidence": [
+    "Customer acquisition cost trend and breakdown by channel",
+    "Customer segment profitability analysis",
+    "Competitive GTM positioning"
+  ]
+}

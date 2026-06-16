@@ -1,0 +1,176 @@
+{
+  "frozenAt": "2026-06-16T21:01:24.402Z",
+  "caseId": "RW-027",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "d2ba822b-90b3-4122-9836-a840756d4555",
+    "engagementId": "bb55795a-d8f3-45bb-862e-fa4fc85aa20b",
+    "timestamp": "2026-06-16T21:01:24.396Z",
+    "businessProblem": "A refrigerated cold-brew CPG brand is growing invoiced revenue 41% YoY while its true contribution margin has collapsed from 19% to 11% in twelve months, and burn is at an all-time high with 7.4 months of runway. Reported (invoiced) gross margin of 34% masks a much weaker net picture once trade spend (now 18% of retail revenue), refrigerated freight, slotting, and 7% spoilage are subtracted, leaving retail contribution at just 4% versus DTC at 44%. The founder must determine whether the business is fundamentally unprofitable, whether the retail channel as a whole destroys value, or whether a specific subset of SKUs and low-velocity doors is dragging an otherwise viable blend — before committing to any retail retreat, SKU rationalization, or price action that could breach shelf commitments or co-pack minimums.",
+    "rootCauseDiagnosis": {
+      "id": "807f8af4-edde-409f-884b-860cb44e2fc5",
+      "type": "demand_forecasting_mismatch",
+      "description": "Supply-demand imbalance due to forecast error or inventory misalignment",
+      "mechanismDescription": "Demand signal not correctly translated to supply plan. Excess inventory ties up cash; stockouts lose revenue. Forecast error causes bullwhip effect through supply chain.",
+      "evidenceIds": [
+        "9a50e191-20eb-4b0c-ba69-2e97f963b3d1"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "Demand may be genuinely volatile (external shock)",
+        "Supply chain constraint may be the binding constraint"
+      ],
+      "missingEvidenceFor": [
+        "Demand forecast accuracy historical data",
+        "Safety stock model",
+        "Supply lead time analysis"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "db4d8856-2938-410a-a935-41fe7dccda22",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Demand signal not correctly translated to supply plan. Excess inventory ties up cash; stockouts lose revenue. Forecast error causes bullwhip effect through supply chain.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "9a50e191-20eb-4b0c-ba69-2e97f963b3d1"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: CRITICAL (contribution-margin collapse with 7.4 months runway; bridge financing conditional on margin recovery)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "b89bf1cb-9521-4c3b-821d-43dd858587ea",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "db4d8856-2938-410a-a935-41fe7dccda22"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "c6c3e6a2-6c39-4de7-87b1-a8decce90a03",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "db4d8856-2938-410a-a935-41fe7dccda22"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "db4d8856-2938-410a-a935-41fe7dccda22",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "db4d8856-2938-410a-a935-41fe7dccda22"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "step": "owner_intake",
+  "businessType": "Mid/large commercial staffing firm operating a national branch network. Two reportable streams: (1) temporary/contract staffing (~80% of revenue), where the firm earns the spread between client bill rate and worker pay rate; (2) permanent / direct-hire placement (~20% of revenue), a fee-based, demand-leading service. Revenue concentrated in light-industrial, logistics, clerical, and administrative verticals. Internal headcount is mostly recruiters and branch staff carried as a largely fixed cost.",
+  "stage": "FY2025: Revenue $1,500M (+5.0% YoY vs $1,429M FY2024, decelerating sharply from +12% the prior year). Mix: temp/contract $1,200M (~80%), perm/direct-hire $300M (~20%). Permanent placement revenue DOWN -8% YoY. Gross margin (blended bill-pay spread plus perm fees) 19.5%, down from 21.0% prior year. SG&A ~13.5% of revenue (recruiters, branches), roughly fixed and grew with the prior expansion. EBITDA $90M (6.0% margin) vs $114.3M (8.0%) prior year, a 200 bps decline. Internal staff headcount +4% YoY (added ahead of demand). Client orders -6% YoY; temp hours per week trending -2% sequentially in recent quarters.",
+  "ownerGoal": "Decide before the next quarter (~90 days) whether to freeze internal hiring and right-size the branch/recruiter footprint ahead of a possible demand downturn, or to hold capacity to capture a rebound. Protect EBITDA margin and return to profitable growth without either (a) being caught with excess fixed capacity into a softening cycle or (b) gutting the recruiter base needed to capture a recovery.",
+  "ownerConstraints": [
+    "Bill-rate constraint: bill rates are capped by client budgets and intense competition for orders; clients are resisting the bill-rate increases needed to fully pass through wage inflation, so the firm cannot simply re-price the temp book at will.",
+    "Capacity / rebound constraint: recruiter and branch capacity cannot be cut too fast — recruiter tenure and client relationships take 6-12 months to rebuild, so over-cutting destroys the ability to capture a demand rebound.",
+    "Cost-input constraint: worker wage inflation is running ~6% and is largely outside the firm's control; pay rates must stay competitive to fill orders, which compresses the spread when bill rates lag.",
+    "Fixed-commitment constraint: branch lease commitments are multi-year; the firm cannot instantly shed branch occupancy cost even where order volume has fallen.",
+    "Client-concentration constraint: a meaningful share of temp hours sits with a small number of large light-industrial/logistics clients whose order volumes are the most economically sensitive, so demand softening is concentrated and lumpy.",
+    "Workforce constraint: temp workers are contingent and re-deployable, but losing skilled recruiters during a freeze risks permanent loss of fill capability in key verticals."
+  ],
+  "immediateConcern": "EBITDA margin fell 200 bps in one year (8.0% to 6.0%) while revenue still grew 5%. Leadership cannot tell how much of the decline is a controllable spread/pricing problem versus a softening demand cycle that the cost base has not adjusted to. Permanent placement (the leading indicator) is already down -8%, client orders are down -6%, and internal staff grew +4% — yet the firm keeps adding capacity against a forecast that may be rolling over. The CEO must commit a capacity decision within 90 days and a wrong call in either direction is costly.",
+  "availableData": [
+    "Revenue and mix: total revenue $1,500M FY2025 vs $1,429M FY2024; temp/contract $1,200M (~80%) vs perm/direct-hire $300M (~20%); perm placement revenue -8% YoY (10-K segment disclosure).",
+    "Gross margin / spread: blended gross margin 19.5% FY2025 vs 21.0% FY2024 (150 bps spread compression), from audited P&L.",
+    "Bill vs pay rate movement: worker pay-rate inflation +6% YoY against client bill-rate increases of only +3.5% YoY (250 bps of unrecovered wage inflation on the temp book), from operating-metric disclosure.",
+    "Orders trend: client orders / job openings -6% YoY and temp hours per week trending -2% sequentially over recent quarters (operating KPIs).",
+    "Internal headcount: internal recruiter/branch staff +4% YoY (added ahead of demand), from headcount disclosure.",
+    "Cost structure: SG&A ~13.5% of revenue, largely fixed, grew with the prior network expansion (P&L schedules).",
+    "EBITDA: $90M FY2025 (6.0% margin) vs $114.3M FY2024 (8.0% margin), a 200 bps decline (10-K)."
+  ],
+  "unavailableData": [
+    "Branch-level and vertical-level order and utilization detail (orders, fill rate, and recruiter productivity by branch/vertical are not disclosed publicly).",
+    "Client-by-client order pipeline and forward staffing commitments (proprietary, not in filings).",
+    "Worker-level redeployment and fill-time data (contingent workforce operating data not disclosed).",
+    "Forward macro/sector demand forecast used internally to justify the +4% internal hiring (internal planning assumptions not disclosed).",
+    "Detailed bill-rate elasticity by client segment (proprietary pricing data)."
+  ],
+  "timeHorizon": "90 days (capacity decision must be made before the next quarter); 12-month horizon for full margin recovery / cycle navigation",
+  "riskAppetite": "MEDIUM (cyclical business; leadership wants to avoid both over-building into a downturn and over-cutting the capacity needed for a rebound)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

@@ -1,0 +1,28 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 1,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability",
+    "market_position"
+  ],
+  "unavailableDataDeclared": [
+    "Utilization and realization split by practice area, grade, and client segment.",
+    "Per-client-segment profitability (mid-market vs large-enterprise gross margin after fully-loaded delivery cost).",
+    "Win-rate and proposal-volume trend from the CRM to test whether demand actually fell or whether the firm is losing competitive bids.",
+    "Engagement-level margin analysis to see whether fixed-fee projects are overrunning budgeted hours.",
+    "External market benchmark confirming that comparable firms are seeing the same fee/utilization pressure."
+  ],
+  "lowConfidenceFields": 1,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Utilization and realization split by practice area, grade, and client segment.",
+    "Cannot conclude on: Per-client-segment profitability (mid-market vs large-enterprise gross margin after fully-loaded delivery cost).",
+    "Cannot conclude on: Win-rate and proposal-volume trend from the CRM to test whether demand actually fell or whether the firm is losing competitive bids.",
+    "Cannot conclude on: Engagement-level margin analysis to see whether fixed-fee projects are overrunning budgeted hours.",
+    "Cannot conclude on: External market benchmark confirming that comparable firms are seeing the same fee/utilization pressure."
+  ]
+}

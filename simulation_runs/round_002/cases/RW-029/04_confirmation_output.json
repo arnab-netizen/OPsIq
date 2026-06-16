@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Active patients (seen in the trailing 12 months) fell from 38,400 to 34,900 (-9%) and client retention dropped from 79% to 68% (-11 points), with the decline accelerating quarter over quarter. Total visits fell 7% even as revenue rose 6%, meaning the top line is propped up by higher prices, not a healthy client base — the recurring-revenue foundation is shrinking.",
+    "Online review ratings at the two flagship clinics fell from 4.7 to 4.1 stars after acquisition, with recurring themes of 'rushed visits,' 'can't see my vet,' and 'too expensive now.' These clinics lost their founding veterinarian and 3 of 6 senior associates within 12 months, and corporate shortened appointment slots and moved to online-only booking. The complaint pattern points squarely at care-continuity and access changes, alongside price.",
+    "Revenue grew 6% on a 14% ATV increase while visits fell 7%; EBITDA margin slipped from 21% to 17% as fixed clinic costs deleveraged across fewer visits. The price increase is temporarily offsetting volume loss in revenue terms, but margin is already eroding and the trend is unsustainable as the active base shrinks.",
+    "Two corporate-backed competitor clinics and one national telehealth/vet-membership entrant opened within 5 miles of the flagship clinics in the last year, increasing local switching options. Post-pandemic pet-care demand has also normalized industry-wide. New-client acquisition is flat, so the active-base decline is a retention problem, not a top-of-funnel acquisition problem."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Attrition cohort analysis: which clients lapsed — by clinic, by tenure (legacy vs. post-acquisition), by primary-vet relationship (clients of departed vets vs. retained vets), by pet life-stage",
+    "Reason-for-leaving data: structured exit/lapsed-client survey distinguishing price, vet continuity/access, and competitive switching",
+    "Visit-frequency change by retained vs. lapsing clients: are remaining clients also visiting less (wellness deferral) or only the lapsed cohort?",
+    "Competitive switching evidence: how many lapsed clients moved to the two new clinics or the telehealth entrant, and why",
+    "Preventive-care-plan retention vs. churn by clinic and by enrolling veterinarian"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Active patients (seen in the trailing 12 months) fell from 38,400 to 34,900 (-9%) and client retention dropped from 79% to 68% (-11 points), with the decline accelerating quarter over quarter. Total visits fell 7% even as revenue rose 6%, meaning the top line is propped up by higher prices, not a healthy client base — the recurring-revenue foundation is shrinking.",
+    "Online review ratings at the two flagship clinics fell from 4.7 to 4.1 stars after acquisition, with recurring themes of 'rushed visits,' 'can't see my vet,' and 'too expensive now.' These clinics lost their founding veterinarian and 3 of 6 senior associates within 12 months, and corporate shortened appointment slots and moved to online-only booking. The complaint pattern points squarely at care-continuity and access changes, alongside price.",
+    "Revenue grew 6% on a 14% ATV increase while visits fell 7%; EBITDA margin slipped from 21% to 17% as fixed clinic costs deleveraged across fewer visits. The price increase is temporarily offsetting volume loss in revenue terms, but margin is already eroding and the trend is unsustainable as the active base shrinks.",
+    "Two corporate-backed competitor clinics and one national telehealth/vet-membership entrant opened within 5 miles of the flagship clinics in the last year, increasing local switching options. Post-pandemic pet-care demand has also normalized industry-wide. New-client acquisition is flat, so the active-base decline is a retention problem, not a top-of-funnel acquisition problem."
+  ]
+}

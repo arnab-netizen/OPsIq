@@ -1,0 +1,34 @@
+{
+  "step": "owner_intake",
+  "businessType": "Not-for-profit regional health system. Operates 5 acute-care hospitals and 50 outpatient/ambulatory clinics across a multi-county service area. ~$1.8B net patient revenue. Tax-exempt municipal bonds outstanding with rate covenants and a maintained credit rating. Governed by a community board; revenue overwhelmingly third-party (Medicare/Medicaid/commercial), so reimbursement rates are externally set rather than priced by the system.",
+  "stage": "FY2025: Net patient revenue $1,800M (flat YoY vs $1,790M FY2024, +0.6%). Total operating expense $1,665M (up from $1,575M FY2024, +5.7%). EBITDA $135M (7.5% margin) vs $215M FY2024 (12.0% margin) — a 450 bps margin compression. Labor expense $900M (up from $810M, +11.1%), of which contract/agency nursing $140M (up from $70M, +100%). Medical supplies & pharmacy $396M (up from $360M, +10%). Inpatient admissions -3% YoY; outpatient volume +2% YoY.",
+  "ownerGoal": "Restore EBITDA margin above the 8% covenant/rating threshold within ~90 days of board-decision execution and onto a path back toward double-digit margin, without breaching safe nurse-staffing ratios, degrading quality/patient-safety metrics, or triggering a rating downgrade.",
+  "ownerConstraints": [
+    "Covenant/rating constraint: Municipal bond rate covenants and the current investment-grade rating are at risk if EBITDA margin remains below 8%. A downgrade raises future borrowing cost and may trip continuing-disclosure scrutiny. Board must act within ~90 days.",
+    "Reimbursement constraint: Payer rates (Medicare, Medicaid, commercial contracts) are externally set or contractually fixed. The system cannot unilaterally raise prices to recover margin; commercial contract renegotiation is annual and slow.",
+    "Safe-staffing / regulatory constraint: Nurse-to-patient staffing ratios are governed by state regulation, accreditation (Joint Commission), and union agreements. Across-the-board headcount cuts that breach safe ratios are legally and clinically prohibited.",
+    "Mission / not-for-profit constraint: As a tax-exempt charitable system, it must maintain community-benefit obligations, charity care, and essential service lines (including unprofitable but essential ones such as ED and behavioral health) — limiting pure service-line exit.",
+    "Workforce constraint: An acute regional nursing shortage drives reliance on contract/agency staff; abrupt elimination of agency nurses without a permanent-hire pipeline risks bed closures and admission diversion.",
+    "Quality constraint: Cost actions cannot degrade publicly reported quality, readmission, or patient-safety metrics that influence value-based reimbursement and reputation."
+  ],
+  "immediateConcern": "EBITDA margin fell 450 bps in one fiscal year (12.0% to 7.5%) while net patient revenue stayed flat. The board fears the margin is now structurally below the 8% level that protects bond covenants and the credit rating. Management is unsure whether the driver is a cost-structure/throughput problem (agency labor and supply cost inflation against falling inpatient volume) or a revenue/pricing problem, and must present a credible recovery plan to the board within 90 days.",
+  "availableData": [
+    "Consolidated financials FY2024-FY2025: Net patient revenue ($1,790M → $1,800M), total operating expense ($1,575M → $1,665M), EBITDA ($215M → $135M), EBITDA margin (12.0% → 7.5%) from audited statements and bond continuing-disclosure operating data.",
+    "Labor cost detail: Total labor $810M → $900M (+11.1%); contract/agency nursing $70M → $140M (+100%); employed salaries/wages/benefits as the remainder, from operating-expense schedules.",
+    "Non-labor cost detail: Medical supplies & pharmacy $360M → $396M (+10%); other operating expense from supplemental schedules.",
+    "Volume statistics: Inpatient admissions -3% YoY; outpatient/ambulatory visit volume +2% YoY; case-mix index roughly stable, from bond-disclosure utilization tables.",
+    "Capital/liquidity context: Days cash on hand, debt-service coverage ratio, and outstanding tax-exempt debt balance from continuing-disclosure filings; covenant threshold near 8% operating EBITDA margin.",
+    "Payer mix summary: Approximate Medicare/Medicaid/commercial split (rates externally set); net revenue flat indicates static rates and mix, from disclosure tables."
+  ],
+  "unavailableData": [
+    "Unit-level (per-hospital and per-clinic) productivity and worked-hours-per-adjusted-patient-day detail (not in public disclosures).",
+    "Contract/agency nurse hourly bill-rate vs equivalent employed-FTE fully-loaded cost by facility (internal staffing-vendor data).",
+    "Service-line-level contribution margin (e.g., orthopedics vs behavioral health vs ED) at the procedure level (internal cost accounting).",
+    "Supply formulary and GPO contract pricing detail by category to isolate price inflation vs utilization (internal procurement data).",
+    "Nurse vacancy, turnover, and time-to-fill metrics by facility needed to size a permanent-hire ramp."
+  ],
+  "timeHorizon": "~90 days to a board decision on cutting agency staffing vs restructuring vs accepting a downgrade; 12-18 months to demonstrate margin recovery above the 8% covenant threshold.",
+  "riskAppetite": "LOW-MEDIUM (not-for-profit board with covenant/rating exposure; must avoid actions that breach safe staffing, harm quality, or signal distress to bondholders and rating agencies)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

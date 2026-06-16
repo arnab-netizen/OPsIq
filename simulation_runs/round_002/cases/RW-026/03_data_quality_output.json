@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "ARPU, CAC, payback, and LTV broken out by segment (SMB vs mid-market vs DSO) and acquisition channel.",
+    "Expansion mechanics: which modules/seats drive expansion in each segment and why SMB expansion is low.",
+    "Win/loss and pricing-elasticity data for the SMB segment (would higher ARPU/packaging hold?).",
+    "True cost-to-serve and support load per segment (SMB volume vs DSO complexity).",
+    "Pipeline coverage and conversion by segment to size a credible diversification plan."
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: ARPU, CAC, payback, and LTV broken out by segment (SMB vs mid-market vs DSO) and acquisition channel.",
+    "Cannot conclude on: Expansion mechanics: which modules/seats drive expansion in each segment and why SMB expansion is low.",
+    "Cannot conclude on: Win/loss and pricing-elasticity data for the SMB segment (would higher ARPU/packaging hold?).",
+    "Cannot conclude on: True cost-to-serve and support load per segment (SMB volume vs DSO complexity).",
+    "Cannot conclude on: Pipeline coverage and conversion by segment to size a credible diversification plan."
+  ]
+}

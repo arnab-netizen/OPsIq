@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (asset-based carrier with capital-markets and lender access, but covenant pressure and lease commitments limit discretionary spend)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (large workforce but driver capacity constrained by a tight CDL labor market; analytical/pricing team available for a focused diagnostic)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

@@ -1,0 +1,31 @@
+{
+  "step": "owner_intake",
+  "businessType": "Vertical SaaS for production planning and scheduling sold to discrete-manufacturing firms. Annual contracts, $30k-$120k ACV, implementation-heavy onboarding. Founded 2020, Series B raised 2024. ARR $8M, 130 customers, ~70 employees.",
+  "stage": "ARR $8M, 40% YoY growth but decelerating; churn 3% MRR; CAC $35k; LTV $180k; LTV:CAC ~5.1:1; gross margin 80%. Cash runway 36 months. ~90% of customers and new-logo ARR concentrated in the core discrete-manufacturing vertical.",
+  "ownerGoal": "Series B expansion with focus on deeper penetration of the core manufacturing vertical and a path to $20M ARR within 18 months, while protecting capital efficiency.",
+  "ownerConstraints": [
+    "Sales constraint: Limited sales resources (8 quota-carrying reps); cannot dramatically expand headcount without straining the 36-month runway and capital-efficiency expectations.",
+    "Product constraint: Each new vertical or sub-segment requires meaningful vertical-specific customization and integrations (8-12 weeks of product/engineering effort per adjacency).",
+    "Market constraint: The core discrete-manufacturing segment the company targets is finite; signals suggest the reachable, qualified portion of that segment is approaching saturation.",
+    "Data constraint: The company tracks ARR, churn, and CAC/LTV by vertical and customer count by industry, but has no validated market-size or addressable-demand estimate by vertical or sub-segment.",
+    "Organizational constraint: Lean go-to-market and customer-success teams; entering an adjacent vertical would require new domain expertise and reference customers the company does not yet have."
+  ],
+  "immediateConcern": "Growth is slowing: YoY growth is 40% but month-over-month new-bookings growth has fallen from ~5% to ~3.5%, and win rates in the core segment are softening as the most obvious target accounts have already been sold. The concern is whether the company has nearly exhausted the qualified demand in its core vertical (a saturation/forecast problem), is losing deals to competitors, or has hit a product-market-fit ceiling. Leadership is leaning toward investing further in the same vertical, but lacks any addressable-demand estimate to confirm headroom remains.",
+  "availableData": [
+    "ARR, MRR, and new-bookings trend (MoM and YoY)",
+    "Churn and net revenue retention by vertical",
+    "CAC, LTV, and LTV:CAC by vertical and acquisition channel",
+    "Customer count and pipeline coverage by industry/sub-segment",
+    "Win rate and sales-cycle length over the trailing year"
+  ],
+  "unavailableData": [
+    "Validated market size and growth rate by vertical and sub-segment (no addressable-demand model)",
+    "Competitive dynamics and win/loss reasons by deal",
+    "Penetration rate of the qualified core-segment account universe",
+    "Demand signal for adjacent verticals (no in-market test run)"
+  ],
+  "timeHorizon": "18 months",
+  "riskAppetite": "MEDIUM",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

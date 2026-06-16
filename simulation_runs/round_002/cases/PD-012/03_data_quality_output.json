@@ -1,0 +1,25 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 2,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Detailed competitive win/loss and shopper-defection data (not disclosed)",
+    "Granular customer-behavior and basket-shift analytics (proprietary)",
+    "Store-by-store contribution margin net of allocated fixed cost (aggregated in filings)",
+    "Lease-termination cost detail by location (not itemized publicly)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Detailed competitive win/loss and shopper-defection data (not disclosed)",
+    "Cannot conclude on: Granular customer-behavior and basket-shift analytics (proprietary)",
+    "Cannot conclude on: Store-by-store contribution margin net of allocated fixed cost (aggregated in filings)",
+    "Cannot conclude on: Lease-termination cost detail by location (not itemized publicly)"
+  ]
+}

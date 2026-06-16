@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (venture-backed, margin-sensitive)",
+    "timeHorizonDays": 420,
+    "staffCapacity": "MEDIUM (support and product analysts available; ticket tagging not yet built)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

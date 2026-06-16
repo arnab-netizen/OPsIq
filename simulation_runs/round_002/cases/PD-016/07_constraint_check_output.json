@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (large balance sheet but capital tied up in spec and land; land-bank covenants and board funding decision constrain new spend)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (division/community teams in place, but redeploying starts and land strategy requires coordinated land, construction, and sales decisions)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

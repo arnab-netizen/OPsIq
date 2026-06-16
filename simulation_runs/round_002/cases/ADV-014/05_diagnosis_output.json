@@ -1,0 +1,16 @@
+{
+  "step": "diagnosis",
+  "rootCauseType": "demand_forecasting_mismatch",
+  "description": "Supply-demand imbalance due to forecast error or inventory misalignment",
+  "mechanism": "Demand signal not correctly translated to supply plan. Excess inventory ties up cash; stockouts lose revenue. Forecast error causes bullwhip effect through supply chain.",
+  "confidence": "MODERATE",
+  "rejectedHypotheses": [
+    "Demand may be genuinely volatile (external shock)",
+    "Supply chain constraint may be the binding constraint"
+  ],
+  "missingEvidence": [
+    "Demand forecast accuracy historical data",
+    "Safety stock model",
+    "Supply lead time analysis"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Junior turnover doubled (10% → 18% in two years). Exit interviews suggest junior consultants leaving for Big Four strategy roles or corporate positions. Partnership track is narrow: only 2 out of 10 hired consultants reach partner level. This creates perception of limited career advancement.",
+    "Revenue growth slowing (8% YoY, down from higher historical growth), EBITDA margin compressing toward 12% from historical 15%+. Partner utilization at 72% (below peer 75-80%), suggesting bench time or suboptimal project staffing. Realization rate 85% (below target 90%), indicating discount pressure or project profitability issues.",
+    "Boutique firm facing consolidation pressure; Big Four expanding in strategy. Client concentration risk: top 3 = 32% of revenue. Limited differentiation vs. larger competitors; pricing pressure from Big Four. Market perception: boutique = smaller, less resourced, riskier than Big Four."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Junior consultant feedback: Why are they leaving? Compensation? Career path? Fit/culture?",
+    "Partner productivity variance: Do some partners generate higher revenue than others? What differentiates?",
+    "Client profitability: Which clients are most profitable? Are low-margin clients driving utilization down?",
+    "Market positioning: How is firm differentiated from Big Four? Why should juniors stay for partnership track?"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Junior turnover doubled (10% → 18% in two years). Exit interviews suggest junior consultants leaving for Big Four strategy roles or corporate positions. Partnership track is narrow: only 2 out of 10 hired consultants reach partner level. This creates perception of limited career advancement.",
+    "Revenue growth slowing (8% YoY, down from higher historical growth), EBITDA margin compressing toward 12% from historical 15%+. Partner utilization at 72% (below peer 75-80%), suggesting bench time or suboptimal project staffing. Realization rate 85% (below target 90%), indicating discount pressure or project profitability issues.",
+    "Boutique firm facing consolidation pressure; Big Four expanding in strategy. Client concentration risk: top 3 = 32% of revenue. Limited differentiation vs. larger competitors; pricing pressure from Big Four. Market perception: boutique = smaller, less resourced, riskier than Big Four."
+  ]
+}

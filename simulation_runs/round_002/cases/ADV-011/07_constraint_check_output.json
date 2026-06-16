@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (partnership structure, limited external capital availability; must fund growth from retained earnings)",
+    "timeHorizonDays": 545,
+    "staffCapacity": "LOW (40-person firm; every hire requires careful planning; partner retention/recruitment critical constraint)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

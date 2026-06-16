@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 5,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "The PUC's internal disposition / likelihood of approving a forward test year or specific tracker mechanisms in the next case (not disclosable pre-filing)",
+    "Detailed cost-of-service study allocations by customer class beyond the last filed case (proprietary / not yet filed)",
+    "Confidential settlement positions of intervenors and consumer advocates for the upcoming case",
+    "Forward interest-rate path and its effect on the next authorized cost of capital (market-dependent, not disclosed)",
+    "Project-by-project deferral flexibility within the mandated capital plan (internal engineering assessments not public)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: The PUC's internal disposition / likelihood of approving a forward test year or specific tracker mechanisms in the next case (not disclosable pre-filing)",
+    "Cannot conclude on: Detailed cost-of-service study allocations by customer class beyond the last filed case (proprietary / not yet filed)",
+    "Cannot conclude on: Confidential settlement positions of intervenors and consumer advocates for the upcoming case",
+    "Cannot conclude on: Forward interest-rate path and its effect on the next authorized cost of capital (market-dependent, not disclosed)",
+    "Cannot conclude on: Project-by-project deferral flexibility within the mandated capital plan (internal engineering assessments not public)"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 3,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Detailed segment profitability: Which verticals (fintech, tech, other) are most profitable? Which are declining?",
+    "Recruiter productivity breakdown: Which recruiters are performing above/below $300k average? What are the best performers doing differently?",
+    "Client win/loss: Which clients increasing/decreasing placement volume? Why?",
+    "Product diversification potential: What adjacent services (coaching, outplacement, advisory) could add margin?",
+    "Competitive positioning: How are larger recruiting firms more efficient? What can we learn?"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Detailed segment profitability: Which verticals (fintech, tech, other) are most profitable? Which are declining?",
+    "Cannot conclude on: Recruiter productivity breakdown: Which recruiters are performing above/below $300k average? What are the best performers doing differently?",
+    "Cannot conclude on: Client win/loss: Which clients increasing/decreasing placement volume? Why?",
+    "Cannot conclude on: Product diversification potential: What adjacent services (coaching, outplacement, advisory) could add margin?",
+    "Cannot conclude on: Competitive positioning: How are larger recruiting firms more efficient? What can we learn?"
+  ]
+}

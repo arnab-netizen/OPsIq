@@ -1,0 +1,25 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 3,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Detailed employee skill inventory and career paths",
+    "BIM adoption readiness assessment",
+    "Competitive win/loss data at project level",
+    "Market sizing for digital/AI-assisted design services"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Detailed employee skill inventory and career paths",
+    "Cannot conclude on: BIM adoption readiness assessment",
+    "Cannot conclude on: Competitive win/loss data at project level",
+    "Cannot conclude on: Market sizing for digital/AI-assisted design services"
+  ]
+}

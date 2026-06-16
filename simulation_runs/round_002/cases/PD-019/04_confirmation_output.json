@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "EBITDA margin declined from 11.0% (FY2024, $87.1M on $792M) to 8.0% (FY2025, $64M on $800M), a 300 bps compression, even though revenue was essentially flat (+1%). The operating ratio (operating expenses / revenue) deteriorated from 91% to 94%, a 300 bps increase, indicating that operating costs grew materially faster than revenue.",
+    "Cost per mile rose sharply in the two largest variable cost lines. Fuel per mile increased 15% to $0.40 (from $0.348), adding ~$0.052/mile. Driver wages and benefits per mile increased 12% to $0.62 (from $0.554), adding ~$0.066/mile. Combined, the two lines added ~$0.118/mile of cost on 500M miles, roughly +$59M of cost year over year. Other cost-per-mile lines: maintenance $0.18, equipment/depreciation $0.16, insurance/other $0.20.",
+    "Revenue per mile fell 3.6% to $1.60 (from $1.66) in a soft, oversupplied freight market. Competitive spot rates are pressuring pricing and the contract fuel surcharge under-recovers: spot freight (~30% of revenue) carries little surcharge and contract surcharge formulas lag the pump. The carrier cannot raise rates unilaterally without ceding volume, so revenue per mile is being squeezed from both base rate and incomplete fuel pass-through.",
+    "Volumes are roughly stable: total miles ~500M and revenue essentially flat at $800M vs $792M (+1%). This rules out a demand-collapse explanation. The deterioration is concentrated in the gap between revenue per mile ($1.60) and rising cost per mile; the marginal mile now contributes far less, with the combined fuel+wage cost increase (~$0.118/mile) exceeding the revenue-per-mile decline (-$0.06/mile), so contribution per mile has compressed even before fixed costs."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Lane-level and customer-level profitability (contribution margin per lane and per account is not disclosed in public filings).",
+    "Empty-mile / deadhead percentage and tractor utilization by region (not separately disclosed).",
+    "Fuel-surcharge recovery ratio by customer (actual surcharge collected vs incremental fuel cost) at the account level.",
+    "Driver turnover, recruiting, and training cost detail by terminal (proprietary HR data).",
+    "Equipment lease-by-lease terms, early-termination penalties, and residual values (not itemized publicly)."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "EBITDA margin declined from 11.0% (FY2024, $87.1M on $792M) to 8.0% (FY2025, $64M on $800M), a 300 bps compression, even though revenue was essentially flat (+1%). The operating ratio (operating expenses / revenue) deteriorated from 91% to 94%, a 300 bps increase, indicating that operating costs grew materially faster than revenue.",
+    "Cost per mile rose sharply in the two largest variable cost lines. Fuel per mile increased 15% to $0.40 (from $0.348), adding ~$0.052/mile. Driver wages and benefits per mile increased 12% to $0.62 (from $0.554), adding ~$0.066/mile. Combined, the two lines added ~$0.118/mile of cost on 500M miles, roughly +$59M of cost year over year. Other cost-per-mile lines: maintenance $0.18, equipment/depreciation $0.16, insurance/other $0.20.",
+    "Revenue per mile fell 3.6% to $1.60 (from $1.66) in a soft, oversupplied freight market. Competitive spot rates are pressuring pricing and the contract fuel surcharge under-recovers: spot freight (~30% of revenue) carries little surcharge and contract surcharge formulas lag the pump. The carrier cannot raise rates unilaterally without ceding volume, so revenue per mile is being squeezed from both base rate and incomplete fuel pass-through.",
+    "Volumes are roughly stable: total miles ~500M and revenue essentially flat at $800M vs $792M (+1%). This rules out a demand-collapse explanation. The deterioration is concentrated in the gap between revenue per mile ($1.60) and rising cost per mile; the marginal mile now contributes far less, with the combined fuel+wage cost increase (~$0.118/mile) exceeding the revenue-per-mile decline (-$0.06/mile), so contribution per mile has compressed even before fixed costs."
+  ]
+}

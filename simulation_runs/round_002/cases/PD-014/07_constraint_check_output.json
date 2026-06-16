@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH (investment-grade public contractor with capital-markets access, but spending and pricing constrained by board oversight and government contracting compliance)",
+    "timeHorizonDays": 120,
+    "staffCapacity": "HIGH (~6,500 employees including contracts, pricing, and legal functions; but specialized REA/claims and pricing capacity is finite)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

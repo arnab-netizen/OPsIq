@@ -1,0 +1,31 @@
+{
+  "step": "owner_intake",
+  "businessType": "Mid-tier department store chain operating 45 full-line stores across suburban and secondary markets. ~$800M annual revenue, ~6,500 employees. Apparel, home goods, beauty, and accessories under a single banner. Public company.",
+  "stage": "Revenue declined from $850M (FY2023) to $800M (FY2025), a 5.9% drop. EBITDA margin fell from 6% to 4% (-200 bps). Same-store sales down ~4% per year. Inventory growing faster than sales (inventory up ~12% over two years on declining revenue). E-commerce only ~14% of sales versus ~30%+ for stronger peers.",
+  "ownerGoal": "Stabilize profitability and avoid a wave of store closures or a distressed sale. Restore EBITDA margin toward 6% and right-size the store base and inventory to actual demand within 24 months.",
+  "ownerConstraints": [
+    "Secular constraint: Brick-and-mortar department-store foot traffic is in structural decline; the company built and staffed a 45-store footprint sized for demand that no longer materializes at the planned level.",
+    "Competitive constraint: E-commerce and off-price competitors (Amazon, Target, TJX) are capturing the chain's traditional mid-tier shopper; the company cannot match their assortment breadth or price.",
+    "Cost constraint: High fixed real-estate (long-term leases) and store-labor costs do not flex down as revenue and traffic fall, de-leveraging margin.",
+    "Inventory constraint: Buying and allocation are still planned to a higher demand forecast, leaving excess seasonal inventory that must be cleared at markdown, compressing gross margin.",
+    "Capital constraint: Limited balance-sheet flexibility; major store closures carry lease-termination costs and require careful investor communication to avoid signaling distress."
+  ],
+  "immediateConcern": "Same-store sales keep declining while inventory accumulates and markdowns deepen, indicating the company is buying and operating to a demand level that the market is no longer delivering. Margin is compressing because fixed store and lease costs are spread over a shrinking, over-forecasted revenue base. The core question is whether the store footprint and inventory plan are sized to real, sustainable demand or to an outdated forecast.",
+  "availableData": [
+    "Revenue and same-store sales trends by year (10-K, 10-Q)",
+    "Gross margin and markdown rate by category (investor presentations)",
+    "Store-level metrics: sales per store, sales per square foot, traffic trends",
+    "Inventory levels and inventory turnover (balance sheet, MD&A)",
+    "Channel mix: in-store vs e-commerce revenue split"
+  ],
+  "unavailableData": [
+    "Detailed competitive win/loss and shopper-defection data (not disclosed)",
+    "Granular customer-behavior and basket-shift analytics (proprietary)",
+    "Store-by-store contribution margin net of allocated fixed cost (aggregated in filings)",
+    "Lease-termination cost detail by location (not itemized publicly)"
+  ],
+  "timeHorizon": "24 months",
+  "riskAppetite": "LOW",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

@@ -1,0 +1,37 @@
+{
+  "step": "owner_intake",
+  "businessType": "Regional department-store retailer operating 30 full-line department stores across mid-size metropolitan and suburban markets. Merchandise mix spans apparel, footwear, home goods, beauty, and accessories. Founded as a family banner, later recapitalized; now carries leveraged-buyout-era debt. Approximately 4,800 employees (mostly hourly store associates). Channel mix: ~82% physical store sales, ~18% e-commerce. Operates under a single banner with a legacy loyalty program and an aging core customer base.",
+  "stage": "FY2025: Revenue $600M (declining, -6.5% YoY vs $642M FY2024; FY2023 was $675M — multi-year decline). Comparable-store sales -7% YoY. Store traffic -9% YoY; conversion roughly flat; average ticket +1%. E-commerce 18% of sales ($108M), up from 12% prior year, but total revenue still falling. Gross margin 34% (down from 38%). Inventory write-downs $24M in FY2025 (4.0% of revenue), up from $9M (1.4%) prior year. EBITDA $24M (4.0% margin), down from $45M (7.0% margin) prior year — a ~300 bps decline. Roughly 6 of 30 stores are EBITDA-negative on a four-wall basis. Occupancy cost rising as a percentage of declining store sales.",
+  "ownerGoal": "Stabilize the business and present a credible forward plan to the board and lender ahead of a refinancing decision and the next season's merchandise buy (both within ~90-120 days). Owner wants to know whether to invest in repositioning the banner, rationalize the store fleet, or pursue strategic alternatives — without triggering a markdown spiral that breaches debt covenants.",
+  "ownerConstraints": [
+    "Long-term mall and store leases are hard to exit: most of the 30 stores carry leases with 5-12 years of remaining term and substantial early-termination penalties, limiting fast fleet rationalization and locking in occupancy cost on declining sales.",
+    "Brand heritage and an aging core customer base: the banner has decades of regional recognition and a loyalty file skewed older; alienating the existing base while chasing younger/online customers risks accelerating the decline before any repositioning pays off.",
+    "E-commerce build cost: closing the digital-capability gap (fulfillment, site merchandising, marketing, data) requires meaningful capital and 12-24 months, competing for scarce funds against store operations and debt service.",
+    "Vendor and merchandise commitments: next season's buy must be committed within ~90-120 days; open-to-buy and vendor terms are partly locked, and several key vendors have tightened terms as performance has weakened, constraining merchandise flexibility.",
+    "Limited capital and covenant pressure: leverage is high, the refinancing window is ~90-120 days, and another heavy markdown season threatens to breach EBITDA-based covenants — restricting discretionary spend on diagnostics, capex, or repositioning.",
+    "Workforce and community footprint: ~4,800 mostly hourly employees and concentrated local employment in several markets create political and reputational constraints on rapid store closures."
+  ],
+  "immediateConcern": "Sales and margins are deteriorating together and the deterioration looks structural rather than cyclical. Comparable-store sales fell 7% while traffic fell 9% and conversion held roughly flat — customers are simply coming in less, not failing to buy once inside. E-commerce grew to 18% of sales but total revenue still fell 6.5%, so online is not offsetting store losses; it reads as cannibalization and share loss rather than additive growth. Gross margin fell from 38% to 34%, driven mostly by escalating markdowns and inventory write-downs ($9M to $24M, 1.4% to 4.0% of revenue) on merchandise the customer base no longer wants. With a refinancing and the next merchandise buy both due in ~90-120 days, management must decide whether the problem is the merchandise/buying process, the cost structure, or something more fundamental about the banner's relevance — before committing capital it cannot easily recover.",
+  "availableData": [
+    "Revenue trend (audited): FY2023 $675M, FY2024 $642M (-4.9%), FY2025 $600M (-6.5% YoY); multi-year decline.",
+    "Comparable-store sales: -7% YoY FY2025 (excludes closed/opened stores), trending negative for 3 consecutive years.",
+    "Store traffic: -9% YoY (door-counter and loyalty-scan data), versus conversion roughly flat (low-to-mid teens %, stable YoY) and average ticket +1%.",
+    "Channel mix: e-commerce 18% of sales ($108M) FY2025, up from 12% ($77M) prior year; store sales declining faster than e-commerce is growing.",
+    "Gross margin: 34% FY2025, down from 38% prior year (400 bps); merchandise margin pressured primarily by markdowns.",
+    "Inventory write-downs / markdown reserve: $24M FY2025 (4.0% of revenue), up from $9M (1.4%) prior year — disclosed in MD&A and inventory footnotes.",
+    "Store-level EBITDA: four-wall EBITDA by store available; ~6 of 30 stores EBITDA-negative; occupancy cost rising as % of store sales.",
+    "EBITDA: $24M (4.0% margin) FY2025 vs $45M (7.0%) prior year; covenant headroom narrowing.",
+    "Loyalty program data: active member count, age skew, and frequency trends (declining trips per member)."
+  ],
+  "unavailableData": [
+    "Lapsed-customer and competitive-defection research: where former customers now shop (off-price, specialty, pure-play online) and why they stopped — not currently collected.",
+    "Brand-perception / relevance study: how target and lapsed customers rate the banner on differentiation, value, assortment, and reasons-to-visit versus competitors.",
+    "Category-level and SKU-level markdown root-cause data: which categories/buys drove the write-down increase, and whether it was over-buying, assortment misfit, or pricing — public/aggregate data masks this.",
+    "Customer overlap between store and e-commerce: degree to which online sales are existing store customers shifting channel (cannibalization) versus genuinely incremental customers.",
+    "Competitor pricing, traffic, and assortment benchmarks at the local-market level for each of the 30 stores."
+  ],
+  "timeHorizon": "90-120 days (refinancing decision and next-season merchandise buy commitment), with an 18-24 month horizon for any brand repositioning or fleet rationalization to show results.",
+  "riskAppetite": "LOW-MEDIUM (high leverage and a near-term covenant/refinancing constraint force caution; cannot fund large simultaneous bets, but inaction through another markdown season is itself high-risk).",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

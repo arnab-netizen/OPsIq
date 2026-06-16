@@ -1,0 +1,34 @@
+{
+  "step": "owner_intake",
+  "businessType": "Direct-to-consumer brand selling premium home/wellness products online. ~45 employees. Revenue driven by paid social and search acquisition plus repeat purchases from an existing customer base. Founded 2020.",
+  "stage": "$8.0M trailing revenue, 35% YoY growth (from $5.9M). Blended gross margin 60%. Marketing spend grew from ~$1.2M to ~$2.6M YoY. Blended CAC rose from ~$38 to ~$61 per new customer. 12-month repeat-purchase rate fell from 42% (2022 cohort) to 28% (2024 cohort). Average order value roughly flat at ~$72.",
+  "ownerGoal": "Hit $12M revenue next year by roughly doubling paid acquisition spend again, then raise a growth round on the back of the growth rate.",
+  "ownerConstraints": [
+    "Cash constraint: ~$1.4M cash, ~9 months runway at current burn; the doubling of ad spend assumes either reinvested margin or a new raise.",
+    "Inventory constraint: working capital is tied up in inventory; faster growth increases inventory financing needs.",
+    "Channel constraint: ~80% of new customers come from two paid platforms whose CPMs have risen; founder is reluctant to diversify channels mid-scale.",
+    "Brand constraint: founder believes brand momentum and growth rate are the fundraising story and does not want to slow spend.",
+    "Data constraint: analytics show blended CAC and a cohort repeat-purchase table, but contribution margin per cohort (after CAC, COGS, shipping, returns) has not been calculated."
+  ],
+  "immediateConcern": "Founder framing: 'We just grew 35% to $8M and the brand is on fire. The plan is simple - double down on paid acquisition, hit $12M next year, and raise on the growth story. Growth solves everything. CAC ticked up a bit but that is just the cost of scaling, and revenue is clearly outrunning it. I do not want to take the foot off the gas to overthink the numbers.'",
+  "availableData": [
+    "Revenue $5.9M -> $8.0M (35% YoY growth); blended gross margin 60%; AOV flat at ~$72.",
+    "Marketing spend roughly doubled ($1.2M -> $2.6M) to produce the 35% revenue growth - spend grew faster than revenue.",
+    "Blended CAC rose ~$38 -> ~$61 per new customer (about +60%).",
+    "12-month repeat-purchase rate by acquisition cohort: 2022 cohort 42%, 2023 cohort 35%, 2024 cohort 28% - declining each vintage.",
+    "New customers are an increasing share of revenue while repeat-customer revenue share is shrinking; the growth is being bought, not retained.",
+    "~80% of new customers acquired via two paid platforms with rising CPMs.",
+    "First-order contribution after CA+COGS+shipping is thin and possibly negative for the newest cohort at $61 CAC on a $72 AOV at 60% margin; full per-cohort contribution margin (including returns and second-order revenue) has not been computed."
+  ],
+  "unavailableData": [
+    "Per-cohort contribution margin and payback after fully-loaded CAC, COGS, shipping, returns, and discounts.",
+    "Cohort LTV projection incorporating the declining repeat-purchase trend.",
+    "Return/refund rate by cohort and channel.",
+    "Organic vs paid customer quality comparison (do paid-acquired customers repeat worse?).",
+    "Marginal CAC at a doubled spend level (does CAC rise further as spend scales into the same two channels?)."
+  ],
+  "timeHorizon": "12 months to the $12M target; ~9 months cash runway",
+  "riskAppetite": "HIGH (founder is growth-maximizing and reluctant to slow spend)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

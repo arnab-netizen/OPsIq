@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Margin-leak attribution: how much of the 330bps decline is stale price files (cost pass-through gap) vs. rep discounting vs. mix shift vs. e-commerce matching",
+    "SKU-level price-band dispersion: how widely the same SKU is sold across customers, and which SKUs/customers carry the deepest unjustified discounts",
+    "Customer/product-mix bridge: did the customer or product mix shift toward lower-margin commodity SKUs, or did margin on the same mix fall?",
+    "Competitive price-sensitivity by SKU category: which SKUs are genuinely price-transparent commodities vs. differentiated/proprietary items with pricing power",
+    "Rep-override outcomes: do overrides actually win/retain business, or do reps discount deals that would have closed at list?"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Margin-leak attribution: how much of the 330bps decline is stale price files (cost pass-through gap) vs. rep discounting vs. mix shift vs. e-commerce matching",
+    "Cannot conclude on: SKU-level price-band dispersion: how widely the same SKU is sold across customers, and which SKUs/customers carry the deepest unjustified discounts",
+    "Cannot conclude on: Customer/product-mix bridge: did the customer or product mix shift toward lower-margin commodity SKUs, or did margin on the same mix fall?",
+    "Cannot conclude on: Competitive price-sensitivity by SKU category: which SKUs are genuinely price-transparent commodities vs. differentiated/proprietary items with pricing power",
+    "Cannot conclude on: Rep-override outcomes: do overrides actually win/retain business, or do reps discount deals that would have closed at list?"
+  ]
+}

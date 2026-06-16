@@ -8,14 +8,16 @@
 ## REMEDIATION STATUS BLOCK (authoritative)
 
 ```yaml
-current_phase: ROUND_2_CASE_PACK_REMEDIATION
-current_slice: Universal Benchmark Artifact Quality Gate
-last_completed_step: ROUND_2_CASE_PACK_REMEDIATION_COMPLETE
+current_phase: ROUND_2_EXECUTION_COMPLETE
+current_slice: Round 2 Staged Owner-Mode Execution
+last_completed_step: ROUND_2_EXECUTION
 universal_benchmark_artifact_quality_gate: PASS   # BENCHMARK_ARTIFACTS_READY
 benchmark_artifact_gate_recorded: true
-next_required_step: ROUND_2_EXECUTION (per execution_consultant_engine_v2.md §14)
-blockers: []
-benchmark_execution_authorized: true   # artifact gate only; §14 staged process + §15 pass-gate still apply
+round_2_execution_status: COMPLETE (50/50 cases executed, 49 valid)
+consultant_grade_gate: FAILED (4/11 criteria pass; root-cause 0%, first-action 0%)
+blockers: [CONSULTANT_GRADE_BLOCKED_BY_ACCURACY]
+benchmark_execution_authorized: completed
+next_required_step: SLICE_3_DESIGN (per execution_consultant_engine_v2.md §17)
 ```
 
 The original hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack. All

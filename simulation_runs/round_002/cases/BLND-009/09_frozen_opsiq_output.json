@@ -1,0 +1,176 @@
+{
+  "frozenAt": "2026-06-16T21:01:05.874Z",
+  "caseId": "BLND-009",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency"
+  ],
+  "decisionMemo": {
+    "id": "993fbe36-c246-45ca-b974-c5fbbc71d678",
+    "engagementId": "2e967286-06a6-479a-b0d4-6a4e023f1a4f",
+    "timestamp": "2026-06-16T21:01:05.868Z",
+    "businessProblem": "A mature, profitable $85M-revenue industrial equipment manufacturer (~$11M EBITDA, higher-margin ~30% aftermarket stream) is owned ~100% by a 64-year-old founder who wants a fair liquidity event and an orderly exit within ~18-24 months while protecting ~310 employees and a 40-year reputation. There is no internal successor and value is concentrated in the founder and 2-3 long-tenured leaders, with top-5 customer concentration at ~38%. He must choose among (A) a financial/PE buyer (faster, EBITDA-multiple-based, often requiring an earn-out or management retention he cannot personally provide), (B) a strategic buyer (potential synergy premium but integration/relocation risk and harder to source), or (C) retaining and running for cash flow with hired management (preserves control/reputation but defers liquidity and concentrates wealth in an illiquid, key-person-dependent asset). The business's transferable value, aftermarket durability, and key-person dependence are not yet substantiated to buyer-diligence standard, and any path that requires the founder's continued daily leadership past ~24 months is unacceptable.",
+    "rootCauseDiagnosis": {
+      "id": "da5b4c0c-fa75-47b5-9c52-57b3c3a17ffa",
+      "type": "brand_erosion",
+      "description": "Loss of market position due to brand/reputation damage",
+      "mechanismDescription": "Customer perception of brand has shifted negative. Market position erodes as customers perceive competitors as superior or more trustworthy. Premium positioning collapses.",
+      "evidenceIds": [
+        "46127359-8a6c-4d62-a897-6c7bd1c934ee"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "Actual product quality declined (not perception issue)",
+        "Competitive product innovation may be superior"
+      ],
+      "missingEvidenceFor": [
+        "Customer perception data vs actual quality",
+        "Competitive positioning analysis",
+        "Timeline of perception shift"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "7dbf0730-7c76-4c8b-9df4-856df561e368",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Customer perception of brand has shifted negative. Market position erodes as customers perceive competitors as superior or more trustworthy. Premium positioning collapses.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "46127359-8a6c-4d62-a897-6c7bd1c934ee"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: MEDIUM-HIGH (no operational crisis, but the founder's age, lack of successor, and key-person concentration make an orderly transition time-sensitive; a poorly prepared process risks a discounted outcome and workforce/reputation harm)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "942c6070-82fe-4c42-b443-cb464e283b62",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "7dbf0730-7c76-4c8b-9df4-856df561e368"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "a5ed8c23-a15b-47fd-9d1b-2a52a18cae28",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "7dbf0730-7c76-4c8b-9df4-856df561e368"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "7dbf0730-7c76-4c8b-9df4-856df561e368",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "7dbf0730-7c76-4c8b-9df4-856df561e368"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

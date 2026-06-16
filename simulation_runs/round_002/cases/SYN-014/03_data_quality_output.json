@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 1,
+  "missingDimensions": [
+    "operational_efficiency",
+    "quality_delivery",
+    "financial_health",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Cross-sell propensity model by customer size and payment volume",
+    "Quantified take-rate elasticity versus the discounting entrants",
+    "Expansion pipeline coverage (there is effectively no expansion pipeline tracked today)",
+    "Margin contribution by module (payouts vs cards vs FX)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Cross-sell propensity model by customer size and payment volume",
+    "Cannot conclude on: Quantified take-rate elasticity versus the discounting entrants",
+    "Cannot conclude on: Expansion pipeline coverage (there is effectively no expansion pipeline tracked today)",
+    "Cannot conclude on: Margin contribution by module (payouts vs cards vs FX)"
+  ]
+}

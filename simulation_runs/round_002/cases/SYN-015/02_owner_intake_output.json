@@ -1,0 +1,32 @@
+{
+  "step": "owner_intake",
+  "businessType": "Cloud security platform (cloud security posture management + workload protection) for mid-market and lower-enterprise security teams. Founded 2018, total raised $55M (Series B 2023). Annual subscriptions, sales-led. Current ARR $10.0M, 40% YoY growth (decelerating from 70% two years ago), 140 customers.",
+  "stage": "ARR $10.0M, 40% YoY growth (down from 70% then 55%). Net retention healthy at 116%; gross retention 97%. New-logo bookings flat YoY despite a 35% larger sales team. Sales cycle extended from 95 to 165 days. Win rate fell from 28% to 18%. Pipeline conversion declining at the top of funnel. Cash runway 30 months.",
+  "ownerGoal": "Restore new-logo growth and sales efficiency; reach $20M ARR within 18 months to support an eventual Series C or exit.",
+  "ownerConstraints": [
+    "Funding constraint: $55M raised, 30-month runway; board expects efficient growth, so adding more reps without fixing efficiency is discouraged.",
+    "Product constraint: platform is feature-complete versus the mid-market ICP; building enterprise-grade features (identity, multi-cloud governance) for up-market is a 2-3 quarter effort.",
+    "Organizational constraint: 90 staff (28 engineering, 30 go-to-market including 18 quota reps, 12 customer success, rest G&A). Sales team grew 35% in the last year with flat output.",
+    "Market constraint: the mid-market cloud-security category has matured; most target accounts in the current ICP already have a CSPM solution, and three large platform vendors now bundle CSPM into broader suites at low incremental price.",
+    "Commercial constraint: budget for standalone cloud-security tools in the mid-market is consolidating into platform suites; security buyers increasingly prefer consolidation over best-of-breed point tools."
+  ],
+  "immediateConcern": "New-logo growth has stalled (bookings flat YoY) even though the sales team grew 35%, the sales cycle has lengthened from 95 to 165 days, and win rate dropped from 28% to 18%. The owner believes the sales org is inefficient and the product has lost differentiation, and wants to hire more senior reps and add features. But retention is excellent (NRR 116%, gross 97%), which contradicts a product-quality story; the deceleration tracks a maturing mid-market where most ICP accounts already own a CSPM tool and budgets are consolidating into bundled platforms. The owner must decide in the next quarter whether to keep scaling the current ICP sales motion or re-aim demand generation at a different segment/use case before the board reviews efficiency.",
+  "availableData": [
+    "Financial: ARR $10.0M, 40% YoY growth (was 70%→55%→40%), gross margin 79%, burn supports 30-month runway",
+    "Retention: NRR 116%, gross retention 97% (both healthy and stable)",
+    "Acquisition: new-logo bookings flat YoY despite 35% larger sales team; sales cycle 95→165 days; win rate 28%→18%",
+    "Pipeline: top-of-funnel lead-to-opportunity conversion down 30%; MQL volume down 20% YoY in current ICP segment",
+    "Market: ~78% of current-ICP target accounts already have a CSPM solution (third-party estimate); 3 large platform vendors now bundle CSPM",
+    "Competitive: losses increasingly to 'platform consolidation' (62% of recent losses) rather than head-to-head feature comparison (21%)"
+  ],
+  "unavailableData": [
+    "Quantified total addressable market remaining in the current ICP after saturation",
+    "Win-rate and cycle by segment (mid-market vs lower-enterprise vs new verticals)",
+    "Willingness-to-pay for best-of-breed vs bundled platform among current ICP buyers",
+    "Demand signal in adjacent segments or use cases not yet targeted"
+  ],
+  "timeHorizon": "18 months to $20M ARR; the demand/segment decision must be made within one quarter to re-aim pipeline generation",
+  "riskAppetite": "MEDIUM (board wants efficient growth; the owner is tempted toward expensive sales hiring and feature investment that may not address a demand-sizing issue)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

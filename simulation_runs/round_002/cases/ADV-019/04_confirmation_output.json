@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Segment churn is tracked: enterprise ~2%/qtr vs mid-market ~8%/qtr. The reassuring blended ~5% is the average of a healthy segment and a deteriorating one. Mid-market churn has risen across the last three quarters (~6% -> 7% -> 8%), so the deterioration is a trend, not noise.",
+    "Mid-market is ~30% of revenue and the acquisition plan would grow its share further because the deals close fast. Growing the higher-churn segment mechanically raises blended churn over time, so the planned strategy would degrade the very retention metric leadership intends to lead the Series B with.",
+    "Customer-success coverage is weighted toward high-ACV enterprise accounts; mid-market is largely self-serve. Mid-market-specific product needs have been deprioritized behind enterprise feature requests. These are plausible drivers of the elevated mid-market churn, but the churn reasons have not been coded.",
+    "Company-wide NPS 45 is reported without a segment split; it may be carried by enterprise while mid-market sentiment is weaker. The blended NPS and blended churn together create a 'healthy across the board' picture that the segment data contradicts."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Mid-market churn reasons (coded) - product gaps, onboarding, support, pricing, competitor?",
+    "Segment-separated NPS (mid-market vs enterprise).",
+    "Cohort retention curves within the mid-market segment (is churn worst in recent cohorts?).",
+    "Projected blended churn under the planned acquisition mix shift toward mid-market.",
+    "Mid-market unit economics (CAC payback and LTV) given the 8% quarterly churn."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Segment churn is tracked: enterprise ~2%/qtr vs mid-market ~8%/qtr. The reassuring blended ~5% is the average of a healthy segment and a deteriorating one. Mid-market churn has risen across the last three quarters (~6% -> 7% -> 8%), so the deterioration is a trend, not noise.",
+    "Mid-market is ~30% of revenue and the acquisition plan would grow its share further because the deals close fast. Growing the higher-churn segment mechanically raises blended churn over time, so the planned strategy would degrade the very retention metric leadership intends to lead the Series B with.",
+    "Customer-success coverage is weighted toward high-ACV enterprise accounts; mid-market is largely self-serve. Mid-market-specific product needs have been deprioritized behind enterprise feature requests. These are plausible drivers of the elevated mid-market churn, but the churn reasons have not been coded.",
+    "Company-wide NPS 45 is reported without a segment split; it may be carried by enterprise while mid-market sentiment is weaker. The blended NPS and blended churn together create a 'healthy across the board' picture that the segment data contradicts."
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 2,
+  "missingDimensions": [
+    "operational_efficiency",
+    "quality_delivery",
+    "financial_health",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Cohort-level retention curves by acquisition channel and customer size",
+    "Quantified willingness-to-pay versus the two bundled-suite competitors",
+    "Root-cause analysis of why onboarding time-to-value is 47 days",
+    "Expansion-propensity scoring tied to multi-module adoption"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Cohort-level retention curves by acquisition channel and customer size",
+    "Cannot conclude on: Quantified willingness-to-pay versus the two bundled-suite competitors",
+    "Cannot conclude on: Root-cause analysis of why onboarding time-to-value is 47 days",
+    "Cannot conclude on: Expansion-propensity scoring tied to multi-module adoption"
+  ]
+}

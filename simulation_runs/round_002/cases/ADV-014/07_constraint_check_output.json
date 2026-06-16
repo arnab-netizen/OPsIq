@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (privately funded, conservative spend)",
+    "timeHorizonDays": 540,
+    "staffCapacity": "MEDIUM (can task internal finance/ops analysts; layoffs off the table)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

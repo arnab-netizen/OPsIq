@@ -1,0 +1,33 @@
+{
+  "step": "owner_intake",
+  "businessType": "Boutique management-consulting firm, founded 2011, ~6 equity partners plus ~95 consultants/staff. Sells strategy and operational-improvement advisory to mid-market and enterprise clients across a handful of industry verticals. Revenue is project-based; reputation is partner-driven and referral-led.",
+  "stage": "Revenue $20M, growth slowed to ~6% YoY (was ~18% three years ago). EBITDA margin 15% ($3M). Utilization ~68% (target 75%+). Average billing rate flat for two years. Repeat-client revenue ~55% of total; top 10 clients ~45% of revenue. ~120 total headcount.",
+  "ownerGoal": "Break the growth plateau and durably raise both growth and margin over a 3-5 year horizon while protecting the partners' reputation and quality, choosing among scaling via acquisition, deepening into a niche, or extending into higher-margin implementation/managed services; partners want a clear direction within ~one quarter to set the next fiscal-year plan and partner compensation model.",
+  "ownerConstraints": [
+    "Partner-capacity constraint: The 6 partners are already near full delivery load; any strategy requiring significant new partner time (selling, integrating, or managing a new line) competes directly with billable work and current margin.",
+    "Capital constraint: Self-funded with ~$2.5M cash and conservative partners; an acquisition-led roll-up would require outside growth capital (Option A references a Series B-style raise), which dilutes partner control and changes governance.",
+    "Talent constraint: Growth is gated by senior-consultant hiring in a tight market; utilization is below target (68%) yet senior capacity to staff larger or different work is the binding constraint.",
+    "Reputation/quality constraint: The firm's brand rests on senior, high-touch delivery; any move that dilutes quality or over-leverages junior staff risks the referral engine that drives ~55% repeat revenue.",
+    "Decision-window constraint: Partners want a committed direction within ~one quarter to lock the FY plan, hiring, and a revised partner-compensation model aligned to the chosen strategy."
+  ],
+  "immediateConcern": "Growth has plateaued (18% -> 6% YoY) with flat billing rates and sub-target utilization (68%), and the partners are at delivery capacity. They must choose a direction within roughly one quarter: (A) consolidate by acquiring smaller competitors to build scale (likely requiring outside growth capital and a Series B-style raise), (B) specialize deeper into a defensible niche to command pricing power and thought leadership (slower top-line growth but higher rates), or (C) pivot to add implementation/managed services alongside advisory to capture higher-margin, more recurring revenue. It is not yet clear whether the plateau is a pricing/positioning problem, a market-demand problem, or a delivery-model problem, and that diagnosis should determine which strategy fits.",
+  "availableData": [
+    "Revenue $20M; growth ~6% YoY (was ~18% three years ago); EBITDA margin 15%; utilization ~68% (target 75%+)",
+    "Pricing: average billing rate flat for ~2 years; win rate on competitive proposals ~32%; ~20% of losses cite price, ~35% cite 'lacked specific industry depth/proof'",
+    "Client mix: repeat-client revenue ~55%; top 10 clients ~45% of revenue; net revenue per client roughly flat",
+    "Margin structure: advisory gross margin ~38%; partners near full utilization; leverage ratio (junior:senior) lower than larger competitors",
+    "Option references: an identified acquisition target list of 2-3 sub-$5M boutiques (Option A); a niche vertical where the firm already wins ~50% of proposals and has 3 marquee references (Option B); recurring managed-services pilots requested by 2 existing clients (Option C)",
+    "Market: overall advisory demand growing modestly; clients increasingly asking for help executing recommendations, not just producing them"
+  ],
+  "unavailableData": [
+    "True driver of the plateau: how much is pricing/positioning (winnable at higher rates), how much is demand softness, and how much is delivery-capacity/model constraint",
+    "Willingness-to-pay and pricing power in the candidate niche if the firm specialized and invested in thought leadership",
+    "Unit economics and margin of a managed-services line at scale (the pilots are too small to be representative; staffing model, churn, and gross margin unknown)",
+    "Integration economics and cultural fit of the acquisition targets, and the real terms/dilution of the outside growth capital required",
+    "Whether sub-target utilization (68%) reflects a demand/sales-pipeline gap or a partner-bandwidth/staffing-mix problem"
+  ],
+  "timeHorizon": "~One quarter (90 days) to commit a direction and set the FY plan, hiring, and partner-compensation model; 3-5 years for the strategy to play out",
+  "riskAppetite": "MEDIUM-LOW (conservative, self-funded partners protective of reputation, control, and current profitability; wary of dilution and quality dilution)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

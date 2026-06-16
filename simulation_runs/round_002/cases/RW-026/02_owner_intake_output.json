@@ -1,0 +1,32 @@
+{
+  "step": "owner_intake",
+  "businessType": "Cloud-based practice-management software for dental offices (scheduling, billing, patient records, claims). Founded 2016, 150 employees, $22M ARR, 2,500 customers, 65% gross margin.",
+  "stage": "Growth: $22M ARR (+22% YoY), EBITDA margin 8% ($1.76M). Blended net revenue retention 98%, blended quarterly churn 2%. Customer concentration: top 10 customers = 35% of ARR; the single largest customer, a dental service organization (DSO) operating 300 offices, represents 12% of ARR. The independent-practice base (the other ~2,490 customers) is growing 28% YoY, while the DSO/large-group segment is growing only 5% YoY.",
+  "ownerGoal": "Reach Series B readiness within 12 months with a fundable growth narrative (durable >25% ARR growth, NRR >105%, reduced single-customer concentration below 8%).",
+  "ownerConstraints": [
+    "Concentration risk: top customer = 12% of ARR with annual renewal and demonstrated pricing leverage; an unfavorable renegotiation or loss creates a 12% revenue cliff.",
+    "Capital: bootstrapped-to-Series-A balance sheet; ~$6M cash, EBITDA only 8%, limited runway for large GTM bets without dilution.",
+    "Team: 150 employees with a sales motion historically optimized for large DSO deals; SMB/independent-practice motion is thinner.",
+    "Product: feature set is mature for large multi-location groups; self-serve onboarding for small practices is underdeveloped.",
+    "Time: Series B fundraising window opens in ~12 months; the growth/NRR narrative must be evidenced by then."
+  ],
+  "immediateConcern": "The headline growth (22%) and acceptable blended churn (2%) mask a divergence: the small-account base is growing fast (28%) but is under-monetized (low ARPU, NRR ~99%), while the large-group segment is near-flat (5%) and concentrated. The owner wants to know where to invest the next GTM dollar to build a durable, less-concentrated growth and expansion engine before Series B.",
+  "availableData": [
+    "ARR $22M, +22% YoY; gross margin 65%; EBITDA 8% ($1.76M); ~$6M cash.",
+    "2,500 customers; top 10 = 35% of ARR; largest single customer (300-office DSO) = 12% of ARR.",
+    "Segment growth: independent/SMB practices +28% YoY; large-group/DSO +5% YoY.",
+    "Blended NRR 98% (SMB ~99% from low expansion; large-group ~97% with some seat contraction); blended quarterly churn 2%.",
+    "Sales mix: historically large-deal motion; SMB acquisition increasingly self-/inside-sales sourced."
+  ],
+  "unavailableData": [
+    "ARPU, CAC, payback, and LTV broken out by segment (SMB vs mid-market vs DSO) and acquisition channel.",
+    "Expansion mechanics: which modules/seats drive expansion in each segment and why SMB expansion is low.",
+    "Win/loss and pricing-elasticity data for the SMB segment (would higher ARPU/packaging hold?).",
+    "True cost-to-serve and support load per segment (SMB volume vs DSO complexity).",
+    "Pipeline coverage and conversion by segment to size a credible diversification plan."
+  ],
+  "timeHorizon": "12 months to a fundable Series B narrative; first decisions needed within ~30-60 days.",
+  "riskAppetite": "MEDIUM (willing to invest in growth but cannot absorb a concentration shock or burn through limited cash).",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

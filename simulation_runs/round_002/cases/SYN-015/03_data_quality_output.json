@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 3,
+  "missingDimensions": [
+    "operational_efficiency",
+    "quality_delivery",
+    "financial_health",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Quantified total addressable market remaining in the current ICP after saturation",
+    "Win-rate and cycle by segment (mid-market vs lower-enterprise vs new verticals)",
+    "Willingness-to-pay for best-of-breed vs bundled platform among current ICP buyers",
+    "Demand signal in adjacent segments or use cases not yet targeted"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Quantified total addressable market remaining in the current ICP after saturation",
+    "Cannot conclude on: Win-rate and cycle by segment (mid-market vs lower-enterprise vs new verticals)",
+    "Cannot conclude on: Willingness-to-pay for best-of-breed vs bundled platform among current ICP buyers",
+    "Cannot conclude on: Demand signal in adjacent segments or use cases not yet targeted"
+  ]
+}

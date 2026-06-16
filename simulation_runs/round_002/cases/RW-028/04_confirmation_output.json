@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Technician billable utilization is 58% against a 70-75% industry benchmark, and revenue per truck fell from $430k pre-rollup to $367k (top-quartile operators reach ~$525k). The same trucks and technicians are producing materially less billable output post-rollup, indicating capacity is being lost in scheduling/dispatch rather than in demand or pricing.",
+    "Three of six acquired branches still run their original, separate dispatch/field-service software, with no unified scheduling or cross-branch capacity view. There is no normalized branch-level KPI scorecard, so dispatch efficiency (jobs/tech/day, drive-time, idle hours) cannot be compared across branches. This is a structural integration gap that prevents the platform from balancing load and enforcing scheduling discipline.",
+    "Consolidated revenue grew 52% YoY but organic same-branch revenue grew only 3%, while EBITDA margin fell from 13% to 9.5% (-350bps). Growth is almost entirely acquired, and profitability per dollar of revenue is deteriorating — the platform is getting bigger but less efficient, consistent with integration drag rather than healthy organic scaling.",
+    "Membership/maintenance-plan attachment varies extremely by branch: platform branches at 41% of customers, two acquired branches under 12%. Plan members provide recurring demand, demand-smoothing across shoulder seasons, and higher replacement-lead conversion. Low-attachment branches therefore have lumpier demand and lower utilization — but plan attachment is an operational discipline, not a demand-quality problem."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Branch-level operating P&L and KPI scorecard: revenue per truck, billable utilization, first-time-fix, and callback rate normalized across all 11 branches",
+    "Dispatch/scheduling efficiency: jobs per tech per day, drive-time, and idle-capacity hours by branch — needed to locate where utilization is lost",
+    "Whether the EBITDA dilution is concentrated in specific acquired branches or spread evenly (acquisition-quality vs. integration-execution question)",
+    "Membership-plan economics by branch: recurring revenue, demand-smoothing effect, and replacement-lead conversion from plan members",
+    "Pricing/labor-rate consistency across branches and whether discounting or low ticket sizes explain low revenue per truck"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Technician billable utilization is 58% against a 70-75% industry benchmark, and revenue per truck fell from $430k pre-rollup to $367k (top-quartile operators reach ~$525k). The same trucks and technicians are producing materially less billable output post-rollup, indicating capacity is being lost in scheduling/dispatch rather than in demand or pricing.",
+    "Three of six acquired branches still run their original, separate dispatch/field-service software, with no unified scheduling or cross-branch capacity view. There is no normalized branch-level KPI scorecard, so dispatch efficiency (jobs/tech/day, drive-time, idle hours) cannot be compared across branches. This is a structural integration gap that prevents the platform from balancing load and enforcing scheduling discipline.",
+    "Consolidated revenue grew 52% YoY but organic same-branch revenue grew only 3%, while EBITDA margin fell from 13% to 9.5% (-350bps). Growth is almost entirely acquired, and profitability per dollar of revenue is deteriorating — the platform is getting bigger but less efficient, consistent with integration drag rather than healthy organic scaling.",
+    "Membership/maintenance-plan attachment varies extremely by branch: platform branches at 41% of customers, two acquired branches under 12%. Plan members provide recurring demand, demand-smoothing across shoulder seasons, and higher replacement-lead conversion. Low-attachment branches therefore have lumpier demand and lower utilization — but plan attachment is an operational discipline, not a demand-quality problem."
+  ]
+}

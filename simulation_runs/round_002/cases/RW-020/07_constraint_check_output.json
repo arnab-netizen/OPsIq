@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (large balance sheet, but capex constrained by legacy system transition)",
+    "timeHorizonDays": 720,
+    "staffCapacity": "MEDIUM (2,200 people, but core team heavily focused on compliance/regulatory, limited capacity for innovation)",
+    "cashRunwayMonths": "N/A (mature company, ongoing operations)",
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

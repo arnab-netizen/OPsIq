@@ -1,0 +1,24 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Net revenue retention fell from 110% to 100% over four quarters while gross retention stayed healthy at 94%. The entire NRR decline is therefore attributable to lost expansion, not to customers leaving. Expansion bookings dropped from 38% to 19% of total bookings over the same period.",
+    "There is no expansion motion. All 12 sales reps carry new-logo quota only; CS (8 people) is success-only with no expansion target; there are zero account-management or expansion-quota holders. Only ~30% of AP-automation customers have ever been pitched a second module. Cross-sell penetration is low: embedded payouts 22%, virtual cards 9%, FX 6%, despite QBR-recorded customer interest.",
+    "Two larger payments platforms entered mid-market with aggressive take-rate discounts. However, the competitive losses on price are concentrated in the top 10% highest-volume prospects, where take-rate dominates economics; the broad mid-market base shows no elevated price-driven loss. New-logo win rate is stable at ~31%.",
+    "Cross-sell modules (payouts, virtual cards, FX) are technically live and product satisfaction is high (NPS 44, stable). Customers express interest in additional modules in QBRs, but there is no follow-through pipeline because no one owns expansion. The constraint is commercial motion, not product readiness or customer willingness.",
+    "Revenue mix is ~65% subscription and ~35% payment take-rate at 68% blended margin. A blanket take-rate cut to match entrants would hit the 35% take-rate line across the entire base to defend against losses concentrated in the top 10% of prospects, an asymmetric trade that would compress margin far more than it protects revenue."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Cross-sell propensity model by customer size and payment volume",
+    "Quantified take-rate elasticity versus the discounting entrants",
+    "Expansion pipeline coverage (there is effectively no expansion pipeline tracked today)",
+    "Margin contribution by module (payouts vs cards vs FX)"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Net revenue retention fell from 110% to 100% over four quarters while gross retention stayed healthy at 94%. The entire NRR decline is therefore attributable to lost expansion, not to customers leaving. Expansion bookings dropped from 38% to 19% of total bookings over the same period.",
+    "There is no expansion motion. All 12 sales reps carry new-logo quota only; CS (8 people) is success-only with no expansion target; there are zero account-management or expansion-quota holders. Only ~30% of AP-automation customers have ever been pitched a second module. Cross-sell penetration is low: embedded payouts 22%, virtual cards 9%, FX 6%, despite QBR-recorded customer interest.",
+    "Two larger payments platforms entered mid-market with aggressive take-rate discounts. However, the competitive losses on price are concentrated in the top 10% highest-volume prospects, where take-rate dominates economics; the broad mid-market base shows no elevated price-driven loss. New-logo win rate is stable at ~31%.",
+    "Cross-sell modules (payouts, virtual cards, FX) are technically live and product satisfaction is high (NPS 44, stable). Customers express interest in additional modules in QBRs, but there is no follow-through pipeline because no one owns expansion. The constraint is commercial motion, not product readiness or customer willingness.",
+    "Revenue mix is ~65% subscription and ~35% payment take-rate at 68% blended margin. A blanket take-rate cut to match entrants would hit the 35% take-rate line across the entire base to defend against losses concentrated in the top 10% of prospects, an asymmetric trade that would compress margin far more than it protects revenue."
+  ]
+}

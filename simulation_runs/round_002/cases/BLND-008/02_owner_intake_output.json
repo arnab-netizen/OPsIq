@@ -1,0 +1,33 @@
+{
+  "step": "owner_intake",
+  "businessType": "Vertical SaaS for dental practices, founded 2018. ~1,900 paying practice locations, average ~$525/month per location. Core product: practice management + scheduling + patient communications; adjacent modules (payments, recall/reactivation) at early attach. Founder-CEO holds ~38% equity; Series A investors hold ~45%; ESOP/team ~17%.",
+  "stage": "ARR $12M, growing ~35% YoY (was ~50% two years ago). Gross margin 79%. Net revenue retention 112%. Logo churn ~9% annual. Roughly cash-flow breakeven (slightly EBITDA-positive in recent quarters). $4M cash on balance sheet. Headcount 78.",
+  "ownerGoal": "Maximize risk-adjusted value for the founder, employees, and Series A investors over a 3-5 year horizon, and decide how to respond to an inbound acquisition offer from a larger dental-industry platform within the offer's exclusivity window.",
+  "ownerConstraints": [
+    "Offer-window constraint: The inbound offer carries a ~45-day exclusivity/decision window; a definitive yes/no on entering exclusivity is required soon, and prolonged independent due diligence is limited.",
+    "Investor-alignment constraint: Series A investors (45%) have a liquidation preference and a target return multiple; their preference may diverge from the founder's on timing and price floor.",
+    "Capital constraint: $4M cash and ~breakeven operations mean the 'acquire a complementary SaaS' path cannot be funded from cash alone; it would require a new raise or seller financing.",
+    "Concentration/market constraint: ~1,900 of an estimated ~180,000 addressable practice locations; growth depends on out-competing 2-3 entrenched incumbents and the acquirer is one of the largest channels in the category.",
+    "Key-person constraint: Founder-CEO and two early engineers hold most product and integration knowledge; retention/earn-out terms would materially affect both an M&A outcome and any organic-scale plan."
+  ],
+  "immediateConcern": "A larger dental-industry software platform has made an unsolicited acquisition offer. Management must decide within the exclusivity window whether to (A) pursue the M&A, (B) decline and continue independently toward a larger future outcome, or (C) decline and instead acquire a complementary SaaS to broaden the product and accelerate organic growth. The offer's headline value, structure (cash vs stock vs earn-out), and the company's true standalone trajectory are only partially characterized, and the board and investors are not yet aligned on a price floor or the standalone plan.",
+  "availableData": [
+    "ARR $12M; YoY growth ~35% (down from ~50% two years ago); gross margin 79%; NRR 112%; logo churn ~9%/yr; ~cash-flow breakeven; $4M cash",
+    "Inbound offer headline: roughly $80-95M enterprise value indicated verbally, structure not finalized (mix of cash, acquirer stock, and a 2-year earn-out tied to retention/cross-sell targets)",
+    "Unit economics: blended CAC payback ~16 months; gross-margin LTV/CAC ~3.4x; expansion revenue from adjacent modules growing but <15% of ARR today",
+    "Market: ~180,000 addressable locations; 2-3 entrenched incumbents with larger installed bases; the acquirer controls a large distribution channel into the same buyer",
+    "Comparable transactions: recent vertical-SaaS deals in adjacent healthcare niches priced at ~6-9x ARR for sub-scale assets and ~10-14x for assets above ~$30M ARR with >120% NRR",
+    "Complementary-SaaS target (Option C): an identified ~$3M ARR insurance-claims/billing add-on, asking ~$14-18M, with overlapping customers but a different tech stack and ~25-person team"
+  ],
+  "unavailableData": [
+    "Final, signed offer structure: precise cash/stock/earn-out split, earn-out achievability, escrow, indemnities, and the acquirer's stock liquidity/valuation basis",
+    "Verified standalone forecast: durable independent growth rate, the realistic probability of reaching $30M+ ARR (the tier where premium multiples appear), and the capital required to get there",
+    "Diligence-grade churn and NRR cohorts: whether 112% NRR is durable across cohorts or concentrated in a few large accounts, and true post-onboarding logo churn",
+    "Integration economics of the Option C target: real revenue/cost synergies, churn of its base post-acquisition, and the financing terms actually obtainable",
+    "Investor and key-employee reservation values: the price/structure below which Series A would block, and the retention terms that would keep the founder and key engineers committed"
+  ],
+  "timeHorizon": "~45 days to decide whether to enter exclusivity on the offer; 3-5 years for the standalone or acquisition paths to resolve",
+  "riskAppetite": "MEDIUM (founder open to a strong exit but also to building; investors want a defensible return and dislike binary all-or-nothing bets without analysis)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

@@ -1,0 +1,28 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 2,
+  "missingDimensions": [
+    "operational_efficiency",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability",
+    "market_position"
+  ],
+  "unavailableDataDeclared": [
+    "Cohort-level LTV and LTV:CAC (only blended LTV is computed; per-cohort LTV not yet calculated).",
+    "Net revenue retention and gross retention split by cohort and by acquisition channel (inbound/referral vs outbound).",
+    "Fully-loaded CAC bridge explaining why recent-cohort payback is approximately 18 months (sales comp, SDR cost, marketing, ramp inefficiency of new AEs).",
+    "Win-rate and sales-cycle data for outbound vs inbound deals under the new GTM motion.",
+    "Forward projection of blended payback as recent cohorts grow as a share of the base."
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Cohort-level LTV and LTV:CAC (only blended LTV is computed; per-cohort LTV not yet calculated).",
+    "Cannot conclude on: Net revenue retention and gross retention split by cohort and by acquisition channel (inbound/referral vs outbound).",
+    "Cannot conclude on: Fully-loaded CAC bridge explaining why recent-cohort payback is approximately 18 months (sales comp, SDR cost, marketing, ramp inefficiency of new AEs).",
+    "Cannot conclude on: Win-rate and sales-cycle data for outbound vs inbound deals under the new GTM motion.",
+    "Cannot conclude on: Forward projection of blended payback as recent cohorts grow as a share of the base."
+  ]
+}

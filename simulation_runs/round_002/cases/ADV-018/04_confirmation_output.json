@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Top 3 customers are ~45% of revenue (the #1 alone ~22%), all on negotiated volume discounts. The proposed expanded agreement with the #1 customer would push concentration above 50% at deeper discounts. High concentration plus deepening discounts increases both margin risk and fragility (loss of one account idles plant capacity).",
+    "Average selling price to the top 3 is materially below the company average, and these accounts demand more customization, shorter lead times, and longer payment terms - all cost-to-serve drivers. The plant-wide overhead allocation spreads these costs evenly, hiding that the big accounts likely consume more cost per dollar of revenue than the smaller accounts do.",
+    "Per-customer and per-product-line profitability have never been computed; there is no activity-based cost-to-serve. The 26% blended gross margin therefore cannot tell whether the discounted top-3 volume covers its fully-loaded cost or merely its variable cost while the smaller accounts subsidize the blend. The decision to deepen discounts is being made without this visibility.",
+    "The smaller and mid-tier accounts (the other 55% of revenue) pay closer to list, appear to carry higher per-unit margin, and are receiving less sales attention as the organization concentrates on the top 3. If these accounts are the true profit engine, the strategy of deepening focus and discounts on the top 3 may be optimizing for revenue at the expense of profit."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Per-customer gross and operating margin after fully-allocated, activity-based cost to serve.",
+    "Cost-to-serve quantification for the top 3 (setup/changeover, expedite, custom tooling, extended terms, returns).",
+    "Margin contribution of the smaller/mid-tier accounts that are being under-served.",
+    "Break-even and contribution analysis showing whether discounted top-3 volume covers its fully-loaded cost or merely its variable cost.",
+    "Capacity-cost attribution: how much fixed plant cost is genuinely 'kept full' by the top 3 vs allocated to them."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Top 3 customers are ~45% of revenue (the #1 alone ~22%), all on negotiated volume discounts. The proposed expanded agreement with the #1 customer would push concentration above 50% at deeper discounts. High concentration plus deepening discounts increases both margin risk and fragility (loss of one account idles plant capacity).",
+    "Average selling price to the top 3 is materially below the company average, and these accounts demand more customization, shorter lead times, and longer payment terms - all cost-to-serve drivers. The plant-wide overhead allocation spreads these costs evenly, hiding that the big accounts likely consume more cost per dollar of revenue than the smaller accounts do.",
+    "Per-customer and per-product-line profitability have never been computed; there is no activity-based cost-to-serve. The 26% blended gross margin therefore cannot tell whether the discounted top-3 volume covers its fully-loaded cost or merely its variable cost while the smaller accounts subsidize the blend. The decision to deepen discounts is being made without this visibility.",
+    "The smaller and mid-tier accounts (the other 55% of revenue) pay closer to list, appear to carry higher per-unit margin, and are receiving less sales attention as the organization concentrates on the top 3. If these accounts are the true profit engine, the strategy of deepening focus and discounts on the top 3 may be optimizing for revenue at the expense of profit."
+  ]
+}

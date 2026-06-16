@@ -1,0 +1,24 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "financial_health",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Detailed root cause analysis of reliability issues (engineering team has not done deep diagnostics)",
+    "Customer willingness-to-pay for reliability vs features (not surveyed)",
+    "Competitive feature parity analysis (subjective assessment only)",
+    "Detailed technical debt inventory (not formally documented)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Detailed root cause analysis of reliability issues (engineering team has not done deep diagnostics)",
+    "Cannot conclude on: Customer willingness-to-pay for reliability vs features (not surveyed)",
+    "Cannot conclude on: Competitive feature parity analysis (subjective assessment only)",
+    "Cannot conclude on: Detailed technical debt inventory (not formally documented)"
+  ]
+}

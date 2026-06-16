@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM ($1.5M discretionary for strategic initiatives; $2.5M total available with board approval)",
+    "timeHorizonDays": 210,
+    "staffCapacity": "MEDIUM (380 people total, but 320 in store operations; limited capacity for new strategic initiatives without hiring or reallocation)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

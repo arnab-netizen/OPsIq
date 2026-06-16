@@ -1,0 +1,32 @@
+{
+  "step": "owner_intake",
+  "businessType": "PE-backed residential home-services platform: HVAC, plumbing, and electrical service and replacement. Platform company plus 6 bolt-on acquisitions across 4 metros. 11 branches, 340 employees, 185 service trucks/technicians, ~$68M consolidated revenue TTM. Sponsor acquired the platform in 2022; bolt-ons closed over the last 20 months.",
+  "stage": "Consolidated revenue $68M TTM, up 52% YoY — but almost all growth is acquired, not organic (organic same-branch revenue +3%). Consolidated EBITDA margin 9.5%, down from 13% at platform acquisition (-350bps). Average revenue per truck $367k/year (down from $430k pre-rollup; industry top-quartile ~$525k). Technician billable utilization 58% (industry benchmark 70-75%). Net leverage 4.6x EBITDA; recap targeted in 12-15 months.",
+  "ownerGoal": "Restore consolidated EBITDA margin to 13%+ and revenue per truck to $450k+ within 12 months to support a leveraged recapitalization at a 9x+ EBITDA multiple.",
+  "ownerConstraints": [
+    "Net leverage 4.6x EBITDA; the recap and the sponsor's return thesis depend on EBITDA-margin recovery within 12-15 months, not just more acquisitions.",
+    "Three of the six acquired branches still run their original, separate dispatch/field-service software (different from the platform's ServiceTitan instance); no unified scheduling or capacity view across branches.",
+    "Skilled-technician labor market is tight: average 9-week time-to-fill for a senior HVAC technician; cannot simply hire utilization up.",
+    "Membership/maintenance-plan attachment varies wildly by branch (platform branches 41% of customers on plans; two acquired branches under 12%), driving inconsistent recurring demand and winter/summer demand smoothing.",
+    "Seasonality: HVAC demand peaks in summer/winter; shoulder seasons show idle technician capacity, magnifying utilization gaps.",
+    "Integration team is thin (2 ops integration leads for 6 bolt-ons); branch managers retain significant autonomy per acquisition earn-out agreements running another 6-14 months."
+  ],
+  "immediateConcern": "Consolidated revenue is up 52% but EBITDA margin has fallen 350bps and revenue per truck dropped from $430k to $367k since the rollup began. The sponsor cannot tell whether the margin decline is dilution from buying lower-quality businesses, a pricing problem, or a post-acquisition operational integration failure. With the recap window opening in 12-15 months, the team must identify the highest-leverage fix before committing capital to either more acquisitions, a pricing overhaul, or a costly software migration.",
+  "availableData": [
+    "Consolidated revenue $68M TTM (+52% YoY), organic same-branch +3%, EBITDA margin 9.5% (down from 13%), 11 branches, 185 trucks",
+    "Revenue per truck $367k (down from $430k pre-rollup; top-quartile ~$525k), technician billable utilization 58% (benchmark 70-75%)",
+    "Membership-plan attachment: platform branches 41%, two acquired branches <12%; first-time-fix and callback rates tracked inconsistently across branches",
+    "Three acquired branches on separate dispatch software; 9-week time-to-fill for senior HVAC techs; net leverage 4.6x"
+  ],
+  "unavailableData": [
+    "Branch-level operating P&L and KPI scorecard: revenue per truck, billable utilization, first-time-fix, and callback rate normalized across all 11 branches",
+    "Dispatch/scheduling efficiency: jobs per tech per day, drive-time, and idle-capacity hours by branch — needed to locate where utilization is lost",
+    "Whether the EBITDA dilution is concentrated in specific acquired branches or spread evenly (acquisition-quality vs. integration-execution question)",
+    "Membership-plan economics by branch: recurring revenue, demand-smoothing effect, and replacement-lead conversion from plan members",
+    "Pricing/labor-rate consistency across branches and whether discounting or low ticket sizes explain low revenue per truck"
+  ],
+  "timeHorizon": "90 days to diagnose and begin remediation (recap window opens in 12-15 months; margin recovery must be demonstrably underway before the sponsor markets the recap)",
+  "riskAppetite": "MEDIUM-LOW (4.6x leverage and a recap thesis dependent on margin recovery; sponsor cannot afford a costly mis-sequenced software migration or a destabilizing pricing shock during earn-out periods)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

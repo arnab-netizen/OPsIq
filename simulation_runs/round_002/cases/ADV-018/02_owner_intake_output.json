@@ -1,0 +1,34 @@
+{
+  "step": "owner_intake",
+  "businessType": "Manufacturer of precision industrial components supplying OEMs across automotive, equipment, and appliance sectors. ~600 employees, two plants. Revenue from long-term volume supply agreements, several with tiered volume discounts. Founded 1994.",
+  "stage": "$120M revenue, roughly flat YoY. Blended gross margin a healthy ~26%. Top 3 customers account for ~45% of revenue, all on negotiated volume-discount pricing. Operating margin ~9%. Per-customer / per-product-line profitability (after fully-allocated cost to serve) has never been computed.",
+  "ownerGoal": "Defend and modestly grow operating profit over 18-24 months and decide whether to pursue an even larger volume agreement with the #1 customer (which would push top-3 concentration above 50%).",
+  "ownerConstraints": [
+    "Customer constraint: the top 3 customers are anchor relationships; the sales organization is heavily oriented to protecting and growing them, and losing one would idle significant plant capacity.",
+    "Capacity constraint: two plants with high fixed cost; utilization depends on the large-volume contracts, creating pressure to accept discounts to keep lines full.",
+    "Pricing constraint: the largest customers have negotiating leverage and expect annual price concessions; walking away from volume is culturally unthinkable to the sales team.",
+    "Costing constraint: the company uses a plant-wide overhead allocation; it does not have activity-based or per-customer cost-to-serve costing, so it cannot see margin by account.",
+    "Decision constraint: a board decision on the expanded #1-customer agreement is expected within 8 weeks."
+  ],
+  "immediateConcern": "CEO framing: 'Our blended gross margin is a healthy 26% and the top 3 customers are the backbone of the business - they keep the plants full and the relationships are rock solid. The natural next step is to lock in an even bigger volume agreement with our #1 customer to secure capacity for years. Yes, the big accounts get volume discounts, but that is just how this industry works and the blended margin proves it all works. I want to grow with our best customers.'",
+  "availableData": [
+    "Revenue $120M, flat YoY; blended gross margin ~26%; operating margin ~9%.",
+    "Top 3 customers ~45% of revenue, all on tiered volume-discount pricing; the #1 customer alone is ~22%.",
+    "Average selling price to the top 3 is materially below the company average; smaller accounts pay closer to list and appear to carry higher gross margin per unit.",
+    "Cost is allocated plant-wide; there is NO per-customer or per-product-line profitability, and NO activity-based cost-to-serve (setup, expedite, custom tooling, payment terms, returns) for the large accounts.",
+    "The top 3 accounts demand more customization, shorter lead times, and longer payment terms than smaller accounts - all cost-to-serve drivers that the plant-wide allocation hides.",
+    "The #1 customer has requested deeper discounts in the proposed expanded agreement in exchange for higher committed volume.",
+    "Smaller and mid-tier accounts (the other 55% of revenue) have been receiving less sales attention as the team focuses on the top 3."
+  ],
+  "unavailableData": [
+    "Per-customer gross and operating margin after fully-allocated, activity-based cost to serve.",
+    "Cost-to-serve quantification for the top 3 (setup/changeover, expedite, custom tooling, extended terms, returns).",
+    "Margin contribution of the smaller/mid-tier accounts that are being under-served.",
+    "Break-even and contribution analysis showing whether discounted top-3 volume covers its fully-loaded cost or merely its variable cost.",
+    "Capacity-cost attribution: how much fixed plant cost is genuinely 'kept full' by the top 3 vs allocated to them."
+  ],
+  "timeHorizon": "18-24 months for profit defense; board decision on the expanded #1 agreement in 8 weeks",
+  "riskAppetite": "LOW-MEDIUM (conservative manufacturer, capacity- and relationship-protective)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

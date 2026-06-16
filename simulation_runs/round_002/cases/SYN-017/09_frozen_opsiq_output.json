@@ -1,0 +1,203 @@
+{
+  "frozenAt": "2026-06-16T21:01:32.461Z",
+  "caseId": "SYN-017",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "INSUFFICIENT_EVIDENCE",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+    "Cannot proceed with confident diagnosis. Additional investigation required.",
+    "1 constraint(s) identified that may block execution"
+  ],
+  "decisionMemo": {
+    "id": "f900c4bf-39a1-4487-98bd-921f6f2653ee",
+    "engagementId": "4a3f93e7-d4de-4b33-ad87-cdf4560aa111",
+    "timestamp": "2026-06-16T21:01:32.455Z",
+    "businessProblem": "A B2B marketplace growing 30% is leaking its most valuable GMV: seller NRR fell from 108% to 95%, and the top 8% of sellers (61% of GMV) are routing repeat buyers off-platform after the first marketplace-sourced order (on-platform large-seller repeat rate fell 64%→41%, ~30% of their repeat GMV now off-platform). The owner reads this as declining seller satisfaction and value proposition and wants broad seller-success investment and new features. But the problem is concentrated and structural: a flat ~12% take-rate is cheap for demand-dependent small/mid sellers (whose retention and satisfaction are stable) and economically irrational for high-volume repeat sellers, who pay 12% on buyers the marketplace no longer sources, making disintermediation the rational move (their top complaint, 58%, is 'commission too high for repeat orders'). With the next raise gated on GMV/retention and 24 months of runway, the owner must decide whether to spread seller-success effort broadly or restructure monetization for the large-seller segment before more GMV leaks.",
+    "rootCauseDiagnosis": {
+      "id": "d0eb71e6-767c-4109-ba70-e198e70f6273",
+      "type": "unknown",
+      "description": "Evidence insufficient for definitive diagnosis",
+      "mechanismDescription": "The evidence provided does not clearly match known root cause patterns.",
+      "evidenceIds": [
+        "5d77a886-d99f-467f-9621-0360da880262",
+        "441fccde-d859-44da-be25-ba4b5acd7580",
+        "4a017676-c39c-46a5-819d-f8c813b7ffea",
+        "5f6b8fd8-cb28-4508-8cd8-6c202d29fa3f",
+        "d14ad70b-2d41-4cb6-8fc2-2fcf4c46d6a8"
+      ],
+      "confidence": "INSUFFICIENT_EVIDENCE",
+      "alternativeExplanations": [
+        "Multiple root causes may be present",
+        "Root cause may be unique to this business"
+      ],
+      "missingEvidenceFor": [
+        "Deeper investigation required on each dimension",
+        "Customer interviews",
+        "Process observation"
+      ]
+    },
+    "diagnosisConfidence": "INSUFFICIENT_EVIDENCE",
+    "criticalConstraints": [
+      {
+        "id": "2647303f-9fc5-405c-a7b3-3be4ceeeefdf",
+        "type": "ORGANIZATIONAL",
+        "description": "No customer relationship management system or loyalty program infrastructure",
+        "severity": "MEDIUM",
+        "blocksActions": [
+          "retention_focus",
+          "relationship_marketing"
+        ],
+        "releasableVia": [
+          "crm_implementation",
+          "loyalty_program_design"
+        ]
+      }
+    ],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "71f5ccad-0162-40c9-b814-3621fe22aee9",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "The evidence provided does not clearly match known root cause patterns.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "5d77a886-d99f-467f-9621-0360da880262",
+            "441fccde-d859-44da-be25-ba4b5acd7580",
+            "4a017676-c39c-46a5-819d-f8c813b7ffea",
+            "5f6b8fd8-cb28-4508-8cd8-6c202d29fa3f",
+            "d14ad70b-2d41-4cb6-8fc2-2fcf4c46d6a8"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH (large-seller GMV leakage compounds monthly and threatens the GMV/retention-gated raise)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "0379b0e1-0516-4dc1-997b-e858ac039530",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "71f5ccad-0162-40c9-b814-3621fe22aee9"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "682cf49a-4dba-4dc8-944c-377ed7678a2c",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "71f5ccad-0162-40c9-b814-3621fe22aee9"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "71f5ccad-0162-40c9-b814-3621fe22aee9",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "71f5ccad-0162-40c9-b814-3621fe22aee9"
+      ],
+      "contingencyRequired": true
+    },
+    "limitations": [
+      "Insufficient evidence for definitive diagnosis. Recommend phase 1 investigation before committing to full intervention plan.",
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "1 constraint(s) must be released before full execution: No customer relationship management system or loyalty program infrastructure",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

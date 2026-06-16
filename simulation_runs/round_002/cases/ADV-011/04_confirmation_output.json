@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Partnership profit declined from $1.3M (2023) to $0.9M (2024), a 31% YoY decrease. Profitability per partner declined from $433k to $300k. This is a significant decline for a mature professional services firm. Revenue appears flat (~$6.5M both years, ~0% growth), suggesting the profit decline is entirely driven by cost/efficiency deterioration.",
+    "Billable utilization declined from 70% (2023) to 55% (2024), a 15 percentage point decline or 21% relative decline. This is a significant operational deterioration. At 65% gross margin, lower utilization directly reduces profitability. Leadership attributes this to 'weak manufacturing economy' and 'fewer transformation project opportunities.' However, no detailed analysis provided of which clients, industries, or project types are declining.",
+    "Leadership reports that 'global consulting firms gaining share in manufacturing transformation space' and 'competition from digital transformation firms intensified.' Clients are expressing desire for digital/technology expertise beyond the firm's core operations transformation. Implying competitive displacement in core business, but no specific win/loss analysis provided.",
+    "Top 5 clients represent 45% of revenue. Two partner departures in past 18 months to larger firms. These are concerning signs: high client concentration means firm is vulnerable to individual client loss, and partner departures suggest compensation/career satisfaction issues. No detailed data on whether departing partners took clients with them, or what the stated reasons for departure were."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Detailed revenue cohort analysis: Which vintage of projects or client engagements are declining? Are all clients losing project volume, or are specific clients (by industry, size, or other characteristic) showing decline?",
+    "Client win/loss analysis: Which specific client relationships have been lost? What were the stated reasons? (Only general sense that 'fewer opportunities')",
+    "Pricing trend data: Have average project fees declined? Or is the volume of projects declining while average fees steady?",
+    "Root-cause analysis of utilization decline: Is the decline due to client demand (fewer transformation needs) or competitive displacement (clients choosing competitors)?",
+    "Detailed cost structure analysis: Which cost categories are fixed vs variable? What is the break-even utilization rate?"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Partnership profit declined from $1.3M (2023) to $0.9M (2024), a 31% YoY decrease. Profitability per partner declined from $433k to $300k. This is a significant decline for a mature professional services firm. Revenue appears flat (~$6.5M both years, ~0% growth), suggesting the profit decline is entirely driven by cost/efficiency deterioration.",
+    "Billable utilization declined from 70% (2023) to 55% (2024), a 15 percentage point decline or 21% relative decline. This is a significant operational deterioration. At 65% gross margin, lower utilization directly reduces profitability. Leadership attributes this to 'weak manufacturing economy' and 'fewer transformation project opportunities.' However, no detailed analysis provided of which clients, industries, or project types are declining.",
+    "Leadership reports that 'global consulting firms gaining share in manufacturing transformation space' and 'competition from digital transformation firms intensified.' Clients are expressing desire for digital/technology expertise beyond the firm's core operations transformation. Implying competitive displacement in core business, but no specific win/loss analysis provided.",
+    "Top 5 clients represent 45% of revenue. Two partner departures in past 18 months to larger firms. These are concerning signs: high client concentration means firm is vulnerable to individual client loss, and partner departures suggest compensation/career satisfaction issues. No detailed data on whether departing partners took clients with them, or what the stated reasons for departure were."
+  ]
+}

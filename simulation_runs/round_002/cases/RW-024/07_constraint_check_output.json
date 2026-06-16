@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (profitable but not venture-backed; limited comp flexibility vs. Big Four)",
+    "timeHorizonDays": 730,
+    "staffCapacity": "MEDIUM (60 people, stretched by turnover and utilization)",
+    "cashRunwayMonths": "N/A (profitable, positive cash flow)",
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

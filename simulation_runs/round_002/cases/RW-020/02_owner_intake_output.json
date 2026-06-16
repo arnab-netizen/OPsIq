@@ -1,0 +1,31 @@
+{
+  "step": "owner_intake",
+  "businessType": "Regional bank, $8.2B total assets, 45 branches across three states, $850M net interest income, expanding wealth management ($2.1B AUM). Founded 1987, private equity backed (2018). CEO in role 3 years.",
+  "stage": "Mature company: Net interest margin (NIM) 3.1% (down from 3.4% 18 months ago, -30bps erosion), net income $82M (down 12% YoY from $93M), efficiency ratio 62% (up from 59%), deposit beta rising (customers switching to higher-yield alternatives). ROA 1.0% (below peer median 1.2%), ROAE 9.5% (below peer median 11%).",
+  "ownerGoal": "Return ROA to 1.2%+ and ROAE to 12%+ within 24 months to support Series B PE transaction (exit opportunity for PE owner).",
+  "ownerConstraints": [
+    "Regulatory constraint: Compliance costs rising due to regulatory expansion (CFPB rules, Community Reinvestment Act, enhanced monitoring). Cannot cut compliance without regulatory risk.",
+    "Competitive constraint: Mega-banks offer higher deposit rates (attracting deposits away from regional bank). Tech-forward fintech competitors attracting wealth management and payments customers.",
+    "Cost structure: Personnel costs 43% of revenue (high for retail banking). Legacy systems consuming tech budget; modernization requires 3-5 year capex commitment.",
+    "Deposit dynamics: Interest rate environment pressure; as Fed rates stay elevated, customers moving deposits to yield-bearing alternatives (MMAs, CDs, direct Treasury exposure).",
+    "Market saturation: Regional market mature; growth must come from market share gains (difficult, price-based) or customer wallet expansion (limited in retail banking)."
+  ],
+  "immediateConcern": "NIM compression accelerating: down 30bps in 18 months. Model shows further 20-30bps compression if rates stay elevated and deposit mix continues to shift toward rate-sensitive deposits. At current trajectory, NIM could drop to 2.8%, making 1.2% ROA target unachievable without major cost reduction or fee income growth. Must understand whether NIM compression is temporary (rate environment driven) or structural (permanent competitive/market shift), and identify which levers (pricing, deposit mix, cost structure, fee income) offer improvement path.",
+  "availableData": [
+    "Financial: $8.2B assets, $850M NIM (3.1% current, 3.4% 18mo ago), net income $82M (-12% YoY), efficiency ratio 62% (-3pp YoY), deposit beta rising, ROA 1.0%, ROAE 9.5%",
+    "Operational: 45 branches, 2,200 employees, personnel costs 43% of revenue, legacy core system (15 years old), tech investment 2.5% of revenue",
+    "Market: Deposit market share stable but eroding in key demographics (high-net-worth, young professionals), wealth management AUM $2.1B (growing 8% YoY, above bank growth), average customer age rising (55 to 56 YoY)",
+    "Competitive: 3 mega-banks nearby offering 4.5%+ on deposits (vs. bank's 3.8%), 5+ fintechs competing in payments/lending, robo-advisors competing in wealth ($500k+ portfolios)"
+  ],
+  "unavailableData": [
+    "Customer segmentation by profitability and retention: Which customer segments contribute to ROA? Which are declining or at risk?",
+    "Deposit pricing elasticity: How sensitive are deposits to rate changes by segment (consumers, businesses, high-net-worth)?",
+    "Fee income potential: Which new fee products (advisory, management fees, transactional) could improve revenue without asset growth?",
+    "Cost structure deep dive: Where is the efficiency opportunity (branch consolidation? workforce optimization? process automation)?",
+    "Competitive win/loss: Which customers are leaving to competitors? Which are being retained and why?"
+  ],
+  "timeHorizon": "24 months (PE exit window; Series B transaction requires clear path to 1.2% ROA)",
+  "riskAppetite": "MEDIUM (PE owner wants growth but transaction certainty matters; cannot take balance sheet risks)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

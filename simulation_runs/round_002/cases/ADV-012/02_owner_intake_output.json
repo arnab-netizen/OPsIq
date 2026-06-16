@@ -1,0 +1,30 @@
+{
+  "step": "owner_intake",
+  "businessType": "Team-collaboration SaaS platform (messaging, channels, file-sharing, light workflow) competing with Slack and Microsoft Teams. Self-serve plus sales-assisted motion. Founded 2020, ~120 employees. 45,000 active paying accounts.",
+  "stage": "ARR $12M, up 50% YoY from $8M. 45,000 active accounts. Gross margin 79%. Monthly churn 4% (was 2% twelve months ago). Net revenue retention ~96% blended. Cash runway 48 months after the Series B.",
+  "ownerGoal": "Raise a Series C in the next 12 months at a strong multiple, leading with the 50% YoY growth story, and continue investing in top-of-funnel acquisition to sustain the headline growth rate.",
+  "ownerConstraints": [
+    "Market constraint: Highly competitive category dominated by Slack and Microsoft Teams; differentiation and switching costs are limited, so retention is hard-won.",
+    "Investor constraint: Pressure to demonstrate continued high growth for Series C; leadership has already socialized the 50% YoY growth figure with prospective leads and is focused on the growth headline.",
+    "Data constraint: The company reports ARR, growth, account count, and blended churn, but has not produced cohort retention curves, churn-reason analysis, or competitive win/loss data.",
+    "Product constraint: Roadmap is allocated to growth/acquisition features; limited engineering capacity is currently directed at retention, onboarding, or reliability work.",
+    "Time constraint: Series C process is expected to begin within ~12 months; leadership does not want to slow the growth narrative to investigate metrics that already 'look strong.'"
+  ],
+  "immediateConcern": "Growth is strong (50% YoY) and leadership is confident about product-market fit. At the same time, monthly churn has risen from 2% to 4% over the past twelve months. Net new account growth still looks healthy because acquisition is outpacing churn, but the underlying retention trend is deteriorating. Leadership is focused on the growth metric and wants to keep pushing acquisition; the rising churn has not been investigated, and there is no cohort, churn-reason, or win/loss analysis to explain it.",
+  "availableData": [
+    "ARR $12M, 50% YoY growth (from $8M), 45,000 active accounts, gross margin 79%",
+    "Monthly churn 4% (was 2% twelve months ago), blended net revenue retention ~96%",
+    "Marketing spend and new-account acquisition trend (acquisition outpacing churn so far)",
+    "Top-line account growth by month"
+  ],
+  "unavailableData": [
+    "Cohort retention curves (retention by signup cohort over time)",
+    "Churn-reason analysis / exit-survey data (why accounts are leaving)",
+    "Competitive win/loss data versus Slack and Teams",
+    "Engagement/usage-depth metrics by cohort (whether churning accounts ever activated)"
+  ],
+  "timeHorizon": "12 months",
+  "riskAppetite": "HIGH",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

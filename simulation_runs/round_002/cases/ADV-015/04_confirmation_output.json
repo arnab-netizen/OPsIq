@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Revenue grew 35% ($5.9M->$8.0M) but marketing spend grew ~117% ($1.2M->$2.6M) to achieve it. Spend is growing far faster than revenue, indicating worsening acquisition efficiency hidden behind a healthy-looking top-line growth rate.",
+    "Blended CAC rose from ~$38 to ~$61 (+60%) while AOV stayed flat at ~$72. At 60% gross margin a $72 order yields ~$43 gross profit, so a $61 CAC leaves first-order contribution negative before shipping and returns - the newest customers likely lose money on the first order and must repeat to become profitable.",
+    "12-month repeat-purchase rate is declining every cohort: 2022 42%, 2023 35%, 2024 28%. The exact mechanism (the repeats) that is supposed to rescue the negative first-order economics is weakening at the same time CAC rises. The two trends compound against the marginal customer.",
+    "~80% of new customers come from two paid platforms with rising CPMs. Doubling spend would push further into the same saturating channels, where marginal CAC typically rises above blended CAC - so the $61 figure likely understates the cost of the next customer at doubled spend. Marginal CAC at scale has not been modeled."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Per-cohort contribution margin and payback after fully-loaded CAC, COGS, shipping, returns, and discounts.",
+    "Cohort LTV projection incorporating the declining repeat-purchase trend.",
+    "Return/refund rate by cohort and channel.",
+    "Organic vs paid customer quality comparison (do paid-acquired customers repeat worse?).",
+    "Marginal CAC at a doubled spend level (does CAC rise further as spend scales into the same two channels?)."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Revenue grew 35% ($5.9M->$8.0M) but marketing spend grew ~117% ($1.2M->$2.6M) to achieve it. Spend is growing far faster than revenue, indicating worsening acquisition efficiency hidden behind a healthy-looking top-line growth rate.",
+    "Blended CAC rose from ~$38 to ~$61 (+60%) while AOV stayed flat at ~$72. At 60% gross margin a $72 order yields ~$43 gross profit, so a $61 CAC leaves first-order contribution negative before shipping and returns - the newest customers likely lose money on the first order and must repeat to become profitable.",
+    "12-month repeat-purchase rate is declining every cohort: 2022 42%, 2023 35%, 2024 28%. The exact mechanism (the repeats) that is supposed to rescue the negative first-order economics is weakening at the same time CAC rises. The two trends compound against the marginal customer.",
+    "~80% of new customers come from two paid platforms with rising CPMs. Doubling spend would push further into the same saturating channels, where marginal CAC typically rises above blended CAC - so the $61 figure likely understates the cost of the next customer at doubled spend. Marginal CAC at scale has not been modeled."
+  ]
+}

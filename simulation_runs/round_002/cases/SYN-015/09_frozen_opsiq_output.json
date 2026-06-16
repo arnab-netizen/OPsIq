@@ -1,0 +1,178 @@
+{
+  "frozenAt": "2026-06-16T21:01:30.841Z",
+  "caseId": "SYN-015",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "PROVISIONAL",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+    "Diagnosis confidence is PROVISIONAL. Recommend deeper investigation before major intervention."
+  ],
+  "decisionMemo": {
+    "id": "39e30893-3b30-4065-879d-905706cb497c",
+    "engagementId": "276d6c17-10cb-47f8-91d8-5cd28124fa5e",
+    "timestamp": "2026-06-16T21:01:30.836Z",
+    "businessProblem": "A Series B cloud-security SaaS has decelerated from 70% to 40% growth with new-logo bookings flat YoY despite a 35% larger sales team, a sales cycle stretched from 95 to 165 days, and win rate falling from 28% to 18%. The owner reads this as sales inefficiency and lost differentiation and wants to hire senior reps and add features. But retention is excellent (NRR 116%, gross 97%), undercutting a product-quality narrative, and the deceleration mirrors a maturing market: roughly 78% of current-ICP accounts already own a CSPM tool, MQL volume in that segment is down 20%, and 62% of recent losses are to 'platform consolidation' rather than feature comparison. The growth plan assumed continued category expansion that is no longer there. With 30 months of runway and a board demanding efficient growth, the owner must decide within a quarter whether to keep scaling into a saturating ICP or re-aim demand at a different segment or use case.",
+    "rootCauseDiagnosis": {
+      "id": "d2485eff-a09e-41ec-8bc5-9eab2fdaa121",
+      "type": "go_to_market_misalignment",
+      "description": "Go-to-market strategy misaligned with customer needs or channel efficacy",
+      "mechanismDescription": "Customer acquisition cost rising or channel becoming ineffective. Marketing reaches wrong segment or channel saturation. GTM timing may be misaligned with market readiness.",
+      "evidenceIds": [
+        "c529bc39-6e28-4d64-8ac6-0340a63483f6"
+      ],
+      "confidence": "PROVISIONAL",
+      "alternativeExplanations": [
+        "Product may be uncompetitive (not a GTM issue)",
+        "Market saturation may be industry-wide trend"
+      ],
+      "missingEvidenceFor": [
+        "Customer acquisition cost trend and breakdown by channel",
+        "Customer segment profitability analysis",
+        "Competitive GTM positioning"
+      ]
+    },
+    "diagnosisConfidence": "PROVISIONAL",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "67c60d60-fe7f-4a07-9b49-23a950fbcb42",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Customer acquisition cost rising or channel becoming ineffective. Marketing reaches wrong segment or channel saturation. GTM timing may be misaligned with market readiness.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "c529bc39-6e28-4d64-8ac6-0340a63483f6"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH (new-logo stall threatens the $20M ARR plan and board efficiency review)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "b6e757b3-653f-4174-8dc9-61a828d59422",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "67c60d60-fe7f-4a07-9b49-23a950fbcb42"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "8af17766-c61f-43ea-baf3-756e259e3a39",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "67c60d60-fe7f-4a07-9b49-23a950fbcb42"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "67c60d60-fe7f-4a07-9b49-23a950fbcb42",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "67c60d60-fe7f-4a07-9b49-23a950fbcb42"
+      ],
+      "contingencyRequired": true
+    },
+    "limitations": [
+      "Diagnosis confidence is PROVISIONAL. Recommend validation through initial quick wins before major capital investment.",
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

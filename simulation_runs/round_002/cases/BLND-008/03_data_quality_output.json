@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "operational_efficiency",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Final, signed offer structure: precise cash/stock/earn-out split, earn-out achievability, escrow, indemnities, and the acquirer's stock liquidity/valuation basis",
+    "Verified standalone forecast: durable independent growth rate, the realistic probability of reaching $30M+ ARR (the tier where premium multiples appear), and the capital required to get there",
+    "Diligence-grade churn and NRR cohorts: whether 112% NRR is durable across cohorts or concentrated in a few large accounts, and true post-onboarding logo churn",
+    "Integration economics of the Option C target: real revenue/cost synergies, churn of its base post-acquisition, and the financing terms actually obtainable",
+    "Investor and key-employee reservation values: the price/structure below which Series A would block, and the retention terms that would keep the founder and key engineers committed"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Final, signed offer structure: precise cash/stock/earn-out split, earn-out achievability, escrow, indemnities, and the acquirer's stock liquidity/valuation basis",
+    "Cannot conclude on: Verified standalone forecast: durable independent growth rate, the realistic probability of reaching $30M+ ARR (the tier where premium multiples appear), and the capital required to get there",
+    "Cannot conclude on: Diligence-grade churn and NRR cohorts: whether 112% NRR is durable across cohorts or concentrated in a few large accounts, and true post-onboarding logo churn",
+    "Cannot conclude on: Integration economics of the Option C target: real revenue/cost synergies, churn of its base post-acquisition, and the financing terms actually obtainable",
+    "Cannot conclude on: Investor and key-employee reservation values: the price/structure below which Series A would block, and the retention terms that would keep the founder and key engineers committed"
+  ]
+}

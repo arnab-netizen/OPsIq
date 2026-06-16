@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (Series A funding, $400k/month burn, 24-month runway; limited discretionary spend for external tools/services)",
+    "timeHorizonDays": 180,
+    "staffCapacity": "LOW (18 total people; 6 engineering fully allocated to roadmap; limited capacity for major stability/refactoring work without reducing feature output)",
+    "cashRunwayMonths": 24,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

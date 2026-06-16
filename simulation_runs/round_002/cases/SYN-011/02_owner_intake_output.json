@@ -1,0 +1,29 @@
+{
+  "step": "owner_intake",
+  "businessType": "B2B SaaS platform providing workflow automation for mid-market professional services firms (accounting, legal, consulting). Subscription model with monthly pricing ($2k-$10k/month per customer). Founded 2021, Series A funding $8M (2023). Current ARR: $4.2M, growing 25% YoY. Customer base: 180 mid-market customers.",
+  "stage": "Post-Series A growth: ARR $4.2M (25% YoY growth). Gross margin 72% (healthy for SaaS). Magic number 0.8 (revenue generated per $1 CAC; target 1.0+). CAC payback period 16 months (target <12 months). NPS 42 (target >50 for healthy SaaS). Churn rate 3% MRR (acceptable), but trend rising: was 2% MRR 6 months ago. Cash runway 24 months at current burn.",
+  "ownerGoal": "Reach Series B readiness ($10M ARR, <3% churn, NPS >55, path to profitability) within 18 months. Primary lever: improve customer retention (reduce churn from 3% to <2%) and expand NPS (42 to 55+). Series B investors will scrutinize retention metrics as indicator of product-market fit.",
+  "ownerConstraints": [
+    "Funding constraint: $8M Series A capital, 24-month runway at current burn ($400k/month). Cannot hire aggressively without jeopardizing runway. Must demonstrate path to efficiency before Series B.",
+    "Product constraint: Platform built on legacy architecture (dating to MVP phase); significant technical debt. Major feature additions require 8-12 weeks of engineering effort. Refactoring for stability/performance requires 12-16 weeks without new feature progress.",
+    "Organizational constraint: Lean team (18 people: 6 engineering, 4 sales, 4 support/operations, 2 finance/legal, 2 founding team). Product/engineering fully allocated to roadmap. Limited capacity for major platform redesign or new feature development.",
+    "Market constraint: Competitive landscape consolidating; 2 larger competitors with more feature-rich platforms entering market; customers evaluating feature parity as purchasing criteria."
+  ],
+  "immediateConcern": "NPS is low (42) and churn is rising (2%→3% MRR over 6 months). Customer interviews suggest satisfaction is high with core workflow automation features, but customers are increasingly frustrated with product reliability (uptime issues, occasional data sync failures, slow UI responsiveness). Recent incidents: 4-hour outage (data sync failure), 8-minute page load times during peak usage. These are not feature gaps but stability/reliability issues. If product reliability continues to deteriorate, churn will accelerate and Series B will become difficult.",
+  "availableData": [
+    "Financial metrics: ARR, MRR, CAC, LTV estimates, churn rate (by cohort and aggregate), payback period, gross margin, burn rate",
+    "Product metrics: Platform uptime (99.2%), incident frequency (2-3 incidents per month, avg 2-hour resolution), feature usage (workflow automation 85% adoption, newer features 20% adoption)",
+    "Customer feedback: NPS survey results (42 overall; detractor feedback focuses on reliability/performance, not features), support ticket volume (trending up 40% YoY), support resolution time (avg 24 hours, trending up)",
+    "Competitive context: 2 new entrants in market with 5-7x more funding, feature-rich platforms, 99.99% uptime SLAs"
+  ],
+  "unavailableData": [
+    "Detailed root cause analysis of reliability issues (engineering team has not done deep diagnostics)",
+    "Customer willingness-to-pay for reliability vs features (not surveyed)",
+    "Competitive feature parity analysis (subjective assessment only)",
+    "Detailed technical debt inventory (not formally documented)"
+  ],
+  "timeHorizon": "18 months (Series B readiness deadline; must demonstrate churn stabilization within 6 months to de-risk fundraising)",
+  "riskAppetite": "MEDIUM (growth-stage company must balance feature development to compete with funding-backed entrants vs. stability/reliability investment to retain existing customers)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

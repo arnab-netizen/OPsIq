@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Blended unit economics are strong: CAC payback 10 months, LTV ~$120k, LTV:CAC ~4.1:1, gross margin 78%. These are the metrics in the current board deck and the ones the founder wants to lead the Series B with.",
+    "Cohort CAC payback by acquisition quarter shows a clear deterioration: 2023 H1 ~7mo, 2023 H2 ~9mo, 2024 H1 ~13mo, 2024 H2 (the most recent and largest cohort) ~18mo and still rising. The favorable blended 10-month figure is weighted by older, cheaper cohorts; the marginal new customer pays back in ~18 months, not 10.",
+    "Acquisition channel shifted from ~70% inbound/referral (2023) to ~65% outbound-sourced (2024) after a new VP Sales reorganized AE pods. Outbound deals carry higher fully-loaded acquisition cost. This shift coincides with the rising-payback cohorts but no win-rate, cycle, or fully-loaded CAC bridge has been produced for outbound vs inbound.",
+    "Blended NRR 104%, gross retention 88%. LTV (~$120k) is computed at the blended level only. If recent outbound cohorts retain worse, the assumed LTV for those cohorts would be lower while their CAC is higher - compressing LTV:CAC for the exact customers being scaled. NRR/retention have not been cut by cohort or channel."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Cohort-level LTV and LTV:CAC (only blended LTV is computed; per-cohort LTV not yet calculated).",
+    "Net revenue retention and gross retention split by cohort and by acquisition channel (inbound/referral vs outbound).",
+    "Fully-loaded CAC bridge explaining why recent-cohort payback is approximately 18 months (sales comp, SDR cost, marketing, ramp inefficiency of new AEs).",
+    "Win-rate and sales-cycle data for outbound vs inbound deals under the new GTM motion.",
+    "Forward projection of blended payback as recent cohorts grow as a share of the base."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Blended unit economics are strong: CAC payback 10 months, LTV ~$120k, LTV:CAC ~4.1:1, gross margin 78%. These are the metrics in the current board deck and the ones the founder wants to lead the Series B with.",
+    "Cohort CAC payback by acquisition quarter shows a clear deterioration: 2023 H1 ~7mo, 2023 H2 ~9mo, 2024 H1 ~13mo, 2024 H2 (the most recent and largest cohort) ~18mo and still rising. The favorable blended 10-month figure is weighted by older, cheaper cohorts; the marginal new customer pays back in ~18 months, not 10.",
+    "Acquisition channel shifted from ~70% inbound/referral (2023) to ~65% outbound-sourced (2024) after a new VP Sales reorganized AE pods. Outbound deals carry higher fully-loaded acquisition cost. This shift coincides with the rising-payback cohorts but no win-rate, cycle, or fully-loaded CAC bridge has been produced for outbound vs inbound.",
+    "Blended NRR 104%, gross retention 88%. LTV (~$120k) is computed at the blended level only. If recent outbound cohorts retain worse, the assumed LTV for those cohorts would be lower while their CAC is higher - compressing LTV:CAC for the exact customers being scaled. NRR/retention have not been cut by cohort or channel."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "YoY growth is 40% but MoM new-bookings growth has decelerated from ~5% (run-rate ~80% annualized) to ~3.5% (~51% annualized), and the trend is still slowing. The deceleration is in new bookings, not in retention, pointing to a top-of-funnel demand or acquisition issue rather than a churn problem.",
+    "Approximately 90% of customers and new-logo ARR are concentrated in the core discrete-manufacturing vertical. Win rates in that segment have softened over the trailing year (from ~28% to ~22%) and sales cycles have lengthened, consistent with the most obvious, best-fit accounts already being sold and the remaining pipeline being lower-quality.",
+    "Churn is steady at 3% MRR and net revenue retention is healthy (~112%) with strong expansion inside existing accounts. Retention and product satisfaction are not deteriorating, which localizes the growth problem to acquisition/demand rather than to product value or a retention failure.",
+    "Unit economics remain strong: CAC $35k, LTV $180k, LTV:CAC ~5.1:1, gross margin 80%. The economics are not broken; the issue is that the volume of new qualified opportunities in the core vertical is shrinking, not that each deal has become unprofitable. No validated addressable-demand model exists to confirm how much qualified core-segment demand remains."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Validated market size and growth rate by vertical and sub-segment (no addressable-demand model)",
+    "Competitive dynamics and win/loss reasons by deal",
+    "Penetration rate of the qualified core-segment account universe",
+    "Demand signal for adjacent verticals (no in-market test run)"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "YoY growth is 40% but MoM new-bookings growth has decelerated from ~5% (run-rate ~80% annualized) to ~3.5% (~51% annualized), and the trend is still slowing. The deceleration is in new bookings, not in retention, pointing to a top-of-funnel demand or acquisition issue rather than a churn problem.",
+    "Approximately 90% of customers and new-logo ARR are concentrated in the core discrete-manufacturing vertical. Win rates in that segment have softened over the trailing year (from ~28% to ~22%) and sales cycles have lengthened, consistent with the most obvious, best-fit accounts already being sold and the remaining pipeline being lower-quality.",
+    "Churn is steady at 3% MRR and net revenue retention is healthy (~112%) with strong expansion inside existing accounts. Retention and product satisfaction are not deteriorating, which localizes the growth problem to acquisition/demand rather than to product value or a retention failure.",
+    "Unit economics remain strong: CAC $35k, LTV $180k, LTV:CAC ~5.1:1, gross margin 80%. The economics are not broken; the issue is that the volume of new qualified opportunities in the core vertical is shrinking, not that each deal has become unprofitable. No validated addressable-demand model exists to confirm how much qualified core-segment demand remains."
+  ]
+}

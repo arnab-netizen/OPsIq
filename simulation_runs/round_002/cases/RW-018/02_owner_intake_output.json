@@ -1,0 +1,25 @@
+{
+  "step": "owner_intake",
+  "businessType": "Regional specialty clinic network, orthopedic and sports medicine focus, 8 locations, 120 employees, $15M revenue.",
+  "stage": "Revenue growing 12% YoY to $15M, but profitability declining. Net margin 6% (down from 10% two years ago). Patient volumes up but reimbursement rates declining. Insurance mix shifting to lower-paying plans.",
+  "ownerGoal": "Stabilize profitability and achieve 8%+ net margin within 18 months without reducing patient capacity.",
+  "ownerConstraints": [
+    "Regulatory constraint: Healthcare compliance, staffing regulations, credentialing requirements",
+    "Reimbursement constraint: Insurance payors controlling pricing; limited pricing power",
+    "Talent constraint: Physician recruitment difficult; must maintain physician compensation to retain staff"
+  ],
+  "immediateConcern": "Profitability declining despite volume growth. Root cause unclear: is it reimbursement rates declining, operational costs rising, or mix shift to lower-margin services?",
+  "availableData": [
+    "Financial: $15M revenue, 6% net margin, growing 12% YoY",
+    "Operational: 120 employees, 8 locations, patient volumes up 8% YoY, average patient visit revenue $180, cost per visit rising"
+  ],
+  "unavailableData": [
+    "Detailed reimbursement rate trends by payor",
+    "Service line profitability breakdown",
+    "Staffing costs vs revenue by location"
+  ],
+  "timeHorizon": "18 months",
+  "riskAppetite": "MEDIUM",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

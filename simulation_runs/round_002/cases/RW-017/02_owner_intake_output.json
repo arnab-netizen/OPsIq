@@ -1,0 +1,28 @@
+{
+  "step": "owner_intake",
+  "businessType": "MEP engineering consulting firm, 150 employees, 12 regional offices, $28M annual revenue. Specializes in HVAC, plumbing, electrical design for commercial/industrial clients.",
+  "stage": "Mature: Revenue flat $28M (0% growth), EBITDA margin 8% ($2.2M). Headcount stable. Average project value $180k, 18-month sales cycle. Client concentration: top 10 clients = 35% of revenue.",
+  "ownerGoal": "Return to 3-5% annual revenue growth and improve EBITDA margin to 12%+ within 24 months without major layoffs or acquisitions.",
+  "ownerConstraints": [
+    "Competitive constraint: Larger firms (Jacobs, Stantec) competing on price and scale; smaller boutiques competing on nimbleness",
+    "Market constraint: Commercial/industrial construction declining due to interest rates; clients delaying projects",
+    "Talent constraint: Engineering shortage; difficulty recruiting junior engineers; 35% of staff >55 years old (retirement risk)",
+    "Technology constraint: Legacy CAD systems; difficulty adopting BIM (Building Information Modeling) firm-wide; $500k investment would be required"
+  ],
+  "immediateConcern": "Revenue stagnation with rising labor costs (wage pressure due to talent shortage) is compressing margins. Pipeline visibility is declining (18-month sales cycle, but clients delaying decisions). Partners question whether the firm is viable long-term or should be sold.",
+  "availableData": [
+    "Financial: $28M revenue (flat), 8% EBITDA, 150 headcount, $187k revenue per employee",
+    "Client data: Top 10 = 35% of revenue, typical project $180k, 18-month cycle, project profitability varies 4-12% depending on complexity",
+    "Operational: Average project margin 8%, utilization rate 72%, rework/revisions increasing (15% of labor hours wasted on rework in 2024 vs 8% in 2022)"
+  ],
+  "unavailableData": [
+    "Detailed employee skill inventory and career paths",
+    "BIM adoption readiness assessment",
+    "Competitive win/loss data at project level",
+    "Market sizing for digital/AI-assisted design services"
+  ],
+  "timeHorizon": "24 months (partner confidence threshold; consideration of exit/sale)",
+  "riskAppetite": "LOW-MEDIUM (mature partnership, conservative)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

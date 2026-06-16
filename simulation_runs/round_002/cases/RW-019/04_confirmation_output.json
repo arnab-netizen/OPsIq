@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Churn accelerated from 4% quarterly (Q2) to 6% (Q3), reversing earlier trend. Simultaneously, expansion ARR declined from 12% of new customer revenue in Q1 to 8% in Q3. This suggests either customer satisfaction is declining, or customer cohorts being acquired now have different economics than earlier cohorts.",
+    "NPS 38 (neutral, not negative). Customer satisfaction survey scores stable at 7.2/10. However, support ticket volume increased 25% YoY while customer count only increased 15% YoY, suggesting support burden rising. Churn reasons unknown (no structured exit interview data).",
+    "User adoption strong: 85% of paying accounts have weekly active users (WAU). Usage metrics stable across cohorts. This suggests product is not obviously broken, but does not rule out feature fit or use-case fit issues for churning segments.",
+    "Customer base concentrated: top 5 customers = 32% of ARR. Series A company in market with larger competitors (Procore $10B+, Touchplan ~$500M). Competitive landscape consolidating; larger vendors acquiring niche players. Market adoption accelerating but heterogeneous (large GCs prioritize Procore, mid-market and regional buyers more open to alternatives)."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Detailed churn cohort analysis: Which cohorts are churning (by acquisition source, customer size, vertical, tenure)?",
+    "Win/loss analysis for churned customers: Stated reasons for churn (product fit, pricing, feature gap, competitive switching)?",
+    "Expansion data by customer segment: Which segments expand, which stay flat, which churn?",
+    "Competitive win/loss: How often losing deals to specific competitors? Product vs. pricing vs. go-to-market?",
+    "Usage cohort analysis: Correlation between usage patterns and churn risk?"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Churn accelerated from 4% quarterly (Q2) to 6% (Q3), reversing earlier trend. Simultaneously, expansion ARR declined from 12% of new customer revenue in Q1 to 8% in Q3. This suggests either customer satisfaction is declining, or customer cohorts being acquired now have different economics than earlier cohorts.",
+    "NPS 38 (neutral, not negative). Customer satisfaction survey scores stable at 7.2/10. However, support ticket volume increased 25% YoY while customer count only increased 15% YoY, suggesting support burden rising. Churn reasons unknown (no structured exit interview data).",
+    "User adoption strong: 85% of paying accounts have weekly active users (WAU). Usage metrics stable across cohorts. This suggests product is not obviously broken, but does not rule out feature fit or use-case fit issues for churning segments.",
+    "Customer base concentrated: top 5 customers = 32% of ARR. Series A company in market with larger competitors (Procore $10B+, Touchplan ~$500M). Competitive landscape consolidating; larger vendors acquiring niche players. Market adoption accelerating but heterogeneous (large GCs prioritize Procore, mid-market and regional buyers more open to alternatives)."
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (profitable, but margin constrained; capex limited for non-essential projects)",
+    "timeHorizonDays": 540,
+    "staffCapacity": "MEDIUM (650 people, but manufacturing teams stretched with supply chain management burden)",
+    "cashRunwayMonths": "N/A (profitable, positive cash flow)",
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

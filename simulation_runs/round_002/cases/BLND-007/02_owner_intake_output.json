@@ -1,0 +1,33 @@
+{
+  "step": "owner_intake",
+  "businessType": "D2C apparel brand founded 2017, selling womenswear and unisex basics direct online plus 3 owned showrooms in the domestic market. Roughly 480,000 lifetime customers, ~140,000 active buyers in the trailing 12 months. Design and merchandising owned in-house; manufacturing outsourced to 6 contract factories across two countries.",
+  "stage": "Trailing-12-month revenue $25M, growing ~30% YoY (down from ~45% YoY two years ago). Gross margin 58%. EBITDA margin 9% ($2.25M). Domestic market is ~80% of revenue; remaining ~20% is incidental cross-border orders fulfilled from the domestic warehouse at high shipping cost. Headcount 95.",
+  "ownerGoal": "Sustain 25-30%+ annual growth for the next 3 years and roughly double revenue to ~$50M while preserving the brand's premium-but-accessible positioning and current profitability, by choosing the next major market to enter.",
+  "ownerConstraints": [
+    "Capital constraint: $6M of internally generated cash plus a $4M undrawn revolving facility; founder will not raise dilutive equity in the next 18 months, so total expansion budget is capped near $8-10M including working-capital build.",
+    "Margin protection constraint: Will not accept an expansion that drags blended EBITDA margin below ~5% for more than 12 months; the brand must remain profitable through the move.",
+    "Operational constraint: Single domestic 3PL warehouse near capacity (88% utilization); international fulfillment requires either a local 3PL contract or a new node, each with 4-7 month standup plus localization (returns, duties, sizing).",
+    "Brand constraint: Premium-accessible positioning and sizing fit are core; the team has limited evidence on how the brand and fit translate to non-domestic body-size distributions and style preferences.",
+    "Team constraint: Lean leadership; no in-house international operations, customs, or local-market marketing expertise. Any market entered needs a dedicated GM hire and local marketing partner."
+  ],
+  "immediateConcern": "Domestic new-customer acquisition is getting more expensive (paid CAC up ~35% over 18 months) and the founder believes domestic TAM at the brand's price point is finite. The founder group must pick the next growth market within roughly one quarter so merchandising, fulfillment localization, and the FY budget can be locked. Three candidate paths are on the table and resources allow committing meaningfully to only one as the primary bet.",
+  "availableData": [
+    "Revenue $25M TTM; YoY growth 30% (was 45% two years ago); gross margin 58%; EBITDA margin 9%",
+    "Domestic blended CAC $62 (paid CAC $88), trailing AOV $115, repeat-purchase rate 41% within 12 months, first-order contribution margin ~$24",
+    "Cross-border (incidental) orders: ~20% of revenue, AOV $134, but contribution margin ~$6 due to international shipping and a ~22% return rate vs ~14% domestic",
+    "Domestic market share estimated ~1.1% of a ~$2.3B addressable premium-accessible apparel segment; trailing 18 months show domestic active-buyer growth decelerating to ~12%",
+    "Europe interest signal: unsolicited cross-border European orders growing ~50% YoY off a small base, concentrated in 3 countries; domestic-equivalent ad CPMs in those markets benchmarked 20-40% higher",
+    "Asia interest signal: largest absolute search/social interest volume, but observed cross-border return rate from the region ~31% and sizing complaints elevated; payment, duties, and counterfeit-risk landscape more complex"
+  ],
+  "unavailableData": [
+    "True localized CAC and payback by candidate market (no in-market paid-acquisition test has been run; benchmarks are external estimates)",
+    "Localized contribution margin after duties, local 3PL, returns, and FX at scale (current cross-border economics are distorted by domestic-warehouse shipping)",
+    "Whether the brand's sizing/fit and style resonate with local body-size distributions and seasonal preferences in each candidate market",
+    "Realistic local repeat-purchase and retention curves (incidental cross-border buyers are not representative of a deliberately acquired local cohort)",
+    "Competitive intensity and incumbent loyalty at the brand's price point in each candidate market"
+  ],
+  "timeHorizon": "One quarter (90 days) to commit the primary expansion path so FY merchandising buys, fulfillment localization, and the operating budget can be finalized",
+  "riskAppetite": "MEDIUM (founder-controlled, profitable; willing to invest for growth but unwilling to risk insolvency or sustained losses, and unwilling to dilute)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

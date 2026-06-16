@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (large system with bond-market access but constrained by covenant/rating pressure and not-for-profit reserves; discretionary spend on diagnostics is available, large restructuring requires board approval)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM (large workforce but acute nurse shortage and agency dependence; a permanent-hire ramp is constrained by the regional labor market and union agreements)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

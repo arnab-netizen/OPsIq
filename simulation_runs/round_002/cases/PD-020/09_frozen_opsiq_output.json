@@ -1,0 +1,178 @@
+{
+  "frozenAt": "2026-06-16T21:01:14.662Z",
+  "caseId": "PD-020",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "185ea415-2dae-4067-a6a3-fc901c84ab00",
+    "engagementId": "3086bff0-79c4-4c6b-a30d-1a8f5d639d03",
+    "timestamp": "2026-06-16T21:01:14.656Z",
+    "businessProblem": "A leveraged regional department-store retailer (30 stores, $600M revenue) is in multi-year decline and must, within roughly 90-120 days, make capital-allocation decisions tied to a refinancing and the next season's merchandise buy. Revenue has fallen from $675M (FY2023) to $642M (FY2024) to $600M (FY2025, -6.5% YoY). Comparable-store sales fell 7%, driven by a 9% drop in store traffic while conversion held roughly flat and average ticket rose 1% — indicating the decline is a traffic/relevance problem, not a conversion or in-store-execution problem. E-commerce grew to 18% of sales ($108M, up from 12%), yet total revenue still declined, so the online channel is not offsetting store losses and appears to reflect cannibalization and share loss rather than additive growth. Gross margin compressed from 38% to 34%, driven primarily by escalating markdowns and inventory write-downs that rose from $9M (1.4% of revenue) to $24M (4.0%), as the company marks down merchandise its customers increasingly do not want. EBITDA fell from $45M (7.0% margin) to $24M (4.0% margin), and about 6 of 30 stores are now EBITDA-negative on a four-wall basis while occupancy cost rises as a share of declining sales. The core challenge: Is the decline driven by a merchandise/demand-planning failure (over-buying causing write-downs), by a cost-structure/unit-economics problem (occupancy and four-wall losses), or by something more fundamental — a structural loss of the banner's relevance and differentiation that is pushing customers to other formats and online? Management must diagnose the true driver before committing the merchandise buy and the refinancing case, because another markdown season could breach covenants.",
+    "rootCauseDiagnosis": {
+      "id": "ac41c8b0-011b-4f4e-86a5-8a22da232305",
+      "type": "unit_economics_breakdown",
+      "description": "Unit profitability collapse due to margin compression or fixed-cost burden",
+      "mechanismDescription": "Per-unit contribution has become negative or margins have compressed. Fixed-cost burden grows faster than revenue. Expansion to new units/segments unprofitable.",
+      "evidenceIds": [
+        "32fe168d-2c3c-4c70-bd23-950f94c51e0c",
+        "6319da1c-4113-4843-a63a-7d1adaea8e5d"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "Temporary cost inflation (commodity price spike) may recover",
+        "Scale benefits may kick in with volume growth"
+      ],
+      "missingEvidenceFor": [
+        "Unit contribution margin by segment/location",
+        "Cost structure breakdown (COGS vs OpEx)",
+        "Projection when scale achieves breakeven"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "6427fb6a-db3e-4ef7-82fb-5b4c16ecb044",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Per-unit contribution has become negative or margins have compressed. Fixed-cost burden grows faster than revenue. Expansion to new units/segments unprofitable.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "32fe168d-2c3c-4c70-bd23-950f94c51e0c",
+            "6319da1c-4113-4843-a63a-7d1adaea8e5d"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH (multi-year revenue decline, margin compression, and a ~90-120 day refinancing/covenant window with another markdown season threatening covenant breach)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "9add02ed-a173-456c-b39a-f43fa1df672f",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "6427fb6a-db3e-4ef7-82fb-5b4c16ecb044"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "55e58d21-03d1-4f74-bbd7-80272399444f",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "6427fb6a-db3e-4ef7-82fb-5b4c16ecb044"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "6427fb6a-db3e-4ef7-82fb-5b4c16ecb044",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "6427fb6a-db3e-4ef7-82fb-5b4c16ecb044"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

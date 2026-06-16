@@ -1,0 +1,24 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "operational_efficiency",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Cohort retention curves (retention by signup cohort over time)",
+    "Churn-reason analysis / exit-survey data (why accounts are leaving)",
+    "Competitive win/loss data versus Slack and Teams",
+    "Engagement/usage-depth metrics by cohort (whether churning accounts ever activated)"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Cohort retention curves (retention by signup cohort over time)",
+    "Cannot conclude on: Churn-reason analysis / exit-survey data (why accounts are leaving)",
+    "Cannot conclude on: Competitive win/loss data versus Slack and Teams",
+    "Cannot conclude on: Engagement/usage-depth metrics by cohort (whether churning accounts ever activated)"
+  ]
+}

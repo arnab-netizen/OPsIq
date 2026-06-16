@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Gross margin PER UNIT shipped has declined each of the last three years, driven by rising labor cost per unit and contract escalators capped below cost inflation. The stable blended 11% EBITDA hides this deterioration at the unit level - the core economics are eroding even as the headline holds.",
+    "The stable EBITDA was sustained by non-recurring levers: a facility consolidation, a one-time freight contract renegotiation, and overhead reductions - now largely exhausted. These offsets masked the declining per-unit margin. With the levers depleted, the underlying unit-margin erosion would flow through to EBITDA going forward.",
+    "Labor cost per unit continues to rise and several client contracts renew over the next 12-18 months with escalators still capped below projected cost inflation. Volume growth (~6%) gives some fixed-cost leverage, but with per-unit contribution shrinking, that leverage diminishes - the forward direction of margin is down absent new offsets.",
+    "The recap is being marketed on three years of stable margin as evidence of low-risk durability. No forward model separates recurring unit margin from the depleting one-time offsets, so neither the company nor lenders can yet see whether the 11% is sustainable. Layering debt onto a possibly eroding base raises the risk if margin falls post-recap."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "A bridge decomposing the three-year EBITDA into recurring per-unit margin vs one-time cost actions (how much of the 11% is durable?).",
+    "Forward per-unit margin projection as one-time levers exhaust and labor cost per unit continues rising.",
+    "Contract-by-contract margin and the impact of capped escalators at upcoming renewals.",
+    "Automation/capex business case and its effect on per-unit cost.",
+    "Sensitivity of EBITDA to wage inflation and volume under the no-more-one-time-levers scenario."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Gross margin PER UNIT shipped has declined each of the last three years, driven by rising labor cost per unit and contract escalators capped below cost inflation. The stable blended 11% EBITDA hides this deterioration at the unit level - the core economics are eroding even as the headline holds.",
+    "The stable EBITDA was sustained by non-recurring levers: a facility consolidation, a one-time freight contract renegotiation, and overhead reductions - now largely exhausted. These offsets masked the declining per-unit margin. With the levers depleted, the underlying unit-margin erosion would flow through to EBITDA going forward.",
+    "Labor cost per unit continues to rise and several client contracts renew over the next 12-18 months with escalators still capped below projected cost inflation. Volume growth (~6%) gives some fixed-cost leverage, but with per-unit contribution shrinking, that leverage diminishes - the forward direction of margin is down absent new offsets.",
+    "The recap is being marketed on three years of stable margin as evidence of low-risk durability. No forward model separates recurring unit margin from the depleting one-time offsets, so neither the company nor lenders can yet see whether the 11% is sustainable. Layering debt onto a possibly eroding base raises the risk if margin falls post-recap."
+  ]
+}

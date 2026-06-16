@@ -1,0 +1,24 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Fully-loaded CAC has risen to ~$220k (sales + marketing + sales-engineering + subsidized implementation), LTV/CAC fell from 3.4 to 1.6, and CAC payback extended from 18 to 34 months. At a 1.6 ratio and 34-month payback, the company spends far ahead of customer profitability, and the economics are below the threshold needed to be fundable.",
+    "The sales motion is expensive and slow: average sales cycle 6.5 months and sales-engineering hours per deal up 45%, while win rate is stable at 22%. The rising SE intensity inflates CAC without improving conversion, indicating the cost of acquiring each customer is structurally high, especially in the largest deals.",
+    "Implementation averages 16 weeks and is heavily subsidized: the company absorbs ~60% of implementation cost, roughly $48k per customer, which is loaded into CAC. Implementation is genuinely complex (data migration, pipeline setup, governance), so the subsidy is a structural drag on acquisition economics rather than a one-off.",
+    "~40% of churned customers leave within the first 9 months, citing implementation delays and unrealized value, which shortens realized LTV before payback (34 months) is ever reached. Gross retention is 90%. Early-life churn does not just lose revenue; it directly worsens the LTV/CAC ratio by truncating lifetime on the most expensively acquired customers.",
+    "Segmentation matters: large enterprise deals have the longest cycles and most expensive delivery (and worst LTV/CAC) but highest ACV, while mid-size deals show materially better LTV/CAC. Competitors with simpler scopes run shorter cycles and cheaper delivery, pressuring the company's cost-to-acquire-and-serve in the enterprise segment."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "LTV/CAC and payback broken out by deal size and segment",
+    "Automation/productization potential and cost reduction for the 16-week implementation",
+    "Price elasticity for charging (vs subsidizing) implementation",
+    "Contribution-margin-positive timing per cohort under alternative motions"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Fully-loaded CAC has risen to ~$220k (sales + marketing + sales-engineering + subsidized implementation), LTV/CAC fell from 3.4 to 1.6, and CAC payback extended from 18 to 34 months. At a 1.6 ratio and 34-month payback, the company spends far ahead of customer profitability, and the economics are below the threshold needed to be fundable.",
+    "The sales motion is expensive and slow: average sales cycle 6.5 months and sales-engineering hours per deal up 45%, while win rate is stable at 22%. The rising SE intensity inflates CAC without improving conversion, indicating the cost of acquiring each customer is structurally high, especially in the largest deals.",
+    "Implementation averages 16 weeks and is heavily subsidized: the company absorbs ~60% of implementation cost, roughly $48k per customer, which is loaded into CAC. Implementation is genuinely complex (data migration, pipeline setup, governance), so the subsidy is a structural drag on acquisition economics rather than a one-off.",
+    "~40% of churned customers leave within the first 9 months, citing implementation delays and unrealized value, which shortens realized LTV before payback (34 months) is ever reached. Gross retention is 90%. Early-life churn does not just lose revenue; it directly worsens the LTV/CAC ratio by truncating lifetime on the most expensively acquired customers.",
+    "Segmentation matters: large enterprise deals have the longest cycles and most expensive delivery (and worst LTV/CAC) but highest ACV, while mid-size deals show materially better LTV/CAC. Competitors with simpler scopes run shorter cycles and cheaper delivery, pressuring the company's cost-to-acquire-and-serve in the enterprise segment."
+  ]
+}

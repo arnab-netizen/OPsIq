@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (PE-backed with capital available, but disciplined by 4.6x leverage and recap-return math)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "LOW (2 ops integration leads for 6 bolt-ons; branch managers semi-autonomous under earn-outs)",
+    "cashRunwayMonths": "N/A (cash-generative platform; constraint is leverage and recap timing, not runway)",
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": false
+}

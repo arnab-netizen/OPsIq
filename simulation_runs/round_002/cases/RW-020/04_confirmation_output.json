@@ -1,0 +1,25 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "NIM compressed 30bps over 18 months (3.4% → 3.1%), accelerating. Net income down 12% YoY despite flat deposit base, suggesting margin per dollar of assets deteriorating. Efficiency ratio worsening (59% → 62%), indicating costs not decreasing with margin. This is a profitability squeeze: revenues declining, costs flat to increasing.",
+    "Deposit beta (cost increase relative to Fed rate increase) rising. Market deposit rates (mega-banks) at 4.5%+ while bank's blended deposit rate 3.8%. Deposit migration to higher-yield products (MMAs, CDs) observed. This is a structural shift: as rates stay elevated, customers shopping for better rates. Deposit volume stable but mix deteriorating (lower-cost checking declining, higher-cost MMAs increasing).",
+    "Competitive landscape intensifying: mega-banks expanding in regional markets with rate-aggressive deposits. Fintechs (Ally, Marcus, etc.) offering 4.5%+ on savings, attracting tech-comfortable customers. Robo-advisors (Betterment, Wealthfront) competing in wealth management for <$1M portfolios. Bank's wealth management growing (8% AoUM growth) but losing younger customer acquisition to fintechs and robo-advisors.",
+    "Personnel costs 43% of revenue (high for retail banking; peer median ~40%). Legacy core system (15 years old) consuming tech budget; modernization roadmap would cost 3-5 year capex commitment. Tech investment only 2.5% of revenue (peer median 3.5%), suggesting under-investment in digital capabilities.",
+    "ROA 1.0% and ROAE 9.5%, both below peer median (ROA 1.2%, ROAE 11%). Current trajectory continues to deteriorate ROA. At 1.0% ROA on $8.2B assets, annual net income ~$82M; if assets grow 2% and ROA stays flat, net income grows 2%. To achieve $1.2% ROA target (transaction requirement), must improve profitability while maintaining asset base or grow assets with improved profitability. Currently doing neither."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Customer segmentation by profitability and retention: Which customer segments contribute to ROA? Which are declining or at risk?",
+    "Deposit pricing elasticity: How sensitive are deposits to rate changes by segment (consumers, businesses, high-net-worth)?",
+    "Fee income potential: Which new fee products (advisory, management fees, transactional) could improve revenue without asset growth?",
+    "Cost structure deep dive: Where is the efficiency opportunity (branch consolidation? workforce optimization? process automation)?",
+    "Competitive win/loss: Which customers are leaving to competitors? Which are being retained and why?"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "NIM compressed 30bps over 18 months (3.4% → 3.1%), accelerating. Net income down 12% YoY despite flat deposit base, suggesting margin per dollar of assets deteriorating. Efficiency ratio worsening (59% → 62%), indicating costs not decreasing with margin. This is a profitability squeeze: revenues declining, costs flat to increasing.",
+    "Deposit beta (cost increase relative to Fed rate increase) rising. Market deposit rates (mega-banks) at 4.5%+ while bank's blended deposit rate 3.8%. Deposit migration to higher-yield products (MMAs, CDs) observed. This is a structural shift: as rates stay elevated, customers shopping for better rates. Deposit volume stable but mix deteriorating (lower-cost checking declining, higher-cost MMAs increasing).",
+    "Competitive landscape intensifying: mega-banks expanding in regional markets with rate-aggressive deposits. Fintechs (Ally, Marcus, etc.) offering 4.5%+ on savings, attracting tech-comfortable customers. Robo-advisors (Betterment, Wealthfront) competing in wealth management for <$1M portfolios. Bank's wealth management growing (8% AoUM growth) but losing younger customer acquisition to fintechs and robo-advisors.",
+    "Personnel costs 43% of revenue (high for retail banking; peer median ~40%). Legacy core system (15 years old) consuming tech budget; modernization roadmap would cost 3-5 year capex commitment. Tech investment only 2.5% of revenue (peer median 3.5%), suggesting under-investment in digital capabilities.",
+    "ROA 1.0% and ROAE 9.5%, both below peer median (ROA 1.2%, ROAE 11%). Current trajectory continues to deteriorate ROA. At 1.0% ROA on $8.2B assets, annual net income ~$82M; if assets grow 2% and ROA stays flat, net income grows 2%. To achieve $1.2% ROA target (transaction requirement), must improve profitability while maintaining asset base or grow assets with improved profitability. Currently doing neither."
+  ]
+}

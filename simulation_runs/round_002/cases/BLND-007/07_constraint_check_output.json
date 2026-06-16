@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM ($8-10M non-dilutive cap including working-capital build; no equity raise within 18 months)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "LOW-MEDIUM (lean leadership, no in-house international operations or local marketing; each new market needs a GM hire and local partner)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

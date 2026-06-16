@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (profitable with cash flow; can fund diligence preparation and a hired manager, but not large acquisitions)",
+    "timeHorizonDays": 540,
+    "staffCapacity": "MEDIUM (~310 employees but thin senior bench; no successor; key knowledge concentrated)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

@@ -1,0 +1,35 @@
+{
+  "step": "owner_intake",
+  "businessType": "Mid-cap quick-service restaurant operator. 200+ company-operated units across multiple regions. Limited-service format (counter/drive-thru), value-oriented menu positioning. System revenue ~$850M FY2025. Revenue model: company-operated restaurant sales (no material franchise royalty stream at this stage). Workforce predominantly hourly crew plus salaried general managers.",
+  "stage": "FY2025: System revenue $850M across 200 company-operated units (average unit volume / AUV ~$4.25M per restaurant). Average per-restaurant annual P&L: Sales $4.25M; Food & paper (COGS) 30.0% = $1.275M (up from 28.0% prior year); Labor 32.0% = $1.36M (up from 30.0% prior year); Occupancy 9.0% = $382.5k; Other operating expense 14.0% = $595k. Restaurant-level EBITDA margin 15.0% = $637.5k per unit (down from 19.0% / ~$807.5k prior year), a 400 bps decline. Same-store sales 0% YoY (menu price +2% offset by traffic -2%).",
+  "ownerGoal": "Restore restaurant-level (four-wall) EBITDA margin toward the prior ~19% range without sacrificing traffic, value positioning, or service speed/quality. CEO must decide before the next franchise/lender review (~60-90 days) whether to re-engineer the unit model, take additional price, or slow new-unit growth. A lender covenant is tied to restaurant-level margin.",
+  "ownerConstraints": [
+    "Competitive pricing cap: Menu pricing power is limited by aggressive value competition; broad price increases beyond ~2% risk traffic loss and have historically been offset roughly 1:1 by traffic decline.",
+    "Franchise / brand standards constraint: Menu, portion, packaging, and operating procedures are governed by brand standards; unit-level changes cannot violate brand consistency or quality specifications.",
+    "Minimum wage law constraint: A meaningful share of crew labor is at or near statutory minimum wage in multiple jurisdictions; wage floors are rising and cannot be reduced below legal minimums.",
+    "Value-menu commitments: Public value-menu / promotional price commitments restrict the ability to re-price entry-level items in the near term.",
+    "Speed and quality constraint: Cannot degrade drive-thru/service speed or food quality; throughput and quality are core to traffic and same-store sales, so labor cuts that slow service are off-limits.",
+    "Covenant constraint: Lender covenant tied to restaurant-level margin limits actions that would further depress near-term four-wall profitability."
+  ],
+  "immediateConcern": "Unit-level profitability is declining even though system revenue is stable. Same-store sales are flat (0%) while food costs rose ~8% and labor costs rose ~10%, compressing restaurant-level EBITDA margin from 19% to 15%. The operator cannot price its way out (competition caps menu increases at ~2%, and that increase was already offset by a 2% traffic decline). The CEO must determine whether the margin erosion is a pricing-structure problem, a demand/traffic problem, or a fundamental four-wall unit-economics problem, ahead of a covenant-relevant lender/franchise review in the next 60-90 days.",
+  "availableData": [
+    "Average unit volume (AUV): ~$4.25M per restaurant; system revenue $850M across 200 units (10-K / investor presentation patterns)",
+    "Food & paper (COGS) as % of sales: 30.0% FY2025 vs 28.0% prior year (restaurant-level P&L disclosure)",
+    "Labor as % of sales: 32.0% FY2025 vs 30.0% prior year (restaurant-level P&L disclosure)",
+    "Occupancy as % of sales: 9.0%; Other operating expense as % of sales: 14.0% (restaurant-level P&L disclosure)",
+    "Same-store sales (SSS): 0% YoY; menu price +2% offset by traffic -2% (segment / SSS bridge disclosure)",
+    "Restaurant-level EBITDA margin: 15.0% FY2025 vs 19.0% prior year (400 bps decline) (non-GAAP restaurant-level margin disclosure)",
+    "Input inflation: food cost inflation +8% YoY; labor wage inflation +10% YoY (minimum-wage increases plus scheduling/overtime)"
+  ],
+  "unavailableData": [
+    "Theoretical (ideal) vs actual food cost by unit (waste, over-portioning, yield loss not disclosed in public filings)",
+    "Unit-level labor deployment / scheduling efficiency (labor hours vs transactions by daypart, not publicly disclosed)",
+    "Item-level menu margin and menu-mix contribution (menu engineering data is proprietary)",
+    "Unit-by-unit dispersion of the 200 restaurants (range/quartiles of margin by unit not disclosed)",
+    "Daypart-level transaction counts and ticket detail (proprietary point-of-sale data)"
+  ],
+  "timeHorizon": "60-90 days (CEO decision required ahead of next franchise/lender review; covenant tied to restaurant-level margin)",
+  "riskAppetite": "MEDIUM (covenant-sensitive; must protect traffic, value positioning, and service standards while restoring four-wall margin)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

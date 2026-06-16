@@ -1,0 +1,32 @@
+{
+  "step": "owner_intake",
+  "businessType": "Nine companion-animal general-practice veterinary clinics across one metro and two suburban counties, consolidated 16 months ago under a regional veterinary management company. 14 veterinarians, 96 total staff. ~$31M revenue TTM. The two flagship clinics were founded by a now-retired veterinarian with a 25-year local following; corporate standardized scheduling, pricing, protocols, and a preventive-care plan after acquisition.",
+  "stage": "Revenue $31M TTM, up 6% YoY — but that growth is entirely price-led: average transaction value (ATV) rose 14% while total patient visits fell 7% and active patients (seen in trailing 12 months) declined from 38,400 to 34,900 (-9%). Client retention (clients returning within 18 months) fell from 79% to 68%. EBITDA margin 17% (down from 21% at acquisition; deleveraging on lower visit volume). New-client acquisition flat.",
+  "ownerGoal": "Stabilize active-patient count above 36,000 and restore client retention to 75%+ within 12 months to protect the recurring-revenue base before the management company's next financing review.",
+  "ownerConstraints": [
+    "Active patients fell 9% (38,400 to 34,900) and the decline is accelerating quarter over quarter; recurring wellness revenue depends on the active base.",
+    "Two flagship clinics (45% of group revenue) lost their founding veterinarian and 3 of 6 senior associate vets within 12 months of acquisition; new hires are still building client trust.",
+    "Corporate standardization raised prices 14% and changed appointment length/scheduling (shorter slots, online-only booking), drawing client complaints about access and continuity of care.",
+    "Two new corporate-backed competitor clinics and a national telehealth/vet-membership entrant opened within 5 miles of the flagship clinics in the last year.",
+    "Online review ratings at the two flagship clinics fell from 4.7 to 4.1 stars post-acquisition, with recurring themes of 'rushed visits,' 'can't see my vet,' and 'too expensive now.'",
+    "Management company financing review in 9 months expects the recurring active-patient base to be stabilizing, not eroding."
+  ],
+  "immediateConcern": "Revenue is up 6% but it is masking a 9% decline in active patients and an 11-point drop in client retention (79% to 68%). The management company cannot tell whether clients are leaving because of price, because of the loss of the founding veterinarian and care-continuity changes, or because of new competition. With the active base eroding and a financing review in 9 months, leadership must decide whether to roll back pricing, invest in veterinarian recruiting/retention, or launch a client-winback program — without knowing which lever actually drives the attrition.",
+  "availableData": [
+    "Revenue $31M TTM (+6% YoY), ATV +14%, total visits -7%, active patients 38,400 -> 34,900 (-9%), client retention 79% -> 68%",
+    "EBITDA margin 17% (down from 21%), new-client acquisition flat, preventive-care plan enrollment data by clinic",
+    "Two flagship clinics = 45% of revenue; lost founding vet and 3 of 6 senior associates; review ratings 4.7 -> 4.1 stars with themes 'rushed visits,' 'can't see my vet,' 'too expensive now'",
+    "Two corporate competitor clinics and one telehealth/membership entrant opened within 5 miles in the last year"
+  ],
+  "unavailableData": [
+    "Attrition cohort analysis: which clients lapsed — by clinic, by tenure (legacy vs. post-acquisition), by primary-vet relationship (clients of departed vets vs. retained vets), by pet life-stage",
+    "Reason-for-leaving data: structured exit/lapsed-client survey distinguishing price, vet continuity/access, and competitive switching",
+    "Visit-frequency change by retained vs. lapsing clients: are remaining clients also visiting less (wellness deferral) or only the lapsed cohort?",
+    "Competitive switching evidence: how many lapsed clients moved to the two new clinics or the telehealth entrant, and why",
+    "Preventive-care-plan retention vs. churn by clinic and by enrolling veterinarian"
+  ],
+  "timeHorizon": "90 days to diagnose and begin intervention (active base is eroding quarterly; financing review in 9 months requires a stabilizing trend, so the driver must be identified fast)",
+  "riskAppetite": "MEDIUM-LOW (recurring active-patient base is the core asset; leadership cannot afford a mis-targeted pricing rollback that sacrifices margin without stopping attrition, nor inaction while the base erodes)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

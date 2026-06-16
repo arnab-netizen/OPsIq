@@ -1,0 +1,16 @@
+{
+  "step": "diagnosis",
+  "rootCauseType": "brand_erosion",
+  "description": "Loss of market position due to brand/reputation damage",
+  "mechanism": "Customer perception of brand has shifted negative. Market position erodes as customers perceive competitors as superior or more trustworthy. Premium positioning collapses.",
+  "confidence": "MODERATE",
+  "rejectedHypotheses": [
+    "Actual product quality declined (not perception issue)",
+    "Competitive product innovation may be superior"
+  ],
+  "missingEvidence": [
+    "Customer perception data vs actual quality",
+    "Competitive positioning analysis",
+    "Timeline of perception shift"
+  ]
+}

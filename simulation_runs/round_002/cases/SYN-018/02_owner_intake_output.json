@@ -1,0 +1,32 @@
+{
+  "step": "owner_intake",
+  "businessType": "B2B analytics/BI platform for mid-market and enterprise data teams. Founded 2018, total raised $48M (Series B). Annual subscriptions plus a mandatory implementation (data modeling, connector setup, dashboard build) before go-live. Current ARR $9.0M, 35% YoY growth, 120 customers, average ACV $75k.",
+  "stage": "ARR $9.0M, 35% YoY growth. NRR 102%. Gross retention 95%. Implementation time-to-go-live extended from 8 weeks to 19 weeks over the past year. A backlog of 28 customers is waiting to start or finish implementation. The implementation/services team is 9 people, fully booked 14 weeks out. Customer satisfaction with the product post-go-live is high; dissatisfaction is concentrated in the waiting/implementation phase. Cash runway 22 months.",
+  "ownerGoal": "Reduce time-to-value, clear the implementation backlog, and lift NRR/expansion; reach $16M ARR within 18 months while protecting the post-go-live satisfaction that drives expansion.",
+  "ownerConstraints": [
+    "Funding constraint: $48M raised, 22-month runway; board wants efficient growth, so unbounded services hiring is discouraged, but the backlog is throttling realized revenue.",
+    "Product constraint: the product itself is well-regarded once live; connector/data-modeling steps in implementation are partly manual and could be templatized/automated with 6-10 weeks of product+tooling work.",
+    "Organizational constraint: 95 staff (24 engineering, 22 sales, 9 implementation/services, 14 customer success, rest G&A). Sales is closing deals faster than implementation can deliver, widening the backlog.",
+    "Market constraint: larger BI vendors compete, but the company wins on product; deals are not lost on capability. The risk is that the implementation delay damages references and slows expansion.",
+    "Commercial constraint: revenue recognition and expansion both wait on go-live; a 19-week implementation means cash and NRR lag bookings by nearly five months, and the backlog compounds as sales outpaces delivery."
+  ],
+  "immediateConcern": "Time-to-go-live has more than doubled (8→19 weeks), a 28-customer implementation backlog has formed, and the 9-person services team is booked 14 weeks out. The owner suspects 'time-to-value' and customer-success problems and is considering broad CS investment or product changes. But the product is well-regarded post-go-live (satisfaction high, NRR 102%); dissatisfaction is concentrated specifically in the waiting/implementation phase, and sales is closing faster than delivery can absorb. This is a throughput/capacity bottleneck in a specialized delivery function, compounded by partly manual implementation steps. The owner must decide within the next month whether to keep selling at the current pace (worsening the backlog), expand services capacity, or automate the bottleneck steps before delayed go-lives damage references and stall expansion.",
+  "availableData": [
+    "Financial: ARR $9.0M, 35% YoY growth, average ACV $75k, gross margin 76%, runway 22 months",
+    "Retention: NRR 102%, gross retention 95%; post-go-live product satisfaction high (CSAT 8.4/10)",
+    "Delivery: time-to-go-live 8→19 weeks over 12 months; backlog of 28 customers; services team 9 people booked 14 weeks out",
+    "Bottleneck composition: data-modeling and connector setup account for ~60% of implementation hours and are partly manual; dashboard build ~25%; training ~15%",
+    "Phase satisfaction: implementation-phase NPS 18 (low) vs post-go-live NPS 52 (high); dissatisfaction concentrated pre-go-live",
+    "Pipeline: sales bookings up 40% YoY; new starts outpace go-lives by ~3 per month, widening the backlog"
+  ],
+  "unavailableData": [
+    "Per-step implementation cycle-time breakdown with bottleneck-resource utilization",
+    "Automation feasibility and ROI for the manual data-modeling/connector steps",
+    "Throughput gain from templatizing common connector/data-model patterns",
+    "Revenue and NRR impact quantified per week of go-live delay"
+  ],
+  "timeHorizon": "18 months to $16M ARR; the backlog compounds monthly, so the delivery decision is urgent",
+  "riskAppetite": "MEDIUM (board wants efficient growth; tempted to either over-hire services or slow sales, when the bottleneck may be addressable through process/automation)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

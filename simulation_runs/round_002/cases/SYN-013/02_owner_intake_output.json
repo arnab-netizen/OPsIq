@@ -1,0 +1,32 @@
+{
+  "step": "owner_intake",
+  "businessType": "B2B HR-tech platform covering recruitment, onboarding, and performance management for mid-market employers (200-2,000 employees). Founded 2020, Series A of $14M in 2023. Subscription, seat-based pricing. Current ARR $6.0M, 35% YoY growth, 240 customers.",
+  "stage": "ARR $6.0M, 35% YoY growth. Gross margin 74%. Quarterly logo churn rose from 2% to 4% over the last three quarters. Net revenue retention slipped from 108% to 101%. CAC up 15% YoY to ~$22k blended; CAC payback now 19 months (was 14). NPS fell from 38 to 27 over two quarters. Cash runway 20 months at $360k/month burn.",
+  "ownerGoal": "Restore unit economics and re-establish product differentiation versus larger suites; reach Series B readiness ($12M ARR, <2.5% quarterly churn, NPS >40) within 18 months.",
+  "ownerConstraints": [
+    "Funding constraint: $14M Series A raised, 20-month runway at $360k/month burn; cannot fund a large sales-led land-grab or aggressive discounting without endangering Series B timing.",
+    "Product constraint: three modules share one codebase; the performance module lags competitor depth and is the most common churn-citation surface; meaningful module rework is 10-14 weeks of engineering.",
+    "Organizational constraint: 32 staff (10 engineering, 7 sales, 5 customer success, 4 support, 3 marketing, 3 leadership). CS is the binding constraint at ~80 accounts per CSM.",
+    "Market constraint: two larger HR suites bundle comparable modules at list parity and are visible in renewal evaluations; switching costs for customers are moderate, not high.",
+    "Commercial constraint: annual contracts mean churn concentrates at renewal windows; ~35% of the base renews in the next two quarters, so a retention problem will surface fast."
+  ],
+  "immediateConcern": "Churn has doubled (2%→4% quarterly) and NPS has collapsed (38→27) while top-line growth still reads 35%. The owner believes the company is losing on features and price to bigger suites and wants to invest in differentiation and discounting. But renewal-window data and CS notes suggest existing customers are leaving for reasons tied to onboarding friction, low feature adoption beyond recruitment, and weak post-sale engagement, not headline price. The owner must decide in the next 30 days how to allocate the next two quarters of engineering and CS capacity before the heavy renewal window hits.",
+  "availableData": [
+    "Financial: ARR $6.0M, 35% YoY growth, gross margin 74%, blended CAC ~$22k (+15% YoY), CAC payback 19 months, burn $360k/month, runway 20 months",
+    "Retention: quarterly logo churn 2%→4% over 3 quarters; NRR 108%→101%; gross revenue churn 4.5%→7%/quarter",
+    "Engagement: NPS 38→27 (two quarters); module adoption (recruitment 88%, onboarding 41%, performance 19%); average 1.4 of 3 modules active per account",
+    "Customer success: 80 accounts per CSM; QBR completion rate 38%; time-to-first-value (first hire processed) averaging 47 days vs 21-day target",
+    "Acquisition: CAC +15% YoY, win rate stable at 24%, sales cycle stable at ~70 days, lead volume flat",
+    "Churn diagnostics: exit surveys on 22 churned logos cite 'didn't get full value / low adoption' (55%), 'switched to bundled suite' (23%), 'price' (14%), 'company event' (8%)"
+  ],
+  "unavailableData": [
+    "Cohort-level retention curves by acquisition channel and customer size",
+    "Quantified willingness-to-pay versus the two bundled-suite competitors",
+    "Root-cause analysis of why onboarding time-to-value is 47 days",
+    "Expansion-propensity scoring tied to multi-module adoption"
+  ],
+  "timeHorizon": "18 months to Series B readiness; the next 2 quarters carry ~35% of renewals, so retention must visibly stabilize within 6 months",
+  "riskAppetite": "MEDIUM (growth-stage; must protect runway and renewals while resisting the temptation to over-invest in feature parity or discounting)",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

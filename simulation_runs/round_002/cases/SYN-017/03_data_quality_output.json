@@ -1,0 +1,26 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "operational_efficiency",
+    "quality_delivery",
+    "financial_health",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Price elasticity of take-rate by seller tier and order type (first-order vs repeat)",
+    "Margin contribution of value-added services (financing, logistics) if bundled to justify take-rate on repeat",
+    "Contractual/technical feasibility of enforcing on-platform transactions for marketplace-sourced buyers",
+    "Competitor marketplace take-rate structures by tier"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Price elasticity of take-rate by seller tier and order type (first-order vs repeat)",
+    "Cannot conclude on: Margin contribution of value-added services (financing, logistics) if bundled to justify take-rate on repeat",
+    "Cannot conclude on: Contractual/technical feasibility of enforcing on-platform transactions for marketplace-sourced buyers",
+    "Cannot conclude on: Competitor marketplace take-rate structures by tier"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH (public company with access to capital markets, but constrained by board/investor approvals for major spending)",
+    "timeHorizonDays": 180,
+    "staffCapacity": "HIGH (1,200+ employees, but organizational structure set; major hiring/restructuring requires board and investor communication)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

@@ -1,0 +1,21 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "EBITDA margin eroding (14% 3 years ago → 12% current), 200bps decline. Revenue growing slowly (5% YoY) compared to historical growth (12% three years ago). Net income declining despite revenue growth, indicating margin deterioration outpacing revenue growth. Operating cash flow still positive ($9M), but declining as % of revenue.",
+    "E-commerce customer growth driving mix shift: e-commerce now 38% of revenue (growing faster) but at lower margins (8-10% vs. retail 15-18%). Traditional retail declining but higher-margin. This is structural shift: e-commerce is growing industry-wide and customers are shifting, but it erodes 3PL margins due to operational complexity (returns, speed requirements) without price premium.",
+    "Labor costs rising +12% in 24 months while utilization only 72%, suggesting excess capacity. Automation gap vs. competitors; modern 3PLs using robotics/WMS, but this company is still labor-intensive. Capex requirements ($8-12M for full automation) exceed annual cash flow generation ($9M), creating modernization constraint."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Customer-level profitability: Exact margin by customer; which customers are profitable vs. marginal?",
+    "Service cost analysis: Detailed cost to serve for e-commerce vs. retail customers; what drives complexity?",
+    "Capacity utilization detail: Which warehouses are underutilized? Opportunities for consolidation or exit?",
+    "Automation ROI: What is the actual capex and payback for warehouse automation?",
+    "Competitive win/loss: Which customers are switching to competitors? Why?"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "EBITDA margin eroding (14% 3 years ago → 12% current), 200bps decline. Revenue growing slowly (5% YoY) compared to historical growth (12% three years ago). Net income declining despite revenue growth, indicating margin deterioration outpacing revenue growth. Operating cash flow still positive ($9M), but declining as % of revenue.",
+    "E-commerce customer growth driving mix shift: e-commerce now 38% of revenue (growing faster) but at lower margins (8-10% vs. retail 15-18%). Traditional retail declining but higher-margin. This is structural shift: e-commerce is growing industry-wide and customers are shifting, but it erodes 3PL margins due to operational complexity (returns, speed requirements) without price premium.",
+    "Labor costs rising +12% in 24 months while utilization only 72%, suggesting excess capacity. Automation gap vs. competitors; modern 3PLs using robotics/WMS, but this company is still labor-intensive. Capex requirements ($8-12M for full automation) exceed annual cash flow generation ($9M), creating modernization constraint."
+  ]
+}

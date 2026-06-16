@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH (large regulated utility with capital-market access, but all rate/recovery changes gated by the PUC and major spending governed by the approved capital plan)",
+    "timeHorizonDays": 180,
+    "staffCapacity": "HIGH (~4,800 employees with regulatory, rates, and finance functions; but rate-case strategy requires regulatory/legal coordination and Commission process)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  },
+  "contingencyRequired": false,
+  "legalComplianceSensitive": true
+}

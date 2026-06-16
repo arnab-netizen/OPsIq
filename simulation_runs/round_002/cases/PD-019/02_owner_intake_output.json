@@ -1,0 +1,36 @@
+{
+  "step": "owner_intake",
+  "businessType": "Asset-based truckload and LTL freight carrier. Mid-cap, ~$800M annual revenue. Operates a fleet of ~5,500 tractors and ~18,000 trailers across a national lane network. ~6,000 employees including ~5,000 drivers. Revenue split roughly 70% dedicated/contract freight and 30% spot market. Fuel surcharge programs apply to most contract lanes but with a recovery lag and incomplete pass-through on spot freight.",
+  "stage": "FY2025: Revenue $800M (up ~1% from $792M FY2024, essentially flat). Total miles 500M. Revenue per mile $1.60 (down from $1.66 in FY2024, -3.6%). EBITDA $64M, EBITDA margin 8.0% (down from $87.1M / 11.0% in FY2024, a 300 bps decline). Operating ratio (operating expenses / revenue) 94% in FY2025, up from 91% in FY2024 (300 bps deterioration). Cost-per-mile components FY2025: fuel $0.40 (up from $0.348, +15%), driver wages and benefits $0.62 (up from $0.554, +12%), maintenance $0.18, equipment/depreciation $0.16, insurance/other $0.20.",
+  "ownerGoal": "Restore EBITDA margin toward 11% (operating ratio back below 91%) and stabilize per-mile contribution before the upcoming contract bid season and the annual lender covenant review (~90 days out). Decide whether to shed unprofitable lanes/customers, re-rate the fuel surcharge, or right-size the fleet.",
+  "ownerConstraints": [
+    "Competitive spot rates cap pricing: the freight market is soft and oversupplied; competitors are bidding aggressively, so the carrier cannot unilaterally raise contract or spot rates without losing volume to lower-cost bidders.",
+    "Fuel-surcharge lag and under-recovery: contract fuel surcharge formulas reset against a national index and lag real pump prices; spot freight carries little or no surcharge, so the +15% fuel increase is only partially recovered.",
+    "Driver shortage and retention: the labor market for qualified CDL drivers is tight; wages were raised +12% specifically to retain drivers. Cutting driver pay would spike turnover, increase recruiting/training cost, and idle trucks.",
+    "Equipment lease commitments: a large share of the tractor/trailer fleet is under multi-year leases with fixed payments and early-termination penalties, limiting how quickly the fleet can be right-sized to reduce fixed cost.",
+    "Customer contracts: dedicated/contract freight is under annual rate agreements that cannot be repriced mid-term; rate corrections are only possible at the next bid cycle, constraining near-term revenue-per-mile recovery.",
+    "Covenant pressure: operating ratio is approaching a lender covenant threshold ahead of the annual review, limiting appetite for large discretionary capital outlays."
+  ],
+  "immediateConcern": "Margin is compressing on every mile. Fuel cost per mile rose 15% and driver wages per mile rose 12%, while revenue per mile fell 3.6% in a soft, competitive freight market where the fuel surcharge does not fully pass through. The operating ratio has climbed from 91% to 94% and is nearing the lender covenant limit. The owner needs to know, before bid season and the lender review (~90 days), whether the problem is fixable through lane/customer profitability surgery and surcharge re-rating, or whether the fleet must be right-sized.",
+  "availableData": [
+    "Revenue: $800M FY2025 vs $792M FY2024 (annual income statement and operating-statistics supplement).",
+    "Total miles: 500M FY2025 (operating statistics).",
+    "Revenue per mile: $1.60 FY2025 vs $1.66 FY2024 (-3.6%), disclosed in operating-statistics supplement.",
+    "Cost-per-mile components FY2025: fuel $0.40 (+15% from $0.348), driver wages and benefits $0.62 (+12% from $0.554), maintenance $0.18, equipment/depreciation $0.16, insurance/other $0.20.",
+    "Operating ratio: 94% FY2025 vs 91% FY2024 (operating expenses / revenue).",
+    "EBITDA and EBITDA margin: $64M / 8.0% FY2025 vs $87.1M / 11.0% FY2024.",
+    "Fuel cost inflation +15% and driver wage inflation +12% year over year (cost-line disclosures and management commentary).",
+    "Revenue mix: ~70% dedicated/contract, ~30% spot; fuel-surcharge coverage by lane type."
+  ],
+  "unavailableData": [
+    "Lane-level and customer-level profitability (contribution margin per lane and per account is not disclosed in public filings).",
+    "Empty-mile / deadhead percentage and tractor utilization by region (not separately disclosed).",
+    "Fuel-surcharge recovery ratio by customer (actual surcharge collected vs incremental fuel cost) at the account level.",
+    "Driver turnover, recruiting, and training cost detail by terminal (proprietary HR data).",
+    "Equipment lease-by-lease terms, early-termination penalties, and residual values (not itemized publicly)."
+  ],
+  "timeHorizon": "~90 days (decision required before the contract bid season and the annual lender covenant review).",
+  "riskAppetite": "MEDIUM (margin recovery is urgent and operating ratio is nearing a covenant limit, but driver retention and customer relationships must be protected; cannot take actions that spike turnover or shed strategic volume recklessly).",
+  "intakeComplete": true,
+  "monitorFlag": null
+}

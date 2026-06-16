@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "quality_delivery",
+    "process_maturity",
+    "team_capability",
+    "market_position"
+  ],
+  "unavailableDataDeclared": [
+    "Branch-level operating P&L and KPI scorecard: revenue per truck, billable utilization, first-time-fix, and callback rate normalized across all 11 branches",
+    "Dispatch/scheduling efficiency: jobs per tech per day, drive-time, and idle-capacity hours by branch — needed to locate where utilization is lost",
+    "Whether the EBITDA dilution is concentrated in specific acquired branches or spread evenly (acquisition-quality vs. integration-execution question)",
+    "Membership-plan economics by branch: recurring revenue, demand-smoothing effect, and replacement-lead conversion from plan members",
+    "Pricing/labor-rate consistency across branches and whether discounting or low ticket sizes explain low revenue per truck"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Branch-level operating P&L and KPI scorecard: revenue per truck, billable utilization, first-time-fix, and callback rate normalized across all 11 branches",
+    "Cannot conclude on: Dispatch/scheduling efficiency: jobs per tech per day, drive-time, and idle-capacity hours by branch — needed to locate where utilization is lost",
+    "Cannot conclude on: Whether the EBITDA dilution is concentrated in specific acquired branches or spread evenly (acquisition-quality vs. integration-execution question)",
+    "Cannot conclude on: Membership-plan economics by branch: recurring revenue, demand-smoothing effect, and replacement-lead conversion from plan members",
+    "Cannot conclude on: Pricing/labor-rate consistency across branches and whether discounting or low ticket sizes explain low revenue per truck"
+  ]
+}

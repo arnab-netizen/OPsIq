@@ -1,0 +1,24 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "Implementation time-to-go-live more than doubled from 8 to 19 weeks over 12 months, a 28-customer backlog has formed, and the 9-person services team is fully booked 14 weeks out. New implementation starts outpace go-lives by ~3 per month, so the backlog compounds. This is a delivery-throughput bottleneck in a capacity-constrained specialized team.",
+    "Data-modeling and connector setup account for ~60% of implementation hours and are partly manual; dashboard build is ~25% and training ~15%. The bottleneck is concentrated in a small set of manual, repeatable steps that are strong candidates for templatization/automation, which could lift throughput without proportional headcount.",
+    "Dissatisfaction is phase-specific: implementation-phase NPS is 18 (low) while post-go-live NPS is 52 (high) and CSAT is 8.4/10. Customers are unhappy waiting to go live, not with the product once they do. This localizes the problem to the implementation/delivery phase, not product usability or value.",
+    "Sales bookings are up 40% YoY and the company wins on product capability, not losing deals to larger BI vendors. However, sales is closing faster than implementation can deliver, so demand is healthy and the constraint is downstream in delivery, not acquisition. The mismatch between sales velocity and delivery throughput is widening the backlog.",
+    "Revenue recognition and expansion both wait on go-live, so a 19-week implementation makes cash and NRR lag bookings by nearly five months. Gross margin is healthy at 76% and NRR is 102%, but the backlog is suppressing realized revenue and delaying the expansion that NRR depends on."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Per-step implementation cycle-time breakdown with bottleneck-resource utilization",
+    "Automation feasibility and ROI for the manual data-modeling/connector steps",
+    "Throughput gain from templatizing common connector/data-model patterns",
+    "Revenue and NRR impact quantified per week of go-live delay"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "Implementation time-to-go-live more than doubled from 8 to 19 weeks over 12 months, a 28-customer backlog has formed, and the 9-person services team is fully booked 14 weeks out. New implementation starts outpace go-lives by ~3 per month, so the backlog compounds. This is a delivery-throughput bottleneck in a capacity-constrained specialized team.",
+    "Data-modeling and connector setup account for ~60% of implementation hours and are partly manual; dashboard build is ~25% and training ~15%. The bottleneck is concentrated in a small set of manual, repeatable steps that are strong candidates for templatization/automation, which could lift throughput without proportional headcount.",
+    "Dissatisfaction is phase-specific: implementation-phase NPS is 18 (low) while post-go-live NPS is 52 (high) and CSAT is 8.4/10. Customers are unhappy waiting to go live, not with the product once they do. This localizes the problem to the implementation/delivery phase, not product usability or value.",
+    "Sales bookings are up 40% YoY and the company wins on product capability, not losing deals to larger BI vendors. However, sales is closing faster than implementation can deliver, so demand is healthy and the constraint is downstream in delivery, not acquisition. The mismatch between sales velocity and delivery throughput is widening the backlog.",
+    "Revenue recognition and expansion both wait on go-live, so a 19-week implementation makes cash and NRR lag bookings by nearly five months. Gross margin is healthy at 76% and NRR is 102%, but the backlog is suppressing realized revenue and delaying the expansion that NRR depends on."
+  ]
+}

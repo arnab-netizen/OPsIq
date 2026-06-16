@@ -1,0 +1,178 @@
+{
+  "frozenAt": "2026-06-16T21:01:13.077Z",
+  "caseId": "PD-018",
+  "engineEntryPoint": "runConsultingEngine",
+  "deterministic": true,
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "1b47a56d-eadf-4d53-bdf8-902ddda85ff7",
+    "engagementId": "dea4f223-8e86-456c-861a-7d3b04e806ca",
+    "timestamp": "2026-06-16T21:01:13.070Z",
+    "businessProblem": "A regional regulated electric utility with stable ~$3B revenue and stable EBITDA is steadily under-earning its allowed return. Its earned ROE has fallen from 9.5% (FY2023) to 8.2% (FY2025), now ~160 bps below the 9.8% ROE authorized in its last rate case. The structural driver is a mismatch between the regulated pricing mechanism and the capital cost trajectory: approved revenue is permitted to grow only ~2.4%/yr (within a 2-3% band), while the company must deploy $1,100M/yr of largely mandated capital (grid hardening, reliability, decarbonization) against only ~$650M of depreciation (capex/depreciation 1.69x), and the unit cost of that capital is inflating ~9%/yr. Because rates are set via a historical test year and reset only every ~3 years, current rates reflect a cost picture ~24 months stale, so the utility chronically under-recovers the cost of capital it has already put into service (regulatory lag / under-recovery). O&M is run lean and is roughly flat, so the gap is not operating-cost bloat or a demand problem. The core question: is the realized-return erosion an operations/cost issue, a demand issue, or a structural mismatch between the regulator-approved rate mechanism and the inflating capital plan — and what should management do before the next rate-case filing window (~120-180 days) to stop locking in another multi-year cycle of under-earning?",
+    "rootCauseDiagnosis": {
+      "id": "ab663a54-ca7a-4269-a946-abb6d3fd60d2",
+      "type": "unit_economics_breakdown",
+      "description": "Unit profitability collapse due to margin compression or fixed-cost burden",
+      "mechanismDescription": "Per-unit contribution has become negative or margins have compressed. Fixed-cost burden grows faster than revenue. Expansion to new units/segments unprofitable.",
+      "evidenceIds": [
+        "c3e2c146-33da-4e87-9d2f-3ae8c183a63a",
+        "30d79729-e04b-4403-b6d8-5dfb7aa26c7a"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "Temporary cost inflation (commodity price spike) may recover",
+        "Scale benefits may kick in with volume growth"
+      ],
+      "missingEvidenceFor": [
+        "Unit contribution margin by segment/location",
+        "Cost structure breakdown (COGS vs OpEx)",
+        "Projection when scale achieves breakeven"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "351588bf-6a9b-4be3-b2b7-a6a4951ff9d8",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Per-unit contribution has become negative or margins have compressed. Fixed-cost burden grows faster than revenue. Expansion to new units/segments unprofitable.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "c3e2c146-33da-4e87-9d2f-3ae8c183a63a",
+            "30d79729-e04b-4403-b6d8-5dfb7aa26c7a"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH (persistent ~160 bps under-earning, ~$72M/yr earnings shortfall vs allowed, with a ~120-180 day filing window before the next ~3-year cycle locks in)"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "a732cef8-7503-40af-9902-8eea0ba1ba2c",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "351588bf-6a9b-4be3-b2b7-a6a4951ff9d8"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "8c304296-4f35-4cde-b125-e98eb53ccb21",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "351588bf-6a9b-4be3-b2b7-a6a4951ff9d8"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "351588bf-6a9b-4be3-b2b7-a6a4951ff9d8",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "351588bf-6a9b-4be3-b2b7-a6a4951ff9d8"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

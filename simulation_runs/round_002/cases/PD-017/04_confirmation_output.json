@@ -1,0 +1,23 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "EBITDA declined from $114.3M (8.0% margin) FY2024 to $90M (6.0% margin) FY2025 — a 200 bps margin contraction — even though revenue grew +5.0% to $1,500M. Revenue growth itself decelerated sharply from +12% the prior year to +5%, indicating that top-line momentum is rolling over while the cost base has not adjusted.",
+    "Permanent / direct-hire placement revenue — the leading indicator of hiring demand in staffing — fell -8% YoY to $300M, and client orders / job openings are down -6% YoY, with temp hours per week trending -2% sequentially over recent quarters. Permanent placement is discretionary and contracts first when clients pull back hiring, so a -8% perm decline alongside -6% orders signals an early-cycle demand contraction, not a one-off.",
+    "Internal recruiter and branch headcount grew +4% YoY while client orders fell -6% and revenue grew only +5%. Capacity is being added ahead of (and now against) decelerating demand. SG&A is ~13.5% of revenue, largely fixed, and was sized during the prior high-growth expansion, so it does not flex down as order volume softens — producing operating de-leverage as utilization falls.",
+    "Blended gross margin (bill-pay spread plus perm fees) compressed 150 bps from 21.0% to 19.5%. Worker pay-rate inflation ran ~+6% YoY while client bill-rate increases were only ~+3.5% YoY, leaving roughly 250 bps of unrecovered wage inflation on the temp book because budget- and competition-constrained clients resisted full bill-rate pass-through. This spread compression is a contributing pressure on EBITDA alongside the demand-driven SG&A de-leverage."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Branch-level and vertical-level order and utilization detail (orders, fill rate, and recruiter productivity by branch/vertical are not disclosed publicly).",
+    "Client-by-client order pipeline and forward staffing commitments (proprietary, not in filings).",
+    "Worker-level redeployment and fill-time data (contingent workforce operating data not disclosed).",
+    "Forward macro/sector demand forecast used internally to justify the +4% internal hiring (internal planning assumptions not disclosed).",
+    "Detailed bill-rate elasticity by client segment (proprietary pricing data)."
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "EBITDA declined from $114.3M (8.0% margin) FY2024 to $90M (6.0% margin) FY2025 — a 200 bps margin contraction — even though revenue grew +5.0% to $1,500M. Revenue growth itself decelerated sharply from +12% the prior year to +5%, indicating that top-line momentum is rolling over while the cost base has not adjusted.",
+    "Permanent / direct-hire placement revenue — the leading indicator of hiring demand in staffing — fell -8% YoY to $300M, and client orders / job openings are down -6% YoY, with temp hours per week trending -2% sequentially over recent quarters. Permanent placement is discretionary and contracts first when clients pull back hiring, so a -8% perm decline alongside -6% orders signals an early-cycle demand contraction, not a one-off.",
+    "Internal recruiter and branch headcount grew +4% YoY while client orders fell -6% and revenue grew only +5%. Capacity is being added ahead of (and now against) decelerating demand. SG&A is ~13.5% of revenue, largely fixed, and was sized during the prior high-growth expansion, so it does not flex down as order volume softens — producing operating de-leverage as utilization falls.",
+    "Blended gross margin (bill-pay spread plus perm fees) compressed 150 bps from 21.0% to 19.5%. Worker pay-rate inflation ran ~+6% YoY while client bill-rate increases were only ~+3.5% YoY, leaving roughly 250 bps of unrecovered wage inflation on the temp book because budget- and competition-constrained clients resisted full bill-rate pass-through. This spread compression is a contributing pressure on EBITDA alongside the demand-driven SG&A de-leverage."
+  ]
+}

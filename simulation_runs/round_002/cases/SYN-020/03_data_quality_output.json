@@ -1,0 +1,25 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 5,
+  "numericEvidenceCount": 3,
+  "missingDimensions": [
+    "quality_delivery",
+    "financial_health",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "LTV/CAC and payback broken out by deal size and segment",
+    "Automation/productization potential and cost reduction for the 16-week implementation",
+    "Price elasticity for charging (vs subsidizing) implementation",
+    "Contribution-margin-positive timing per cohort under alternative motions"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: LTV/CAC and payback broken out by deal size and segment",
+    "Cannot conclude on: Automation/productization potential and cost reduction for the 16-week implementation",
+    "Cannot conclude on: Price elasticity for charging (vs subsidizing) implementation",
+    "Cannot conclude on: Contribution-margin-positive timing per cohort under alternative motions"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "step": "business_fact_confirmation",
+  "factsAccepted": [
+    "In-account active adoption collapsed from 62% to 38% of licensed seats active (weekly) over 18 months, and new licensed seats reach active use only 29% of the time within 60 days. Power users (top 15%) remain highly engaged, but the broad licensed base disengages, indicating a complexity barrier that affects non-power users specifically.",
+    "Feature bloat has degraded usability: feature count tripled in two years, median clicks-to-core-task rose 40%, and just 11 of 60+ shipped features account for 80% of active usage. Core workflows are buried under rarely-used features, making the product harder to use for the broad base.",
+    "NRR fell from 118% to 104% over 12 months as seat expansion stalled, while gross retention stayed healthy at 96%. The decline is driven by failure to expand seats, which is impossible when only 38% of licensed seats are active. Accounts will not buy more seats they cannot get users to adopt.",
+    "Support tickets per seat are up 55%, with top themes 'too complicated' (34%) and 'can't find feature' (28%). The friction is usability and discoverability, not capability gaps or reliability outages, which localizes the problem to product complexity eroding daily-use trust.",
+    "Competitors range from simpler point tools to broad suites. The company wins on breadth at purchase but loses daily-use engagement to simpler tools inside the same accounts, where employees gravitate to easier alternatives for routine work. The competitive threat is in-account usage share, not deal-stage capability."
+  ],
+  "factsRejected": [],
+  "factsNeedingClarification": [
+    "Per-feature adoption and abandonment funnel for the broad (non-power) user base",
+    "Which buried core workflows, if surfaced, would most lift broad adoption",
+    "Quantified link between active-seat % and seat-expansion/renewal outcomes",
+    "Enterprise contractual dependencies on specific lower-usage features"
+  ],
+  "finalFactsUsedForDiagnosis": [
+    "In-account active adoption collapsed from 62% to 38% of licensed seats active (weekly) over 18 months, and new licensed seats reach active use only 29% of the time within 60 days. Power users (top 15%) remain highly engaged, but the broad licensed base disengages, indicating a complexity barrier that affects non-power users specifically.",
+    "Feature bloat has degraded usability: feature count tripled in two years, median clicks-to-core-task rose 40%, and just 11 of 60+ shipped features account for 80% of active usage. Core workflows are buried under rarely-used features, making the product harder to use for the broad base.",
+    "NRR fell from 118% to 104% over 12 months as seat expansion stalled, while gross retention stayed healthy at 96%. The decline is driven by failure to expand seats, which is impossible when only 38% of licensed seats are active. Accounts will not buy more seats they cannot get users to adopt.",
+    "Support tickets per seat are up 55%, with top themes 'too complicated' (34%) and 'can't find feature' (28%). The friction is usability and discoverability, not capability gaps or reliability outages, which localizes the problem to product complexity eroding daily-use trust.",
+    "Competitors range from simpler point tools to broad suites. The company wins on breadth at purchase but loses daily-use engagement to simpler tools inside the same accounts, where employees gravitate to easier alternatives for routine work. The competitive threat is in-account usage share, not deal-stage capability."
+  ]
+}

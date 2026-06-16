@@ -1,0 +1,27 @@
+{
+  "step": "data_quality_check",
+  "evidenceCount": 4,
+  "numericEvidenceCount": 0,
+  "missingDimensions": [
+    "customer_retention",
+    "quality_delivery",
+    "process_maturity",
+    "team_capability"
+  ],
+  "unavailableDataDeclared": [
+    "Door-level velocity: units sold per store per week (SPSW) by retailer and door cohort — needed to know which doors are below the breakeven velocity threshold",
+    "SKU-level true contribution after trade, freight, and spoilage — which of the 9 SKUs are margin-positive vs. negative",
+    "Channel-level fully-loaded P&L — true DTC vs. retail vs. Amazon contribution net of fulfillment, ad spend (CAC), and trade",
+    "Trade-spend ROI: lift per promotional dollar by retailer; whether promoted volume is incremental or merely subsidized base",
+    "Spoilage attribution: which doors/regions/SKUs generate short-code returns, and whether velocity or distribution overreach is the cause"
+  ],
+  "lowConfidenceFields": 0,
+  "confidenceCap": "HIGH",
+  "whatCannotBeConcluded": [
+    "Cannot conclude on: Door-level velocity: units sold per store per week (SPSW) by retailer and door cohort — needed to know which doors are below the breakeven velocity threshold",
+    "Cannot conclude on: SKU-level true contribution after trade, freight, and spoilage — which of the 9 SKUs are margin-positive vs. negative",
+    "Cannot conclude on: Channel-level fully-loaded P&L — true DTC vs. retail vs. Amazon contribution net of fulfillment, ad spend (CAC), and trade",
+    "Cannot conclude on: Trade-spend ROI: lift per promotional dollar by retailer; whether promoted volume is incremental or merely subsidized base",
+    "Cannot conclude on: Spoilage attribution: which doors/regions/SKUs generate short-code returns, and whether velocity or distribution overreach is the cause"
+  ]
+}

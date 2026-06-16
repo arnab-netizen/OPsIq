@@ -1,0 +1,13 @@
+{
+  "step": "owner_constraint_check",
+  "engineConstraints": [],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW-MEDIUM (Series A capital $8M, 22-month runway; limited discretionary spending)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM-LOW (18 people, lean team; major product/sales changes require prioritization)",
+    "cashRunwayMonths": 22,
+    "legalComplianceSensitive": false
+  },
+  "contingencyRequired": true,
+  "legalComplianceSensitive": false
+}
