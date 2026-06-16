@@ -8,16 +8,27 @@
 ## REMEDIATION STATUS BLOCK (authoritative)
 
 ```yaml
-current_phase: ROUND_2_EXECUTION_COMPLETE
-current_slice: Round 2 Staged Owner-Mode Execution
-last_completed_step: ROUND_2_EXECUTION
-universal_benchmark_artifact_quality_gate: PASS   # BENCHMARK_ARTIFACTS_READY
+current_phase: ARCHITECTURE_CEILING_REVIEW
+current_slice: NONE
+last_completed_step: ROUND_2_EXECUTION_COMPLETE_PASS_GATE_FAILED
+universal_benchmark_artifact_quality_gate: PASS
 benchmark_artifact_gate_recorded: true
-round_2_execution_status: COMPLETE (50/50 cases executed, 49 valid)
-consultant_grade_gate: FAILED (4/11 criteria pass; root-cause 0%, first-action 0%)
-blockers: [CONSULTANT_GRADE_BLOCKED_BY_ACCURACY]
-benchmark_execution_authorized: completed
-next_required_step: SLICE_3_DESIGN (per execution_consultant_engine_v2.md §17)
+round_2_execution_status: COMPLETE (50/50 cases executed, 49 valid, 0% root-cause accuracy)
+consultant_grade_gate: FAILED (4/11 criteria pass)
+  - valid_cases: 49/50 (below required 50)
+  - average_score: 4.45/10 (required 8.5+)
+  - median_score: 4.0/10 (required 8.5+)
+  - cases_at_or_above_8_5: 0% (required 80%+)
+  - root_cause_accuracy: 0% (required 80%+)
+  - first_priority_action_accuracy: 0% (required 80%+)
+  - evidence_trace_rate: 58.5% (required 95%+)
+  - safety: PASS (0 dangerous, 0 hallucinations, 0 leakage)
+architecture_ceiling: CONFIRMED (per execution_consultant_engine_v2.md §17)
+consultant_grade_claim: PROHIBITED
+engine_status: ARCHITECTURE_CEILING_REACHED
+next_required_step: USER_DECISION_ON_ARCHITECTURE_PATH (choose Option A-F from ARCHITECTURE_CEILING_REPORT.md)
+recommendation: Option E + C (Evidence Synthesis + Human-in-Loop Review)
+blockers: [USER_DECISION_REQUIRED]
 ```
 
 The original hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack. All
