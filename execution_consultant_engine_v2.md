@@ -344,6 +344,129 @@ If Round 2 case quality fails, do not run benchmark.
 
 ⸻
 
+13A. UNIVERSAL BENCHMARK ARTIFACT QUALITY GATE
+
+## UNIVERSAL BENCHMARK ARTIFACT QUALITY GATE
+
+This gate applies to every benchmark artifact, every case pack, every case subset, every future round, every rerun, and every slice validation pack.
+
+It applies to:
+- Round 2,
+- Round 3,
+- Round 4,
+- every future benchmark round,
+- every case pack,
+- every synthetic / adversarial / blind / public-dataset / real-world pack,
+- every slice-validation benchmark subset,
+- every post-remediation rerun,
+- every future owner-mode simulation pack.
+
+No benchmark execution may begin unless this gate passes.
+
+```yaml
+universal_benchmark_artifact_quality_gate:
+  complete_case_pairs: required_count/required_count
+  case_specific_answer_keys: required_count/required_count
+  duplicate_inputs: 0
+  duplicate_answer_keys: 0
+  near_duplicate_inputs: 0
+  near_duplicate_answer_keys: 0
+  generic_template_answer_keys: 0
+  placeholder_cases: 0
+  empty_directories: 0
+  scorable_answer_keys: required_count/required_count
+  parser_valid_cases: required_count/required_count
+  empty_criteria_cases: 0
+  malformed_answer_keys: 0
+  fallback_required_cases: 0
+  degenerate_score_risk_cases: 0
+  leakage_events: 0
+  high_similarity_to_prior_rounds: 0
+  hidden_outcome_leakage: 0
+  answer_key_terms_in_visible_prompt: 0
+  average_case_quality: ">=8.0"
+  easy_case_rate: "<=20%"
+  adversarial_leakage_resistance: ">=9/10"
+  blind_leakage_resistance: ">=9/10"
+  public_dataset_expected_values_present: all_public_dataset_cases
+  public_dataset_tolerances_present: all_public_dataset_cases
+  owner_decision_pressure_present: required_count/required_count
+  source_references_present_for_real_world: all_real_world_cases
+  final_verdict: BENCHMARK_ARTIFACTS_READY
+```
+
+If any condition fails:
+- Claude must not execute the benchmark.
+- Claude must not mark the round complete.
+- Claude must not mark the slice complete.
+- Claude must not claim readiness.
+- Claude must fix defects.
+- Claude must rerun the full quality gate.
+- Claude must repeat until pass or BLOCKED_WITH_EVIDENCE.
+
+step_completion_rule:
+  No step may be marked complete unless:
+    - all expected artifacts exist,
+    - all artifacts are non-empty,
+    - all artifacts are case-specific where applicable,
+    - all parser/scoring compatibility checks pass,
+    - all leakage checks pass,
+    - all duplicate checks pass,
+    - all quality gates pass,
+    - closeout claims match file evidence.
+
+after_every_artifact_change_self_audit:
+  after every created or modified benchmark artifact, Claude must run:
+    - inventory audit,
+    - duplicate audit,
+    - near-duplicate audit,
+    - leakage audit,
+    - parser compatibility audit,
+    - scoring specificity audit,
+    - case quality audit,
+    - closeout consistency audit.
+  If any fail, Claude must fix before marking the step complete.
+
+closeout_truth_rule:
+  every closeout claim must be source-verified against files.
+  If file evidence contradicts the closeout, the closeout is invalid.
+  Invalid closeouts must be corrected before proceeding.
+
+no_generic_template_rule:
+  template reuse is allowed only for structural fields.
+  The following must be case-specific:
+    - factual content,
+    - root cause rationale,
+    - symptom vs contributing factor vs root cause,
+    - first action,
+    - reason first action is first,
+    - scoring guide,
+    - source references,
+    - expected answer,
+    - automatic-fail conditions.
+
+benchmark_execution_prohibition:
+  Benchmark execution is prohibited unless:
+    - UNIVERSAL_BENCHMARK_ARTIFACT_QUALITY_GATE.final_verdict = BENCHMARK_ARTIFACTS_READY
+    - CURRENT_WORKFLOW_STATE.md records the benchmark artifact gate as passed
+    - all expected case artifacts are present and parser-compatible.
+
+all_rounds_rule:
+  These rules apply to every benchmark round:
+    - Round 2,
+    - Round 3,
+    - Round 4,
+    - every future validation round,
+    - every rerun used for promotion,
+    - every slice-validation case subset.
+
+no_round_specific_loophole_rule:
+  Claude may not interpret benchmark quality gates as Round-2-only.
+  If a future round, rerun, or slice-validation subset uses cases, answer keys,
+  scoring guides, or benchmark outputs, the universal gate applies.
+
+⸻
+
 14. ROUND 2 EXECUTION RULES
 
 Round 2 execution must follow the same staged owner-mode process:

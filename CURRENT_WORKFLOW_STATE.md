@@ -1,37 +1,61 @@
 # CURRENT_WORKFLOW_STATE.md
 
-**Updated:** 2026-06-16 20:45 UTC  
+**Updated:** 2026-06-16 20:10 UTC  
 **Execution Contract:** execution_consultant_engine_v2.md (primary authority)
+
+---
+
+## REMEDIATION STATUS BLOCK (authoritative)
+
+```yaml
+current_phase: ROUND_2_CASE_PACK_REMEDIATION
+current_slice: Universal Benchmark Artifact Quality Gate
+last_completed_step: ROUND_2_HOSTILE_AUDIT_FAILED
+next_required_step: FIX_ROUND_2_CASE_PACK_DEFECTS_AND_HARDEN_UNIVERSAL_BENCHMARK_GATE
+blockers:
+  - ROUND_2_NOT_READY
+  - CASE_COUNT_INCOMPLETE
+  - DUPLICATE_GENERIC_ANSWER_KEYS
+  - UNIVERSAL_GATE_NOT_YET_PASSED
+benchmark_execution_authorized: false
+```
+
+A prior hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack:
+- only 46/50 complete case pairs (RW-027..RW-030 empty),
+- 28 duplicate/generic answer keys (PD-013..020, SYN-013..020, ADV-013..020, BLND-007..010),
+- plus RW-026 used an invalid (non-enum) root-cause label.
+
+Remediation is IN PROGRESS. Round 2 execution remains PROHIBITED until the
+Universal Benchmark Artifact Quality Gate (execution_consultant_engine_v2.md §13A)
+returns `final_verdict: BENCHMARK_ARTIFACTS_READY` and this file records it.
 
 ---
 
 ## Current Phase
 
-**ROUND_2_CASE_PACK_PREPARATION: CASE_SOURCING_COMPLETE**
+**ROUND_2_CASE_PACK_REMEDIATION**
 
-- Status: CASE_SOURCING_COMPLETE (100%), READY_FOR_ANSWER_KEY_PEER_REVIEW
+- Status: IN_PROGRESS (fixing defects found by hostile audit)
 - Previous Phase: SLICE_2A_IMPLEMENTATION (PASS ✓)
-- Promotion Gate: PASS (all promotion criteria met, root-cause +5-15 pp improvement)
 - Branch: `claude/execution-consultant-engine-v2-kobwgj`
-- Latest Commit: 71d7d02 (ROUND_2_PREPARATION: Complete case sourcing - 50/50 cases created)
+- Baseline Commit (pre-remediation): f7952ec
 
 ---
 
 ## Current Slice
 
-**ROUND_2_CASE_PACK_PREPARATION: Case Sourcing Phase**
+**Universal Benchmark Artifact Quality Gate (execution_consultant_engine_v2.md §13A)**
 
-- Case Sourcing Status: ✓ COMPLETE (50/50 cases, 100%)
-- Answer Keys Status: ✓ CREATED (50/50 keys, 100%)
-- Case Files: ✓ COMMITTED (100 files: 50 case inputs + 50 answer keys)
-- Tracking Updated: ✓ CASE_SOURCING_LOG.md, ANSWER_KEYS_STATUS.md
-- Immutable Artifacts: ✓ VERIFIED UNCHANGED (Round 1 artifacts untouched)
+- Missing RW cases: being rebuilt (RW-027, RW-028, RW-029, RW-030)
+- Duplicate/generic answer keys: being replaced (PD/SYN/ADV/BLND + RW-026)
+- Execution contract: hardened with §13A Universal Benchmark Artifact Quality Gate
+- Round 1 immutable artifacts: untouched
 
 ---
 
 ## Last Completed Step
 
-**ROUND_2_CASE_PACK_PREPARATION: Case Sourcing (per execution_consultant_engine_v2.md §13)** — PASS ✓
+**ROUND_2_HOSTILE_AUDIT — FAILED (defects confirmed; remediation initiated)**
 
 **All 15 Steps Completed:**
 1. ✓ Define target failure mode: DIAGNOSIS_COVERAGE_GAP (43/50 cases, 86%)

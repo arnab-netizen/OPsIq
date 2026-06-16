@@ -1,23 +1,131 @@
 {
   "case_id": "RW-026",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Business Operations)",
-  "root_cause_diagnosis": "CUSTOMER_CONCENTRATION_RISK (or GO_TO_MARKET_MISALIGNMENT if diagnosing GTM focus on large customers)",
-  "root_cause_description": "Company has 35% of revenue from top 10 customers, 12% from single customer (DSO group). While company is growing 22% YoY and churn is acceptable (2% quarterly), valuation and risk profile are constrained by customer concentration. Business is healthy, but strategic vulnerability is high.",
-  "confidence_in_diagnosis": "HIGH",
-  "first_priority_action": "Commission 4-week customer segmentation and go-to-market analysis: (1) Analyze customer cohorts by CAC, LTV, expansion, churn by segment size/acquisition channel. (2) Identify which customer segments (SMB, mid-market, DSO) have healthiest unit economics. (3) Assess GTM efficiency by segment; are smaller customers underserved or under-monetized? (4) Model revenue concentration scenarios with customer diversification targets. Results determine whether solution is (A) GTM rebalancing (invest more in SMB/mid-market vs. DSO focus), (B) product repositioning (build features for smaller customers), or (C) pricing optimization (increase ARPU in smaller segments).",
+  "answer_creator": "Domain Expert (Vertical SaaS Growth & Monetization)",
+  "creation_methodology": "Expert decomposed the blended metrics into segment economics. Distinguished the visible concentration risk (a real but secondary downside) from the primary growth-quality problem (weak expansion/monetization in the fast-growing SMB base). Diagnosed the root cause from the NRR/expansion pattern, not the logo-churn or satisfaction data.",
+  "root_cause_diagnosis": "GO_TO_MARKET_MISALIGNMENT",
+  "root_cause_description": "The company's go-to-market and product investment are aligned to a near-flat large-group/DSO segment (5% growth, 12%-of-ARR single customer) while the engine of growth is the SMB/independent-practice base (28% growth) that the company is not equipped to monetize or expand (SMB NRR ~99%, low ARPU, underdeveloped self-serve onboarding and packaging). The result is a fundable-growth gap: strong logo acquisition (churn only 2%) but weak expansion (blended NRR 98% vs the >105% Series B bar). The root cause is GTM/monetization misalignment with where demand actually is, not customer dissatisfaction (retention is strong) and not the concentration risk per se (that is a downside to hedge, not the growth lever).",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Blended NRR 98%, below Series B expectations",
+      "EBITDA only 8% despite 22% growth",
+      "Single customer = 12% of ARR (concentration anxiety)"
+    ],
+    "contributing_factors": [
+      "Sales motion historically optimized for large DSO deals",
+      "Underdeveloped SMB self-serve onboarding and packaging",
+      "Large-group segment growth ceiling (5%) limiting the historical core"
+    ],
+    "true_root_cause": "GTM and product monetization are aimed at the slow, concentrated segment instead of being rebuilt around the high-growth SMB segment, leaving SMB expansion (and therefore NRR and durable growth) structurally weak."
+  },
+  "confidence_in_diagnosis": "MEDIUM-HIGH",
+  "first_priority_action": "Run a 4-week segment economics and expansion diagnostic before committing GTM spend: break out ARPU, CAC, payback, LTV, and NRR by segment (SMB / mid-market / DSO) and acquisition channel; identify which modules/seats drive expansion and why SMB expansion is ~99%; test SMB pricing/packaging elasticity with win/loss and a small pricing experiment. Use the results to decide whether to fund an SMB monetization/expansion motion (better packaging, self-serve onboarding, expansion playbook) versus continuing large-deal focus. In parallel, secure the top DSO with a multi-year renewal to cap the 12% concentration downside while the growth decision is made.",
+  "action_description": "The diagnostic is first because the candidate strategies (double down on SMB monetization vs. hedge concentration vs. chase more large groups) require segment-level CAC/LTV/expansion data the company does not yet have; spending GTM dollars before that data is a guess. The parallel DSO multi-year renewal is cheap insurance that removes the acute downside without pre-committing the growth strategy.",
+  "accepted_alternative_actions": [
+    "Stand up an SMB monetization workstream (repackage tiers, build self-serve onboarding, add an expansion/upsell playbook) piloted on a cohort, with success measured by SMB NRR moving toward 105%+ — acceptable if paired with the segment diagnostic to size it.",
+    "Negotiate a multi-year DSO renewal with expansion commitments to reduce concentration and convert the largest account from a risk into an anchor — acceptable as the risk-hedge half of the plan."
+  ],
+  "bad_actions": [
+    "Aggressively pursue more large DSO logos to 'grow faster' — worsens concentration and chases a 5%-growth segment; misreads where demand is.",
+    "Cut SMB acquisition spend to protect EBITDA — kills the 28% growth engine and the Series B narrative.",
+    "Force a blanket price increase across all customers to lift ARPU — risks SMB churn and DSO renewal-leverage backlash without segment elasticity data."
+  ],
+  "action_constraints_respected": [
+    "Capital: a 4-week internal diagnostic plus a small pricing pilot fits the ~$6M cash and 8% EBITDA constraint; avoids a large pre-committed GTM bet.",
+    "Time: completes well within the 12-month Series B window, leaving time to execute the chosen motion.",
+    "Concentration: the parallel DSO renewal directly addresses the 12% single-customer risk."
+  ],
+  "rationale": "Retention is strong and satisfaction is not the problem, so a quality/retention diagnosis is unsupported. The concentration risk is real but is a downside to hedge, not the lever that produces durable >25% growth and >105% NRR. The evidence (fast SMB logo growth + weak SMB expansion + large-deal-tuned GTM) points to a go-to-market/monetization misalignment with where demand is. The first action gathers the segment economics needed to fund the SMB engine while cheaply capping the concentration downside.",
+  "evidence_basis": [
+    "SMB +28% vs large-group +5% growth divergence",
+    "Blended NRR 98% with strong logo retention (churn 2%) = expansion gap, not churn problem",
+    "Top customer 12% of ARR, top 10 = 35% = concentration downside",
+    "GTM/product tuned to large deals; SMB onboarding/packaging underdeveloped"
+  ],
+  "evidence_not_explained": [
+    "Whether SMB low expansion is a packaging problem (fixable) or a true willingness-to-pay ceiling in small practices (structural) — requires the pricing/elasticity test.",
+    "Cost-to-serve differential between high-volume SMB and complex DSO accounts."
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN: EBITDA is only 8%, but gross margin (65%) is healthy and the issue is growth-quality/expansion, not a cost/price structural break — weaker fit.",
+    "CUSTOMER_RETENTION_EROSION: rejected — logo churn is 2% and retention is strong; the gap is expansion, not retention.",
+    "DEMAND_FORECASTING_MISMATCH: the large-group ceiling (5%) is real, but overall demand is robust (SMB +28%); the problem is mis-aimed GTM, not a misread of total demand — weaker fit."
+  ],
+  "missing_evidence": [
+    "Segment-level ARPU, CAC, payback, LTV, and NRR",
+    "SMB pricing/packaging elasticity and win/loss",
+    "Module/seat-level expansion drivers per segment",
+    "Cost-to-serve and support load by segment"
+  ],
+  "success_metrics": [
+    "Segment economics delivered within 4 weeks (ARPU/CAC/LTV/NRR by segment and channel)",
+    "Decision on SMB monetization investment with a target SMB NRR path to 105%+",
+    "Signed multi-year DSO renewal reducing single-customer share below 10%",
+    "Credible Series B growth/NRR narrative evidenced within 12 months"
+  ],
+  "expected_outcome": "If correct, the diagnostic shows SMB has acceptable CAC/payback but low ARPU/expansion due to packaging and onboarding gaps; funding an SMB monetization motion lifts NRR toward 105%+ and sustains >25% growth, while the DSO multi-year renewal removes the concentration cliff — producing a fundable Series B story. If the diagnostic instead shows SMB willingness-to-pay is structurally capped, the company pivots to a mid-market focus rather than over-investing in SMB.",
+  "automatic_fail_conditions": [
+    "Recommends acquiring more large DSO customers as the primary growth strategy (worsens concentration, chases the 5% segment).",
+    "Diagnoses a customer-satisfaction/quality/retention root cause despite 2% churn and strong logo retention.",
+    "Commits major GTM spend to one segment before segment-level CAC/LTV/expansion data exists.",
+    "Ignores the 12%-of-ARR single-customer concentration risk entirely."
+  ],
+  "source_references": [
+    "Vertical SaaS Series B benchmarks (NRR >105%, durable >25% growth) — investor diligence norms",
+    "Dental practice-management market structure (independent practices vs DSO consolidation)",
+    "SaaS expansion/monetization playbooks (packaging, self-serve onboarding, expansion motions)"
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {
-      "rubric_10": "Diagnoses customer concentration risk or GTM misalignment toward large customers."
+      "criterion": "Does the engine identify GTM/monetization misalignment with the high-growth SMB segment (not satisfaction, not pure concentration) as the root cause?",
+      "rubric_10": "Diagnoses GO_TO_MARKET_MISALIGNMENT: GTM/product aimed at the flat DSO segment while the SMB growth engine is under-monetized (weak expansion/NRR).",
+      "rubric_8": "Identifies an expansion/monetization gap in SMB as the core issue even if labeled slightly differently.",
+      "rubric_6": "Notes the segment divergence but is unsure whether the issue is GTM, concentration, or economics.",
+      "rubric_4": "Focuses only on concentration risk or only on EBITDA without the expansion insight.",
+      "rubric_2": "Diagnoses satisfaction/quality/churn despite 2% churn.",
+      "rubric_0": "Recommends chasing more large DSO logos / unrelated diagnosis."
     },
     "first_action_accuracy": {
-      "rubric_10": "Recommends customer segmentation and GTM analysis before major strategic shifts."
+      "criterion": "Does the engine run a segment-economics/expansion diagnostic (and hedge the DSO concentration) before committing GTM spend?",
+      "rubric_10": "Recommends the 4-week segment CAC/LTV/expansion diagnostic + SMB pricing test, with a parallel multi-year DSO renewal hedge.",
+      "rubric_8": "Recommends segment economics analysis before deciding GTM investment.",
+      "rubric_6": "Recommends some analysis but omits either the segment breakout or the concentration hedge.",
+      "rubric_4": "Picks an SMB or DSO strategy with only light validation.",
+      "rubric_2": "Commits major GTM spend with no diagnostic.",
+      "rubric_0": "Recommends acquiring more large logos or cutting SMB acquisition."
     },
     "business_relevance": {
-      "rubric_10": "Addresses Series B valuation/risk profile through concentration reduction."
+      "criterion": "Does the action reflect a growth-stage vertical SaaS pre-Series-B context (NRR bar, concentration, limited cash)?",
+      "rubric_10": "Directly ties to Series B readiness (NRR>105%, concentration<8%) and limited cash.",
+      "rubric_6": "Relevant to SaaS growth but misses one of NRR-bar/concentration/cash.",
+      "rubric_2": "Generic SaaS advice.",
+      "rubric_0": "Irrelevant to the context."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action fit ~$6M cash, 8% EBITDA, 12-month window, and the concentration constraint?",
+      "rubric_10": "Internal diagnostic + small pilot + renewal hedge; no large pre-committed bet; within window.",
+      "rubric_6": "Mostly fits constraints with minor tension.",
+      "rubric_2": "Partially violates cash/time/concentration constraints.",
+      "rubric_0": "Requires spend or risk the company cannot bear."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the case data (segment growth 28%/5%, NRR 98%, churn 2%, top customer 12%)?",
+      "rubric_10": "All key claims traced to specific figures.",
+      "rubric_6": "Main claims traced, some inference.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MEDIUM-HIGH confidence appropriate given strong directional evidence but unknown SMB elasticity?",
+      "rubric_10": "Expresses MEDIUM-HIGH: confident on the GTM/expansion gap, explicit that SMB monetization upside needs the pricing test.",
+      "rubric_6": "Reasonable confidence but over/understates the SMB-elasticity unknown.",
+      "rubric_2": "Miscalibrated (HIGH with no acknowledgement of unknowns).",
+      "rubric_0": "Confidence inverted."
     },
     "safety": {
-      "rubric_10": "Diagnostic before major GTM changes or customer exit."
+      "criterion": "Does the action avoid an irreversible/concentration-worsening move without data, and hedge the 12% cliff?",
+      "rubric_10": "Diagnostic-first, hedges the DSO concentration, no aggressive irreversible bet.",
+      "rubric_0": "Commits to concentration-worsening growth or a blanket price hike without segment data."
     }
   },
   "manual_review_completed": false,
