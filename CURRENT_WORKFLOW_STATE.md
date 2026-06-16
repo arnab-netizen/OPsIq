@@ -61,7 +61,7 @@
 
 **Mandatory Step:** Round 2 is mandatory before consultant-grade claim (§13, §14, §15)
 
-**Current Status:** SPECIFICATION_COMPLETE
+**Current Status:** TEMPLATES_AND_INFRASTRUCTURE_COMPLETE
 
 **Specification Document:** ROUND_2_CASE_PACK_SPECIFICATION.md
 
@@ -72,14 +72,39 @@
 - ≥10 adversarial cases (new trap types)
 - ≥5 blind-outcome cases (new forward-looking scenarios)
 
-**Tasks:**
-1. Source 50+ fresh cases (independent of Round 1)
-2. Create manual answer keys (consultant-level, domain expert)
-3. Create manual scoring guides (domain expert level)
-4. Run leakage audit (no answer-key hints in cases)
-5. Run source quality audit (legitimate, distinct sources)
+**Completed in This Run:**
 
-**Timeline:** 12-17 days (case sourcing + answer keys + guides)
+✓ Case Templates Created:
+- CASE_TEMPLATE_REAL_WORLD.json (with guidance and example structure)
+- CASE_TEMPLATE_PUBLIC_DATASET.json (for SEC filings, public data)
+- CASE_TEMPLATE_SYNTHETIC.json (for stress-test scenarios)
+- CASE_TEMPLATE_ADVERSARIAL.json (for cognitive trap testing)
+- CASE_TEMPLATE_BLIND_OUTCOME.json (for forward-looking decisions)
+
+✓ Answer Key Infrastructure:
+- ANSWER_KEY_TEMPLATE.json (7-dimension scoring structure)
+- ANSWER_KEYS_STATUS.md (tracking matrix for 50 cases)
+
+✓ Scoring Guide Infrastructure:
+- SCORING_GUIDE_TEMPLATE.md (comprehensive 7-dimension rubric with examples)
+- SCORING_GUIDES_STATUS.md (tracking matrix for 5 case types)
+
+✓ Audit Infrastructure:
+- LEAKAGE_AUDIT_CHECKLIST.md (prevents answer-key hints in case inputs)
+- SOURCE_QUALITY_AUDIT.md (verifies source legitimacy and Round 1 distinctness)
+
+**Remaining Tasks:**
+1. Source 50+ fresh cases (independent of Round 1) - populate CASE_SOURCING_LOG
+2. Create manual answer keys (consultant-level, domain expert) - populate case directories
+3. Create manual scoring guides per case type - finalize SCORING_GUIDES_STATUS
+4. Run leakage audit (pass/fail on all 50+ cases)
+5. Run source quality audit (pass/fail on all 50+ cases)
+
+**Timeline:** 10-15 days (case sourcing + answer keys + guides + audits)
+- Sourcing: 5-7 days
+- Answer keys: 5-7 days (parallel with sourcing)
+- Audits: 1-2 days (running as cases are ready)
+- Buffer: 1-2 days
 
 **Next Step After Preparation:** Execute Round 2 following 11-step protocol (§14)
 
