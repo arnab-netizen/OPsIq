@@ -1,0 +1,13 @@
+{
+  "case_id": "PD-012",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Retail Strategy)",
+  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Conduct store-level profitability and market analysis: identify which locations are profitable vs. unprofitable, which markets have sustainable demand, which should be closed or repositioned.",
+  "action_description": "Portfolio optimization: close unprofitable stores, invest in profitable locations, reduce fixed cost base.",
+  "evidence_basis": ["Revenue decline despite flat market indicates market share loss", "Margin compression indicates cost structure misalignment"],
+  "scoring_criteria": {"root_cause_accuracy": {"rubric_10": "Diagnoses DEMAND_FORECASTING_MISMATCH"}, "first_action_accuracy": {"rubric_10": "Recommends portfolio analysis"}, "business_relevance": {"rubric_10": "Reflects retail context"}, "constraint_awareness": {"rubric_10": "Respects constraints"}, "evidence_traceability": {"rubric_10": "Traces to revenue decline"}, "confidence_calibration": {"rubric_10": "HIGH appropriate"}, "safety": {"rubric_10": "Safe diagnostic"}},
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

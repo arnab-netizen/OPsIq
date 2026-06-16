@@ -1,0 +1,13 @@
+{
+  "caseId": "PD-012",
+  "caseType": "PUBLIC_DATASET",
+  "industry": "Retail",
+  "businessModel": "Department Store Chain",
+  "businessStage": "Mature, Declining",
+  "sourceNote": "Retail chain case from SEC filings, financial data 2022-2025.",
+  "ownerIntake": {"businessType": "Mid-tier department store chain, 45 locations, $800M revenue, declining market share", "stage": "Revenue declined from $850M (2023) to $800M (2025), EBITDA margin 4% down from 6%", "ownerGoal": "Stabilize profitability and avoid store closures", "ownerConstraints": ["Brick-and-mortar retail secular decline", "E-commerce competition from Amazon/Target", "High real estate and labor costs"], "immediateConcern": "Same-store sales declining, inventory accumulating, margin pressure", "availableData": ["Revenue trends", "Gross margin by category", "Store-level metrics"], "unavailableData": ["Detailed competitive win/loss", "Customer behavior shifts"], "timeHorizon": "24 months", "riskAppetite": "LOW"},
+  "clientContext": {"industry": "Retail", "size": "mid-market", "revenueImpactUrgency": "CRITICAL"},
+  "businessProblem": "Department store chain facing secular retail decline with margin compression.",
+  "evidence": [{"dimension": "financial_health", "finding": "Revenue declining from $850M to $800M (-5.9%) while EBITDA margin fell from 6% to 4% (-200bps).", "confidence": "HIGH", "source": "SEC filings", "isCritical": true, "supportingData": {"revenue_2023": "$850M", "revenue_2025": "$800M", "ebitda_2023": "6%", "ebitda_2025": "4%"}}],
+  "ownerConstraintProfile": {"budgetBand": "MEDIUM", "timeHorizonDays": 730, "staffCapacity": "MEDIUM", "cashRunwayMonths": null, "legalComplianceSensitive": false}
+}

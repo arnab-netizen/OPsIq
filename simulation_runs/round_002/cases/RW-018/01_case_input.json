@@ -1,0 +1,51 @@
+{
+  "caseId": "RW-018",
+  "caseType": "REAL_CASE_STUDY",
+  "industry": "Healthcare / Specialty Clinic",
+  "businessModel": "Multi-location medical clinic network",
+  "businessStage": "Growth, facing scaling challenges",
+  "sourceNote": "Healthcare clinic network case sourced from healthcare services industry case studies.",
+  "ownerIntake": {
+    "businessType": "Regional specialty clinic network, orthopedic and sports medicine focus, 8 locations, 120 employees, $15M revenue.",
+    "stage": "Revenue growing 12% YoY to $15M, but profitability declining. Net margin 6% (down from 10% two years ago). Patient volumes up but reimbursement rates declining. Insurance mix shifting to lower-paying plans.",
+    "ownerGoal": "Stabilize profitability and achieve 8%+ net margin within 18 months without reducing patient capacity.",
+    "ownerConstraints": [
+      "Regulatory constraint: Healthcare compliance, staffing regulations, credentialing requirements",
+      "Reimbursement constraint: Insurance payors controlling pricing; limited pricing power",
+      "Talent constraint: Physician recruitment difficult; must maintain physician compensation to retain staff"
+    ],
+    "immediateConcern": "Profitability declining despite volume growth. Root cause unclear: is it reimbursement rates declining, operational costs rising, or mix shift to lower-margin services?",
+    "availableData": [
+      "Financial: $15M revenue, 6% net margin, growing 12% YoY",
+      "Operational: 120 employees, 8 locations, patient volumes up 8% YoY, average patient visit revenue $180, cost per visit rising"
+    ],
+    "unavailableData": [
+      "Detailed reimbursement rate trends by payor",
+      "Service line profitability breakdown",
+      "Staffing costs vs revenue by location"
+    ],
+    "timeHorizon": "18 months",
+    "riskAppetite": "MEDIUM"
+  },
+  "clientContext": {"industry": "Healthcare", "size": "mid-market", "revenueImpactUrgency": "HIGH"},
+  "businessProblem": "Specialty clinic network is growing in patient volumes but declining in profitability, suggesting a margin compression issue. The root cause could be reimbursement rate decline (payor mix shift), operational cost increase, or service mix shift to lower-margin services.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Net margin declined from 10% ($1.5M profit on $15M revenue) to 6% ($900k profit), a 40% decline in profitability. Revenue growing 12% YoY indicates volume is not the problem; margin compression is the issue.",
+      "confidence": "HIGH",
+      "source": "Income statements",
+      "isCritical": true,
+      "supportingData": {"margin_prior": "10%", "margin_current": "6%", "profit_decline": "40%"}
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Cost per visit trending up. Patient visit revenue averaging $180, but operating cost per visit trending up due to labor cost increases and overhead allocation across growing patient base.",
+      "confidence": "MEDIUM",
+      "source": "Cost accounting data",
+      "isCritical": true,
+      "supportingData": {"revenue_per_visit": "$180", "cost_trend": "Rising"}
+    }
+  ],
+  "ownerConstraintProfile": {"budgetBand": "MEDIUM", "timeHorizonDays": 540, "staffCapacity": "MEDIUM", "cashRunwayMonths": null, "legalComplianceSensitive": true}
+}

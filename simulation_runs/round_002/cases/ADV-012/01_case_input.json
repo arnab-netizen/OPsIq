@@ -1,0 +1,13 @@
+{
+  "caseId": "ADV-012",
+  "caseType": "ADVERSARIAL",
+  "industry": "SaaS",
+  "businessModel": "Collaboration Software",
+  "businessStage": "Series B",
+  "sourceNote": "Adversarial case testing cognitive trap: anchoring bias on growth metrics while missing retention issues.",
+  "ownerIntake": {"businessType": "Team collaboration SaaS platform, competing with Slack/Teams", "stage": "ARR $12M, 50% YoY growth, 45k active accounts, churn 4% MRR", "ownerGoal": "Series C fundraising", "ownerConstraints": ["Highly competitive market", "Pressure to demonstrate growth for Series C"], "immediateConcern": "Impressive growth rate (50% YoY) creating overconfidence about product-market fit, but churn is rising (was 2% MoM 12 months ago, now 4% MoM). Trap: leadership focused on growth metric, blind to deteriorating retention.", "availableData": ["ARR $12M, growth 50% YoY, 45k accounts, churn 4% MoM"], "unavailableData": ["Cohort retention curves", "Reason for churn", "Competitive win/loss data"], "timeHorizon": "12 months", "riskAppetite": "HIGH"},
+  "clientContext": {"industry": "SaaS", "size": "growth-stage", "revenueImpactUrgency": "CRITICAL"},
+  "businessProblem": "SaaS company celebrating 50% growth rate but ignoring doubling of churn rate (2%→4% MoM), embedding overconfidence about product-market fit when retention signals suggest otherwise. Trap: growth metric anchoring masks retention deterioration.",
+  "evidence": [{"dimension": "financial_health", "finding": "ARR growing 50% YoY from $8M to $12M (impressive). Churn rising from 2% MoM (12 mo ago) to 4% MoM (current), a 100% increase in churn rate.", "confidence": "HIGH", "source": "Metrics dashboard", "isCritical": true, "supportingData": {"arr_growth": "50%", "churn_prior": "2%", "churn_current": "4%"}}],
+  "ownerConstraintProfile": {"budgetBand": "MEDIUM", "timeHorizonDays": 365, "staffCapacity": "MEDIUM", "cashRunwayMonths": 48, "legalComplianceSensitive": false}
+}

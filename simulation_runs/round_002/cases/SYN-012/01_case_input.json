@@ -1,0 +1,13 @@
+{
+  "caseId": "SYN-012",
+  "caseType": "SYNTHETIC",
+  "industry": "B2B SaaS",
+  "businessModel": "Vertical SaaS for Manufacturing",
+  "businessStage": "Series B, Growth",
+  "sourceNote": "Synthetic manufacturing SaaS case designed to test DEMAND_FORECASTING_MISMATCH diagnosis.",
+  "ownerIntake": {"businessType": "Manufacturing SaaS for production planning and scheduling", "stage": "ARR $8M, 40% YoY growth, churn 3% MRR, CAC $35k, LTV $180k", "ownerGoal": "Series B expansion with focus on vertical penetration", "ownerConstraints": ["Limited sales resources", "Vertical-specific customization required"], "immediateConcern": "Growth slowing: 40% YoY growth, but MoM growth rate declining. Early signals that market may be saturating in core vertical.", "availableData": ["ARR, churn, CAC/LTV by vertical", "Customer count by industry"], "unavailableData": ["Market size and growth rates by vertical", "Competitive dynamics"], "timeHorizon": "18 months", "riskAppetite": "MEDIUM"},
+  "clientContext": {"industry": "SaaS", "size": "growth-stage", "revenueImpactUrgency": "HIGH"},
+  "businessProblem": "Manufacturing SaaS experiencing growth deceleration with unclear root cause: market saturation vs. competitive displacement vs. product-market fit limits.",
+  "evidence": [{"dimension": "financial_health", "finding": "YoY growth 40% but MoM growth declining trend: 5% MoM (recent) vs 3.5% MoM run rate implies ~42% annualized declining to ~36%.", "confidence": "MEDIUM", "source": "Growth metrics", "isCritical": true, "supportingData": {"yoy_growth": "40%", "growth_trend": "Declining"}}],
+  "ownerConstraintProfile": {"budgetBand": "MEDIUM", "timeHorizonDays": 540, "staffCapacity": "LOW", "cashRunwayMonths": 36, "legalComplianceSensitive": false}
+}

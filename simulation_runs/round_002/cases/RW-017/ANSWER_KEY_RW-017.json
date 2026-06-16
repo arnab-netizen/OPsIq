@@ -1,0 +1,49 @@
+{
+  "case_id": "RW-017",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Professional Services Consulting)",
+  "creation_methodology": "Blind review of engineering consulting case scenario",
+  "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK",
+  "root_cause_description": "The firm's profitability is being destroyed by operational inefficiency (rework increasing from 8% to 15% of labor hours) combined with market stagnation. The rework is likely driven by legacy CAD systems and lack of integrated project coordination (BIM would address this). The firm is burning labor hours on non-billable work while unable to grow revenue or reduce costs proportionally. This is an operational bottleneck: the infrastructure (CAD systems, processes) cannot support efficient delivery.",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "Conduct 4-week assessment of BIM adoption readiness and ROI: (1) Identify which project types would benefit most from BIM (likely complex multi-discipline projects where coordination is high-friction), (2) Estimate ROI of BIM investment ($500k capex, 2-3 FTE training), (3) Pilot BIM on 2-3 projects in Q3 to validate rework reduction. If pilot shows >30% rework reduction on BIM projects, proceed with firm-wide BIM adoption roadmap.",
+  "action_description": "BIM adoption directly targets rework elimination. At 15% rework currently, reducing to 8% (via BIM + process improvement) would free up 7% of labor capacity = $1.96M in recovered labor (at $28M revenue × 7% utilization). This pays back the $500k BIM investment in ~3 months and creates capacity for growth or margin improvement.",
+  "action_constraints_respected": [
+    "Budget constraint ($500k): BIM investment is within stated budget tolerance",
+    "Timeline constraint (24 months): BIM pilot and rollout fits within 24-month partnership confidence window",
+    "Talent constraint (shortage): BIM reduces manual coordination, mitigating junior engineer shortage impact"
+  ],
+  "rationale": "The firm is not broken; it's operationally inefficient. Fixing the operational inefficiency (rework) has immediate ROI and creates capacity for growth. This is lower-risk than cost-cutting (which damages culture) or niche consolidation (which requires market discovery). BIM is proven technology; the question is execution and adoption.",
+  "evidence_basis": [
+    "Rework trending from 8% to 15%, indicating operational deterioration tied to legacy systems",
+    "Margin compression from 10% to 8% driven by labor cost increase + rework waste",
+    "Flat revenue + client concentration risk indicating market pressure"
+  ],
+  "evidence_not_explained": [
+    "Why rework is increasing could be due to factors other than CAD systems (e.g., complexity of projects increasing, coordination with larger firms). Diagnostic needed to confirm."
+  ],
+  "alternative_explanations": [
+    "DEMAND_FORECASTING_MISMATCH: Market demand declining and firm growth is impossible (market size shrinking). Rejected because: top 10 client concentration suggests clients exist; problem is conversion/cycle time, not demand absence."
+  ],
+  "missing_evidence": [
+    "Root cause of rework: Is it CAD system limitations, process/coordination gaps, or client-driven scope changes?",
+    "BIM adoption potential: Which projects would benefit most from BIM? What is the addressable rework opportunity?"
+  ],
+  "success_metrics": [
+    "BIM pilot completion and ROI validation within 8 weeks",
+    "Rework reduction from 15% to <10% on BIM pilot projects",
+    "Firm-wide BIM adoption roadmap approved by partner group"
+  ],
+  "expected_outcome": "If BIM adoption is executed well, firm should see: (1) Rework reduction to <10% within 6 months, (2) $2M+ annual labor capacity recovery, (3) Margin improvement to 10%+ within 12 months, (4) Capacity for 3-5% revenue growth without additional hiring.",
+  "scoring_criteria": {
+    "root_cause_accuracy": {"rubric_10": "Engine diagnoses OPERATIONAL_BOTTLENECK with rework focus", "rubric_8": "Engine diagnoses operational efficiency issue", "rubric_6": "Engine identifies some operational elements but misses rework specifically", "rubric_4": "Engine focuses on market decline or financial issues without operational focus", "rubric_0": "Completely unrelated"},
+    "first_action_accuracy": {"rubric_10": "Engine recommends BIM assessment and pilot", "rubric_8": "Engine recommends operational/technology improvement", "rubric_6": "Engine recommends investigation before major action", "rubric_4": "Engine recommends cost-cutting or niche consolidation without operational diagnosis", "rubric_0": "Harmful action"},
+    "business_relevance": {"rubric_10": "Action reflects engineering consulting context and partnership dynamics", "rubric_0": "Generic or misaligned"},
+    "constraint_awareness": {"rubric_10": "Respects $500k budget, 24-month timeline, and talent constraints", "rubric_0": "Violates constraints"},
+    "evidence_traceability": {"rubric_10": "Clearly traces to rework trend and margin compression", "rubric_0": "No traceability"},
+    "confidence_calibration": {"rubric_10": "HIGH confidence appropriate given rework data", "rubric_0": "Misaligned"},
+    "safety": {"rubric_10": "Safe operational improvement approach", "rubric_0": "Dangerous"}
+  },
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

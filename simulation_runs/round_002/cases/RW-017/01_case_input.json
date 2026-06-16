@@ -1,0 +1,86 @@
+{
+  "caseId": "RW-017",
+  "caseType": "REAL_CASE_STUDY",
+  "industry": "Professional Services / Engineering",
+  "businessModel": "Engineering Design and Consulting",
+  "businessStage": "Mature, Stagnant",
+  "sourceNote": "Engineering consulting firm case sourced from industry case studies on digital transformation challenges in traditional professional services.",
+  "ownerIntake": {
+    "businessType": "MEP engineering consulting firm, 150 employees, 12 regional offices, $28M annual revenue. Specializes in HVAC, plumbing, electrical design for commercial/industrial clients.",
+    "stage": "Mature: Revenue flat $28M (0% growth), EBITDA margin 8% ($2.2M). Headcount stable. Average project value $180k, 18-month sales cycle. Client concentration: top 10 clients = 35% of revenue.",
+    "ownerGoal": "Return to 3-5% annual revenue growth and improve EBITDA margin to 12%+ within 24 months without major layoffs or acquisitions.",
+    "ownerConstraints": [
+      "Competitive constraint: Larger firms (Jacobs, Stantec) competing on price and scale; smaller boutiques competing on nimbleness",
+      "Market constraint: Commercial/industrial construction declining due to interest rates; clients delaying projects",
+      "Talent constraint: Engineering shortage; difficulty recruiting junior engineers; 35% of staff >55 years old (retirement risk)",
+      "Technology constraint: Legacy CAD systems; difficulty adopting BIM (Building Information Modeling) firm-wide; $500k investment would be required"
+    ],
+    "immediateConcern": "Revenue stagnation with rising labor costs (wage pressure due to talent shortage) is compressing margins. Pipeline visibility is declining (18-month sales cycle, but clients delaying decisions). Partners question whether the firm is viable long-term or should be sold.",
+    "availableData": [
+      "Financial: $28M revenue (flat), 8% EBITDA, 150 headcount, $187k revenue per employee",
+      "Client data: Top 10 = 35% of revenue, typical project $180k, 18-month cycle, project profitability varies 4-12% depending on complexity",
+      "Operational: Average project margin 8%, utilization rate 72%, rework/revisions increasing (15% of labor hours wasted on rework in 2024 vs 8% in 2022)"
+    ],
+    "unavailableData": [
+      "Detailed employee skill inventory and career paths",
+      "BIM adoption readiness assessment",
+      "Competitive win/loss data at project level",
+      "Market sizing for digital/AI-assisted design services"
+    ],
+    "timeHorizon": "24 months (partner confidence threshold; consideration of exit/sale)",
+    "riskAppetite": "LOW-MEDIUM (mature partnership, conservative)"
+  },
+  "clientContext": {
+    "industry": "Engineering Consulting",
+    "size": "mid-market (150 employees, $28M revenue, 12 offices)",
+    "revenueImpactUrgency": "HIGH (stagnation + margin pressure threatening partnership viability)"
+  },
+  "businessProblem": "Engineering consulting firm faces a classic commoditization and maturity crisis: revenue is flat in a declining market, margins are compressed by rising labor costs and increasing rework, and the firm lacks clear differentiation. The core question is whether the firm should: (1) restructure for efficiency and lower cost base, (2) differentiate through technology/BIM/digital services, (3) consolidate into a niche (e.g., healthcare, semiconductors), or (4) accept lower margins as a mature service business.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue flat at $28M (0% growth for 3 consecutive years) while labor costs increased 8% annually, compressing EBITDA margin from 10% (2022) to 8% (2024).",
+      "confidence": "HIGH",
+      "source": "Partnership financial statements",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_2022": "$28M",
+        "revenue_2024": "$28M",
+        "ebitda_margin_2022": "10%",
+        "ebitda_margin_2024": "8%",
+        "labor_cost_growth": "+8% annually"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Rework and revisions consuming 15% of labor hours (2024) vs 8% (2022), indicating quality or coordination issues. Likely driven by legacy CAD systems and lack of BIM coordination.",
+      "confidence": "MEDIUM",
+      "source": "Project tracking and time sheets",
+      "isCritical": true,
+      "supportingData": {
+        "rework_percent_2022": "8%",
+        "rework_percent_2024": "15%",
+        "trend": "Rising"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Top 10 clients = 35% of revenue, indicating concentration risk. Commercial/industrial construction market declining; client decision timelines extending from 12 months to 18+ months.",
+      "confidence": "MEDIUM",
+      "source": "CRM data, client interviews",
+      "isCritical": true,
+      "supportingData": {
+        "top_10_concentration": "35%",
+        "sales_cycle_prior": "12 months",
+        "sales_cycle_current": "18+ months"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW ($500k max technology investment)",
+    "timeHorizonDays": 730,
+    "staffCapacity": "LOW (150 people, lean operations)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

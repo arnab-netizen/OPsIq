@@ -1,0 +1,21 @@
+{
+  "case_id": "RW-018",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (Healthcare Operations)",
+  "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "confidence_in_diagnosis": "MODERATE",
+  "first_priority_action": "Conduct payer mix and service line profitability analysis: identify which payors are declining in reimbursement, which service lines are most/least profitable, where to optimize.",
+  "action_description": "Detailed profitability analysis will reveal whether the problem is payor mix (need to shift mix), service mix (need to de-emphasize low-margin services), or operational costs (need to reduce costs). Cannot improve without this clarity.",
+  "evidence_basis": ["Margin decline from 10% to 6% while volumes growing", "Cost per visit rising despite volume growth"],
+  "scoring_criteria": {
+    "root_cause_accuracy": {"rubric_10": "Diagnoses UNIT_ECONOMICS_BREAKDOWN", "rubric_0": "Unrelated"},
+    "first_action_accuracy": {"rubric_10": "Recommends profitability analysis", "rubric_0": "Harmful"},
+    "business_relevance": {"rubric_10": "Reflects healthcare context", "rubric_0": "Generic"},
+    "constraint_awareness": {"rubric_10": "Respects regulatory/talent constraints", "rubric_0": "Violates"},
+    "evidence_traceability": {"rubric_10": "Traces to margin decline and cost trends", "rubric_0": "None"},
+    "confidence_calibration": {"rubric_10": "MODERATE appropriate", "rubric_0": "Misaligned"},
+    "safety": {"rubric_10": "Safe diagnostic approach", "rubric_0": "Dangerous"}
+  },
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

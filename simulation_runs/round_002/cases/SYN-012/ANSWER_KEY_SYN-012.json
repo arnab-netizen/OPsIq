@@ -1,0 +1,13 @@
+{
+  "case_id": "SYN-012",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (SaaS Growth Strategy)",
+  "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "confidence_in_diagnosis": "MODERATE",
+  "first_priority_action": "Conduct customer cohort analysis by vertical: identify which verticals are saturating vs. growing, which have highest LTV/retention, where to focus future acquisition.",
+  "action_description": "Vertical portfolio optimization based on unit economics and market saturation signals.",
+  "evidence_basis": ["Growth slowing from 40% to implied 36%", "No data on market size by vertical"],
+  "scoring_criteria": {"root_cause_accuracy": {"rubric_10": "Diagnoses demand forecasting issue"}, "first_action_accuracy": {"rubric_10": "Recommends cohort analysis"}, "business_relevance": {"rubric_10": "Reflects SaaS context"}, "constraint_awareness": {"rubric_10": "Respects resource constraints"}, "evidence_traceability": {"rubric_10": "Traces to growth deceleration"}, "confidence_calibration": {"rubric_10": "MODERATE appropriate"}, "safety": {"rubric_10": "Safe"}},
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}

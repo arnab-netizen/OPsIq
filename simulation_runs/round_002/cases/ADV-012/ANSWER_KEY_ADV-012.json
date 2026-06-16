@@ -1,0 +1,13 @@
+{
+  "case_id": "ADV-012",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Domain Expert (SaaS Metrics & Strategy)",
+  "root_cause_diagnosis": "TRUST_QUALITY_CRISIS",
+  "confidence_in_diagnosis": "HIGH",
+  "first_priority_action": "STOP: Do not proceed with Series C conversations until churn trend is understood. Conduct immediate churn analysis: cohort retention curves, exit interviews, competitive loss analysis. Understand whether churn is normal market dynamics or signal of product-market fit deterioration. DO NOT let growth metrics anchor confidence in retention quality.",
+  "action_description": "Diagnostic halt: churn doubling while growth accelerating is a major red flag. Series C investors will scrutinize retention; hidden churn problem will be discovered in due diligence. Better to diagnose now than during Series C discussions.",
+  "evidence_basis": ["Churn doubling from 2% to 4% MoM is a critical signal masked by growth celebration"],
+  "scoring_criteria": {"root_cause_accuracy": {"rubric_10": "Recognizes trap and diagnoses underlying trust/quality issue"}, "first_action_accuracy": {"rubric_10": "Recommends diagnostic halt before major strategic action"}, "business_relevance": {"rubric_10": "Reflects Series B company dynamics and investor scrutiny"}, "constraint_awareness": {"rubric_10": "Respects time constraint by diagnosing before Series C"}, "evidence_traceability": {"rubric_10": "Clearly identifies churn doubling as critical signal"}, "confidence_calibration": {"rubric_10": "HIGH appropriate for retention risk"}, "safety": {"rubric_10": "Safe diagnostic approach prevents Series C disaster"}},
+  "manual_review_completed": false,
+  "locked_for_round_2_execution": false
+}
