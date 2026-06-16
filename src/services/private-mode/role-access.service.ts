@@ -37,12 +37,38 @@ export class PrivateModeRoleAccessService {
       throw new Error('Only OWNER can grant roles');
     }
 
-    // Check if user already has active access in this workspace
+    // A single record can exist per (workspace, user) due to the unique
+    // (workspace_id, user_id) constraint. Inspect the existing record (if any)
+    // to decide between rejecting a duplicate active grant and reopening a
+    // previously revoked grant.
     const existing = await this.prisma.privateModeAccess.findFirst({
-      where: { workspaceId, userId, revokedAt: null },
+      where: { workspaceId, userId },
     });
-    if (existing) {
+    if (existing && !existing.revokedAt) {
       throw new Error(`User already has role in workspace: ${existing.role}`);
+    }
+
+    if (existing && existing.revokedAt) {
+      // Reopen the revoked record in place. Creating a new row would violate the
+      // unique (workspace_id, user_id) constraint, so the prior grant is reset to
+      // a fresh grant with cleared revocation and approval state.
+      const reopened = await this.prisma.privateModeAccess.update({
+        where: { id: existing.id },
+        data: {
+          role,
+          grantedBy,
+          grantedAt: new Date(),
+          revokedAt: null,
+          revokedBy: null,
+          revokeReason: null,
+          approvalStatus: requireApproval ? 'pending' : 'approved',
+          approvedBy: requireApproval ? null : grantedBy,
+          approvedAt: requireApproval ? null : new Date(),
+          rejectionReason: null,
+          updatedAt: new Date(),
+        },
+      });
+      return reopened;
     }
 
     // Create new access record
@@ -164,15 +190,9 @@ export class PrivateModeRoleAccessService {
     revokeReason: string,
     revokedBy: string,
   ) {
-    // Verify revoker is OWNER
-    const revoker = await this.prisma.privateModeAccess.findFirst({
-      where: { workspaceId, userId: revokedBy },
-    });
-    if (!revoker || revoker.role !== 'OWNER') {
-      throw new Error('Only OWNER can revoke roles');
-    }
-
-    // Find access record
+    // Find access record and enforce workspace isolation before authorization.
+    // Validating the record's workspace binding first ensures a grant belonging
+    // to another workspace cannot be acted on through this workspace's context.
     const access = await this.prisma.privateModeAccess.findUnique({
       where: { id: accessId },
     });
@@ -182,6 +202,15 @@ export class PrivateModeRoleAccessService {
     if (access.workspaceId !== workspaceId) {
       throw new Error('Workspace mismatch');
     }
+
+    // Verify revoker is OWNER of this workspace
+    const revoker = await this.prisma.privateModeAccess.findFirst({
+      where: { workspaceId, userId: revokedBy },
+    });
+    if (!revoker || revoker.role !== 'OWNER') {
+      throw new Error('Only OWNER can revoke roles');
+    }
+
     if (access.revokedAt) {
       throw new Error('Role already revoked');
     }

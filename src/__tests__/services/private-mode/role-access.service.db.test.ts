@@ -300,7 +300,7 @@ describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', ()
 
       // Cleanup workspace 2
       await db.privateModeAccess.deleteMany({
-        where: { workspace_id: workspace2Id },
+        where: { workspaceId: workspace2Id },
       });
       await db.clientAccount.delete({
         where: { id: workspace2Id },
@@ -422,7 +422,7 @@ describe('[db] B24-S2: Private Mode Role Access Service — DB-Backed Tests', ()
 
       // Revoke access
       const access = await db.privateModeAccess.findFirst({
-        where: { user_id: consultantId, workspace_id: workspaceId },
+        where: { userId: consultantId, workspaceId: workspaceId },
       });
       await service.revokeRoleAccess(workspaceId, access!.id, 'Reason', ownerId);
       hasAccess = await service.hasPrivateModeAccess(workspaceId, consultantId);
