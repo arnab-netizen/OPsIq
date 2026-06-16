@@ -66,6 +66,54 @@ export class HypothesisGenerator {
     },
   };
 
+  // Keywords that specifically indicate each diagnosis
+  private readonly diagnosisKeywords: Record<string, {
+    required: string[];
+    supporting: string[];
+    contradictory: string[];
+  }> = {
+    [DiagnosisType.UNIT_ECONOMICS_BREAKDOWN]: {
+      required: ["cac", "unit economics", "payback", "margin", "ltv", "contribution"],
+      supporting: ["pricing", "profitability", "cost per unit", "arpu", "revenue"],
+      contradictory: ["perfect operations", "zero issues", "no delays"],
+    },
+    [DiagnosisType.OPERATIONAL_BOTTLENECK]: {
+      required: ["bottleneck", "capacity", "throughput", "cycle time", "queue", "constraint"],
+      supporting: ["process", "workflow", "coordination", "dependency", "latency"],
+      contradictory: ["financial metrics strong", "unit economics sound"],
+    },
+    [DiagnosisType.GO_TO_MARKET_MISALIGNMENT]: {
+      required: ["gtm", "market entry", "positioning", "value prop", "messaging"],
+      supporting: ["competitor", "differentiation", "segment", "market position"],
+      contradictory: ["strong retention", "loyal customers"],
+    },
+    [DiagnosisType.DEMAND_FORECASTING_MISMATCH]: {
+      required: ["forecast", "demand", "expected", "projected", "mismatch"],
+      supporting: ["market sizing", "tam", "adoption", "growth rate"],
+      contradictory: ["actual demand strong", "growth on track"],
+    },
+    [DiagnosisType.CUSTOMER_RETENTION_EROSION]: {
+      required: ["churn", "retention", "attrition", "customer loss", "cancellation"],
+      supporting: ["loyalty", "engagement", "satisfaction", "nps", "lifetime"],
+      contradictory: ["growing customer base", "retention high"],
+    },
+    [DiagnosisType.QUALITY_CONTROL_FAILURE]: {
+      required: ["quality", "defect", "bug", "failure", "reliability", "uptime"],
+      supporting: ["issue", "problem", "error", "regression"],
+      contradictory: ["perfect quality", "zero defects"],
+    },
+    [DiagnosisType.TRUST_QUALITY_CRISIS]: {
+      required: ["trust", "credibility", "reputation", "scandal", "fraud", "security"],
+      supporting: ["confidence", "breach", "incident"],
+      contradictory: ["trust strong", "reputation excellent"],
+    },
+    [DiagnosisType.CASH_RUNWAY_CRISIS]: {
+      required: ["cash", "runway", "burn", "burn rate", "fundraising", "capital"],
+      supporting: ["liquidity", "solvency", "cash flow"],
+      contradictory: ["cash position strong", "funded", "profitable"],
+    },
+  };
+
   generateHypotheses(
     synthesizedEvidence: SynthesizedEvidence,
     allEvidence: EvidenceItem[]
@@ -159,6 +207,9 @@ export class HypothesisGenerator {
       synthesizedEvidence
     );
 
+    // Score keyword match to validate or refute the diagnosis
+    const keywordMatch = this.scoreKeywordMatch(diagnosisType, allEvidence);
+
     // Calculate raw confidence with pattern weighting
     let baseConfidence = 0;
     if (supportingIds.size > 0) {
@@ -189,16 +240,32 @@ export class HypothesisGenerator {
       baseConfidence - contradictions.length * 8
     );
 
-    // Cap at 65% and ensure minimum
-    let confidence = Math.min(65, Math.round(scoreAfterContradictions));
+    // Blend pattern-based with keyword validation
+    let confidence = 0;
+    if (matchingPatterns.length > 0) {
+      // Pattern-based diagnosis is primary
+      confidence = Math.min(65, Math.round(scoreAfterContradictions));
 
-    // If no patterns support this diagnosis, apply baseline scoring
-    if (matchingPatterns.length === 0) {
+      // Keyword validation helps confirm or refute
+      if (keywordMatch.hasRequiredKeywords && keywordMatch.supportingKeywordCount > 0) {
+        // Keywords confirm the diagnosis - boost slightly
+        confidence = Math.min(65, confidence + 5);
+      } else if (!keywordMatch.hasRequiredKeywords && keywordMatch.contradictoryKeywordCount > 0) {
+        // Keywords contradict the diagnosis - reduce significantly
+        confidence = Math.max(10, confidence - 15);
+      }
+    } else {
+      // No patterns - use keyword-based scoring as fallback
       confidence = this.calculateBaselineScore(
         diagnosisType,
         synthesizedEvidence,
         allEvidence
       );
+
+      // If keywords are present, boost baseline
+      if (keywordMatch.hasRequiredKeywords) {
+        confidence = Math.min(40, confidence + (keywordMatch.supportingKeywordCount > 0 ? 15 : 10));
+      }
     }
 
     return {
@@ -217,6 +284,54 @@ export class HypothesisGenerator {
         matchingPatterns.length
       ),
     };
+  }
+
+  private scoreKeywordMatch(
+    diagnosis: DiagnosisType,
+    allEvidence: EvidenceItem[]
+  ): {
+    hasRequiredKeywords: boolean;
+    supportingKeywordCount: number;
+    contradictoryKeywordCount: number;
+  } {
+    const keywords = this.diagnosisKeywords[diagnosis];
+    if (!keywords) {
+      return {
+        hasRequiredKeywords: false,
+        supportingKeywordCount: 0,
+        contradictoryKeywordCount: 0,
+      };
+    }
+
+    let hasRequiredKeywords = false;
+    let supportingKeywordCount = 0;
+    let contradictoryKeywordCount = 0;
+
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+
+    // Check required keywords
+    for (const keyword of keywords.required) {
+      if (allText.includes(keyword.toLowerCase())) {
+        hasRequiredKeywords = true;
+        break;
+      }
+    }
+
+    // Count supporting keywords
+    for (const keyword of keywords.supporting) {
+      if (allText.includes(keyword.toLowerCase())) {
+        supportingKeywordCount++;
+      }
+    }
+
+    // Count contradictory keywords
+    for (const keyword of keywords.contradictory) {
+      if (allText.includes(keyword.toLowerCase())) {
+        contradictoryKeywordCount++;
+      }
+    }
+
+    return { hasRequiredKeywords, supportingKeywordCount, contradictoryKeywordCount };
   }
 
   private calculateBaselineScore(

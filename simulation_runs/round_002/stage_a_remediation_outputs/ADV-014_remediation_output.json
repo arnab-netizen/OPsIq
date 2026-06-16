@@ -24,8 +24,8 @@
           "operational_efficiency"
         ],
         "supportingItems": [
-          "06ede85b-74df-477f-84be-95c203cfd9ba",
-          "aa2d57b1-7466-4e74-932f-f7184d80effc"
+          "b673bc8d-fe53-4b3e-8818-ba54c56175c8",
+          "6634b386-ba53-4bb8-b3b1-c4135a3a75cd"
         ],
         "patternStrength": 4,
         "potentialRootCauses": [
@@ -58,6 +58,17 @@
       "patternStrengthSum": 4,
       "evidenceDiversity": 2,
       "reasoning": "operational bottleneck (1 pattern): 2 supporting, 0 contradictions"
+    },
+    {
+      "id": "hyp-2",
+      "rootCause": "customer_retention_erosion",
+      "confidence": 15,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions"
     }
   ],
   "rankedHypotheses": [
@@ -92,6 +103,22 @@
       "netScore": 5,
       "specificity": 4,
       "confidenceJustification": "Supporting: 2 items, Conflicting: 0 items, Total: 4 (1 pattern), Confidence = 49%"
+    },
+    {
+      "id": "hyp-2",
+      "rootCause": "customer_retention_erosion",
+      "confidence": 17,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions",
+      "supportingScore": 0,
+      "conflictScore": 0,
+      "netScore": 0,
+      "specificity": 2,
+      "confidenceJustification": "Supporting: 0 items, Conflicting: 0 items, Total: 4, Confidence = 17%"
     }
   ],
   "mappings": [
@@ -99,12 +126,12 @@
       "hypothesis": "unit_economics_breakdown",
       "supporting": [
         {
-          "evidenceId": "06ede85b-74df-477f-84be-95c203cfd9ba",
+          "evidenceId": "b673bc8d-fe53-4b3e-8818-ba54c56175c8",
           "strength": 10,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         },
         {
-          "evidenceId": "aa2d57b1-7466-4e74-932f-f7184d80effc",
+          "evidenceId": "6634b386-ba53-4bb8-b3b1-c4135a3a75cd",
           "strength": 10,
           "reasoning": "operational_efficiency evidence supports unit_economics_breakdown"
         }
@@ -112,11 +139,11 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "1e7be34f-cc3b-4be5-80e6-8aeeb54883ae",
+          "evidenceId": "25bffa67-fcbd-4307-95e3-a91cb4b5a100",
           "reasoning": "customer_mix evidence is neutral to unit_economics_breakdown"
         },
         {
-          "evidenceId": "015097ca-a661-4fd8-82ae-7ba7a9b3c142",
+          "evidenceId": "d9fdabad-f338-4135-b3c5-758e4d2c5ed4",
           "reasoning": "competitive_demand evidence is neutral to unit_economics_breakdown"
         }
       ],
@@ -126,7 +153,7 @@
       "hypothesis": "operational_bottleneck",
       "supporting": [
         {
-          "evidenceId": "aa2d57b1-7466-4e74-932f-f7184d80effc",
+          "evidenceId": "6634b386-ba53-4bb8-b3b1-c4135a3a75cd",
           "strength": 10,
           "reasoning": "operational_efficiency evidence supports operational_bottleneck"
         }
@@ -134,16 +161,40 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "06ede85b-74df-477f-84be-95c203cfd9ba",
+          "evidenceId": "b673bc8d-fe53-4b3e-8818-ba54c56175c8",
           "reasoning": "financial_health evidence is neutral to operational_bottleneck"
         },
         {
-          "evidenceId": "1e7be34f-cc3b-4be5-80e6-8aeeb54883ae",
+          "evidenceId": "25bffa67-fcbd-4307-95e3-a91cb4b5a100",
           "reasoning": "customer_mix evidence is neutral to operational_bottleneck"
         },
         {
-          "evidenceId": "015097ca-a661-4fd8-82ae-7ba7a9b3c142",
+          "evidenceId": "d9fdabad-f338-4135-b3c5-758e4d2c5ed4",
           "reasoning": "competitive_demand evidence is neutral to operational_bottleneck"
+        }
+      ],
+      "coverage": 100
+    },
+    {
+      "hypothesis": "customer_retention_erosion",
+      "supporting": [],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "b673bc8d-fe53-4b3e-8818-ba54c56175c8",
+          "reasoning": "financial_health evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "6634b386-ba53-4bb8-b3b1-c4135a3a75cd",
+          "reasoning": "operational_efficiency evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "25bffa67-fcbd-4307-95e3-a91cb4b5a100",
+          "reasoning": "customer_mix evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "d9fdabad-f338-4135-b3c5-758e4d2c5ed4",
+          "reasoning": "competitive_demand evidence is neutral to customer_retention_erosion"
         }
       ],
       "coverage": 100

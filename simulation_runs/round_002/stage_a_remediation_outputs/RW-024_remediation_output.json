@@ -21,6 +21,17 @@
   "hypotheses": [
     {
       "id": "hyp-0",
+      "rootCause": "unit_economics_breakdown",
+      "confidence": 25,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "unit economics breakdown (no patterns): 0 supporting, 0 contradictions"
+    },
+    {
+      "id": "hyp-1",
       "rootCause": "demand_forecasting_mismatch",
       "confidence": 10,
       "supportingEvidenceCount": 0,
@@ -29,17 +40,6 @@
       "patternStrengthSum": 0,
       "evidenceDiversity": 0,
       "reasoning": "demand forecasting mismatch (no patterns): 0 supporting, 0 contradictions"
-    },
-    {
-      "id": "hyp-1",
-      "rootCause": "unit_economics_breakdown",
-      "confidence": 10,
-      "supportingEvidenceCount": 0,
-      "conflictingEvidenceCount": 0,
-      "patternCount": 0,
-      "patternStrengthSum": 0,
-      "evidenceDiversity": 0,
-      "reasoning": "unit economics breakdown (no patterns): 0 supporting, 0 contradictions"
     },
     {
       "id": "hyp-2",
@@ -56,22 +56,6 @@
   "rankedHypotheses": [
     {
       "id": "hyp-0",
-      "rootCause": "demand_forecasting_mismatch",
-      "confidence": 17,
-      "supportingEvidenceCount": 0,
-      "conflictingEvidenceCount": 0,
-      "patternCount": 0,
-      "patternStrengthSum": 0,
-      "evidenceDiversity": 0,
-      "reasoning": "demand forecasting mismatch (no patterns): 0 supporting, 0 contradictions",
-      "supportingScore": 0,
-      "conflictScore": 0,
-      "netScore": 0,
-      "specificity": 2,
-      "confidenceJustification": "Supporting: 0 items, Conflicting: 0 items, Total: 3, Confidence = 17%"
-    },
-    {
-      "id": "hyp-1",
       "rootCause": "unit_economics_breakdown",
       "confidence": 17,
       "supportingEvidenceCount": 0,
@@ -80,6 +64,22 @@
       "patternStrengthSum": 0,
       "evidenceDiversity": 0,
       "reasoning": "unit economics breakdown (no patterns): 0 supporting, 0 contradictions",
+      "supportingScore": 0,
+      "conflictScore": 0,
+      "netScore": 0,
+      "specificity": 2,
+      "confidenceJustification": "Supporting: 0 items, Conflicting: 0 items, Total: 3, Confidence = 17%"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "demand_forecasting_mismatch",
+      "confidence": 17,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "demand forecasting mismatch (no patterns): 0 supporting, 0 contradictions",
       "supportingScore": 0,
       "conflictScore": 0,
       "netScore": 0,
@@ -105,10 +105,34 @@
   ],
   "mappings": [
     {
+      "hypothesis": "unit_economics_breakdown",
+      "supporting": [
+        {
+          "evidenceId": "8ac97437-610d-4260-9881-6e666e137470",
+          "strength": 7,
+          "reasoning": "financial_health evidence supports unit_economics_breakdown"
+        }
+      ],
+      "conflicting": [
+        {
+          "evidenceId": "6b96ccb8-6ec9-4793-91e1-989a60c8b4e8",
+          "strength": 7,
+          "reasoning": "market_position evidence may contradict unit_economics_breakdown"
+        }
+      ],
+      "neutral": [
+        {
+          "evidenceId": "e849ae99-0cd9-480c-ab05-4fe1b6da3286",
+          "reasoning": "talent_retention evidence is neutral to unit_economics_breakdown"
+        }
+      ],
+      "coverage": 100
+    },
+    {
       "hypothesis": "demand_forecasting_mismatch",
       "supporting": [
         {
-          "evidenceId": "de00a4ca-0669-4f1e-80a2-f36c7f3c2ac2",
+          "evidenceId": "6b96ccb8-6ec9-4793-91e1-989a60c8b4e8",
           "strength": 7,
           "reasoning": "market_position evidence supports demand_forecasting_mismatch"
         }
@@ -116,36 +140,12 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "e9c2ca15-c9cd-4df5-a241-289418ebbf8b",
+          "evidenceId": "e849ae99-0cd9-480c-ab05-4fe1b6da3286",
           "reasoning": "talent_retention evidence is neutral to demand_forecasting_mismatch"
         },
         {
-          "evidenceId": "1817a956-457b-41b4-8a7b-d4f8acf799c7",
+          "evidenceId": "8ac97437-610d-4260-9881-6e666e137470",
           "reasoning": "financial_health evidence is neutral to demand_forecasting_mismatch"
-        }
-      ],
-      "coverage": 100
-    },
-    {
-      "hypothesis": "unit_economics_breakdown",
-      "supporting": [
-        {
-          "evidenceId": "1817a956-457b-41b4-8a7b-d4f8acf799c7",
-          "strength": 7,
-          "reasoning": "financial_health evidence supports unit_economics_breakdown"
-        }
-      ],
-      "conflicting": [
-        {
-          "evidenceId": "de00a4ca-0669-4f1e-80a2-f36c7f3c2ac2",
-          "strength": 7,
-          "reasoning": "market_position evidence may contradict unit_economics_breakdown"
-        }
-      ],
-      "neutral": [
-        {
-          "evidenceId": "e9c2ca15-c9cd-4df5-a241-289418ebbf8b",
-          "reasoning": "talent_retention evidence is neutral to unit_economics_breakdown"
         }
       ],
       "coverage": 100
@@ -154,21 +154,21 @@
       "hypothesis": "go_to_market_misalignment",
       "supporting": [
         {
-          "evidenceId": "de00a4ca-0669-4f1e-80a2-f36c7f3c2ac2",
+          "evidenceId": "6b96ccb8-6ec9-4793-91e1-989a60c8b4e8",
           "strength": 7,
           "reasoning": "market_position evidence supports go_to_market_misalignment"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "1817a956-457b-41b4-8a7b-d4f8acf799c7",
+          "evidenceId": "8ac97437-610d-4260-9881-6e666e137470",
           "strength": 7,
           "reasoning": "financial_health evidence may contradict go_to_market_misalignment"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "e9c2ca15-c9cd-4df5-a241-289418ebbf8b",
+          "evidenceId": "e849ae99-0cd9-480c-ab05-4fe1b6da3286",
           "reasoning": "talent_retention evidence is neutral to go_to_market_misalignment"
         }
       ],
@@ -176,6 +176,6 @@
     }
   ],
   "evidenceTraceRate": 100,
-  "topHypothesis": "demand_forecasting_mismatch",
+  "topHypothesis": "unit_economics_breakdown",
   "topConfidence": 17
 }

@@ -9,7 +9,7 @@
     {
       "caseId": "BLND-006",
       "traceRate": 100,
-      "topHypothesis": "go_to_market_misalignment",
+      "topHypothesis": "customer_retention_erosion",
       "confidence": 49
     },
     {
@@ -45,7 +45,7 @@
     {
       "caseId": "ADV-012",
       "traceRate": 100,
-      "topHypothesis": "go_to_market_misalignment",
+      "topHypothesis": "customer_retention_erosion",
       "confidence": 49
     },
     {
@@ -87,7 +87,7 @@
     {
       "caseId": "RW-024",
       "traceRate": 100,
-      "topHypothesis": "demand_forecasting_mismatch",
+      "topHypothesis": "unit_economics_breakdown",
       "confidence": 17
     },
     {

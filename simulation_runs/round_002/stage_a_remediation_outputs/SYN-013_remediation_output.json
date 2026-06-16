@@ -25,8 +25,8 @@
           "customer_retention"
         ],
         "supportingItems": [
-          "91acba25-f4c5-4ea9-966e-44b2b633bcb5",
-          "5e535365-5b06-40ba-a575-fb6d11228fdb"
+          "505762a3-d036-40c7-bd38-e3ab2e1c8dc3",
+          "9fcb7091-75c4-4f7a-8f5a-e717cc3bc5fa"
         ],
         "patternStrength": 4,
         "potentialRootCauses": [
@@ -51,7 +51,7 @@
     {
       "id": "hyp-1",
       "rootCause": "customer_retention_erosion",
-      "confidence": 10,
+      "confidence": 20,
       "supportingEvidenceCount": 0,
       "conflictingEvidenceCount": 0,
       "patternCount": 0,
@@ -126,12 +126,12 @@
       "hypothesis": "go_to_market_misalignment",
       "supporting": [
         {
-          "evidenceId": "91acba25-f4c5-4ea9-966e-44b2b633bcb5",
+          "evidenceId": "505762a3-d036-40c7-bd38-e3ab2e1c8dc3",
           "strength": 10,
           "reasoning": "customer_retention evidence supports go_to_market_misalignment"
         },
         {
-          "evidenceId": "5e535365-5b06-40ba-a575-fb6d11228fdb",
+          "evidenceId": "9fcb7091-75c4-4f7a-8f5a-e717cc3bc5fa",
           "strength": 5,
           "reasoning": "market_position evidence supports go_to_market_misalignment"
         }
@@ -139,15 +139,15 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "4a0ebf86-1b5c-40ed-8f10-5705f2f008e0",
+          "evidenceId": "f353ee51-5db5-458a-b41f-0c867b2acdda",
           "reasoning": "product_adoption evidence is neutral to go_to_market_misalignment"
         },
         {
-          "evidenceId": "b0e3fd17-7047-4cc2-9cb5-059489c01a7d",
+          "evidenceId": "787484cb-cf81-4811-b020-d7a7c8b8f64c",
           "reasoning": "customer_success evidence is neutral to go_to_market_misalignment"
         },
         {
-          "evidenceId": "08133942-0c5c-48c7-a2d2-a0de44d74e0f",
+          "evidenceId": "487abebf-7441-4d26-937c-1630cd5287ca",
           "reasoning": "unit_economics evidence is neutral to go_to_market_misalignment"
         }
       ],
@@ -157,7 +157,7 @@
       "hypothesis": "customer_retention_erosion",
       "supporting": [
         {
-          "evidenceId": "91acba25-f4c5-4ea9-966e-44b2b633bcb5",
+          "evidenceId": "505762a3-d036-40c7-bd38-e3ab2e1c8dc3",
           "strength": 10,
           "reasoning": "customer_retention evidence supports customer_retention_erosion"
         }
@@ -165,19 +165,19 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "4a0ebf86-1b5c-40ed-8f10-5705f2f008e0",
+          "evidenceId": "f353ee51-5db5-458a-b41f-0c867b2acdda",
           "reasoning": "product_adoption evidence is neutral to customer_retention_erosion"
         },
         {
-          "evidenceId": "b0e3fd17-7047-4cc2-9cb5-059489c01a7d",
+          "evidenceId": "787484cb-cf81-4811-b020-d7a7c8b8f64c",
           "reasoning": "customer_success evidence is neutral to customer_retention_erosion"
         },
         {
-          "evidenceId": "5e535365-5b06-40ba-a575-fb6d11228fdb",
+          "evidenceId": "9fcb7091-75c4-4f7a-8f5a-e717cc3bc5fa",
           "reasoning": "market_position evidence is neutral to customer_retention_erosion"
         },
         {
-          "evidenceId": "08133942-0c5c-48c7-a2d2-a0de44d74e0f",
+          "evidenceId": "487abebf-7441-4d26-937c-1630cd5287ca",
           "reasoning": "unit_economics evidence is neutral to customer_retention_erosion"
         }
       ],
@@ -187,7 +187,7 @@
       "hypothesis": "demand_forecasting_mismatch",
       "supporting": [
         {
-          "evidenceId": "5e535365-5b06-40ba-a575-fb6d11228fdb",
+          "evidenceId": "9fcb7091-75c4-4f7a-8f5a-e717cc3bc5fa",
           "strength": 5,
           "reasoning": "market_position evidence supports demand_forecasting_mismatch"
         }
@@ -195,19 +195,19 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "91acba25-f4c5-4ea9-966e-44b2b633bcb5",
+          "evidenceId": "505762a3-d036-40c7-bd38-e3ab2e1c8dc3",
           "reasoning": "customer_retention evidence is neutral to demand_forecasting_mismatch"
         },
         {
-          "evidenceId": "4a0ebf86-1b5c-40ed-8f10-5705f2f008e0",
+          "evidenceId": "f353ee51-5db5-458a-b41f-0c867b2acdda",
           "reasoning": "product_adoption evidence is neutral to demand_forecasting_mismatch"
         },
         {
-          "evidenceId": "b0e3fd17-7047-4cc2-9cb5-059489c01a7d",
+          "evidenceId": "787484cb-cf81-4811-b020-d7a7c8b8f64c",
           "reasoning": "customer_success evidence is neutral to demand_forecasting_mismatch"
         },
         {
-          "evidenceId": "08133942-0c5c-48c7-a2d2-a0de44d74e0f",
+          "evidenceId": "487abebf-7441-4d26-937c-1630cd5287ca",
           "reasoning": "unit_economics evidence is neutral to demand_forecasting_mismatch"
         }
       ],
