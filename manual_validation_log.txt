@@ -1,0 +1,82 @@
+[MANUAL_BASELINE_VALIDATION] Starting systematic review...
+Cases to review: 40
+  RW-001... VALID_REVIEWED
+  RW-002... VALID_REVIEWED
+  RW-003... VALID_REVIEWED
+  RW-004... VALID_REVIEWED
+  RW-005... VALID_REVIEWED
+  RW-006... VALID_REVIEWED
+  RW-007... VALID_REVIEWED
+  RW-008... VALID_REVIEWED
+  RW-009... VALID_REVIEWED
+  RW-010... VALID_REVIEWED
+  RW-011... VALID_REVIEWED
+  RW-012... VALID_REVIEWED
+  RW-013... VALID_REVIEWED
+  RW-014... VALID_REVIEWED
+  RW-015... VALID_REVIEWED
+  ADV-001... VALID_REVIEWED
+  ADV-002... VALID_REVIEWED
+  ADV-003... VALID_REVIEWED
+  ADV-004... VALID_REVIEWED
+  ADV-005... VALID_REVIEWED
+  ADV-006... VALID_REVIEWED
+  ADV-007... VALID_REVIEWED
+  ADV-008... VALID_REVIEWED
+  ADV-009... VALID_REVIEWED
+  ADV-010... VALID_REVIEWED
+  BLND-001... VALID_REVIEWED
+  BLND-002... VALID_REVIEWED
+  BLND-003... VALID_REVIEWED
+  BLND-004... VALID_REVIEWED
+  BLND-005... VALID_REVIEWED
+  SYN-001... VALID_REVIEWED
+  SYN-002... VALID_REVIEWED
+  SYN-003... VALID_REVIEWED
+  SYN-004... VALID_REVIEWED
+  SYN-005... VALID_REVIEWED
+  SYN-006... VALID_REVIEWED
+  SYN-007... VALID_REVIEWED
+  SYN-008... VALID_REVIEWED
+  SYN-009... VALID_REVIEWED
+  SYN-010... VALID_REVIEWED
+✓ Per-case reviews: /home/user/OPsIq/MANUAL_BASELINE_VALIDATION_PER_CASE.json
+✓ Aggregate results: /home/user/OPsIq/MANUAL_BASELINE_VALIDATION_AGGREGATE.json
+
+================================================================================
+MANUAL_BASELINE_VALIDATION SUMMARY
+================================================================================
+Cases reviewed: 40
+Valid reviewed: 40
+Invalid: 0
+
+Scoring:
+  Automated avg: 5.58
+  Manual avg: 5.53
+  Manual median: 5.25
+  Delta: -0.05
+
+Score Fairness:
+  Confirmed: 35
+  Too harsh: 4
+  Too generous: 1
+
+Root Cause Verdicts:
+  Correct: 6
+  Partial: 5
+  Missed: 29
+
+First Action Verdicts:
+  Correct: 0
+  Partial: 38
+  Generic/Missing: 2
+
+Safety Issues:
+  Dangerous: 0
+  Hallucinated: 0
+  False confidence: 0
+  Constraint violations: 5
+  Leakage: 0
+
+Benchmark Trust Status: TRUSTED
+================================================================================
