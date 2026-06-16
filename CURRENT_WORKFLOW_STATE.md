@@ -61,7 +61,7 @@
 
 **Mandatory Step:** Round 2 is mandatory before consultant-grade claim (§13, §14, §15)
 
-**Current Status:** TEMPLATES_AND_INFRASTRUCTURE_COMPLETE
+**Current Status:** CASE_SOURCING_IN_PROGRESS (1/50 cases created)
 
 **Specification Document:** ROUND_2_CASE_PACK_SPECIFICATION.md
 
@@ -72,7 +72,7 @@
 - ≥10 adversarial cases (new trap types)
 - ≥5 blind-outcome cases (new forward-looking scenarios)
 
-**Completed in This Run:**
+**Completed in Previous Run:**
 
 ✓ Case Templates Created:
 - CASE_TEMPLATE_REAL_WORLD.json (with guidance and example structure)
@@ -93,18 +93,29 @@
 - LEAKAGE_AUDIT_CHECKLIST.md (prevents answer-key hints in case inputs)
 - SOURCE_QUALITY_AUDIT.md (verifies source legitimacy and Round 1 distinctness)
 
-**Remaining Tasks:**
-1. Source 50+ fresh cases (independent of Round 1) - populate CASE_SOURCING_LOG
-2. Create manual answer keys (consultant-level, domain expert) - populate case directories
-3. Create manual scoring guides per case type - finalize SCORING_GUIDES_STATUS
-4. Run leakage audit (pass/fail on all 50+ cases)
-5. Run source quality audit (pass/fail on all 50+ cases)
+**Completed in Current Run:**
 
-**Timeline:** 10-15 days (case sourcing + answer keys + guides + audits)
-- Sourcing: 5-7 days
-- Answer keys: 5-7 days (parallel with sourcing)
-- Audits: 1-2 days (running as cases are ready)
-- Buffer: 1-2 days
+✓ Case Sourcing Begun:
+- RW-016 case input created (specialty home goods retailer, multi-dimensional problem)
+- RW-016 answer key created (GO_TO_MARKET_MISALIGNMENT diagnosis with 7-dimension scoring)
+- CASE_SOURCING_LOG.md updated (1/50 cases sourced, 2%)
+- ANSWER_KEYS_STATUS.md updated (1/50 answer keys created, 2%)
+- Infrastructure validated with proof-of-concept case
+
+**Remaining Tasks:**
+1. Source 49+ remaining cases (RW-017–RW-030: 14 more; PD-011–PD-020: 10; SYN-011–SYN-020: 10; ADV-011–ADV-020: 10; BLND-006–BLND-010: 5)
+2. Create manual answer keys for remaining 49 cases (consultant-level, domain expert review)
+3. Create manual scoring guides per case type (5 guides: RW, PD, SYN, ADV, BLND) - will finalize SCORING_GUIDES_STATUS
+4. Run leakage audit on all 50 cases (pass/fail verification that answer keys contain no hints visible in case inputs)
+5. Run source quality audit on all 50 cases (pass/fail verification of source legitimacy and Round 1 distinctness)
+
+**Timeline:** 9-14 days remaining (case sourcing + answer keys + guides + audits)
+- Sourcing: 4-6 days (1 case done, 49 remaining)
+- Answer keys: 4-6 days (parallel with sourcing; 1 done, 49 remaining)
+- Scoring guides: 1-2 days (case-type templates, can run in parallel)
+- Leakage audit: 1 day (running as cases complete)
+- Source quality audit: 1 day (running as cases complete)
+- Buffer: 1 day
 
 **Next Step After Preparation:** Execute Round 2 following 11-step protocol (§14)
 
