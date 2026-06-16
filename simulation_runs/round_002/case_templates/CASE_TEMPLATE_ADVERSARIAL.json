@@ -1,0 +1,95 @@
+{
+  "caseId": "ADV-011 (Example: Adversarial Case - Trap Type: Survivorship Bias)",
+  "caseType": "ADVERSARIAL",
+  "industry": "Industry designed to include the trap",
+  "businessModel": "Business model relevant to the trap archetype",
+  "businessStage": "Stage chosen to make trap salient",
+  "sourceNote": "Adversarial case designed to test diagnosis engine resilience to cognitive traps, missing data, or conflicting signals. Trap type: [SURVIVORSHIP_BIAS / CONFLICTING_SIGNALS / MISSING_CRITICAL_DATA / COGNITIVE_OVERLOAD / RECENCY_BIAS]. All data realistic but structured to test engine's handling of ambiguous or misleading evidence. No answer-key content embedded in inputs.",
+  "ownerIntake": {
+    "businessType": "Business description that sets up the trap scenario (e.g., for survivorship bias trap: 'Portfolio of 15 restaurants, 3 of which were closed in the past 18 months')",
+    "stage": "Stage metrics that emphasize the trap (e.g., 'Blended portfolio: $12M revenue, 8% EBITDA margin. Operating restaurants: $13.5M revenue, 12% EBITDA margin (survivorship bias)')",
+    "ownerGoal": "Goal that the trap obscures (e.g., 'Expand the portfolio profitably, but unclear whether current stores are truly healthy or benefiting from selection bias')",
+    "ownerConstraints": [
+      "Constraint exacerbated by the trap (e.g., 'Cannot easily exit underperforming stores due to long-term leases; sunk cost bias risk')",
+      "Constraint that masks the problem (e.g., 'Regional economic downturn affecting all competitors, but our surviving stores outperforming regional average')",
+      "Time constraint that creates pressure for quick decision despite unclear data (e.g., 'Must decide on 3-store expansion within 60 days')"
+    ],
+    "immediateConcern": "The business problem the owner perceives (which may be incomplete/misleading due to the trap) (e.g., 'Our operating restaurants are highly profitable. Should we expand aggressively?')",
+    "availableData": [
+      "Data that supports one narrative but obscures the trap (e.g., 'Current operating restaurants have average EBITDA margin of 12% and strong customer satisfaction scores')",
+      "Summary data lacking granularity (e.g., 'Portfolio revenue is stable YoY' - true for survivors, but losing revenue from closed stores)')",
+      "Selective data samples (e.g., 'Three of our top customers are expanding their relationships' - cherry-picked growth examples)"
+    ],
+    "unavailableData": [
+      "Granular data that would reveal the trap (e.g., 'Month-by-month performance of the 3 closed restaurants before closure showing deterioration')",
+      "Cohort analysis that would show selection bias (e.g., 'Store cohort survival rates by vintage')",
+      "Counterfactual or baseline comparisons (e.g., 'Market conditions for closed vs operating stores - were markets different?')"
+    ],
+    "timeHorizon": "60 days (expansion decision deadline)",
+    "riskAppetite": "AGGRESSIVE (owner biased by success of survivors to underestimate risk)"
+  },
+  "clientContext": {
+    "industry": "Restaurant Franchising / Portfolio Operations",
+    "size": "mid-market (privately held portfolio company)",
+    "revenueImpactUrgency": "HIGH (expansion capital decision with significant downside if diagnosis misses survivorship bias)"
+  },
+  "businessProblem": "Adversarial scenario with embedded trap: 'Restaurant portfolio owner sees strong profitability in operating stores (12% EBITDA margin) and wants to expand rapidly. However, the portfolio has closed 3 of 18 stores in the past 18 months, with aggregate portfolio EBITDA margin at only 8%. The trap: survivorship bias may cause owner to extrapolate from strong performers and miss the structural issues that caused 17% store closure rate. The consultant must recognize that the healthy cohort may not be representative, and that expansion without understanding closure drivers risks replicating failures at scale.'",
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Strong profitability data (e.g., 'Operating restaurants delivered 12% EBITDA margin in 2025, with customer satisfaction scores above 4.5/5.0')",
+      "confidence": "HIGH (based on operating store data)",
+      "source": "Franchisee financial reports for 15 operating locations",
+      "isCritical": false,
+      "supportingData": {
+        "operating_stores_ebitda": "12%",
+        "nps_or_satisfaction": "4.5/5.0",
+        "count": "15 stores"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Portfolio-level metrics that mask the problem (e.g., 'Portfolio revenue flat YoY at $12.1M vs $12.0M prior year' - true for survivors, but net of closures and new openings)",
+      "confidence": "HIGH",
+      "source": "Portfolio aggregate financial reporting",
+      "isCritical": true,
+      "supportingData": {
+        "portfolio_revenue_current": "$12.1M",
+        "portfolio_revenue_prior": "$12.0M",
+        "portfolio_ebitda_margin": "8%",
+        "note": "18 stores starting, 3 closed, appears stable in aggregate"
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Selective success stories without context (e.g., 'Three flagship locations in urban markets expanded customer seating by 30% in 2025 and grew same-store revenue 15%')",
+      "confidence": "MEDIUM (cherry-picked examples)",
+      "source": "Management narrative; may represent success cases but not typical performance",
+      "isCritical": false,
+      "supportingData": {
+        "flagship_stores": "3 locations",
+        "growth_rate": "15%",
+        "seating_expansion": "30%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Missing data: Performance metrics for closed stores before closure, cohort analysis by vintage, market-adjusted performance, and store-level failure drivers (e.g., 'Three closed stores had deteriorating traffic and margin compression in the 12 months prior to closure, but granular data not provided')",
+      "confidence": "LOW (missing data prevents assessment; trap likely here)",
+      "source": "Internally known but not disclosed; would require detailed investigation",
+      "isCritical": true,
+      "supportingData": {
+        "stores_closed_18mo": "3",
+        "closure_rate_percentage": "17%",
+        "failure_drivers": "Unknown without detailed store-level data"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH (portfolio company with capital for expansion)",
+    "timeHorizonDays": 60,
+    "staffCapacity": "MEDIUM (owner and small management team, but may lack analytical depth to audit cohort bias)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
+}

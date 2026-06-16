@@ -1,0 +1,83 @@
+{
+  "caseId": "PD-011 (Example: Public Dataset Case)",
+  "caseType": "PUBLIC_DATASET",
+  "industry": "Industry/sector (e.g., Retail, Manufacturing, Financial Services)",
+  "businessModel": "Type of business model observable from public data",
+  "businessStage": "Stage inferred from financial data (Growth, Mature, Decline)",
+  "sourceNote": "Case constructed from public sources: SEC filings (10-K, 10-Q), Yahoo Finance historical data, public company reports, or Kaggle datasets. All evidence extracted from publicly available data. No proprietary internal data. No answer-key content included.",
+  "ownerIntake": {
+    "businessType": "Description of company based on public filings and SEC data (e.g., 'Regional retail chain with 85 physical locations and growing e-commerce presence')",
+    "stage": "Business stage with quantified metrics from public sources: annual revenue, YoY revenue growth %, net income, operating margin, employee count where disclosed",
+    "ownerGoal": "Inferred goal from business strategy disclosures or investor communications (e.g., 'Expand digital capabilities to offset store traffic decline' or 'Achieve 20%+ EBITDA margin by 2028')",
+    "ownerConstraints": [
+      "Structural constraint from public data (e.g., 'Heavy debt burden: $800M in outstanding bonds with 5-year maturity' or 'Unionized workforce limits flexibility in cost reduction')",
+      "Market constraint observable from industry analysis (e.g., 'Facing secular decline in core retail category with 8-12% annual shrinkage')",
+      "Operational constraint from disclosed metrics (e.g., 'High capex requirements: $50-80M annually to maintain store condition')"
+    ],
+    "immediateConcern": "Challenge inferred from recent financial trends, analyst reports, or SEC disclosures (e.g., 'Operating income declined 32% YoY despite flat revenues, indicating margin pressure' or 'Same-store sales declined 5% while competitor X grew 12%')",
+    "availableData": [
+      "Financial statements: Revenue, gross profit, operating income, net income, balance sheet items (current assets, current liabilities, debt, equity)",
+      "Cash flow metrics: Operating cash flow, free cash flow, capex, dividend payments",
+      "Operational metrics where disclosed: Store count, same-store sales growth, customer count, customer lifetime value estimates"
+    ],
+    "unavailableData": [
+      "Customer-level data (companies rarely disclose granular customer churn or cohort analysis)",
+      "Detailed cost structure (most companies aggregate cost of goods sold and operating expenses)",
+      "Competitive win/loss data or specific customer feedback",
+      "Forward guidance is often limited (no access to management's internal forecasts)"
+    ],
+    "timeHorizon": "Timeframe inferred from business urgency (immediate if financial deterioration rapid, medium-term if long-term trend)",
+    "riskAppetite": "Risk appetite inferred from capital structure and historical strategy (conservative if highly leveraged, aggressive if balance sheet strong)"
+  },
+  "clientContext": {
+    "industry": "Industry from public filings",
+    "size": "Company size from public metrics: startup (rare in public datasets), small, mid-market, or enterprise",
+    "revenueImpactUrgency": "CRITICAL if company is unprofitable with declining revenue, HIGH if margins eroding rapidly, MEDIUM if stable but facing headwinds, LOW if growing and profitable"
+  },
+  "businessProblem": "2-3 sentence diagnosis statement: What multi-dimensional challenge does the financial data reveal? Example: 'ABC Retail faces a structural profitability crisis: revenues flat YoY while operating expenses increased 8%, compressing margins from 12% to 9.8%. Simultaneously, the company is managing $800M in maturing debt while capex requirements remain high. The core question is whether the business can stabilize margins through operational efficiency before debt maturity forces strategic alternatives.'",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Specific financial metric from SEC filings or public data (e.g., 'Operating margin compressed from 12% (2023) to 9.8% (2025)' or 'Free cash flow turned negative in Q3 2025 at -$45M vs +$30M in Q3 2024')",
+      "confidence": "HIGH (from audited financial statements)",
+      "source": "SEC EDGAR filing 10-K 2025 or Yahoo Finance historical data",
+      "isCritical": true,
+      "supportingData": {
+        "metric_prior": "12% (2023)",
+        "metric_current": "9.8% (2025)",
+        "filing_date": "March 15, 2026"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operational metric showing deterioration (e.g., 'Same-store sales declined 3.2% in 2025 vs +2.1% in 2024, while comparable store operating expenses increased 4.5%' or 'Inventory turns declined from 4.8x to 4.2x annually')",
+      "confidence": "HIGH",
+      "source": "10-K filing, investor presentation",
+      "isCritical": true,
+      "supportingData": {
+        "same_store_sales_2024": "+2.1%",
+        "same_store_sales_2025": "-3.2%",
+        "operating_expense_growth": "+4.5%"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Debt and capital structure evidence (e.g., 'Net debt increased to $800M with debt maturity ladder: $150M due 2027, $200M due 2029' or 'Debt/EBITDA ratio increased from 2.1x to 3.2x')",
+      "confidence": "HIGH",
+      "source": "Balance sheet from 10-K filing",
+      "isCritical": true,
+      "supportingData": {
+        "total_debt": "$800M",
+        "debt_due_2027": "$150M",
+        "debt_to_ebitda": "3.2x"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "HIGH (public company with access to capital markets, but constrained by debt covenants and board/investor expectations)",
+    "timeHorizonDays": "365 (typically 12-month planning horizon for public company quarterly cadence)",
+    "staffCapacity": "HIGH (typically large management teams and access to consultant resources, but constrained by organizational complexity)",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": true
+  }
+}

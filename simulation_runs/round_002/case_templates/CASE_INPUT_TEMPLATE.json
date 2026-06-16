@@ -1,0 +1,56 @@
+{
+  "caseId": "RW-XXX or PD-XXX or SYN-XXX or ADV-XXX or BLND-XXX",
+  "caseType": "REAL_CASE_STUDY or PUBLIC_DATASET or SYNTHETIC or ADVERSARIAL or BLIND_OUTCOME",
+  "industry": "Industry/sector of the business",
+  "businessModel": "Type of business model (e.g., SaaS, Retail, Manufacturing)",
+  "businessStage": "Current business stage (e.g., Early, Growth, Mature, Decline)",
+  "sourceNote": "Evidence below is derived ONLY from case data. No answer-key content included.",
+  "ownerIntake": {
+    "businessType": "Concise business description",
+    "stage": "Current business stage with relevant metrics",
+    "ownerGoal": "What the owner wants to achieve (time-bound if possible)",
+    "ownerConstraints": [
+      "Constraint 1: Description of resource/capability/time/organizational constraint",
+      "Constraint 2: ...",
+      "Constraint 3: ..."
+    ],
+    "immediateConcern": "The pressing issue the owner brought up",
+    "availableData": [
+      "Data source 1 (e.g., financial metrics, customer data, market data)",
+      "Data source 2",
+      "Data source 3"
+    ],
+    "unavailableData": [
+      "Missing data that would help diagnosis (e.g., competitor details, internal metrics)",
+      "..."
+    ],
+    "timeHorizon": "Expected timeframe for decision (e.g., 6-12 months, immediate)",
+    "riskAppetite": "CONSERVATIVE, MEDIUM, AGGRESSIVE"
+  },
+  "clientContext": {
+    "industry": "industry string",
+    "size": "startup, small, mid-market, enterprise",
+    "revenueImpactUrgency": "LOW, MEDIUM, HIGH, CRITICAL"
+  },
+  "businessProblem": "Comprehensive statement of the business problem requiring diagnosis and recommendation. Should be 2-3 sentences, multi-dimensional, evidence-backed.",
+  "evidence": [
+    {
+      "dimension": "customer_retention or operational_efficiency or quality_delivery or financial_health or process_maturity or team_capability or market_position",
+      "finding": "Specific evidence statement (e.g., 'Sales declined 30% YoY' or 'Customer churn rate increased from 5% to 12%')",
+      "confidence": "HIGH or MEDIUM or LOW",
+      "source": "Source of evidence (e.g., 'Owner-reported financial data', 'Customer survey', 'Third-party analysis')",
+      "isCritical": true,
+      "supportingData": {
+        "metric1": "numeric or string value",
+        "metric2": "numeric or string value"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MINIMAL, LOW, MEDIUM, HIGH",
+    "timeHorizonDays": 365,
+    "staffCapacity": "MINIMAL, LOW, MEDIUM, HIGH",
+    "cashRunwayMonths": "numeric or null",
+    "legalComplianceSensitive": true
+  }
+}

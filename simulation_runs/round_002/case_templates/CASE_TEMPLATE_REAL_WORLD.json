@@ -1,0 +1,80 @@
+{
+  "caseId": "RW-016 (Example: Real-World Case from Business Case Study)",
+  "caseType": "REAL_CASE_STUDY",
+  "industry": "Specific industry sector (e.g., SaaS, Retail, Manufacturing, Healthcare)",
+  "businessModel": "Specific business model type (e.g., Subscription, Direct Sales, Marketplace, Hybrid)",
+  "businessStage": "Business stage with stage-specific metrics",
+  "sourceNote": "Case sourced from [SPECIFIC SOURCE: Author, Publication, Date]. All evidence derived solely from published case data. No proprietary or internal data included. No answer-key content included.",
+  "ownerIntake": {
+    "businessType": "Concise description of what the business does, how it makes money, key value proposition",
+    "stage": "Current stage with quantified metrics: revenue, growth rate, employee count, geographic scope, market share where available",
+    "ownerGoal": "Specific, time-bound goal the owner/leadership team stated (e.g., 'double revenue within 18 months', 'expand to 3 new markets by Q4 2026')",
+    "ownerConstraints": [
+      "Specific constraint with quantified impact (e.g., 'Budget capped at $2M for the fiscal year' or 'Only 2 engineering resources available')",
+      "Organizational or market constraint (e.g., 'Limited brand recognition in enterprise segment' or 'Competitor X just entered the market')",
+      "Time constraint if applicable (e.g., 'Must achieve profitability within 12 months or face board pressure')"
+    ],
+    "immediateConcern": "The specific problem the owner brought to a consultant or decision-maker (e.g., 'Revenue growth has plateaued' or 'Customer churn increased 40% year-over-year')",
+    "availableData": [
+      "Financial metrics: income statement, balance sheet, cash flow items available",
+      "Operational data: production volumes, efficiency metrics, quality metrics",
+      "Customer/market data: customer acquisition cost, lifetime value, retention rates, NPS or satisfaction scores"
+    ],
+    "unavailableData": [
+      "Specific missing data that would clarify diagnosis (e.g., 'No breakdown of customer churn by segment or cohort')",
+      "Competitor intelligence not available to the business",
+      "Internal process details not disclosed in public case study"
+    ],
+    "timeHorizon": "Decision timeframe: immediate (days), short-term (months), medium-term (6-12 months), or longer",
+    "riskAppetite": "CONSERVATIVE (minimize downside risk), MEDIUM (balanced risk/reward), or AGGRESSIVE (accept higher risk for higher potential return)"
+  },
+  "clientContext": {
+    "industry": "Same as top-level industry field",
+    "size": "startup, small, mid-market, or enterprise based on revenue/employees",
+    "revenueImpactUrgency": "LOW (nice-to-have), MEDIUM (important within 12 months), HIGH (critical within 6 months), or CRITICAL (immediate threat to viability)"
+  },
+  "businessProblem": "2-3 sentence synthesis: What is the multi-dimensional business challenge? What evidence indicates this is a problem? Why should it matter to the owner right now? Example: 'Post-Series A, the company faces a critical choice between rapid market expansion and operational consolidation. Revenue growth has slowed from 40% YoY to 12% YoY despite increased marketing spend, suggesting either market saturation or messaging misalignment. Simultaneously, customer churn increased 15pp, indicating potential product-market fit erosion that could compound the growth challenge.'",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Specific, quantified evidence statement (e.g., 'Gross margin declined from 68% to 52% over 18 months' or 'Cash runway reduced to 14 months at current burn rate')",
+      "confidence": "HIGH (multiple independent sources confirming), MEDIUM (single reliable source or inference from multiple weak sources), or LOW (anecdotal, unclear causation, or single weak source)",
+      "source": "Specific attribution: e.g., 'Company annual report 2025', 'Industry analyst report (Gartner Q3 2026)', 'Customer interviews (5 customers sampled)'",
+      "isCritical": true,
+      "supportingData": {
+        "metric_name": "numeric value with units (e.g., '52%' or '14 months')",
+        "metric_name_2": "prior value for comparison (e.g., '68%' to show the change)"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Customer-specific evidence (e.g., 'Enterprise segment churn rate doubled from 8% to 16% in the past 12 months' or 'Net retention rate fell below 100% for the first time')",
+      "confidence": "HIGH",
+      "source": "Company financial disclosures or customer analytics",
+      "isCritical": false,
+      "supportingData": {
+        "cohort": "Enterprise / SMB / Startup",
+        "churn_prior": "8%",
+        "churn_current": "16%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Market competitive or perception evidence (e.g., 'Lost three major contracts to Competitor X, citing feature parity and lower pricing' or 'Brand awareness in target segment remains below 15% vs. 60% for market leader')",
+      "confidence": "MEDIUM",
+      "source": "Industry reports, competitor win/loss analysis, brand tracking study",
+      "isCritical": true,
+      "supportingData": {
+        "lost_deals": "3 Enterprise contracts to Competitor X",
+        "brand_awareness": "15% vs leader 60%"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MINIMAL (under $100k), LOW ($100k-$500k), MEDIUM ($500k-$5M), or HIGH (over $5M)",
+    "timeHorizonDays": "Number of days until decision must be made (e.g., 180 for 6-month horizon)",
+    "staffCapacity": "MINIMAL (0-2 people available), LOW (3-5 people), MEDIUM (6-15 people), or HIGH (15+ people with discretionary allocation)",
+    "cashRunwayMonths": "Number of months of operations the company can sustain at current burn rate (null if not applicable for profitable companies)",
+    "legalComplianceSensitive": true
+  }
+}

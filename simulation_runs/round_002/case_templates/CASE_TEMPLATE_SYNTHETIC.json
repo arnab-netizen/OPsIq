@@ -1,0 +1,83 @@
+{
+  "caseId": "SYN-011 (Example: Synthetic Case - Stress Test)",
+  "caseType": "SYNTHETIC",
+  "industry": "Sector chosen for stress-test relevance",
+  "businessModel": "Business model type relevant to test scenario",
+  "businessStage": "Stage assigned for test scenario",
+  "sourceNote": "Synthetic case created to stress-test diagnosis engine on specific failure mode archetype. All data generated to be realistic and representative. No cases replicate Round 1 synthetic patterns. No answer-key content embedded in case inputs.",
+  "ownerIntake": {
+    "businessType": "Realistic business description matching the stress-test scenario (e.g., 'B2B SaaS platform for supply chain optimization, serving mid-market manufacturers')",
+    "stage": "Stage with metrics designed to trigger the target failure mode (e.g., for UNIT_ECONOMICS_BREAKDOWN test: 'Post-Series B, $8M ARR growing 35% YoY, but unit economics deteriorating: CAC $45k, LTV $120k (3-year payback)')",
+    "ownerGoal": "Goal that makes the stress-test scenario salient (e.g., 'Prepare for Series C fundraising within 12 months while demonstrating unit economics improvement')",
+    "ownerConstraints": [
+      "Constraint that intensifies the stress-test scenario (e.g., 'Cannot raise additional capital until unit economics improve' or 'Board requires profitability path within 2 years')",
+      "Structural constraint supporting the test (e.g., 'Sales cycles 6-9 months, so early customer cohort LTV data sparse')",
+      "Resource constraint relevant to remediation (e.g., 'Engineering team fully allocated to product; no capacity for experimental optimizations')"
+    ],
+    "immediateConcern": "The specific problem the scenario poses (e.g., 'With current unit economics, scaling to $100M ARR will require $300M+ in cumulative CapEx, but capital is constrained. What drives unit economics deterioration?')",
+    "availableData": [
+      "Financial metrics: ARR, MRR, gross margin %, customer acquisition cost (CAC), customer lifetime value (LTV), payback period",
+      "Operational data: Sales cycle length, time to first dollar, customer retention cohorts, expansion revenue per customer, churn by cohort age",
+      "Customer data: Customer acquisition channels, pricing tiers, customer size distribution, satisfaction scores"
+    ],
+    "unavailableData": [
+      "Specific competitor pricing or win/loss data",
+      "Detailed product usage analytics (assumed available internally but not disclosed)",
+      "Market research on willingness to pay or price elasticity"
+    ],
+    "timeHorizon": "180 days (6-month decision point: Series C prep or strategic pivot)",
+    "riskAppetite": "MEDIUM (funding-dependent company must balance growth with economics)"
+  },
+  "clientContext": {
+    "industry": "B2B SaaS / Supply Chain",
+    "size": "mid-market (series B company)",
+    "revenueImpactUrgency": "HIGH (unit economics directly impact fundraising ability and long-term viability)"
+  },
+  "businessProblem": "Synthetic scenario statement: 'A B2B SaaS company with strong revenue growth (35% YoY, $8M ARR) faces deteriorating unit economics as it scales. CAC has risen 40% from $32k to $45k due to market saturation in initial segment, while LTV has declined 15% from $142k to $120k due to earlier-cohort churn acceleration. The company must diagnose whether the deterioration is systemic (product-market fit erosion) or resolvable (pricing, sales efficiency, or retention-specific intervention). Series C timing depends on the diagnosis.'",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Unit economics deterioration (e.g., 'LTV:CAC ratio declined from 4.4x (2024) to 2.7x (2025), below sustainable 3.0x threshold')",
+      "confidence": "HIGH (based on cohort analysis)",
+      "source": "Synthetic case design - SaaS metrics modeling",
+      "isCritical": true,
+      "supportingData": {
+        "ltv_cac_ratio_2024": "4.4x",
+        "ltv_cac_ratio_2025": "2.7x",
+        "threshold": "3.0x"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Cohort-level churn acceleration (e.g., 'Year-1 churn rate for 2024 cohort: 18%. Year-1 churn rate for 2025 cohort: 28% (estimated at 6-month mark, projected to 35% at 12-month mark)')",
+      "confidence": "MEDIUM (early cohort data, extrapolated)",
+      "source": "Synthetic case design - cohort churn modeling",
+      "isCritical": true,
+      "supportingData": {
+        "2024_cohort_year1_churn": "18%",
+        "2025_cohort_year1_churn": "28% (6-month data)",
+        "2025_cohort_projected_year1": "35%"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "CAC inflation (e.g., 'Blended CAC increased 40% from $32k (2024 average) to $45k (2025 average). Primary driver: cost-per-acquisition in core segment rising due to market saturation; secondary channel CAC much higher at $68k')",
+      "confidence": "HIGH",
+      "source": "Synthetic case design - marketing CAC modeling",
+      "isCritical": true,
+      "supportingData": {
+        "cac_2024": "$32k",
+        "cac_2025": "$45k",
+        "core_segment_cac": "$42k",
+        "secondary_channel_cac": "$68k"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM (post-Series B, but constrained by capital efficiency requirements)",
+    "timeHorizonDays": 180,
+    "staffCapacity": "MEDIUM (dedicated finance/analytics team, but founders focused on fundraising and product)",
+    "cashRunwayMonths": 24,
+    "legalComplianceSensitive": false
+  }
+}

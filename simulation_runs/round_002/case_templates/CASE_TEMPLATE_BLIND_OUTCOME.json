@@ -1,0 +1,123 @@
+{
+  "caseId": "BLND-006 (Example: Blind-Outcome Case - Forward-Looking Decision)",
+  "caseType": "BLIND_OUTCOME",
+  "industry": "Industry with forward-looking strategic decision",
+  "businessModel": "Business model relevant to the forward-looking scenario",
+  "businessStage": "Stage at decision inflection point",
+  "sourceNote": "Blind-outcome case where the actual future outcome is hidden from the engine. Case presents a decision point where the owner must choose between strategic alternatives. Diagnosis should identify which alternative aligns with root-cause drivers and constraints. Actual outcome revealed only after diagnosis is complete (for oracle comparison). No answer-key content in inputs.",
+  "ownerIntake": {
+    "businessType": "Business description at the decision point (e.g., 'E-commerce platform for B2B beauty products, currently $3M ARR, 40% YoY growth, but facing margin compression and competitive pressure')",
+    "stage": "Stage with context for the decision (e.g., 'Series A candidate company with strong growth but profitability questions. Must choose strategic direction within 90 days')",
+    "ownerGoal": "The strategic goal, but decision point is ambiguous (e.g., 'Achieve sustainable unit economics and prepare for Series A, but unclear whether this requires geographic expansion, product consolidation, or go-to-market shift')",
+    "ownerConstraints": [
+      "Constraint that bears on the strategic choice (e.g., 'Cannot raise capital until unit economics trajectory improves or clear path to profitability articulated')",
+      "Time constraint making the decision urgent (e.g., 'Must decide within 90 days; competitive window for expansion closing')",
+      "Resource constraint affecting which strategies are feasible (e.g., 'Engineering team fully allocated to core product; limited capacity for new market development or product expansion')"
+    ],
+    "immediateConcern": "The strategic decision the owner faces (e.g., 'Should we expand into 3 new geographies to amortize product costs, consolidate into core market and optimize unit economics, or pivot to higher-margin enterprise segment?')",
+    "availableData": [
+      "Current performance data: Current market performance, unit economics, customer cohort data, margin drivers",
+      "Strategic option analyses: Preliminary analysis of each strategic option (expansion, consolidation, pivot) with assumed outcomes",
+      "Market and competitive data: Market size, growth rates, competitive positioning, customer interviews"
+    ],
+    "unavailableData": [
+      "The outcome of the strategic choice (hidden from engine; will be revealed post-diagnosis)",
+      "Long-term customer cohort data for expansion markets (markets not yet entered)",
+      "Enterprise customer feedback (pivot not yet tested)",
+      "Execution risk details for each option (known to owner, not provided to engine)"
+    ],
+    "timeHorizon": "90 days (decision point, 12-month execution horizon if decision made)",
+    "riskAppetite": "MEDIUM (growth-dependent company balancing risk of capital constraint vs. execution risk of expansion)"
+  },
+  "clientContext": {
+    "industry": "E-commerce B2B / Beauty Tech",
+    "size": "startup (Series A candidate)",
+    "revenueImpactUrgency": "CRITICAL (strategic choice directly determines capital availability and company direction)"
+  },
+  "businessProblem": "Forward-looking decision scenario: 'A B2B beauty e-commerce platform has achieved rapid growth (40% YoY ARR growth to $3M) but faces a strategic fork. Unit economics are under pressure: gross margin declining from 48% (Year 1) to 41% (Year 2) due to customer acquisition costs rising faster than customer lifetime value. The owner has three strategic options: (1) Expand into 3 new geographies to amortize product/platform costs across larger customer base (high execution risk), (2) Consolidate to core market and optimize unit economics through retention and pricing (lower upside, faster profitability), (3) Pivot to higher-margin enterprise segment (unproven, requires product and sales shift). The company must decide within 90 days to secure capital for execution. Which strategy aligns with root-cause drivers of the margin compression, and which is most likely to succeed given the company's constraints and market realities?'",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Margin compression trend (e.g., 'Gross margin declined from 48% (Year 1) to 41% (Year 2), with COGS as % of revenue stable at 52%, indicating customer acquisition cost (CAC) inflation is primary driver')",
+      "confidence": "HIGH",
+      "source": "Company financial statements, customer cohort analysis",
+      "isCritical": true,
+      "supportingData": {
+        "gross_margin_year1": "48%",
+        "gross_margin_year2": "41%",
+        "cogs_percent": "52%",
+        "implied_cac_inflation": "Yes"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "CAC inflation evidence (e.g., 'Blended CAC increased 35% from $180 (Year 1) to $243 (Year 2). Breakdown: core market CAC up 20% from $150 to $180 (saturation); secondary market CAC $320 (untested, high risk)')",
+      "confidence": "HIGH",
+      "source": "Customer acquisition reporting, cohort analysis",
+      "isCritical": true,
+      "supportingData": {
+        "cac_year1": "$180",
+        "cac_year2": "$243",
+        "core_market_cac": "$180",
+        "secondary_market_cac": "$320"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Retention data by cohort (e.g., 'Year-1 cohorts (primary market): 24-month retention 52%. Year-2 cohorts (mixed primary/secondary): 12-month retention 48% (early data). Enterprise cohort (pilot): 12-month retention 78% with higher LTV')",
+      "confidence": "MEDIUM (Year-2 data only 12-month, extrapolated to 24-month estimate lower)",
+      "source": "Cohort analysis, pilot customer data",
+      "isCritical": true,
+      "supportingData": {
+        "primary_market_24mo_retention": "52%",
+        "mixed_12mo_retention": "48%",
+        "enterprise_pilot_12mo_retention": "78%",
+        "enterprise_ltv": "Higher (estimated 60%+ vs core 40%)"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Competitive and market data (e.g., 'Core market growth 20% YoY, but company growing at 40% (market share gain). Secondary market competitors have 15-25% lower CAC due to lower brand awareness, suggesting either opportunity (expansion) or risk (commoditization). Enterprise segment: smaller market ($500M vs $2.5B core), but 2-3 year lag in digital adoption suggests opportunity window')",
+      "confidence": "MEDIUM (market data from industry reports; company-specific competitive position less certain)",
+      "source": "Industry analysis, competitive research, pilot feedback",
+      "isCritical": true,
+      "supportingData": {
+        "core_market_growth": "20% YoY",
+        "company_growth": "40% YoY",
+        "secondary_market_cac_vs_core": "15-25% lower",
+        "enterprise_market_size": "$500M",
+        "core_market_size": "$2.5B"
+      }
+    }
+  ],
+  "strategicOptions": [
+    {
+      "optionId": "Option_A_Expansion",
+      "description": "Expand into 3 new geographies to amortize product costs and achieve unit economics recovery",
+      "rationale": "If margin compression is driven by CAC inflation in saturated core market, geographic expansion into less-saturated markets may improve blended CAC and restore margins",
+      "implementationRisk": "HIGH (execution complexity, capital requirement $2-3M for go-to-market setup, uncertainty on secondary market performance)",
+      "timelineIfChosen": "12 months to positive unit economics"
+    },
+    {
+      "optionId": "Option_B_Consolidation",
+      "description": "Consolidate to core market, focus on unit economics optimization through retention, pricing, and cost reduction",
+      "rationale": "If margin compression is driven by CAC inefficiency in core market, focused optimization may improve LTV:CAC ratio without expansion capital",
+      "implementationRisk": "MEDIUM (execution less complex, lower capital requirement ~$500k, but limits upside growth potential)",
+      "timelineIfChosen": "6-9 months to unit economics recovery"
+    },
+    {
+      "optionId": "Option_C_Pivot",
+      "description": "Pivot to enterprise segment with customized product and higher-margin go-to-market",
+      "rationale": "Enterprise cohort shows 78% retention and higher LTV despite small sample; pivot could achieve superior unit economics if execution succeeds",
+      "implementationRisk": "HIGHEST (product pivot required, sales model transformation, uncertain market fit, capital requirement $1.5-2M, 12-18 month execution)",
+      "timelineIfChosen": "12-18 months to first meaningful enterprise revenue"
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW (bootstrapped; cannot support >$500k investment without capital raise)",
+    "timeHorizonDays": 90,
+    "staffCapacity": "LOW (founder + 3 full-time, limited bandwidth for major strategic shift)",
+    "cashRunwayMonths": 18,
+    "legalComplianceSensitive": false
+  }
+}

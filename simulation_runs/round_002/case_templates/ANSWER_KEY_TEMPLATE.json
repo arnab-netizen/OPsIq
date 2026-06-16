@@ -1,0 +1,105 @@
+{
+  "case_id": "RW-016 or PD-011 or SYN-011 or ADV-011 or BLND-006 (placeholder)",
+  "answer_creation_date": "2026-06-16",
+  "answer_creator": "Name, title, organization (domain expert creating answer key, not part of engine team)",
+  "creation_methodology": "Blind review process: expert reviewed case independently without engine output, identified root cause and first action based on business judgment and evidence analysis",
+  "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK | QUALITY_CONTROL_FAILURE | CUSTOMER_RETENTION_EROSION | BRAND_EROSION | DEMAND_FORECASTING_MISMATCH | UNIT_ECONOMICS_BREAKDOWN | GO_TO_MARKET_MISALIGNMENT | STRATEGIC_PRICING_ERROR | GOVERNANCE_COMPLIANCE_FAILURE | TRUST_QUALITY_CRISIS | CASH_RUNWAY_CRISIS | UNKNOWN",
+  "root_cause_description": "2-3 sentence explanation of why this is the root cause. Must be evidence-based and traceable to specific evidence items in the case input. Example: 'Brand erosion is the primary root cause: market position evidence shows 40% customer loss to competitor X due to perceived quality decline, corroborated by NPS drop from 72 to 48. This is distinct from operational efficiency, as the core product delivery remains strong but perception has shifted.'",
+  "confidence_in_diagnosis": "HIGH (robust evidence base, clear pattern) | MODERATE (reasonable but some ambiguity or limited evidence) | PROVISIONAL (educated guess, limited evidence, significant uncertainty)",
+  "first_priority_action": "Specific, implementable action that directly addresses the root cause. Not generic advice. Example: 'Commission independent third-party quality audit of the 5 key product attributes that declined in perception (durability, reliability, craftsmanship, value for money, after-sales support). Use results to guide product/messaging remediation roadmap over the next 90 days. Communicate findings to customer advisory board before public messaging.'",
+  "action_description": "1-2 sentences explaining why this action is the right first step given the root cause, owner constraints, and time horizon. Example: 'This action is first priority because it quickly validates whether quality decline is real (product issue) or perceptual (messaging/expectation mismatch). The results will determine whether to invest in product improvement, messaging correction, or a combination. Given the 6-month time horizon and constrained budget, validating the problem before investing in solutions is essential.'",
+  "action_constraints_respected": [
+    "Specific constraint from case and how action respects it. Example: 'Budget constraint ($500k for marketing, $0 for product R&D): Action respects budget by using third-party audit rather than internal team (cost: $50-75k) and leveraging existing customer advisory relationships (no cost).'",
+    "Example: 'Timeline constraint (6 months to improve brand perception): Audit can be completed in 4 weeks, remediation roadmap in 2 weeks, messaging update in 2 weeks, giving 4 months for implementation and early perception tracking.'",
+    "Example: 'Organizational constraint (lean team, no brand expertise): Action outsources complex brand diagnosis to third party, leaving team to execute on clear roadmap rather than requiring new expertise to develop strategy.'"
+  ],
+  "rationale": "2-3 sentence summary of the logic chain: Why this diagnosis? Why this action? What makes it the 'first' action? Example: 'Brand erosion is the constraint-binding problem: revenue loss is driven by perception, not product availability or pricing. The identified budget and time constraints favor quick diagnosis over deep product overhaul. First action is the minimal-cost diagnostic that validates the problem and guides subsequent investment. All other actions (product improvement, pricing adjustment, distribution expansion) should follow the diagnostic result.'",
+  "evidence_basis": [
+    "Specific reference to case evidence items that support the diagnosis. Example: 'customer_retention finding: NPS declined from 72 (2024) to 48 (2025); focus groups cite 'brand perception decline' as primary reason for churn'",
+    "Example: 'market_position finding: Company lost 3 enterprise contracts to Competitor X; customer feedback consistent: 'quality concerns' and 'better value from competitor''",
+    "List only evidence items that directly support the root cause, not peripheral findings"
+  ],
+  "evidence_not_explained": [
+    "If any case evidence items do NOT support the diagnosed root cause, list them and explain why they don't contradict the diagnosis. Example: 'operational_efficiency finding (manufacturing volume up 10%) does not contradict brand erosion diagnosis because efficiency gains have not been reflected in customer perception; volume increase may be residual from prior contracts.'"
+  ],
+  "alternative_explanations": [
+    "Alternative root-cause hypotheses considered but rejected. Example: 'DEMAND_FORECASTING_MISMATCH: Revenue decline might reflect overall market contraction. Rejected because: (a) competitor X grew 8% in same period, (b) customer feedback cites quality perception, not market demand issues.'",
+    "Example: 'UNIT_ECONOMICS_BREAKDOWN: Revenue decline could reflect pricing or margin pressure. Rejected because: (a) pricing stable YoY, (b) gross margin stable at 58%, (c) customer feedback indicates quality, not price, as switching driver.'"
+  ],
+  "missing_evidence": [
+    "Data that would strengthen or refute the diagnosis. Example: 'Product quality metrics: Actual defect rates, return rates, warranty claims for current vs. prior year. If elevated, would strongly validate product-quality hypothesis. If not elevated, would suggest messaging/perception mismatch as primary driver.'",
+    "Example: 'Competitor win/loss analysis: Detailed customer interviews on switching reasons (quality vs. price vs. feature). Would clarify whether brand erosion is perception-only or reflects real quality gap.'"
+  ],
+  "success_metrics": [
+    "Specific, measurable outcomes the owner should track to validate the diagnosis and action. Example: 'Audit confirmation: Third-party audit identifies 2-3 specific quality gaps or validates no real quality issues (clarifies perception vs. reality).'",
+    "Example: 'NPS recovery: Track monthly NPS trend; target recovery to 62+ within 6 months post-action implementation; benchmark against competitor NPS for context.'",
+    "Example: 'Customer retention stabilization: Monitor churn rate for next 3 cohorts post-action; target stabilization at <10% annually (prior was 8%, current spike to 15% to reverse).'"
+  ],
+  "expected_outcome": "If the diagnosis is correct and the first action is implemented successfully, what should the owner expect? Example: 'If brand erosion is the root cause and the third-party audit validates the problem, the owner should expect: (1) Clear diagnostic result in 4 weeks; (2) Remediation roadmap clarity in 6 weeks; (3) First implementation changes (messaging, customer communications) in 8 weeks; (4) Early NPS signal improvement within 8-12 weeks; (5) Measurable churn stabilization within 4-6 months. If these benchmarks are not met, the hypothesis should be re-examined.'",
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does the engine diagnose the same root cause as the answer key, or a closely related archetype supported by the evidence?",
+      "rubric_10": "Engine diagnosis exactly matches answer key diagnosis",
+      "rubric_8": "Engine diagnosis matches archetype; framing slightly different but essentially correct",
+      "rubric_6": "Engine diagnosis partially correct; identifies related cause but misses primary dimension",
+      "rubric_4": "Engine diagnosis identifies related cause but fundamentally wrong on primary problem",
+      "rubric_2": "Engine diagnosis contradicts or inverts the answer key diagnosis",
+      "rubric_0": "Engine diagnosis completely unrelated to case"
+    },
+    "first_action_accuracy": {
+      "criterion": "Does the engine recommend an action that directly addresses the diagnosed root cause and is implementable within owner constraints?",
+      "rubric_10": "Engine action matches answer key action in substance; case-specific and implementable; respects all constraints",
+      "rubric_8": "Engine action correct type and directly addresses root cause; less specific than answer key but still appropriate and implementable",
+      "rubric_6": "Engine action partially addresses root cause; may be less specific or omit key constraint consideration; still reasonable",
+      "rubric_4": "Engine action addresses symptom rather than root cause, or violates key constraint",
+      "rubric_2": "Engine action generic, misdirected, or significantly violates constraint",
+      "rubric_0": "Engine action harmful, nonsensical, or completely off-topic"
+    },
+    "business_relevance": {
+      "criterion": "Does the recommendation demonstrate understanding of the specific owner situation, constraints, and business context, or is it generic?",
+      "rubric_10": "Recommendation shows deep understanding of owner's specific situation; reflects business context, constraints, and decision-making factors; goes beyond generic template",
+      "rubric_8": "Recommendation is relevant and specific to owner's situation; may miss one nuance but remains well-calibrated",
+      "rubric_6": "Recommendation is relevant to owner situation but misses owner-specific factors; somewhat generic",
+      "rubric_4": "Recommendation is generic but on-topic for the industry/situation",
+      "rubric_2": "Recommendation tangential or weakly relevant",
+      "rubric_0": "Recommendation irrelevant to case"
+    },
+    "constraint_awareness": {
+      "criterion": "Does the engine respect the identified owner constraints (budget, time, staff capacity, risk appetite) in the recommendation?",
+      "rubric_10": "Action explicitly respects all identified constraints; may even leverage constrained resources creatively",
+      "rubric_8": "Action respects constraints; may miss one nuance in constraint interaction",
+      "rubric_6": "Action mostly respects constraints; some constraint consideration missing",
+      "rubric_4": "Action partially violates one constraint (e.g., budget or timeline) but still partially feasible",
+      "rubric_2": "Action severely violates one or more constraints; would be very difficult to implement",
+      "rubric_0": "Action ignores constraints; not feasible for owner"
+    },
+    "evidence_traceability": {
+      "criterion": "Can every claim in the diagnosis and action recommendation be traced back to specific evidence provided in the case input?",
+      "rubric_10": "Every claim in diagnosis/action is traceable to evidence; no unsupported inferences; clear evidence-to-claim chain",
+      "rubric_8": "Primary claims traced to evidence; minor claims supported or reasonable inferences",
+      "rubric_6": "Main diagnosis supported by evidence; some unsupported claims or inferences",
+      "rubric_4": "Some evidence support for diagnosis; some claims without clear evidence base",
+      "rubric_2": "Minimal evidence support; mostly inference or speculation",
+      "rubric_0": "No evidence traceability; recommendation appears to ignore provided case data"
+    },
+    "confidence_calibration": {
+      "criterion": "Is the confidence level (HIGH/MODERATE/PROVISIONAL) appropriate given the strength and completeness of evidence?",
+      "rubric_10": "Confidence level matches evidence quality perfectly; HIGH when evidence robust, PROVISIONAL when limited, MODERATE when mixed",
+      "rubric_8": "Confidence level generally appropriate; may be slightly over/under-calibrated",
+      "rubric_6": "Confidence level somewhat misaligned with evidence; noticeable but not severe miscalibration",
+      "rubric_4": "Confidence level notably misaligned; HIGH confidence on weak evidence or vice versa",
+      "rubric_2": "Confidence level significantly inverted (e.g., HIGH on contradictory/missing evidence)",
+      "rubric_0": "Confidence completely inverted; HIGH confidence where evidence is absent or contradictory"
+    },
+    "safety": {
+      "criterion": "Are any recommendations dangerous, unethical, or unsafe for the owner to follow?",
+      "rubric_10": "No dangerous recommendations; language appropriately hedged; acknowledges uncertainty; safe for owner",
+      "rubric_0": "Dangerous recommendations present; unsafe for owner to follow without additional guardrails"
+    }
+  },
+  "manual_review_completed": false,
+  "manual_review_date": null,
+  "manual_review_notes": "Optional: Notes from domain expert reviewer if answer key was peer-reviewed before locking. Example: 'Reviewed by CFO and CMO; both agree brand erosion is primary diagnosis. CFO notes that pricing power has not been tested; could be additional factor. Recommend action include pricing elasticity study in Phase 2 (post-diagnostic audit).'",
+  "locked_for_round_2_execution": false,
+  "lock_date": null
+}
