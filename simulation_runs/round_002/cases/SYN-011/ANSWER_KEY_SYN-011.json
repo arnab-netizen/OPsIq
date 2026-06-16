@@ -6,8 +6,31 @@
   "root_cause_diagnosis": "TRUST_QUALITY_CRISIS",
   "root_cause_description": "The company faces a trust and quality crisis: customers value the core product (workflow automation receives high satisfaction scores) but are losing confidence in product reliability and stability. Multiple independent signals indicate a quality/trust issue: (1) churn rising from 2%→3% MRR despite healthy feature adoption, (2) NPS low (42) with detractor feedback citing reliability, not features, (3) support tickets rising 40% while customer base grew 20%, indicating growing frustration, (4) recent incidents (4-hour outages, 8-minute load times) are directly mentioned by customers as switching drivers. This is distinct from a feature gap (which would show in promoter feedback and new customer acquisition issues) or pricing issue (not mentioned). The product quality issue (uptime 99.2% vs industry 99.9%+, performance degradation, frequent incidents) is eroding customer trust and causing churn. If unaddressed, churn will accelerate and Series B investors will view the company as having lost product-market fit.",
   "confidence_in_diagnosis": "HIGH",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Churn rising 2% -> 3% MRR over 6 months (~35% annualized)",
+      "NPS low at 42 with detractors citing reliability/crashes/performance",
+      "Support tickets up 40% YoY while customers grew only 20% (tickets-per-customer rising)"
+    ],
+    "contributing_factors": [
+      "Platform uptime 99.2% vs 99.9%+ standard; 2-3 incidents/month; recent 4-hour outage and 8-minute peak load times",
+      "Legacy MVP-era architecture and technical debt straining stability under load",
+      "Two well-funded entrants advertising 99.99% uptime, raising the reliability bar at renewal/evaluation"
+    ],
+    "true_root_cause": "A trust/quality crisis: customers value the core workflow automation (high feature satisfaction, 85% adoption) but are losing confidence in product reliability, so reliability failures -- not feature gaps or price -- are driving churn and suppressing NPS."
+  },
   "first_priority_action": "Immediately pause non-critical feature development (2-week freeze to redirect engineering capacity). Conduct rapid technical triage: (1) Root-cause analysis of recent outages and performance issues (1 week), (2) Identify the top 3-5 stability/performance problems causing customer impact (1 week), (3) Develop focused 8-week engineering roadmap to fix critical issues, improve uptime from 99.2%→99.9%, and reduce incident frequency to <1/month. Communicate publicly to customers: 'We're investing in platform stability as our top priority. You will see weekly updates to uptime, incident frequency, and performance metrics.' Run weekly customer communication updates showing progress (new status dashboard published weekly). Commit to 99.9% uptime by end of Q3 (8 weeks). This action stops the trust erosion, demonstrates commitment to quality, and buys time for Series B discussions by showing churn stabilization trajectory within 6 weeks.",
   "action_description": "This action is first priority because churn is rising and NPS is low—signals that customer trust is eroding. The business is not growing toward Series B readiness; it is deteriorating. Feature development cannot fix this; only demonstrable reliability improvements can rebuild trust. The 8-week intensive focus is feasible (pushes Series B timeline slightly but de-risks fundraising by proving churn stabilization). Feature development can resume after Series B when the company has more resources.",
+  "accepted_alternative_actions": [
+    "Stand up a focused 'reliability SRE' workstream (subset of the 6 engineers) that instruments uptime/incident dashboards, fixes the top data-sync and peak-load failure modes, and publishes a weekly customer-facing status report -- acceptable because it attacks the exact reliability drivers cited by >60% of churned customers while keeping a thin feature track alive, provided stability is unambiguously prioritized.",
+    "Run a 1-2 week technical root-cause triage of the recent 4-hour outage and 8-minute load times FIRST to confirm the issues are fixable within the legacy architecture before committing the full 8-week push -- acceptable because it de-risks the stability investment (the engineering team has not yet done deep diagnostics) without delaying the reliability focus past the at-risk renewal window."
+  ],
+  "bad_actions": [
+    "Accelerating new-feature development to reach parity with the well-funded entrants: wrong for THIS case because >60% of churned customers cite reliability and <20% cite features; adding features onto an unstable, technical-debt-laden platform increases incident surface area and would worsen the very reliability problem driving churn.",
+    "Hiring more support staff to absorb the 40% ticket increase: wrong because rising tickets are a symptom of product failures, not a support-capacity gap; adding headcount treats the symptom, burns runway against a $400k/month burn, and leaves the uptime (99.2%) and incident root causes unaddressed.",
+    "Discounting or offering credits to retain churning customers: wrong because customers are leaving over unrealized reliability (can't trust the platform for critical workflows), not price; concessions destroy margin (72%) without restoring the trust that only demonstrable uptime improvement can rebuild.",
+    "Launching a large 12-16 week platform refactor immediately as the first move: wrong because it consumes the entire pre-Series-B window with no near-term reliability signal to customers, risks accelerating churn during the rebuild, and is premature before the root-cause triage confirms what actually needs re-architecting."
+  ],
   "action_constraints_respected": [
     "Funding constraint (24-month runway): Action requires no external funding; redirects existing engineering (6 FTEs). May delay Series B by 2-3 months but increases likelihood of successful fundraising by de-risking churn metrics.",
     "Product constraint (technical debt, legacy architecture): Action specifically targets stability/performance within existing architecture. Does not require major refactoring; focuses on reliability of current platform.",
@@ -41,6 +64,35 @@
     "Support load stabilization: Support tickets per customer stabilizes or declines. Support team time freed up to focus on customer success rather than firefighting reliability issues."
   ],
   "expected_outcome": "If TRUST_QUALITY_CRISIS is the root cause and the 8-week stability push is executed well: (1) Within 2 weeks, dramatic reduction in support tickets and customer complaint volume as engineering focuses on reliability. (2) Within 4-6 weeks, measurable uptime improvement (99.5%+) and reduced incident frequency. Churn stabilizes or improves. (3) Within 8 weeks, uptime reaches 99.9% target. Churn improved to <2% MRR range. NPS improved toward 50+. (4) Within 12 weeks, Series B discussions can proceed with confidence in unit economics and customer retention metrics. If stability improvements don't stop churn, the company has learned that the problem is deeper (competitive displacement, unmet feature needs) and must reassess strategy.",
+  "automatic_fail_conditions": [
+    "Recommends accelerating new-feature development to match entrants while >60% of churn cites reliability, ignoring the quality root cause.",
+    "Diagnoses a feature-gap, pricing, or market-demand root cause despite high feature adoption (85%), healthy 25% growth, and detractor feedback centered on reliability/crashes.",
+    "Recommends discounting or retention credits to stop churn that is driven by unrealized reliability, not price.",
+    "Recommends hiring more support staff as the primary fix, treating the 40% ticket symptom rather than the product-failure cause.",
+    "Recommends a multi-month platform refactor as the immediate first action without a root-cause triage and with no near-term reliability signal to customers before renewals."
+  ],
+  "source_references": [
+    "Incident tracking system logs and platform monitoring dashboards (uptime 99.2%, incident frequency, outage durations).",
+    "Churn analytics and customer/exit interview transcripts (reliability vs feature switching drivers).",
+    "NPS survey results and open-ended detractor/promoter feedback.",
+    "Support ticketing system data (volume +40% YoY, resolution-time trend) and competitive intelligence on entrant uptime SLAs."
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "Uptime 99.2% vs 99.9%+ standard, 2-3 incidents/month, a 4-hour data-sync outage and 8-minute peak load times", "implication": "Recurring, customer-visible reliability failures on critical workflow paths are the concrete mechanism eroding trust."},
+      {"fact": ">60% of churned/at-risk customers cite reliability/performance as the switching driver while <20% cite features", "implication": "The loss is driven by unreliability, not feature gaps or price, isolating a trust/quality root cause."},
+      {"fact": "NPS 42 with detractors citing crashes/reliability while promoters praise the features but withhold enthusiasm", "implication": "Customers like what the product does but distrust that it will do it reliably -- the signature of a trust/quality crisis, not a value or fit gap."},
+      {"fact": "Support tickets +40% YoY vs customer growth +20% (tickets-per-customer rising) and resolution time 16h -> 24h", "implication": "Growing per-customer friction reflects product failures generating support load, an operational symptom of the underlying quality issue."},
+      {"fact": "Two entrants advertise 99.99% uptime against the company's 99.2%", "implication": "The reliability gap is competitively material at renewal, accelerating the churn the quality crisis causes."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "DEMAND_FORECASTING_MISMATCH", "why_weaker": "Revenue is growing 25% YoY and core-feature adoption is 85%; demand for the product is not the problem, reliability is."},
+      {"alternate": "GO_TO_MARKET_MISALIGNMENT", "why_weaker": "Promoters value the product and adoption is high, so the segment is not mis-targeted; the failure is post-sale reliability, not acquisition fit."},
+      {"alternate": "OPERATIONAL_BOTTLENECK", "why_weaker": "Support resolution (24h) is acceptable and the constraint is not operational throughput; the churn driver is product failures (outages, slow performance), a quality/trust issue."}
+    ],
+    "first_action_justification": "With churn rising and reliability cited by the majority of churned customers, the only lever that changes near-term retention and NPS before Series B is demonstrable reliability improvement; a time-boxed 8-week stability push (uptime 99.2% -> 99.9%, incidents <1/month) with weekly customer-facing status updates directly rebuilds the eroding trust without new spend.",
+    "constraints_effect_on_action": "The 24-month runway and $400k/month burn forbid hiring or external funding, so the action redirects the existing 6 engineers; the legacy-architecture/technical-debt constraint forces a targeted stability push (within current architecture, gated by a root-cause triage) rather than an immediate 12-16 week refactor; the well-funded-entrant constraint is answered by differentiating on reliability now and deferring feature competition until after a de-risked Series B."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose TRUST_QUALITY_CRISIS or related archetype (OPERATIONAL_BOTTLENECK from quality perspective)?",

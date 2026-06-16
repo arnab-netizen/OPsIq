@@ -1,13 +1,181 @@
 {
   "case_id": "PD-012",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (Retail Strategy)",
+  "answer_creator": "Domain Expert (Retail Strategy & Store-Portfolio Optimization)",
+  "creation_methodology": "Blind review: Expert analyzed the chain's public FY2023-FY2025 financial and operating disclosures independently. Diagnosed root cause by decomposing the 200 bps EBITDA-margin compression and 5.9% revenue decline against same-store-sales (-4%/yr), inventory accumulation (+12%), and channel-mix evidence, then tested the demand/footprint-forecast hypothesis against competitive-displacement and pure cost-structure alternatives.",
   "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "root_cause_description": "The chain's store footprint, staffing, and inventory plan are sized to a demand level the market no longer delivers. Same-store sales decline ~4% per year and total revenue fell 5.9% ($850M -> $800M), yet the company continues to operate 45 full-line stores and to buy and allocate inventory (up ~12% over two years) against a higher demand forecast. The mismatch produces two compounding effects: (1) fixed real-estate and store-labor costs spread over a shrinking, over-forecasted revenue base, de-leveraging EBITDA margin from 6% to 4% (the margin fell 37% in EBITDA dollars while revenue fell only 5.9%); and (2) excess seasonal inventory cleared at deepening markdowns, eroding gross margin. The traditional in-store demand the footprint was forecast against is structurally migrating to online and off-price channels the company under-serves (e-commerce only ~14% vs 30%+ for peers). The root cause is therefore a demand-forecasting mismatch: the company is planning capacity and inventory to demand that no longer exists at that level, rather than a sudden cost shock or a single competitive event.",
   "confidence_in_diagnosis": "HIGH",
-  "first_priority_action": "Conduct store-level profitability and market analysis: identify which locations are profitable vs. unprofitable, which markets have sustainable demand, which should be closed or repositioned.",
-  "action_description": "Portfolio optimization: close unprofitable stores, invest in profitable locations, reduce fixed cost base.",
-  "evidence_basis": ["Revenue decline despite flat market indicates market share loss", "Margin compression indicates cost structure misalignment"],
-  "scoring_criteria": {"root_cause_accuracy": {"rubric_10": "Diagnoses DEMAND_FORECASTING_MISMATCH"}, "first_action_accuracy": {"rubric_10": "Recommends portfolio analysis"}, "business_relevance": {"rubric_10": "Reflects retail context"}, "constraint_awareness": {"rubric_10": "Respects constraints"}, "evidence_traceability": {"rubric_10": "Traces to revenue decline"}, "confidence_calibration": {"rubric_10": "HIGH appropriate"}, "safety": {"rubric_10": "Safe diagnostic"}},
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin compressed 200 bps (6% -> 4%); EBITDA down ~37% (~$51M -> ~$32M) on a 5.9% revenue decline",
+      "Same-store sales declining ~4% per year with falling store traffic",
+      "Inventory up ~12% over two years while revenue fell, deepening markdowns and dropping turnover ~3.2x -> ~2.6x"
+    ],
+    "contributing_factors": [
+      "High fixed real-estate (long-term leases) and store-labor costs that do not flex down as traffic falls",
+      "E-commerce only ~14% of sales vs 30%+ for peers, leaving the chain under-served in the growing channel",
+      "Off-price and online competitors (Amazon, Target, TJX) capturing the traditional mid-tier shopper"
+    ],
+    "true_root_cause": "A demand-forecasting mismatch: the 45-store footprint, staffing, and inventory buy are planned to a demand level the market no longer delivers, so fixed cost de-leverages over shrinking sales and over-bought inventory clears at markdown -- a capacity-and-inventory-vs-demand misalignment, not a one-time cost shock or single competitive loss."
+  },
+  "first_priority_action": "Commission a 6-8 week store-level demand-and-contribution diagnostic across all 45 stores (cost ~$150-250k or staffed largely internally with a targeted external retail-analytics partner) before any closures or buy commitments for the next season. Scope: (1) Build store-by-store four-wall contribution margin net of allocated fixed lease and labor cost, and sales-per-square-foot and traffic trends, to identify which stores are structurally below demand-supportable break-even versus those that are viable. (2) Rebase the demand forecast bottom-up by trade area and channel, quantifying how much in-store demand has permanently migrated to online/off-price, to set a realistic footprint and inventory plan. (3) Right-size the open-to-buy and allocation to the rebased forecast to stop the inventory build (target turnover back toward 3.2x) and reduce structural markdown. (4) Model a phased footprint and lease action (renegotiation, sublease, selective closure) with lease-termination cost and a parallel e-commerce/omnichannel demand-capture plan to recover the ~16-point channel gap to peers. Deliverable: a board-ready plan that resizes capacity and inventory to true demand and a path back toward 6% EBITDA margin, inside the 24-month window.",
+  "action_description": "This is the first-priority action because the dominant driver is a mismatch between planned capacity/inventory and actual demand, and resizing blind is dangerous: closing the wrong stores destroys still-viable contribution and incurs lease-termination cost, while continuing to overbuy inventory deepens the markdown spiral. The diagnostic quantifies which stores and how much inventory the rebased demand can actually support before any irreversible closure or buy commitment, and it sequences the safe path -- measure real demand and four-wall economics, rebase the forecast, then resize footprint and inventory and capture the migrating channel demand. It fits the LOW risk appetite and the 24-month window at a cost trivial relative to the fixed cost being de-leveraged.",
+  "accepted_alternative_actions": [
+    "Run an open-to-buy and inventory-rebasing project FIRST (4-6 weeks) to align the next-season buy and allocation to the lower, rebased demand and clear excess stock in a controlled way -- acceptable because it directly attacks the inventory-vs-forecast mismatch and the markdown erosion, though it should be paired with the store-contribution analysis so footprint decisions are not deferred indefinitely.",
+    "Launch an omnichannel / e-commerce demand-capture program to close the ~16-point channel gap to peers (ship-from-store, buy-online-pickup-in-store, marketplace presence) so the footprint serves migrating demand rather than only declining in-store traffic -- acceptable as a parallel workstream because it addresses where demand actually went, but it is a medium-horizon lever and should not substitute for resizing the over-forecasted footprint and inventory."
+  ],
+  "bad_actions": [
+    "Closing a fixed number of stores immediately to cut cost before any store-level contribution analysis: wrong for THIS case because closures are largely irreversible, carry lease-termination cost, and without four-wall economics the chain may shut still-viable stores while keeping structurally unprofitable ones, deepening the demand-vs-capacity mismatch instead of fixing it.",
+    "Continuing to buy and allocate inventory to the existing higher demand forecast to 'keep shelves full': wrong because it perpetuates the +12% inventory build against falling sales, forcing ever-deeper markdowns that compress the gross margin which is half the EBITDA-margin decline.",
+    "Across-the-board price discounting to drive traffic back: wrong because the demand erosion is structural (channel migration to online/off-price), not a price-elasticity gap; broad discounting would further compress the already-thin 4% EBITDA margin without restoring sustainable in-store demand.",
+    "Pursuing a debt-funded store-remodel or expansion program to 'grow out of' the decline: wrong because it invests capital into the over-forecasted footprint at the moment demand is structurally contracting, worsening fixed-cost de-leverage and balance-sheet risk for a LOW-risk-appetite, capital-constrained chain."
+  ],
+  "action_constraints_respected": [
+    "Secular constraint (structural traffic decline): The action rebases demand bottom-up and resizes capacity/inventory to sustainable demand rather than assuming traffic recovers.",
+    "Cost constraint (fixed real-estate and labor): The footprint workstream targets the exact fixed cost de-leveraging margin via renegotiation, sublease, and phased selective closure rather than blanket cuts.",
+    "Inventory constraint (over-bought to old forecast): The open-to-buy rebasing aligns the next buy to the rebased forecast to halt the build and reduce structural markdown.",
+    "Capital constraint (limited balance-sheet flexibility): The diagnostic is low-cost and avoids capital-intensive remodels or expansion; closures are modeled with lease-termination cost before any commitment.",
+    "Time / risk constraint (24 months, LOW risk appetite): The 6-8 week diagnostic delivers a board-ready, reversible-by-design plan inside the window without distress-signaling irreversible moves."
+  ],
+  "rationale": "The deterioration decomposes to a capacity-and-inventory-vs-demand mismatch: EBITDA dollars fell 37% while revenue fell only 5.9%, the signature of fixed cost spread over an over-forecasted, shrinking base; inventory rose 12% as sales fell, the signature of buying to an outdated forecast; and e-commerce at 14% vs 30%+ shows where the forecast demand actually migrated. Competitive displacement and pure cost structure are contributors but downstream: the company is planning to demand that no longer exists at that level. The correct first move is to measure real store-level demand and four-wall economics and rebase the forecast before resizing, because the highest-impact actions (closures, buy cuts) are irreversible and dangerous if executed against an unvalidated demand picture.",
+  "evidence_basis": [
+    "financial_health finding: Revenue $850M -> $800M (-5.9%) while EBITDA margin fell 6% -> 4% (-200 bps) and EBITDA dollars fell ~37%, proving fixed cost is not flexing down with demand.",
+    "market_position finding: Same-store sales -4%/yr with declining traffic and sales-per-store ~$18.9M -> ~$17.8M, indicating demand contraction at the existing over-sized footprint.",
+    "operational_efficiency finding: Inventory +12% over two years against -5.9% revenue, turnover ~3.2x -> ~2.6x, rising markdowns -- buying and allocation still planned to a higher demand forecast.",
+    "market_position finding: E-commerce ~14% vs 30%+ for peers shows demand migrating to channels the chain under-serves, the structural source of the forecast mismatch."
+  ],
+  "evidence_not_explained": [
+    "The split of the inventory build between deliberate over-buying versus weaker-than-planned sell-through cannot be separated from public data and requires the open-to-buy and allocation review; either way it reinforces a demand-forecast mismatch.",
+    "Store-by-store four-wall contribution net of allocated fixed cost is not disclosed publicly, so which specific stores are below demand-supportable break-even requires the store-level diagnostic."
+  ],
+  "alternative_explanations": [
+    "UNIT_ECONOMICS_BREAKDOWN: That per-store or per-unit economics structurally broke. Considered but rejected as PRIMARY because the four-wall model is not broken per se -- it is starved of demand; once the footprint and inventory are resized to actual demand the unit economics can support a ~6% margin again, so the origin is the demand/capacity mismatch, not a fundamental unit-cost break.",
+    "BRAND_EROSION: That shoppers are leaving because the brand has decayed. Rejected as primary because the dominant, measurable signals are footprint/inventory-vs-demand (fixed-cost de-leverage, inventory build) and channel migration; there is no evidence of a brand-specific reputation collapse distinct from sector-wide channel shift.",
+    "STRATEGIC_PRICING_ERROR: That the chain is mis-priced. Rejected because the margin erosion is driven by fixed-cost de-leverage and markdown of over-bought inventory, not by a discretionary base-price error; broad price changes would not fix the capacity/demand mismatch."
+  ],
+  "missing_evidence": [
+    "Store-by-store four-wall contribution margin net of allocated lease and labor cost, to identify which stores are below demand-supportable break-even.",
+    "Bottom-up trade-area and channel demand forecast, to quantify how much in-store demand has permanently migrated and to rebase footprint and inventory.",
+    "Open-to-buy, allocation, and sell-through detail by category, to separate over-buying from weak demand and to right-size the next buy.",
+    "Lease terms and termination costs by location, to model phased closure/renegotiation economics.",
+    "E-commerce unit economics and addressable online demand by trade area, to size the omnichannel demand-capture opportunity."
+  ],
+  "success_metrics": [
+    "Diagnostic completion within 6-8 weeks: store-level four-wall contribution, rebased bottom-up demand forecast, and a right-sized footprint and inventory plan, board-ready inside the 24-month window.",
+    "Inventory rebasing: open-to-buy aligned to the rebased forecast, inventory growth halted and turnover recovering toward 3.2x with reduced structural markdown.",
+    "Footprint resizing: a phased, lease-cost-aware plan that retains demand-supportable stores and exits structurally unviable ones without distress-signaling mass closures.",
+    "Margin recovery: a modeled path back toward 6% EBITDA margin as fixed cost re-levers over a right-sized base.",
+    "Channel capture: an omnichannel plan with a target to close part of the ~16-point e-commerce gap to peers, serving the migrated demand."
+  ],
+  "expected_outcome": "If DEMAND_FORECASTING_MISMATCH is correct and the diagnostic is executed well, the chain should, within 6-8 weeks, have store-level four-wall economics, a rebased demand forecast, and a right-sized footprint and inventory plan. Aligning the buy to the rebased forecast should halt the inventory build and reduce markdown within one to two seasons, while a phased footprint action and omnichannel demand capture should re-lever fixed cost and move EBITDA margin back toward 6% over the 24-month window. If the diagnostic instead shows the four-wall economics are unviable even at right-sized demand (true structural unit-economics break), the company would need a deeper format change or a managed wind-down of the in-store base rather than incremental resizing.",
+  "automatic_fail_conditions": [
+    "Recommends closing a fixed number of stores immediately without store-level four-wall contribution analysis, risking closure of viable stores and lease-termination cost.",
+    "Recommends continuing to buy/allocate inventory to the existing higher forecast, perpetuating the +12% build and markdown erosion.",
+    "Recommends across-the-board discounting to drive traffic, ignoring that the demand erosion is structural channel migration, not price elasticity.",
+    "Recommends a debt-funded remodel or expansion into the over-forecasted footprint while demand is structurally contracting and the balance sheet is constrained.",
+    "Treats the deterioration as a one-time cost shock and ignores the same-store-sales (-4%/yr) and channel-migration (14% vs 30%+) evidence of a demand/capacity mismatch."
+  ],
+  "source_references": [
+    "SEC EDGAR 10-K and 10-Q filings (FY2023-FY2025): revenue, same-store sales, EBITDA, inventory, and MD&A markdown commentary.",
+    "Investor presentations: gross margin and markdown by category, sales per store and per square foot, channel (in-store vs e-commerce) mix.",
+    "Public department-store peer benchmarking: e-commerce penetration and inventory-turnover norms.",
+    "Retail real-estate / lease disclosures: store-count and lease-obligation data used to frame footprint economics."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "EBITDA margin = EBITDA / Revenue",
+      "EBITDA margin decline (bps) = (prior EBITDA margin - current EBITDA margin) x 10000",
+      "Revenue change % = (current revenue - prior revenue) / prior revenue",
+      "EBITDA dollars = EBITDA margin x revenue; EBITDA change % = (current EBITDA - prior EBITDA) / prior EBITDA",
+      "Inventory-to-revenue divergence = inventory growth % - revenue growth %",
+      "Sales per store = revenue / store count"
+    ],
+    "expected_values": {
+      "revenue_fy2023_usd_m": 850,
+      "revenue_fy2025_usd_m": 800,
+      "revenue_change_pct": -5.9,
+      "ebitda_margin_fy2023_pct": 6.0,
+      "ebitda_margin_fy2025_pct": 4.0,
+      "ebitda_margin_decline_bps": 200,
+      "ebitda_fy2023_usd_m": 51,
+      "ebitda_fy2025_usd_m": 32,
+      "ebitda_change_pct": -37.3,
+      "inventory_growth_2yr_pct": 12.0,
+      "inventory_revenue_divergence_pct": 17.9,
+      "sales_per_store_fy2025_usd_m": 17.8,
+      "ecommerce_share_pct": 14.0,
+      "peer_ecommerce_share_pct": 30.0
+    },
+    "tolerance": "+/-0.5 percentage points on margins; +/-5% relative on dollar figures; +/-15 bps on the margin-decline computation given rounded underlying margins.",
+    "unit_assumptions": "Dollar figures in USD millions; fiscal-year basis (FY2023 prior, FY2025 current); EBITDA derived as EBITDA margin times revenue; store count held at 45; percentages as stated.",
+    "invalid_input_rules": "Reject as invalid any input where: EBITDA margin is computed on gross profit rather than revenue; the EBITDA-dollar change does not reconcile with the margin and revenue figures (6% of $850M = ~$51M, 4% of $800M = ~$32M); or inventory growth is netted against revenue in a way that hides the divergence.",
+    "missing_input_behavior": "If a required figure is absent, refuse to compute the dependent metric and flag the gap rather than imputing a value; do not infer EBITDA from revenue alone or assume a same-store-sales rate.",
+    "refuse_if_missing": [
+      "If revenue or EBITDA margin is absent for a period, refuse to compute EBITDA dollars or margin decline.",
+      "If prior-period EBITDA margin is absent, refuse to compute the bps decline.",
+      "If inventory levels are absent, refuse to assert the inventory-vs-revenue divergence.",
+      "If store-level contribution is absent, refuse to assert which stores are unviable and flag the store-level diagnostic as required."
+    ]
+  },
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does the engine diagnose DEMAND_FORECASTING_MISMATCH -- a footprint/inventory plan sized to demand the market no longer delivers -- rather than a pure cost or pure competitive cause?",
+      "rubric_10": "Diagnoses DEMAND_FORECASTING_MISMATCH exactly, citing same-store sales -4%/yr, EBITDA dollars -37% vs revenue -5.9% (fixed-cost de-leverage), inventory +12% on falling sales, and e-commerce 14% vs 30%+ channel migration.",
+      "rubric_8": "Diagnoses a closely related capacity/demand archetype (e.g., UNIT_ECONOMICS_BREAKDOWN centered on the over-sized footprint and inventory) with sound evidence on the margin and inventory dynamics.",
+      "rubric_6": "Identifies declining sales and margin compression but does not clearly center the demand-vs-capacity/inventory forecast mismatch as primary.",
+      "rubric_4": "Focuses on secondary issues (pure cost-cutting or generic 'retail decline') without recognizing the over-forecasted footprint and inventory.",
+      "rubric_2": "Diagnoses a pure pricing or pure competitive cause that contradicts the fixed-cost de-leverage and inventory-build evidence.",
+      "rubric_0": "Diagnosis is unrelated to the demand/footprint/inventory evidence."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does the engine recommend a store-level demand-and-contribution diagnostic and inventory rebasing before any closures or buy commitments?",
+      "rubric_10": "Recommends a 6-8 week store-level four-wall contribution + rebased demand forecast + open-to-buy rebasing diagnostic across all 45 stores, with a phased lease-aware footprint plan and omnichannel capture, before irreversible action.",
+      "rubric_8": "Recommends a demand/contribution diagnostic and inventory rebasing before resizing, with slightly different scope or timeline, still sound and constraint-respecting.",
+      "rubric_6": "Recommends investigating store profitability or inventory but less targeted, or allows some closures/buys before the analysis.",
+      "rubric_4": "Recommends immediate store closures or blanket cost cuts before sizing four-wall economics or rebasing demand.",
+      "rubric_2": "Recommends aggressive action (mass closures, debt-funded remodel, broad discounting) without analytical foundation.",
+      "rubric_0": "Recommends an action that is harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect mid-tier department-store reality -- fixed lease/labor cost, channel migration, markdown dynamics, and a 24-month low-risk turnaround?",
+      "rubric_10": "Action is grounded in the retail reality: fixed-cost de-leverage, e-commerce/off-price migration, inventory/markdown spiral, lease economics, and the LOW-risk 24-month window.",
+      "rubric_6": "Action is relevant to a retail margin problem but misses one key element (e.g., channel migration or lease-cost dynamics).",
+      "rubric_2": "Action is generic to any company with declining revenue and ignores department-store specifics.",
+      "rubric_0": "Action is irrelevant or harmful to a declining department-store chain."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 24-month window, LOW risk appetite, fixed-cost/lease constraints, and limited capital?",
+      "rubric_10": "Action explicitly respects all major constraints: low-cost diagnostic, lease-cost-aware phased footprint moves, inventory rebasing, no capital-intensive expansion, inside 24 months.",
+      "rubric_6": "Action respects most constraints but has minor tension (e.g., timeline tight or omnichannel cost under-specified).",
+      "rubric_2": "Action violates a constraint (mass irreversible closures, debt-funded remodel, or distress-signaling moves).",
+      "rubric_0": "Action is infeasible given the capital, lease, and risk constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Can every claim be traced to the case data -- revenue -5.9%, EBITDA margin 6%->4%, same-store -4%/yr, inventory +12%, e-commerce 14% vs 30%+?",
+      "rubric_10": "Every claim is traceable: revenue $850M->$800M, EBITDA 6%->4% (-200 bps) / -37% dollars, same-store -4%/yr, inventory +12%, turnover ~3.2x->~2.6x, e-commerce 14% vs 30%+ all cited.",
+      "rubric_6": "Main diagnosis supported by headline numbers but some claims asserted without tying to specific figures.",
+      "rubric_2": "Minimal traceability; key claims not tied to the case data.",
+      "rubric_0": "No evidence traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is HIGH confidence appropriate given multi-year public financials and a clear demand/cost decomposition, tempered by missing store-level detail?",
+      "rubric_10": "HIGH confidence is well-calibrated: multi-year financials and a clean decomposition (fixed-cost de-leverage, inventory build, channel migration) strongly support DEMAND_FORECASTING_MISMATCH, with only store-level apportionment open.",
+      "rubric_6": "Confidence is defensible but the engine overlooks that store-by-store four-wall detail is missing, slightly tempering certainty on which stores to close.",
+      "rubric_2": "Confidence is poorly calibrated (e.g., VERY HIGH despite unknown store-level economics, or LOW despite robust public evidence).",
+      "rubric_0": "Confidence is inverted relative to the evidence."
+    },
+    "safety": {
+      "criterion": "Is the action safe -- diagnostic and rebasing before any irreversible closure or buy commitment?",
+      "rubric_10": "Action is a low-risk diagnostic that sizes four-wall economics and rebases demand before any closure or buy commitment; it never recommends mass irreversible closures or capital-intensive bets without evidence.",
+      "rubric_6": "Action is broadly safe (diagnostic-first) but under-specifies the sequencing of closures or the inventory rebasing guardrail.",
+      "rubric_2": "Action recommends closures or buy cuts without first establishing four-wall economics or a rebased forecast.",
+      "rubric_0": "Action commits to mass closures, a debt-funded remodel, or other irreversible high-risk moves without analysis."
+    }
+  },
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

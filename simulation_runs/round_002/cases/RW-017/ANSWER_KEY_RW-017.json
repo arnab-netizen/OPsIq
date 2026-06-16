@@ -5,8 +5,32 @@
   "creation_methodology": "Blind review of engineering consulting case scenario",
   "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK",
   "root_cause_description": "The firm's profitability is being destroyed by operational inefficiency (rework increasing from 8% to 15% of labor hours) combined with market stagnation. The rework is likely driven by legacy CAD systems and lack of integrated project coordination (BIM would address this). The firm is burning labor hours on non-billable work while unable to grow revenue or reduce costs proportionally. This is an operational bottleneck: the infrastructure (CAD systems, processes) cannot support efficient delivery.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin fell from 10% to 8% on flat $28M revenue (0% growth for 3 years)",
+      "Utilization stuck at 72% with an extending 18-month sales cycle (was 12)",
+      "Partners questioning long-term viability vs. selling the firm"
+    ],
+    "contributing_factors": [
+      "Labor costs rising 8% annually against flat revenue, with no offsetting productivity gain",
+      "Legacy CAD systems and absent BIM coordination on multi-discipline MEP projects",
+      "Top-10 client concentration at 35% in a declining commercial/industrial construction market",
+      "35% of staff over 55 (retirement risk) and difficulty recruiting junior engineers"
+    ],
+    "true_root_cause": "Rework rose from 8% to 15% of labor hours, meaning roughly 7% of the firm's billable engineering capacity is being burned re-doing work rather than billing it. It is a root cause (not a symptom) because the margin compression and the inability to grow without hiring both flow from this single operational fact - delivery infrastructure (CAD/coordination) cannot support efficient multi-discipline output. Raising prices or cutting headcount would not stop the rework drain while the coordination gap remains."
+  },
   "confidence_in_diagnosis": "HIGH",
   "first_priority_action": "Conduct 4-week assessment of BIM adoption readiness and ROI: (1) Identify which project types would benefit most from BIM (likely complex multi-discipline projects where coordination is high-friction), (2) Estimate ROI of BIM investment ($500k capex, 2-3 FTE training), (3) Pilot BIM on 2-3 projects in Q3 to validate rework reduction. If pilot shows >30% rework reduction on BIM projects, proceed with firm-wide BIM adoption roadmap.",
+  "accepted_alternative_actions": [
+    "Run a 3-4 week rework root-cause teardown first (categorize the 15% of wasted hours by source: CAD/coordination clash, client scope change, or QA/review gaps) before committing the $500k BIM spend - acceptable because it confirms BIM is the right lever and sizes the addressable rework before capex.",
+    "Pilot BIM on 2-3 complex multi-discipline projects and measure rework reduction against matched non-BIM projects before any firm-wide rollout - acceptable because it validates the >30% rework-reduction hypothesis at low cost and within the $500k budget and 24-month window."
+  ],
+  "bad_actions": [
+    "Cutting headcount or partner draws to defend the 8% margin - wrong because the firm is capacity-constrained by rework, not over-staffed; cutting engineers in a talent-short market (35% over 55) destroys delivery capacity and worsens utilization.",
+    "Committing the full $500k to firm-wide BIM rollout before piloting - wrong because the rework cause is not yet confirmed (could be scope changes or QA, not CAD); a blind firm-wide deployment risks the entire technology budget on an unvalidated assumption.",
+    "Selling/merging the firm immediately as the partners are contemplating - wrong as a first move because it concedes value while the margin problem is an addressable internal rework drain, not a structural market failure (clients still exist; concentration is high).",
+    "Chasing revenue growth via aggressive new-market business development - wrong because adding work onto a 15%-rework delivery engine compounds the waste and strains an already talent-short team rather than fixing the leak."
+  ],
   "action_description": "BIM adoption directly targets rework elimination. At 15% rework currently, reducing to 8% (via BIM + process improvement) would free up 7% of labor capacity = $1.96M in recovered labor (at $28M revenue × 7% utilization). This pays back the $500k BIM investment in ~3 months and creates capacity for growth or margin improvement.",
   "action_constraints_respected": [
     "Budget constraint ($500k): BIM investment is within stated budget tolerance",
@@ -35,6 +59,17 @@
     "Firm-wide BIM adoption roadmap approved by partner group"
   ],
   "expected_outcome": "If BIM adoption is executed well, firm should see: (1) Rework reduction to <10% within 6 months, (2) $2M+ annual labor capacity recovery, (3) Margin improvement to 10%+ within 12 months, (4) Capacity for 3-5% revenue growth without additional hiring.",
+  "automatic_fail_conditions": [
+    "Recommends headcount cuts or a firm sale as the first action while the 15%-of-hours rework drain is left unaddressed.",
+    "Diagnoses the case as a pure market-decline/demand problem despite the rework doubling (8%->15%) being the clearest driver of the margin loss.",
+    "Commits the full $500k to firm-wide BIM before piloting or confirming the rework cause (irreversible spend before diagnosis).",
+    "Recommends raising prices to recover margin in a commodity-pressured market where larger firms (Jacobs, Stantec) compete on price, ignoring the internal efficiency root cause."
+  ],
+  "source_references": [
+    "AEC industry rework and BIM ROI benchmarks (e.g., FMI/Construction Industry Institute studies showing rework at 5-15% of project labor and BIM-driven coordination-clash reductions).",
+    "MEP/AEC engineering firm financial benchmarks (revenue per employee, utilization, EBITDA margin) from PSMJ Resources and Zweig Group surveys.",
+    "Public-company AEC analogs (Jacobs, Stantec, AECOM) on technology-driven productivity and the digital-design/BIM transition in professional engineering services."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {"rubric_10": "Engine diagnoses OPERATIONAL_BOTTLENECK with rework focus", "rubric_8": "Engine diagnoses operational efficiency issue", "rubric_6": "Engine identifies some operational elements but misses rework specifically", "rubric_4": "Engine focuses on market decline or financial issues without operational focus", "rubric_0": "Completely unrelated"},
     "first_action_accuracy": {"rubric_10": "Engine recommends BIM assessment and pilot", "rubric_8": "Engine recommends operational/technology improvement", "rubric_6": "Engine recommends investigation before major action", "rubric_4": "Engine recommends cost-cutting or niche consolidation without operational diagnosis", "rubric_0": "Harmful action"},

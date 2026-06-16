@@ -5,8 +5,32 @@
   "creation_methodology": "Blind review process: Expert reviewed case independently without engine output. Diagnosed root cause and first action based on multi-dimensional evidence analysis and business judgment.",
   "root_cause_diagnosis": "GO_TO_MARKET_MISALIGNMENT",
   "root_cause_description": "The retailer's value proposition (curated selection, premium quality, in-store experience) has become misaligned with customer purchasing behavior and competitive market dynamics. Customers acknowledge the brand value ('curated selection' and 'in-person experience' still valued) but are making purchase decisions based on price rather than brand attributes. This is evidenced by: (1) customer churn increasing despite stable NPS on product quality, (2) pricing perception declining (3.6→3.1/5), (3) competitive DTC and e-commerce entrants using price as primary lever, and (4) store traffic declining while customers acknowledge value but visit less frequently. The company is competing on price in a market where it has no price advantage (DTC competitors 15-20% cheaper) while failing to monetize its actual competitive advantage (curated selection, brand experience). This is distinct from pricing-power loss (which would require price increase to fix) or pure product quality issues (which would show in satisfaction metrics); it is a positioning and go-to-market misalignment where the value proposition is not reaching or resonating with customers in their purchase decisions.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Gross margin fell 400bps (42%->38%) and EBITDA margin 290bps (9.1%->6.2%) on flat revenue ($183M->$185M)",
+      "Physical store traffic down 12% YoY (285K->251K transactions) with in-store basket down to $461 from $485",
+      "Customer churn up from 5% to 8% and NPS down from 68 to 62"
+    ],
+    "contributing_factors": [
+      "Pricing perception declined 3.6->3.1/5 while product-quality rating held at 4.2/5 (value, not quality, is the issue)",
+      "Three DTC entrants priced 15-20% below plus Amazon/Wayfair/Overstock expansion compressing perceived value",
+      "Store labor cost +18% ($45M->$53M) from wage inflation and omnichannel fulfillment overhead (~2 hrs/store/day)",
+      "E-commerce growing 18% but at $310 AOV and 8-10% margin vs. 38% store margin, with digital CAC rising (spend +35% for 18% more customers)"
+    ],
+    "true_root_cause": "The premium curation/in-store value proposition is no longer reaching customers in their purchase decisions: they still acknowledge the curation and experience but buy on price, where the company has no advantage. It is a root cause (not a symptom) because the traffic decline, churn, and margin erosion all flow from one fact - the go-to-market is competing on price it cannot win while failing to monetize the curation it can. Fixing surface symptoms (cutting labor, expanding e-commerce, dropping price) without re-targeting the value proposition by segment would not stop the bleed."
+  },
   "confidence_in_diagnosis": "HIGH",
   "first_priority_action": "Commission a customer segmentation and value-perception study (6-week project, $60-80k cost) to identify which customer segments value the curation and in-store experience enough to sustain premium pricing, and which are purely price-motivated. Use results to define three distinct go-to-market strategies: (1) Premium Segment (in-store curated experience, brand loyalty, price inelastic), (2) Price-Conscious Segment (value-oriented digital-first offering, lower-margin clearance/volume focus), (3) Occasional Buyers (simplified product range, lower-touch digital experience). Pilot segment-specific positioning and operations in Q4 2025, measure unit economics and customer metrics by segment, and develop segment-based financial projections for board presentation in Q3 2025.",
+  "accepted_alternative_actions": [
+    "Run a churned-and-active customer win/loss study (n=40-60, mix of segments) focused on why customers switched to the DTC entrants and what they would pay for curation/experience - acceptable because it isolates the value-vs-price tradeoff that drives the diagnosis before any pricing or store change.",
+    "Build a store-level and channel-level contribution P&L (each of the 42 stores plus e-commerce, fully loaded with occupancy, labor, omnichannel fulfillment, and digital CAC) to see which stores/channels still earn premium margin before committing the $2.5M - acceptable because it grounds the segment strategy in unit economics and respects the budget and board timeline."
+  ],
+  "bad_actions": [
+    "Cutting an across-the-board price (matching the DTC 15-20% discount) - wrong because the company has a 38% store/8-10% e-commerce margin structure and no scale cost advantage; matching DTC prices accelerates the EBITDA collapse it is trying to reverse.",
+    "Closing stores or cutting store labor to defend the 6.2% EBITDA before diagnosis - wrong because store traffic decline is from lower visit frequency of an otherwise stable customer base, and the in-store experience is the very asset premium segments value; premature cuts destroy the differentiator.",
+    "Pouring the $2.5M into e-commerce expansion to chase the 18% growth - wrong as a first move because digital runs at 8-10% margin with rising CAC (spend +35% for 18% more customers) and would dilute blended margin further while ignoring the positioning root cause.",
+    "Raising prices to recover the 400bps of lost gross margin - wrong because pricing perception is already deteriorating (3.6->3.1/5) against cheaper competitors; a list-price increase would push more price-motivated customers to the DTC and generalist alternatives."
+  ],
   "action_description": "This action is first priority because it diagnoses whether the company's value proposition can be rescued through better targeting/positioning (fixable) or whether the market has fundamentally shifted away from premium positioning (requiring deeper repositioning). The study is low-cost relative to major operational changes ($60-80k out of $2.5M budget) and provides clarity within the board timeline (6-week study + 4-week pilot + 2-week analysis = 12 weeks, well within 7-month deadline). It avoids premature cost-cutting (store closures) or premature expansion (expensive e-commerce buildout) by first understanding which customers still value the premium positioning and which segments require different strategies. The segmentation results will inform whether future investment should be in premium experience (for segments 1-2) or cost-efficiency (for segments 3).",
   "action_constraints_respected": [
     "Budget constraint ($2.5M available, action uses $60-80k = 3.2% of budget, leaving $2.4M+ for implementation): Respects budget by using existing customer base for study rather than external data purchase.",
@@ -43,6 +67,17 @@
     "Board readiness: By Q3 2025 board meeting, company presents clear go-to-market strategy informed by segment analysis, with financial projections for each segment's contribution to margin recovery roadmap."
   ],
   "expected_outcome": "If GO_TO_MARKET_MISALIGNMENT is the root cause and segmentation study is executed, the company should expect: (1) Within 6 weeks, clear identification of segment-specific value propositions and margin potential. (2) Within 12 weeks, pilot results showing measurable customer response differences by segment. (3) Within 7 months (board timeline), clear strategic direction for segment-specific operations, with financial model showing path to 8% EBITDA margin through positioning-informed operational choices. If segmentation study shows that the market has fundamentally shifted and premium positioning is no longer viable, the company should prepare for strategic alternatives (brand repositioning, acquisition, or consolidation). If results show strong demand for premium positioning in one or more segments, the company should invest in better targeting and experience rather than cost-cutting.",
+  "automatic_fail_conditions": [
+    "Recommends an across-the-board price cut or price increase as the first action before diagnosing which segments value curation vs. price.",
+    "Diagnoses a product-quality or operational-cost root cause despite the 4.2/5 product rating and pricing-perception decline (3.6->3.1/5) pointing to value-positioning, not quality.",
+    "Recommends store closures or headcount cuts (irreversible spend/disruption) before the segmentation study identifies which stores/segments sustain premium margin.",
+    "Recommends a major e-commerce buildout funded from the $2.5M despite digital's 8-10% margin and rising CAC, ignoring the positioning root cause."
+  ],
+  "source_references": [
+    "Specialty home-goods omnichannel margin-compression patterns analogous to public-company disclosures from Williams-Sonoma, RH (Restoration Hardware), and Bed Bath & Beyond's decline.",
+    "DTC home-furnishings price-disruption analogs (Article, Burrow, Wayfair/Overstock category expansion) and their effect on incumbent premium positioning.",
+    "Retail customer-segmentation and value-perception study benchmarks (NPS, churn, willingness-to-pay) for premium multi-channel specialty retail."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does the engine diagnose GO_TO_MARKET_MISALIGNMENT or a closely related archetype (e.g., BRAND_EROSION) supported by customer behavior data?",

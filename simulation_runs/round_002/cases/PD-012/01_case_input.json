@@ -4,10 +4,107 @@
   "industry": "Retail",
   "businessModel": "Department Store Chain",
   "businessStage": "Mature, Declining",
-  "sourceNote": "Retail chain case from SEC filings, financial data 2022-2025.",
-  "ownerIntake": {"businessType": "Mid-tier department store chain, 45 locations, $800M revenue, declining market share", "stage": "Revenue declined from $850M (2023) to $800M (2025), EBITDA margin 4% down from 6%", "ownerGoal": "Stabilize profitability and avoid store closures", "ownerConstraints": ["Brick-and-mortar retail secular decline", "E-commerce competition from Amazon/Target", "High real estate and labor costs"], "immediateConcern": "Same-store sales declining, inventory accumulating, margin pressure", "availableData": ["Revenue trends", "Gross margin by category", "Store-level metrics"], "unavailableData": ["Detailed competitive win/loss", "Customer behavior shifts"], "timeHorizon": "24 months", "riskAppetite": "LOW"},
-  "clientContext": {"industry": "Retail", "size": "mid-market", "revenueImpactUrgency": "CRITICAL"},
-  "businessProblem": "Department store chain facing secular retail decline with margin compression.",
-  "evidence": [{"dimension": "financial_health", "finding": "Revenue declining from $850M to $800M (-5.9%) while EBITDA margin fell from 6% to 4% (-200bps).", "confidence": "HIGH", "source": "SEC filings", "isCritical": true, "supportingData": {"revenue_2023": "$850M", "revenue_2025": "$800M", "ebitda_2023": "6%", "ebitda_2025": "4%"}}],
-  "ownerConstraintProfile": {"budgetBand": "MEDIUM", "timeHorizonDays": 730, "staffCapacity": "MEDIUM", "cashRunwayMonths": null, "legalComplianceSensitive": false}
+  "sourceNote": "Case constructed from public SEC filings (10-K and 10-Q) and investor materials for a mid-tier department store chain, financial data covering FY2022-FY2025. All figures from publicly available disclosures; no proprietary internal data and no answer-key content embedded in this input.",
+  "ownerIntake": {
+    "businessType": "Mid-tier department store chain operating 45 full-line stores across suburban and secondary markets. ~$800M annual revenue, ~6,500 employees. Apparel, home goods, beauty, and accessories under a single banner. Public company.",
+    "stage": "Revenue declined from $850M (FY2023) to $800M (FY2025), a 5.9% drop. EBITDA margin fell from 6% to 4% (-200 bps). Same-store sales down ~4% per year. Inventory growing faster than sales (inventory up ~12% over two years on declining revenue). E-commerce only ~14% of sales versus ~30%+ for stronger peers.",
+    "ownerGoal": "Stabilize profitability and avoid a wave of store closures or a distressed sale. Restore EBITDA margin toward 6% and right-size the store base and inventory to actual demand within 24 months.",
+    "ownerConstraints": [
+      "Secular constraint: Brick-and-mortar department-store foot traffic is in structural decline; the company built and staffed a 45-store footprint sized for demand that no longer materializes at the planned level.",
+      "Competitive constraint: E-commerce and off-price competitors (Amazon, Target, TJX) are capturing the chain's traditional mid-tier shopper; the company cannot match their assortment breadth or price.",
+      "Cost constraint: High fixed real-estate (long-term leases) and store-labor costs do not flex down as revenue and traffic fall, de-leveraging margin.",
+      "Inventory constraint: Buying and allocation are still planned to a higher demand forecast, leaving excess seasonal inventory that must be cleared at markdown, compressing gross margin.",
+      "Capital constraint: Limited balance-sheet flexibility; major store closures carry lease-termination costs and require careful investor communication to avoid signaling distress."
+    ],
+    "immediateConcern": "Same-store sales keep declining while inventory accumulates and markdowns deepen, indicating the company is buying and operating to a demand level that the market is no longer delivering. Margin is compressing because fixed store and lease costs are spread over a shrinking, over-forecasted revenue base. The core question is whether the store footprint and inventory plan are sized to real, sustainable demand or to an outdated forecast.",
+    "availableData": [
+      "Revenue and same-store sales trends by year (10-K, 10-Q)",
+      "Gross margin and markdown rate by category (investor presentations)",
+      "Store-level metrics: sales per store, sales per square foot, traffic trends",
+      "Inventory levels and inventory turnover (balance sheet, MD&A)",
+      "Channel mix: in-store vs e-commerce revenue split"
+    ],
+    "unavailableData": [
+      "Detailed competitive win/loss and shopper-defection data (not disclosed)",
+      "Granular customer-behavior and basket-shift analytics (proprietary)",
+      "Store-by-store contribution margin net of allocated fixed cost (aggregated in filings)",
+      "Lease-termination cost detail by location (not itemized publicly)"
+    ],
+    "timeHorizon": "24 months",
+    "riskAppetite": "LOW"
+  },
+  "clientContext": {
+    "industry": "Retail",
+    "size": "mid-market (public, ~$800M revenue, 45 stores, ~6,500 employees)",
+    "revenueImpactUrgency": "CRITICAL (declining sales, accumulating inventory, and margin compression threaten viability and risk a distressed outcome)"
+  },
+  "businessProblem": "A mid-tier department store chain is declining: revenue fell from $850M (FY2023) to $800M (FY2025) and EBITDA margin compressed from 6% to 4%. Same-store sales decline ~4% per year while inventory accumulates (+~12%) and markdowns deepen, indicating the company is buying and operating its 45-store footprint to a demand forecast that the market no longer delivers. Fixed real-estate and store-labor costs do not flex down, so margin de-leverages as revenue shrinks. The central question: is the deterioration a structural mismatch between the company's demand/footprint plan and actual sustainable demand (over-forecasted store base and inventory), a competitive displacement problem, or a pure cost-structure problem? Without store-level demand and contribution analysis, the chain risks either closing the wrong stores or continuing to overbuy inventory against an outdated forecast.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue declined from $850M (FY2023) to $800M (FY2025), a 5.9% decrease, while EBITDA margin fell from 6% to 4% (-200 bps). EBITDA fell from ~$51M to ~$32M (-37%). The margin decline outpaces the revenue decline, indicating fixed costs are not flexing down as the demand base shrinks.",
+      "confidence": "HIGH",
+      "source": "SEC EDGAR 10-K and 10-Q filings (FY2023, FY2025)",
+      "isCritical": true,
+      "supportingData": {
+        "revenue_fy2023": "$850M",
+        "revenue_fy2025": "$800M",
+        "revenue_decline_pct": "-5.9%",
+        "ebitda_margin_fy2023": "6%",
+        "ebitda_margin_fy2025": "4%",
+        "ebitda_margin_decline_bps": 200,
+        "ebitda_fy2023": "~$51M",
+        "ebitda_fy2025": "~$32M",
+        "ebitda_decline_pct": "-37%"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Same-store sales declined approximately 4% per year over the period, indicating demand contraction at the existing footprint rather than a one-time shock. The 45-store base was sized and staffed for a higher demand level that is no longer materializing, leaving stores under-trafficked.",
+      "confidence": "HIGH",
+      "source": "Investor presentations and 10-K MD&A (same-store sales disclosure)",
+      "isCritical": true,
+      "supportingData": {
+        "same_store_sales_trend": "-4% per year",
+        "store_count": 45,
+        "sales_per_store_fy2023": "~$18.9M",
+        "sales_per_store_fy2025": "~$17.8M",
+        "traffic_trend": "declining"
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Inventory grew approximately 12% over two years while revenue fell 5.9%, so inventory turnover deteriorated and markdown rates rose. Buying and allocation remained planned to a higher demand forecast than the market delivered, leaving excess seasonal inventory cleared at markdown and compressing gross margin.",
+      "confidence": "MEDIUM",
+      "source": "Balance sheet (inventory), MD&A (markdown commentary), category margin disclosure",
+      "isCritical": true,
+      "supportingData": {
+        "inventory_growth_2yr": "+12%",
+        "revenue_growth_2yr": "-5.9%",
+        "inventory_turnover_fy2023": "~3.2x",
+        "inventory_turnover_fy2025": "~2.6x",
+        "markdown_rate_trend": "rising"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "E-commerce is only ~14% of the chain's sales versus ~30%+ for stronger department-store peers, while off-price and online competitors (Amazon, Target, TJX) capture the mid-tier shopper. The traditional in-store demand the footprint was forecast against is migrating to channels and competitors the company under-serves.",
+      "confidence": "MEDIUM",
+      "source": "Investor presentations (channel mix), public peer benchmarking",
+      "isCritical": true,
+      "supportingData": {
+        "ecommerce_share": "14%",
+        "peer_ecommerce_share": "30%+",
+        "in_store_share": "86%",
+        "market_demand_shift": "in-store to online/off-price"
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 730,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  }
 }

@@ -6,8 +6,31 @@
   "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
   "root_cause_description": "The company's core unit economics have deteriorated across multiple dimensions. Gross margin declined 400 bps due to product mix shift (high-margin smart speakers declining, low-margin accessories growing) and component cost inflation (COGS % of revenue increased from 62% to 66%). Simultaneously, operating leverage has reversed: SG&A increased 600 bps as % of revenue (from 18% to 24%) while revenue remained flat. This combination—declining gross margin + fixed cost de-leverage—has compressed operating margin from 10% to 7.1%. The unit economics problem is structural: the company is attempting to maintain the same revenue base ($1.2B) with a changing product mix (lower-margin categories growing) and higher cost structure (SG&A 33% absolute growth). This is not a temporary margin pressure; it reflects fundamental deterioration in the business model's profitability at current scale.",
   "confidence_in_diagnosis": "HIGH",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Operating margin compressed 290 bps (10.0% -> 7.1%); operating income down 29% ($120M -> $85M) on flat $1.2B revenue",
+      "Stock down 35% over 12 months, market cap $4.25B -> $2.75B, analyst coverage 12 -> 8, consensus Buy -> Hold",
+      "Revenue flat at $1.2B while the smart-home market grows 8% annually, signaling share loss"
+    ],
+    "contributing_factors": [
+      "Product-mix shift from high-margin smart speakers (45-50%, declining 15% YoY) toward low-margin accessories (15-20%, growing 8%)",
+      "Component-cost inflation lifting COGS from 62% to 66% of revenue",
+      "Scale competitors (Apple, Google, Amazon) bundling ecosystems and pricing aggressively in the core categories"
+    ],
+    "true_root_cause": "A structural unit-economics breakdown: gross margin eroded 400 bps (38% -> 34%) from adverse mix and COGS inflation while SG&A de-levered 600 bps (18% -> 24%, +$72M / +33% absolute) against flat revenue, so the business no longer earns an adequate operating margin at its current scale and cost structure -- not a temporary or purely competitive pressure."
+  },
   "first_priority_action": "Conduct a detailed product-level profitability analysis (6-week project, $40-60k cost) to identify which products and categories are value-accretive vs value-destructive at current pricing and cost. Quantify the margin impact of the category mix shift (smart speakers → accessories) and identify the minimum gross margin required per category to meet company's 10% operating margin target given current SG&A structure. Based on analysis results, develop three potential responses: (1) Exit or de-emphasize low-margin categories (accessories) to restore overall margin, accepting revenue decline; (2) Re-price low-margin categories or increase value-add (bundles, services) to improve margins while retaining volume; (3) Restructure SG&A to match flattened revenue (target: return SG&A to 18% of revenue = $216M from current $288M), requiring $72M cost reduction. Present financial model to board showing margin impact of each option, with 6-month plan for implementation decision.",
   "action_description": "This action is first priority because without understanding product-level unit economics, the company cannot develop a credible margin recovery plan. The $72M SG&A reduction option risks destroying the business through cost-cutting without direction; the pricing option risks competitive harm without understanding margin requirements. The profitability analysis provides the diagnostic clarity to make strategic trade-offs between revenue/margin/market share consciously rather than reactively. At $40-60k cost and 6-week timeline, it fits the 18-month board deadline and investor guidance constraints.",
+  "accepted_alternative_actions": [
+    "Commission a fully-loaded SG&A / cost-structure diagnostic that decomposes the +$72M (18% -> 24% of revenue) increase by function (marketing, R&D, G&A, sales) and benchmarks each against the flattened revenue base, with a target of restructuring SG&A back toward 18% (~$216M) -- acceptable because it directly attacks the operating-leverage half of the breakdown, though it should be sequenced after (or alongside) the product-profitability study so cuts do not strand viable categories.",
+    "Run a category portfolio + selective re-pricing / value-add study (bundles, attach services, accessory-to-device cross-sell) to lift the blended gross margin off 34% without an across-the-board price hike that the firm cannot sustain against Apple/Google/Amazon -- acceptable because it targets the gross-margin half of the breakdown and the mix shift, but it must be grounded in per-category margin data first."
+  ],
+  "bad_actions": [
+    "Across-the-board price increases to restore gross margin: wrong for THIS case because the firm explicitly cannot win on price against scale competitors (Apple/Google/Amazon) and the gross-margin erosion is driven by category MIX and COGS inflation, not under-pricing; a blanket hike would accelerate the 15% smart-speaker volume decline and the share loss already visible in flat revenue.",
+    "Immediate broad SG&A / headcount cuts to force margin back to 10% before any profitability analysis: wrong because cutting blind risks stranding the very categories and customer-acquisition spend that are economically viable, would signal distress to an already-skittish investor base (stock -35%, Buy -> Hold), and treats the symptom (high SG&A ratio) without knowing which spend is value-accretive.",
+    "Doubling down on the growing accessories category to defend top-line revenue: wrong because accessories carry only 15-20% margin versus 45-50% for speakers, so growing the lowest-margin mix would deepen the gross-margin erosion (38% -> 34%) that is half the root cause, worsening the very unit-economics breakdown.",
+    "Pursuing a near-term acquisition or transformational M&A to 'buy growth' and reset the narrative: wrong because it requires shareholder approval the board does not yet have, adds integration risk and cost while operating margin is already compressing, and addresses neither the mix nor the cost-structure driver -- a distraction from the controllable internal economics."
+  ],
   "action_constraints_respected": [
     "Board/investor constraint (18-month deadline, requires shareholder communication): Action produces clear diagnostic results within 6 weeks, enabling board presentation at next quarterly earnings (within 3 months) with margin recovery plan. Early communication de-risks activist investor concerns.",
     "Competitive constraint (cannot win on price): Action focuses on category profitability, not across-the-board price increases, enabling selective pricing or portfolio optimization rather than vulnerable across-the-board moves.",
@@ -42,6 +65,56 @@
     "Board readiness: By next quarterly earnings (within 3 months), board presents investor guidance on margin recovery path and 6-month implementation plan based on analysis results."
   ],
   "expected_outcome": "If UNIT_ECONOMICS_BREAKDOWN is the root cause and the profitability analysis is executed well, the company should expect: (1) Within 6 weeks, clear diagnostic showing which categories/products are economically viable and what SG&A structure supports them. (2) Within 12 weeks, board decision on strategic response (exit categories, re-price, restructure SG&A, or combination). (3) Within 18 months (board deadline), measurable progress toward 10% operating margin target through some combination of: category portfolio optimization, SG&A reduction, or price/value-add improvements. If analysis shows that existing categories cannot support 10% margin at competitive prices, the company must pursue acquisitions or strategic repositioning (e.g., services, ecosystem approach) to create new margin drivers.",
+  "automatic_fail_conditions": [
+    "Recommends across-the-board price increases despite the explicit 'cannot win on price' competitive constraint and a gross-margin decline driven by mix/COGS rather than under-pricing.",
+    "Recommends immediate broad SG&A or headcount cuts to hit 10% margin without first diagnosing which categories and spend are value-accretive.",
+    "Accepts flat revenue as benign and ignores the 8% market growth / share-loss signal, failing to recognize a structural problem.",
+    "Diagnoses a pure pricing root cause (STRATEGIC_PRICING_ERROR) or pure demand collapse (DEMAND_FORECASTING_MISMATCH) despite the 600 bps SG&A de-leverage and 400 bps mix/COGS-driven gross-margin erosion.",
+    "Recommends a near-term acquisition/M&A requiring shareholder approval while operating margin is compressing, adding risk without addressing mix or cost structure."
+  ],
+  "source_references": [
+    "SEC EDGAR 10-K filings (FY2022, FY2023, FY2024): revenue, gross profit, COGS, SG&A, operating income, and detailed P&L schedules.",
+    "Quarterly 10-Q reports: balance sheet, cash flow, and interim margin trends.",
+    "Investor presentations and quarterly earnings-call transcripts: segment revenue and gross margin by category (smart speakers, displays, accessories) and channel (DTC vs retail).",
+    "NASDAQ historical price data and analyst-coverage databases (Bloomberg/FactSet): stock price, market cap, analyst count, and consensus rating history; IDC smart-home market growth data."
+  ],
+  "deterministic_scoring": {
+    "required_formulas": [
+      "Operating margin = Operating income / Revenue",
+      "Operating margin decline (bps) = (prior operating margin - current operating margin) x 10000",
+      "Operating income change % = (current operating income - prior operating income) / prior operating income",
+      "Gross margin decline (bps) = (prior gross margin - current gross margin) x 10000",
+      "SG&A de-leverage (bps) = (current SG&A % of revenue - prior SG&A % of revenue) x 10000",
+      "SG&A absolute = SG&A % of revenue x revenue; SG&A absolute growth % = (current SG&A - prior SG&A) / prior SG&A"
+    ],
+    "expected_values": {
+      "operating_margin_fy2023_pct": 10.0,
+      "operating_margin_fy2024_pct": 7.1,
+      "operating_margin_decline_bps": 290,
+      "operating_income_change_pct": -29.2,
+      "gross_margin_fy2022_pct": 38.0,
+      "gross_margin_fy2024_pct": 34.0,
+      "gross_margin_decline_bps": 400,
+      "sga_pct_fy2022": 18.0,
+      "sga_pct_fy2024": 24.0,
+      "sga_deleverage_bps": 600,
+      "sga_absolute_fy2022_usd_m": 216,
+      "sga_absolute_fy2024_usd_m": 288,
+      "sga_absolute_growth_pct": 33.3,
+      "cogs_pct_fy2022": 62.0,
+      "cogs_pct_fy2024": 66.0
+    },
+    "tolerance": "+/-0.5 percentage points on margins and ratios; +/-5% relative on dollar figures; +/-15 bps on the bps computations given the rounded underlying margins (e.g., 10.0% -> 7.1% computes to 290 bps).",
+    "unit_assumptions": "Revenue treated as $1.2B flat across FY2023 and FY2024; dollar figures in USD; SG&A absolute derived from the disclosed SG&A % times the $1.2B base; fiscal-year basis (FY2022 baseline for gross margin/COGS/SG&A %, FY2023 prior and FY2024 current for operating margin).",
+    "invalid_input_rules": "Reject as invalid any input where: operating margin is computed on a revenue figure other than the flat $1.2B base without justification; the operating-income change and margin decline do not reconcile (10.0% of $1.2B = $120M and 7.1% of $1.2B = ~$85M); or gross margin and COGS % do not sum to 100% within rounding (34% gross vs 66% COGS in FY2024).",
+    "missing_input_behavior": "If a required figure is absent, refuse to compute the dependent metric and flag the gap rather than imputing a value; do not infer operating income from revenue alone or assume an SG&A level.",
+    "refuse_if_missing": [
+      "If operating income or revenue is absent, refuse to compute operating margin.",
+      "If prior-year operating margin is absent, refuse to compute the bps decline.",
+      "If SG&A % of revenue is absent for both periods, refuse to assert the 600 bps de-leverage or the ~$72M absolute increase.",
+      "If category-level gross margins are absent, refuse to attribute the gross-margin decline to mix versus COGS and flag the product-profitability study as required."
+    ]
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or related archetype (e.g., OPERATIONAL_BOTTLENECK) with evidence from margin compression and cost structure?",
