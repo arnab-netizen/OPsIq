@@ -1,0 +1,136 @@
+{
+  "caseCount": 21,
+  "avgTraceRate": 98,
+  "avgConfidence": 52,
+  "maxConfidence": 64,
+  "minConfidence": 17,
+  "unknownCount": 0,
+  "outputs": [
+    {
+      "caseId": "BLND-006",
+      "traceRate": 100,
+      "topHypothesis": "go_to_market_misalignment",
+      "confidence": 49
+    },
+    {
+      "caseId": "BLND-007",
+      "traceRate": 100,
+      "topHypothesis": "go_to_market_misalignment",
+      "confidence": 49
+    },
+    {
+      "caseId": "BLND-008",
+      "traceRate": 100,
+      "topHypothesis": "go_to_market_misalignment",
+      "confidence": 49
+    },
+    {
+      "caseId": "BLND-009",
+      "traceRate": 80,
+      "topHypothesis": "go_to_market_misalignment",
+      "confidence": 49
+    },
+    {
+      "caseId": "BLND-010",
+      "traceRate": 100,
+      "topHypothesis": "go_to_market_misalignment",
+      "confidence": 49
+    },
+    {
+      "caseId": "ADV-011",
+      "traceRate": 100,
+      "topHypothesis": "unit_economics_breakdown",
+      "confidence": 49
+    },
+    {
+      "caseId": "ADV-012",
+      "traceRate": 100,
+      "topHypothesis": "go_to_market_misalignment",
+      "confidence": 49
+    },
+    {
+      "caseId": "ADV-013",
+      "traceRate": 100,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 17
+    },
+    {
+      "caseId": "ADV-014",
+      "traceRate": 100,
+      "topHypothesis": "unit_economics_breakdown",
+      "confidence": 49
+    },
+    {
+      "caseId": "RW-016",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 64
+    },
+    {
+      "caseId": "RW-018",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 64
+    },
+    {
+      "caseId": "RW-020",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 64
+    },
+    {
+      "caseId": "RW-022",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 59
+    },
+    {
+      "caseId": "RW-024",
+      "traceRate": 100,
+      "topHypothesis": "demand_forecasting_mismatch",
+      "confidence": 17
+    },
+    {
+      "caseId": "PD-011",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 64
+    },
+    {
+      "caseId": "PD-013",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 64
+    },
+    {
+      "caseId": "PD-015",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 59
+    },
+    {
+      "caseId": "PD-017",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 59
+    },
+    {
+      "caseId": "PD-019",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 59
+    },
+    {
+      "caseId": "SYN-011",
+      "traceRate": 100,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 59
+    },
+    {
+      "caseId": "SYN-013",
+      "traceRate": 80,
+      "topHypothesis": "go_to_market_misalignment",
+      "confidence": 49
+    }
+  ]
+}

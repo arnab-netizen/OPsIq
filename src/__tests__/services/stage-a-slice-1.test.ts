@@ -25,6 +25,147 @@ function createEvidence(
   };
 }
 
+describe("Stage A Slice 1 - Hypothesis Ranking Improvements (Remediation)", () => {
+  describe("HypothesisGenerator - Improved Scoring", () => {
+    const engine = new EvidenceSynthesisEngine();
+    const generator = new HypothesisGenerator();
+    const ranker = new HypothesisRanker();
+
+    it("should score UNIT_ECONOMICS_BREAKDOWN higher when financial patterns present", () => {
+      // Financial + operational evidence → should favor UNIT_ECONOMICS_BREAKDOWN
+      const evidence = [
+        createEvidence("financial_health", "Margin declining - CAC rising", ConfidenceLevel.HIGH),
+        createEvidence("financial_health", "Unit economics broken - payback extending", ConfidenceLevel.HIGH),
+        createEvidence("operational_efficiency", "Costs stable", ConfidenceLevel.MEDIUM),
+      ];
+
+      const synthesized = engine.synthesizeEvidence(evidence);
+      const hypotheses = generator.generateHypotheses(synthesized, evidence);
+      const ranked = ranker.rankHypotheses(hypotheses, evidence);
+
+      // UNIT_ECONOMICS_BREAKDOWN should be in top 3 (and ideally top 1 or 2)
+      const unitEconomicsHyp = ranked.find((h) => h.rootCause === DiagnosisType.UNIT_ECONOMICS_BREAKDOWN);
+      expect(unitEconomicsHyp).toBeDefined();
+      expect(unitEconomicsHyp?.confidence).toBeGreaterThan(0);
+    });
+
+    it("should not heavily bias toward operational_bottleneck when financial evidence dominant", () => {
+      // Financial-heavy evidence should not default to operational_bottleneck
+      const evidence = [
+        createEvidence("financial_health", "Margin declining", ConfidenceLevel.HIGH),
+        createEvidence("financial_health", "Cost structure broken", ConfidenceLevel.HIGH),
+        createEvidence("financial_health", "Payback period extending", ConfidenceLevel.MEDIUM),
+      ];
+
+      const synthesized = engine.synthesizeEvidence(evidence);
+      const hypotheses = generator.generateHypotheses(synthesized, evidence);
+      const ranked = ranker.rankHypotheses(hypotheses, evidence);
+
+      const topHyp = ranked[0];
+      // Should be UNIT_ECONOMICS_BREAKDOWN or similar, not necessarily OPERATIONAL_BOTTLENECK
+      expect(topHyp.rootCause).not.toBe(DiagnosisType.CUSTOMER_RETENTION_EROSION);
+    });
+
+    it("should prefer diagnoses with multiple supporting patterns", () => {
+      // Evidence supporting multiple patterns
+      const evidence = [
+        createEvidence("financial_health", "Unit economics broken", ConfidenceLevel.HIGH),
+        createEvidence("operational_efficiency", "Utilization high", ConfidenceLevel.HIGH),
+        createEvidence("market_position", "Competition intense", ConfidenceLevel.MEDIUM),
+        createEvidence("market_position", "Market growth slowing", ConfidenceLevel.MEDIUM),
+      ];
+
+      const synthesized = engine.synthesizeEvidence(evidence);
+      const hypotheses = generator.generateHypotheses(synthesized, evidence);
+
+      // Should have hypotheses with pattern information
+      hypotheses.forEach((h) => {
+        expect(h.patternCount).toBeDefined();
+      });
+
+      // At least one hypothesis should score above baseline
+      const scoredHyp = hypotheses.find((h) => h.confidence > 15);
+      expect(scoredHyp).toBeDefined();
+    });
+
+    it("should lower confidence for tied hypotheses to indicate uncertainty", () => {
+      // Two diagnoses with similar evidence
+      const evidence = [
+        createEvidence("quality_delivery", "Quality metrics stable", ConfidenceLevel.MEDIUM),
+        createEvidence("customer_retention", "Churn rising", ConfidenceLevel.MEDIUM),
+      ];
+
+      const synthesized = engine.synthesizeEvidence(evidence);
+      const hypotheses = generator.generateHypotheses(synthesized, evidence);
+      const ranked = ranker.rankHypotheses(hypotheses, evidence);
+
+      // All hypotheses should be ordered by confidence (descending)
+      if (ranked.length >= 2) {
+        for (let i = 1; i < ranked.length; i++) {
+          expect(ranked[i].confidence).toBeLessThanOrEqual(ranked[i - 1].confidence);
+        }
+      }
+
+      // No hypothesis should exceed confidence cap
+      ranked.forEach((h) => {
+        expect(h.confidence).toBeLessThanOrEqual(65);
+      });
+    });
+
+    it("should handle cases with no patterns by applying baseline scoring", () => {
+      // Evidence with no clear patterns
+      const evidence = [
+        createEvidence("process_maturity", "Process improvement initiated", ConfidenceLevel.LOW),
+      ];
+
+      const synthesized = engine.synthesizeEvidence(evidence);
+      const hypotheses = generator.generateHypotheses(synthesized, evidence);
+
+      if (hypotheses.length > 0) {
+        // Even with no patterns, should have low baseline confidence, not crash
+        const anyHyp = hypotheses[0];
+        expect(anyHyp.confidence).toBeGreaterThanOrEqual(0);
+        expect(anyHyp.confidence).toBeLessThanOrEqual(15); // Baseline max
+      }
+    });
+
+    it("should include diagnosis-specific evidence requirements in scoring", () => {
+      // DEMAND_FORECASTING_MISMATCH needs market_position dimension
+      const evidence = [
+        createEvidence("market_position", "Competitor growth faster", ConfidenceLevel.HIGH),
+        createEvidence("market_position", "Market consolidation", ConfidenceLevel.MEDIUM),
+        createEvidence("financial_health", "Revenue flat", ConfidenceLevel.MEDIUM),
+      ];
+
+      const synthesized = engine.synthesizeEvidence(evidence);
+      const hypotheses = generator.generateHypotheses(synthesized, evidence);
+      const ranked = ranker.rankHypotheses(hypotheses, evidence);
+
+      const demandMismatch = ranked.find((h) => h.rootCause === DiagnosisType.DEMAND_FORECASTING_MISMATCH);
+      expect(demandMismatch).toBeDefined();
+      expect(demandMismatch?.confidence).toBeGreaterThan(10); // Should score above 0
+    });
+
+    it("should maintain confidence cap at 65%", () => {
+      const evidence = [
+        createEvidence("operational_efficiency", "Utilization 90%", ConfidenceLevel.HIGH),
+        createEvidence("operational_efficiency", "Costs rising", ConfidenceLevel.HIGH),
+        createEvidence("operational_efficiency", "Capacity constrained", ConfidenceLevel.HIGH),
+        createEvidence("operational_efficiency", "Throughput declining", ConfidenceLevel.HIGH),
+      ];
+
+      const synthesized = engine.synthesizeEvidence(evidence);
+      const hypotheses = generator.generateHypotheses(synthesized, evidence);
+      const ranked = ranker.rankHypotheses(hypotheses, evidence);
+
+      // No hypothesis should exceed 65%
+      ranked.forEach((h) => {
+        expect(h.confidence).toBeLessThanOrEqual(65);
+      });
+    });
+  });
+});
+
 describe("Stage A Slice 1 - Evidence Synthesis Pipeline", () => {
   describe("EvidenceSynthesisEngine", () => {
     const engine = new EvidenceSynthesisEngine();

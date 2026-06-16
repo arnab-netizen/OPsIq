@@ -6,6 +6,7 @@ export interface RankedHypothesis extends Hypothesis {
   conflictScore: number; // 0-10
   netScore: number; // support - conflict, -10 to +10
   confidenceJustification: string;
+  specificity: number; // 0-10, based on pattern count and evidence diversity
 }
 
 export class HypothesisRanker {
@@ -38,14 +39,22 @@ export class HypothesisRanker {
 
     const netScore = supportScore - conflictScore;
 
-    // Recalculate confidence based on net score and evidence
-    const confidence = this.calculateConfidenceFromScore(netScore, hypothesis);
+    // Calculate specificity score (how many patterns + dimensions support this)
+    const specificity = this.calculateSpecificity(hypothesis);
+
+    // Recalculate confidence based on net score, evidence, and specificity
+    const confidence = this.calculateConfidenceFromScore(
+      netScore,
+      hypothesis,
+      specificity
+    );
 
     const justification = this.generateJustification(
       hypothesis.supportingEvidenceCount,
       hypothesis.conflictingEvidenceCount,
       allEvidence.length,
-      confidence
+      confidence,
+      hypothesis.patternCount || 0
     );
 
     return {
@@ -53,18 +62,40 @@ export class HypothesisRanker {
       supportingScore: Math.round(supportScore * 10) / 10,
       conflictScore: Math.round(conflictScore * 10) / 10,
       netScore: Math.round(netScore * 10) / 10,
+      specificity: Math.round(specificity * 10) / 10,
       confidence,
       confidenceJustification: justification,
     };
   }
 
+  private calculateSpecificity(hypothesis: Hypothesis): number {
+    // Specificity is based on how many patterns support + evidence diversity
+    let specificity = 0;
+
+    const patternCount = hypothesis.patternCount || 0;
+    const diversity = hypothesis.evidenceDiversity || 0;
+
+    // Multiple patterns boost specificity significantly
+    if (patternCount >= 3) specificity = 8;
+    else if (patternCount === 2) specificity = 6;
+    else if (patternCount === 1) specificity = 4;
+    else specificity = 2; // No patterns
+
+    // Evidence diversity adds to specificity
+    if (diversity >= 4) specificity = Math.min(10, specificity + 2);
+    else if (diversity === 3) specificity = Math.min(10, specificity + 1);
+
+    return specificity;
+  }
+
   private calculateConfidenceFromScore(
     netScore: number,
-    hypothesis: Hypothesis
+    hypothesis: Hypothesis,
+    specificity: number
   ): number {
-    // Map net score to confidence (0-65 range)
     let confidence: number;
 
+    // Base confidence from net score
     if (netScore > 5) {
       confidence = 55; // 55-65
     } else if (netScore > 3) {
@@ -81,8 +112,17 @@ export class HypothesisRanker {
     if (hypothesis.supportingEvidenceCount >= 4) confidence = Math.min(65, confidence + 5);
     if (hypothesis.supportingEvidenceCount >= 6) confidence = Math.min(65, confidence + 5);
 
+    // Add boost from specificity (multiple patterns = more confidence)
+    const specificityBoost = (specificity / 10) * 10; // Up to +10
+    confidence = Math.min(65, confidence + specificityBoost);
+
     // Reduce if contradictions present
     if (hypothesis.conflictingEvidenceCount > 3) confidence = Math.max(10, confidence - 10);
+
+    // Reduce if no patterns (baseline scoring only)
+    if ((hypothesis.patternCount || 0) === 0 && confidence > 15) {
+      confidence = Math.max(10, confidence - 10); // Very uncertain
+    }
 
     return Math.round(confidence);
   }
@@ -91,8 +131,10 @@ export class HypothesisRanker {
     supportingCount: number,
     conflictCount: number,
     totalEvidence: number,
-    confidence: number
+    confidence: number,
+    patternCount: number
   ): string {
-    return `Supporting: ${supportingCount} items, Conflicting: ${conflictCount} items, Total: ${totalEvidence}, Confidence = ${confidence}%`;
+    const patternNote = patternCount > 0 ? ` (${patternCount} pattern${patternCount > 1 ? "s" : ""})` : "";
+    return `Supporting: ${supportingCount} items, Conflicting: ${conflictCount} items, Total: ${totalEvidence}${patternNote}, Confidence = ${confidence}%`;
   }
 }

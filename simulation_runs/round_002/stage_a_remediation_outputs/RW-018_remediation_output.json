@@ -1,0 +1,167 @@
+{
+  "caseId": "RW-018",
+  "synthesizedEvidence": {
+    "dimensionsExamined": [
+      "financial_health",
+      "operational_efficiency"
+    ],
+    "dimensionsMissing": [
+      "customer_retention",
+      "quality_delivery",
+      "process_maturity",
+      "team_capability",
+      "market_position"
+    ],
+    "evidenceTraceRate": 100,
+    "criticalEvidencePresent": true,
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "dimensions": [
+          "financial_health",
+          "operational_efficiency"
+        ],
+        "supportingItems": [
+          "72a403f1-66f9-4152-9bcd-24f321c0abab",
+          "1562f2c1-bc19-417e-828b-3a5bd5536c6d",
+          "020c72ee-fe17-409f-b78e-0a088ae94137",
+          "39e80e32-ec71-484e-9e60-50de9e903b61",
+          "10e80467-25c7-4cc7-988b-a53e78c6677f"
+        ],
+        "patternStrength": 10,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ]
+      }
+    ],
+    "synthesisConfidence": 0.6
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "operational_bottleneck",
+      "confidence": 65,
+      "supportingEvidenceCount": 5,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 1,
+      "patternStrengthSum": 10,
+      "evidenceDiversity": 2,
+      "reasoning": "operational bottleneck (1 pattern): 5 supporting, 0 contradictions"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "unit_economics_breakdown",
+      "confidence": 60,
+      "supportingEvidenceCount": 5,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 1,
+      "patternStrengthSum": 10,
+      "evidenceDiversity": 2,
+      "reasoning": "unit economics breakdown (1 pattern): 5 supporting, 0 contradictions"
+    }
+  ],
+  "rankedHypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "operational_bottleneck",
+      "confidence": 64,
+      "supportingEvidenceCount": 5,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 1,
+      "patternStrengthSum": 10,
+      "evidenceDiversity": 2,
+      "reasoning": "operational bottleneck (1 pattern): 5 supporting, 0 contradictions",
+      "supportingScore": 10,
+      "conflictScore": 0,
+      "netScore": 10,
+      "specificity": 4,
+      "confidenceJustification": "Supporting: 5 items, Conflicting: 0 items, Total: 5 (1 pattern), Confidence = 64%"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "unit_economics_breakdown",
+      "confidence": 64,
+      "supportingEvidenceCount": 5,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 1,
+      "patternStrengthSum": 10,
+      "evidenceDiversity": 2,
+      "reasoning": "unit economics breakdown (1 pattern): 5 supporting, 0 contradictions",
+      "supportingScore": 10,
+      "conflictScore": 0,
+      "netScore": 10,
+      "specificity": 4,
+      "confidenceJustification": "Supporting: 5 items, Conflicting: 0 items, Total: 5 (1 pattern), Confidence = 64%"
+    }
+  ],
+  "mappings": [
+    {
+      "hypothesis": "operational_bottleneck",
+      "supporting": [
+        {
+          "evidenceId": "1562f2c1-bc19-417e-828b-3a5bd5536c6d",
+          "strength": 7,
+          "reasoning": "operational_efficiency evidence supports operational_bottleneck"
+        },
+        {
+          "evidenceId": "39e80e32-ec71-484e-9e60-50de9e903b61",
+          "strength": 7,
+          "reasoning": "operational_efficiency evidence supports operational_bottleneck"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "72a403f1-66f9-4152-9bcd-24f321c0abab",
+          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
+        },
+        {
+          "evidenceId": "020c72ee-fe17-409f-b78e-0a088ae94137",
+          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
+        },
+        {
+          "evidenceId": "10e80467-25c7-4cc7-988b-a53e78c6677f",
+          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
+        }
+      ],
+      "coverage": 100
+    },
+    {
+      "hypothesis": "unit_economics_breakdown",
+      "supporting": [
+        {
+          "evidenceId": "72a403f1-66f9-4152-9bcd-24f321c0abab",
+          "strength": 10,
+          "reasoning": "financial_health evidence supports unit_economics_breakdown"
+        },
+        {
+          "evidenceId": "1562f2c1-bc19-417e-828b-3a5bd5536c6d",
+          "strength": 7,
+          "reasoning": "operational_efficiency evidence supports unit_economics_breakdown"
+        },
+        {
+          "evidenceId": "020c72ee-fe17-409f-b78e-0a088ae94137",
+          "strength": 7,
+          "reasoning": "financial_health evidence supports unit_economics_breakdown"
+        },
+        {
+          "evidenceId": "39e80e32-ec71-484e-9e60-50de9e903b61",
+          "strength": 7,
+          "reasoning": "operational_efficiency evidence supports unit_economics_breakdown"
+        },
+        {
+          "evidenceId": "10e80467-25c7-4cc7-988b-a53e78c6677f",
+          "strength": 5,
+          "reasoning": "financial_health evidence supports unit_economics_breakdown"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [],
+      "coverage": 100
+    }
+  ],
+  "evidenceTraceRate": 100,
+  "topHypothesis": "operational_bottleneck",
+  "topConfidence": 64
+}

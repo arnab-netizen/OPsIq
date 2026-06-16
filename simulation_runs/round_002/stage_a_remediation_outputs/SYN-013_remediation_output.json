@@ -1,0 +1,220 @@
+{
+  "caseId": "SYN-013",
+  "synthesizedEvidence": {
+    "dimensionsExamined": [
+      "customer_retention",
+      "product_adoption",
+      "customer_success",
+      "market_position",
+      "unit_economics"
+    ],
+    "dimensionsMissing": [
+      "operational_efficiency",
+      "quality_delivery",
+      "financial_health",
+      "process_maturity",
+      "team_capability"
+    ],
+    "evidenceTraceRate": 80,
+    "criticalEvidencePresent": true,
+    "patterns": [
+      {
+        "name": "market_position-customer_retention-pattern",
+        "dimensions": [
+          "market_position",
+          "customer_retention"
+        ],
+        "supportingItems": [
+          "91acba25-f4c5-4ea9-966e-44b2b633bcb5",
+          "5e535365-5b06-40ba-a575-fb6d11228fdb"
+        ],
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "synthesisConfidence": 0.9
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "go_to_market_misalignment",
+      "confidence": 48,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 1,
+      "patternStrengthSum": 4,
+      "evidenceDiversity": 2,
+      "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "customer_retention_erosion",
+      "confidence": 10,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions"
+    },
+    {
+      "id": "hyp-2",
+      "rootCause": "demand_forecasting_mismatch",
+      "confidence": 10,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "demand forecasting mismatch (no patterns): 0 supporting, 0 contradictions"
+    }
+  ],
+  "rankedHypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "go_to_market_misalignment",
+      "confidence": 49,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 1,
+      "patternStrengthSum": 4,
+      "evidenceDiversity": 2,
+      "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions",
+      "supportingScore": 4,
+      "conflictScore": 0,
+      "netScore": 4,
+      "specificity": 4,
+      "confidenceJustification": "Supporting: 2 items, Conflicting: 0 items, Total: 5 (1 pattern), Confidence = 49%"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "customer_retention_erosion",
+      "confidence": 17,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions",
+      "supportingScore": 0,
+      "conflictScore": 0,
+      "netScore": 0,
+      "specificity": 2,
+      "confidenceJustification": "Supporting: 0 items, Conflicting: 0 items, Total: 5, Confidence = 17%"
+    },
+    {
+      "id": "hyp-2",
+      "rootCause": "demand_forecasting_mismatch",
+      "confidence": 17,
+      "supportingEvidenceCount": 0,
+      "conflictingEvidenceCount": 0,
+      "patternCount": 0,
+      "patternStrengthSum": 0,
+      "evidenceDiversity": 0,
+      "reasoning": "demand forecasting mismatch (no patterns): 0 supporting, 0 contradictions",
+      "supportingScore": 0,
+      "conflictScore": 0,
+      "netScore": 0,
+      "specificity": 2,
+      "confidenceJustification": "Supporting: 0 items, Conflicting: 0 items, Total: 5, Confidence = 17%"
+    }
+  ],
+  "mappings": [
+    {
+      "hypothesis": "go_to_market_misalignment",
+      "supporting": [
+        {
+          "evidenceId": "91acba25-f4c5-4ea9-966e-44b2b633bcb5",
+          "strength": 10,
+          "reasoning": "customer_retention evidence supports go_to_market_misalignment"
+        },
+        {
+          "evidenceId": "5e535365-5b06-40ba-a575-fb6d11228fdb",
+          "strength": 5,
+          "reasoning": "market_position evidence supports go_to_market_misalignment"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "4a0ebf86-1b5c-40ed-8f10-5705f2f008e0",
+          "reasoning": "product_adoption evidence is neutral to go_to_market_misalignment"
+        },
+        {
+          "evidenceId": "b0e3fd17-7047-4cc2-9cb5-059489c01a7d",
+          "reasoning": "customer_success evidence is neutral to go_to_market_misalignment"
+        },
+        {
+          "evidenceId": "08133942-0c5c-48c7-a2d2-a0de44d74e0f",
+          "reasoning": "unit_economics evidence is neutral to go_to_market_misalignment"
+        }
+      ],
+      "coverage": 100
+    },
+    {
+      "hypothesis": "customer_retention_erosion",
+      "supporting": [
+        {
+          "evidenceId": "91acba25-f4c5-4ea9-966e-44b2b633bcb5",
+          "strength": 10,
+          "reasoning": "customer_retention evidence supports customer_retention_erosion"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "4a0ebf86-1b5c-40ed-8f10-5705f2f008e0",
+          "reasoning": "product_adoption evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "b0e3fd17-7047-4cc2-9cb5-059489c01a7d",
+          "reasoning": "customer_success evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "5e535365-5b06-40ba-a575-fb6d11228fdb",
+          "reasoning": "market_position evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "08133942-0c5c-48c7-a2d2-a0de44d74e0f",
+          "reasoning": "unit_economics evidence is neutral to customer_retention_erosion"
+        }
+      ],
+      "coverage": 100
+    },
+    {
+      "hypothesis": "demand_forecasting_mismatch",
+      "supporting": [
+        {
+          "evidenceId": "5e535365-5b06-40ba-a575-fb6d11228fdb",
+          "strength": 5,
+          "reasoning": "market_position evidence supports demand_forecasting_mismatch"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "91acba25-f4c5-4ea9-966e-44b2b633bcb5",
+          "reasoning": "customer_retention evidence is neutral to demand_forecasting_mismatch"
+        },
+        {
+          "evidenceId": "4a0ebf86-1b5c-40ed-8f10-5705f2f008e0",
+          "reasoning": "product_adoption evidence is neutral to demand_forecasting_mismatch"
+        },
+        {
+          "evidenceId": "b0e3fd17-7047-4cc2-9cb5-059489c01a7d",
+          "reasoning": "customer_success evidence is neutral to demand_forecasting_mismatch"
+        },
+        {
+          "evidenceId": "08133942-0c5c-48c7-a2d2-a0de44d74e0f",
+          "reasoning": "unit_economics evidence is neutral to demand_forecasting_mismatch"
+        }
+      ],
+      "coverage": 100
+    }
+  ],
+  "evidenceTraceRate": 80,
+  "topHypothesis": "go_to_market_misalignment",
+  "topConfidence": 49
+}
