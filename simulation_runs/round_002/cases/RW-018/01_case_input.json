@@ -45,6 +45,30 @@
       "source": "Cost accounting data",
       "isCritical": true,
       "supportingData": {"revenue_per_visit": "$180", "cost_trend": "Rising"}
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Insurance mix is shifting toward lower-paying plans. Over the two-year window in which net margin fell from 10% to 6%, the share of visits reimbursed by higher-paying commercial plans declined while government and narrow-network plan share rose, pulling blended realized revenue per visit down even though list charges and the ~$180 average visit revenue figure are roughly flat. With volumes up 8% YoY, total reimbursement still grows but per-visit reimbursement is eroding.",
+      "confidence": "MEDIUM",
+      "source": "Practice management system payer-mix and remittance data",
+      "isCritical": true,
+      "supportingData": {"payer_mix_shift": "Commercial share declining, government/narrow-network share rising", "realized_revenue_per_visit_trend": "Declining", "volume_growth": "8% YoY"}
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Clinical labor is the dominant and rising cost driver. Physician and clinical staff compensation must be held flat-to-up to retain providers in a tight recruiting market, and these costs are spread across 8 locations and 120 employees. As the clinic scaled patient volume, fixed and semi-fixed staffing was added ahead of fully utilized demand at newer sites, raising cost per visit faster than the modest growth in revenue per visit.",
+      "confidence": "MEDIUM",
+      "source": "Payroll and location-level staffing analysis",
+      "isCritical": true,
+      "supportingData": {"locations": 8, "employees": 120, "labor_cost_trend": "Rising", "physician_comp_constraint": "Held to retain staff"}
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "There is no service-line or per-location profitability reporting, so the clinic cannot yet see which of its service lines (surgical orthopedics, sports-medicine visits, imaging, physical therapy) or which of its 8 locations are contribution-positive versus contribution-negative after fully loaded labor and overhead. This blind spot means the margin compression from 10% to 6% cannot be attributed to a specific payer, service, or site without further analysis.",
+      "confidence": "MEDIUM",
+      "source": "Finance team assessment; absence of service-line cost accounting",
+      "isCritical": false,
+      "supportingData": {"service_line_profitability_visibility": "None", "location_profitability_visibility": "None", "margin_prior": "10%", "margin_current": "6%"}
     }
   ],
   "ownerConstraintProfile": {"budgetBand": "MEDIUM", "timeHorizonDays": 540, "staffCapacity": "MEDIUM", "cashRunwayMonths": null, "legalComplianceSensitive": true}

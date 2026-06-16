@@ -6,8 +6,31 @@
   "root_cause_diagnosis": "INSUFFICIENT_EVIDENCE",
   "root_cause_description": "The case presents incomplete information that masks the true root cause of profitability decline. Leadership's narrative ('weak manufacturing economy, fewer transformation opportunities') is plausible but unvalidated. The utilization decline (70%→55%) could be caused by: (1) demand-side (manufacturing market actually declining, fewer transformation needs), (2) supply-side/competitive (global competitors winning bids at lower prices, clients choosing competitors), (3) client concentration (one or two key clients reducing project volume while market is healthy), or (4) pricing (firm's rates not competitive, so fewer bids converted). Without cohort analysis (which clients are declining?), win/loss analysis (what are we losing to and why?), and pricing trend data (are we winning fewer bids, or at lower rates?), the firm cannot distinguish between these hypotheses. Leadership's proposed solution (aggressive expansion into healthcare/financial services) might be correct—but it might also be wrong if the real problem is client concentration risk, competitive pricing pressure, or declining competitiveness. Recommending major strategic action (new vertical expansion) without first validating the diagnosis is the trap: the firm could invest in new business development and still face profitability crisis if the root cause is unaddressed.",
   "confidence_in_diagnosis": "PROVISIONAL",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Partnership profit down 31% ($1.3M -> $0.9M); profit per partner $433k -> $300k on flat ~$6.5M revenue",
+      "Billable utilization down 70% -> 55% (-15 pp / -21% relative)",
+      "Two partner departures in 18 months to larger firms"
+    ],
+    "contributing_factors": [
+      "High top-5 client concentration (45% of revenue) creating vulnerability to individual client loss",
+      "Reported intensifying competition from global and digital-transformation firms and client demand for digital expertise the firm lacks",
+      "Leadership narrative ('weak manufacturing economy') asserted without cohort, win/loss, or pricing data"
+    ],
+    "true_root_cause": "Not yet determinable. The utilization and profit decline are real, but whether they stem from market-wide demand decline, competitive/pricing displacement, client concentration, or a digital-capability gap cannot be resolved without client cohort analysis, win/loss analysis, and pricing-trend data -- so the correct posture is to withhold a concrete diagnosis and demand the missing evidence before any strategic commitment."
+  },
   "first_priority_action": "DO NOT PROCEED with new vertical expansion until detailed diagnostic is complete. Instead, commission a 4-week diagnostic project to answer three critical questions: (1) Client cohort analysis: Which clients are declining in project volume? By how much? Are ALL manufacturing clients showing decline (market-wide demand issue), or specific clients (concentration/loss risk)? (2) Win/loss analysis: Which opportunities were lost in past 12 months? To whom (global firms, boutiques, internal client team)? Stated reasons? (3) Pricing/competitiveness analysis: Have average project fees changed? Are we winning fewer bids at same price (demand issue) or same win rates at lower prices (competitive displacement)? Results of diagnostic will guide whether the solution is: (A) Vertical expansion (if market-wide demand decline), (B) Client concentration risk mitigation (if specific clients declining), (C) Competitive positioning/pricing (if losing to competitors), or (D) Capability gap (if clients want digital expertise we lack). Defer new vertical expansion decision until diagnostic results are in hand.",
   "action_description": "This action is first priority because leadership's proposed solution (expand to new verticals) might be incorrect if the underlying diagnosis is wrong. The firm has 18-month runway to recover profitability before partner departures accelerate. Investing time in new vertical business development without validating the diagnosis risks wasting time and capital on a strategy that doesn't address the real problem. A 4-week diagnostic is low-cost (internal or minimal external resources) and clarifies the real root cause. This de-risks major strategic decisions.",
+  "accepted_alternative_actions": [
+    "Run the diagnostic in three parallel mini-workstreams (cohort, win/loss, pricing) staffed by 2-3 people part-time and explicitly gate the vertical-expansion decision on the results, rather than a single sequential study -- acceptable because it compresses the timeline while still refusing to commit before the evidence is in hand.",
+    "Pair the diagnostic with a break-even-utilization analysis (at what utilization does the firm become unprofitable, and is 55% below it?) so leadership can size the urgency and the minimum recovery needed -- acceptable because it directly informs whether the recovery requires demand replacement, cost action, or both, without prematurely choosing a strategy."
+  ],
+  "bad_actions": [
+    "Launching aggressive expansion into healthcare/financial services now on leadership's 'weak manufacturing economy' narrative: wrong for THIS case because the narrative is unvalidated -- no cohort, win/loss, or pricing data confirms a market-wide demand decline; if the real driver is concentration, pricing, or a digital-capability gap, expansion burns scarce partner time and capital and leaves the true cause unaddressed.",
+    "Cutting partner compensation or staff to restore profitability: wrong because partners are the rainmakers and key client relationships; compensation cuts risk further departures (2 already lost) and capacity collapse, and staff cuts could push utilization economics the wrong way before the cause of the 70%->55% decline is even known.",
+    "Pursuing a merger/acquisition with a larger firm as the primary response: wrong because it is an irreversible strategic move chosen on a sparse, unvalidated diagnosis; without knowing whether the problem is fixable internally (concentration, pricing, capability), the firm could sell or merge from a misunderstood and weaker-than-necessary position.",
+    "Accepting the leadership narrative and stating a confident demand-decline diagnosis: wrong because the evidence is qualitative and incomplete; a HIGH-confidence demand-side diagnosis on this data would mask client-concentration, competitive-displacement, and capability-gap hypotheses that are equally consistent with the facts."
+  ],
   "action_constraints_respected": [
     "Partner constraint: Diagnostic does not require reducing partner compensation or aggressive partner recruitment; uses existing partnership analytical capability to inform strategy.",
     "Client constraint: Diagnostic involves no changes to existing client relationships or project types; purely analytical work to understand client/market trends.",
@@ -44,6 +67,39 @@
     "Board readiness: By end of 4 weeks, partners can make informed decision on strategic direction with confidence that the chosen path addresses the true root cause."
   ],
   "expected_outcome": "If the firm conducts the diagnostic and acts on results: (1) Within 4 weeks, clear understanding of profitability drivers and root cause of utilization decline. (2) Within 12 weeks, partnership agreement on strategic response (vertical expansion, client concentration mitigation, competitive repositioning, pricing adjustment, or combination). (3) Within 18 months, measurable improvement in utilization, profitability, and partner satisfaction. If the diagnostic reveals that the problem is NOT 'weak manufacturing market' but rather client concentration or competitive displacement, the vertical expansion strategy could fail or compound the problem. The diagnostic is insurance against strategic mis-direction.",
+  "automatic_fail_conditions": [
+    "Endorses new vertical expansion (or any major strategic commitment) as the first action without demanding the missing cohort, win/loss, and pricing analysis.",
+    "States HIGH confidence in a concrete demand-decline diagnosis on qualitative, incomplete evidence.",
+    "Accepts leadership's 'weak manufacturing economy' narrative at face value without identifying the competing hypotheses (concentration, competitive/pricing displacement, capability gap).",
+    "Recommends partner-compensation or staff cuts before the cause of the utilization decline is established, risking further partner departures.",
+    "Recommends a merger/acquisition as the primary response on the current sparse diagnosis."
+  ],
+  "source_references": [
+    "Case input ADV-011: partnership financials (profit, profit-per-partner, revenue), utilization metrics, client-concentration data, and the explicitly unavailable cohort/win-loss/pricing analyses.",
+    "Professional-services performance benchmarks (utilization, break-even, and partner-productivity norms for boutique consulting) used to frame the diagnostic, not to assert internal values."
+  ],
+  "trap_definition": {
+    "exact_trap": "Recency/availability bias combined with an unvalidated authority narrative and insufficient critical data. A plausible, recent-sounding explanation ('weak 2024 manufacturing economy, so expand to new verticals') is offered confidently by leadership, but the firm has no cohort, win/loss, or pricing data to confirm it, and several alternative root causes (client concentration, competitive/pricing displacement, digital-capability gap) fit the same facts.",
+    "plausible_but_wrong_narrative": "'The manufacturing market is weak and transformation work has dried up; the fix is to aggressively expand into healthcare and financial services to replace the lost capacity.'",
+    "disconfirming_evidence_in_input": [
+      "Revenue is flat (~$6.5M) while profit fell 31% and utilization fell 70%->55%, so the loss is efficiency/utilization-driven, not obviously a market-demand collapse",
+      "Top-5 clients represent 45% of revenue, so a concentration-driven volume loss could fully explain the decline without any market-wide weakness",
+      "Competition from global and digital firms and client demand for digital expertise are reported, pointing to possible competitive/capability displacement rather than demand decline",
+      "No cohort, win/loss, or pricing analysis exists to distinguish these causes -- the narrative is asserted, not evidenced"
+    ],
+    "safe_correct_response": "Refuse to act on the unvalidated narrative. Commission a short (about 4-week) diagnostic -- client cohort analysis, win/loss analysis, and pricing/competitiveness analysis, plus a break-even-utilization check -- and gate the vertical-expansion decision on the findings.",
+    "false_positive_failure_modes": [
+      "Anchoring on the recent, plausible 'weak economy' story because it fits 2024 headlines",
+      "Treating leadership's confidence as evidence and skipping validation",
+      "Reading flat revenue plus falling profit as proof of a demand problem rather than a utilization/concentration/pricing problem"
+    ],
+    "insufficient_evidence_points": [
+      "Which clients/segments are actually declining is unknown (no cohort analysis)",
+      "What the firm is losing bids to and why is unknown (no win/loss analysis)",
+      "Whether fees or win rates are falling (pricing vs demand) is unknown (no pricing-trend data)"
+    ],
+    "dangerous_overconfident_answer": "A confident diagnosis of market-wide demand decline that endorses an immediate, capital- and partner-intensive expansion into healthcare/financial services. It is dangerous because, if the true driver is client concentration, competitive/pricing displacement, or a digital-capability gap, the expansion fails to recover profitability, consumes scarce partner capacity, and accelerates the partner departures that threaten firm viability."
+  },
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine recognize the trap: incomplete data, and recommend diagnostic before accepting leadership's narrative?",

@@ -3,10 +3,45 @@
   "answer_creation_date": "2026-06-16",
   "answer_creator": "Domain Expert (Healthcare Operations)",
   "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Net margin halved from 10% ($1.5M) to 6% ($900k) - a 40% profit decline on $15M revenue",
+      "Profitability falling even as revenue grows 12% YoY and patient volumes rise 8%",
+      "Cost per visit trending up against a ~$180 average revenue per visit"
+    ],
+    "contributing_factors": [
+      "Insurance mix shifting toward lower-paying plans, eroding reimbursement per visit",
+      "Physician and clinical labor costs that must be held to retain staff in a tight recruiting market",
+      "Overhead spread across 8 locations and 120 employees as the clinic scales volume",
+      "No service-line or per-location profitability visibility, so loss-making mix is invisible"
+    ],
+    "true_root_cause": "Per-visit economics are inverting: reimbursement per visit (driven by payer mix) is declining while cost per visit rises, so each incremental visit contributes less margin and growth no longer generates proportional profit. It is a root cause (not a symptom) because the margin halving, the cost-per-visit rise, and the profit-vs-volume divergence all flow from this one fact - the clinic is adding volume that is not covering its fully-loaded cost to serve. Raising more capital or cutting capacity would not fix the bleed while the underlying payer-mix and cost-per-visit gap remains."
+  },
   "confidence_in_diagnosis": "MODERATE",
   "first_priority_action": "Conduct payer mix and service line profitability analysis: identify which payors are declining in reimbursement, which service lines are most/least profitable, where to optimize.",
+  "accepted_alternative_actions": [
+    "Build a per-visit contribution model by location and service line (orthopedic vs. sports medicine vs. ancillary imaging/PT) that subtracts direct clinical labor, supplies, and allocated overhead from reimbursement, to find where the $180 average masks loss-making mix - acceptable because it isolates the unit-economics driver before any capacity or staffing change.",
+    "Run a payer-contract and reimbursement-trend audit (rate change by payer over 24 months, plan-mix shift, denials/underpayments) to quantify how much of the margin drop is reimbursement-driven vs. cost-driven - acceptable because it directly tests the payer-mix hypothesis without touching patient capacity (per the owner's no-capacity-reduction goal)."
+  ],
+  "bad_actions": [
+    "Cutting patient capacity or closing locations to reduce cost - wrong because the owner's explicit goal is to hold capacity, and volume is growing 12%; the problem is margin per visit, not too much volume.",
+    "Cutting physician compensation to restore margin - wrong because the talent constraint requires holding physician pay to retain staff; a comp cut risks physician attrition and lost revenue in a tight recruiting market.",
+    "Raising prices/chargemaster rates to lift margin - wrong because reimbursement is payor-controlled with limited pricing power; list-rate increases do not change negotiated payer rates and will not move realized revenue per visit.",
+    "Pursuing aggressive volume growth/marketing to outgrow the problem - wrong because each incremental visit currently earns declining margin; adding volume on inverted unit economics deepens the loss rather than fixing it."
+  ],
   "action_description": "Detailed profitability analysis will reveal whether the problem is payor mix (need to shift mix), service mix (need to de-emphasize low-margin services), or operational costs (need to reduce costs). Cannot improve without this clarity.",
   "evidence_basis": ["Margin decline from 10% to 6% while volumes growing", "Cost per visit rising despite volume growth"],
+  "automatic_fail_conditions": [
+    "Recommends reducing patient capacity or closing locations as the first action, violating the owner's explicit goal to maintain capacity.",
+    "Diagnoses a demand/volume problem despite revenue growing 12% YoY and volumes up 8% - the issue is margin per visit, not volume.",
+    "Recommends cutting physician compensation before diagnosing payer mix vs. service mix vs. cost, ignoring the talent-retention constraint.",
+    "Recommends list-price/chargemaster increases to fix a payor-reimbursement-driven margin problem where the clinic has no pricing power."
+  ],
+  "source_references": [
+    "Specialty-clinic (orthopedic/sports medicine) reimbursement and payer-mix margin benchmarks (MGMA cost and revenue surveys; CMS physician fee schedule trend data).",
+    "Public-company analogs in physician-services/clinic roll-ups (e.g., U.S. Physical Therapy, USPI/Tenet, and ortho/MSK platform groups) showing volume-up/margin-down compression from payer-mix shift.",
+    "Healthcare cost-to-serve and per-visit contribution-margin analysis conventions for multi-site outpatient networks."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {"rubric_10": "Diagnoses UNIT_ECONOMICS_BREAKDOWN", "rubric_0": "Unrelated"},
     "first_action_accuracy": {"rubric_10": "Recommends profitability analysis", "rubric_0": "Harmful"},

@@ -5,8 +5,32 @@
   "creation_methodology": "Expert analysis of 3PL margin compression. Reviewed financial trends (EBITDA 14%→12% in three years, revenue growth 12%→5%), customer mix shift (e-commerce now 38% of revenue at 8-10% margin vs. retail 15-18%), and cost pressures (labor +12% in 24 months, utilization only 72%). Diagnosed root cause as unit economics deterioration due to customer mix shift and cost inflation.",
   "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
   "root_cause_description": "The 3PL's unit economics are deteriorating due to two factors: (1) customer mix shift to e-commerce (lower-margin 8-10% vs. retail 15-18%), and (2) labor cost inflation (+12% in 24 months) without matching automation/productivity improvements. The math is clear: if e-commerce (38% of revenue) is 8% margin and retail (62% of revenue) is 16% margin, blended margin should be ~13% (which matches current 12% closely). But labor costs are rising 12% while utilization is only 72%, suggesting labor expense per unit of output is rising. Without automation investment or customer mix improvement, margin will continue declining. The company is trying to serve a changing market (shift to e-commerce) without changing its operating model (still labor-intensive), creating profitability squeeze.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin down 200bps in three years (14% -> 12%)",
+      "Revenue growth slowing from 12% to 5% YoY with net income declining despite growth",
+      "ROA 6.3% vs. peer median 8%"
+    ],
+    "contributing_factors": [
+      "Customer-mix shift to e-commerce (now 38% of revenue at 8-10% margin vs. retail 15-18%)",
+      "Labor costs up 12% in 24 months while utilization sits at only 72% (excess capacity)",
+      "Automation gap vs. competitors, with $8-12M modernization capex exceeding $9M annual OCF",
+      "No customer-level or service-cost-to-serve visibility, so loss-making accounts and warehouses are invisible"
+    ],
+    "true_root_cause": "Per-unit economics are deteriorating because the company is taking on lower-margin e-commerce volume (with returns/speed complexity) using a still labor-intensive operating model whose costs rise faster than its pricing. It is a root cause (not a symptom) because the margin compression, slowing net income, and sub-peer ROA all flow from this one fact - revenue mix and cost structure are misaligned with how the work is now performed. Adding capital or chasing more volume would not fix the bleed while the loss-making accounts, services, and underused warehouses remain."
+  },
   "confidence_in_diagnosis": "HIGH",
   "first_priority_action": "Commission 6-week customer profitability and operational efficiency analysis: (1) Calculate exact margin by customer; identify which customers are above 12% margin (sustainable) vs. below (marginal or unprofitable). (2) Analyze e-commerce vs. retail service cost drivers: what makes e-commerce more expensive to serve? Returns? Speed requirements? (3) Assess utilization opportunity: can 28 warehouses be consolidated to higher utilization levels? (4) Model automation ROI: for top 3 customers, what would automation capex save in labor cost? Results will determine whether solution is (A) customer mix shift (exit lower-margin e-commerce), (B) pricing adjustment (repricing lower-margin customers), (C) operational efficiency (consolidation, process improvement), or (D) targeted automation (capex in high-opportunity warehouses).",
+  "accepted_alternative_actions": [
+    "Build a per-customer fully-loaded contribution P&L (netting direct labor, returns-processing, speed/fulfillment, and allocated warehouse overhead) to segment accounts into profitable, marginal, and value-destroying before any pricing or exit - acceptable because it isolates the loss-makers driving the blended margin down.",
+    "Run a warehouse-level utilization and consolidation analysis (which of the 28 sites are underused at the 72% blended rate, and whether work can be re-floored to higher-utilization locations) to size the overhead-leverage opportunity before any capex or automation decision - acceptable because under-utilization is a sized 150-200bps lever."
+  ],
+  "bad_actions": [
+    "Committing the $8-12M automation capex across all 28 warehouses before analysis - wrong because it exceeds the $9M annual OCF and the ROI is unvalidated; a blanket modernization risks the balance sheet ahead of an owner exit without knowing which sites pay back.",
+    "Exiting all e-commerce customers to restore retail-level margins - wrong because e-commerce is 38% of revenue and growing while retail is declining; an indiscriminate exit forfeits the growth segment and shrinks the business before repricing/efficiency options are tested.",
+    "Cutting warehouse labor across the board to offset the 12% labor inflation - wrong because utilization is already only 72% and e-commerce service demands (returns, speed) require staffing; blanket cuts degrade service and risk losing the top-3 accounts (28% of revenue).",
+    "Raising prices uniformly on all customers - wrong because customer-level price sensitivity is unknown; a blanket increase risks churning defensible retail accounts while failing to fix the specific loss-making e-commerce economics."
+  ],
   "action_description": "This is first priority because margin trajectory is unsustainable without intervention. Growth is slowing (5% YoY) while costs rising, creating a profitability spiral. The 6-week analysis will identify which customers and services are economically viable and which require action (repricing, exit, or efficiency improvement), enabling the owner to position the company for exit with clear profitability path.",
   "action_constraints_respected": [
     "Cash runway: 6-week analysis uses internal resources (no external capex required yet); analysis informs capex decisions.",
@@ -43,6 +67,17 @@
     "Strategic option clarity: By end of week 6, clear recommendation on which 2-3 levers (mix adjustment, pricing, consolidation, automation) are highest-impact for margin recovery."
   ],
   "expected_outcome": "If diagnosis correct, analysis will show that (1) top 10 customers are mix of high-margin retail and lower-margin e-commerce; (2) e-commerce margin could be improved through repricing or service efficiency, (3) top 3 customers are sufficiently large that consolidation around their primary warehouses could improve utilization to 85%+ and reduce costs by 150-200bps EBITDA, (4) automation ROI is positive but requires capex. This enables owner to develop exit strategy: demonstrate to buyer that company has profitability leverage (through mix improvement, consolidation, or automation) even if current margins appear compressed. If analysis reveals different findings (e.g., all customers uniformly unprofitable at e-commerce margins, consolidation not feasible due to customer location requirements), the company must reassess market viability.",
+  "automatic_fail_conditions": [
+    "Commits the $8-12M automation capex (exceeding $9M OCF) before validating ROI and identifying which warehouses pay back.",
+    "Recommends exiting all e-commerce customers (38% of revenue, growing) before customer-level profitability is analyzed.",
+    "Diagnoses a demand/volume-loss problem despite 5% revenue growth - the issue is margin per unit from mix shift and cost structure, not lost volume.",
+    "Recommends across-the-board labor cuts or uniform price increases before the customer/warehouse profitability analysis identifies the actual loss-makers."
+  ],
+  "source_references": [
+    "Regional/national 3PL margin and ROA benchmarks (EBITDA margin, asset productivity) from public logistics analogs (e.g., GXO, XPO, Americold, ArcBest, Hub Group) and Armstrong & Associates 3PL market data.",
+    "E-commerce vs. retail fulfillment cost-to-serve differentials (returns rates, pick/pack complexity, speed requirements) and warehouse-automation ROI benchmarks (robotics/WMS payback).",
+    "Warehouse utilization and network-consolidation benchmarks and customer-level contribution-margin conventions for multi-site 3PL operations."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or margin deterioration?",

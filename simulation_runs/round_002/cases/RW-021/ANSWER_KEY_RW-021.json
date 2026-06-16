@@ -5,8 +5,32 @@
   "creation_methodology": "Expert analysis of industrial manufacturer margin compression. Reviewed financial trends (EBITDA 18%→15.6%, gross margin 46%→42%), supply chain cost pressures (semiconductors +15-20%, freight +12%), pricing constraints (OEM contracts capped at 5% adjustment, distributor switching risk), and manufacturing utilization (US 85%, Mexico 65%). Diagnosed root cause as unit economics breakdown due to cost inflation outpacing pricing.",
   "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
   "root_cause_description": "The manufacturer's gross margin is eroding due to supply cost inflation (semiconductors +15-20%, freight +12%) outpacing pricing power. Selling prices constrained by customer contracts (OEM multi-year contracts with 5% price-adjust cap) and competitive dynamics (distributors price-sensitive). This creates a structural margin squeeze: costs rising 15-20% while prices capped at 5%. Simultaneously, manufacturing footprint is inefficient (Mexico plant 65% utilization, underutilized by logistics costs), preventing full overhead leverage. Combined, these factors are driving EBITDA margin down 240bps in 24 months (18%→15.6%). Root cause is not demand (flat but not declining) or operational breakdown (cost discipline is good, but costs are structural/external), but unit economics deterioration due to cost inflation outpacing pricing. Without intervention, margin will continue eroding as contract price-adjust lags cost inflation.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin down 240bps in 24 months (18% -> 15.6%) on flat revenue",
+      "Gross margin down 400bps (46% -> 42%) with operating leverage running in reverse",
+      "Trajectory points to ~14% EBITDA within 12 months, threatening PE acquisition viability"
+    ],
+    "contributing_factors": [
+      "Semiconductor/raw-material costs up 15-20% and freight up 12%, while OEM contracts cap price adjustments at 5% annually",
+      "Distributor channel (88% of revenue) is price-sensitive and will re-source if prices rise more than 5-7%",
+      "Mexico plant at 65% utilization vs. US at 85%, denying overhead leverage (est. 200-300bps EBITDA opportunity)",
+      "No product- or channel-level profitability visibility to see which lines/channels are compressing most"
+    ],
+    "true_root_cause": "Input-cost inflation (15-20% on components, 12% on freight) is outpacing contractually and competitively capped pricing (5% OEM cap, distributor switching risk), so per-unit contribution is structurally falling. It is a root cause (not a symptom) because the EBITDA and gross-margin erosion and the negative operating leverage all flow from this one fact - costs rise faster than realizable price. Cost-stabilization hopes or blanket price hikes would not fix the squeeze without knowing which products and channels can bear price and where the manufacturing footprint can recover leverage."
+  },
   "confidence_in_diagnosis": "HIGH",
   "first_priority_action": "Commission 6-week product and channel profitability analysis: (1) Calculate gross margin and EBITDA contribution by product line (pumps, valves, controls): which products are contracting, which holding? (2) Analyze profitability by channel (distributor vs. direct): are there channel mix opportunities? (3) Identify supply cost drivers by product (which products most exposed to semiconductor, freight, raw material inflation?). (4) Quantify manufacturing efficiency impact (Mexico under-utilization cost, US consolidation opportunity). Results will determine whether solution is (A) repricing strategy (which product lines can sustain price increases?), (B) product mix shift (shift to higher-margin products), (C) manufacturing consolidation (Mexico plant optimization or closure), or (D) supply chain optimization (identify alternative suppliers, redesign for lower-cost materials).",
+  "accepted_alternative_actions": [
+    "Run a SKU/product-line contribution teardown (pumps vs. valves vs. controls) that maps semiconductor, raw-material, and freight exposure per product and identifies which lines hold margin vs. compress - acceptable because it pinpoints where price-recovery, redesign, or supplier-qualification effort should focus before any plant or pricing move.",
+    "Build a manufacturing-footprint and utilization economics analysis (Mexico 65% vs. US 85%, tariff/freight load) to quantify the consolidation/leverage opportunity before committing capex - acceptable because under-utilization is a sized 200-300bps EBITDA lever that must be evaluated before footprint changes."
+  ],
+  "bad_actions": [
+    "Pushing an across-the-board price increase to recover the 400bps of gross margin - wrong because OEM contracts cap adjustments at 5% and distributors (88% of revenue) will re-source above 5-7%; a blanket hike loses volume in a flat-demand, commodity-like market.",
+    "Closing or consolidating the Mexico plant before analysis - wrong because the consolidation economics (tariffs, freight, disruption, capex) are unquantified; an unanalyzed closure risks destroying capacity and proximity that some product lines depend on.",
+    "Cutting engineering/sales overhead to defend EBITDA - wrong because the squeeze is external input-cost inflation, not operational bloat; cutting the overhead that supports the 42% gross margin would impair the differentiation and pricing the firm still has.",
+    "Waiting for supply costs to normalize on their own - wrong because OEM price-adjust clauses lag cost inflation and the 18-month PE window cannot absorb continued erosion; passivity lets margin drift toward the unviable 14% threshold."
+  ],
   "action_description": "This is first priority because margin erosion is accelerating and threatens PE exit timeline (18-month window). Without understanding which products/channels are compressing and which structural costs can be addressed, management risks making wrong investments (e.g., consolidating wrong plant, cutting costs from growth areas, pursuing price increases on products that can't sustain them). The 6-week analysis is low-risk and provides clarity for 12-month margin recovery plan.",
   "action_constraints_respected": [
     "PE acquisition timeline: 6-week analysis fits within 18-month window, leaving 14 months for margin recovery execution.",
@@ -43,6 +67,17 @@
     "Improvement path clarity: By end of week 6, clear recommendation on which 2-3 levers (repricing, product mix, supply chain optimization, manufacturing consolidation) offer highest-impact margin recovery potential."
   ],
   "expected_outcome": "If diagnosis correct, analysis will show that (1) certain product lines (e.g., electronic controls) are more exposed to semiconductor cost inflation and have compressed more than others, (2) distributor channel may have lower margins than direct but is necessary for volume, (3) Mexico plant under-utilization is a 100-150bps drag on EBITDA that could be recovered through consolidation or channel shift, (4) specific customer contracts or products with flexible pricing offer repricing opportunity. This will enable a 12-month margin recovery plan combining selective repricing (high-margin products), supply chain optimization (identify alternative suppliers or material substitutes), and potential manufacturing optimization. If analysis reveals different findings (e.g., all products equally compressed, no channel profitability difference, demand actually declining in specific segments), the company must reassess and may need competitive analysis or market assessment.",
+  "automatic_fail_conditions": [
+    "Recommends an across-the-board price increase ignoring the 5% OEM contract cap and distributor switching risk above 5-7%.",
+    "Recommends closing or consolidating the Mexico plant before quantifying the consolidation economics and capex/disruption.",
+    "Diagnoses a demand/market-decline problem despite flat (not declining) revenue - the issue is cost-price mismatch, not lost volume.",
+    "Commits irreversible capex (automation or footprint change) before the product/channel profitability analysis identifies the highest-impact levers."
+  ],
+  "source_references": [
+    "Industrial-equipment (pumps/valves/controls) manufacturer margin benchmarks and gross-margin ranges from public analogs (e.g., Flowserve, Xylem, Roper, Watts Water, Crane) under post-COVID input-cost inflation.",
+    "Semiconductor and raw-material cost-inflation and freight-rate indices (2021-2024) and their pass-through lag under multi-year OEM contracts with price-adjustment caps.",
+    "Manufacturing footprint/plant-utilization and overhead-absorption benchmarks for multi-site B2B industrial manufacturers, and product/channel contribution-margin analysis conventions."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or margin deterioration?",

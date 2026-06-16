@@ -5,8 +5,32 @@
   "creation_methodology": "Expert analysis of recruiting firm margin and productivity decline. Reviewed financial trends (15% revenue growth vs. 25% two years ago, 15% EBITDA vs. 18%), recruiter productivity (revenue per recruiter $300k vs. $340k, declining 12%), cost pressures (salary +18% in 18 months), and utilization (78% vs. 82%). Diagnosed root cause as unit economics breakdown due to recruiter cost rising faster than revenue per recruiter.",
   "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
   "root_cause_description": "The recruiting firm's unit economics are deteriorating: cost per recruiter (salary) rising 18% while revenue per recruiter falling 12%, creating a profitability squeeze. Utilization declining (82%→78%) suggests bench time increasing or client work declining. The root cause is not market demand collapse (revenue still growing 15%, tech segment growing 18%), but cost structure misalignment with revenue model. Salary costs are rising faster than value delivered, and utilization is declining (suggesting either lower-value work or productivity loss). This creates a math problem: to maintain 18% EBITDA margin with current cost structure, the firm would need revenue per recruiter to be $380k+, but it's only $300k. Without addressing the cost-revenue mismatch, profitability will continue declining.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin down 300bps (18% -> 15%) with growth decelerating from 25% to 15% YoY",
+      "Revenue per recruiter down 12% ($340k -> $300k)",
+      "Utilization down 82% -> 78% with recruiter turnover up 12% -> 20% annually"
+    ],
+    "contributing_factors": [
+      "Recruiter salary costs up 18% in 18 months, outpacing the 15% revenue growth",
+      "Rising bench time and a less-experienced team from churn dragging productivity",
+      "Fintech segment (40% of revenue) growing only 8% vs. tech (45%) at 18%, reflecting macro sensitivity",
+      "No vertical- or recruiter-level profitability view to separate top performers and high-margin segments from the rest"
+    ],
+    "true_root_cause": "Cost per recruiter (salary +18%) is rising while value delivered per recruiter (revenue $340k -> $300k) is falling, inverting the firm's core unit economics: to hold an 18% margin at this cost base it would need ~$380k per recruiter but earns only $300k. It is a root cause (not a symptom) because the margin compression, the utilization decline, and the productivity drop all flow from this one cost-revenue mismatch. Cutting salaries or chasing volume would not fix it without knowing which segments and recruiters actually carry profitable economics."
+  },
   "confidence_in_diagnosis": "HIGH",
   "first_priority_action": "Commission 4-week operational profitability analysis: (1) Segment revenue and profitability by vertical (fintech, tech, executive search, junior-mid): which segments are healthy margins vs. compressed? (2) Analyze recruiter productivity: which recruiters are above $300k revenue? What are they doing differently (client mix, service model, efficiency)? (3) Benchmark against larger recruiting firms: how do they achieve better unit economics? (4) Identify utilization drivers: is 78% due to bench time, lower client demand, or internal process inefficiency? Results will determine whether solution is (A) premium service repositioning (shift to higher-value executive search), (B) process efficiency (reduce bench time, improve placement velocity), (C) segment exit (deprioritize lower-margin verticals), or (D) productivity-based incentive realignment.",
+  "accepted_alternative_actions": [
+    "Run a recruiter-cohort productivity distribution (revenue per recruiter by tenure, experience, vertical, and location) to identify what top performers do differently and how much of the $300k average is dragged by a low-performing tail - acceptable because it tests whether the problem is fixable productivity vs. structural before any staffing change.",
+    "Build a vertical-level contribution P&L (fintech vs. tech vs. executive search vs. junior-mid placement) that nets fully-loaded recruiter cost against placement revenue - acceptable because it isolates which segments are margin-accretive (e.g., premium executive search) vs. dilutive before any segment exit or repositioning."
+  ],
+  "bad_actions": [
+    "Cutting recruiter salaries to restore the 18% margin - wrong because turnover is already at 20% in a competitive talent market; pay cuts accelerate departures, worsening utilization and the productivity decline.",
+    "Exiting the slower-growing fintech vertical wholesale - wrong because fintech is still 40% of revenue and growing 8% (not declining); a blanket exit destroys real revenue before segment-level profitability is known.",
+    "Mass-hiring recruiters to outgrow the margin problem - wrong because revenue per recruiter is already falling ($340k -> $300k) and utilization is at 78%; adding heads onto inverted unit economics deepens the loss and the salary-cost drag.",
+    "Cutting support staff to lift EBITDA - wrong because the squeeze is recruiter cost-vs-revenue and rising bench time, not back-office bloat; cutting support shifts non-billable load onto recruiters and worsens productivity."
+  ],
   "action_description": "This is first priority because the profitability trajectory is unsustainable. Salary cost increases (18% in 18 months) require matching revenue growth or productivity improvement, but neither is happening. The 4-week analysis will identify whether the problem is structural (market shift to lower-margin business) or operational (recruiters not performing, bench time too high), enabling targeted intervention before Series B conversations.",
   "action_constraints_respected": [
     "Series B timeline: 4-week analysis fits within 18-month window.",
@@ -43,6 +67,17 @@
     "Strategic option clarity: By end of week 4, clear recommendation on which levers (segment repositioning, recruiter training/retention, process efficiency, incentive realignment) offer highest-impact margin recovery."
   ],
   "expected_outcome": "If diagnosis correct, analysis will show that (1) executive search vertical is higher-margin (25%+) but smaller, while junior-mid is lower-margin (12%) but larger, (2) top 20% of recruiters achieve $450k+ revenue per recruiter (demonstrating $340k is achievable), while bottom 20% only $180k (opportunity to improve), (3) 78% utilization is due to bench time or longer sales cycles (addressable through process improvement or incentives). This enables Series B narrative: company has profitability leverage (proven by top recruiters' metrics) and pathway is operational efficiency + segment mix improvement. If analysis reveals different findings (e.g., all recruiters at $300k regardless of effort, all verticals compressed equally, utilization acceptable for market), the company must consider whether market fundamentals have shifted or whether larger, consolidated players have structural advantage.",
+  "automatic_fail_conditions": [
+    "Recommends cutting recruiter salaries as the first action despite 20% turnover in a competitive talent market, predictably accelerating attrition.",
+    "Recommends exiting the fintech vertical (40% of revenue, still +8%) before vertical-level profitability is analyzed.",
+    "Diagnoses a pure demand-collapse problem despite 15% revenue growth and 18% tech-segment growth - the issue is cost-revenue mismatch, not absent demand.",
+    "Recommends mass recruiter hiring to grow out of the problem while revenue per recruiter is falling and utilization is only 78%."
+  ],
+  "source_references": [
+    "Staffing/executive-search productivity and margin benchmarks (revenue per recruiter, utilization, EBITDA margin) from public analogs (e.g., Heidrick & Struggles, Korn Ferry, Robert Half, ManpowerGroup) and ASA/Staffing Industry Analysts data.",
+    "Recruiter compensation and turnover benchmarks for specialized fintech/tech search in a tight talent market.",
+    "Professional-services contribution-margin and segment-profitability analysis conventions (vertical, tenure-cohort, and per-producer economics)."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or cost-revenue mismatch?",

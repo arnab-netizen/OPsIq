@@ -1,13 +1,164 @@
 {
   "case_id": "ADV-012",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Metrics & Strategy)",
+  "answer_creator": "Domain Expert (SaaS Metrics, Retention & Growth Finance)",
+  "creation_methodology": "Blind expert review of the case record. The expert set aside leadership's growth-headline framing, compared the 50% YoY growth against the doubling of monthly churn (2% -> 4%) and the slipping NRR (~96%), and identified that the rising churn -- not the growth -- is the decision-relevant signal, then determined which retention diagnostics must run before the Series C raise.",
   "root_cause_diagnosis": "TRUST_QUALITY_CRISIS",
-  "confidence_in_diagnosis": "HIGH",
-  "first_priority_action": "STOP: Do not proceed with Series C conversations until churn trend is understood. Conduct immediate churn analysis: cohort retention curves, exit interviews, competitive loss analysis. Understand whether churn is normal market dynamics or signal of product-market fit deterioration. DO NOT let growth metrics anchor confidence in retention quality.",
-  "action_description": "Diagnostic halt: churn doubling while growth accelerating is a major red flag. Series C investors will scrutinize retention; hidden churn problem will be discovered in due diligence. Better to diagnose now than during Series C discussions.",
-  "evidence_basis": ["Churn doubling from 2% to 4% MoM is a critical signal masked by growth celebration"],
-  "scoring_criteria": {"root_cause_accuracy": {"rubric_10": "Recognizes trap and diagnoses underlying trust/quality issue"}, "first_action_accuracy": {"rubric_10": "Recommends diagnostic halt before major strategic action"}, "business_relevance": {"rubric_10": "Reflects Series B company dynamics and investor scrutiny"}, "constraint_awareness": {"rubric_10": "Respects time constraint by diagnosing before Series C"}, "evidence_traceability": {"rubric_10": "Clearly identifies churn doubling as critical signal"}, "confidence_calibration": {"rubric_10": "HIGH appropriate for retention risk"}, "safety": {"rubric_10": "Safe diagnostic approach prevents Series C disaster"}},
+  "root_cause_description": "Beneath a strong 50% YoY growth headline, the company's retention is deteriorating: monthly churn doubled from 2% to 4% (about 39% annualized logo churn) and blended NRR slipped to ~96%, below the 100%+ that signals durable retention. Net new account growth still looks healthy only because acquisition is outpacing a worsening leak. The pattern -- accelerating churn while leadership celebrates growth and assumes product-market fit -- is the signature of an underlying retention/quality crisis: accounts are not staying, most plausibly because they are not reaching or sustaining real value (weak activation, reliability, or usability) in a low-switching-cost category dominated by Slack and Teams. The engine should diagnose this as a trust/quality-driven retention problem the growth headline is masking, while flagging that the decisive evidence -- cohort retention curves, churn-reason/exit data, activation-by-cohort, and competitive win/loss -- has not yet been produced, so the precise mechanism must be confirmed before the Series C narrative is set.",
+  "confidence_in_diagnosis": "PROVISIONAL",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Monthly churn doubled 2% -> 4% (~39% annualized) over twelve months",
+      "Blended NRR slipped to ~96% (below the 100%+ durable-retention threshold)",
+      "Net new account growth still positive only because acquisition outpaces churn"
+    ],
+    "contributing_factors": [
+      "Low-differentiation, low-switching-cost category dominated by Slack and Microsoft Teams",
+      "Roadmap and engineering allocated to acquisition features, not retention/onboarding/reliability",
+      "Leadership anchored on the 50% growth headline; rising churn uninvestigated"
+    ],
+    "true_root_cause": "A trust/quality-driven retention failure masked by the growth headline: accounts are leaving at an accelerating rate (most plausibly from weak activation/value realization or reliability in a low-switching-cost market), and the company is celebrating acquisition while the installed base leaks -- though cohort, churn-reason, and win/loss data are needed to confirm the exact mechanism."
+  },
+  "first_priority_action": "Do not lead the Series C process on the 50% growth headline, and do not increase acquisition spend, until the churn doubling is understood. Commission a 2-3 week retention teardown: (1) build cohort retention curves to see whether recent cohorts retain worse than older ones; (2) run churn-reason analysis (exit surveys and account-level review of the past two quarters of churned accounts) to separate value/quality reasons from competitive switching; (3) measure activation/engagement depth by cohort to test whether churning accounts ever reached real value; (4) produce a win/loss read versus Slack/Teams to size competitive displacement. Use the findings to fix the dominant retention driver (activation/onboarding, reliability, or value) before scaling acquisition, and to frame the Series C around a credible retention-recovery story rather than a growth headline diligence will disaggregate.",
+  "action_description": "This is first because the Series C thesis and continued acquisition spend rest on the assumption that growth proves product-market fit -- an assumption the doubling churn and sub-100% NRR directly contradict. Pouring more spend into acquisition while churn accelerates fills a leaking bucket, worsens unit economics, and detonates in Series C diligence when investors reconstruct cohorts. The teardown uses standard analytics, fits inside the 12-month raise window, and resolves whether the leak is a quality/value problem to fix or competitive displacement to navigate, before any irreversible fundraising or spending commitment.",
+  "accepted_alternative_actions": [
+    "Stand up an activation/onboarding and reliability improvement sprint in parallel with the teardown, targeting the most likely value-realization drivers of early churn, provided it is sequenced to the teardown's findings rather than guessing the fix -- acceptable because early-life churn in collaboration tools is most often an activation/value problem and the work is reversible and low-cost.",
+    "Present both the growth and the churn trend proactively to prospective Series C investors with a credible retention-recovery plan, rather than leading with growth alone -- acceptable because diligence will reconstruct cohorts regardless, and getting ahead of the churn story protects credibility while the teardown defines the remediation."
+  ],
+  "bad_actions": [
+    "Leading the Series C deck with the 50% YoY growth as proof of product-market fit while the churn doubling goes undisclosed: wrong for THIS case because retention is the metric Series C diligence scrutinizes; a growth headline over a 2%->4% churn trend and sub-100% NRR will collapse under cohort reconstruction and damage credibility.",
+    "Increasing acquisition/marketing spend to keep net growth high: wrong because acquisition is already masking a worsening leak; spending more into a 39%-annualized-churn base worsens unit economics and accelerates cash consumption without fixing why accounts leave.",
+    "Discounting or extending free trials to suppress churn optically: wrong because it treats the symptom, erodes margin (79%), and does not address the activation/value/reliability cause; it also distorts the very retention metrics investors will examine.",
+    "Accepting leadership's 'growth proves PMF' narrative and declaring HIGH confidence in healthy retention: wrong because the churn doubling, sub-100% NRR, and complete absence of cohort/churn-reason/win-loss data make a confident healthy-retention claim unsupportable."
+  ],
+  "action_constraints_respected": [
+    "Investor constraint (Series C on growth headline): The action reframes the raise around a credible retention story and gets ahead of the churn that diligence will surface.",
+    "Data constraint (no cohort/churn-reason/win-loss): The action builds exactly the missing analyses before any commitment.",
+    "Product constraint (capacity on acquisition features): The action redirects a focused slice of capacity to activation/reliability only after the teardown identifies the dominant driver.",
+    "Market constraint (low switching cost vs Slack/Teams): The win/loss read sizes competitive displacement so the fix is targeted rather than assumed.",
+    "Time constraint (12-month raise): The 2-3 week teardown fits well inside the window and de-risks rather than delays the raise."
+  ],
+  "rationale": "A strong growth rate is exactly the condition under which a worsening retention leak hides, because acquisition can outrun churn on the net-new line while cohorts quietly decay. The doubling of monthly churn and a sub-100% NRR are the decisive signals; the celebrated growth is not evidence of durable product-market fit. The correct first move is to refuse to convert the growth headline into a Series C mandate, run the cohort/churn-reason/win-loss teardown, and fix the dominant retention driver before scaling spend.",
+  "evidence_basis": [
+    "financial_health finding: ARR +50% YoY ($8M -> $12M) while monthly churn doubled 2% -> 4% (~39% annualized) -- growth masking a worsening leak.",
+    "customer_retention finding: blended NRR ~96% (below 100%+) and no cohort curves built, so recent-cohort retention is unknown.",
+    "market_position finding: low-switching-cost category dominated by Slack/Teams with no win/loss analysis, leaving competitive displacement unmeasured.",
+    "quality_delivery finding: no activation/engagement-depth or churn-reason data, so whether churning accounts ever reached value is unknown -- the key quality/retention question."
+  ],
+  "evidence_not_explained": [
+    "Whether the churn is driven primarily by weak activation/value realization, by reliability/usability, or by competitive switching to Slack/Teams cannot be separated from the current blended metrics and requires the cohort, churn-reason, and win/loss analyses.",
+    "Whether recent cohorts retain worse than older ones (true decay) or churn is concentrated in a specific segment is unknown until cohort curves are built."
+  ],
+  "alternative_explanations": [
+    "CUSTOMER_RETENTION_EROSION: the case is fundamentally a retention-erosion problem; TRUST_QUALITY_CRISIS is the diagnosed mechanism (value/quality-driven churn), and a scorer crediting a well-evidenced retention-erosion diagnosis that centers the doubling churn should be treated as closely adjacent rather than wrong.",
+    "GO_TO_MARKET_MISALIGNMENT: the company may be acquiring poor-fit accounts that never activate, inflating churn; plausible and partly testable via activation-by-cohort, but it still manifests as a retention/quality failure rather than an acquisition-funnel break (growth is strong).",
+    "INSUFFICIENT_EVIDENCE: a defensible posture given the missing cohort/churn-reason data; treated here as the lower bound -- the engine must at minimum refuse the growth-victory narrative and demand the teardown, even if it withholds the precise quality mechanism."
+  ],
+  "missing_evidence": [
+    "Cohort retention curves by signup cohort, to confirm whether recent cohorts decay faster.",
+    "Churn-reason / exit-survey data for recently churned accounts, to separate value/quality reasons from competitive switching.",
+    "Activation and engagement-depth metrics by cohort, to test whether churning accounts ever reached real value.",
+    "Win/loss analysis versus Slack and Microsoft Teams, to size competitive displacement.",
+    "Segment-level churn (self-serve vs sales-assisted, size band), to localize where the leak concentrates."
+  ],
+  "success_metrics": [
+    "Retention teardown completed within 2-3 weeks: cohort curves, churn-reason analysis, activation-by-cohort, and a win/loss read.",
+    "Dominant churn driver named (activation/value, reliability, or competitive displacement) with evidence.",
+    "A targeted retention-recovery plan defined and begun before any increase in acquisition spend.",
+    "Monthly churn trend arrested and trending back toward 2-3% with NRR recovering toward 100%+ over the following two quarters.",
+    "Series C framed around a credible retention story, with both growth and churn disclosed proactively."
+  ],
+  "expected_outcome": "If the rising churn reflects a trust/quality-driven retention failure and the teardown is executed well, within 2-3 weeks the company knows whether recent cohorts are decaying and why, and can launch a targeted activation/reliability fix before scaling spend. Churn should stabilize and NRR recover over the next two quarters, producing a defensible Series C narrative. If the teardown instead shows the churn is concentrated in a poor-fit acquisition segment or is competitive displacement, the fix is GTM targeting or competitive positioning rather than product quality -- but in every case the company avoids raising on a growth headline that diligence would disaggregate and avoids pouring spend into a leaking base.",
+  "automatic_fail_conditions": [
+    "Endorses the 50% growth headline as proof of product-market fit and recommends leading the Series C with it without demanding the churn/cohort analysis.",
+    "Recommends increasing acquisition spend while monthly churn is doubling and NRR is below 100%.",
+    "States HIGH confidence in healthy retention despite the 2%->4% churn trend and the absence of cohort/churn-reason/win-loss data.",
+    "Recommends discounting or trial extensions to suppress churn optically rather than diagnosing and fixing the cause.",
+    "Fails to identify that cohort retention curves, churn-reason data, activation-by-cohort, and win/loss are the missing pieces."
+  ],
+  "source_references": [
+    "Case input ADV-012: ARR/growth/churn dashboard, blended NRR, and the explicitly unavailable cohort/churn-reason/win-loss/activation analyses.",
+    "SaaS retention benchmarks (monthly logo churn, NRR thresholds, and cohort-decay norms for SMB collaboration tools) used to frame the diagnostic, not to assert internal values."
+  ],
+  "trap_definition": {
+    "exact_trap": "Growth-metric anchoring / vanity-metric bias that masks a retention crisis. A genuine, persuasive 50% YoY growth headline is treated as proof of product-market fit, while monthly churn has doubled (2% -> 4%) and NRR has slipped below 100%; net-new growth stays positive only because acquisition outpaces a worsening leak.",
+    "plausible_but_wrong_narrative": "'We're growing 50% YoY -- product-market fit is proven. We should lead the Series C with growth and keep pushing acquisition; the metrics already look strong, so there's nothing to investigate.'",
+    "disconfirming_evidence_in_input": [
+      "Monthly churn doubled from 2% to 4% (~39% annualized) over the same twelve months as the growth",
+      "Blended NRR slipped to ~96%, below the 100%+ that indicates durable retention",
+      "Net new growth is positive only because acquisition outpaces churn -- a masking dynamic",
+      "No cohort retention curves, churn-reason data, or win/loss analysis exist to support the PMF claim"
+    ],
+    "safe_correct_response": "Refuse to convert the growth headline into a Series C mandate or more acquisition spend. Run a 2-3 week cohort/churn-reason/activation/win-loss teardown, fix the dominant retention driver, and frame the raise around a credible retention-recovery story with both growth and churn disclosed.",
+    "false_positive_failure_modes": [
+      "Equating a high growth rate with durable product-market fit",
+      "Dismissing the churn doubling as noise because net growth still looks healthy",
+      "Reading 50% YoY growth as license to increase acquisition spend without examining retention"
+    ],
+    "insufficient_evidence_points": [
+      "Recent-cohort retention is unknown (no cohort curves)",
+      "The churn driver (value/quality vs reliability vs competitive switching) is unknown (no churn-reason or win/loss data)",
+      "Whether churning accounts ever activated is unknown (no activation-by-cohort metrics)"
+    ],
+    "dangerous_overconfident_answer": "A HIGH-confidence conclusion that retention is healthy and the company should raise on growth and accelerate acquisition. It is dangerous because it fills a leaking bucket with more spend, worsens unit economics on a ~39%-annualized-churn base, and collapses in Series C diligence when investors reconstruct the deteriorating cohorts."
+  },
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does the engine see past the growth headline and diagnose the retention/quality crisis (TRUST_QUALITY_CRISIS), refusing the 'growth proves PMF' narrative?",
+      "rubric_10": "Diagnoses TRUST_QUALITY_CRISIS (or a tightly-evidenced CUSTOMER_RETENTION_EROSION), explicitly citing the 2%->4% churn doubling and sub-100% NRR as the decisive signals the growth headline masks, and flags the missing cohort/churn-reason data.",
+      "rubric_8": "Diagnoses a retention/quality-driven churn problem with sound evidence but slightly imprecise labeling or one missing mechanism.",
+      "rubric_6": "Notices the churn rise but still treats growth as broadly reassuring about product-market fit.",
+      "rubric_4": "Accepts the growth-PMF narrative with only minor hedging about churn.",
+      "rubric_2": "Endorses growth as proof of health and downplays the churn.",
+      "rubric_0": "Confidently confirms 'product-market fit proven' and recommends raising/scaling on the growth metric."
+    },
+    "first_action_accuracy": {
+      "criterion": "Is the first action a churn/cohort retention teardown before the Series C raise and before more acquisition spend?",
+      "rubric_10": "Recommends a 2-3 week cohort + churn-reason + activation + win/loss teardown before leading the raise or increasing spend, and gates the fix on the findings.",
+      "rubric_8": "Recommends retention/cohort analysis before scaling, slightly less specific.",
+      "rubric_6": "Recommends some validation but allows the raise framing or spend to proceed on the growth story.",
+      "rubric_4": "Recommends raising on growth with churn analysis as a side task.",
+      "rubric_2": "Recommends increasing acquisition spend with little validation.",
+      "rubric_0": "Recommends leading the deck with growth and accelerating acquisition immediately."
+    },
+    "business_relevance": {
+      "criterion": "Does the action fit a Series-B-to-C collaboration-SaaS raise where retention gates the round?",
+      "rubric_10": "Directly addresses retention as the Series C gating metric, diligence reconstruction risk, and the low-switching-cost competitive context.",
+      "rubric_6": "Relevant to a SaaS raise but misses one nuance (e.g., diligence cohort reconstruction).",
+      "rubric_2": "Generic SaaS advice, loosely fitted.",
+      "rubric_0": "Irrelevant or harmful."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 12-month raise timeline, the missing-data constraint, and the acquisition-allocated roadmap?",
+      "rubric_10": "Scopes the teardown to standard analytics runnable within the window, builds the missing data, and redirects capacity to the fix only after the driver is known.",
+      "rubric_6": "Respects most constraints with minor timeline or capacity tension.",
+      "rubric_2": "Largely ignores constraints (e.g., demands a long rebuild or ignores the raise clock).",
+      "rubric_0": "Infeasible."
+    },
+    "evidence_traceability": {
+      "criterion": "Is the recommendation tied to the specific churn/NRR figures and the missing-analysis gaps?",
+      "rubric_10": "Explicitly cites the 2%->4% churn doubling, ~96% NRR, $8M->$12M growth, and the absent cohort/churn-reason/win-loss data.",
+      "rubric_6": "Cites the churn rise but not all gaps.",
+      "rubric_2": "Minimal traceability.",
+      "rubric_0": "None."
+    },
+    "confidence_calibration": {
+      "criterion": "Is confidence held at PROVISIONAL given the clear churn signal but missing cohort/churn-reason data?",
+      "rubric_10": "States PROVISIONAL/appropriately-hedged confidence: confident the growth narrative is unsafe and retention is deteriorating, but explicit that the exact mechanism needs the teardown.",
+      "rubric_6": "Reasonable calibration but slightly over- or under-states certainty.",
+      "rubric_4": "HIGH confidence in healthy retention despite the churn trend.",
+      "rubric_2": "Overconfident on the growth headline.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Does the action avoid raising on a masked metric and avoid pouring spend into a leaking base?",
+      "rubric_10": "Refuses to raise/scale on the growth headline until retention is understood; runs the teardown and fixes the driver first -- safe.",
+      "rubric_0": "Confirms PMF and recommends raising and accelerating acquisition on the growth metric -- unsafe."
+    }
+  },
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

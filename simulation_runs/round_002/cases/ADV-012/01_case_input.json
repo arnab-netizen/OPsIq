@@ -4,10 +4,99 @@
   "industry": "SaaS",
   "businessModel": "Collaboration Software",
   "businessStage": "Series B",
-  "sourceNote": "Adversarial case testing cognitive trap: anchoring bias on growth metrics while missing retention issues.",
-  "ownerIntake": {"businessType": "Team collaboration SaaS platform, competing with Slack/Teams", "stage": "ARR $12M, 50% YoY growth, 45k active accounts, churn 4% MRR", "ownerGoal": "Series C fundraising", "ownerConstraints": ["Highly competitive market", "Pressure to demonstrate growth for Series C"], "immediateConcern": "Impressive growth rate (50% YoY) creating overconfidence about product-market fit, but churn is rising (was 2% MoM 12 months ago, now 4% MoM). Trap: leadership focused on growth metric, blind to deteriorating retention.", "availableData": ["ARR $12M, growth 50% YoY, 45k accounts, churn 4% MoM"], "unavailableData": ["Cohort retention curves", "Reason for churn", "Competitive win/loss data"], "timeHorizon": "12 months", "riskAppetite": "HIGH"},
-  "clientContext": {"industry": "SaaS", "size": "growth-stage", "revenueImpactUrgency": "CRITICAL"},
-  "businessProblem": "SaaS company celebrating 50% growth rate but ignoring doubling of churn rate (2%→4% MoM), embedding overconfidence about product-market fit when retention signals suggest otherwise. Trap: growth metric anchoring masks retention deterioration.",
-  "evidence": [{"dimension": "financial_health", "finding": "ARR growing 50% YoY from $8M to $12M (impressive). Churn rising from 2% MoM (12 mo ago) to 4% MoM (current), a 100% increase in churn rate.", "confidence": "HIGH", "source": "Metrics dashboard", "isCritical": true, "supportingData": {"arr_growth": "50%", "churn_prior": "2%", "churn_current": "4%"}}],
-  "ownerConstraintProfile": {"budgetBand": "MEDIUM", "timeHorizonDays": 365, "staffCapacity": "MEDIUM", "cashRunwayMonths": 48, "legalComplianceSensitive": false}
+  "sourceNote": "Case record for a team-collaboration SaaS company preparing a Series C raise. The intake reflects leadership's own framing, which emphasizes headline growth; some retention and cohort analyses are noted as not yet completed. All figures are realistic and internally consistent. No diagnosis or label is embedded in the inputs.",
+  "ownerIntake": {
+    "businessType": "Team-collaboration SaaS platform (messaging, channels, file-sharing, light workflow) competing with Slack and Microsoft Teams. Self-serve plus sales-assisted motion. Founded 2020, ~120 employees. 45,000 active paying accounts.",
+    "stage": "ARR $12M, up 50% YoY from $8M. 45,000 active accounts. Gross margin 79%. Monthly churn 4% (was 2% twelve months ago). Net revenue retention ~96% blended. Cash runway 48 months after the Series B.",
+    "ownerGoal": "Raise a Series C in the next 12 months at a strong multiple, leading with the 50% YoY growth story, and continue investing in top-of-funnel acquisition to sustain the headline growth rate.",
+    "ownerConstraints": [
+      "Market constraint: Highly competitive category dominated by Slack and Microsoft Teams; differentiation and switching costs are limited, so retention is hard-won.",
+      "Investor constraint: Pressure to demonstrate continued high growth for Series C; leadership has already socialized the 50% YoY growth figure with prospective leads and is focused on the growth headline.",
+      "Data constraint: The company reports ARR, growth, account count, and blended churn, but has not produced cohort retention curves, churn-reason analysis, or competitive win/loss data.",
+      "Product constraint: Roadmap is allocated to growth/acquisition features; limited engineering capacity is currently directed at retention, onboarding, or reliability work.",
+      "Time constraint: Series C process is expected to begin within ~12 months; leadership does not want to slow the growth narrative to investigate metrics that already 'look strong.'"
+    ],
+    "immediateConcern": "Growth is strong (50% YoY) and leadership is confident about product-market fit. At the same time, monthly churn has risen from 2% to 4% over the past twelve months. Net new account growth still looks healthy because acquisition is outpacing churn, but the underlying retention trend is deteriorating. Leadership is focused on the growth metric and wants to keep pushing acquisition; the rising churn has not been investigated, and there is no cohort, churn-reason, or win/loss analysis to explain it.",
+    "availableData": [
+      "ARR $12M, 50% YoY growth (from $8M), 45,000 active accounts, gross margin 79%",
+      "Monthly churn 4% (was 2% twelve months ago), blended net revenue retention ~96%",
+      "Marketing spend and new-account acquisition trend (acquisition outpacing churn so far)",
+      "Top-line account growth by month"
+    ],
+    "unavailableData": [
+      "Cohort retention curves (retention by signup cohort over time)",
+      "Churn-reason analysis / exit-survey data (why accounts are leaving)",
+      "Competitive win/loss data versus Slack and Teams",
+      "Engagement/usage-depth metrics by cohort (whether churning accounts ever activated)"
+    ],
+    "timeHorizon": "12 months",
+    "riskAppetite": "HIGH"
+  },
+  "clientContext": {
+    "industry": "SaaS",
+    "size": "growth-stage (Series B, $12M ARR, ~120 employees, 45k accounts)",
+    "revenueImpactUrgency": "CRITICAL (doubling churn under a growth headline threatens unit economics and a Series C that will be scrutinized on retention)"
+  },
+  "businessProblem": "A Series B collaboration-SaaS company is preparing to raise a Series C on a 50% YoY growth story. The headline growth is real, but monthly churn has doubled from 2% to 4% over twelve months, and net new account growth still looks healthy only because acquisition is outpacing a worsening leak. Leadership is anchored on the growth metric and confident about product-market fit, but has produced no cohort retention curves, churn-reason analysis, or win/loss data to explain the rising churn. Competing hypotheses are open: (1) growth genuinely validates product-market fit and churn is incidental; (2) a deteriorating retention/quality dynamic (onboarding, reliability, or unmet value) is causing accounts to leave and the growth headline is masking it; (3) competitive displacement by Slack/Teams. Without cohort and churn-reason analysis, the company risks raising on a metric that Series C diligence will disaggregate, and risks pouring acquisition spend into a leaking bucket.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "ARR grew 50% YoY from $8M to $12M, an impressive headline. Over the same period, monthly churn rose from 2% to 4% -- a 100% increase in the churn rate. Net new account growth still appears healthy because acquisition is outpacing churn, but the churn trend is the opposite of what a 'product-market-fit victory' narrative implies.",
+      "confidence": "HIGH",
+      "source": "Metrics dashboard (ARR, growth, churn)",
+      "isCritical": true,
+      "supportingData": {
+        "arr_prior": "$8M",
+        "arr_current": "$12M",
+        "arr_growth": "50%",
+        "churn_prior_monthly": "2%",
+        "churn_current_monthly": "4%",
+        "churn_rate_increase": "100%"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Monthly churn of 4% implies roughly 39% annualized logo churn, and blended net revenue retention has slipped to ~96% (below the 100%+ that signals durable retention). The company has not produced cohort retention curves, so whether recent cohorts retain worse than older ones -- the key question for whether growth is healthy -- is unknown.",
+      "confidence": "MEDIUM",
+      "source": "Subscription analytics (blended); cohort analysis not yet run",
+      "isCritical": true,
+      "supportingData": {
+        "monthly_churn": "4%",
+        "annualized_logo_churn": "~39%",
+        "net_revenue_retention": "~96%",
+        "cohort_curves_built": false
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The category is dominated by Slack and Microsoft Teams, with limited differentiation and low switching costs. Rising churn in this context could reflect competitive displacement, but no win/loss analysis versus the incumbents has been produced, so the competitive contribution to churn is unmeasured.",
+      "confidence": "MEDIUM",
+      "source": "Competitive context; win/loss analysis not available",
+      "isCritical": true,
+      "supportingData": {
+        "primary_competitors": "Slack, Microsoft Teams",
+        "switching_costs": "low",
+        "win_loss_analysis": false
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "No engagement-depth or activation metrics by cohort have been analyzed, and no churn-reason/exit-survey data exists. Whether churning accounts ever activated (onboarded to real value) or churned for reliability, usability, or unmet-value reasons is unknown -- precisely the evidence needed to tell a quality/retention problem apart from incidental churn or competitive loss.",
+      "confidence": "MEDIUM",
+      "source": "Product analytics gap; no exit-survey program",
+      "isCritical": true,
+      "supportingData": {
+        "activation_by_cohort_measured": false,
+        "churn_reason_data": false,
+        "engagement_depth_measured": false
+      }
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 365,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 48,
+    "legalComplianceSensitive": false
+  }
 }

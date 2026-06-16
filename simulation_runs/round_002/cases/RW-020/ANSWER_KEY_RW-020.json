@@ -5,8 +5,32 @@
   "creation_methodology": "Expert analysis of regional bank margin compression. Reviewed financial trends (NIM 3.4%→3.1%, net income -12% YoY, efficiency ratio 59%→62%), deposit dynamics (beta rising, rate competition from mega-banks and fintechs), and operational costs (personnel 43% vs. peer 40%). Diagnosed root cause as unit economics deterioration (margin per dollar of assets declining while cost structure not adapting).",
   "root_cause_diagnosis": "UNIT_ECONOMICS_BREAKDOWN",
   "root_cause_description": "The bank's profitability per dollar of assets (ROA) is deteriorating due to two compounding factors: (1) deposit costs rising faster than loan yields (NIM compression from 3.4%→3.1%, with further compression expected), and (2) cost structure not adjusting (efficiency ratio worsening 59%→62% despite no revenue growth). The root cause is structural unit economics breakdown, not temporary rate pressure. Deposit beta is rising because customers have alternatives (mega-bank 4.5%+ deposits, fintechs, CDs, Treasury exposure), and the bank is losing rate competition. Simultaneously, operating costs (personnel 43% of revenue vs. peer 40%) are not declining, creating a profitability squeeze. The bank is trying to grow assets (wealth AUM +8%), but asset growth alone cannot fix unit economics if margin per asset is declining. Without intervention, further NIM compression (forecast 20-30bps) will push ROA below 0.9%, making 1.2% target unachievable.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "NIM compressed 30bps in 18 months (3.4% -> 3.1%) and is accelerating",
+      "Net income down 12% YoY ($93M -> $82M) with efficiency ratio worsening 59% -> 62%",
+      "ROA 1.0% and ROAE 9.5%, both below peer medians (1.2% / 11%)"
+    ],
+    "contributing_factors": [
+      "Deposit beta rising as mega-banks/fintechs offer 4.5%+ vs. the bank's 3.8% blended rate, shifting mix from checking to MMA/CD",
+      "Personnel costs at 43% of revenue vs. peer 40%, with a 15-year legacy core limiting efficiency",
+      "Under-investment in technology (2.5% of revenue vs. peer 3.5%) and customer base aging (55 -> 56)",
+      "No customer- or product-level profitability view, so loss-making segments and products are invisible"
+    ],
+    "true_root_cause": "Profitability per dollar of assets is structurally deteriorating: deposit funding costs are rising faster than asset yields while the cost base does not flex, so each dollar of assets earns less spread and the cost structure no longer fits the margin. It is a root cause (not a symptom) because the NIM compression, the falling net income, and the sub-peer ROA all flow from this one fact - the unit economics of intermediation have shifted against the bank. Raising deposit rates blindly or cutting costs indiscriminately would not fix the bleed without knowing which products and segments are value-destroying."
+  },
   "confidence_in_diagnosis": "HIGH",
   "first_priority_action": "Commission comprehensive margin and customer profitability analysis within 6 weeks: (1) Analyze NIM bridge by product (deposits, loans, wealth management): which products are compressing? Which are stable? (2) Segment customers by profitability (deposit + loan + fee revenue vs. service costs): which segments are profitable? Which are value-destroying? (3) Model deposit cost sensitivity by segment: how much rate increase will be needed to retain deposits in each segment? (4) Identify operational cost reduction opportunities: where is the efficiency gap vs. peers (branch productivity, staffing model, process automation)?. Results will determine whether bank should (A) aggressively reprice deposits and accept deposit loss for rate-insensitive segments, (B) double down on wealth management (higher fee income, lower price sensitivity), (C) pursue major cost restructuring (branch consolidation, workforce optimization), or (D) combination approach.",
+  "accepted_alternative_actions": [
+    "Build a NIM bridge and product-level fully-loaded P&L (deposits by type, loan categories, wealth management) as the first deliverable, decomposing the 30bps compression by driver before any repricing - acceptable because it pinpoints which products are bleeding spread and directly supports the ROA-recovery story for the PE exit.",
+    "Run a deposit price-elasticity and customer-segmentation study (which segments are rate-sensitive vs. sticky, and what differential retains them) before any deposit repricing - acceptable because it lets the bank reprice selectively rather than across-the-board, protecting low-cost sticky deposits."
+  ],
+  "bad_actions": [
+    "Repricing all deposits up to mega-bank 4.5%+ levels to stem outflows - wrong because it would crush the already-compressed 3.1% NIM by raising cost of funds on the entire book, including rate-insensitive deposits that would have stayed at 3.8%.",
+    "Closing branches or cutting staff across the board to fix the 62% efficiency ratio before diagnosis - wrong because cuts in growth areas (wealth management is +8% and the high-margin franchise) would destroy the very ROA lever the bank needs, and risks regulatory/CRA exposure.",
+    "Cutting compliance/regulatory spend to improve the efficiency ratio - wrong because the owner constraint flags rising compliance as non-negotiable; cutting it creates regulatory risk that would derail the PE transaction.",
+    "Aggressively growing the balance sheet to dilute the cost ratio - wrong because adding assets at a deteriorating ROA earns sub-peer spread and does not fix margin per dollar; it grows the problem, and the PE owner cannot take balance-sheet risk."
+  ],
   "action_description": "This is first priority because the margin compression is accelerating and threatens the transaction timeline (PE exit in 24 months). Without clear understanding of which segments/products are problematic and which levers offer improvement, the bank risks making wrong trade-offs (e.g., cutting costs that destroy growth, pricing deposits aggressively and losing volume). The 6-week analysis is low-risk and provides clarity for 24-month improvement plan.",
   "action_constraints_respected": [
     "Transaction window: 6-week analysis fits within 24-month PE exit timeline, leaving 20 months for execution of improvement plan.",
@@ -43,6 +67,17 @@
     "Strategic option clarity: By end of week 6, clear recommendation on which 2-3 levers offer highest-impact improvement path (e.g., wealth fee growth + cost reduction, or aggressive deposit repricing + customer segmentation)."
   ],
   "expected_outcome": "If diagnosis correct, analysis will show that (1) deposit NIM is compressing faster than loan NIM due to deposit rate competition, (2) certain customer segments (e.g., small businesses, high-net-worth) are rate-sensitive and costly to serve, while others (e.g., wealth management clients) are high-value, (3) cost structure efficiency gap is concentrated in branch productivity or staffing, (4) wealth management is the high-growth, high-margin business that should be prioritized. This will enable the bank to develop a 24-month plan combining aggressive wealth growth, selective deposit repricing/customer segmentation, and targeted cost reduction. If analysis reveals different findings (e.g., loan NIM equally compressed, cost structure actually efficient vs. peers, all customer segments rate-sensitive), the bank must reassess the problem and may need deeper industry or competitive analysis.",
+  "automatic_fail_conditions": [
+    "Recommends raising deposit rates across the entire book to mega-bank levels before segmenting rate-sensitive vs. sticky deposits, knowingly compressing the 3.1% NIM further.",
+    "Recommends cutting compliance/regulatory spend to improve the 62% efficiency ratio, violating the stated non-negotiable regulatory constraint and risking the transaction.",
+    "Diagnoses a pure volume/demand problem despite flat deposit volume - the issue is margin per dollar of assets, not balance-sheet size.",
+    "Recommends branch closures or workforce cuts before the margin/customer-profitability analysis identifies where the cost and margin gaps actually sit."
+  ],
+  "source_references": [
+    "Regional/community bank NIM, deposit-beta, and efficiency-ratio benchmarks (FDIC Quarterly Banking Profile, S&P Global Market Intelligence peer data) for $5-10B-asset banks.",
+    "Public-company regional-bank analogs facing deposit-cost pressure and rate competition (e.g., KeyCorp, Comerica, Zions, Valley National) and their NIM/ROA recovery levers.",
+    "Bank customer- and product-level profitability and funds-transfer-pricing (FTP) conventions for diagnosing NIM compression by product and segment."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose UNIT_ECONOMICS_BREAKDOWN or margin/profitability deterioration?",

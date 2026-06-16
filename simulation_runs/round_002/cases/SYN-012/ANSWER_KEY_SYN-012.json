@@ -1,13 +1,161 @@
 {
   "case_id": "SYN-012",
   "answer_creation_date": "2026-06-16",
-  "answer_creator": "Domain Expert (SaaS Growth Strategy)",
+  "answer_creator": "Domain Expert (B2B SaaS Growth Strategy & Market Sizing)",
+  "creation_methodology": "Blind expert review of the synthetic intake. The expert set aside the owner's 'keep investing in the core vertical' framing and traced the bookings deceleration, win-rate softening, concentration, and healthy-retention/unit-economics evidence to its source, then tested the saturation/forecast hypothesis against competitive-displacement and product-market-fit-ceiling alternatives.",
   "root_cause_diagnosis": "DEMAND_FORECASTING_MISMATCH",
+  "root_cause_description": "The company has been planning growth against an over-optimistic, unvalidated estimate of reachable demand in its core discrete-manufacturing vertical. New-bookings MoM growth has decelerated from ~5% to ~3.5% while retention (3% churn, ~112% NRR) and unit economics (LTV:CAC ~5.1:1, 80% gross margin) remain strong, localizing the problem to acquisition/demand rather than product value or churn. With ~90% concentration in one vertical, softening win rates (~28% -> ~22%) and lengthening sales cycles are the signature of the most obvious, best-fit accounts already being sold and the qualified portion of the segment approaching saturation. Critically, the company has no addressable-demand model by vertical or sub-segment, so it cannot say how much qualified core demand remains. The root cause is a demand-forecasting mismatch: growth plans assume more reachable core-segment demand than likely exists, and the company is deciding whether to deepen the core, expand to an adjacency, or fix positioning without any validated sizing of the demand each path can deliver.",
   "confidence_in_diagnosis": "MODERATE",
-  "first_priority_action": "Conduct customer cohort analysis by vertical: identify which verticals are saturating vs. growing, which have highest LTV/retention, where to focus future acquisition.",
-  "action_description": "Vertical portfolio optimization based on unit economics and market saturation signals.",
-  "evidence_basis": ["Growth slowing from 40% to implied 36%", "No data on market size by vertical"],
-  "scoring_criteria": {"root_cause_accuracy": {"rubric_10": "Diagnoses demand forecasting issue"}, "first_action_accuracy": {"rubric_10": "Recommends cohort analysis"}, "business_relevance": {"rubric_10": "Reflects SaaS context"}, "constraint_awareness": {"rubric_10": "Respects resource constraints"}, "evidence_traceability": {"rubric_10": "Traces to growth deceleration"}, "confidence_calibration": {"rubric_10": "MODERATE appropriate"}, "safety": {"rubric_10": "Safe"}},
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "MoM new-bookings growth decelerating ~5% -> ~3.5% (YoY still 40% but falling)",
+      "Core-segment win rate softening ~28% -> ~22% and sales cycles lengthening",
+      "Pipeline quality declining as the most obvious target accounts are already sold"
+    ],
+    "contributing_factors": [
+      "~90% customer/ARR concentration in a single, finite discrete-manufacturing vertical",
+      "No validated market-size or addressable-demand model by vertical/sub-segment",
+      "Vertical-specific customization (8-12 weeks per adjacency) and lean GTM limiting fast diversification"
+    ],
+    "true_root_cause": "A demand-forecasting mismatch: the company is planning acquisition growth against an unvalidated, over-optimistic estimate of reachable core-segment demand that appears to be saturating, rather than facing a churn, unit-economics, or product-value failure."
+  },
+  "first_priority_action": "Before committing further sales/marketing or product capacity to the core vertical, run a 3-4 week addressable-demand and saturation diagnostic: (1) build a bottom-up TAM/SAM model for the core discrete-manufacturing vertical and estimate the penetration rate of the qualified account universe to size how much reachable demand actually remains; (2) decompose the win-rate softening (~28% -> ~22%) into saturation (fewer good-fit accounts left) versus competitive loss, using win/loss data, so the deceleration cause is named; (3) size 1-2 nearest-adjacent sub-segments/verticals on demand, fit, and customization cost (the 8-12 week build) to test whether an adjacency offers more qualified headroom than deepening the core. Hold the headcount-expansion decision until the model shows where qualified demand is, then allocate the 8 reps and product capacity to the highest-demand path.",
+  "action_description": "This is first because all three candidate strategies -- deepen core, expand to an adjacency, or fix competitive positioning -- depend on knowing how much qualified demand each can deliver, and the company has no addressable-demand model. Pouring more sales capacity into a saturating core vertical would worsen capital efficiency (rising CAC, falling win rate) exactly when the Series-C narrative depends on efficient growth, while a blind adjacency bet incurs 8-12 weeks of customization against unvalidated demand. The 3-4 week diagnostic uses data the company already tracks plus a bottom-up sizing exercise, fits the 18-month window and 36-month runway, and resolves the exact uncertainty that separates the options.",
+  "accepted_alternative_actions": [
+    "Run a focused win/loss analysis FIRST (2-3 weeks) on the trailing year's core-segment deals to separate saturation from competitive displacement, provided it feeds directly into the addressable-demand model rather than standing alone -- acceptable because the win-rate softening could be either, and naming the cause changes whether the answer is 'find new demand' or 'fix positioning.'",
+    "Commission a capped, time-boxed adjacent-vertical demand test (lightweight outbound into 1-2 sub-segments without full customization) to validate whether an adjacency has more qualified demand than the core -- acceptable as a parallel, low-cost probe because it tests the diversification hypothesis before the 8-12 week build commitment, but it must not pre-empt the core-segment sizing."
+  ],
+  "bad_actions": [
+    "Tripling sales headcount to push harder into the core vertical: wrong for THIS case because win rates are softening and the qualified core segment appears to be saturating, so adding reps would raise CAC and lengthen cycles against shrinking qualified demand, damaging the capital efficiency the Series-C story depends on -- without any addressable-demand model to justify the headroom.",
+    "Committing 8-12 weeks of product/engineering to a new adjacent vertical now, on intuition: wrong because no in-market demand test or sizing exists for any adjacency; building vertical-specific customization against unvalidated demand burns scarce lean-team capacity and runway on a guess.",
+    "Cutting price or discounting to lift the softening win rate: wrong because unit economics are healthy (LTV:CAC ~5.1:1, 80% margin) and there is no evidence the losses are price-driven; discounting would erode margin and mask whether the real issue is saturation rather than pricing.",
+    "Declaring a product-market-fit failure and pivoting the product: wrong because retention is strong (3% churn, ~112% NRR) and existing customers expand -- PMF in the core vertical is intact; the problem is the volume of new qualified demand, not product value."
+  ],
+  "action_constraints_respected": [
+    "Sales constraint (8 reps, capital efficiency): The diagnostic defers any headcount expansion until demand is sized, protecting capital efficiency and the 36-month runway.",
+    "Product constraint (8-12 weeks per adjacency): The action sizes adjacency demand and customization cost before any build commitment, avoiding wasted engineering.",
+    "Market constraint (finite, possibly saturating core): The action explicitly measures penetration of the qualified core universe to confirm or refute saturation.",
+    "Data constraint (no addressable-demand model): The action builds the missing bottom-up TAM/SAM model rather than acting on the absent forecast.",
+    "Organizational constraint (lean GTM/CS, no adjacency domain expertise): The action uses a light demand test before any full adjacency entry that would require new domain expertise and references."
+  ],
+  "rationale": "The decisive pattern is a healthy installed base (3% churn, ~112% NRR, strong unit economics) against a decelerating, lower-quality new-bookings funnel in a single concentrated vertical with softening win rates -- the signature of demand-side saturation in the core segment rather than a churn, pricing, or product failure. Because the company has no validated addressable-demand model, choosing to deepen the core, expand to an adjacency, or fix positioning would be guessing. A short demand-sizing and win/loss diagnostic resolves the exact uncertainty and tells the company where the qualified demand actually is before it allocates scarce reps and engineering capacity.",
+  "evidence_basis": [
+    "financial_health: MoM new-bookings growth decelerating ~5% -> ~3.5% while YoY is 40%, with the deceleration in new bookings (acquisition), not retention.",
+    "market_position: ~90% concentration in one vertical; win rate softening ~28% -> ~22% and lengthening sales cycles, consistent with best-fit accounts already sold.",
+    "customer_retention: churn 3% MRR and NRR ~112% with healthy expansion, localizing the problem to acquisition/demand not product value.",
+    "operational_efficiency: CAC $35k, LTV $180k, LTV:CAC ~5.1:1, 80% margin intact -- economics not broken; and no addressable-demand model exists."
+  ],
+  "evidence_not_explained": [
+    "Whether the win-rate softening (~28% -> ~22%) is driven by saturation (fewer good-fit accounts) or by competitive losses cannot be separated without win/loss data; the diagnostic resolves it, and either reading still points away from a churn or unit-economics root cause.",
+    "Whether any adjacent vertical has materially more qualified demand than the saturating core cannot be known without the sizing/test, so the relative attractiveness of expansion vs deeper core is currently indeterminate."
+  ],
+  "alternative_explanations": [
+    "GO_TO_MARKET_MISALIGNMENT: that the company is competitively displaced or attacking the wrong sub-segment. Plausible and partly testable via win/loss, but rejected as PRIMARY because the dominant signal is shrinking qualified-demand volume in a concentrated, finite vertical with intact retention, not a systematic fit or positioning failure.",
+    "UNIT_ECONOMICS_BREAKDOWN: that acquisition has become uneconomic. Rejected because LTV:CAC ~5.1:1 and 80% gross margin are healthy and not deteriorating; the issue is fewer qualified opportunities, not unprofitable ones.",
+    "TRUST_QUALITY_CRISIS / product-market-fit ceiling: that the product is failing customers. Rejected because churn (3%) and NRR (~112%) are strong and existing accounts expand, indicating PMF in the core is intact; the problem is new-demand volume."
+  ],
+  "missing_evidence": [
+    "Bottom-up TAM/SAM for the core vertical and the penetration rate of the qualified account universe, to size remaining reachable demand.",
+    "Win/loss reasons by deal over the trailing year, to separate saturation from competitive displacement.",
+    "Demand and fit sizing for 1-2 nearest-adjacent sub-segments/verticals, with the associated 8-12 week customization cost.",
+    "Pipeline-quality and lead-source trends, to confirm whether the remaining core pipeline is structurally lower-fit.",
+    "Competitive landscape and pricing benchmarks in the core vertical, to rule competitive pressure in or out."
+  ],
+  "success_metrics": [
+    "Addressable-demand model delivered within 3-4 weeks: core-vertical TAM/SAM and qualified-account penetration estimate quantifying remaining headroom.",
+    "Deceleration cause named: win-rate softening decomposed into saturation vs competitive loss with evidence.",
+    "Adjacency sizing: 1-2 adjacent sub-segments sized on demand, fit, and customization cost, with a go/no-go on a capped test.",
+    "Capital-efficient allocation decision: the 8 reps and product capacity directed to the highest-qualified-demand path, with no headcount expansion committed before the model.",
+    "Series-C narrative clarity: a defensible growth path (deepen core, expand, or reposition) grounded in sized demand within the 18-month window."
+  ],
+  "expected_outcome": "If DEMAND_FORECASTING_MISMATCH is correct and the diagnostic is executed well, within 3-4 weeks the company will know how much qualified core demand remains and whether the deceleration is saturation or competition. If the core is saturating, it redirects reps and product capacity toward the best-sized adjacency (after a capped demand test) rather than overspending on a shrinking core, preserving capital efficiency. If win/loss instead shows competitive displacement in a still-large core, it fixes positioning rather than expanding. Either way it avoids the over-optimistic-forecast trap of pouring capacity into demand that may not exist. If the model reveals ample untapped qualified core demand, deeper core penetration is validated and the deceleration is a coverage/execution issue, not saturation.",
+  "automatic_fail_conditions": [
+    "Recommends expanding sales headcount or marketing spend into the core vertical without any addressable-demand model, despite softening win rates and saturation signals.",
+    "Recommends committing 8-12 weeks of product/engineering to a new adjacent vertical with no demand test or sizing.",
+    "Diagnoses a churn, unit-economics, or product-market-fit-failure root cause despite 3% churn, ~112% NRR, and LTV:CAC ~5.1:1.",
+    "Recommends discounting/price cuts to lift win rate, ignoring healthy unit economics and the absence of price-driven loss evidence.",
+    "Accepts the owner's 'keep investing in the core' framing without sizing remaining qualified demand or testing the saturation hypothesis."
+  ],
+  "source_references": [
+    "Bookings and growth metrics (MoM and YoY new-bookings trend).",
+    "Pipeline and win-rate analysis by segment and sub-segment.",
+    "Churn and net-revenue-retention reporting by vertical.",
+    "CAC/LTV model by vertical and channel; absence of an addressable-demand/market-size model."
+  ],
+  "synthetic_fact_mapping": {
+    "facts_to_root_cause": [
+      {"fact": "MoM new-bookings growth decelerating ~5% -> ~3.5% while churn (3%) and NRR (~112%) hold", "implication": "The slowdown is in acquisition/new demand, not retention, pointing to a demand/forecast problem rather than a churn or value failure."},
+      {"fact": "~90% concentration in one finite vertical with win rate softening ~28% -> ~22% and lengthening cycles", "implication": "The best-fit accounts are being exhausted; the qualified core demand is approaching saturation, the heart of a demand-forecast mismatch."},
+      {"fact": "No validated addressable-demand model by vertical/sub-segment", "implication": "Growth plans rest on an unvalidated, likely over-optimistic estimate of reachable demand -- the definition of a forecasting mismatch."},
+      {"fact": "Unit economics intact (LTV:CAC ~5.1:1, 80% margin)", "implication": "Economics are not broken; fewer qualified opportunities, not unprofitable ones, rules out a unit-economics root cause."},
+      {"fact": "Vertical-specific customization (8-12 weeks) and lean GTM with no adjacency expertise", "implication": "Diversification is costly and slow, so mis-forecasting where demand is would waste scarce capacity -- raising the stakes of validating demand first."}
+    ],
+    "why_alternate_diagnoses_weaker": [
+      {"alternate": "UNIT_ECONOMICS_BREAKDOWN", "why_weaker": "LTV:CAC ~5.1:1 and 80% gross margin are healthy and not deteriorating; the constraint is demand volume, not deal profitability."},
+      {"alternate": "GO_TO_MARKET_MISALIGNMENT", "why_weaker": "Retention and expansion are strong and the segment is well-served; the win-rate softening is better explained by saturation of a concentrated vertical than by systematic mis-targeting, though win/loss should confirm."},
+      {"alternate": "TRUST_QUALITY_CRISIS", "why_weaker": "3% churn and ~112% NRR with healthy expansion show product-market fit and satisfaction are intact; the issue is new-demand volume, not product trust."}
+    ],
+    "first_action_justification": "With all three strategies hinging on how much qualified demand each can deliver and no addressable-demand model in hand, the highest-value first move is a 3-4 week bottom-up demand-sizing and win/loss diagnostic; it resolves saturation-vs-competition and sizes any adjacency before scarce reps or 8-12 weeks of engineering are committed.",
+    "constraints_effect_on_action": "The lean 8-rep sales team and 36-month runway forbid speculative headcount expansion, so the action defers hiring until demand is sized; the 8-12 week per-adjacency customization cost forces sizing/testing an adjacency before any build; the absent addressable-demand model is the specific gap the action fills rather than acting around it."
+  },
+  "scoring_criteria": {
+    "root_cause_accuracy": {
+      "criterion": "Does the engine diagnose DEMAND_FORECASTING_MISMATCH -- growth planned against unvalidated, likely over-optimistic core-segment demand that is saturating -- rather than a churn, unit-economics, or PMF-failure cause?",
+      "rubric_10": "Diagnoses DEMAND_FORECASTING_MISMATCH exactly, citing the new-bookings deceleration (~5% -> ~3.5%), ~90% concentration, win-rate softening (~28% -> ~22%), intact retention/economics, and the absent addressable-demand model.",
+      "rubric_8": "Diagnoses a closely related demand/saturation archetype (e.g., GO_TO_MARKET saturation) with sound evidence on the deceleration and concentration.",
+      "rubric_6": "Identifies growth deceleration but does not clearly center the unvalidated-demand/saturation forecast mismatch as primary.",
+      "rubric_4": "Focuses on secondary issues (pricing, generic 'sell more') without recognizing the saturation/forecast gap.",
+      "rubric_2": "Diagnoses a churn, unit-economics, or PMF-failure cause that contradicts the 3% churn, ~112% NRR, and ~5.1:1 LTV:CAC evidence.",
+      "rubric_0": "Diagnosis unrelated to the growth/demand evidence."
+    },
+    "first_action_accuracy": {
+      "criterion": "Does the engine recommend an addressable-demand and win/loss diagnostic before committing more sales/product capacity to the core or an adjacency?",
+      "rubric_10": "Recommends a 3-4 week bottom-up TAM/SAM + penetration + win/loss + adjacency-sizing diagnostic before any headcount expansion or adjacency build.",
+      "rubric_8": "Recommends demand-sizing/win-loss analysis before scaling, with slightly different scope or timeline, still sound.",
+      "rubric_6": "Recommends some analysis but allows core-vertical investment or an adjacency build to proceed in parallel without sizing.",
+      "rubric_4": "Endorses deepening the core or expanding with only light validation.",
+      "rubric_2": "Recommends headcount expansion or an adjacency build with no demand validation.",
+      "rubric_0": "Action harmful or contradicts the diagnosis."
+    },
+    "business_relevance": {
+      "criterion": "Does the action reflect Series-B vertical-SaaS reality where capital-efficient growth and a sized Series-C narrative matter?",
+      "rubric_10": "Action is explicitly built around capital efficiency, the concentrated-vertical saturation risk, customization cost, and the 18-month Series-C narrative.",
+      "rubric_6": "Action is relevant to a growth-stage SaaS but generic about saturation or capital efficiency.",
+      "rubric_2": "Action loosely related to the SaaS context.",
+      "rubric_0": "Action irrelevant or harmful to a growth-stage SaaS."
+    },
+    "constraint_awareness": {
+      "criterion": "Does the action respect the 36-month runway, lean 8-rep sales team, 8-12 week customization cost, and missing demand model?",
+      "rubric_10": "Defers headcount expansion until demand is sized, sizes adjacency cost before any build, and fills the missing addressable-demand model.",
+      "rubric_6": "Respects most constraints but proposes some incremental spend or build before sizing.",
+      "rubric_2": "Proposes actions that strain runway or commit capacity without sizing.",
+      "rubric_0": "Action infeasible within constraints."
+    },
+    "evidence_traceability": {
+      "criterion": "Are claims tied to the specific SYN-012 metrics?",
+      "rubric_10": "Every claim traces to data: MoM ~5% -> ~3.5%, YoY 40%, ~90% concentration, win rate ~28% -> ~22%, churn 3%, NRR ~112%, LTV:CAC ~5.1:1, no demand model.",
+      "rubric_6": "Main diagnosis supported; some claims not tied to specific numbers.",
+      "rubric_2": "Minimal use of the case data.",
+      "rubric_0": "No traceability."
+    },
+    "confidence_calibration": {
+      "criterion": "Is MODERATE confidence justified given clear retention/economics but unresolved saturation-vs-competition and missing demand sizing?",
+      "rubric_10": "MODERATE well-calibrated: strong on the demand-side localization but explicitly flags that saturation-vs-competition and adjacency demand are unresolved without the diagnostic.",
+      "rubric_6": "Confidence defensible but understates the saturation-vs-competition uncertainty.",
+      "rubric_2": "Confidence asserted (e.g., HIGH) without grounding given the missing demand model.",
+      "rubric_0": "Confidence inverted relative to evidence."
+    },
+    "safety": {
+      "criterion": "Is the action low-risk and non-destructive (no speculative headcount, no blind adjacency build, no margin-eroding discounting)?",
+      "rubric_10": "Action is a contained, reversible demand-sizing/win-loss diagnostic with no runway burn or capacity commitment before evidence.",
+      "rubric_6": "Action mostly safe but includes one spend/build item needing justification.",
+      "rubric_2": "Action introduces meaningful runway or capacity risk before validation.",
+      "rubric_0": "Action high-risk (large hiring, blind adjacency build, or discount spiral)."
+    }
+  },
   "manual_review_completed": false,
-  "locked_for_round_2_execution": false
+  "manual_review_date": null,
+  "manual_review_notes": null,
+  "locked_for_round_2_execution": false,
+  "lock_date": null
 }

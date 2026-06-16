@@ -5,8 +5,32 @@
   "creation_methodology": "Expert analysis of Series A SaaS churn acceleration pattern. Reviewed financial metrics (churn Q2 4% → Q3 6%), expansion ARR decline, customer concentration (top 5 = 32% of ARR), and usage data (strong adoption but no correlation with expansion). Diagnosed root cause as customer fit/segment mismatch, not product quality.",
   "root_cause_diagnosis": "GO_TO_MARKET_MISALIGNMENT",
   "root_cause_description": "The company is acquiring customers that are technically good fits (strong usage, adequate satisfaction) but commercially misaligned (low expansion, eventual churn). The cohort data shows expansion ARR declining as a percentage of new customer revenue (Q1 12% → Q3 8%), suggesting either (1) GTM messaging is attracting lower-value/lower-expansion customer segments, or (2) acquisition channels changed and new channels bring different customer profiles. Top 5 customer concentration (32% of ARR) suggests some customers are strategic/good fit, while others are not. The churn acceleration pattern (4% Q2 → 6% Q3) timing aligns with when newer cohorts reach the 12-18 month evaluation point (when expansion decisions are typically made). Root cause is not product (usage strong, satisfaction neutral) or market (adoption accelerating), but GTM fit: the company's positioning or acquisition channels are attracting customers that don't expand.",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "Quarterly churn accelerated from 4% (Q2) to 6% (Q3)",
+      "Net revenue retention stuck at ~95%, unhealthy for SaaS",
+      "Expansion ARR declining as a share of new-customer revenue (Q1 12% -> Q3 8%)"
+    ],
+    "contributing_factors": [
+      "Top-5 customer concentration at 32% of ARR creating a 15%+ revenue cliff risk",
+      "Support ticket volume up 25% YoY against only 15% customer growth, signaling rising service burden in some cohorts",
+      "Heterogeneous construction-tech market where large GCs default to Procore and only mid-market/regional buyers are open to alternatives",
+      "Cohort-level churn drivers invisible: no structured exit-interview or acquisition-source segmentation yet"
+    ],
+    "true_root_cause": "The company is acquiring customers that are technically good fits (85% WAU, 7.2/10 satisfaction) but commercially misaligned - they adopt the product yet do not expand and eventually churn - so newer cohorts carry weaker economics than early ones. It is a root cause (not a symptom) because the churn acceleration, the NRR shortfall, and the expansion decline all flow from one fact: the go-to-market is attracting a segment that does not expand. Fixing the product (the common reflex to churn) would not stop the bleed when usage and satisfaction are already healthy."
+  },
   "confidence_in_diagnosis": "MEDIUM-HIGH",
   "first_priority_action": "Commission 4-week detailed cohort analysis: (1) Segment customer base by acquisition source (direct sales, self-serve, partner channels), customer size (revenue), vertical (construction segment: GCs, subs, engineers), and tenure. (2) Calculate LTV, CAC, expansion %, and churn % by cohort. (3) Identify which cohorts have LTV >$35k and expansion >15% of base (healthy), and which have LTV $15-20k and <5% expansion (weak). (4) For churned customers in each cohort, compile churn reasons (stated + inferred from usage). Results will determine whether GTM messaging, channel strategy, or sales targeting needs adjustment.",
+  "accepted_alternative_actions": [
+    "Run structured win/loss and exit interviews across the recently churned accounts plus a sample of expanded vs. flat accounts, coding reasons (fit, pricing, feature gap, competitive switching) before any GTM change - acceptable because it directly tests the customer-fit hypothesis with primary data inside the 90-day window.",
+    "Build a cohort-economics model (LTV, CAC, expansion %, churn %) segmented by acquisition source and customer size/vertical, comparing early high-expansion cohorts to recent low-expansion ones - acceptable because it isolates whether channel/segment mix changed before reallocating any acquisition spend."
+  ],
+  "bad_actions": [
+    "Launching a major product roadmap overhaul to 'fix churn' - wrong for THIS case because usage (85% WAU) and satisfaction (7.2/10) are healthy; treating churn as a product-quality problem misdirects the lean 18-person team away from the customer-fit root cause.",
+    "Cutting all acquisition spend or pausing new logos to protect runway - wrong because acquisition is not the problem (45% growth is real); the issue is which segment is acquired, and a blanket cut would stall the Series B growth narrative.",
+    "Discounting aggressively or cutting price to reduce churn - wrong because there is no evidence churn is price-driven (satisfaction neutral, usage strong); discounting would erode the 68% gross margin and unit-economics story without addressing fit.",
+    "Doubling down on the top-5 concentrated accounts to defend ARR - wrong as a first move because it deepens the 32% concentration cliff risk and ignores the broader cohort-fit problem driving the 4%->6% churn acceleration."
+  ],
   "action_description": "This is first priority because churn acceleration will compound if not understood. Within 4 weeks, the company will have clarity on whether the problem is (A) messaging attracting wrong segment (fix: reposition), (B) acquisition channels changed (fix: reallocate spend), or (C) customer expectations misaligned (fix: improve sales qualification). This diagnostic is lower risk than major product pivots and prevents wasted effort on false fixes.",
   "action_constraints_respected": [
     "Cash runway: 4-week analysis uses internal analytics team (no external cost), fits within 22-month runway.",
@@ -41,6 +65,17 @@
     "GTM adjustment plan: By end of week 4, clear recommendation on whether to (A) adjust messaging, (B) reallocate acquisition spending, (C) improve sales qualification, or (D) combination."
   ],
   "expected_outcome": "If diagnosis correct, cohort analysis will show that (1) early cohorts (acquired via direct sales, larger GCs) have high expansion and low churn, while (2) recent cohorts (acquired via self-serve or new channels, smaller subs) have low expansion and higher churn. This validates customer-fit hypothesis and suggests GTM adjustment (reallocate spend back to direct sales, change messaging, improve qualification). If cohort analysis shows no clear pattern by acquisition source or customer type, the company must investigate other factors (product fit, pricing, competitive switching) and may need more targeted investigation.",
+  "automatic_fail_conditions": [
+    "Diagnoses a product-quality/TRUST_QUALITY problem despite 85% WAU and stable 7.2/10 satisfaction, and recommends a product overhaul as the fix.",
+    "Recommends an irreversible GTM pivot (repositioning, channel cut, or pricing change) before the cohort analysis identifies which segments are healthy vs. at-risk.",
+    "Recommends cutting acquisition spend or pausing new-logo growth as the first action, undermining the Series B growth narrative without diagnosing cohort fit.",
+    "Ignores the 32% top-5 concentration risk and the expansion decline (12%->8%), focusing only on the headline churn number."
+  ],
+  "source_references": [
+    "B2B SaaS net-revenue-retention and expansion benchmarks (e.g., OpenView/SaaS Capital surveys) where sub-100% NRR signals a customer-fit/expansion problem rather than pure product churn.",
+    "Construction-tech competitive dynamics around Procore (public, $10B+) and the large-GC vs. mid-market/regional buyer segmentation that shapes vertical-SaaS GTM fit.",
+    "Series A->B SaaS cohort-analysis conventions (LTV/CAC, payback, logo vs. net-dollar retention by acquisition source) used in diligence."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose GO_TO_MARKET_MISALIGNMENT or customer fit issue?",

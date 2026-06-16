@@ -5,8 +5,32 @@
   "creation_methodology": "Expert analysis of boutique consulting firm junior turnover and utilization issues. Reviewed talent metrics (junior turnover 10%→18%, partnership track 2/10), financial trends (EBITDA 15%→12.2%, revenue growth 8% YoY), and utilization (partner 72%, below peer 75-80%). Diagnosed root cause as operational bottleneck: junior talent loss constraining delivery capacity and utilization.",
   "root_cause_diagnosis": "OPERATIONAL_BOTTLENECK",
   "root_cause_description": "The firm's delivery capacity and utilization are constrained by junior consultant turnover (10% → 18%), which reduces the pipeline of trained consultants available for projects. Junior turnover accelerating (18% annual rate) means approximately 6-7 consultants are leaving annually from a 35-person consultant base, requiring continuous hiring and training. This creates a utilization problem: partners spending time training/mentoring new staff instead of billable work (partner utilization 72% vs. peer 75-80%), and junior consultants leaving before becoming productive contributors. The root cause is operational: the firm's staffing model depends on retaining junior consultants to scale projects, but talent is leaving to Big Four and corporate roles. Without addressing retention, the firm will continue to have utilization issues (bench time, underutilized capacity) and will struggle to scale revenue (current 8% growth is suboptimal given market).",
+  "symptom_vs_contributing_vs_root_cause": {
+    "symptoms": [
+      "EBITDA margin compressing 15%+ -> 12.2% with revenue growth slowing to 8% YoY",
+      "Partner utilization 72%, below the peer 75-80% benchmark, and realization 85% vs. 90% target",
+      "Revenue per employee $300k vs. peer $320k"
+    ],
+    "contributing_factors": [
+      "Narrow partnership track (only 2 of 10 hired reach partner) creating a perceived career ceiling",
+      "Compensation not competitive with McKinsey/BCG and Big Four/corporate offers",
+      "Continuous hire-and-train cycle pulling partners into mentoring instead of billable work",
+      "Top-3 client concentration at 32% and limited differentiation vs. expanding Big Four strategy practices"
+    ],
+    "true_root_cause": "Junior consultant turnover doubling (10% -> 18%, ~6-7 of 35 consultants leaving annually) is draining the trained-delivery pipeline, so partners absorb training load and utilization falls below peer levels - constraining capacity and revenue scaling. It is a root cause (not a symptom) because the utilization shortfall, the margin compression, and the stalled growth all flow from this one fact: the staffing model depends on retaining juniors who keep leaving. Raising prices or chasing growth would not fix the bleed while the talent pipeline empties."
+  },
   "confidence_in_diagnosis": "HIGH",
   "first_priority_action": "Commission 4-week junior consultant exit and career path analysis: (1) Conduct structured exit interviews with recent junior departures (last 12 months, n=6-8): specific questions on compensation, career path, project experience, culture fit. (2) Analyze partnership track: model years-to-partnership timeline; what skills/experience do junior consultants who make partner track demonstrate? (3) Benchmark compensation vs. Big Four and corporate strategy roles (actual offers made). (4) Assess project assignment practices: are junior consultants getting high-impact/visible projects or low-value work? Results will determine whether solution is (A) compensation adjustment (raise junior pay to be competitive), (B) partnership path clarity (clearer track, more transparent process), (C) project/skill development (high-impact projects, mentoring), or (D) combination.",
+  "accepted_alternative_actions": [
+    "Run a junior-cohort retention and career-path diagnostic (years-to-partner modeling, promotion-rate transparency, project-staffing/visibility audit) before any compensation change - acceptable because it tests whether the driver is career ceiling vs. pay vs. project quality, the fork the whole strategy turns on.",
+    "Benchmark junior compensation and total package against the specific destinations consultants are leaving for (Big Four, corporate strategy) and pair it with structured exit interviews - acceptable because it quantifies the pay gap and ranks turnover drivers before committing to a retention investment."
+  ],
+  "bad_actions": [
+    "Raising junior compensation across the board before diagnosing the driver - wrong because exit signals point to limited partnership opportunity and career path (departures to Big Four/corporate), so a blanket pay raise may spend margin the firm lacks without fixing the ceiling problem.",
+    "Hiring more juniors to backfill turnover without fixing retention - wrong because it deepens the training burden that is already dragging partner utilization to 72%, worsening the capacity bottleneck rather than relieving it.",
+    "Pushing partners to bill more hours to lift utilization - wrong because partners are below benchmark precisely because they are absorbing mentoring/rework from churn; demanding more billable hours without fixing the pipeline accelerates burnout and turnover.",
+    "Selling the firm now to exit the talent problem - wrong as a first move because a revolving-door junior base and below-peer utilization depress exit value; the partners' own goal of a strong exit requires fixing retention first."
+  ],
   "action_description": "This is first priority because turnover is accelerating and threatens firm viability. Training/mentoring burden is constraining partner utilization (already below peer benchmark at 72%). Without understanding the specific drivers (comp? opportunity? fit?), the firm will continue to lose talent and struggle with capacity. The 4-week analysis is low-cost (internal interviews, benchmark research) and provides clarity for retention strategy.",
   "action_constraints_respected": [
     "Timeline: 4 weeks fits within 24-month exit planning window.",
@@ -43,6 +67,17 @@
     "Retention strategy options: By end of week 4, clear recommendation on which 2-3 levers (compensation, partnership clarity, project assignment, culture) are highest-priority for retention improvement."
   ],
   "expected_outcome": "If diagnosis correct, analysis will show that (1) top reasons for turnover are (A) limited partnership opportunity perceived (18% promotion rate low), (B) compensation below Big Four offers by 15-20%, or (C) limited visibility/impact on projects, (2) junior consultants who do reach partnership have specific skill patterns (e.g., client-facing, business development, thought leadership) that firm should cultivate, (3) compensation adjustment of 10-15% for junior roles would be cost-effective vs. hiring/training replacement cost. This enables firm to develop retention strategy targeting highest-impact levers. If analysis reveals different findings (e.g., turnover driven by cultural fit or unsustainable partnership path even with changes), the firm may need deeper strategic assessment.",
+  "automatic_fail_conditions": [
+    "Recommends an across-the-board junior compensation increase as the first action before diagnosing whether the driver is career path, pay, or project quality.",
+    "Diagnoses a pure demand/market-decline problem despite 8% revenue growth - the constraint is talent pipeline and utilization, not absent demand.",
+    "Recommends hiring more juniors to backfill turnover without addressing retention, knowingly deepening the training burden dragging partner utilization.",
+    "Recommends selling the firm or major restructuring before the exit/career-path diagnostic identifies the turnover drivers."
+  ],
+  "source_references": [
+    "Consulting-firm utilization, realization, and revenue-per-professional benchmarks (e.g., Consultancy.org / SPI Professional Services Maturity benchmarks; Big-Four vs. boutique economics).",
+    "Strategy-consulting talent-attrition and up-or-out partnership-pipeline patterns from MBB/Big-Four analogs and their effect on boutique retention.",
+    "Professional-services talent-retention and cost-of-turnover benchmarks (replacement cost, ramp time, mentoring drag on senior utilization)."
+  ],
   "scoring_criteria": {
     "root_cause_accuracy": {
       "criterion": "Does engine diagnose OPERATIONAL_BOTTLENECK or capacity/delivery constraint?",
