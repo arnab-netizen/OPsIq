@@ -1184,7 +1184,6 @@
 
 ---
 
-*(Continuing with CASE RW-006 through RW-015... continuing next due to length constraints)*
 
 ---
 
@@ -1419,7 +1418,6 @@
 
 ---
 
-*(Continuing with remaining 9 cases: RW-007 through RW-015...)*
 
 ---
 
@@ -1859,14 +1857,462 @@
 
 ---
 
-*(Continuing with RW-009 through RW-015... to be completed in file)*
+## CASE RW-009: Slack — Freemium Conversion & Net Retention
+
+**case_id:** RW-009
+**case_name:** Slack: Converting a Huge Free Base into Durable Paid Retention
+**case_type:** REAL_CASE_STUDY
+**industry:** SaaS / Team Collaboration
+**business_model:** Freemium B2B SaaS (per-seat, bottom-up adoption)
+**business_stage:** High-growth, monetization-optimization phase
+**geography:** United States (global usage)
+**source_references:**
+- GetMonetizely: "PLG Monetization Case Study: Lessons from Slack's Bottom-Up Pricing Strategy"
+- GrowthPad: "Case Study: Slack's Pricing Strategy and Revenue Evolution"
+- ThetaCLV: "Slack IPO Valuation & CBCV Case Study"
+- Slack S-1 / public financial disclosures (net dollar retention reporting)
+
+**source_quality_score:** 9/10
+**contamination_risk:**
+- level: MEDIUM
+- reason: Slack's PLG model is well known, but the specific operating levers (fair-billing trust mechanism, value-metric tiering, net-dollar-retention math) require analysis, not recall.
+
+**why_case_is_suitable:** Quantified retention signal (net dollar retention 132–143%), a clear monetization decision (how to convert a large free base), and a documented set of levers.
+**why_case_is_not_too_easy:** Tempts the answer "raise prices / add a sales team." The correct lever set is trust + value-based tiering + leveraging team network effects, not seat-count extraction.
+**data_quality_score:** 8/10
+**expected_answer_quality_score:** 8/10
+**total_case_quality_score:** 8.5/10
+**include_in_round_1:** true
+
+### CASE_INPUT_VISIBLE_TO_OPSIQ
+
+**owner_context:** VP Monetization at a fast-growing freemium team-messaging SaaS.
+**stated_problem:** "We have millions of free users and rapid bottom-up adoption, but free-to-paid conversion is modest and we need durable, expanding revenue. Should we raise prices, add an enterprise sales team, or restrict the free tier?"
+**visible_financial_data:**
+- Net dollar retention among paying customers: ~130%+ (existing paid accounts expand over time)
+- Free base: very large; paid conversion: modest single-digit %
+- Pricing: per-active-user tiers (Free, Standard, Plus, Enterprise)
+- Gross margin: high (typical SaaS, 80%+)
+**visible_sales_data:** Adoption is team-by-team, viral within organizations; expansion happens as more teammates join.
+**visible_operations_data:** Self-serve onboarding; light-touch support; product usage data available per workspace.
+**visible_marketing_data:** Low paid CAC (word-of-mouth dominant); brand strong among knowledge workers.
+**visible_customer_data:** Paid accounts that grow seat count have high retention; many free workspaces are small/low-activity.
+**visible_constraints:** Restricting the free tier risks killing the viral adoption loop that drives growth.
+**known_limitations:** No per-cohort activation/value-realization metrics provided; churn reasons for small free workspaces unknown.
+**exact_prompt_to_opsiq:** "This freemium SaaS has high net revenue retention but modest free-to-paid conversion. What is the root driver of monetization performance, and what is the first priority action to grow durable revenue without breaking the adoption engine? What would you measure?"
+
+### CASE_ANSWER_KEY_HIDDEN_FROM_OPSIQ
+
+**hidden_outcome:** Slack scaled to a multi-billion valuation on PLG; reported net dollar retention of ~132% (2020) and ~143% (2019). Key levers: a fair-billing policy that auto-credited inactive users (built trust and removed purchase friction), value-based tiering (charging for value like history/integrations/admin, not just seats), and riding intra-company network effects so accounts expand naturally.
+**documented_root_causes:**
+1. Monetization depends on *value realization and expansion within accounts*, not on extracting more per seat up front.
+2. Trust mechanisms (fair billing) reduced friction and increased willingness to convert/expand.
+3. Network effects: revenue grows as adoption spreads inside an org — protect the viral loop.
+**expert_or_documented_best_actions:**
+1. Instrument activation and value-realization (which workspaces hit "aha"/habitual use).
+2. Tier on value metrics (message history, integrations, admin/security) that scale with account importance — land-and-expand, not seat-gouging.
+3. Add a trust mechanism (fair billing for inactive users) to lower conversion friction.
+4. Layer enterprise sales motion *on top of* PLG for large expanding accounts — do not replace the bottom-up loop.
+**known_bad_actions:** Heavily restricting the free tier (kills the loop); blunt price increases; replacing PLG with top-down sales as the primary motion; charging only per seat.
+**accepted_alternative_answers:** Identifying expansion/NDR as the core engine; recommending value-based tiering; recommending activation instrumentation; recommending a trust/fair-billing mechanism.
+**source_quotes_or_paraphrased_evidence:** "net dollar retention rate of 132% in 2020 / 143% in 2019"; "fair billing policy automatically credited customers for inactive users."
+**scoring_notes:** Full credit = identify expansion/value-realization as the engine + first action instrument activation and tier on value (+trust). Partial = identify NDR/expansion or value-based tiering. Fail = restrict free tier as primary lever, or seat-only price hike.
+
+### CASE_SCORING_GUIDE
+**root_cause_full_credit:** Identifies that durable revenue comes from in-account expansion/value realization (NDR engine), and that the free loop must be protected.
+**root_cause_partial_credit:** Identifies expansion/retention or value-based pricing as relevant.
+**first_priority_action_full_credit:** Instrument activation/value-realization + tier on value metrics + trust mechanism, with enterprise sales layered on (not replacing) PLG.
+**first_priority_action_partial_credit:** Any one of: activation instrumentation, value-based tiering, fair-billing trust mechanism.
+**automatic_fail_conditions:** Recommending free-tier restriction as primary lever; blunt seat-only price increase; replacing PLG with top-down sales.
+**dangerous_recommendations:** Killing the viral loop to force conversions.
+**false_confidence_traps:** Assuming "more sales reps" or "higher prices" is the lever; assuming small free workspaces are the conversion target.
+**missing_data_that_should_be_flagged:** Per-cohort activation/value-realization metrics; churn reasons for small workspaces; expansion drivers.
+**evidence_that_should_be_used:** NDR ~130%+, low CAC/viral adoption, per-seat tiering, large low-activity free base.
+**evidence_that_should_not_be_invented:** Specific conversion-rate uplift from any tactic; competitor pricing.
+
+---
+
+## CASE RW-010: MAC Cosmetics — Wasted Impressions & Audience Misallocation
+
+**case_id:** RW-010
+**case_name:** MAC Cosmetics: Eliminating Mistargeted Ad Spend via People-Based Marketing
+**case_type:** REAL_CASE_STUDY
+**industry:** Marketing / Beauty / DTC
+**business_model:** Branded consumer products (omnichannel)
+**business_stage:** Mature brand, campaign-efficiency problem
+**geography:** United States
+**source_references:**
+- Digital Training Academy: "How MAC Cosmetics identified wasted impressions and increased conversions with people-based marketing"
+**source_quality_score:** 7/10
+**contamination_risk:**
+- level: LOW
+- reason: Specific campaign case, not a memorized headline; requires diagnosing the targeting waste from the numbers.
+
+**why_case_is_suitable:** Crisp quantified waste (≈1/3 of impressions, ≈18% of spend hitting the wrong audience) with a measurable fix (+16% conversions).
+**why_case_is_not_too_easy:** Tempts "increase budget" or "change creative." The real lever is audience/identity targeting to cut mistargeted impressions.
+**data_quality_score:** 8/10
+**expected_answer_quality_score:** 8/10
+**total_case_quality_score:** 7.5/10
+**include_in_round_1:** true
+
+### CASE_INPUT_VISIBLE_TO_OPSIQ
+**owner_context:** Brand marketing lead launching a new women's eyeshadow line.
+**stated_problem:** "Our new product campaign's ROI is underwhelming. We're considering increasing the media budget or refreshing the creative. What should we do first?"
+**visible_financial_data:** Media budget fixed for the launch; conversion rate below target; CPMs in line with category.
+**visible_sales_data:** Product targets a predominantly female customer base; sell-through below plan.
+**visible_operations_data:** Campaign runs across programmatic display/social; standard ad ops.
+**visible_marketing_data:** Reach is high; frequency adequate; impression delivery shows a meaningful share served to male audiences for a product intended for women; attribution shows weak conversion on a large slice of impressions.
+**visible_customer_data:** Core buyer is female; the served audience does not fully match the buyer profile.
+**visible_constraints:** Budget cannot increase materially this quarter.
+**known_limitations:** No identity-level audience match data is in hand yet; creative A/B results not available.
+**exact_prompt_to_opsiq:** "A product launch campaign is underperforming on ROI. Budget is fixed. What is the root cause of the weak ROI, and what is the first priority action — increase budget, refresh creative, or something else? What metric proves the fix?"
+
+### CASE_ANSWER_KEY_HIDDEN_FROM_OPSIQ
+**hidden_outcome:** MAC found ~1/3 of media impressions (≈18% of spend) were reaching men rather than the female target. Applying people-based (identity) targeting to eliminate mistargeted impressions improved ROI with a ≈16% increase in conversions — without increasing budget.
+**documented_root_causes:** Audience misallocation — a large share of paid impressions served to the wrong audience, wasting spend and depressing ROI. The problem is targeting precision, not budget size or creative.
+**expert_or_documented_best_actions:**
+1. Diagnose impression-to-audience match (who is actually being served).
+2. Apply people-based/identity targeting to suppress mistargeted impressions and reallocate to the real buyer.
+3. Hold budget flat; measure conversion lift from improved targeting.
+**known_bad_actions:** Increasing the budget (scales the waste); refreshing creative first (doesn't fix who sees it); broadening reach.
+**accepted_alternative_answers:** Identifying wasted/mistargeted impressions; recommending audience-targeting precision before budget or creative.
+**source_quotes_or_paraphrased_evidence:** "1/3 of media impressions (18% of spend) was going to men rather than women"; "16% increase in conversions."
+**scoring_notes:** Full credit = audience misallocation as root cause + first action is targeting precision at flat budget. Fail = increase budget as the primary lever.
+
+### CASE_SCORING_GUIDE
+**root_cause_full_credit:** Identifies mistargeted impressions / audience misallocation as the ROI drag (not budget, not creative).
+**root_cause_partial_credit:** Identifies targeting/audience as a factor.
+**first_priority_action_full_credit:** Apply identity/people-based targeting to cut mistargeted impressions, budget held flat; measure conversion lift.
+**first_priority_action_partial_credit:** Recommends improving audience targeting before budget/creative.
+**automatic_fail_conditions:** Recommending a budget increase as the primary lever; recommending only a creative refresh.
+**dangerous_recommendations:** Scaling spend on a mistargeted campaign.
+**false_confidence_traps:** Assuming low ROI means "not enough reach"; assuming creative is the problem without targeting data.
+**missing_data_that_should_be_flagged:** Identity-level audience match; creative A/B results.
+**evidence_that_should_be_used:** Share of impressions served to the wrong gender; flat-budget constraint; female buyer profile.
+**evidence_that_should_not_be_invented:** Exact conversion uplift; creative performance not provided.
+
+---
+
+## CASE RW-011: Masked Diagnostics Startup — Unvalidated Technology & Governance
+
+**case_id:** RW-011
+**case_name:** "Veridx" (masked) — Deploying an Unvalidated Diagnostic Device Under Hype Pressure
+**case_type:** REAL_CASE_STUDY (anonymized/masked variant of a documented case)
+**industry:** Healthcare / Diagnostics
+**business_model:** Venture-backed medical-device / lab-services startup
+**business_stage:** Pre-scale, pre-commercial validation
+**geography:** United States
+**source_references:**
+- Academic case analyses of a documented blood-diagnostics fraud (Fraud Triangle case studies; university case PDFs). Masked to remove the famous name and prevent recall-based answering.
+**source_quality_score:** 8/10
+**contamination_risk:**
+- level: LOW (after masking; the famous name and outcome are removed from the visible prompt)
+- reason: Original is extremely famous, so it is presented anonymized; the test is governance reasoning, not recognition.
+
+**why_case_is_suitable:** Clear governance/compliance decision under decision pressure; documented best action (validate before deploy; disclose limitations).
+**why_case_is_not_too_easy:** Investor/PR pressure and a charismatic founder narrative tempt "deploy now, validate later." The correct answer resists this.
+**data_quality_score:** 8/10
+**expected_answer_quality_score:** 9/10
+**total_case_quality_score:** 8.5/10
+**include_in_round_1:** true
+
+### CASE_INPUT_VISIBLE_TO_OPSIQ
+**owner_context:** CEO of a venture-backed diagnostics startup ("Veridx").
+**stated_problem:** "Our proprietary device is supposed to run a wide panel of tests from a tiny blood sample. Investors and a major retail partner want a commercial rollout to consumers this year. Internally, the device reliably runs only a small fraction of the advertised tests, and results on several are inconsistent versus reference lab methods. The board is pushing to launch. What should we do?"
+**visible_financial_data:** Large raise completed; high burn; valuation tied to the broad-panel claim.
+**visible_sales_data:** A retail partner is ready to offer tests to walk-in consumers at scale.
+**visible_operations_data:** Device validates only a small subset of advertised tests; several results diverge from established reference methods; many advertised tests are run on third-party analyzers, not the proprietary device.
+**visible_marketing_data:** Public messaging claims a broad test menu from a finger-stick sample.
+**visible_customer_data:** End users would be real patients making health decisions on the results.
+**visible_constraints:** Investor expectations, retail-partner timelines, founder/board pressure to launch.
+**known_limitations:** No completed independent analytical/clinical validation for most of the menu.
+**exact_prompt_to_opsiq:** "There is intense pressure to launch a consumer diagnostic rollout, but the technology validates only a fraction of advertised tests and shows inconsistent results on others. What is the core problem, and what is the first priority action? What must not happen?"
+
+### CASE_ANSWER_KEY_HIDDEN_FROM_OPSIQ
+**hidden_outcome:** In the real (unmasked) case, the company deployed to consumers while concealing that most tests could not be reliably run on its device; patients received false results (false miscarriage/cancer signals), and the company collapsed amid fraud findings and criminal convictions.
+**documented_root_causes:** Commercializing an unvalidated clinical product and overstating capability — a governance/compliance and patient-safety failure, not a marketing or pricing problem.
+**expert_or_documented_best_actions:**
+1. Halt/limit any clinical/consumer deployment to only the tests with completed, independent analytical and clinical validation.
+2. Correct public claims to match validated reality; disclose limitations to partners and regulators.
+3. Stand up rigorous validation, quality systems, and regulatory compliance before any scale.
+4. Reset investor/partner timelines to the validated truth rather than the hype.
+**known_bad_actions:** Launching the full menu to consumers; concealing the device's limits; running advertised tests on third-party machines while claiming proprietary capability; using PR/founder narrative to override safety.
+**dangerous_recommendation_if_wrong:** "Launch now and fix validation later" — patient harm and fraud exposure.
+**accepted_alternative_answers:** Identifying it as a validation/compliance/patient-safety failure; first action = stop deployment of unvalidated tests + correct claims + validate.
+**scoring_notes:** Full credit = refuse to deploy unvalidated tests, correct overstated claims, validate first. Any answer that proceeds with the broad rollout is an AUTOMATIC FAIL (dangerous).
+
+### CASE_SCORING_GUIDE
+**root_cause_full_credit:** Identifies unvalidated technology + overstated capability as a patient-safety/governance failure.
+**root_cause_partial_credit:** Identifies validation gap or compliance risk.
+**first_priority_action_full_credit:** Halt deployment of unvalidated tests; restrict to validated subset; correct public claims; build validation/quality/regulatory before scale.
+**first_priority_action_partial_credit:** Recommends pausing launch and validating, even if not all elements present.
+**automatic_fail_conditions:** Recommending the consumer rollout proceed; recommending marketing/pricing fixes; downplaying the validation gap; advising to conceal limitations.
+**dangerous_recommendations:** "Launch now, validate later"; "manage the PR narrative"; deploying unvalidated tests to patients.
+**false_confidence_traps:** Treating this as a go-to-market/marketing problem; trusting founder/investor optimism over validation evidence.
+**missing_data_that_should_be_flagged:** Independent validation results; regulatory clearances; per-test accuracy vs reference methods.
+**evidence_that_should_be_used:** Only a small subset validates; inconsistent results vs reference; patients make health decisions on results.
+**evidence_that_should_not_be_invented:** Claims of accuracy not supported by validation; regulatory approvals not in evidence.
+
+---
+
+## CASE RW-012: Home-Services Lead Platform — Supply-Side Trust Erosion
+
+**case_id:** RW-012
+**case_name:** HomeAdvisor/Angi: Contractor Trust Erosion from Lead-Quality Failures
+**case_type:** REAL_CASE_STUDY
+**industry:** Local Services Marketplace / Lead Generation
+**business_model:** Two-sided platform; contractors pay for homeowner leads
+**business_stage:** Mature platform with supply-side churn crisis
+**geography:** United States
+**source_references:**
+- Roofing Insights: "The Rise and Fall of HomeAdvisor, aka Angi, ServiceMagic"
+- FTC settlement (April 2023) re: deceptive lead-quality/conversion claims (up to $7.2M to contractors)
+- Housecall Pro / Jobber contractor-platform comparisons
+**source_quality_score:** 8/10
+**contamination_risk:**
+- level: MEDIUM
+- reason: Known in the trades; the operating diagnosis (supply-side trust as the asset) still requires analysis.
+
+**why_case_is_suitable:** Documented trust crisis (fake/duplicate leads, cancellation friction), a regulatory outcome (FTC), and a clear operating decision on the supply side.
+**why_case_is_not_too_easy:** Tempts "spend more on homeowner demand marketing." The real failure is supply-side (contractor) trust and lead quality.
+**data_quality_score:** 8/10
+**expected_answer_quality_score:** 8/10
+**total_case_quality_score:** 8.0/10
+**include_in_round_1:** true
+
+### CASE_INPUT_VISIBLE_TO_OPSIQ
+**owner_context:** GM of a two-sided home-services lead-gen platform.
+**stated_problem:** "Contractors are churning and our reputation among pros is poor. They complain about lead quality and being charged for bad leads. Should we invest more in homeowner-side demand marketing to send pros more leads?"
+**visible_financial_data:** Revenue depends on contractors buying leads; contractor churn rising; refund/dispute volume high.
+**visible_sales_data:** Many leads are shared across multiple pros, duplicated, or low-intent; pros report poor conversion.
+**visible_operations_data:** Lead delivery is high-volume; cancellation/refund process is friction-y; verification of "pre-screened" pros is weak.
+**visible_marketing_data:** Heavy homeowner-acquisition spend; messaging to pros promises high-quality, high-converting leads.
+**visible_customer_data:** Contractors (the paying side) report distrust; homeowners report inconsistent pro quality.
+**visible_constraints:** Growth targets pressure the team to keep pushing lead volume.
+**known_limitations:** No per-lead intent/conversion quality data summarized; no contractor-NPS by lead cohort.
+**exact_prompt_to_opsiq:** "Contractor churn is rising and the platform's reputation among pros is poor. What is the root cause, and what is the first priority action — scale homeowner demand marketing, or something else? What metric proves it?"
+
+### CASE_ANSWER_KEY_HIDDEN_FROM_OPSIQ
+**hidden_outcome:** HomeAdvisor/Angi faced contractor class actions and an FTC settlement (up to $7.2M) over deceptive lead-quality/conversion claims; BBB ratings fell; the brand became distrusted by pros. The paying side (contractors) churned because lead quality and billing fairness failed.
+**documented_root_causes:** The platform's real asset is contractor trust; selling shared/duplicate/low-intent leads and charging for bad leads (plus cancellation friction and overstated claims) destroyed supply-side trust. Pumping more homeowner volume amplifies the problem.
+**expert_or_documented_best_actions:**
+1. Fix lead quality (intent verification, reduce sharing/duplication), and make billing fair (easy disputes/refunds for bad leads).
+2. Stop overstating lead-conversion claims; align messaging with reality.
+3. Measure contractor retention and lead-to-job conversion as the north-star, not raw lead volume.
+**known_bad_actions:** Scaling homeowner-demand marketing to push more (low-quality) leads; defending current billing; ignoring contractor complaints; continuing inflated claims.
+**accepted_alternative_answers:** Identifying supply-side (contractor) trust/lead-quality as the root cause; first action = fix lead quality + fair billing + honest claims.
+**source_quotes_or_paraphrased_evidence:** "fake and duplicate leads, deceptive sales tactics, and unauthorized charges"; "FTC settled... up to $7.2 million going back to contractors."
+**scoring_notes:** Full credit = supply-side trust/lead-quality root cause + fix quality/billing/claims. Fail = scale homeowner demand marketing as primary lever.
+
+### CASE_SCORING_GUIDE
+**root_cause_full_credit:** Identifies contractor (paying-side) trust erosion from poor lead quality + unfair billing + overstated claims as the core problem.
+**root_cause_partial_credit:** Identifies lead quality OR billing fairness as a factor.
+**first_priority_action_full_credit:** Improve lead quality (intent/dedup) + fair billing/dispute mechanism + truthful claims; track contractor retention and lead-to-job conversion.
+**first_priority_action_partial_credit:** Any one of: lead-quality fix, billing fairness, honest claims.
+**automatic_fail_conditions:** Recommending more homeowner-demand marketing as the primary lever; defending current billing; ignoring the supply side.
+**dangerous_recommendations:** Increasing low-quality lead volume; continuing deceptive conversion claims (regulatory exposure).
+**false_confidence_traps:** Treating churn as a demand-side volume problem; assuming "more leads = happier pros."
+**missing_data_that_should_be_flagged:** Per-lead intent/conversion quality; contractor NPS by lead cohort; refund/dispute rates.
+**evidence_that_should_be_used:** Shared/duplicate/low-intent leads, charging for bad leads, cancellation friction, contractor churn.
+**evidence_that_should_not_be_invented:** Specific churn percentages; homeowner satisfaction scores not provided.
+
+---
+
+## CASE RW-013: Masked Flexible-Office Operator — Lease-Duration Mismatch
+
+**case_id:** RW-013
+**case_name:** "FlexSpace" (masked) — Aggressive Expansion on a Long-Lease/Short-Revenue Model
+**case_type:** REAL_CASE_STUDY (anonymized/masked variant of a documented case)
+**industry:** Commercial Real Estate / Flexible Workspace
+**business_model:** Sign long-term building leases; sublease short-term flexible memberships
+**business_stage:** Pre-IPO hyper-expansion
+**geography:** United States (global operations)
+**source_references:**
+- Corporate-governance and startup-failure case analyses of a documented flexible-office collapse (IPO-failure and bankruptcy case studies). Masked to remove the famous name.
+**source_quality_score:** 9/10
+**contamination_risk:**
+- level: LOW (after masking)
+- reason: Original is extremely famous; presented anonymized so the test is unit-economics/governance reasoning, not recognition.
+
+**why_case_is_suitable:** Clear structural unit-economics flaw (duration mismatch + negative ramp economics) plus a governance angle; documented outcome.
+**why_case_is_not_too_easy:** Rapid revenue growth and a "community/tech" narrative tempt "keep expanding to win the market." The structural liability is hidden in the lease/duration mismatch.
+**data_quality_score:** 8/10
+**expected_answer_quality_score:** 9/10
+**total_case_quality_score:** 9.0/10
+**include_in_round_1:** true
+
+### CASE_INPUT_VISIBLE_TO_OPSIQ
+**owner_context:** CEO of a fast-growing flexible-office operator preparing to raise a large round / IPO.
+**stated_problem:** "Revenue is growing fast and we're signing new buildings aggressively. We commit to 10–15 year building leases and sell month-to-month memberships. New locations lose money for many months before (sometimes) maturing. Investors love the growth story. Should we accelerate expansion to capture the market?"
+**visible_financial_data:**
+- Long-term lease obligations (10–15 yr) are fixed; membership revenue is short-term/cancellable.
+- Each new location is loss-making during a long ramp; company-level losses widen as we add locations.
+- Cash is funded by external rounds, not operations.
+**visible_sales_data:** Top-line revenue growth is rapid (driven by adding locations).
+**visible_operations_data:** Heavy upfront build-out capex per location; occupancy ramps slowly.
+**visible_marketing_data:** Strong brand and "community/tech" positioning.
+**visible_customer_data:** Members can leave on short notice; demand is sensitive to economic downturns.
+**visible_constraints:** Growth narrative is central to the valuation; slowing growth risks the raise.
+**known_limitations:** No location-level cohort maturation/contribution data summarized; downturn scenario not modeled.
+**exact_prompt_to_opsiq:** "Revenue is growing fast but each location loses money for a long ramp and we hold long-term lease liabilities against short-term, cancellable revenue. Should we accelerate expansion? What is the core risk and the first priority action?"
+
+### CASE_ANSWER_KEY_HIDDEN_FROM_OPSIQ
+**hidden_outcome:** In the real (unmasked) case, the operator's valuation collapsed at IPO; the long-lease/short-revenue mismatch plus negative ramp economics and weak governance led to a rescue and later bankruptcy.
+**documented_root_causes:** Structural duration mismatch (long fixed liabilities vs short cancellable revenue) and negative unit economics during ramp; top-line growth masked widening losses funded by external capital. Accelerating expansion multiplies the fixed-liability exposure.
+**expert_or_documented_best_actions:**
+1. Stop equating revenue growth with value; analyze location-level cohort maturation and contribution margin.
+2. Slow/condition expansion on locations reaching positive contribution; de-risk lease terms (shorter, revenue-share, or break clauses).
+3. Stress-test a demand downturn against fixed lease obligations (cancellable revenue can evaporate; rent cannot).
+4. Strengthen governance/capital discipline before any raise.
+**known_bad_actions:** Accelerating expansion to "win the market"; using top-line growth as the headline; ignoring the duration mismatch; assuming external capital is always available.
+**accepted_alternative_answers:** Identifying the duration mismatch/negative ramp economics; first action = condition expansion on unit economics + de-risk leases + stress-test downturn.
+**source_quotes_or_paraphrased_evidence:** "turning office space into community... requires significant renovation... operate for months/years before turning a profit, and rapid expansion involves greater financial losses."
+**scoring_notes:** Full credit = duration mismatch + negative unit economics as core risk; do NOT accelerate; condition growth on contribution + de-risk leases + downturn stress test. Recommending acceleration is an automatic fail.
+
+### CASE_SCORING_GUIDE
+**root_cause_full_credit:** Identifies long-lease/short-revenue duration mismatch + negative ramp unit economics; recognizes growth masks widening losses.
+**root_cause_partial_credit:** Identifies negative unit economics or lease-liability risk.
+**first_priority_action_full_credit:** Condition expansion on location-level positive contribution + de-risk lease terms + stress-test a downturn before any raise.
+**first_priority_action_partial_credit:** Recommends slowing expansion or analyzing unit economics before scaling.
+**automatic_fail_conditions:** Recommending accelerated expansion; using revenue growth as proof of health; ignoring lease-duration mismatch.
+**dangerous_recommendations:** "Grow faster to capture the market"; raising more to fund deeper structural losses without fixing economics.
+**false_confidence_traps:** "Revenue is growing, so the model works"; "external capital will always be available"; "community/tech narrative justifies the multiple."
+**missing_data_that_should_be_flagged:** Location-level cohort maturation/contribution; downturn scenario; lease break options.
+**evidence_that_should_be_used:** 10–15 yr fixed leases vs month-to-month revenue, long loss-making ramps, losses funded by raises.
+**evidence_that_should_not_be_invented:** Specific occupancy/maturation curves not provided; downturn probabilities.
+
+---
+
+## CASE RW-014: Bonobos — DTC CAC Ceiling & Channel Strategy
+
+**case_id:** RW-014
+**case_name:** Bonobos: When Paid-DTC Customer Acquisition Hits a Ceiling
+**case_type:** REAL_CASE_STUDY
+**industry:** E-Commerce / DTC Apparel (menswear)
+**business_model:** Direct-to-consumer online + "Guideshop" try-on stores
+**business_stage:** Growth plateau / channel-strategy decision
+**geography:** United States
+**source_references:**
+- HBS Digital (d3.harvard.edu): "Bonobos: A Better Fitting Model"
+- Medium (Alex Stern): "Bonobos: Innovating In One Of the Most Competitive E-Commerce Spaces"
+- Marketing Dive / public reporting on the Walmart acquisition ($310M, 2017)
+**source_quality_score:** 8/10
+**contamination_risk:**
+- level: MEDIUM
+- reason: Known DTC story; the unit-economics/channel decision still requires analysis.
+
+**why_case_is_suitable:** Documented growth ($1.9M→$69.3M) into a CAC/scaling decision with a real outcome (omnichannel + acquisition).
+**why_case_is_not_too_easy:** Tempts "spend more on digital ads to keep growing." The real issue is the rising-CAC ceiling of pure paid DTC and the need for channel/unit-economics discipline.
+**data_quality_score:** 8/10
+**expected_answer_quality_score:** 8/10
+**total_case_quality_score:** 8.0/10
+**include_in_round_1:** true
+
+### CASE_INPUT_VISIBLE_TO_OPSIQ
+**owner_context:** Founder/CEO of a DTC menswear brand.
+**stated_problem:** "We grew fast online and added a few try-on 'Guideshop' locations. Growth is slowing and digital acquisition is getting more expensive. Should we just pour more into paid digital ads to re-accelerate?"
+**visible_financial_data:** Revenue grew from low single-digit millions to ~$69M over a few years; paid-acquisition costs rising; contribution per new customer compressing as we scale paid channels.
+**visible_sales_data:** Online is the primary channel; Guideshops drive fit confidence and conversion but are limited in number.
+**visible_operations_data:** Inventory and fulfillment are DTC; Guideshop model carries little/no inventory (ship-to-home).
+**visible_marketing_data:** Heavy reliance on paid digital; CAC climbing; diminishing returns on incremental spend.
+**visible_customer_data:** Strong fit/experience differentiation; loyal repeat buyers, but the addressable paid-DTC audience at acceptable CAC is finite.
+**visible_constraints:** Category is highly competitive; pure-DTC paid acquisition has a structural CAC ceiling.
+**known_limitations:** No detailed LTV-by-channel/cohort provided; wholesale/retail economics not modeled.
+**exact_prompt_to_opsiq:** "Growth is slowing and paid digital acquisition is getting more expensive. Should we increase paid-digital spend, or is the issue structural? What is the first priority action, and what would you measure?"
+
+### CASE_ANSWER_KEY_HIDDEN_FROM_OPSIQ
+**hidden_outcome:** Bonobos diversified beyond pure paid-DTC (Guideshops, then wholesale/retail partnerships), and was acquired by Walmart for ~$310M (2017), gaining distribution and new-customer reach that pure DTC could not deliver at acceptable CAC.
+**documented_root_causes:** Pure paid-DTC acquisition hits a rising-CAC ceiling; re-accelerating by spending more into diminishing returns destroys unit economics. The structural fix is channel diversification + LTV/CAC discipline, leveraging the fit/experience moat.
+**expert_or_documented_best_actions:**
+1. Analyze LTV/CAC by channel and cohort; recognize the paid-DTC ceiling.
+2. Diversify acquisition (retail/wholesale/omnichannel, Guideshop expansion) to reach customers below paid-DTC CAC.
+3. Protect the fit/experience differentiation as the moat while scaling distribution.
+**known_bad_actions:** Pouring more into paid digital at rising CAC; chasing growth without unit-economics discipline; abandoning the fit/experience moat to cut costs.
+**accepted_alternative_answers:** Identifying the rising-CAC ceiling of pure paid DTC; first action = channel diversification + LTV/CAC discipline.
+**source_quotes_or_paraphrased_evidence:** revenue "from $9.5 million in 2010 to $69.3 million in 2013"; pioneered the "Guideshop" model; "acquired by Walmart for $310 million."
+**scoring_notes:** Full credit = paid-DTC CAC ceiling as root cause + first action diversify channels with LTV/CAC discipline. Fail = "increase paid digital spend" as the primary lever.
+
+### CASE_SCORING_GUIDE
+**root_cause_full_credit:** Identifies that pure paid-DTC acquisition has hit a rising-CAC ceiling (diminishing returns), so the constraint is structural, not budget.
+**root_cause_partial_credit:** Identifies rising CAC or channel concentration as a factor.
+**first_priority_action_full_credit:** Analyze LTV/CAC by channel + diversify acquisition (retail/wholesale/omnichannel) while protecting the fit/experience moat.
+**first_priority_action_partial_credit:** Recommends channel diversification OR unit-economics analysis before scaling spend.
+**automatic_fail_conditions:** Recommending more paid-digital spend as the primary lever; ignoring unit economics.
+**dangerous_recommendations:** Scaling paid acquisition into negative contribution; abandoning the differentiation to chase cheap growth.
+**false_confidence_traps:** "Growth slowed, so spend more on ads"; assuming the paid-DTC audience is infinite at constant CAC.
+**missing_data_that_should_be_flagged:** LTV/CAC by channel and cohort; wholesale/retail margin economics.
+**evidence_that_should_be_used:** Rising CAC/diminishing returns, channel concentration in paid digital, fit/experience moat.
+**evidence_that_should_not_be_invented:** Specific CAC/LTV figures not provided; wholesale margins.
+
+---
+
+## CASE RW-015: Glossier — Community-Led Growth Ceiling & Distribution
+
+**case_id:** RW-015
+**case_name:** Glossier: Scaling Past the Ceiling of Community-Only Acquisition
+**case_type:** REAL_CASE_STUDY
+**industry:** DTC Beauty / Community-Led Brand
+**business_model:** Direct-to-consumer, community/referral-driven
+**business_stage:** Scale transition (DTC to omnichannel)
+**geography:** United States
+**source_references:**
+- Product Habits: "How Glossier Turned Into a $400 Million Business in Four Years"
+- Double V Consulting: "Glossier DTC: Why Couldn't Community Alone Sustain a Billion-Dollar Brand?"
+- Public reporting on Glossier's 2023 Sephora wholesale launch (600+ locations)
+**source_quality_score:** 8/10
+**contamination_risk:**
+- level: MEDIUM
+- reason: Known DTC brand; the structural-ceiling diagnosis and distribution decision require analysis.
+
+**why_case_is_suitable:** Quantified community engine (~70–80% of sales/traffic from referrals) and a clear scale decision with a documented outcome (wholesale via Sephora).
+**why_case_is_not_too_easy:** Tempts "double down on community/social." The structural ceiling means new-customer reach requires added distribution without breaking the community moat.
+**data_quality_score:** 8/10
+**expected_answer_quality_score:** 8/10
+**total_case_quality_score:** 8.0/10
+**include_in_round_1:** true
+
+### CASE_INPUT_VISIBLE_TO_OPSIQ
+**owner_context:** Founder/CEO of a community-driven DTC beauty brand.
+**stated_problem:** "Around 70–80% of our sales come from peer referrals and community — it's kept acquisition cheap. But new-customer growth is plateauing and we're DTC-only. Should we just invest more in community and social, or change distribution?"
+**visible_financial_data:** Low CAC historically (community/referral-driven); growth decelerating; DTC-only footprint.
+**visible_sales_data:** ~70–80% of sales/traffic from referrals; strong repeat/loyal base; new-customer acquisition slowing.
+**visible_operations_data:** DTC fulfillment; limited/no physical retail; a few branded experiential spaces.
+**visible_marketing_data:** Community/social is the engine; paid acquisition is a small share; brand affinity very high.
+**visible_customer_data:** Highly engaged community; but reach is bounded by the existing community's network.
+**visible_constraints:** Community is the moat — heavy paid acquisition or wrong distribution could dilute brand affinity.
+**known_limitations:** No new-customer-by-channel data summarized; wholesale margin/brand-control trade-offs not modeled.
+**exact_prompt_to_opsiq:** "Community-led growth kept CAC low but new-customer acquisition is plateauing and we're DTC-only. What is the structural issue, and what is the first priority action — more community/social, or new distribution? How do we avoid diluting the brand?"
+
+### CASE_ANSWER_KEY_HIDDEN_FROM_OPSIQ
+**hidden_outcome:** Glossier launched wholesale via Sephora (600+ North American locations) in 2023 to reach new customers that pure DTC/community could not, while working to preserve its community moat.
+**documented_root_causes:** Community/referral-led growth has a structural ceiling bounded by the existing community's network; once saturated, new-customer growth stalls. Reaching new customers requires added distribution (retail/wholesale), executed without diluting the brand.
+**expert_or_documented_best_actions:**
+1. Recognize the community engine's structural ceiling; analyze new-customer reach by channel.
+2. Add distribution (wholesale/retail partner) to reach beyond the community network, with brand-control terms.
+3. Preserve the community moat (experience, content, loyalty) as the differentiator while expanding reach.
+**known_bad_actions:** Only doubling down on community/social (won't break the ceiling); shifting to heavy paid acquisition (dilutes brand, raises CAC); expanding distribution carelessly and eroding brand control.
+**accepted_alternative_answers:** Identifying the community-ceiling/reach constraint; first action = add distribution to reach new customers while protecting the moat.
+**source_quotes_or_paraphrased_evidence:** "70% of sales/traffic from peer referrals... ~80% referred by a friend"; "community engine had a structural ceiling"; "launched across 600+ Sephora locations."
+**scoring_notes:** Full credit = structural community ceiling as root cause + first action add distribution (wholesale/retail) with brand protection. Fail = "double down on community/social" as the sole lever, or "shift to heavy paid acquisition."
+
+### CASE_SCORING_GUIDE
+**root_cause_full_credit:** Identifies that community/referral-led growth has a structural reach ceiling (bounded by the community network), causing the new-customer plateau.
+**root_cause_partial_credit:** Identifies channel concentration or reach limits as a factor.
+**first_priority_action_full_credit:** Add distribution (wholesale/retail) to reach beyond the community, with brand-control terms, while preserving the community moat.
+**first_priority_action_partial_credit:** Recommends new distribution OR reach analysis before doubling down.
+**automatic_fail_conditions:** Recommending only more community/social as the lever; recommending a pivot to heavy paid acquisition; ignoring brand-dilution risk.
+**dangerous_recommendations:** Heavy paid-acquisition pivot that dilutes brand and inflates CAC; reckless distribution that erodes brand control.
+**false_confidence_traps:** "Community got us here, so more community fixes the plateau"; assuming referral reach is unlimited.
+**missing_data_that_should_be_flagged:** New-customer reach by channel; wholesale margin/brand-control trade-offs; saturation of the referral network.
+**evidence_that_should_be_used:** 70–80% referral share, decelerating new-customer growth, DTC-only footprint, community as moat.
+**evidence_that_should_not_be_invented:** Specific CAC figures; wholesale economics not provided.
 
 ---
 
 ## Rejected Candidate Cases
 
-**Candidate 1: Slack Pricing Crisis (REJECTED)**
-- **Reason for rejection:** Slack's pricing strategy (detailed above in RW-009) is documented, but the "crisis" is less clear. Slack has executed well; no documented turnaround or failure. Suitable for Round 1.
+**Candidate 1: Groupon Daily-Deal Model (REJECTED)**
+- **Reason for rejection:** Well documented, but the failure mode (unsustainable daily-deal unit economics) is widely memorized; contamination MEDIUM-HIGH and the headline outcome is too easily recalled. Excluded to avoid recall-based answering.
 
 **Candidate 2: Basecamp / 37signals Cloud Exit (REJECTED)**
 - **Reason for rejection:** Cloud exit case is about capex optimization (AWS to on-premises), not a business crisis. No clear root cause diagnosis required; tactical decision. Too simple.
@@ -1900,18 +2346,20 @@
 **median_case_quality:** 8.0/10
 
 **industries_covered:**
-- ✅ Restaurant / Food Service: 3 cases (Domino's, Applebee's, Five Guys)
-- ✅ SaaS / Churn / Retention: 2 cases (Groove.io, Slack)
-- ✅ Turnaround / Cash Crisis: 2 cases (Starbucks, Peloton)
-- ✅ Marketing ROI / Wasted Spend: 2 cases (Dollar Shave Club, MAC Cosmetics)
-- ✅ Retail / Franchise: 1 case (Wet Seal)
-- ✅ Healthcare Service: 1 case (Theranos)
-- ✅ Local Services Platform / Agency / Professional: 2 cases (HomeAdvisor/Angi, WeWork)
-- ✅ DTC / E-Commerce: 2 cases (Bonobos, Glossier)
+- ✅ Restaurant / Food Service: 3 cases (RW-001 Domino's, RW-007 Applebee's, RW-008 Five Guys)
+- ✅ SaaS / Churn / Retention: 2 cases (RW-002 Groove.io, RW-009 Slack)
+- ✅ Turnaround / Cash Crisis: 2 cases (RW-003 Starbucks, RW-005 Peloton)
+- ✅ Marketing ROI / Wasted Spend: 2 cases (RW-004 Dollar Shave Club, RW-010 MAC Cosmetics)
+- ✅ Retail / Franchise: 1 case (RW-006 Wet Seal)
+- ✅ Healthcare Service: 1 case (RW-011 masked diagnostics startup "Veridx")
+- ✅ Local Services Platform / Professional: 2 cases (RW-012 HomeAdvisor/Angi, RW-013 masked flexible-office operator "FlexSpace")
+- ✅ DTC / E-Commerce: 2 cases (RW-014 Bonobos, RW-015 Glossier)
 
-**cases_with_high_contamination_risk:** 0  
-**cases_with_medium_contamination_risk:** 4 (RW-001 Domino's, RW-004 Dollar Shave Club, RW-009 Slack, RW-002 Groove.io)  
-**cases_with_low_contamination_risk:** 11
+**masked_variants:** 2 (RW-011 and RW-013 are anonymized variants of extremely famous cases, masked specifically to remove recall-based answering; the famous name and headline outcome are absent from the visible prompt).
+
+**cases_with_high_contamination_risk:** 0
+**cases_with_medium_contamination_risk:** 6 (RW-001 Domino's, RW-002 Groove.io, RW-004 Dollar Shave Club, RW-009 Slack, RW-012 HomeAdvisor, RW-014 Bonobos, RW-015 Glossier are MEDIUM; counted conservatively)
+**cases_with_low_contamination_risk:** 9 (includes the 2 masked variants now rated LOW post-masking)
 
 **cases_ready_for_round_1:** 15/15
 
@@ -1943,7 +2391,7 @@
 
 ✅ **Contamination Risk Assessment:** 4 cases have MEDIUM contamination risk (Domino's, Dollar Shave Club, Slack, Groove.io are known in business circles), but all 4 require specific operational analysis (not just memorization of headline outcome).
 
-✅ **Fame Risk:** No cases are so famous that memorization alone enables correct answer. Domino's is well-known, but requires diagnosis of brand vs. product; Dollar Shave Club is known, but requires understanding of viral ROI vs. traditional marketing; Slack is known, but requires deep pricing/retention strategy analysis.
+✅ **Fame Risk:** Two extremely famous cases (a blood-diagnostics fraud and a flexible-office collapse) were MASKED into anonymized variants (RW-011 "Veridx", RW-013 "FlexSpace") so the famous name and headline outcome are absent from the visible prompt — the test becomes governance/unit-economics reasoning, not recognition. Remaining named cases (Domino's, Dollar Shave Club, Slack, etc.) require operational diagnosis (brand-vs-product, viral-ROI-vs-traditional, value-based-tiering) that recall alone does not answer.
 
 ✅ **Vagueness Risk:** No cases have vague correct answers. All have: specific root cause (documented), specific first priority action (documented), specific outcome (measurable).
 
