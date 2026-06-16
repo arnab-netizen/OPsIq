@@ -8,9 +8,13 @@
 ## REMEDIATION STATUS BLOCK (authoritative)
 
 ```yaml
-current_phase: OWNER_MODE_LEARNING_AND_VALIDATION_ARCHITECTURE
-current_stage: STAGE_A_THROUGH_D1_DESIGN_REQUIRED
-last_completed_step: ARCHITECTURE_CEILING_CONFIRMED
+current_phase: OWNER_MODE_CONSULTANT_GRADE_ARCHITECTURE
+current_stage: STAGE_A_SPECIFICATION
+last_completed_step: EXECUTION_CONTRACT_V3_READY
+specification_status: DESIGNED_AND_HOSTILE_AUDITED
+specification_issues_found: 12
+specification_issues_fixed: 12
+hostile_audit_passed: true
 universal_benchmark_artifact_quality_gate: PASS
 benchmark_artifact_gate_recorded: true
 round_2_execution_status: COMPLETE (50/50 cases executed, 49 valid, 0% root-cause accuracy)
@@ -26,15 +30,13 @@ consultant_grade_gate: FAILED (4/11 criteria pass)
 architecture_ceiling: CONFIRMED (per execution_consultant_engine_v2.md §17)
 consultant_grade_claim: PROHIBITED (until Stage C + Round 3 validates + D5 owner validation complete)
 public_saas_claim: PROHIBITED
-owner_mode_target: PRACTICAL_CONSULTANT_GRADE_90_TO_100_PERCENT (via Stage A→B→C→D→D1-D5)
+owner_mode_target: 90_TO_100_PERCENT_PRACTICAL_OWNER_DECISION_QUALITY (target accuracy unvalidated)
 target_accuracy_claim: PROHIBITED_UNTIL_VALIDATED
-engine_status: ARCHITECTURE_CEILING_REACHED → LEARNING_ARCHITECTURE_REQUIRED
-next_required_step: DESIGN_STAGE_A_EXECUTION_SPEC + DESIGN_ROUND_3_CASE_PACK + DESIGN_CASE_LIBRARY_SOURCING (parallel fast-track)
+engine_status: ARCHITECTURE_CEILING_REACHED → STAGE_A_SPECIFICATION_COMPLETE
+next_required_step: STAGE_A_IMPLEMENTATION_SLICE_1 (per STAGE_A_EXECUTION_SPEC.md, hostile audit PASS)
 implementation_started: false
-hostile_rules_count: 15_UNIVERSAL_RULES_PLUS_ORIGINAL_24_NON_NEGOTIABLE_RULES
-blockers: [DESIGN_GATE_ONLY]
-target_accuracy_status: UNVALIDATED
-roadmap_target_accuracy: 90_TO_100_PERCENT_OWNER_MODE_PRACTICAL_DECISION_QUALITY
+hostile_audit_completed: true
+blockers: [NONE - STAGE_A_READY_FOR_IMPLEMENTATION]
 ```
 
 The original hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack. All
