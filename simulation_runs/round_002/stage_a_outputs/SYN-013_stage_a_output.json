@@ -1,0 +1,99 @@
+{
+  "caseId": "SYN-013",
+  "synthesizedEvidence": {
+    "dimensionsExamined": [
+      "customer_retention",
+      "product_adoption",
+      "customer_success",
+      "market_position",
+      "unit_economics"
+    ],
+    "dimensionsMissing": [
+      "operational_efficiency",
+      "quality_delivery",
+      "financial_health",
+      "process_maturity",
+      "team_capability"
+    ],
+    "evidenceTraceRate": 80,
+    "criticalEvidencePresent": true,
+    "patterns": [
+      {
+        "name": "market_position-customer_retention-pattern",
+        "dimensions": [
+          "market_position",
+          "customer_retention"
+        ],
+        "supportingItems": [
+          "7a5363ba-5d12-40a7-874b-a3e439dddbc5",
+          "564848ac-6fb5-4fdc-a4c1-19b5bf024a9d"
+        ],
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "synthesisConfidence": 0.9
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "go_to_market_misalignment",
+      "confidence": 52,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "go to market misalignment: 2 supporting evidence items, 0 contradictions"
+    }
+  ],
+  "rankedHypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "go_to_market_misalignment",
+      "confidence": 45,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "go to market misalignment: 2 supporting evidence items, 0 contradictions",
+      "supportingScore": 4,
+      "conflictScore": 0,
+      "netScore": 4,
+      "confidenceJustification": "Supporting: 2 items, Conflicting: 0 items, Total: 5, Confidence = 45%"
+    }
+  ],
+  "mappings": [
+    {
+      "hypothesis": "go_to_market_misalignment",
+      "supporting": [
+        {
+          "evidenceId": "7a5363ba-5d12-40a7-874b-a3e439dddbc5",
+          "strength": 10,
+          "reasoning": "customer_retention evidence supports go_to_market_misalignment"
+        },
+        {
+          "evidenceId": "564848ac-6fb5-4fdc-a4c1-19b5bf024a9d",
+          "strength": 5,
+          "reasoning": "market_position evidence supports go_to_market_misalignment"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "a48ee9f6-38d2-4ed0-99f7-6c8cf039dc23",
+          "reasoning": "product_adoption evidence is neutral to go_to_market_misalignment"
+        },
+        {
+          "evidenceId": "eb6805a3-2449-49cf-a793-0a6c731e2bf8",
+          "reasoning": "customer_success evidence is neutral to go_to_market_misalignment"
+        },
+        {
+          "evidenceId": "edbdf441-25c7-4a24-8b31-966976f50123",
+          "reasoning": "unit_economics evidence is neutral to go_to_market_misalignment"
+        }
+      ],
+      "coverage": 100
+    }
+  ],
+  "evidenceTraceRate": 80,
+  "topHypothesis": "go_to_market_misalignment",
+  "topConfidence": 45
+}

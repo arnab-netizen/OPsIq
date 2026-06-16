@@ -1,0 +1,28 @@
+{
+  "caseId": "ADV-013",
+  "synthesizedEvidence": {
+    "dimensionsExamined": [
+      "financial_health",
+      "unit_economics_cohort_detail",
+      "go_to_market",
+      "customer_retention"
+    ],
+    "dimensionsMissing": [
+      "operational_efficiency",
+      "quality_delivery",
+      "process_maturity",
+      "team_capability",
+      "market_position"
+    ],
+    "evidenceTraceRate": 100,
+    "criticalEvidencePresent": true,
+    "patterns": [],
+    "synthesisConfidence": 0.8
+  },
+  "hypotheses": [],
+  "rankedHypotheses": [],
+  "mappings": [],
+  "evidenceTraceRate": 100,
+  "topHypothesis": "UNKNOWN",
+  "topConfidence": 0
+}

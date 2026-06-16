@@ -1,0 +1,135 @@
+{
+  "caseCount": 21,
+  "avgTraceRate": 98,
+  "avgConfidence": 47,
+  "maxConfidence": 60,
+  "minConfidence": 0,
+  "outputs": [
+    {
+      "caseId": "BLND-006",
+      "traceRate": 100,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 45
+    },
+    {
+      "caseId": "BLND-007",
+      "traceRate": 100,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 45
+    },
+    {
+      "caseId": "BLND-008",
+      "traceRate": 100,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 45
+    },
+    {
+      "caseId": "BLND-009",
+      "traceRate": 80,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 45
+    },
+    {
+      "caseId": "BLND-010",
+      "traceRate": 100,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 45
+    },
+    {
+      "caseId": "ADV-011",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 45
+    },
+    {
+      "caseId": "ADV-012",
+      "traceRate": 100,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 45
+    },
+    {
+      "caseId": "ADV-013",
+      "traceRate": 100,
+      "topHypothesis": "UNKNOWN",
+      "confidence": 0
+    },
+    {
+      "caseId": "ADV-014",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 45
+    },
+    {
+      "caseId": "RW-016",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 60
+    },
+    {
+      "caseId": "RW-018",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 60
+    },
+    {
+      "caseId": "RW-020",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 60
+    },
+    {
+      "caseId": "RW-022",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 55
+    },
+    {
+      "caseId": "RW-024",
+      "traceRate": 100,
+      "topHypothesis": "UNKNOWN",
+      "confidence": 0
+    },
+    {
+      "caseId": "PD-011",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 60
+    },
+    {
+      "caseId": "PD-013",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 60
+    },
+    {
+      "caseId": "PD-015",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 55
+    },
+    {
+      "caseId": "PD-017",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 55
+    },
+    {
+      "caseId": "PD-019",
+      "traceRate": 100,
+      "topHypothesis": "operational_bottleneck",
+      "confidence": 55
+    },
+    {
+      "caseId": "SYN-011",
+      "traceRate": 100,
+      "topHypothesis": "customer_retention_erosion",
+      "confidence": 55
+    },
+    {
+      "caseId": "SYN-013",
+      "traceRate": 80,
+      "topHypothesis": "go_to_market_misalignment",
+      "confidence": 45
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "caseId": "RW-024",
+  "synthesizedEvidence": {
+    "dimensionsExamined": [
+      "talent_retention",
+      "financial_health",
+      "market_position"
+    ],
+    "dimensionsMissing": [
+      "customer_retention",
+      "operational_efficiency",
+      "quality_delivery",
+      "process_maturity",
+      "team_capability"
+    ],
+    "evidenceTraceRate": 100,
+    "criticalEvidencePresent": true,
+    "patterns": [],
+    "synthesisConfidence": 0.7
+  },
+  "hypotheses": [],
+  "rankedHypotheses": [],
+  "mappings": [],
+  "evidenceTraceRate": 100,
+  "topHypothesis": "UNKNOWN",
+  "topConfidence": 0
+}

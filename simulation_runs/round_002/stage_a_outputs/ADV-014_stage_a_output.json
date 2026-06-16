@@ -1,0 +1,141 @@
+{
+  "caseId": "ADV-014",
+  "synthesizedEvidence": {
+    "dimensionsExamined": [
+      "financial_health",
+      "operational_efficiency",
+      "customer_mix",
+      "competitive_demand"
+    ],
+    "dimensionsMissing": [
+      "customer_retention",
+      "quality_delivery",
+      "process_maturity",
+      "team_capability",
+      "market_position"
+    ],
+    "evidenceTraceRate": 100,
+    "criticalEvidencePresent": true,
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "dimensions": [
+          "financial_health",
+          "operational_efficiency"
+        ],
+        "supportingItems": [
+          "03cf899b-3af1-4d01-9e72-d2dc7ebd68b1",
+          "e513666b-067b-461f-913f-89dfc7ae9698"
+        ],
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ]
+      }
+    ],
+    "synthesisConfidence": 0.8
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "operational_bottleneck",
+      "confidence": 65,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "operational bottleneck: 2 supporting evidence items, 0 contradictions"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "unit_economics_breakdown",
+      "confidence": 65,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "unit economics breakdown: 2 supporting evidence items, 0 contradictions"
+    }
+  ],
+  "rankedHypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "operational_bottleneck",
+      "confidence": 45,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "operational bottleneck: 2 supporting evidence items, 0 contradictions",
+      "supportingScore": 5,
+      "conflictScore": 0,
+      "netScore": 5,
+      "confidenceJustification": "Supporting: 2 items, Conflicting: 0 items, Total: 4, Confidence = 45%"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "unit_economics_breakdown",
+      "confidence": 45,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "unit economics breakdown: 2 supporting evidence items, 0 contradictions",
+      "supportingScore": 5,
+      "conflictScore": 0,
+      "netScore": 5,
+      "confidenceJustification": "Supporting: 2 items, Conflicting: 0 items, Total: 4, Confidence = 45%"
+    }
+  ],
+  "mappings": [
+    {
+      "hypothesis": "operational_bottleneck",
+      "supporting": [
+        {
+          "evidenceId": "e513666b-067b-461f-913f-89dfc7ae9698",
+          "strength": 10,
+          "reasoning": "operational_efficiency evidence supports operational_bottleneck"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "03cf899b-3af1-4d01-9e72-d2dc7ebd68b1",
+          "reasoning": "financial_health evidence is neutral to operational_bottleneck"
+        },
+        {
+          "evidenceId": "0a020f39-9a15-4575-90b1-fe02209c88d6",
+          "reasoning": "customer_mix evidence is neutral to operational_bottleneck"
+        },
+        {
+          "evidenceId": "e7b0eeeb-9f3f-47ba-9f4f-d7bea4f1810c",
+          "reasoning": "competitive_demand evidence is neutral to operational_bottleneck"
+        }
+      ],
+      "coverage": 100
+    },
+    {
+      "hypothesis": "unit_economics_breakdown",
+      "supporting": [
+        {
+          "evidenceId": "03cf899b-3af1-4d01-9e72-d2dc7ebd68b1",
+          "strength": 10,
+          "reasoning": "financial_health evidence supports unit_economics_breakdown"
+        },
+        {
+          "evidenceId": "e513666b-067b-461f-913f-89dfc7ae9698",
+          "strength": 10,
+          "reasoning": "operational_efficiency evidence supports unit_economics_breakdown"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "0a020f39-9a15-4575-90b1-fe02209c88d6",
+          "reasoning": "customer_mix evidence is neutral to unit_economics_breakdown"
+        },
+        {
+          "evidenceId": "e7b0eeeb-9f3f-47ba-9f4f-d7bea4f1810c",
+          "reasoning": "competitive_demand evidence is neutral to unit_economics_breakdown"
+        }
+      ],
+      "coverage": 100
+    }
+  ],
+  "evidenceTraceRate": 100,
+  "topHypothesis": "operational_bottleneck",
+  "topConfidence": 45
+}

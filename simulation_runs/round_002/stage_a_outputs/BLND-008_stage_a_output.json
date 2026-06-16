@@ -1,0 +1,218 @@
+{
+  "caseId": "BLND-008",
+  "synthesizedEvidence": {
+    "dimensionsExamined": [
+      "financial_health",
+      "market_position",
+      "customer_retention",
+      "quality_delivery"
+    ],
+    "dimensionsMissing": [
+      "operational_efficiency",
+      "process_maturity",
+      "team_capability"
+    ],
+    "evidenceTraceRate": 100,
+    "criticalEvidencePresent": true,
+    "patterns": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "dimensions": [
+          "quality_delivery",
+          "customer_retention"
+        ],
+        "supportingItems": [
+          "64603ae1-2cd9-4798-bfff-110af6ae8c5c",
+          "a04f0cc7-afcf-43b5-9b07-4befbeaafe5d"
+        ],
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ]
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "dimensions": [
+          "market_position",
+          "customer_retention"
+        ],
+        "supportingItems": [
+          "1580f302-5387-4e7c-9ad9-23be6f89ffd3",
+          "64603ae1-2cd9-4798-bfff-110af6ae8c5c"
+        ],
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "synthesisConfidence": 0.8
+  },
+  "hypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "customer_retention_erosion",
+      "confidence": 52,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "customer retention erosion: 2 supporting evidence items, 0 contradictions"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "go_to_market_misalignment",
+      "confidence": 52,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "go to market misalignment: 2 supporting evidence items, 0 contradictions"
+    },
+    {
+      "id": "hyp-2",
+      "rootCause": "trust_quality_crisis",
+      "confidence": 52,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "trust quality crisis: 2 supporting evidence items, 0 contradictions"
+    }
+  ],
+  "rankedHypotheses": [
+    {
+      "id": "hyp-0",
+      "rootCause": "customer_retention_erosion",
+      "confidence": 45,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "customer retention erosion: 2 supporting evidence items, 0 contradictions",
+      "supportingScore": 4,
+      "conflictScore": 0,
+      "netScore": 4,
+      "confidenceJustification": "Supporting: 2 items, Conflicting: 0 items, Total: 5, Confidence = 45%"
+    },
+    {
+      "id": "hyp-1",
+      "rootCause": "go_to_market_misalignment",
+      "confidence": 45,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "go to market misalignment: 2 supporting evidence items, 0 contradictions",
+      "supportingScore": 4,
+      "conflictScore": 0,
+      "netScore": 4,
+      "confidenceJustification": "Supporting: 2 items, Conflicting: 0 items, Total: 5, Confidence = 45%"
+    },
+    {
+      "id": "hyp-2",
+      "rootCause": "trust_quality_crisis",
+      "confidence": 45,
+      "supportingEvidenceCount": 2,
+      "conflictingEvidenceCount": 0,
+      "reasoning": "trust quality crisis: 2 supporting evidence items, 0 contradictions",
+      "supportingScore": 4,
+      "conflictScore": 0,
+      "netScore": 4,
+      "confidenceJustification": "Supporting: 2 items, Conflicting: 0 items, Total: 5, Confidence = 45%"
+    }
+  ],
+  "mappings": [
+    {
+      "hypothesis": "customer_retention_erosion",
+      "supporting": [
+        {
+          "evidenceId": "64603ae1-2cd9-4798-bfff-110af6ae8c5c",
+          "strength": 7,
+          "reasoning": "customer_retention evidence supports customer_retention_erosion"
+        }
+      ],
+      "conflicting": [],
+      "neutral": [
+        {
+          "evidenceId": "2efca4fd-e829-4b74-a25a-d788f435d997",
+          "reasoning": "financial_health evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "1580f302-5387-4e7c-9ad9-23be6f89ffd3",
+          "reasoning": "market_position evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "0ab3e263-82a7-4f63-a53d-747ea10edc6f",
+          "reasoning": "financial_health evidence is neutral to customer_retention_erosion"
+        },
+        {
+          "evidenceId": "a04f0cc7-afcf-43b5-9b07-4befbeaafe5d",
+          "reasoning": "quality_delivery evidence is neutral to customer_retention_erosion"
+        }
+      ],
+      "coverage": 100
+    },
+    {
+      "hypothesis": "go_to_market_misalignment",
+      "supporting": [
+        {
+          "evidenceId": "1580f302-5387-4e7c-9ad9-23be6f89ffd3",
+          "strength": 7,
+          "reasoning": "market_position evidence supports go_to_market_misalignment"
+        },
+        {
+          "evidenceId": "64603ae1-2cd9-4798-bfff-110af6ae8c5c",
+          "strength": 7,
+          "reasoning": "customer_retention evidence supports go_to_market_misalignment"
+        }
+      ],
+      "conflicting": [
+        {
+          "evidenceId": "2efca4fd-e829-4b74-a25a-d788f435d997",
+          "strength": 10,
+          "reasoning": "financial_health evidence may contradict go_to_market_misalignment"
+        },
+        {
+          "evidenceId": "0ab3e263-82a7-4f63-a53d-747ea10edc6f",
+          "strength": 10,
+          "reasoning": "financial_health evidence may contradict go_to_market_misalignment"
+        }
+      ],
+      "neutral": [
+        {
+          "evidenceId": "a04f0cc7-afcf-43b5-9b07-4befbeaafe5d",
+          "reasoning": "quality_delivery evidence is neutral to go_to_market_misalignment"
+        }
+      ],
+      "coverage": 100
+    },
+    {
+      "hypothesis": "trust_quality_crisis",
+      "supporting": [
+        {
+          "evidenceId": "a04f0cc7-afcf-43b5-9b07-4befbeaafe5d",
+          "strength": 5,
+          "reasoning": "quality_delivery evidence supports trust_quality_crisis"
+        }
+      ],
+      "conflicting": [
+        {
+          "evidenceId": "1580f302-5387-4e7c-9ad9-23be6f89ffd3",
+          "strength": 7,
+          "reasoning": "market_position evidence may contradict trust_quality_crisis"
+        },
+        {
+          "evidenceId": "64603ae1-2cd9-4798-bfff-110af6ae8c5c",
+          "strength": 7,
+          "reasoning": "customer_retention evidence may contradict trust_quality_crisis"
+        }
+      ],
+      "neutral": [
+        {
+          "evidenceId": "2efca4fd-e829-4b74-a25a-d788f435d997",
+          "reasoning": "financial_health evidence is neutral to trust_quality_crisis"
+        },
+        {
+          "evidenceId": "0ab3e263-82a7-4f63-a53d-747ea10edc6f",
+          "reasoning": "financial_health evidence is neutral to trust_quality_crisis"
+        }
+      ],
+      "coverage": 100
+    }
+  ],
+  "evidenceTraceRate": 100,
+  "topHypothesis": "customer_retention_erosion",
+  "topConfidence": 45
+}
