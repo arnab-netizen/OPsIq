@@ -1171,61 +1171,72 @@ next_slice: B24-S2 (Admin role grant/revocation service with DB)
 
 ### B24-S2 Closeout (Private Mode Role Access Service)
 
-**Status:** READY_FOR_LANE_B_VERIFICATION
+**Status:** DB_VERIFIED_GITHUB_POSTGRES_SERVICE ✅
 
 - **Files added:**
-  - `src/services/private-mode/role-access.service.ts` (role grant/revoke/approve/reject logic)
-  - `src/__tests__/services/private-mode/role-access.service.db.test.ts` (23 DB integration tests)
+  - `src/services/private-mode/role-access.service.ts` (role grant/revoke/approve/reject logic, updated for revoke-after-revocation)
+  - `src/__tests__/services/private-mode/role-access.service.db.test.ts` (23 DB integration tests, fixed field names)
   - `.github/workflows/b24-s2-db-verification.yml` (LANE_B workflow, postgres:16 service)
 
 - **Core service functions:**
-  - `grantRoleAccess()`: Create role access record with pending/approved status (owner-only)
+  - `grantRoleAccess()`: Create role access record with pending/approved status (owner-only); reopens revoked records on re-grant
   - `approveRoleAccess()`: Owner approves pending role request
   - `rejectRoleAccess()`: Owner rejects pending request with reason
-  - `revokeRoleAccess()`: Owner revokes any role (pending or approved)
+  - `revokeRoleAccess()`: Owner revokes any role (pending or approved); validates workspace binding before authorization
   - `getWorkspaceRoles()`: List all active (non-revoked) roles in workspace
   - `getPendingRequests()`: List pending approval requests for workspace
   - `getUserRole()`: Get user's approved role in workspace (null if no access)
   - `hasPrivateModeAccess()`: Check if user has any active private mode access
 
-- **Acceptance gates (§33) — all implemented:**
+- **Acceptance gates (§33) — all implemented and verified:**
   - ✅ Private mode gated by role/config (grantRoleAccess enforces OWNER-only)
   - ✅ Cannot leak to public users (role verification on all operations)
   - ✅ Admin actions audited (PrivateModeAccess fields: grantedBy, approvedBy, revokedBy, audit reasons)
   - ✅ Approval workflow enforced (pending → approved/rejected → can reject → can revoke)
 
-- **DB tests (23 total, currently skipped locally, will run LANE_B):**
-  - Role grant with pending approval
-  - Role grant with immediate approval
-  - Approve pending role request
-  - Reject pending role request
-  - Non-OWNER cannot grant roles
-  - Prevent duplicate roles for same user
-  - Re-grant after revocation
-  - Revoke approved role
-  - Revoke pending role
-  - Cannot double-revoke
-  - Non-OWNER cannot revoke
-  - Workspace isolation enforcement
-  - Cross-workspace rejection
-  - Get all active roles in workspace
-  - Exclude revoked roles from active list
-  - Get pending role requests
-  - Get user role in workspace
-  - Return null for unapproved role
-  - Return null for revoked role
-  - Check user has private mode access
-  - Gate private mode by role/config
-  - Prevent unauthorized role changes
-  - Track audit fields for role changes
+- **DB tests (23 total, all passing in LANE_B):**
+  - Role grant with pending approval ✓
+  - Role grant with immediate approval ✓
+  - Approve pending role request ✓
+  - Reject pending role request ✓
+  - Non-OWNER cannot grant roles ✓
+  - Prevent duplicate roles for same user ✓
+  - Re-grant after revocation ✓ (fixed: reopen revoked record instead of duplicate)
+  - Revoke approved role ✓
+  - Revoke pending role ✓
+  - Cannot double-revoke ✓
+  - Non-OWNER cannot revoke ✓
+  - Workspace isolation enforcement ✓ (fixed: validate workspace before owner check)
+  - Cross-workspace rejection ✓
+  - Get all active roles in workspace ✓
+  - Exclude revoked roles from active list ✓
+  - Get pending role requests ✓
+  - Get user role in workspace ✓
+  - Return null for unapproved role ✓
+  - Return null for revoked role ✓
+  - Check user has private mode access ✓ (fixed: use camelCase field names)
+  - Gate private mode by role/config ✓
+  - Prevent unauthorized role changes ✓
+  - Track audit fields for role changes ✓
+
+**Fixes Applied:**
+- Commit 8a82ab77: camelCase field names in test fixture (created_at → createdAt, updated_at → updatedAt)
+- Commit eaa3487c: 
+  - Test fixes: camelCase field names in cleanup/queries (workspace_id → workspaceId, user_id → userId)
+  - Service fixes: grantRoleAccess reopens revoked records (unique constraint respect); revokeRoleAccess validates workspace before auth
 
 **Type Safety:** tsc --noEmit exit 0
 
-**LANE_B Workflow:** `.github/workflows/b24-s2-db-verification.yml`
-- PostgreSQL 16 service container on localhost:5432
-- Runs: npm ci, prisma validate, prisma generate, prisma migrate deploy, test suite
-- Exit codes captured
-- Ready to trigger manually or via CI
+**LANE_B Verification:** ✅ PASSED
+- Workflow: LANE_B — Database Test Bootstrap
+- Run: #35
+- Branch: claude/continue-post-owner-build-wabkf5
+- Test file: src/__tests__/services/private-mode/role-access.service.db.test.ts
+- Result: 23/23 passing (0 failures)
+- DB source: postgres:16 service container on localhost:5432
+- Duration: ~16s test execution
+- Migrations: Applied successfully, no data loss
+- All 23 tests executed and passed against ephemeral postgres:16 container
 
 SLICE_DB_CLASSIFICATION (B24-S2):
 ```
@@ -1233,15 +1244,13 @@ slice_id: B24-S2
 module: B24 (Private Owner Command Mode)
 db_required: true
 db_lane_used: LANE_B_GITHUB_POSTGRES_SERVICE
-workflow_file: .github/workflows/b24-s2-db-verification.yml
-status: READY_FOR_LANE_B_VERIFICATION
-tests_count: 23 (all DB integration)
+workflow_file: .github/workflows/lane-b-db-test.yml (generic bootstrap with B24-S2 test file)
+status: DB_VERIFIED_GITHUB_POSTGRES_SERVICE
+tests_count: 23 (all DB integration, all passing)
 test_framework: vitest with db helper from @/lib/db
-gates: 
-  - tsc --noEmit exit 0
-  - 23 DB tests defined and loadable
-  - LANE_B workflow ready to run
-next_action: Trigger LANE_B workflow via GitHub Actions or continue to B25-S1
+lane_b_proof: LANE_B #35, 23/23 passing, postgres:16 service container
+lane_c_status: NOT_APPLICABLE (no hosted Neon deployment in scope)
+next_action: Proceed to B25 (already complete with PURE_FUNCTION verification)
 ```
 
 ### B25-S1 Closeout (Owner Dashboard Private Mode Gate)
