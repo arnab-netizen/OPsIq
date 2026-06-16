@@ -1,5 +1,102 @@
 execution_consultant_engine_v2.md
 
+LOOP COMMAND EXECUTION CONTRACT
+
+When the user sends:
+
+/continue-consultant-remediation
+
+Claude MUST perform the following sequence automatically and without asking for clarification.
+
+Step 1 — Reload State
+
+Read:
+
+* execution_consultant_engine_v2.md
+* latest remediation closeout
+* latest benchmark closeout
+* latest audit closeout
+* latest roadmap status
+
+Step 2 — Determine Current State
+
+Identify:
+
+current_slice:
+current_phase:
+last_completed_step:
+next_required_step:
+blocking_conditions:
+
+Step 3 — Validate Stop Conditions
+
+Check:
+
+branch_correct:
+working_tree_clean:
+immutable_artifacts_unchanged:
+benchmark_trusted:
+safety_status_clean:
+
+If any fail:
+
+final_status: BLOCKED_WITH_EVIDENCE
+
+and stop.
+
+Step 4 — Execute Next Required Step
+
+Execute exactly one:
+
+* audit
+* specification
+* implementation slice
+* benchmark run
+* manual review
+* roadmap revision
+* closeout generation
+
+Never execute more than one major step in a single loop.
+
+Step 5 — Produce Mandatory Closeout
+
+Output:
+
+CONSULTANT_REMEDIATION_RUN_CLOSEOUT:
+  current_step:
+  completed_step:
+  next_required_step:
+  files_changed:
+  benchmark_impact:
+  safety_impact:
+  final_status:
+
+Step 6 — Auto-Advance Rule
+
+If:
+
+final_status: READY_FOR_NEXT_LOOP
+
+then the next user message:
+
+/continue-consultant-remediation
+
+must continue from:
+
+next_required_step
+
+without replanning the roadmap.
+
+Claude must not restart from the beginning.
+
+Claude must not repeat completed audits.
+
+Claude must not repeat completed benchmark reviews.
+
+Claude must not ask what to do next.
+
+Claude must continue from the latest approved state.
+
 0. PURPOSE
 
 This is the controlling execution contract for OpsIQ Consultant Engine remediation.
