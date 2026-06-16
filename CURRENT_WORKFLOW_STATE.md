@@ -61,7 +61,7 @@
 
 **Mandatory Step:** Round 2 is mandatory before consultant-grade claim (§13, §14, §15)
 
-**Current Status:** CASE_SOURCING_IN_PROGRESS (4/50 cases created, demonstrating diversity across all case types)
+**Current Status:** CASE_SOURCING_IN_PROGRESS (5/50 cases created, ALL 5 CASE TYPES DEMONSTRATED)
 
 **Specification Document:** ROUND_2_CASE_PACK_SPECIFICATION.md
 
@@ -95,26 +95,27 @@
 
 **Completed in Current Run:**
 
-✓ Case Sourcing Continued:
+✓ Case Sourcing Completed for All 5 Case Types:
 - RW-016: Specialty home goods retailer (GO_TO_MARKET_MISALIGNMENT diagnosis)
 - PD-011: Mid-cap electronics company, public financial data (UNIT_ECONOMICS_BREAKDOWN diagnosis)
 - SYN-011: Series A SaaS company with product quality crisis (TRUST_QUALITY_CRISIS diagnosis)
 - ADV-011: Boutique consulting firm with incomplete diagnostic data (INSUFFICIENT_EVIDENCE/trap recognition)
-- CASE_SOURCING_LOG.md updated (4/50 cases sourced, 8% - all case types represented)
-- ANSWER_KEYS_STATUS.md updated (4/50 answer keys created, 8%)
-- Infrastructure validated across all 5 case types (4 case types demonstrated)
+- BLND-006: E-Commerce subscription company facing strategic fork (DEMAND_FORECASTING_MISMATCH diagnosis)
+- CASE_SOURCING_LOG.md updated (5/50 cases sourced, 10% - ALL 5 CASE TYPES REPRESENTED)
+- ANSWER_KEYS_STATUS.md updated (5/50 answer keys created, 10%)
+- Infrastructure validated across all 5 case types
 
 **Remaining Tasks:**
-1. Source 46 remaining cases (RW-017–RW-030: 14 more; PD-012–PD-020: 9; SYN-012–SYN-020: 9; ADV-012–ADV-020: 9; BLND-006–BLND-010: 5)
-2. Create manual answer keys for remaining 46 cases (consultant-level, domain expert review)
+1. Source 45 remaining cases (RW-017–RW-030: 14 more; PD-012–PD-020: 9; SYN-012–SYN-020: 9; ADV-012–ADV-020: 9; BLND-007–BLND-010: 4)
+2. Create manual answer keys for remaining 45 cases (consultant-level, domain expert review)
 3. Create manual scoring guides per case type (5 guides: RW, PD, SYN, ADV, BLND) - using SCORING_GUIDE_TEMPLATE.md as base
 4. Run leakage audit on all 50 cases (pass/fail verification that answer keys contain no hints visible in case inputs)
 5. Run source quality audit on all 50 cases (pass/fail verification of source legitimacy and Round 1 distinctness)
 
-**Timeline:** 8-13 days remaining (case sourcing + answer keys + guides + audits)
-- Sourcing: 3-5 days (4 cases done, 46 remaining; infrastructure proven, can accelerate)
-- Answer keys: 3-5 days (parallel with sourcing; 4 done, 46 remaining)
-- Scoring guides: 1-2 days (case-type templates, can run in parallel)
+**Timeline:** 7-12 days remaining (case sourcing + answer keys + guides + audits)
+- Sourcing: 3-5 days (5 cases done, 45 remaining; all case types demonstrated, infrastructure proven)
+- Answer keys: 3-5 days (parallel with sourcing; 5 done, 45 remaining)
+- Scoring guides: 1-2 days (can run in parallel; templates proven)
 - Leakage audit: 1 day (running as cases complete)
 - Source quality audit: 1 day (running as cases complete)
 - Buffer: 1 day
