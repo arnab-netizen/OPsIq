@@ -47,7 +47,7 @@ Option 4: Add case-library retrieval (pattern learning)
 Option 5: Enhanced safety governance (harm detection)
 ```
 
-**Combined Expected Improvement:** 5.21 → **8.0-8.5/10** ✅
+**Combined Expected Improvement (Forecast):** 5.21 → **8.0-8.5/10** (requires Round 2 validation to confirm)
 
 ---
 
@@ -67,12 +67,12 @@ Option 5: Enhanced safety governance (harm detection)
 
 ## WHY THIS PLAN
 
-✅ **Evidence-based:** Directly addresses Round 1 failure patterns  
-✅ **Safe:** Maintains 0 dangerous recommendations, <2% hallucination  
+✅ **Evidence-based:** Directly addresses Round 1 failure patterns (10 DIAGNOSIS_COVERAGE_GAP + 40 DIMENSION_COVERAGE_GAP)  
+✅ **Safe:** Maintains 0 dangerous recommendations, <2% hallucination (with proper numeric guards)  
 ✅ **Deterministic:** No LLM hallucination risk (foundational building first)  
 ✅ **Testable:** Each slice has clear acceptance tests  
-✅ **Anti-overfitting:** Case-library similarity controls prevent Round 1 memorization  
-✅ **Complete:** Sufficient alone to reach consultant-grade without LLM risk  
+⚠️  **Overfitting guard:** Case-library extraction deferred to Round 2 (avoid Round 1 leakage)  
+⚠️  **Forecast-driven:** Score lift claims (+0.9 to +0.8) are estimates, not commitments. Require Round 2 validation.  
 
 ---
 
@@ -82,10 +82,13 @@ Option 5: Enhanced safety governance (harm detection)
 
 **Prerequisites:**
 - Assign 1 backend engineer + 1 QA
-- Confirm Round 2 case pack ready (50+ fresh cases)
+- Confirm Round 2 case pack ready (50+ fresh cases) — MANDATORY before Slice 4
 - 3-4 week sprint timeline
+- Agree: Score lift forecasts are estimates. Consultant-grade claims require Round 2 ≥80% pass rate.
 
-**Expected Outcome:** 80% pass rate at ≥8.5/10 (consultant-grade ✓)
+**Phase 1 Expected Outcome (Round 1 Revalidation):** 5.21/10 baseline maintained, no regression, targeted cases improve (RW-001, RW-006, PD cases)
+
+**Phase 2 Expected Outcome (Round 2 Validation — REQUIRED for consultant-grade):** 50+ fresh cases, ≥80% pass rate at ≥8.5/10 (proves generalization)
 
 ---
 
