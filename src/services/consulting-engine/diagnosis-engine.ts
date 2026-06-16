@@ -191,6 +191,448 @@ const rootCausePatterns: RootCausePattern[] = [
       ],
     }),
   },
+  {
+    name: "Brand Erosion / Market Position Crisis",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "market_position" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("brand") ||
+            e.finding.toLowerCase().includes("reputation") ||
+            e.finding.toLowerCase().includes("perception") ||
+            e.finding.toLowerCase().includes("market share"))
+      ),
+    confidence: (evidence) => {
+      const marketCount = evidence.filter(
+        (e) => e.dimension === "market_position" && e.isCritical
+      ).length;
+      const highConfidence = evidence.filter(
+        (e) =>
+          e.dimension === "market_position" &&
+          e.confidence === ConfidenceLevel.HIGH
+      ).length;
+
+      if (marketCount >= 2 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (marketCount >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.PROVISIONAL;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.BRAND_EROSION,
+      description: "Loss of market position due to brand/reputation damage",
+      mechanismDescription:
+        "Customer perception of brand has shifted negative. Market position erodes as customers perceive competitors as superior or more trustworthy. Premium positioning collapses.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "market_position")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Actual product quality declined (not perception issue)",
+        "Competitive product innovation may be superior",
+      ],
+      missingEvidenceFor: [
+        "Customer perception data vs actual quality",
+        "Competitive positioning analysis",
+        "Timeline of perception shift",
+      ],
+    }),
+  },
+  {
+    name: "Demand Forecasting / Inventory Mismatch",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "financial_health" &&
+          (e.finding.toLowerCase().includes("inventory") ||
+            e.finding.toLowerCase().includes("demand") ||
+            e.finding.toLowerCase().includes("stockout") ||
+            e.finding.toLowerCase().includes("excess"))
+      ),
+    confidence: (evidence) => {
+      const demandCount = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          (e.finding.toLowerCase().includes("inventory") ||
+            e.finding.toLowerCase().includes("demand"))
+      ).length;
+      const highConfidence = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.confidence === ConfidenceLevel.HIGH &&
+          (e.finding.toLowerCase().includes("inventory") ||
+            e.finding.toLowerCase().includes("demand"))
+      ).length;
+
+      if (demandCount >= 2 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (demandCount >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.PROVISIONAL;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.DEMAND_FORECASTING_MISMATCH,
+      description: "Supply-demand imbalance due to forecast error or inventory misalignment",
+      mechanismDescription:
+        "Demand signal not correctly translated to supply plan. Excess inventory ties up cash; stockouts lose revenue. Forecast error causes bullwhip effect through supply chain.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "financial_health")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Demand may be genuinely volatile (external shock)",
+        "Supply chain constraint may be the binding constraint",
+      ],
+      missingEvidenceFor: [
+        "Demand forecast accuracy historical data",
+        "Safety stock model",
+        "Supply lead time analysis",
+      ],
+    }),
+  },
+  {
+    name: "Unit Economics Breakdown / Overexpansion",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("margin") ||
+            e.finding.toLowerCase().includes("cost") ||
+            e.finding.toLowerCase().includes("expense") ||
+            e.finding.toLowerCase().includes("expansion"))
+      ),
+    confidence: (evidence) => {
+      const economicsCount = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("margin") ||
+            e.finding.toLowerCase().includes("cost"))
+      ).length;
+      const highConfidence = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.confidence === ConfidenceLevel.HIGH &&
+          (e.finding.toLowerCase().includes("margin") ||
+            e.finding.toLowerCase().includes("cost"))
+      ).length;
+
+      if (economicsCount >= 2 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (economicsCount >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.PROVISIONAL;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.UNIT_ECONOMICS_BREAKDOWN,
+      description: "Unit profitability collapse due to margin compression or fixed-cost burden",
+      mechanismDescription:
+        "Per-unit contribution has become negative or margins have compressed. Fixed-cost burden grows faster than revenue. Expansion to new units/segments unprofitable.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "financial_health")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Temporary cost inflation (commodity price spike) may recover",
+        "Scale benefits may kick in with volume growth",
+      ],
+      missingEvidenceFor: [
+        "Unit contribution margin by segment/location",
+        "Cost structure breakdown (COGS vs OpEx)",
+        "Projection when scale achieves breakeven",
+      ],
+    }),
+  },
+  {
+    name: "Go-To-Market Misalignment / Channel Fit",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "market_position" &&
+          (e.finding.toLowerCase().includes("channel") ||
+            e.finding.toLowerCase().includes("customer acquisition") ||
+            e.finding.toLowerCase().includes("go-to-market") ||
+            e.finding.toLowerCase().includes("segment"))
+      ),
+    confidence: (evidence) => {
+      const gtmCount = evidence.filter(
+        (e) =>
+          e.dimension === "market_position" &&
+          (e.finding.toLowerCase().includes("channel") ||
+            e.finding.toLowerCase().includes("customer acquisition") ||
+            e.finding.toLowerCase().includes("go-to-market"))
+      ).length;
+      const highConfidence = evidence.filter(
+        (e) =>
+          e.dimension === "market_position" &&
+          e.confidence === ConfidenceLevel.HIGH &&
+          (e.finding.toLowerCase().includes("channel") ||
+            e.finding.toLowerCase().includes("customer acquisition"))
+      ).length;
+
+      if (gtmCount >= 2 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (gtmCount >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.PROVISIONAL;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.GO_TO_MARKET_MISALIGNMENT,
+      description: "Go-to-market strategy misaligned with customer needs or channel efficacy",
+      mechanismDescription:
+        "Customer acquisition cost rising or channel becoming ineffective. Marketing reaches wrong segment or channel saturation. GTM timing may be misaligned with market readiness.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "market_position")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Product may be uncompetitive (not a GTM issue)",
+        "Market saturation may be industry-wide trend",
+      ],
+      missingEvidenceFor: [
+        "Customer acquisition cost trend and breakdown by channel",
+        "Customer segment profitability analysis",
+        "Competitive GTM positioning",
+      ],
+    }),
+  },
+  {
+    name: "Strategic Pricing Error / Packaging Mismatch",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "financial_health" &&
+          (e.finding.toLowerCase().includes("price") ||
+            e.finding.toLowerCase().includes("pricing") ||
+            e.finding.toLowerCase().includes("packaging") ||
+            e.finding.toLowerCase().includes("willingness to pay"))
+      ),
+    confidence: (evidence) => {
+      const pricingCount = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          (e.finding.toLowerCase().includes("price") ||
+            e.finding.toLowerCase().includes("pricing"))
+      ).length;
+      const highConfidence = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.confidence === ConfidenceLevel.HIGH &&
+          (e.finding.toLowerCase().includes("price") ||
+            e.finding.toLowerCase().includes("pricing"))
+      ).length;
+
+      if (pricingCount >= 2 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (pricingCount >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.PROVISIONAL;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.STRATEGIC_PRICING_ERROR,
+      description: "Pricing or packaging strategy misaligned with customer value perception",
+      mechanismDescription:
+        "Price set above customer willingness-to-pay or below optimal revenue capture. Packaging does not match customer segment needs. Pricing power eroded through discounting.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "financial_health")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Low pricing power may reflect poor product differentiation",
+        "High price may be justified by superior quality",
+      ],
+      missingEvidenceFor: [
+        "Customer willingness-to-pay analysis",
+        "Competitor pricing comparison",
+        "Price elasticity data",
+      ],
+    }),
+  },
+  {
+    name: "Governance / Compliance Failure",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "process_maturity" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("compliance") ||
+            e.finding.toLowerCase().includes("governance") ||
+            e.finding.toLowerCase().includes("control") ||
+            e.finding.toLowerCase().includes("regulatory"))
+      ),
+    confidence: (evidence) => {
+      const governanceCount = evidence.filter(
+        (e) =>
+          e.dimension === "process_maturity" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("compliance") ||
+            e.finding.toLowerCase().includes("governance"))
+      ).length;
+      const highConfidence = evidence.filter(
+        (e) =>
+          e.dimension === "process_maturity" &&
+          e.confidence === ConfidenceLevel.HIGH &&
+          (e.finding.toLowerCase().includes("compliance") ||
+            e.finding.toLowerCase().includes("governance"))
+      ).length;
+
+      if (governanceCount >= 2 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (governanceCount >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.PROVISIONAL;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.GOVERNANCE_COMPLIANCE_FAILURE,
+      description: "Internal control or regulatory compliance failure creating material risk",
+      mechanismDescription:
+        "Process controls absent or ineffective, creating exposure to fraud, data breach, or regulatory violation. Material weakness in governance structure enables unauthorized actions.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "process_maturity")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Compliance gap may be minor vs material",
+        "Control documentation may not reflect actual practice",
+      ],
+      missingEvidenceFor: [
+        "Regulatory requirements and current compliance status",
+        "Control testing results",
+        "Risk assessment and materiality",
+      ],
+    }),
+  },
+  {
+    name: "Trust / Quality Crisis (Non-Operational QC)",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "quality_delivery" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("trust") ||
+            e.finding.toLowerCase().includes("security") ||
+            e.finding.toLowerCase().includes("reliability") ||
+            e.finding.toLowerCase().includes("consistency"))
+      ) &&
+      !evidence.some(
+        (e) =>
+          e.dimension === "quality_delivery" &&
+          e.finding.toLowerCase().includes("complaint")
+      ),
+    confidence: (evidence) => {
+      const trustCount = evidence.filter(
+        (e) =>
+          e.dimension === "quality_delivery" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("trust") ||
+            e.finding.toLowerCase().includes("security") ||
+            e.finding.toLowerCase().includes("reliability"))
+      ).length;
+      const highConfidence = evidence.filter(
+        (e) =>
+          e.dimension === "quality_delivery" &&
+          e.confidence === ConfidenceLevel.HIGH &&
+          (e.finding.toLowerCase().includes("trust") ||
+            e.finding.toLowerCase().includes("security"))
+      ).length;
+
+      if (trustCount >= 2 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (trustCount >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.PROVISIONAL;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.TRUST_QUALITY_CRISIS,
+      description: "Quality or trust issue eroding customer confidence and retention",
+      mechanismDescription:
+        "Product quality failing or service reliability broken, destroying customer trust. Distinct from brand perception: this is actual quality/reliability failure.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "quality_delivery")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Customer perception of quality may be misaligned with actual quality",
+        "Expectations may exceed product design specification",
+      ],
+      missingEvidenceFor: [
+        "Quality metrics (defect rate, uptime, MTBF)",
+        "Customer satisfaction on quality dimensions",
+        "Root cause of quality failure",
+      ],
+    }),
+  },
+  {
+    name: "Cash Runway Crisis",
+    pattern: (evidence) =>
+      evidence.some(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("runway") ||
+            e.finding.toLowerCase().includes("cash") ||
+            e.finding.toLowerCase().includes("burn"))
+      ),
+    confidence: (evidence) => {
+      const runwayCount = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.isCritical &&
+          (e.finding.toLowerCase().includes("runway") ||
+            e.finding.toLowerCase().includes("cash"))
+      ).length;
+      const highConfidence = evidence.filter(
+        (e) =>
+          e.dimension === "financial_health" &&
+          e.confidence === ConfidenceLevel.HIGH &&
+          (e.finding.toLowerCase().includes("runway") ||
+            e.finding.toLowerCase().includes("burn"))
+      ).length;
+
+      if (runwayCount >= 2 && highConfidence >= 1) {
+        return DiagnosisConfidence.HIGH;
+      } else if (runwayCount >= 1) {
+        return DiagnosisConfidence.MODERATE;
+      }
+      return DiagnosisConfidence.PROVISIONAL;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.CASH_RUNWAY_CRISIS,
+      description: "Immediate financial distress from unsustainable burn rate",
+      mechanismDescription:
+        "Cash balance insufficient to cover operating burn. Negative cash flow requires immediate action: fundraising, burn reduction, or business model reset.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "financial_health")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Runway calculation may not reflect available credit facilities",
+        "Burn rate may improve with action already underway",
+      ],
+      missingEvidenceFor: [
+        "Detailed cash flow forecast",
+        "Access to financing or credit",
+        "Path to cash flow break-even",
+      ],
+    }),
+  },
 ];
 
 export interface DiagnosisResult {

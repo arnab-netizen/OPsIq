@@ -144,8 +144,8 @@ const allDims = [
   "process_maturity",
   "team_capability",
   "market_position",
-];
-const missingDims = allDims.filter((d) => !dims.has(d));
+] as const;
+const missingDims = allDims.filter((d) => !dims.has(d as any));
 const lowConfidenceCount = caseInput.evidence.filter(
   (e) => e.confidence === "LOW" || e.confidence === "PROVISIONAL"
 ).length;
