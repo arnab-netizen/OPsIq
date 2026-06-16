@@ -8,9 +8,9 @@
 ## REMEDIATION STATUS BLOCK (authoritative)
 
 ```yaml
-current_phase: ARCHITECTURE_CEILING_REVIEW
+current_phase: OWNER_MODE_ARCHITECTURE_DECISION
 current_slice: NONE
-last_completed_step: ROUND_2_EXECUTION_COMPLETE_PASS_GATE_FAILED
+last_completed_step: ARCHITECTURE_CEILING_REPORT_AUDIT_COMPLETE
 universal_benchmark_artifact_quality_gate: PASS
 benchmark_artifact_gate_recorded: true
 round_2_execution_status: COMPLETE (50/50 cases executed, 49 valid, 0% root-cause accuracy)
@@ -24,11 +24,14 @@ consultant_grade_gate: FAILED (4/11 criteria pass)
   - evidence_trace_rate: 58.5% (required 95%+)
   - safety: PASS (0 dangerous, 0 hallucinations, 0 leakage)
 architecture_ceiling: CONFIRMED (per execution_consultant_engine_v2.md §17)
-consultant_grade_claim: PROHIBITED
-engine_status: ARCHITECTURE_CEILING_REACHED
-next_required_step: USER_DECISION_ON_ARCHITECTURE_PATH (choose Option A-F from ARCHITECTURE_CEILING_REPORT.md)
-recommendation: Option E + C (Evidence Synthesis + Human-in-Loop Review)
-blockers: [USER_DECISION_REQUIRED]
+consultant_grade_claim: PROHIBITED (owner-mode does not require autonomous accuracy)
+public_saas_claim: PROHIBITED (private use only)
+engine_status: ARCHITECTURE_CEILING_REACHED → OWNER_MODE_DECISION_REQUIRED
+next_required_step: USER_DECISION_ON_REVISED_OWNER_MODE_ARCHITECTURE
+recommendation: PATH 1 (7.5 weeks, €30-50k, owner-mode useful) or PATH 2 (7-8 weeks, €40-60k, 20-30% accuracy)
+recommendation_rationale: Architecture Ceiling Report was over-engineered for SaaS; owner-mode use case requires diagnostic assistant (evidence + hypotheses), not autonomous consultant
+blocker_removed: OWNER_DECISION_NOW_BETWEEN_PRAGMATIC_PATHS (not 12-week consultant-grade)
+blockers: [USER_DECISION_BETWEEN_PATH_1_PATH_2_OR_ALTERNATIVE]
 ```
 
 The original hostile audit (2026-06-16 19:34 UTC) FAILED the Round 2 case pack. All
