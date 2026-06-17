@@ -1,0 +1,38 @@
+{
+  "source_id": "SRC-034",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001065280/000119312511278716/d246709dex991.htm",
+  "source_title": "Netflix, Inc. Form 8-K exhibit - Q3 2011 letter to shareholders (Qwikster / pricing aftermath)",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Netflix, Inc. (SEC EDGAR)",
+  "publication_or_filing_date": "2011-10-24",
+  "accessed_date": "2026-06-17",
+  "company_context": "In 2011 Netflix made two linked strategic mistakes: in mid-2011 it sharply raised effective prices by un-bundling DVD-by-mail and streaming (a ~60% increase for customers wanting both), and on September 18-19, 2011 it announced it would split DVD-by-mail into a separately branded, separately billed service called Qwikster. The customer and PR backlash was severe; Netflix abandoned the Qwikster split in October 2011 within weeks, a textbook strategic-mistake-then-correction.",
+  "business_type": "Streaming and DVD-by-mail subscription service (consumer subscription)",
+  "outcome_category": "9 - strategic mistake then correction",
+  "candidate_diagnosis_bucket": "pricing_power",
+  "evidence_summary": "After the mid-2011 price un-bundling (raising the combined plan price meaningfully) and the September 2011 Qwikster announcement, Netflix's Q3 2011 shareholder letter reported US domestic subscribers declining to about 23.8 million, driven by both higher-than-expected cancellations and reduced new acquisitions amid the PR backlash that engulfed the brand. The November 2010 pricing move had introduced a $7.99/month pure-streaming plan and raised combination-plan prices; the July 2011 change set streaming and DVD each at $7.99. Netflix abandoned the planned Qwikster separation in October 2011, reversing the structural mistake while keeping the price change. This is a clean strategic-mistake-then-correction: a self-inflicted pricing/packaging error producing measurable subscriber loss, followed by a rapid partial reversal.",
+  "source_backed_metrics": {
+    "domestic_subscribers_q3_2011": "approximately 23.8 million (declined quarter-over-quarter)",
+    "pure_streaming_plan_price_nov_2010_usd": "$7.99 per month",
+    "post_unbundle_pricing_2011_usd": "$7.99 each for streaming and for DVD (combined ~$15.98, vs prior bundled ~$9.99)",
+    "qwikster_announcement_date": "September 18-19, 2011",
+    "qwikster_reversal": "abandoned in October 2011 (within weeks of announcement)"
+  },
+  "outcome_evidence": "Q3 2011 domestic subscriber base fell to ~23.8 million with elevated cancellations attributed to the price change and Qwikster PR storm; Netflix reversed the Qwikster split in October 2011 and subsequently recovered subscriber growth, confirming the mistake-then-correction arc.",
+  "source_limitations": "The subscriber figure and narrative come from Netflix's Q3 2011 8-K shareholder-letter exhibit on the primary SEC EDGAR domain (sec.gov), surfaced via verbatim search-result snippets; direct WebFetch of sec.gov returned HTTP 403 in this environment. The combined ~$15.98 vs ~$9.99 framing of the price increase is widely reported but the exact pre-change combined price should be confirmed against the filing for quantitative use; the ~60% increase descriptor is from contemporaneous reporting.",
+  "directly_stated": [
+    "Domestic subscribers declined to ~23.8 million in Q3 2011",
+    "Decline driven by higher-than-expected cancellations and reduced acquisitions amid PR backlash",
+    "November 2010 introduced $7.99 streaming plan and raised combination-plan prices",
+    "Qwikster announced mid-September 2011 and abandoned in October 2011"
+  ],
+  "inferred": [
+    "The subscriber loss was self-inflicted (pricing/packaging) rather than caused by external demand collapse",
+    "The rapid Qwikster reversal limited long-term damage, distinguishing it from an irreversible strategic error"
+  ],
+  "reliability_rating": "A",
+  "why_useful_for_opsiq": "A precise pricing_power / strategic-mistake-then-correction case with a quantified subscriber impact and a documented reversal. Tests whether OpsIQ diagnoses a self-inflicted pricing/packaging error (not demand_generation_failure), correctly classifies it as category-9 correction rather than category-10 worsening, and triggers adaptive re-evaluation on a scope-change / owner-decision shock.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

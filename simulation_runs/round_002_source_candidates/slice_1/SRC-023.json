@@ -1,0 +1,45 @@
+{
+  "source_id": "SRC-023",
+  "source_url": "https://www.businesswire.com/news/home/20160202006613/en/Chipotle-Mexican-Grill-Announces-Fourth-Quarter-Full",
+  "source_title": "Chipotle Mexican Grill, Inc. Announces Fourth Quarter and Full Year 2015 Results; CDC Investigation Over; Chipotle Welcomes Customers Back to Restaurants",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Chipotle Mexican Grill, Inc. (press release / Form 8-K exhibit, Business Wire)",
+  "publication_or_filing_date": "2016-02-02",
+  "accessed_date": "2026-06-17",
+  "company_context": "Chipotle Mexican Grill is a U.S. fast-casual restaurant chain. In late 2015 it was hit by E. coli O26 outbreaks (CDC reported 55 sickened across 11 states in the larger outbreak) plus related foodborne-illness publicity, sharply denting traffic and sales before the CDC declared the investigation over in early 2016.",
+  "business_type": "Restaurant (fast-casual, public company)",
+  "outcome_category": "18 - customer trust/quality failure",
+  "candidate_diagnosis_bucket": "quality_trust_failure",
+  "evidence_summary": "Q4 2015 revenue was $997.5 million, a 6.8% decrease versus Q4 2014, driven primarily by a 14.6% decrease in comparable restaurant sales attributed to publicity around foodborne-illness incidents. The company opened 79 restaurants in the quarter (229 for the year), reaching 2,010 total restaurants. Full-year 2015 revenue was $4.5 billion, up 9.6% (driven by new restaurants not yet in the comparable base). The release announced that the CDC concluded its E. coli investigation, and the company rolled out an enhanced food-safety program (reported elsewhere at ~$25 million) to rebuild trust.",
+  "source_backed_metrics": {
+    "q4_2015_revenue_usd": "997.5 million",
+    "q4_2015_revenue_change_pct": "-6.8",
+    "q4_2015_comparable_restaurant_sales_change_pct": "-14.6",
+    "full_year_2015_revenue_usd": "4.5 billion",
+    "full_year_2015_revenue_change_pct": "+9.6",
+    "restaurants_opened_q4_2015": "79",
+    "restaurants_opened_fy_2015": "229",
+    "total_restaurants_end_2015": "2010",
+    "cdc_larger_outbreak_cases": "55",
+    "cdc_larger_outbreak_states": "11",
+    "release_date": "2016-02-02"
+  },
+  "outcome_evidence": "Q4 2015 comparable sales fell 14.6% on foodborne-illness publicity; CDC concluded its investigation and Chipotle announced it could move forward with an enhanced food-safety plan. Outcome sequence: 18 (quality/trust failure) then 13 (temporary shock with recovery), as comparable sales recovered in subsequent years.",
+  "source_limitations": "Both the Business Wire release and the SEC EDGAR 8-K exhibit returned HTTP 403 to automated fetch; figures are quoted verbatim from search snippets of the official Business Wire/IR release and corroborated by the CDC archive page and contemporaneous reporting. Full multi-year recovery trajectory is from later filings, not this single release.",
+  "directly_stated": [
+    "Q4 2015 revenue $997.5 million, down 6.8%",
+    "Q4 2015 comparable restaurant sales down 14.6% due to foodborne-illness publicity",
+    "full year 2015 revenue $4.5 billion, up 9.6%",
+    "2,010 total restaurants; 79 opened in Q4, 229 in FY2015",
+    "CDC concluded its E. coli investigation"
+  ],
+  "inferred": [
+    "demand shock was trust-driven, not pricing or demand-generation driven",
+    "investment in food safety was a corrective good action enabling later recovery"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "Clean quality/trust shock with a quantified comparable-sales collapse followed by documented recovery. Tests OpsIQ's ability to classify a temporary trust shock (13) distinct from structural demand collapse (14), and to credit corrective food-safety action in re-evaluation.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

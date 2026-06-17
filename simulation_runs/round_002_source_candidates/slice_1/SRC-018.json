@@ -1,0 +1,38 @@
+{
+  "source_id": "SRC-018",
+  "source_url": "https://www.cnbc.com/2017/07/10/jawbones-demise-a-case-of-death-by-overfunding-in-silicon-valley.html",
+  "source_title": "Jawbone's demise a case of 'death by overfunding' in Silicon Valley",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CNBC (reporting corroborating The Information and Reuters)",
+  "publication_or_filing_date": "2017-07-10",
+  "accessed_date": "2026-06-17",
+  "company_context": "Jawbone was a consumer-hardware startup known for Bluetooth speakers, headsets, and the UP fitness wearables. After raising more than $900 million and reaching a roughly $3 billion valuation by early 2015, it entered liquidation in July 2017, undone by manufacturing problems and competition from Fitbit and Apple Watch.",
+  "business_type": "consumer hardware startup (wearables / audio devices)",
+  "outcome_category": "14 - market shift/demand collapse",
+  "candidate_diagnosis_bucket": "unit_economics_failure",
+  "evidence_summary": "Despite raising over $900 million and a peak valuation around $3 billion with ~450 employees in early 2015, Jawbone could not ship reliably and was outcompeted in wearables by Fitbit and the Apple Watch. Demand for its core products collapsed against better-executed rivals while its cost structure and manufacturing problems persisted, leading to liquidation in July 2017. Reporting frames it as 'death by overfunding' - capital sustained a structurally uncompetitive hardware business past the point of viability.",
+  "source_backed_metrics": {
+    "total_funding_raised_usd_min": 900000000,
+    "peak_valuation_usd": 3000000000,
+    "employees_early_2015": 450,
+    "liquidation_start_month": "July 2017"
+  },
+  "outcome_evidence": "Jawbone began liquidation in July 2017 after failing to secure further funding; first reported by The Information and independently confirmed by Reuters. It had raised over $900 million and reached ~$3 billion valuation with ~450 employees in early 2015 before its decline.",
+  "source_limitations": "The CNBC primary article returned 403 to direct WebFetch here; figures were confirmed verbatim via credible WebSearch snippets (CNBC, Fortune, TechCrunch) which themselves cite The Information and Reuters. Funding is stated as 'more than $900 million.' The diagnosis bucket (unit_economics_failure) reflects the competitive/cost-structure framing; the outcome_category (14, market/demand shift) reflects the competitive demand collapse to Fitbit/Apple.",
+  "directly_stated": [
+    "Raised more than $900 million",
+    "~$3 billion valuation and ~450 employees by early 2015",
+    "Liquidation began July 2017",
+    "Manufacturing issues and competition from Apple Watch and Fitbit cited as causes",
+    "First reported by The Information, confirmed by Reuters"
+  ],
+  "inferred": [
+    "Excess capital prolonged an uncompetitive hardware cost structure ('death by overfunding')",
+    "Loss of product differentiation drove a demand collapse the balance sheet could not offset"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "Consumer-hardware case blending competitive demand collapse with weak unit economics, where heavy funding masked deterioration. Tests whether a system recognizes that abundant capital can hide rather than fix a structural competitiveness/margin problem, and links a market/demand shift to the underlying cost structure.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

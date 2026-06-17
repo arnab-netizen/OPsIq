@@ -1,0 +1,39 @@
+{
+  "source_id": "SRC-017",
+  "source_url": "https://techcrunch.com/2013/11/05/everpix-shutting-down/",
+  "source_title": "Everpix, The Cloud-Based Photo Startup, Is Shutting Down",
+  "source_type": "FOUNDER_POSTMORTEM",
+  "publisher_issuer": "Everpix founders' shutdown notice, reported via TechCrunch and documented in depth by The Verge (Casey Newton)",
+  "publication_or_filing_date": "2013-11-05",
+  "accessed_date": "2026-06-17",
+  "company_context": "Everpix was a cloud photo-organization subscription startup widely praised for product quality. In November 2013 its founders announced they were shutting down after acquisition talks fell through and they could not raise further funding. The team's own account (and the documents they shared with The Verge) frame it as a go-to-market/growth and unit-economics failure rather than a product-quality failure.",
+  "business_type": "consumer SaaS startup (subscription cloud photo storage/organization)",
+  "outcome_category": "1 - failure/shutdown",
+  "candidate_diagnosis_bucket": "demand_generation_failure",
+  "evidence_summary": "Everpix raised about $2.3 million (from Index Ventures, 500 Startups, Kii Capital, 2020 Ventures) and built an acclaimed product priced at $5/month or $49/year, but reached only about 55,000 users - too few paying subscribers to cover costs. The founders' own postmortem (shared with The Verge) describes over-investing in product perfection at the expense of marketing/distribution, so revenue never caught up to burn; storage and infrastructure bills mounted and the company shut down, refunding subscribers.",
+  "source_backed_metrics": {
+    "total_funding_raised_usd": 2300000,
+    "total_users_approx": 55000,
+    "subscription_price_monthly_usd": 5,
+    "subscription_price_annual_usd": 49,
+    "shutdown_announcement_date": "2013-11-05"
+  },
+  "outcome_evidence": "Founders announced shutdown on November 5, 2013 after acquisition offers (including from Path) fell through and funding ran out; subscribers were to be refunded. The ~55,000 users did not generate enough revenue to cover rising bills.",
+  "source_limitations": "Source URLs (TechCrunch, The Verge) could not be fetched directly in this environment; figures were confirmed verbatim via credible WebSearch snippets. Initial query figures were corrected against the snippets: funding is ~$2.3M (not $1.8M) and pricing is $5/month or $49/year (not $6.99). The detailed first-party narrative lives primarily in Casey Newton's The Verge feature, which drew on the founders' own internal documents; the TechCrunch URL is the verifiable shutdown report.",
+  "directly_stated": [
+    "Raised ~$2.3 million (Index Ventures, 500 Startups, Kii Capital, 2020 Ventures)",
+    "About 55,000 users, insufficient revenue to pay bills",
+    "Pricing $5/month or $49/year",
+    "Shutdown announced November 5, 2013; subscribers refunded",
+    "Acquisition talks (incl. Path) fell through"
+  ],
+  "inferred": [
+    "Over-investment in product and under-investment in distribution starved demand generation",
+    "Subscription conversion/scale never reached the level needed to cover infrastructure burn"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "First-party founder postmortem of a high-quality product that failed on go-to-market and demand generation. Tests whether a system avoids equating product excellence with business viability and correctly diagnoses a distribution/demand failure rather than a product-quality problem.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

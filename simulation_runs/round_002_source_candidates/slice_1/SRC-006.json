@@ -1,0 +1,40 @@
+{
+  "source_id": "SRC-006",
+  "source_url": "https://www.bloomberg.com/news/articles/2020-05-04/j-crew-files-bankruptcy-felled-by-pandemic-and-crushing-debt",
+  "source_title": "J. Crew Files Bankruptcy, Felled by Pandemic and Heavy Debt",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Bloomberg",
+  "publication_or_filing_date": "2020-05-04",
+  "accessed_date": "2026-06-17",
+  "company_context": "J.Crew Group Inc., a US apparel retailer, was acquired in a 2011 leveraged buyout by TPG Capital and Leonard Green & Partners in a roughly $3 billion deal. The LBO transformed a near-debt-free balance sheet into a heavily leveraged one. J.Crew filed for Chapter 11 on May 4, 2020 as the COVID-19 pandemic closed stores, becoming one of the first major retail bankruptcies of the pandemic.",
+  "business_type": "Brick-and-mortar and catalog apparel retail (specialty preppy clothing, including Madewell brand)",
+  "outcome_category": "2 - bankruptcy/restructuring",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "J.Crew filed Chapter 11 on May 4, 2020, crushed by debt rooted in its 2011 LBO and pushed over the edge by pandemic store closures. The company had about $50 million of long-term debt in 2010 before the buyout was announced; by February 1, 2020 it carried roughly $1.7 billion. As part of the prearranged restructuring, lenders agreed to convert about $1.65 billion of debt into equity, taking control of the company, and J.Crew lined up $400 million in financing to operate during the case.",
+  "source_backed_metrics": {
+    "lbo_deal_value_2011_usd": "approximately $3 billion (TPG Capital and Leonard Green & Partners)",
+    "long_term_debt_pre_lbo_2010_usd": "approximately $50 million",
+    "debt_at_filing_feb_2020_usd": "approximately $1.7 billion",
+    "debt_to_equity_conversion_usd": "approximately $1.65 billion",
+    "dip_financing_usd": "$400 million",
+    "filing_date": "2020-05-04"
+  },
+  "outcome_evidence": "Filed Chapter 11 on May 4, 2020 with a prearranged deal: lenders converted ~$1.65 billion of debt to equity and took control; $400 million in financing arranged to operate through the case.",
+  "source_limitations": "Named journalism summary; underlying court docket not fetched directly. Figures as-reported and rounded; debt growth from ~$50 million (2010) to ~$1.7 billion (2020) reflects the LBO leverage, corroborated across multiple outlets.",
+  "directly_stated": [
+    "Filed Chapter 11 on May 4, 2020",
+    "Acquired in 2011 LBO by TPG Capital and Leonard Green & Partners (~$3 billion)",
+    "Long-term debt ~$50 million in 2010 vs ~$1.7 billion as of Feb 1, 2020",
+    "Lenders agreed to convert ~$1.65 billion of debt into equity",
+    "$400 million financing arranged for the bankruptcy"
+  ],
+  "inferred": [
+    "The LBO-installed debt removed the resilience needed to survive a demand shock",
+    "Pandemic store closures were the trigger, not the root cause, of insolvency"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "A pairing of LBO debt_solvency_pressure with a demand shock, where the visible trigger (pandemic) masks the structural cause (leverage). The before/after debt figures (~$50M to ~$1.7B) make it ideal for testing whether OpsIQ attributes failure to the correct dimension rather than the most recent event.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

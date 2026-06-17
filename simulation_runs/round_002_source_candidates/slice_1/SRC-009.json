@@ -1,0 +1,41 @@
+{
+  "source_id": "SRC-009",
+  "source_url": "https://www.nbcnews.com/business/consumer/radioshack-files-chapter-11-bankruptcy-after-years-losses-n301161",
+  "source_title": "RadioShack Files for Chapter 11 Bankruptcy After Years of Losses",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "NBC News",
+  "publication_or_filing_date": "2015-02-05",
+  "accessed_date": "2026-06-17",
+  "company_context": "RadioShack, the US consumer-electronics retail chain, filed for Chapter 11 bankruptcy protection on February 5, 2015 after years of declining sales and losses and delisting from the NYSE. Its core electronics-components and accessories model was eroded by the shift of consumer electronics purchasing online and by slowing growth in its wireless/mobile business.",
+  "business_type": "Brick-and-mortar consumer-electronics specialty retail (company-owned and franchised stores)",
+  "outcome_category": "1 - failure/shutdown",
+  "candidate_diagnosis_bucket": "demand_generation_failure",
+  "evidence_summary": "RadioShack filed Chapter 11 on February 5, 2015 after sustained demand erosion: sales had fallen for nine straight quarters and the company recorded losses in each of its ten latest quarters. The company listed assets worth $1.2 billion against $1.4 billion in liabilities (as of November). As part of the bankruptcy it announced it would sell up to about 2,400 stores. In May 2015 its assets were purchased by General Wireless, a subsidiary of Standard General, for $26.2 million, marking the effective end of the standalone company. The root failure was a collapse in store demand as electronics buying moved online and wireless growth slowed.",
+  "source_backed_metrics": {
+    "filing_date": "2015-02-05",
+    "assets_usd": "$1.2 billion",
+    "liabilities_usd": "$1.4 billion (as of November)",
+    "consecutive_quarterly_sales_declines": "nine straight quarters",
+    "consecutive_quarterly_losses": "each of its ten latest quarters",
+    "stores_to_sell": "up to ~2,400",
+    "asset_sale_price_to_general_wireless_usd": "$26.2 million (May 2015)"
+  },
+  "outcome_evidence": "Filed Chapter 11 on February 5, 2015; assets purchased by General Wireless (Standard General) for $26.2 million in May 2015, ending the standalone company after ten consecutive quarters of losses.",
+  "source_limitations": "Named journalism summary (cross-corroborated with Wikipedia and other outlets for the asset-sale figure); underlying SEC filing/court docket not fetched directly. Liabilities/assets are as-reported and rounded.",
+  "directly_stated": [
+    "Filed Chapter 11 on February 5, 2015",
+    "Sales fell for nine straight quarters; losses in each of ten latest quarters",
+    "Assets ~$1.2 billion vs liabilities ~$1.4 billion",
+    "Announced sale of up to ~2,400 stores",
+    "Assets bought by General Wireless (Standard General) for $26.2 million in May 2015"
+  ],
+  "inferred": [
+    "The core store-based demand model was structurally obsolete as electronics buying moved online",
+    "Slowing wireless/mobile growth removed the last revenue prop, making demand erosion terminal"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "A demand_generation_failure / structural-obsolescence case that ends in shutdown rather than reorganization, with a clear multi-quarter deterioration signal (nine declining quarters, ten loss quarters). Useful for testing whether OpsIQ flags chronic demand collapse early and escalates review cadence, and for distinguishing a terminal demand failure from a survivable debt restructuring.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

@@ -909,5 +909,30 @@
       "ROUND_2_OUTCOME_SPECTRUM_REQUIREMENTS.md",
       "ROUND_2_REAL_CASE_SOURCING_PLAN.md"
     ]
+  },
+  "stage_a_round2_source_collection_slice1": {
+    "slice": "Round 2 source collection slice 1 (candidate provenance records only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_SOURCE_RECORDS (no benchmark cases authored; no engine/gate/scorer/answer-key change)",
+    "files": [
+      "simulation_runs/round_002_source_candidates/slice_1/SRC-001.json..SRC-036.json",
+      "simulation_runs/round_002_source_candidates/slice_1/_SLICE_1_INDEX.json",
+      "ROUND_2_SOURCE_COLLECTION_SLICE_1_REPORT.md"
+    ],
+    "web_access": "AVAILABLE (WebSearch). WebFetch returned HTTP 403 for all primary domains -> figures verified via WebSearch snippets from primary/credible domains, NOT full-text fetch",
+    "records_collected": 36,
+    "outcome_categories_covered": "15 of 20 (1,2,4,6,8,9,11,12,13,14,15,17,18,19,20)",
+    "diagnosis_buckets_covered": "13 of 15 (missing gtm_channel_mismatch, key_person_risk)",
+    "business_types_covered": "~12 (retail, asset-heavy, manufacturing, restaurant/QSR, franchise, DTC, ecommerce/startup, marketplace, SaaS, fintech, healthcare, dataset/gov)",
+    "source_categories_covered": "5 (SEC_FILING, GOVERNMENT_REPORT, PUBLIC_DATASET, JOURNALISM, FOUNDER_POSTMORTEM)",
+    "reliability_distribution": "A=15, B=20, C=1 (provisional: A means primary-source origin, not full-text-read here)",
+    "method": "4 parallel research agents, disjoint ID ranges; strict no-fabrication; real URLs only; unverifiable figures omitted or flagged inferred",
+    "adversarial_flagged": "Wirecard, Theranos, Luckin, Boeing (obvious action worsens outcome)",
+    "not_done": "no 01_case_input.json/key.json authored; no full-text fetch verification; nothing promoted to REAL_SOURCE_BACKED",
+    "known_gaps": "diagnosis: gtm_channel_mismatch, key_person_risk; outcomes 3,5,7,10,16; over-weight large-caps (<=25% rule); 1 C-rated needs corroboration",
+    "gates_run": "36/36 valid JSON + all required fields (node check); no app code touched",
+    "next_step": "slice 2 source collection (close gaps + small-business/mid-market/franchise + corroborate C) -> full-text verification slice -> convert to source.json+cases -> validator -> scorer -> re-trial",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "report": "ROUND_2_SOURCE_COLLECTION_SLICE_1_REPORT.md"
   }
 }

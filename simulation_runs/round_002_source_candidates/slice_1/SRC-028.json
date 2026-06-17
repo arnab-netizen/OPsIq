@@ -1,0 +1,41 @@
+{
+  "source_id": "SRC-028",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001639825/000163982522000117/pton-20220630.htm",
+  "source_title": "Peloton Interactive, Inc. Form 10-K for the fiscal year ended June 30, 2022",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Peloton Interactive, Inc. (SEC EDGAR)",
+  "publication_or_filing_date": "2022-08-26",
+  "accessed_date": "2026-06-17",
+  "company_context": "Peloton Interactive is a connected-fitness, direct-to-consumer company selling Bike, Bike+, Tread and Tread+ hardware plus a recurring Connected Fitness subscription. After a pandemic-era demand surge in FY2020-FY2021, demand reverted sharply as consumers returned to gyms. Peloton had built capacity and committed to supply for demand that did not materialize, producing a large inventory overhang, heavy losses, and severe operating cash burn in FY2022 that forced restructuring and management change.",
+  "business_type": "Connected-fitness consumer hardware plus subscription, direct-to-consumer (DTC), asset/inventory-heavy with owned and contracted manufacturing",
+  "outcome_category": "8 - fast growth then operational breakdown",
+  "candidate_diagnosis_bucket": "inventory_forecasting_mismatch",
+  "evidence_summary": "In fiscal 2022 (ended June 30, 2022) Peloton's total revenue fell to $3.58 billion from $4.02 billion in FY2021, an 11% full-year decline, with Connected Fitness Product revenue falling from $3.15 billion to $2.19 billion as pandemic-era demand reversed. The company recorded a net loss of approximately $2.83 billion for the fiscal year. Inventory built for demand that did not materialize forced large reserves: a $123.9 million reserve as of June 30, 2022 primarily for excess accessories and apparel it did not expect to sell above cost, and $224.9 million of excess-and-obsolete inventory reserve adjustments recognized within the reconciliation of net loss to operating cash flow for the year. The company averaged roughly negative $650 million of free cash flow per quarter in the six months into Q4 FY2022, improving to about negative $412 million in Q4. The mismatch between built/committed supply and collapsed demand is the core operational-breakdown signature.",
+  "source_backed_metrics": {
+    "fy2022_total_revenue_usd": "$3.58 billion (down from $4.02 billion in FY2021; ~11% full-year decline)",
+    "fy2022_connected_fitness_product_revenue_usd": "$2.19 billion (down from $3.15 billion in FY2021)",
+    "fy2022_subscription_revenue_usd": "$1.39 billion (up from $872 million in FY2021)",
+    "fy2022_net_loss_usd": "approximately $2.83 billion ($2,827.7 million)",
+    "inventory_reserve_jun_30_2022_usd": "$123.9 million (primarily excess accessories and apparel not expected to sell above cost)",
+    "fy2022_excess_and_obsolete_inventory_reserve_adjustment_usd": "$224.9 million",
+    "free_cash_flow_per_quarter_into_q4_fy2022_usd": "approximately negative $650 million per quarter, improving to about negative $412 million in Q4 FY2022"
+  },
+  "outcome_evidence": "Multi-billion-dollar net loss for FY2022, double-digit revenue decline, large inventory reserves and write-downs, and sustained heavy negative free cash flow; the company entered an aggressive restructuring program (cost cuts, headcount reduction, shift from owned to outsourced manufacturing) and CEO transition during the period.",
+  "source_limitations": "Figures are sourced from the Peloton FY2022 Form 10-K on the primary SEC EDGAR domain (sec.gov) as surfaced in verbatim search-result snippets; direct WebFetch of the sec.gov URL returned HTTP 403 in this environment, so individual line items could not be re-rendered page-by-page. Free-cash-flow per-quarter figures are management-reported non-GAAP framing. Some figures rounded as presented.",
+  "directly_stated": [
+    "FY2022 total revenue $3.58 billion vs $4.02 billion FY2021 (~11% decline)",
+    "Connected Fitness Product revenue fell from $3.15 billion to $2.19 billion",
+    "FY2022 net loss approximately $2.83 billion",
+    "$123.9 million inventory reserve as of June 30, 2022 for excess accessories and apparel",
+    "$224.9 million excess-and-obsolete inventory reserve adjustment in FY2022"
+  ],
+  "inferred": [
+    "The loss and cash burn were driven primarily by an inventory and capacity build sized to pandemic-era demand that reversed",
+    "The inventory overhang, not a pricing or product-quality failure, is the primary operational driver"
+  ],
+  "reliability_rating": "A",
+  "why_useful_for_opsiq": "Textbook inventory_forecasting_mismatch overlaid on a fast-growth-then-breakdown trajectory and a high-revenue-but-cash-burn condition. Tests whether OpsIQ separates a demand-reversion + overproduction diagnosis from a pure demand_generation_failure or margin_erosion label, and whether it triggers adaptive re-evaluation of InterventionMode/Phase on KPI deterioration (revenue decline plus inventory write-down plus negative free cash flow).",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

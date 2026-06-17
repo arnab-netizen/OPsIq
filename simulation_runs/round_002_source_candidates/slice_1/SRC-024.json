@@ -1,0 +1,42 @@
+{
+  "source_id": "SRC-024",
+  "source_url": "https://dominos.gcs-web.com/news-releases/news-release-details/dominos-pizza-announces-2009-financial-results",
+  "source_title": "Domino's Pizza Announces 2009 Financial Results",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Domino's Pizza, Inc. (press release / Form 8-K exhibit)",
+  "publication_or_filing_date": "2010-03-02",
+  "accessed_date": "2026-06-17",
+  "company_context": "Domino's Pizza, Inc. is a global QSR pizza franchise. After years of reputation problems over product quality ('worst pizza ever' customer feedback), the company reformulated its core pizza recipe and launched a candid 'we heard you' relaunch campaign at the end of fiscal 2009, then reported strong domestic comparable-sales gains.",
+  "business_type": "QSR / pizza franchise (public company)",
+  "outcome_category": "11 - good action then improvement",
+  "candidate_diagnosis_bucket": "quality_trust_failure",
+  "evidence_summary": "Late in Q4 2009 the company successfully introduced a new core pizza product, building momentum for 2010. For Q4 2009 (ended January 3, 2010) domestic same-store sales grew 1.4% on increased traffic; net income rose $12.6 million (+114%) versus the prior year, aided by gains on debt repurchases, lower interest expense, improved sales/operating margins, and international growth; revenues rose 8.1% (partly the 53rd week); diluted EPS was 41 cents (up 22 cents / +116%). The reformulation drove a record 14.3% domestic same-store sales increase in the first quarter after launch (Q1 2010, reported separately).",
+  "source_backed_metrics": {
+    "q4_2009_domestic_same_store_sales_change_pct": "+1.4",
+    "q4_2009_net_income_increase_usd": "12.6 million",
+    "q4_2009_net_income_increase_pct": "+114",
+    "q4_2009_revenue_change_pct": "+8.1",
+    "q4_2009_diluted_eps_usd": "0.41",
+    "q1_2010_domestic_same_store_sales_change_pct": "+14.3",
+    "fiscal_2009_quarter_end": "2010-01-03",
+    "release_date": "2010-03-02"
+  },
+  "outcome_evidence": "Domino's reformulated its core product and launched a transparency campaign; the first full quarter after launch (Q1 2010) delivered a record 14.3% domestic same-store sales increase, confirming a successful quality-driven turnaround following a corrective good action.",
+  "source_limitations": "Domino's IR release and SEC EDGAR 8-K exhibit returned HTTP 403 to automated fetch; Q4 2009 figures are quoted verbatim from a domain-restricted search (dominos.gcs-web.com / sec.gov) snippet of the official 2009 results release. The 14.3% Q1 2010 figure is from the subsequent quarter's reporting, corroborated by multiple outlets.",
+  "directly_stated": [
+    "new core pizza product introduced late Q4 2009",
+    "Q4 2009 domestic same-store sales +1.4%",
+    "Q4 2009 net income up $12.6 million / +114%",
+    "Q4 2009 revenue +8.1%; diluted EPS 41 cents",
+    "Q1 2010 domestic same-store sales +14.3% (subsequent release)"
+  ],
+  "inferred": [
+    "prior quality/trust deficit was the constraint that the reformulation relieved",
+    "radical transparency reduced trust friction and accelerated demand recovery"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "Documented good action (product reformulation + honesty) addressing a quality/trust problem, with quantified sales improvement. Tests OpsIQ's ability to recognize a correct corrective intervention and to credit it in recommendation/action priority re-evaluation (outcome 11/turnaround).",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

@@ -1,0 +1,39 @@
+{
+  "source_id": "SRC-001",
+  "source_url": "https://www.cnbc.com/2017/09/18/toys-r-us-files-for-chapter-11-bankruptcy.html",
+  "source_title": "Toys R Us files for Chapter 11 bankruptcy protection",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CNBC",
+  "publication_or_filing_date": "2017-09-18",
+  "accessed_date": "2026-06-17",
+  "company_context": "Toys 'R' Us, a large US specialty toy and baby-products retailer headquartered in Wayne, New Jersey, was taken private in a 2005 leveraged buyout by Kohlberg Kravis Roberts (KKR), Bain Capital Partners, and Vornado Realty Trust for $6.6 billion. The LBO loaded the company with debt that it never paid down. It filed for Chapter 11 in September 2017 and ultimately liquidated its US operations in 2018.",
+  "business_type": "Brick-and-mortar specialty retail (toys and baby products), asset-heavy with large store footprint and real estate",
+  "outcome_category": "2 - bankruptcy/restructuring",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "Toys 'R' Us filed for Chapter 11 bankruptcy protection in September 2017 burdened with roughly $5 billion of debt left over from its 2005 $6.6 billion leveraged buyout. The company carried about $400 million of debt interest payments due in 2018 and $1.7 billion due in 2019. Heavy fixed debt-service obligations consumed cash that competitors invested in e-commerce and store experience, and the capital structure left no cushion to fund a turnaround. The company obtained a commitment for over $3 billion in debtor-in-possession financing to continue operating through the holiday season. By March 2018 it filed a plan to liquidate its US business.",
+  "source_backed_metrics": {
+    "debt_at_filing_usd": "approximately $4.9 billion (reported as ~$5 billion total)",
+    "lbo_acquisition_price_2005_usd": "$6.6 billion",
+    "debt_interest_due_2018_usd": "$400 million",
+    "debt_due_2019_usd": "$1.7 billion",
+    "dip_financing_committed_usd": "over $3 billion"
+  },
+  "outcome_evidence": "Filed Chapter 11 in September 2017; obtained over $3 billion DIP financing to operate through the holidays; filed a plan to liquidate its US business in March 2018 (closing or selling all US stores).",
+  "source_limitations": "Secondary reporting (named business journalism), not the underlying court docket or SEC filing, which returned access-blocked when fetched directly. Debt figure stated as approximately $4.9 billion / ~$5 billion; exact penny figure not given in the snippet.",
+  "directly_stated": [
+    "Filed for Chapter 11 bankruptcy protection in September 2017",
+    "Approximately $4.9 billion / ~$5 billion of debt at filing",
+    "Debt originated from 2005 $6.6 billion LBO by KKR, Bain Capital, and Vornado",
+    "$400 million interest due 2018; $1.7 billion debt due 2019",
+    "Commitment for over $3 billion in DIP financing"
+  ],
+  "inferred": [
+    "Fixed debt-service obligations diverted cash away from store and e-commerce investment",
+    "The LBO capital structure removed the financial cushion needed to fund a competitive turnaround"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "A canonical case where a fundamentally operating retail business was pushed into insolvency primarily by an LBO-driven debt capital structure rather than by a single quarter of bad operations. Useful for testing whether OpsIQ correctly diagnoses debt_solvency_pressure / strategic_capex_risk versus mislabeling it as a pure demand or margin problem, and for modeling adaptive re-evaluation triggered by a debt-service shock.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

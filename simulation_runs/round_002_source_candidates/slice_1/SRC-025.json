@@ -1,0 +1,40 @@
+{
+  "source_id": "SRC-025",
+  "source_url": "https://appleinsider.com/articles/18/08/06/august-6-1997----the-day-apple-and-microsoft-made-peace",
+  "source_title": "August 6, 1997 — The day Apple and Microsoft made peace",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "AppleInsider (corroborated by contemporaneous reporting)",
+  "publication_or_filing_date": "1997-08-06",
+  "accessed_date": "2026-06-17",
+  "company_context": "By 1997 Apple Computer was near insolvency, losing roughly $1 billion annually with reportedly less than 90 days of cash, single-digit PC market share, and large accumulated losses. Gil Amelio had acquired NeXT (~$430 million) bringing Steve Jobs back; Jobs became interim CEO. At Macworld Boston on 6 August 1997, Apple announced Microsoft would invest $150 million, ship Office for Mac for five years, and settle patent disputes.",
+  "business_type": "Technology hardware (public company)",
+  "outcome_category": "4 - successful turnaround",
+  "candidate_diagnosis_bucket": "cash_liquidity_crisis",
+  "evidence_summary": "Apple faced a liquidity crisis in 1997 with reported losses around $1 billion annually and less than 90 days of cash. The NeXT acquisition (~$430 million) returned Jobs, who became interim CEO. On 6 August 1997 Microsoft committed a $150 million investment in Apple, a five-year Office-for-Mac commitment, and a patent-dispute settlement. This stabilized Apple's finances and reputation, after which Jobs cut product lines and launched the iMac (1998), beginning one of the most documented corporate turnarounds in history.",
+  "source_backed_metrics": {
+    "annual_losses_usd_approx": "1 billion",
+    "cash_runway_days_approx": "less than 90",
+    "microsoft_investment_usd": "150 million",
+    "office_for_mac_commitment_years": "5",
+    "next_acquisition_usd_approx": "430 million",
+    "deal_announcement_date": "1997-08-06"
+  },
+  "outcome_evidence": "The $150 million Microsoft investment and patent/Office settlement announced 6 August 1997 helped stabilize Apple's finances; under Jobs the company restructured its product line and returned to profitability, executing a landmark turnaround (outcome 4). The acute distress phase qualifies as cash_liquidity_crisis (outcome 3) preceding the turnaround.",
+  "source_limitations": "Figures (annual losses ~$1B, <90 days cash) are widely reported and corroborated across multiple outlets but are historical estimates rather than a fetched primary 10-K line item; the $150M investment and 1997-08-06 date are well documented. Treated as B (named journalism corroborated) not A.",
+  "directly_stated": [
+    "$150 million Microsoft investment announced 6 August 1997",
+    "five-year Office for Mac commitment and patent settlement",
+    "Apple losing roughly $1 billion annually",
+    "less than 90 days of cash reported",
+    "NeXT acquired for roughly $430 million, Jobs returned as interim CEO"
+  ],
+  "inferred": [
+    "core liquidity crisis was the binding constraint, not product demand alone",
+    "leadership change plus capital injection enabled product-line focus that drove recovery"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "Classic acute cash/liquidity crisis resolved by capital injection plus disciplined refocusing, leading to a durable turnaround. Tests OpsIQ's handling of cash_liquidity_crisis severity, the role of a key-person leadership change, and re-evaluation after a strategic capital/scope decision.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

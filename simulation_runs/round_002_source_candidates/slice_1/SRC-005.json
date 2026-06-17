@@ -1,0 +1,37 @@
+{
+  "source_id": "SRC-005",
+  "source_url": "https://www.npr.org/2022/06/16/1105490036/revlon-bankruptcy",
+  "source_title": "Revlon files for bankruptcy amid competition and supply chain stress",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "NPR",
+  "publication_or_filing_date": "2022-06-16",
+  "accessed_date": "2026-06-17",
+  "company_context": "Revlon Inc., the legacy US cosmetics and personal-care manufacturer (SEC EDGAR CIK 0000887921), filed voluntary Chapter 11 petitions on June 16, 2022 in the US Bankruptcy Court for the Southern District of New York, weighed down by a large legacy debt load and acute liquidity strain from supply-chain disruption and inflation.",
+  "business_type": "Consumer packaged goods / cosmetics manufacturing (inventory- and working-capital-intensive, global supply chain)",
+  "outcome_category": "2 - bankruptcy/restructuring",
+  "candidate_diagnosis_bucket": "working_capital_stress",
+  "evidence_summary": "Revlon and certain subsidiaries filed Chapter 11 on June 16, 2022 carrying roughly $3.6-3.7 billion of debt. The proximate driver was liquidity stress: supply-chain disruption and rising inflation raised input costs and strained the company's ability to meet lender obligations on its legacy capital structure. Upon court approval the company expected to receive $575 million in debtor-in-possession financing from its existing lender base, which, together with its existing working-capital facility, was intended to fund day-to-day operations during reorganization.",
+  "source_backed_metrics": {
+    "debt_at_filing_usd": "approximately $3.6-3.7 billion",
+    "dip_financing_usd": "$575 million",
+    "filing_date": "2022-06-16",
+    "filing_court": "US Bankruptcy Court, Southern District of New York"
+  },
+  "outcome_evidence": "Filed Chapter 11 on June 16, 2022 with a $575 million DIP financing commitment to support operations during reorganization of its legacy capital structure amid supply-chain and inflation-driven liquidity constraints.",
+  "source_limitations": "Named journalism summary; the underlying SEC 8-K and court petition were not fetched directly (SEC htm access-blocked). Debt stated as a range ($3.6-3.7 billion) across sources.",
+  "directly_stated": [
+    "Filed Chapter 11 on June 16, 2022 in SDNY",
+    "Approximately $3.6-3.7 billion of debt",
+    "$575 million DIP financing from existing lender base",
+    "Cited supply-chain disruption and inflation as drivers of liquidity constraints"
+  ],
+  "inferred": [
+    "Rising input costs compressed working-capital headroom faster than the legacy debt could be serviced",
+    "The capital structure left no liquidity cushion to absorb cost shocks"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "A manufacturing/CPG case where debt and working-capital stress combine: a legacy debt load plus a supply-chain/inflation cost shock tips a viable brand into Chapter 11. Useful for testing whether OpsIQ distinguishes working_capital_stress from pure debt_solvency_pressure, and for modeling adaptive re-evaluation when a cost/supply shock erodes liquidity.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}
