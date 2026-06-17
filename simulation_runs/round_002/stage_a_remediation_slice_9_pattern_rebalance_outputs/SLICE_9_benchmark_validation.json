@@ -1,22 +1,22 @@
 {
   "slice": "SLICE_9",
-  "timestamp": "2026-06-17T02:45:31.802Z",
+  "timestamp": "2026-06-17T08:02:59.639Z",
   "cases_run": 21,
-  "correct": 8,
+  "correct": 6,
   "total": 21,
-  "accuracy_percent": 38.1,
+  "accuracy_percent": 28.6,
   "slice_8_baseline": 38.1,
-  "improvement_pp": 0,
+  "improvement_pp": -9.5,
   "promotion_gate_pass": false,
-  "regressions": 0,
+  "regressions": 2,
   "improvements": 0,
   "results": [
     {
       "caseId": "BLND-006",
       "expected": "DEMAND_FORECASTING_MISMATCH",
       "slice8Predicted": "CUSTOMER_RETENTION_EROSION",
-      "slice9Predicted": "TRUST_QUALITY_CRISIS",
-      "slice9Confidence": 34,
+      "slice9Predicted": "GO_TO_MARKET_MISALIGNMENT",
+      "slice9Confidence": 28,
       "correct": false,
       "changed": true,
       "regression": false,
@@ -27,13 +27,13 @@
       "caseId": "BLND-007",
       "expected": "GO_TO_MARKET_MISALIGNMENT",
       "slice8Predicted": "GO_TO_MARKET_MISALIGNMENT",
-      "slice9Predicted": "GO_TO_MARKET_MISALIGNMENT",
-      "slice9Confidence": 38,
-      "correct": true,
-      "changed": false,
-      "regression": false,
+      "slice9Predicted": "DEMAND_FORECASTING_MISMATCH",
+      "slice9Confidence": 39.2,
+      "correct": false,
+      "changed": true,
+      "regression": true,
       "improvement": false,
-      "reason": "unchanged"
+      "reason": "regression"
     },
     {
       "caseId": "BLND-008",
@@ -63,13 +63,13 @@
       "caseId": "BLND-010",
       "expected": "STRATEGIC_PRICING_ERROR",
       "slice8Predicted": "GO_TO_MARKET_MISALIGNMENT",
-      "slice9Predicted": "GO_TO_MARKET_MISALIGNMENT",
-      "slice9Confidence": 33,
+      "slice9Predicted": "TRUST_QUALITY_CRISIS",
+      "slice9Confidence": 34,
       "correct": false,
-      "changed": false,
+      "changed": true,
       "regression": false,
       "improvement": false,
-      "reason": "unchanged"
+      "reason": "changed but still incorrect"
     },
     {
       "caseId": "ADV-011",
@@ -87,13 +87,13 @@
       "caseId": "ADV-012",
       "expected": "TRUST_QUALITY_CRISIS",
       "slice8Predicted": "CUSTOMER_RETENTION_EROSION",
-      "slice9Predicted": "CUSTOMER_RETENTION_EROSION",
+      "slice9Predicted": "GO_TO_MARKET_MISALIGNMENT",
       "slice9Confidence": 45,
       "correct": false,
-      "changed": false,
+      "changed": true,
       "regression": false,
       "improvement": false,
-      "reason": "unchanged"
+      "reason": "changed but still incorrect"
     },
     {
       "caseId": "ADV-013",
@@ -219,13 +219,13 @@
       "caseId": "PD-017",
       "expected": "DEMAND_FORECASTING_MISMATCH",
       "slice8Predicted": "DEMAND_FORECASTING_MISMATCH",
-      "slice9Predicted": "DEMAND_FORECASTING_MISMATCH",
+      "slice9Predicted": "OPERATIONAL_BOTTLENECK",
       "slice9Confidence": 50,
-      "correct": true,
-      "changed": false,
-      "regression": false,
+      "correct": false,
+      "changed": true,
+      "regression": true,
       "improvement": false,
-      "reason": "unchanged"
+      "reason": "regression"
     },
     {
       "caseId": "PD-019",
