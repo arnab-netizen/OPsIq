@@ -1,0 +1,233 @@
+[
+  {
+    "caseId": "BLND-006",
+    "expected": "demand_forecasting_mismatch",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "trust_quality_crisis",
+    "f1Confidence": 34,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "BLND-007",
+    "expected": "go_to_market_misalignment",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "go_to_market_misalignment",
+    "f1Confidence": 38,
+    "correct": true,
+    "newlyCorrect": true,
+    "regression": false,
+    "reason": "Correct"
+  },
+  {
+    "caseId": "BLND-008",
+    "expected": "insufficient_evidence",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "go_to_market_misalignment",
+    "f1Confidence": 33,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "BLND-009",
+    "expected": "operational_bottleneck",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "trust_quality_crisis",
+    "f1Confidence": 29,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "BLND-010",
+    "expected": "strategic_pricing_error",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "go_to_market_misalignment",
+    "f1Confidence": 33,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "ADV-011",
+    "expected": "insufficient_evidence",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "unit_economics_breakdown",
+    "f1Confidence": 50,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "ADV-012",
+    "expected": "trust_quality_crisis",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "customer_retention_erosion",
+    "f1Confidence": 45,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "ADV-013",
+    "expected": "insufficient_evidence",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "unit_economics_breakdown",
+    "f1Confidence": 26,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "ADV-014",
+    "expected": "insufficient_evidence",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "operational_bottleneck",
+    "f1Confidence": 45,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "RW-016",
+    "expected": "go_to_market_misalignment",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "unit_economics_breakdown",
+    "f1Confidence": 50,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "RW-018",
+    "expected": "unit_economics_breakdown",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "unit_economics_breakdown",
+    "f1Confidence": 50,
+    "correct": true,
+    "newlyCorrect": true,
+    "regression": false,
+    "reason": "Correct"
+  },
+  {
+    "caseId": "RW-020",
+    "expected": "unit_economics_breakdown",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "unit_economics_breakdown",
+    "f1Confidence": 50,
+    "correct": true,
+    "newlyCorrect": true,
+    "regression": false,
+    "reason": "Correct"
+  },
+  {
+    "caseId": "RW-022",
+    "expected": "unit_economics_breakdown",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "demand_forecasting_mismatch",
+    "f1Confidence": 50,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "RW-024",
+    "expected": "operational_bottleneck",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "brand_erosion",
+    "f1Confidence": 10,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "PD-011",
+    "expected": "unit_economics_breakdown",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "unit_economics_breakdown",
+    "f1Confidence": 50,
+    "correct": true,
+    "newlyCorrect": true,
+    "regression": false,
+    "reason": "Correct"
+  },
+  {
+    "caseId": "PD-013",
+    "expected": "operational_bottleneck",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "operational_bottleneck",
+    "f1Confidence": 50,
+    "correct": true,
+    "newlyCorrect": true,
+    "regression": false,
+    "reason": "Correct"
+  },
+  {
+    "caseId": "PD-015",
+    "expected": "unit_economics_breakdown",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "unit_economics_breakdown",
+    "f1Confidence": 50,
+    "correct": true,
+    "newlyCorrect": true,
+    "regression": false,
+    "reason": "Correct"
+  },
+  {
+    "caseId": "PD-017",
+    "expected": "demand_forecasting_mismatch",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "demand_forecasting_mismatch",
+    "f1Confidence": 50,
+    "correct": true,
+    "newlyCorrect": true,
+    "regression": false,
+    "reason": "Correct"
+  },
+  {
+    "caseId": "PD-019",
+    "expected": "unit_economics_breakdown",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "demand_forecasting_mismatch",
+    "f1Confidence": 50,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  },
+  {
+    "caseId": "SYN-011",
+    "expected": "trust_quality_crisis",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "trust_quality_crisis",
+    "f1Confidence": 65,
+    "correct": true,
+    "newlyCorrect": true,
+    "regression": false,
+    "reason": "Correct"
+  },
+  {
+    "caseId": "SYN-013",
+    "expected": "customer_retention_erosion",
+    "slice9Predicted": "UNKNOWN",
+    "f1Predicted": "go_to_market_misalignment",
+    "f1Confidence": 33,
+    "correct": false,
+    "newlyCorrect": false,
+    "regression": false,
+    "reason": "Still failing"
+  }
+]
