@@ -1,0 +1,38 @@
+{
+  "caseId": "HSW-C2",
+  "caseType": "ADVERSARIAL_HIGH_SUPPORT_WRONG",
+  "businessProblem": "A profitable salon has no follow-up or loyalty mechanism and customers simply don't rebook.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Low repeat purchase; no follow-up after visit",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "One-time customers dominate; churn high",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "No loyalty program in place",
+      "confidence": "MEDIUM",
+      "isCritical": true
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Healthy positive margins",
+      "confidence": "HIGH",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  }
+}

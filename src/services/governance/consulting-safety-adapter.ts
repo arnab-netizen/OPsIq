@@ -10,6 +10,7 @@ import {
   type SafetyAssessment,
   type EvidenceSupportSignal,
 } from "./abstention-engine";
+import { runCausalChallenge, type CausalEvidence } from "./causal-challenge";
 import type { AbstentionDecision } from "@/domain/governance/abstention-contracts";
 
 /**
@@ -66,6 +67,11 @@ export interface SafetyGateInputs {
 export interface SafetyDerivationOptions {
   /** Total evidence items available to the engine for this case, if known. */
   totalEvidenceCount?: number;
+  /**
+   * The case evidence (dimension/finding/supportingData/isCritical) for the
+   * RC-7 causal-challenge verifier. When omitted, the causal challenge is inert.
+   */
+  evidence?: CausalEvidence[];
 }
 
 export interface ConsultingSafetyResult {
@@ -73,6 +79,13 @@ export interface ConsultingSafetyResult {
   assessment: SafetyAssessment;
   escalation_required: boolean;
   decision: AbstentionDecision | null;
+  causal_challenge: {
+    committed: boolean;
+    challenged: boolean;
+    outOfModelCauseInProblem: boolean;
+    adverseOffArchetypeEvidence: boolean;
+    reasons: string[];
+  };
 }
 
 /**
@@ -129,6 +142,16 @@ export function assessConsultingOutput(
   opts: SafetyDerivationOptions = {}
 ): ConsultingSafetyResult {
   const inputs = deriveSafetyGateInputs(output, opts);
+
+  // RC-7 Option A: causal challenge (inert unless evidence is supplied).
+  const committed = output.status !== "INSUFFICIENT_EVIDENCE";
+  const causal = runCausalChallenge({
+    committed,
+    businessProblem: output.decisionMemo.businessProblem ?? "",
+    diagnosisType: output.decisionMemo.rootCauseDiagnosis.type,
+    evidence: opts.evidence ?? [],
+  });
+
   const assessment = assessSafety(
     inputs.confidence_score,
     inputs.has_evidence,
@@ -138,7 +161,13 @@ export function assessConsultingOutput(
     inputs.irreversibility_score,
     inputs.operator_capacity_available,
     inputs.active_conflicts,
-    inputs.evidence_support
+    inputs.evidence_support,
+    {
+      committed: causal.committed,
+      challenged: causal.challenged,
+      reasons: causal.reasons,
+      abstention_hint: causal.abstention_hint,
+    }
   );
 
   const escalation_required = requiresEscalation(assessment);
@@ -158,7 +187,19 @@ export function assessConsultingOutput(
     );
   }
 
-  return { inputs, assessment, escalation_required, decision };
+  return {
+    inputs,
+    assessment,
+    escalation_required,
+    decision,
+    causal_challenge: {
+      committed: causal.committed,
+      challenged: causal.challenged,
+      outOfModelCauseInProblem: causal.outOfModelCauseInProblem,
+      adverseOffArchetypeEvidence: causal.adverseOffArchetypeEvidence,
+      reasons: causal.reasons,
+    },
+  };
 }
 
 /** Convenience: did the engine produce a committed, non-unknown diagnosis? */

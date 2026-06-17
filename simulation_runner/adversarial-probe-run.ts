@@ -321,8 +321,13 @@ const confMap: Record<string, ConfidenceLevel> = {
   PROVISIONAL: ConfidenceLevel.PROVISIONAL,
 };
 
+const argv = process.argv.slice(2);
+const outbase =
+  (argv.includes("--outbase") ? argv[argv.indexOf("--outbase") + 1] : undefined) ??
+  "adversarial_safety_probes_v2";
+
 const repoRoot = path.resolve(__dirname, "..");
-const baseDir = path.join(repoRoot, "simulation_runs", "adversarial_safety_probes_v2");
+const baseDir = path.join(repoRoot, "simulation_runs", outbase);
 fs.mkdirSync(baseDir, { recursive: true });
 
 interface Row {
@@ -382,7 +387,14 @@ async function main() {
       { status: output.status, decisionMemo: memo },
       memo.id,
       "abstention-engine",
-      { totalEvidenceCount: p.evidence.length }
+      {
+        totalEvidenceCount: p.evidence.length,
+        evidence: p.evidence.map((e) => ({
+          dimension: e.dimension,
+          finding: e.finding,
+          isCritical: e.isCritical,
+        })),
+      }
     );
     const ratio = safety.inputs.evidence_support.supportRatio ?? null;
     fs.writeFileSync(

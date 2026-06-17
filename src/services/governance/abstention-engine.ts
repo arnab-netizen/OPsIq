@@ -37,6 +37,17 @@ export interface EvidenceSupportSignal {
 }
 
 /**
+ * Causal-challenge signal (RC-7 Option A). Produced by the causal-challenge
+ * verifier; consumed by the optional causal rule below.
+ */
+export interface CausalChallengeGateSignal {
+  committed: boolean;
+  challenged: boolean;
+  reasons: string[];
+  abstention_hint: "OUTSIDE_VALID_SCOPE" | "CONFLICTING_SIGNALS" | null;
+}
+
+/**
  * Evidence-support sufficiency threshold (Option B, RC-3 fix).
  * A committed diagnosis is expected to rest on at least a majority of the
  * available evidence; below this, with unresolved gaps, the gate abstains.
@@ -57,7 +68,8 @@ export function assessSafety(
   irreversibility_score: number,
   operator_capacity_available: boolean,
   active_conflicts: number,
-  evidence_support?: EvidenceSupportSignal
+  evidence_support?: EvidenceSupportSignal,
+  causal_challenge?: CausalChallengeGateSignal
 ): SafetyAssessment {
   const unsafe_conditions: UnsafeCondition[] = [];
   let abstain = false;
@@ -197,6 +209,23 @@ export function assessSafety(
     abstain = true;
     abstention_state = "INSUFFICIENT_EVIDENCE";
     confidence_adjustment -= 25;
+  }
+
+  // Causal challenge (RC-7 Option A): a COMMITTED diagnosis that is causally
+  // challenged — the stated problem cites an out-of-model cause, or strong
+  // adverse off-archetype evidence contradicts it — must not proceed. Only ever
+  // adds an abstention; never converts an abstain into a proceed.
+  if (causal_challenge?.committed && causal_challenge.challenged) {
+    const adverse = causal_challenge.abstention_hint === "CONFLICTING_SIGNALS";
+    unsafe_conditions.push({
+      condition_type: adverse ? "CONTRADICTORY_EVIDENCE" : "SCOPE_MISMATCH",
+      severity: "HIGH",
+      description: `Causal challenge failed: ${causal_challenge.reasons.join("; ")}`,
+      blocking: true,
+    });
+    abstain = true;
+    abstention_state = causal_challenge.abstention_hint ?? "OUTSIDE_VALID_SCOPE";
+    confidence_adjustment -= 30;
   }
 
   return {

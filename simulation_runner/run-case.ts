@@ -332,7 +332,15 @@ async function main() {
     { status: output.status, decisionMemo: memo },
     memo.id,
     "abstention-engine",
-    { totalEvidenceCount: caseInput.evidence.length }
+    {
+      totalEvidenceCount: caseInput.evidence.length,
+      evidence: caseInput.evidence.map((e) => ({
+        dimension: e.dimension,
+        finding: e.finding,
+        isCritical: e.isCritical,
+        supportingData: e.supportingData,
+      })),
+    }
   );
   write("12_abstention_decision.json", {
     step: "abstention_safety_gate",

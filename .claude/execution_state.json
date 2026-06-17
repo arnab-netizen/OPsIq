@@ -418,5 +418,41 @@
       "B4 legacy reproducibility",
       "B5 absent decision docs"
     ]
+  },
+  "stage_a_rc7_option_a": {
+    "slice": "RC-7 Option A: deterministic causal-challenge verifier",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "files": [
+      "src/services/governance/causal-challenge.ts",
+      "src/services/governance/abstention-engine.ts",
+      "src/services/governance/consulting-safety-adapter.ts",
+      "simulation_runner/{run-case,apply-abstention,adversarial-probe-run}.ts",
+      "src/__tests__/governance/causal-challenge.test.ts",
+      "src/__tests__/governance/consulting-safety-adapter.test.ts",
+      "simulation_runs/adversarial_safety_probes_v2_option_a/*",
+      "simulation_runs/round_001/case_*/15_abstention_decision_option_a.json",
+      "RC7_OPTION_A_VALIDATION_REPORT.md"
+    ],
+    "rule": "committed && (out-of-model cause in businessProblem OR adverse off-archetype evidence) -> abstain (CONFLICTING_SIGNALS/OUTSIDE_VALID_SCOPE)",
+    "signals": "businessProblem, evidence dimension/finding/supportingData/isCritical, diagnosis type/evidenceIds (no answer/probe keys/monitor flags)",
+    "probes_caught": "9/10 (only HSW-03 constraint proceeds -> Option C)",
+    "controls_preserved": "2/2 (HSW-C1, HSW-C2)",
+    "round1": "50 evaluated, 1 proceed (RW-002), 49 abstain; 47 baseline preserved",
+    "rw001": "ABSTAIN (CONFLICTING_SIGNALS)",
+    "rw005": "ABSTAIN (OUTSIDE_VALID_SCOPE)",
+    "rw002": "PROCEED (not forced)",
+    "tests": "69 pass",
+    "gates_run": "vitest 69 PASS, tsc clean (changed files), prisma valid, probe run, round1 apply-abstention",
+    "old_outputs_preserved": "12_*/14_* intact; new 15_* + adversarial_safety_probes_v2_option_a/",
+    "remaining": [
+      "Option C (HSW-03 owner-constraint)",
+      "Option D defense-in-depth",
+      "composite E",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs"
+    ],
+    "report": "RC7_OPTION_A_VALIDATION_REPORT.md"
   }
 }

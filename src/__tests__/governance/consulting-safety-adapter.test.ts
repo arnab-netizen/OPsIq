@@ -24,12 +24,14 @@ function makeOutput(opts: {
   type?: DiagnosisType;
   evidenceIds?: string[];
   missingEvidenceFor?: string[];
+  businessProblem?: string;
 }): EngineOut {
   return {
     status: opts.status,
     // Only the fields the adapter reads are required; cast keeps the fixture small.
     decisionMemo: {
       id: "11111111-1111-1111-1111-111111111111",
+      businessProblem: opts.businessProblem ?? "generic problem",
       diagnosisConfidence: opts.confidence,
       rootCauseDiagnosis: {
         type: opts.type ?? DiagnosisType.UNKNOWN,
@@ -158,6 +160,47 @@ describe("consulting-safety-adapter (abstention wiring)", () => {
       const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
         totalEvidenceCount: 6,
       });
+      expect(r.assessment.abstain).toBe(false);
+    });
+
+    it("RC-7 wiring: abstains (CONFLICTING_SIGNALS) on committed dx with adverse off-archetype evidence; HIGH support cannot rescue it", () => {
+      const out = makeOutput({
+        status: "SUCCESS",
+        confidence: DiagnosisConfidence.HIGH,
+        type: DiagnosisType.CUSTOMER_RETENTION_EROSION,
+        evidenceIds: ["a", "b", "c"], // high support 3/4
+        missingEvidenceFor: [],
+        businessProblem: "Customers are churning.",
+      });
+      const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
+        totalEvidenceCount: 4,
+        evidence: [
+          { dimension: "customer_retention", finding: "churn high", isCritical: true },
+          { dimension: "financial_health", finding: "contribution margin negative", supportingData: { m: -12 } },
+        ],
+      });
+      expect(r.causal_challenge.adverseOffArchetypeEvidence).toBe(true);
+      expect(r.assessment.abstain).toBe(true);
+      expect(r.assessment.abstention_state).toBe("CONFLICTING_SIGNALS");
+    });
+
+    it("RC-7 wiring: control preserved — committed dx, high support, benign off-archetype evidence proceeds", () => {
+      const out = makeOutput({
+        status: "SUCCESS",
+        confidence: DiagnosisConfidence.HIGH,
+        type: DiagnosisType.CUSTOMER_RETENTION_EROSION,
+        evidenceIds: ["a", "b", "c"],
+        missingEvidenceFor: [],
+        businessProblem: "No loyalty mechanism; customers don't rebook.",
+      });
+      const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
+        totalEvidenceCount: 4,
+        evidence: [
+          { dimension: "customer_retention", finding: "low repeat purchase", isCritical: true },
+          { dimension: "financial_health", finding: "healthy positive margins" },
+        ],
+      });
+      expect(r.causal_challenge.challenged).toBe(false);
       expect(r.assessment.abstain).toBe(false);
     });
 

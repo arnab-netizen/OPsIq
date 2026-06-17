@@ -65,16 +65,27 @@ for (const dir of caseDirs) {
   // Total evidence available (production-available signal) from the case input.
   const inputPath = path.join(caseDir, "01_case_input.json");
   let totalEvidenceCount: number | undefined;
+  let causalEvidence:
+    | { dimension: string; finding: string; isCritical?: boolean; supportingData?: Record<string, string | number | boolean> }[]
+    | undefined;
   if (fs.existsSync(inputPath)) {
     const input = JSON.parse(fs.readFileSync(inputPath, "utf-8"));
-    totalEvidenceCount = Array.isArray(input.evidence) ? input.evidence.length : undefined;
+    if (Array.isArray(input.evidence)) {
+      totalEvidenceCount = input.evidence.length;
+      causalEvidence = input.evidence.map((e: Record<string, unknown>) => ({
+        dimension: e.dimension as string,
+        finding: e.finding as string,
+        isCritical: e.isCritical as boolean | undefined,
+        supportingData: e.supportingData as Record<string, string | number | boolean> | undefined,
+      }));
+    }
   }
 
   const safety = assessConsultingOutput(
     { status: frozen.status, decisionMemo: memo },
     memo.id,
     "abstention-engine",
-    { totalEvidenceCount }
+    { totalEvidenceCount, evidence: causalEvidence }
   );
 
   fs.writeFileSync(
@@ -96,6 +107,7 @@ for (const dir of caseDirs) {
         escalation_required: safety.escalation_required,
         fallback_action: safety.assessment.fallback_action ?? null,
         abstention_decision: safety.decision,
+        causal_challenge: safety.causal_challenge,
         gate_evaluated: true,
       },
       null,
