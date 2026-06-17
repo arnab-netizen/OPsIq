@@ -108,21 +108,21 @@
       "hypothesis": "unit_economics_breakdown",
       "supporting": [
         {
-          "evidenceId": "c754424c-483a-426e-962f-bc2b0c68775e",
+          "evidenceId": "41f331e7-24aa-4eb3-a03c-bf9b08dfb80b",
           "strength": 7,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "89cdbe24-8ca8-41f9-8f0f-5c47afa077f4",
+          "evidenceId": "070d163f-eff8-491d-8f1f-d1234a57f152",
           "strength": 7,
           "reasoning": "market_position evidence may contradict unit_economics_breakdown"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "443a593c-7c50-44d0-9cd5-0ea5a9b340e6",
+          "evidenceId": "d518cbd8-6a8c-4ff2-b04e-44d9db889287",
           "reasoning": "talent_retention evidence is neutral to unit_economics_breakdown"
         }
       ],
@@ -134,15 +134,15 @@
       "conflicting": [],
       "neutral": [
         {
-          "evidenceId": "443a593c-7c50-44d0-9cd5-0ea5a9b340e6",
+          "evidenceId": "d518cbd8-6a8c-4ff2-b04e-44d9db889287",
           "reasoning": "talent_retention evidence is neutral to brand_erosion"
         },
         {
-          "evidenceId": "c754424c-483a-426e-962f-bc2b0c68775e",
+          "evidenceId": "41f331e7-24aa-4eb3-a03c-bf9b08dfb80b",
           "reasoning": "financial_health evidence is neutral to brand_erosion"
         },
         {
-          "evidenceId": "89cdbe24-8ca8-41f9-8f0f-5c47afa077f4",
+          "evidenceId": "070d163f-eff8-491d-8f1f-d1234a57f152",
           "reasoning": "market_position evidence is neutral to brand_erosion"
         }
       ],
@@ -153,18 +153,18 @@
       "supporting": [],
       "conflicting": [
         {
-          "evidenceId": "89cdbe24-8ca8-41f9-8f0f-5c47afa077f4",
+          "evidenceId": "070d163f-eff8-491d-8f1f-d1234a57f152",
           "strength": 7,
           "reasoning": "market_position evidence may contradict strategic_pricing_error"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "443a593c-7c50-44d0-9cd5-0ea5a9b340e6",
+          "evidenceId": "d518cbd8-6a8c-4ff2-b04e-44d9db889287",
           "reasoning": "talent_retention evidence is neutral to strategic_pricing_error"
         },
         {
-          "evidenceId": "c754424c-483a-426e-962f-bc2b0c68775e",
+          "evidenceId": "41f331e7-24aa-4eb3-a03c-bf9b08dfb80b",
           "reasoning": "financial_health evidence is neutral to strategic_pricing_error"
         }
       ],
