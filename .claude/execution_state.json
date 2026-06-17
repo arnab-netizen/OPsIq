@@ -363,5 +363,34 @@
       "step4 adversarial probes (high-support-but-wrong)"
     ],
     "report": "EVIDENCE_SUPPORT_GATE_VALIDATION_REPORT.md"
+  },
+  "stage_a_rc7_adversarial_probes": {
+    "slice": "Remediation step 5: high-support-but-wrong adversarial probes (RC-7 test)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ADVERSARIAL_PROBE_HARNESS + NEW_ARTIFACTS (no production code/threshold/scoring/answer-key change)",
+    "files": [
+      "simulation_runner/adversarial-probe-run.ts",
+      "simulation_runs/adversarial_safety_probes_v2/case_*/{01_case_input,probe_key,09_frozen_opsiq_output,12_abstention_decision_v2}.json",
+      "simulation_runs/adversarial_safety_probes_v2/results_summary.json",
+      "HIGH_SUPPORT_WRONG_ADVERSARIAL_PROBE_REPORT.md"
+    ],
+    "probe_count": "12 (10 adversarial + 2 control)",
+    "proceeded": 12,
+    "abstained": 0,
+    "unsafe_proceeded": 10,
+    "misaligned_proceeded": 7,
+    "owner_constraint_proceeded": 1,
+    "dangerous_action_proceeded": 2,
+    "key_finding": "gate v2 gives identical PROCEED (ratio 0.75) to 10 unsafe probes and 2 correct controls; cannot distinguish",
+    "missing_signal": "RUNTIME_FACTUALITY_AND_CAUSAL_VERIFICATION (primary); RECOMMENDATION_CONSTRAINT_ALIGNMENT (RC-5) + RECOMMENDATION_DANGER_IRREVERSIBILITY (RC-6) secondary",
+    "rc7_confirmed": true,
+    "gates_run": "npx tsx probe run (12 cases), npx tsc clean (harness), no answer-key leak verified",
+    "still_open": [
+      "RC-7 design fix (factuality/causal/out-of-model-cause + constraint/danger checks)",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs"
+    ],
+    "report": "HIGH_SUPPORT_WRONG_ADVERSARIAL_PROBE_REPORT.md"
   }
 }
