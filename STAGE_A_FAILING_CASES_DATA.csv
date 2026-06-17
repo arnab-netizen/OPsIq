@@ -1,0 +1,14 @@
+Case ID,Ground Truth,Predicted,Confidence %,Total Evidence,Critical Items,Failure Pattern,Root Cause Summary
+BLND-006,DEMAND_FORECASTING_MISMATCH,CUSTOMER_RETENTION_EROSION,39,5,4,Root cause vs symptom confusion,A demand-forecasting mismatch: the company planned and spent against an assumpti
+BLND-008,INSUFFICIENT_EVIDENCE,GO_TO_MARKET_MISALIGNMENT,33,5,4,Overconfidence on incomplete data,"Absence of decision-grade evidence: the offer structure, the risk-adjusted stand"
+BLND-009,OPERATIONAL_BOTTLENECK,TRUST_QUALITY_CRISIS,29,5,4,Root cause vs symptom confusion,Value-creating capability and key customer relationships are concentrated in the
+BLND-010,STRATEGIC_PRICING_ERROR,GO_TO_MARKET_MISALIGNMENT,38,5,4,Pricing signal not weighted,Differentiated expertise is under-monetized: the firm has not converted its prov
+ADV-011,INSUFFICIENT_EVIDENCE,UNIT_ECONOMICS_BREAKDOWN,50,4,4,Overconfidence on incomplete data,"Not yet determinable. The utilization and profit decline are real, but whether t"
+ADV-012,TRUST_QUALITY_CRISIS,CUSTOMER_RETENTION_EROSION,45,4,4,Root cause vs symptom confusion,A trust/quality-driven retention failure masked by the growth headline: accounts
+ADV-013,INSUFFICIENT_EVIDENCE,UNIT_ECONOMICS_BREAKDOWN,26,4,4,Overconfidence on incomplete data,"Not yet determinable. The rising cohort payback is real, but whether it is struc"
+ADV-014,INSUFFICIENT_EVIDENCE,OPERATIONAL_BOTTLENECK,45,4,4,Overconfidence on incomplete data,Not yet determinable. Flat-revenue/halving-margin is the signature of an interna
+RW-016,GO_TO_MARKET_MISALIGNMENT,DEMAND_FORECASTING_MISMATCH,50,6,5,Root cause vs symptom confusion,The premium curation/in-store value proposition is no longer reaching customers 
+RW-022,UNIT_ECONOMICS_BREAKDOWN,OPERATIONAL_BOTTLENECK,50,3,3,Unit economics→Operational misattribution,Cost per recruiter (salary +18%) is rising while value delivered per recruiter (
+RW-024,OPERATIONAL_BOTTLENECK,BRAND_EROSION,10,3,3,Root cause vs symptom confusion,"Junior consultant turnover doubling (10% -> 18%, ~6-7 of 35 consultants leaving "
+PD-019,UNIT_ECONOMICS_BREAKDOWN,DEMAND_FORECASTING_MISMATCH,50,4,4,Root cause vs symptom confusion,
+SYN-013,CUSTOMER_RETENTION_EROSION,GO_TO_MARKET_MISALIGNMENT,33,5,3,Root cause vs symptom confusion,Post-sale value realization is failing: slow onboarding and single-module stagna

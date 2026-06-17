@@ -1,0 +1,184 @@
+================================================================================
+STAGE A FAILING CASES COMPREHENSIVE ANALYSIS - EXECUTIVE SUMMARY
+================================================================================
+
+Analysis Date: 2026-06-17
+Cases Analyzed: 13 (all failing from SLICE_8 validation)
+Accuracy: 0/13 (100% failure rate)
+
+CASE-BY-CASE RESULTS:
+================================================================================
+
+BLND-006:
+  Ground Truth: DEMAND_FORECASTING_MISMATCH
+  Predicted:    CUSTOMER_RETENTION_EROSION (39% confidence)
+  Issue:        Churn (4%→5%) is symptom, not root. Market rate reversion misdiagnosed 
+                as retention problem.
+
+BLND-008:
+  Ground Truth: INSUFFICIENT_EVIDENCE
+  Predicted:    GO_TO_MARKET_MISALIGNMENT (33% confidence)
+  Issue:        System made definitive diagnosis despite missing offer structure, 
+                standalone valuation, and Option C financing data.
+
+BLND-009:
+  Ground Truth: OPERATIONAL_BOTTLENECK
+  Predicted:    TRUST_QUALITY_CRISIS (29% confidence)
+  Issue:        Key-person/succession risk is operational bottleneck, not quality crisis. 
+                Founder unwilling to provide post-sale commitment.
+
+BLND-010:
+  Ground Truth: STRATEGIC_PRICING_ERROR
+  Predicted:    GO_TO_MARKET_MISALIGNMENT (38% confidence)
+  Issue:        Evidence explicitly cites "pricing/yield problem" but not recognized as 
+                root. Under-monetized expertise misattributed to GTM misalignment.
+
+ADV-011:
+  Ground Truth: INSUFFICIENT_EVIDENCE
+  Predicted:    UNIT_ECONOMICS_BREAKDOWN (50% confidence)
+  Issue:        Profit/utilization decline real, but cannot distinguish whether from 
+                demand, competition, or capability gap without diagnostic. Overconfident.
+
+ADV-012:
+  Ground Truth: TRUST_QUALITY_CRISIS
+  Predicted:    CUSTOMER_RETENTION_EROSION (45% confidence)
+  Issue:        Churn doubled (2%→4%), NRR sub-100%: quality/activation failure masked by 
+                growth headline. Misattributed to generic retention erosion.
+
+ADV-013:
+  Ground Truth: INSUFFICIENT_EVIDENCE
+  Predicted:    UNIT_ECONOMICS_BREAKDOWN (26% confidence)
+  Issue:        Rising cohort payback observed, but cannot determine if structural 
+                (outbound CAC), transient (AE ramp), or offset (LTV increase). Missing 
+                cohort detail data.
+
+ADV-014:
+  Ground Truth: INSUFFICIENT_EVIDENCE
+  Predicted:    OPERATIONAL_BOTTLENECK (45% confidence)
+  Issue:        Margin halving (16%→8%) over flat revenue is symptom of mix shift, 
+                practice-level decay, or realization issues. Needs margin teardown.
+
+RW-016:
+  Ground Truth: GO_TO_MARKET_MISALIGNMENT
+  Predicted:    DEMAND_FORECASTING_MISMATCH (50% confidence)
+  Issue:        Physical store traffic down 12% YoY while e-commerce grows 18%: 
+                premium curation value not reaching customers in purchase decision. 
+                GTM issue, not demand forecast.
+
+RW-022:
+  Ground Truth: UNIT_ECONOMICS_BREAKDOWN
+  Predicted:    OPERATIONAL_BOTTLENECK (50% confidence)
+  Issue:        Revenue per recruiter fell (340k→300k) while costs per recruiter rose 
+                (salary +18%). Core unit economics inverted. Misattributed to 
+                utilization/operational issue.
+
+RW-024:
+  Ground Truth: OPERATIONAL_BOTTLENECK
+  Predicted:    BRAND_EROSION (10% confidence)
+  Issue:        Junior turnover doubled (10%→18%), draining delivery pipeline. Partners 
+                absorb training load → utilization falls below benchmark. Operational 
+                capability issue misattributed to brand.
+
+PD-019:
+  Ground Truth: UNIT_ECONOMICS_BREAKDOWN
+  Predicted:    DEMAND_FORECASTING_MISMATCH (50% confidence)
+  Issue:        EBITDA margin fell 300bps (11%→8%), cost per mile rose, revenue per 
+                mile fell. Unit economics breaking down. Soft market is symptom, not 
+                root.
+
+SYN-013:
+  Ground Truth: CUSTOMER_RETENTION_EROSION
+  Predicted:    GO_TO_MARKET_MISALIGNMENT (33% confidence)
+  Issue:        Quarterly churn doubled (2%→4%), NPS fell 38→27. Slow onboarding and 
+                single-module adoption = post-sale value failure. Misattributed to 
+                acquisition/GTM.
+
+================================================================================
+ROOT CAUSE FAILURE PATTERNS
+================================================================================
+
+Pattern 1: INSUFFICIENT_EVIDENCE Threshold Failure (5 cases)
+  Cases: BLND-008, ADV-011, ADV-013, ADV-014 + implicit in others
+  Problem: System makes definitive diagnosis when critical analyses missing
+  - Missing cohort curves → still diagnoses unit economics
+  - Missing churn-reason data → still diagnoses quality/retention
+  - Missing margin/cost breakdown → still diagnoses operational bottleneck
+  Confidence Range: 26-50% despite data gaps
+  
+Pattern 2: Root Cause vs. Symptom Confusion (8 cases)
+  Cases: BLND-006, BLND-009, BLND-010, ADV-012, RW-016, RW-022, RW-024, SYN-013
+  Problem: System identifies valid symptoms but misattributes root cause
+  
+  Subpattern 2a: Retention metrics → wrong root cause
+    - Churn up, NRR down, but attributed to demand/GTM instead of activation/quality
+    - Cases: BLND-006, ADV-012, SYN-013
+  
+  Subpattern 2b: Unit economics signals → operational classification
+    - Revenue per unit down, costs per unit up, but attributed to operational 
+      bottleneck instead of unit economics breakdown
+    - Cases: RW-022, PD-019
+  
+  Subpattern 2c: Operational constraint signals → different diagnosis
+    - Key-person bottleneck diagnosed as quality crisis (BLND-009)
+    - Junior turnover → pipeline drain diagnosed as brand erosion (RW-024)
+
+Pattern 3: Signal Weighting Errors (3 cases)
+  Cases: BLND-010, RW-022, PD-019
+  Problem: Explicit financial/pricing signals not elevated to root cause
+  - Pricing/yield explicitly cited → still predicted GTM misalignment
+  - Unit economics explicitly degrading → still predicted operational
+  - Margin compression explicit → still predicted demand forecasting
+
+Pattern 4: Overconfidence Given Evidence Gaps (4 cases)
+  Cases: ADV-011, ADV-013, BLND-008, ADV-014
+  Problem: Diagnoses returned with 26-50% confidence despite acknowledged 
+           missing data (cohort curves, segmentation, churn reasons, cost breakdown)
+
+================================================================================
+SEVERITY BREAKDOWN
+================================================================================
+
+High Impact (Wrong first action would accelerate problems):
+  - BLND-006 (wrong diagnosis → wrong strategic option, accelerates burn)
+  - ADV-012 (wrong diagnosis → more acquisition spend on leaking base)
+  - RW-022 (wrong diagnosis → ignores inverted unit economics)
+  - PD-019 (wrong diagnosis → ignores margin covenant risk)
+  Count: 4 cases
+
+Medium Impact (Wrong first action delays fix):
+  - BLND-008, BLND-009, BLND-010, ADV-011, ADV-013, ADV-014, RW-016, RW-024, SYN-013
+  Count: 9 cases
+
+================================================================================
+RECOMMENDED FIXES FOR NEXT ITERATION
+================================================================================
+
+1. Add INSUFFICIENT_EVIDENCE Gate
+   - If cohort curves absent → return INSUFFICIENT_EVIDENCE (not UEP breakdown)
+   - If churn-reason data absent → return INSUFFICIENT_EVIDENCE (not quality diagnosis)
+   - If cost breakdown absent → return INSUFFICIENT_EVIDENCE (not operational diagnosis)
+   - If segmentation/win-loss missing → INSUFFICIENT_EVIDENCE gating acquisition diagnosis
+
+2. Weight Financial Signals First
+   - Unit margin/profitability degradation → triggers UNIT_ECONOMICS_BREAKDOWN before 
+     operational or demand factors
+   - Cost per unit rising + revenue per unit falling → unit economics broken
+   - Margin compression + flat revenue → requires detailed cost/mix analysis
+
+3. Establish Diagnosis Hierarchy
+   INSUFFICIENT_EVIDENCE > all specific diagnoses (when critical data missing)
+   STRATEGIC_PRICING_ERROR > GO_TO_MARKET_MISALIGNMENT (when pricing explicit)
+   TRUST_QUALITY_CRISIS > CUSTOMER_RETENTION_EROSION (when activation/reliability 
+     signals present)
+   UNIT_ECONOMICS_BREAKDOWN > OPERATIONAL_BOTTLENECK (when per-unit profitability 
+     inverted)
+
+4. Calibrate Confidence Scoring
+   - Diagnosis with <30 missing evidence signals → cap confidence at 30%
+   - INSUFFICIENT_EVIDENCE → return confidence 30-50% if some data but gaps critical
+   - Don't report >40% confidence when foundational analyses missing
+
+================================================================================
+Files Generated:
+  /home/user/OPsIq/STAGE_A_FAILING_CASES_ANALYSIS.md (detailed markdown report)
+  
