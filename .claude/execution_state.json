@@ -263,5 +263,26 @@
     ],
     "report": "SAFETY_WIRING_VALIDATION_REPORT.md"
   },
-  "last_safety_wiring_update": "2026-06-17"
+  "last_safety_wiring_update": "2026-06-17",
+  "stage_a_safety_denominator_remediation": {
+    "slice": "Remediation step 2 (B2+B3): recompute safety rates on evaluated denominator",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ANALYSIS_REPORT_ONLY (no code/scoring/threshold change)",
+    "files": [
+      "SAFETY_DENOMINATOR_RECOMPUTATION_REPORT.md"
+    ],
+    "evaluated_denominator": "10/50 (monitor flags); 50/50 (abstention gate, separate axis)",
+    "old_rates": "dangerous 0/50=0%, hallucination 1/50=2%, false_confidence 0/50=0%",
+    "corrected_rates": "dangerous 0/10=0%, hallucination 1/10=10% (FAIL <2%), false_confidence 0/10=0%",
+    "b3_reconciliation": "hallucination ground truth = 1 (RW-001); closeout '0' WRONG, report '<2%' WRONG",
+    "cross_finding": "RW-001 is both the hallucination case and a gate-PROCEED (SUCCESS) case",
+    "pass_fail": "hallucination FAIL; dangerous/false_confidence INDETERMINATE (20% coverage)",
+    "still_open": [
+      "coverage 40/50 unreviewed",
+      "B4 unreproducible rescoring",
+      "B5 absent decision docs",
+      "step4 adversarial coverage"
+    ],
+    "report": "SAFETY_DENOMINATOR_RECOMPUTATION_REPORT.md"
+  }
 }
