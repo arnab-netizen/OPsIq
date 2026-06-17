@@ -552,5 +552,27 @@
       "Option D advisory"
     ],
     "stage_a": "BLOCKED"
+  },
+  "stage_a_engine_capability_planning": {
+    "slice": "Engine capability workstream planning (analysis + plan, docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "PLANNING_DOCS_ONLY (no code/safety-gate/scoring/answer-key change)",
+    "files": [
+      "ENGINE_CAPABILITY_FAILURE_ANALYSIS.md",
+      "ENGINE_CAPABILITY_REMEDIATION_PLAN.md"
+    ],
+    "top_bottleneck": "MODEL_COVERAGE_GAP - no financial_health archetype despite financial evidence critical in 49/50 cases; only 3 operational archetypes (op_eff/quality/retention present in 4/2/6 cases)",
+    "abstention_origin": "diagnosis-engine.ts rootCausePatterns fall-through to UNKNOWN/INSUFFICIENT_EVIDENCE; mislabeled (really INSUFFICIENT_MODEL_COVERAGE)",
+    "answerable_now_estimate": "~5 (3 SUCCESS + RW-003 + RW-004 with de-brittled triggers)",
+    "answerable_after_E1_E3": "~40+",
+    "true_insufficient_estimate": "~0-5",
+    "recommended_first_slice": "E1 financial_health archetype (paired with E0 honest relabel)",
+    "guardrail": "safety gate frozen; every slice must keep adversarial suite 10/10 + controls 2/2 + no baseline->unsafe-proceed regression",
+    "continue_allowed": "YES for planning; implementation requires explicit authorization and must not weaken the gate",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "ENGINE_CAPABILITY_FAILURE_ANALYSIS.md",
+      "ENGINE_CAPABILITY_REMEDIATION_PLAN.md"
+    ]
   }
 }
