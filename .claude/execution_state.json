@@ -758,5 +758,23 @@
       "ROUND_2_CASE_AUTHORING_README.md",
       "ROUND_2_CASE_PACK_MANIFEST.json"
     ]
+  },
+  "stage_a_merge_waypoint": {
+    "slice": "Merge-readiness waypoint for safety gate + Round 2 infrastructure (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "CHECKPOINT_DOC_ONLY (no production logic change, no merge performed)",
+    "files": [
+      "MERGE_WAYPOINT_STAGE_A_SAFETY_AND_ROUND2_INFRA.md"
+    ],
+    "branch": "claude/stage-a-unproven-assumption-ecr0dm",
+    "checkpoint_commit": "6c336f11 (pre-waypoint)",
+    "working_tree": "clean",
+    "gates": "vitest 431 pass (17 files), prisma valid, tsc only pre-existing run-case.ts:149 error (0 new-source errors), DB gates DB_BLOCKED_ENVIRONMENT",
+    "safe_to_merge": "additive safety-gate logic (abstain-only) + benchmark tooling + docs; adversarial 10/10, controls 2/2, Round1 49/1, baseline preserved",
+    "not_proven": "engine quality (UNVERIFIED), broad safety (RC-7 residue), Round1 validity, multi-domain synthesis, RW-005, E2-E6",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "merge_title": "Stage A: wire abstention safety gate (evidence-support + causal + constraint), close B1-B5, add E0/E1 + Round 2 benchmark infrastructure (DO_NOT_PROMOTE)",
+    "merged": false,
+    "report": "MERGE_WAYPOINT_STAGE_A_SAFETY_AND_ROUND2_INFRA.md"
   }
 }
