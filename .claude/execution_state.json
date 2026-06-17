@@ -1024,5 +1024,30 @@
       "ROUND_2_SOURCE_FULL_TEXT_VERIFICATION_DESIGN.md",
       "ROUND_2_SOURCE_VERIFICATION_WORKFLOW.md"
     ]
+  },
+  "stage_a_round2_source_verification_batch1": {
+    "slice": "Round 2 source full-text verification batch 1 (SRC-001..012)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SOURCE_VERIFICATION (append-only sidecars + ledger; no benchmark cases; no engine/gate/scorer/answer-key change; original candidate JSON untouched)",
+    "files": [
+      "simulation_runs/round_002_source_candidates/slice_1/SRC-001.verification.json..SRC-012.verification.json",
+      "ROUND_2_SOURCE_VERIFICATION_LEDGER.json",
+      "ROUND_2_SOURCE_VERIFICATION_BATCH_1_REPORT.md"
+    ],
+    "records_processed": 12,
+    "full_text_verified": 0,
+    "partially_verified": 0,
+    "secondary_verified": 0,
+    "source_inaccessible": 12,
+    "rejected": 0,
+    "promotable": 0,
+    "environment_blocker": "WebFetch HTTP 403 on all primary domains (sec.gov, treasury.gov, cnbc.com, npr.org, en.wikipedia.org); web.archive.org disallowed; only WebSearch snippets available",
+    "rule_compliance": "no FULL_TEXT_VERIFIED without opening source; snippets != full-text; no SECONDARY_VERIFIED claimed; no promotion; no source.json; candidate JSON untouched",
+    "corroboration": "SRC-003 (Hertz) and SRC-004 (GM/Treasury) MULTI_SOURCE_INDEPENDENT snippet corroboration -> prioritize once locator captured; SRC-004 net loss recorded as RANGE (10.5B GM-only vs 11.2B incl GMAC), not mismatch; others COLLECTION_SNIPPET_ONLY",
+    "reliability_changes": "none (cannot upgrade to A without primary-at-locator; no contradiction -> no downgrade)",
+    "gates_run": "12 sidecars + ledger valid JSON; execution_state.json valid; no app code touched",
+    "next_step": "run verification batches in a FETCH-CAPABLE environment (working WebFetch or manual EDGAR/PDF/dataset review) to confirm metrics at locators; SRC-003/004 clear first; then batches 2-9 (SRC-013..108); then source.json conversion -> validator -> scorer -> re-trial",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "report": "ROUND_2_SOURCE_VERIFICATION_BATCH_1_REPORT.md"
   }
 }

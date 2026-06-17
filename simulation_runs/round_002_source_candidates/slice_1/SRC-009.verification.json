@@ -1,0 +1,114 @@
+{
+  "source_id": "SRC-009",
+  "verification_status": "SOURCE_INACCESSIBLE",
+  "verifier": "agent:opus-batch1 (WebSearch-only; WebFetch HTTP 403 on all primary domains; web.archive.org blocked)",
+  "verified_at": "2026-06-17",
+  "access_method": "UNAVAILABLE",
+  "resolved_url": null,
+  "access_attempts": [
+    {
+      "channel": "DIRECT_FETCH (primary URL)",
+      "url": "https://www.nbcnews.com/business/consumer/radioshack-files-chapter-11-bankruptcy-after-years-losses-n301161",
+      "result": "HTTP_403_FORBIDDEN"
+    },
+    {
+      "channel": "ARCHIVE (web.archive.org)",
+      "result": "BLOCKED_BY_ENVIRONMENT (WebFetch cannot fetch web.archive.org)"
+    },
+    {
+      "channel": "OFFICIAL_PORTAL / WebSearch",
+      "result": "snippets only (no full-text retrieval available in this environment)"
+    }
+  ],
+  "document_fingerprint": {
+    "title": "RadioShack Files for Chapter 11 Bankruptcy After Years of Losses",
+    "issuer": "NBC News",
+    "date": "2015-02-05",
+    "source_type": "JOURNALISM"
+  },
+  "metric_verifications": [
+    {
+      "metric": "filing_date",
+      "candidate_value": "2015-02-05",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": true,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "assets_usd",
+      "candidate_value": "$1.2 billion",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": false,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "liabilities_usd",
+      "candidate_value": "$1.4 billion (as of November)",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": false,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "consecutive_quarterly_sales_declines",
+      "candidate_value": "nine straight quarters",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": false,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "consecutive_quarterly_losses",
+      "candidate_value": "each of its ten latest quarters",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": true,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "stores_to_sell",
+      "candidate_value": "up to ~2,400",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": false,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "asset_sale_price_to_general_wireless_usd",
+      "candidate_value": "$26.2 million (May 2015)",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": false,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    }
+  ],
+  "snippet_corroboration": {
+    "level": "COLLECTION_SNIPPET_ONLY",
+    "domains": [
+      "www.nbcnews.com"
+    ],
+    "note": "only the collection-time WebSearch snippet from the candidate domain; no independent full-text confirmation"
+  },
+  "contradictions": [],
+  "reliability_change": {
+    "from": "B",
+    "to": "B",
+    "reason": "unchanged - no full text opened (cannot upgrade to A without primary-at-locator); no contradiction found (no downgrade)"
+  },
+  "outcome_evidence_verified": false,
+  "leakage_recheck_passed": true,
+  "leakage_note": "no engine-visible input derived yet; sidecar is hidden provenance only",
+  "decision": "HOLD",
+  "promotable": false,
+  "ready_for_fulltext_run": true,
+  "notes": "Environment cannot perform full-text verification (WebFetch 403 on every primary domain; web.archive.org disallowed). Per design hard rule, snippets are NOT full-text verification, so status is SOURCE_INACCESSIBLE and the record is NOT promotable. Re-run in a fetch-capable environment or via manual PDF/EDGAR review. "
+}

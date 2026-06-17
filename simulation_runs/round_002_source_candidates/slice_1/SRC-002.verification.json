@@ -1,0 +1,105 @@
+{
+  "source_id": "SRC-002",
+  "verification_status": "SOURCE_INACCESSIBLE",
+  "verifier": "agent:opus-batch1 (WebSearch-only; WebFetch HTTP 403 on all primary domains; web.archive.org blocked)",
+  "verified_at": "2026-06-17",
+  "access_method": "UNAVAILABLE",
+  "resolved_url": null,
+  "access_attempts": [
+    {
+      "channel": "DIRECT_FETCH (primary URL)",
+      "url": "https://www.cbc.ca/news/business/sears-bankruptcy-1.4862825",
+      "result": "HTTP_403_FORBIDDEN"
+    },
+    {
+      "channel": "ARCHIVE (web.archive.org)",
+      "result": "BLOCKED_BY_ENVIRONMENT (WebFetch cannot fetch web.archive.org)"
+    },
+    {
+      "channel": "OFFICIAL_PORTAL / WebSearch",
+      "result": "snippets only (no full-text retrieval available in this environment)"
+    }
+  ],
+  "document_fingerprint": {
+    "title": "Sears in U.S. files for bankruptcy protection amid plunging sales, massive debt",
+    "issuer": "CBC News",
+    "date": "2018-10-15",
+    "source_type": "JOURNALISM"
+  },
+  "metric_verifications": [
+    {
+      "metric": "debt_at_filing_usd",
+      "candidate_value": "$11.3 billion",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": true,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "missed_payment_usd",
+      "candidate_value": "$134 million (due October 15, 2018)",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": false,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "dip_financing_bank_usd",
+      "candidate_value": "$300 million",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": false,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "additional_esl_loan_negotiated_usd",
+      "candidate_value": "$300 million",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": false,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "workforce_at_filing",
+      "candidate_value": "approximately 68,000 (down from a peak of ~350,000)",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": true,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    },
+    {
+      "metric": "store_count_at_filing",
+      "candidate_value": "fewer than 900 (down from ~4,000 in 2012)",
+      "verified_value": null,
+      "locator": null,
+      "match": "NOT_FETCHED",
+      "is_critical": true,
+      "note": "full source text not opened (WebFetch 403); candidate value is WebSearch-snippet-level only"
+    }
+  ],
+  "snippet_corroboration": {
+    "level": "COLLECTION_SNIPPET_ONLY",
+    "domains": [
+      "www.cbc.ca"
+    ],
+    "note": "only the collection-time WebSearch snippet from the candidate domain; no independent full-text confirmation"
+  },
+  "contradictions": [],
+  "reliability_change": {
+    "from": "B",
+    "to": "B",
+    "reason": "unchanged - no full text opened (cannot upgrade to A without primary-at-locator); no contradiction found (no downgrade)"
+  },
+  "outcome_evidence_verified": false,
+  "leakage_recheck_passed": true,
+  "leakage_note": "no engine-visible input derived yet; sidecar is hidden provenance only",
+  "decision": "HOLD",
+  "promotable": false,
+  "ready_for_fulltext_run": true,
+  "notes": "Environment cannot perform full-text verification (WebFetch 403 on every primary domain; web.archive.org disallowed). Per design hard rule, snippets are NOT full-text verification, so status is SOURCE_INACCESSIBLE and the record is NOT promotable. Re-run in a fetch-capable environment or via manual PDF/EDGAR review. "
+}
