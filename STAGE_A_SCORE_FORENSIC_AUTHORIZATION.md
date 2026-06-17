@@ -1,251 +1,226 @@
-# PHASE 6 — NEXT FIX AUTHORIZATION
+# PHASE 6 — NEXT FIX AUTHORIZATION (REVISED)
 
-**Evidence-Based Recommendation for Exact Next Fix (No Implementation)**
+**Evidence-Based Recommendation for Correct Next Fix (Forensic Trace Analysis)**
 
-**Confidence Level:** 90% (based on code inspection and Variant A test results)
+**Confidence Level:** REVISED from 90% to 30% (see below)  
+**Reason for Revision:** Forensic trace analysis contradicts initial pattern strength hypothesis
 
 ---
 
-## RECOMMENDED FIX: ADD PATTERN STRENGTH TO BASE CONFIDENCE FORMULA
+## INITIAL RECOMMENDATION (NOW INCORRECT)
 
-### Exact Target Component
+**Previous claim:** "Add pattern strength to base confidence formula"  
+**Confidence:** 90%  
+**Expected impact:** Fix 8-9 cases to 76-81% accuracy
 
-**File:** `src/services/stage-a/hypothesis-generator.ts`  
-**Function:** `scoreHypothesis()`  
-**Lines:** 381-401 (base confidence calculation)  
-**Current Formula (BROKEN):**
+**Why this was WRONG:**
+- Based on code inspection + simulation, not actual measured traces
+- Assumed pattern strength unused in ALL cases, but trace data shows this only affects 1 case directly
+- 69% of failures are due to diagnosis-to-pattern mapping, not scoring formula
+- 23% of failures have equal pattern strength for both winner and correct diagnosis
+
+---
+
+## REVISED FINDINGS FROM FORENSIC TRACE ANALYSIS
+
+### Root Cause Distribution (from actual numeric scores)
+
+| Failure Mode | Count | Diagnosis | Expected Impact of Pattern Strength Fix |
+|---|---|---|---|
+| **Pattern not mapped to diagnosis** | 9 | Diagnosis never generated (rank 0, confidence 0) | **ZERO** — diagnosis doesn't appear in any pattern, so strength formula irrelevant |
+| **Pattern mismatch (winner has pattern, correct doesn't)** | 1 | SYN-013 | **YES** — pattern strength 3 used by winner, correct diagnosis needs pattern |
+| **Equal pattern strength, different boosting** | 3 | ADV-012, RW-022, PD-019 | **ZERO** — both use same strength, gap caused by boosting logic |
+
+### Why Pattern Strength Fix Won't Work for 12/13 Cases
+
+**Example 1: BLND-006 (Pattern Mapping Failure)**
+```
+Ground truth: demand_forecasting_mismatch
+Evidence: CAC rising, acquisition growth slowing, churn rising
+
+Patterns Generated:
+  1. quality_delivery-customer_retention-pattern (strength 1)
+     → potentialRootCauses: [trust_quality_crisis, customer_retention_erosion]
+  2. market_position-customer_retention-pattern (strength 4)
+     → potentialRootCauses: [go_to_market_misalignment]
+
+Problem:
+  - demand_forecasting_mismatch is NOT in any pattern's potentialRootCauses list
+  - Diagnosis never generated in hypotheses, defaults to rank 0, confidence 0
+  - Pattern strength (4) completely unused
+  
+Pattern Strength Fix Impact:
+  - Adding strength to scoring formula has ZERO effect
+  - Diagnosis still not in pattern potentialRootCauses
+  - Diagnosis still has confidence 0
+```
+
+**Example 2: ADV-012 (Equal Pattern Strength)**
+```
+Ground truth: trust_quality_crisis
+Winner: customer_retention_erosion
+Gap: 5 points (45 vs 40)
+
+Both use SAME pattern:
+  - quality_delivery-customer_retention-pattern (strength 3)
+  - Both have 2 supporting evidence items
+  - Both calculated with identical pattern strength
+
+Score gap (5 pts) comes from:
+  - Keyword matching differences ("churn" vs "quality crisis")
+  - Specificity match on evidence keywords
+  - Evidence diversity calculation
+
+Pattern Strength Fix Impact:
+  - Both diagnoses would use identical pattern strength (3) in new formula
+  - Score gap would remain 5 pts (same boosting factors apply)
+  - Variant A test confirmed: disabling keyword boost = 0 improvement
+```
+
+---
+
+## CORRECT NEXT FIXES (Prioritized)
+
+### PRIORITY 1: DIAGNOSIS-TO-PATTERN MAPPING REDESIGN (9 cases, 69%)
+
+**Scope:** Make all 11 canonical diagnoses reachable from evidence patterns
+
+**Affected Diagnoses:**
+- demand_forecasting_mismatch (BLND-006)
+- insufficient_evidence (BLND-008, ADV-011, ADV-013, ADV-014)
+- operational_bottleneck (BLND-009, RW-024)
+- strategic_pricing_error (BLND-010)
+
+**Current Pattern Contract (BROKEN):**
 ```typescript
-let baseConfidence = 0;
-if (supportingIds.size > 0) {
-  baseConfidence = (supportingIds.size / Math.max(allEvidence.length, 1)) * 100;
-  const patternWeight = 1 + (matchingPatterns.length > 1 ? 0.2 : 0);
-  baseConfidence = baseConfidence * patternWeight;
-  if (req) {
-    const dimensionsPresent = Array.from(supportingDimensions).filter((d) =>
-      req.preferredDimensions.includes(d)
-    ).length;
-    if (dimensionsPresent > 0) {
-      baseConfidence = baseConfidence * req.patternBoost;
-    }
-  }
+// Each pattern maps to a fixed list of diagnoses
+market_position_customer_retention: {
+  potentialRootCauses: ["go_to_market_misalignment"]
 }
 ```
 
-**Exact Issue:**
-- `patternStrengthSum` is calculated but never applied
-- `patternWeight` is based on pattern COUNT (1.0 or 1.2), not pattern QUALITY
-- Two diagnoses with same supporting evidence count but different pattern quality get identical baseConfidence
+**Problem:** Not all diagnoses appear in any pattern's potentialRootCauses
 
-**Required Fix:**
+**Proposed Fix Options:**
 
-Replace patternWeight calculation:
+**Option A: Add diagnoses to existing patterns (conservative)**
+- Add demand_forecasting_mismatch to market_position-customer_retention pattern
+- Add operational_bottleneck to quality_delivery-operational_efficiency pattern
+- Add insufficient_evidence as fallback when low confidence across all patterns
 
-**FROM:**
-```typescript
-const patternWeight = 1 + (matchingPatterns.length > 1 ? 0.2 : 0);
+**Option B: Refactor pattern system (architectural)**
+- Change from fixed potentialRootCauses lists to dynamic diagnosis scoring
+- Generate diagnosis scores independently of pattern mapping
+- Use pattern strength to boost scores, not gate generation
+- Allows all 11 diagnoses to compete for every case
+
+**Expected improvement if implemented correctly:**
+- 9 cases: Currently 0/21, could improve to ~10-12/21 (adding diagnosis generation)
+- Additional improvement from pattern strength: ~1-2 cases (if SYN-013 fixed)
+- Total potential: 11-13/21 (52-62%) if combined with pattern strength fix
+
+**Estimate:** Option A ~2-4 hours; Option B ~8-12 hours (requires testing)
+
+---
+
+### PRIORITY 2: ADD CUSTOMER_RETENTION PATTERN FOR ADOPTION FAILURES (1 case, 8%)
+
+**Affected:** SYN-013 (customer_retention_erosion vs go_to_market_misalignment, gap 23 pts)
+
+**Problem:** customer_retention_erosion lacks a pattern that maps adoption failures
+
+**Current Pattern:**
+```
+market_position-customer_retention: potentialRootCauses: ["go_to_market_misalignment"]
 ```
 
-**TO:**
+**Proposed Fix:**
 ```typescript
-// Calculate average pattern strength from F1 validators
-const averagePatternStrength = matchingPatterns.length > 0 
-  ? patternStrengthSum / matchingPatterns.length 
-  : 1;
-// Pattern weight now combines count (1.0-1.2) with quality (0.5-1.0)
-const patternCountWeight = 1 + (matchingPatterns.length > 1 ? 0.2 : 0);
-const patternQualityWeight = (averagePatternStrength / 10) * 0.5 + 0.5; // 0.5-1.0 range
-const patternWeight = patternCountWeight * patternQualityWeight;
+// Add new pattern type
+adoption_concentration_pattern: {
+  triggers: hasLowAdoptionBreadth && (timeToValue > target || csmRatio > target),
+  potentialRootCauses: ["customer_retention_erosion"]  // Add this
+}
 ```
 
-**Result:**
-- Weak patterns (strength=1): patternQualityWeight = 0.5, patternWeight = 0.5-0.6 (down from 1.0-1.2)
-- Strong patterns (strength=9-10): patternQualityWeight = 0.95-1.0, patternWeight = 0.95-1.2 (unchanged)
-- Same supporting evidence count but different pattern strengths now score differently
+**Expected improvement:**
+- SYN-013: customer_retention_erosion confidence +20-25 pts (from ~10 to ~30-35)
+- Winner (go_to_market_misalignment) stays ~33
+- Result: correct diagnosis ranked #1 or #2 (vs #3 currently)
+
+**Estimate:** ~1 hour (pattern definition + test)
 
 ---
 
-## Why This Fix Targets The Actual Blocker
+### PRIORITY 3: RECONSIDER BOOSTING LOGIC FOR EQUAL-STRENGTH CASES (3 cases, 23%)
 
-**Evidence Basis:**
+**Affected:** ADV-012, RW-022, PD-019 (5-point gaps despite equal pattern strength)
 
-1. **Code Inspection:** patternStrengthSum collected but never used (CERTAIN - line 326)
-2. **Variant A Test:** Disabling keyword boost (+5) → 0 improvement (PROVES keyword not blocker)
-3. **F1 Logic:** F1 validators set strength but no scoring improvement (PROVES strength not applied)
-4. **Pattern Quality:** Multiple diagnoses with same supportingEvidence% but different pattern quality (QUANTIFIABLE)
+**Problem:** When both diagnoses use equal pattern strength, boosting logic (keyword, specificity) decides winner
 
-**Why Prior Fixes Failed:**
-- F1 tried to fix pattern quality generation but scoring algorithm ignored results
-- Option 3 tried to fix pattern suppression but scoring algorithm ignored strength
-- Variant A tried to disable keyword boost to "unmask" pattern strength, but pattern strength was never used anyway
+**Current Boosting:**
+```typescript
+// Line 419-425: Keyword boost
+if (keywordMatch.hasRequiredKeywords && keywordMatch.supportingKeywordCount > 0) {
+  confidence = Math.min(65, confidence + 5);
+}
+```
 
-**Why This Fix Will Work:**
-- Directly applies pattern strength to confidence calculation
-- F1 suppression (strength=1) immediately has effect
-- Strong patterns from multiple sources get higher weight
-- Weak patterns from contradictory evidence get lower weight
+**Analysis of 3 equal-strength cases:**
+- ADV-012: Both use strength 3; keyword matching creates 5-pt gap
+- RW-022: Both use strength 4; keyword/specificity creates 5-pt gap
+- PD-019: Both use strength 6; keyword/specificity creates 5-pt gap
 
----
+**Options:**
+1. **Keep current:** Accept that both diagnoses are valid when patterns equal; document as "ambiguous" cases
+2. **Add pattern strength comparison:** When patterns equal, give edge to diagnosis with stronger pattern (but both already use same pattern)
+3. **Increase specificity weighting:** Make evidence-keyword matching more decisive for these cases
+4. **Review evidence for pattern strength differences:** Check if evidence actually supports equal strength or if one diagnosis needs stronger pattern
 
-## Expected Per-Case Score Movement
+**Analysis:** These 3 cases may not have a single correct answer (evidence ambiguous). Reviewing actual evidence details recommended before proposing fix.
 
-### Cases Expected to Improve (8 cases)
-
-**BLND-006: DEMAND_FORECASTING_MISMATCH vs CUSTOMER_RETENTION_EROSION**
-- Current: CUSTOMER_RETENTION_EROSION wins 39-35 (estimated)
-- With fix: If DEMAND_FORECASTING has stronger patterns, score gap flips to 42-37
-- Expected: DEMAND_FORECASTING_MISMATCH correct ✓
-
-**RW-016: GO_TO_MARKET_MISALIGNMENT vs DEMAND_FORECASTING_MISMATCH**
-- Current: DEMAND_FORECASTING wins 50-48 (estimated)
-- With fix: If GO_TO_MARKET has stronger patterns (GTM evidence more direct), score gap flips to 50-45
-- Expected: GO_TO_MARKET_MISALIGNMENT correct ✓
-
-**RW-022: UNIT_ECONOMICS_BREAKDOWN vs OPERATIONAL_BOTTLENECK**
-- Current: OPERATIONAL scores 50 (weak patterns), UNIT_ECONOMICS 48 (strong patterns)
-- With fix: UNIT_ECONOMICS pattern strength (9+) boosts to 52-55 vs OPERATIONAL (1-3) drops to 35-40
-- Expected: UNIT_ECONOMICS_BREAKDOWN correct ✓
-
-**ADV-012: TRUST_QUALITY_CRISIS vs CUSTOMER_RETENTION_EROSION**
-- Current: CUSTOMER_RETENTION scores 45 (weak patterns), TRUST_QUALITY has causal evidence
-- With fix: TRUST_QUALITY pattern strength + causal boost overcomes CUSTOMER_RETENTION weak patterns
-- Expected: TRUST_QUALITY_CRISIS correct ✓
-
-**RW-024: OPERATIONAL_BOTTLENECK vs BRAND_EROSION**
-- Current: BRAND_EROSION scores 10 (very weak, no patterns)
-- With fix: OPERATIONAL should have 2+ patterns, scores 40-50, wins outright
-- Expected: OPERATIONAL_BOTTLENECK correct ✓
-
-**PD-019: UNIT_ECONOMICS_BREAKDOWN vs DEMAND_FORECASTING_MISMATCH**
-- Current: DEMAND_FORECASTING scores 50 (many patterns)
-- With fix: If UNIT_ECONOMICS has stronger pattern quality, can overcome pattern count difference
-- Expected: UNIT_ECONOMICS_BREAKDOWN correct ✓
-
-**SYN-013: CUSTOMER_RETENTION_EROSION vs GO_TO_MARKET_MISALIGNMENT**
-- Current: GO_TO_MARKET scores 33, CUSTOMER_RETENTION likely 30-35
-- With fix: If CUSTOMER_RETENTION has stronger patterns (retention-specific evidence), scores higher
-- Expected: CUSTOMER_RETENTION_EROSION correct ✓
-
-**BLND-009: OPERATIONAL_BOTTLENECK vs TRUST_QUALITY_CRISIS**
-- Current: TRUST_QUALITY scores 29, OPERATIONAL likely 31-38
-- With fix: OPERATIONAL with stronger patterns scores higher, wins
-- Expected: OPERATIONAL_BOTTLENECK correct ✓
-
-**Cases NOT Expected to Improve (5 cases - INSUFFICIENT_EVIDENCE cases):**
-- BLND-008, BLND-010, ADV-011, ADV-013, ADV-014
-- These require a separate mechanism: confidence floor gate for INSUFFICIENT_EVIDENCE
-- Score fix alone won't fix these; need additional logic to suppress all diagnoses when evidence is weak
-- Require separate PHASE 7: Add "INSUFFICIENT_EVIDENCE" return mechanism
+**Estimate:** ~4 hours (review + analysis)
 
 ---
 
-## Expected Overall Improvement
+## DECISION FRAMEWORK
 
-**Current:** 8/21 (38.1%)
+### If Goal is 76-81% Accuracy (16-17/21 correct)
 
-**After This Fix:** Expected 16-17/21 (76-81%)
-- Improve 8 ranking cases: +8 correct
-- Leave 5 INSUFFICIENT cases broken: remain 5 wrong
+**Don't implement:** The simple 5-line pattern strength fix alone  
+**Instead implement:** Priority 1 (diagnosis mapping) + Priority 2 (adoption pattern)  
+**Expected result:** ~13-14/21 (62-67%) after Priority 1; ~14-15/21 (67-71%) after Priority 2  
+**Gap:** Still need Priority 3 or deeper fixes to reach 16-17
 
-**After Adding INSUFFICIENT_EVIDENCE Gate:** Expected 18-21/21 (86-100%)
-- Fix 3-5 of the INSUFFICIENT cases with a confidence floor threshold
-- Remaining cases depend on evidence quality
+### If Goal is 52-62% Accuracy (11-13/21 correct)
 
-**Total Fix Scope:**
-1. **Primary:** Add pattern strength to base formula (1 code change, 5 lines)
-2. **Secondary:** Add INSUFFICIENT_EVIDENCE mechanism (separate gate, 10-20 lines)
+**Implement:** Priority 1 only (diagnosis mapping redesign)  
+**Expected result:** ~11-13/21 (52-62%)  
+**Effort:** ~2-4 hours (Option A) to ~12 hours (Option B)  
+**Confidence:** MEDIUM (depends on which pattern mapping issues are underlying)
 
----
+### If Accepting Current State (38% baseline)
 
-## Minimum Implementation Needed
-
-### Change 1: Pattern Strength in Base Confidence (REQUIRED)
-
-**File:** `src/services/stage-a/hypothesis-generator.ts`  
-**Lines:** ~390-392  
-**Change Type:** Formula refactor  
-**Risk:** LOW (only affects base confidence calculation, doesn't change structure)  
-**Lines of Code:** 5-10  
-**Testing:** Run all 21 benchmark cases, measure accuracy change
-
-### Change 2: INSUFFICIENT_EVIDENCE Gate (RECOMMENDED)
-
-**File:** `src/services/stage-a/hypothesis-generator.ts`  
-**Function:** `generateHypotheses()`  
-**Lines:** ~200-215 (before sorting/returning)  
-**Change Type:** New logic gate  
-**Risk:** LOW (after hypothesis generation, before ranking)  
-**Lines of Code:** 10-20  
-**Logic:** If all candidates have confidence < 20, return INSUFFICIENT_EVIDENCE instead
+No action. Current recommendation stands as-is.
 
 ---
 
-## Rollback Strategy
+## CONCLUSION
 
-If this fix causes unexpected regressions:
+**Pattern strength scoring fix will NOT achieve 76-81% accuracy.**
 
-1. **Revert Change 1:** Remove pattern strength weighting, restore original formula (instantaneous)
-2. **Investigate:** Which cases regressed? Do those cases have unexpected pattern strength values?
-3. **Adjust:** May need to tune the patternQualityWeight formula (0.5-1.0 range) or averaging logic
-4. **Retry:** Re-run benchmark with adjusted formula
+Root cause is primarily **diagnosis-to-pattern mapping incomplete**, not pattern strength unused.
 
-**Rollback Confidence:** Very high (single formula change, easy to revert)
+**Recommended action:**
+1. Implement Priority 1 (diagnosis mapping redesign) first — measure improvement
+2. If <62%, implement Priority 2 (adoption pattern)
+3. If still <70%, review Priority 3 and re-evaluate architectural options
 
----
-
-## Validation Benchmark Required
-
-**Before Production:**
-1. Run all 21 cases, measure accuracy (expect 16-17/21)
-2. Verify no regressions on currently correct cases (expect 8/21 to remain correct)
-3. Verify 8 ranking failures improve (BLND-006, BLND-009, ADV-012, RW-016, RW-022, RW-024, PD-019, SYN-013)
-4. Verify 5 INSUFFICIENT cases still fail (expected until Change 2 added)
-
-**Success Criteria:**
-- Accuracy >= 16/21 (76%)
-- No regressions on current 8 correct cases
-- At least 6/8 ranking failures fixed
-
-**Decision Gate:**
-- If >= 16/21 and no regressions: COMMIT Change 1
-- If < 16/21 or regressions: INVESTIGATE and adjust formula
+**Do NOT recommend the simple 5-line pattern strength formula change alone.** It will have minimal impact and may mask the real root cause that needs fixing (pattern mapping).
 
 ---
 
-## Why This Fix Is Safe
+**Status:** AWAITING DECISION ON NEXT IMPLEMENTATION APPROACH
 
-1. **Purely Mathematical:** Applies existing data (patternStrength) to existing calculation (baseConfidence)
-2. **Non-Destructive:** Collected data already calculated, just applying it
-3. **Reversible:** Single formula change, easy to revert
-4. **Targeted:** Only affects the one proven defect (pattern strength ignored)
-5. **Evidence-Based:** Variant A test proved keyword boost not the blocker; pattern strength must be
-
----
-
-## Why Not Other Fixes?
-
-**Option 4 (Architectural Redesign):** Too broad, not focused
-- This fix is surgical: one formula change
-- Don't need to redesign the whole scoring system
-- Just need to activate already-calculated pattern strength
-
-**Option 5 (Pattern Strength Refactoring):** Upstream of this issue
-- F1 validators already calculate strength correctly
-- Problem is downstream: strength not used in scoring
-- Fix is in scoring formula, not pattern generation
-
-**Further Tweaks (keyword, specificity, causal):** Won't work
-- All prior tweaks failed because they assume pattern strength is somehow compensated
-- Pattern strength never was, never is
-- Tweaks are wasted effort; fix the root cause
-
----
-
-## Next Steps (DO NOT IMPLEMENT YET)
-
-1. Get user approval on this recommendation
-2. If approved: Implement Change 1 (pattern strength formula)
-3. Run benchmark, measure results
-4. If successful: Implement Change 2 (INSUFFICIENT_EVIDENCE gate)
-5. Run full 21-case benchmark
-6. If both successful and verified: Commit both changes together
+**Next approval required before implementing:** Which of the 3 priority fixes to proceed with?
 
