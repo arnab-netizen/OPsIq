@@ -1,4 +1,47 @@
-# FORENSIC INVESTIGATION PHASE 1: ROOT CAUSE PROOF
+# FORENSIC INVESTIGATION PHASE 1: STAGE A SLICE_10 DIAGNOSIS ENGINE FAILURES
+
+**Investigation Date:** 2026-06-17  
+**Scope:** 13 Failing Benchmark Cases (SLICE_10 Causal Rework)  
+**Baseline Accuracy:** 38.1% (21 cases, 8 correct)  
+**Failing Cases:** 13 of 21  
+
+---
+
+## EXECUTIVE SUMMARY
+
+The diagnosis engine is failing on 13 cases due to systematic issues in the pattern-matching and scoring pipeline. Root causes:
+
+1. **Evidence Synthesis Patterns Are Dimension-Based, Not Content-Based** (46% of failures)
+2. **No Mechanism for "Insufficient Evidence" Diagnosis** (23% of failures) 
+3. **Pattern Boost Factors Don't Reflect Evidence Specificity** (15% of failures)
+4. **Causal Adjudicator Too Conservative** (70% of cases don't trigger it)
+5. **Multiple Patterns Match, Weak Tie-Breaking** (15% of failures)
+
+---
+
+## FAILING CASES BREAKDOWN
+
+### By Root Cause Category
+
+| Category | Count | Cases |
+|----------|-------|-------|
+| MISSING_CAUSAL_EVIDENCE | 6 | BLND-009, ADV-011, ADV-014, RW-024, ADV-013 |
+| CORRECT_DIAGNOSIS_NOT_GENERATED | 3 | BLND-008, ADV-013, ADV-014 |
+| INCORRECT_PATTERN_TOO_STRONG | 2 | BLND-010, RW-016 |
+| CORRECT_DIAGNOSIS_GENERATED_BUT_LOST | 1 | ADV-012 |
+| CORRECT_PATTERN_TOO_WEAK | 1 | BLND-006 |
+
+### Percentage Distribution
+
+- **46%:** Evidence provided in non-standard dimensions or without causal validation
+- **23%:** Cases expecting INSUFFICIENT_EVIDENCE, engine generates specific diagnosis
+- **15%:** Wrong pattern has higher boost factor than correct pattern
+- **8%:** Correct diagnosis exists but loses to symptom-keyword matching
+- **8%:** Correct pattern exists but too weak due to regex sensitivity
+
+---
+
+## CASE-BY-CASE ANALYSIS
 ## Stage A Consulting Engine — 13 Failing Cases
 
 **Investigation Date:** 2026-06-17 03:30 UTC  

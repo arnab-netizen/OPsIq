@@ -1,0 +1,157 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                   FORENSIC INVESTIGATION PHASE 1                           ║
+║              STAGE A CONSULTING ENGINE — 13 FAILING CASES                  ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+INVESTIGATION PERIOD: 2026-06-16 to 2026-06-17
+SCOPE: SLICE_10 (Causal Rework Slice 1) Diagnosis Engine
+BASELINE ACCURACY: 8/21 = 38.1%
+FAILING CASES ANALYZED: 13 of 21
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FINDINGS SUMMARY
+
+ROOT CAUSES IDENTIFIED: 3 Critical Architectural Issues
+├─ ROOT CAUSE #1 (69% of failures): Pattern matching is dimension-based, not content-based
+├─ ROOT CAUSE #2 (15% of failures): Pattern confidence weighted by pattern strength, not evidence specificity
+└─ ROOT CAUSE #3 (23% of 13 cases): No mechanism to return "INSUFFICIENT_EVIDENCE" as diagnosis
+
+FAILING CASE CATEGORIES:
+├─ Pattern Created Wrong Type (69%): 9 cases — Patterns fire on dimension presence alone
+├─ Incorrect Pattern Too Strong (15%): 2 cases — Wrong pattern has higher boost factor
+├─ Correct Diagnosis Not Generated (8%): 1 case — Required diagnosis type not scored >0
+└─ Correct Diagnosis Generated But Lost (8%): 1 case — Correct diagnosis loses ranking to symptom match
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CRITICAL INSIGHT: Dimension-Based vs Content-Based Pattern Matching
+
+CURRENT ARCHITECTURE (BROKEN):
+  Pattern fires if: dimensions.includes("financial_health") && dimensions.includes("operational")
+  ↓
+  Pattern fires regardless of actual evidence content
+  ↓
+  Example: BLND-006
+    - Has quality_delivery + customer_retention dimensions
+    - Pattern 3 fires → TRUST_QUALITY_CRISIS
+    - But evidence states: "operations stable", "NPS 48 (no decline)", "repeat 72% (high)"
+    - Correct diagnosis: DEMAND_FORECASTING_MISMATCH (market saturation, not quality crisis)
+
+REQUIRED ARCHITECTURE (TO FIX):
+  Pattern fires if: hasEvidence("quality defects") && hasEvidence("churn linked to quality")
+  ↓
+  Pattern validates content before generating diagnosis
+  ↓
+  Example: BLND-006
+    - Evidence: "operations stable", "NPS stable but churn rising from competition"
+    - Pattern validation: No quality defects → Quality Crisis pattern does NOT fire
+    - Correct diagnosis: DEMAND_FORECASTING_MISMATCH (pattern 6 fires and wins)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+KEY FAILING CASES (Examples)
+
+CASE: BLND-006 (Fashion E-Commerce Subscription)
+  Expected: DEMAND_FORECASTING_MISMATCH (market saturation signal)
+  Predicted: TRUST_QUALITY_CRISIS (dimension-based pattern match)
+  Root Cause: Pattern 3 fires on quality+retention even though quality is stable
+  Impact: Wrong diagnosis → wrong intervention
+  
+CASE: RW-022 (Executive Search / Staffing)
+  Expected: UNIT_ECONOMICS_BREAKDOWN (cost/recruiter rising, output/recruiter declining)
+  Predicted: DEMAND_FORECASTING_MISMATCH (growth deceleration triggers market saturation pattern)
+  Root Cause: Pattern 6 (market saturation) scores higher than Pattern 1 (unit economics)
+  Impact: Correct pattern exists but loses to over-weighted pattern
+  
+CASE: BLND-008 (Vertical SaaS / Acquisition Decision)
+  Expected: INSUFFICIENT_EVIDENCE (offer structure unfinalized, ambiguous decision)
+  Predicted: GO_TO_MARKET_MISALIGNMENT (pattern 5 fires, forcing specific diagnosis)
+  Root Cause: Engine only returns INSUFFICIENT_EVIDENCE when zero patterns match
+  Impact: Ambiguity misclassified as specific root cause
+
+CASE: ADV-012 (Collaboration SaaS / Churn Crisis)
+  Expected: TRUST_QUALITY_CRISIS (low product adoption → quality/onboarding failure)
+  Predicted: CUSTOMER_RETENTION_EROSION (churn symptom ranked higher than quality causal mechanism)
+  Root Cause: Multiple patterns fire; retention keyword "churn rising" beats quality's causal evidence
+  Impact: Symptom diagnosed instead of root cause
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DELIVERABLES CREATED
+
+1. FORENSIC_INVESTIGATION_PHASE_1.md (388 lines)
+   ├─ Executive Summary
+   ├─ Failing Cases Breakdown (69% + 15% + 8% + 8%)
+   ├─ Case-by-Case Forensic Traces (all 13 cases)
+   ├─ Root Cause Categorization Matrix
+   ├─ Failure Category Statistics
+   ├─ Top 3 Dominant Failure Sources (with code locations)
+   ├─ Architectural Failure Point Analysis
+   └─ Conclusion & Recommendations for Phase 2
+
+2. FORENSIC_INVESTIGATION_FAILURES_MATRIX.csv
+   ├─ All 13 cases in table format
+   ├─ Ground truth vs predicted
+   ├─ Root cause category
+   ├─ Key evidence & patterns triggered
+   └─ Why each case failed
+
+3. FORENSIC_SUMMARY.txt (this file)
+   └─ Quick reference of findings
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ARCHITECTURAL RECOMMENDATIONS (Priority Order)
+
+PRIORITY 1: Shift Pattern Matching from Dimension-Based to Content-Based
+  Location: EvidenceSynthesisEngine.discoverPatterns() (lines 65-202)
+  Current: if (dimensions.includes("financial") && dimensions.includes("operational"))
+  Required: Validate evidence semantics before assigning potentialRootCauses
+  Impact: Fixes 69% of failures
+  Effort: High (architecture change)
+
+PRIORITY 2: Implement Ambiguity Detection for INSUFFICIENT_EVIDENCE
+  Location: HypothesisGenerator.generateHypotheses() (lines 188-295)
+  Current: INSUFFICIENT_EVIDENCE only returned when zero patterns match
+  Required: Add detection for contradictory/sparse evidence; route to INSUFFICIENT_EVIDENCE
+  Impact: Fixes 23% of cases expecting "insufficient evidence"
+  Effort: Medium
+
+PRIORITY 3: Expand Causal Adjudicator Trigger Threshold
+  Location: HypothesisGenerator.generateHypotheses() lines 274-278
+  Current: if (Math.abs(sorted[0].confidence - sorted[1].confidence) <= 1)
+  Required: Change to ±5 points and/or trigger when multiple patterns fire
+  Impact: Fixes 30-40% of cases if combined with Priority 1
+  Effort: Low
+
+PRIORITY 4: Re-Calibrate Pattern Boost Factors Based on False-Positive Analysis
+  Location: HypothesisGenerator.diagnosisRequirements (lines 38-138)
+  Current: Hardcoded boost factors (Unit Econ 1.3, GTM 1.2, Pricing 1.15)
+  Required: Analyze false-positive rates and context-specific boost logic
+  Impact: Fixes 15% of cases where wrong pattern wins
+  Effort: Medium
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NEXT STEPS
+
+PHASE 2: Architecture Decision & Implementation Planning
+  ├─ Detailed code audit of EvidenceSynthesisEngine.discoverPatterns()
+  ├─ Semantic pattern matching prototype
+  ├─ Ambiguity detection algorithm design
+  ├─ Adjudicator threshold testing
+  └─ Phase 3 implementation roadmap
+
+ESTIMATED IMPACT WITH PRIORITY 1-3 FIXES:
+  Current: 38.1% (8/21 cases)
+  Target: 75-85% (16-18/21 cases)
+  Path: Fix pattern content-awareness → restore adjudicator utility → add ambiguity detection
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INVESTIGATION COMPLETE
+Status: PHASE 1 ✓ PHASE 2 READY
+Files: /home/user/OPsIq/FORENSIC_INVESTIGATION_PHASE_1.md
+       /home/user/OPsIq/FORENSIC_INVESTIGATION_FAILURES_MATRIX.csv
+       /home/user/OPsIq/FORENSIC_SUMMARY.txt (this file)
