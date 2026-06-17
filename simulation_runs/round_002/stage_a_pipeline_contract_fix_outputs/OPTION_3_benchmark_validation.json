@@ -1,26 +1,26 @@
 {
   "phase": "OPTION_3_FIX_PROPORTIONAL_BOOSTS",
-  "date": "2026-06-17T08:07:50.886Z",
+  "date": "2026-06-17T08:52:12.039Z",
   "slice9_baseline": {
     "accuracy": 38.1,
     "correct_count": 8,
     "total_cases": 21
   },
   "f1_results": {
-    "accuracy": 28.6,
-    "correct_count": 6,
+    "accuracy": 38.1,
+    "correct_count": 8,
     "total_cases": 21,
     "newly_correct_count": 0,
-    "regression_count": 2,
-    "net_gain": -2
+    "regression_count": 0,
+    "net_gain": 0
   },
   "results": [
     {
       "caseId": "BLND-006",
       "expected": "demand_forecasting_mismatch",
       "slice9Predicted": "CUSTOMER_RETENTION_EROSION",
-      "f1Predicted": "go_to_market_misalignment",
-      "f1Confidence": 28,
+      "f1Predicted": "trust_quality_crisis",
+      "f1Confidence": 34,
       "correct": false,
       "newlyCorrect": false,
       "regression": false,
@@ -30,12 +30,12 @@
       "caseId": "BLND-007",
       "expected": "go_to_market_misalignment",
       "slice9Predicted": "GO_TO_MARKET_MISALIGNMENT",
-      "f1Predicted": "demand_forecasting_mismatch",
-      "f1Confidence": 39.2,
-      "correct": false,
+      "f1Predicted": "go_to_market_misalignment",
+      "f1Confidence": 38,
+      "correct": true,
       "newlyCorrect": false,
-      "regression": true,
-      "reason": "Regression (was correct in SLICE_8)"
+      "regression": false,
+      "reason": "Correct"
     },
     {
       "caseId": "BLND-008",
@@ -63,8 +63,8 @@
       "caseId": "BLND-010",
       "expected": "strategic_pricing_error",
       "slice9Predicted": "GO_TO_MARKET_MISALIGNMENT",
-      "f1Predicted": "trust_quality_crisis",
-      "f1Confidence": 34,
+      "f1Predicted": "go_to_market_misalignment",
+      "f1Confidence": 33,
       "correct": false,
       "newlyCorrect": false,
       "regression": false,
@@ -85,7 +85,7 @@
       "caseId": "ADV-012",
       "expected": "trust_quality_crisis",
       "slice9Predicted": "CUSTOMER_RETENTION_EROSION",
-      "f1Predicted": "go_to_market_misalignment",
+      "f1Predicted": "customer_retention_erosion",
       "f1Confidence": 45,
       "correct": false,
       "newlyCorrect": false,
@@ -206,12 +206,12 @@
       "caseId": "PD-017",
       "expected": "demand_forecasting_mismatch",
       "slice9Predicted": "DEMAND_FORECASTING_MISMATCH",
-      "f1Predicted": "operational_bottleneck",
+      "f1Predicted": "demand_forecasting_mismatch",
       "f1Confidence": 50,
-      "correct": false,
+      "correct": true,
       "newlyCorrect": false,
-      "regression": true,
-      "reason": "Regression (was correct in SLICE_8)"
+      "regression": false,
+      "reason": "Correct"
     },
     {
       "caseId": "PD-019",
@@ -249,7 +249,7 @@
   ],
   "max_confidence": 65,
   "confidence_stats": {
-    "mean_confidence": 42.25,
+    "mean_confidence": 42.43,
     "median_confidence": 50,
     "min_confidence": 10,
     "max_confidence": 65

@@ -6,7 +6,7 @@
     "baseline_predicted": "customer_retention_erosion",
     "variantA_predicted": "trust_quality_crisis",
     "variantA_correct": false,
-    "variantA_confidence": 24,
+    "variantA_confidence": 29,
     "changed": true
   },
   {
@@ -44,10 +44,10 @@
     "expected": "strategic_pricing_error",
     "baselineCorrect": false,
     "baseline_predicted": "go_to_market_misalignment",
-    "variantA_predicted": "trust_quality_crisis",
+    "variantA_predicted": "go_to_market_misalignment",
     "variantA_correct": false,
-    "variantA_confidence": 29,
-    "changed": true
+    "variantA_confidence": 28,
+    "changed": false
   },
   {
     "caseId": "ADV-011",
@@ -64,10 +64,10 @@
     "expected": "trust_quality_crisis",
     "baselineCorrect": false,
     "baseline_predicted": "customer_retention_erosion",
-    "variantA_predicted": "go_to_market_misalignment",
+    "variantA_predicted": "customer_retention_erosion",
     "variantA_correct": false,
     "variantA_confidence": 40,
-    "changed": true
+    "changed": false
   },
   {
     "caseId": "ADV-013",
