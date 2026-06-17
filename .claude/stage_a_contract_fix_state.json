@@ -1,0 +1,95 @@
+{
+  "session": "claude/execution-consultant-engine-v2-kobwgj",
+  "task": "STAGE_A_PIPELINE_CONTRACT_FIX",
+  "execution_date": "2026-06-17",
+  "current_status": "OPTION_3_BENCHMARKED_REVERTED_ESCALATE_TO_OPTION_2",
+
+  "phase_summary": {
+    "phase_1": {
+      "name": "F1 Pattern Dimension Validation",
+      "status": "COMPLETE",
+      "result": "8/21 accuracy - zero net gain",
+      "finding": "F1 validators correctly suppress patterns but HypothesisGenerator ignores pattern strength"
+    },
+    "phase_2": {
+      "name": "Pipeline Contract Audit (5-stage)",
+      "status": "COMPLETE",
+      "reports_generated": [
+        "STAGE_A_PIPELINE_CONTRACT_AUDIT.md",
+        "F1_INVISIBILITY_ANALYSIS.md",
+        "STAGE_A_CONTRACT_DEFECT_CLASSIFICATION.md",
+        "STAGE_A_CONTRACT_FIX_OPTIONS.md",
+        "STAGE_A_PIPELINE_CONTRACT_AUTHORIZATION.md"
+      ],
+      "finding": "PATTERN_STRENGTH_IGNORED contract defect confirmed"
+    },
+    "phase_3": {
+      "name": "Option 3 Implementation & Benchmarking",
+      "status": "COMPLETE_REVERTED",
+      "result": "6/21 accuracy - 2 regressions vs SLICE_8 baseline (8/21)",
+      "implementation": "Proportional scaling of keyword/specificity/causal boosts by pattern strength",
+      "decision": "REVERTED due to regressions"
+    }
+  },
+
+  "option_3_details": {
+    "specification": "avgPatternStrength / 10 → strengthMultiplier → apply to all boosts",
+    "expected_outcome": "10-14/21 accuracy (48-67%)",
+    "actual_outcome": "6/21 accuracy (28.6%)",
+    "regressions": 2,
+    "newly_fixed": 0,
+    "net_gain": -2,
+    "root_cause": "Proportional scaling breaks SLICE_8 baseline uniformly; affects ALL diagnoses equally",
+    "issue": "Reduces boosts for normal patterns (0.4-0.6 multiplier) in addition to suppressed patterns (0.1 multiplier)"
+  },
+
+  "tests_created": {
+    "f1_hypothesis_integration": {
+      "file": "src/__tests__/services/stage-a/f1-hypothesis-integration.test.ts",
+      "tests": 6,
+      "purpose": "Verify pattern strength visibility in HypothesisGenerator"
+    },
+    "f1_benchmark_updated": {
+      "file": "src/__tests__/services/stage-a/f1-benchmark.test.ts",
+      "change": "Updated to compare against SLICE_8 baseline (8/21) instead of SLICE_9 (6/21)",
+      "purpose": "Correct baseline comparison for Option 3 validation"
+    }
+  },
+
+  "gates_run": {
+    "npm_run_build": "PASS",
+    "npx_tsc_noEmit": "PASS",
+    "npx_prisma_validate": "PASS",
+    "f1_benchmark_21_case": "FAIL - regressions detected"
+  },
+
+  "next_action": {
+    "option": "Option 2 - Remove Keyword Rescoring Entirely",
+    "expected_improvement": "12-16/21 accuracy (57-76%)",
+    "risk": "Higher complexity, removes keyword-independent logic",
+    "authorization": "Per fallback path in STAGE_A_PIPELINE_CONTRACT_AUTHORIZATION.md"
+  },
+
+  "artifacts": {
+    "commit": "063e3545 - STAGE_A_FIX: Option 3 (Proportional Boosts) - Benchmarked and Rejected",
+    "reports": [
+      "OPTION_3_VALIDATION_REPORT.md",
+      "OPTION_3_INVESTIGATION_SUMMARY.md"
+    ],
+    "benchmark_outputs": "simulation_runs/round_002/stage_a_pipeline_contract_fix_outputs/"
+  },
+
+  "decision_rationale": {
+    "why_reverted": "Regressions on BLND-007 and PD-017 caused by blanket reduction of all pattern boosts",
+    "why_insufficient": "Option 3 reduces normal pattern boosts (0.4-0.6x) uniformly, reversing existing confidence orderings",
+    "why_no_new_fixes": "Base confidences and other factors overwhelm the differentiation from proportional scaling",
+    "escalation_path": "Option 2 should provide more control through explicit removal of keyword rescoring"
+  },
+
+  "branch_status": {
+    "current_branch": "claude/execution-consultant-engine-v2-kobwgj",
+    "committed": true,
+    "pushed": true,
+    "clean_state": true
+  }
+}
