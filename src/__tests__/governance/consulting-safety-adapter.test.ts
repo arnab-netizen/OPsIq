@@ -23,6 +23,7 @@ function makeOutput(opts: {
   confidence: DiagnosisConfidence;
   type?: DiagnosisType;
   evidenceIds?: string[];
+  missingEvidenceFor?: string[];
 }): EngineOut {
   return {
     status: opts.status,
@@ -33,6 +34,7 @@ function makeOutput(opts: {
       rootCauseDiagnosis: {
         type: opts.type ?? DiagnosisType.UNKNOWN,
         evidenceIds: opts.evidenceIds ?? [],
+        missingEvidenceFor: opts.missingEvidenceFor ?? [],
       },
     } as unknown as ConsultingEngineOutput["decisionMemo"],
   };
@@ -105,5 +107,74 @@ describe("consulting-safety-adapter (abstention wiring)", () => {
       type: DiagnosisType.UNKNOWN,
     });
     expect(hasCommittedDiagnosis(out)).toBe(false);
+  });
+
+  // ── Option B: evidence-support sufficiency rule ─────────────────────────────
+  describe("evidence-support sufficiency gate (Option B)", () => {
+    it("ABSTAINS on a committed diagnosis with low support AND missing-evidence gaps (RW-001/RW-005 pattern)", () => {
+      const out = makeOutput({
+        status: "SUCCESS",
+        confidence: DiagnosisConfidence.MODERATE,
+        type: DiagnosisType.QUALITY_CONTROL_FAILURE,
+        evidenceIds: ["a"], // 1 used
+        missingEvidenceFor: ["g1", "g2", "g3"],
+      });
+      const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
+        totalEvidenceCount: 6, // ratio 0.167 < 0.5
+      });
+      expect(r.assessment.abstain).toBe(true);
+      expect(r.assessment.abstention_state).toBe("INSUFFICIENT_EVIDENCE");
+      expect(
+        r.assessment.unsafe_conditions.some(
+          (c) => c.condition_type === "MISSING_EVIDENCE" && c.blocking
+        )
+      ).toBe(true);
+      expect(r.inputs.evidence_support.supportRatio).toBeCloseTo(1 / 6, 3);
+    });
+
+    it("PROCEEDS on a committed diagnosis with HIGH support even if some gaps remain (RW-002 pattern)", () => {
+      const out = makeOutput({
+        status: "SUCCESS",
+        confidence: DiagnosisConfidence.HIGH,
+        type: DiagnosisType.CUSTOMER_RETENTION_EROSION,
+        evidenceIds: ["a", "b", "c"], // 3 used
+        missingEvidenceFor: ["g1", "g2", "g3"],
+      });
+      const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
+        totalEvidenceCount: 4, // ratio 0.75 >= 0.5
+      });
+      expect(r.assessment.abstain).toBe(false);
+      expect(r.decision).toBeNull();
+    });
+
+    it("does NOT abstain on low support when there are NO declared gaps (both conditions required)", () => {
+      const out = makeOutput({
+        status: "SUCCESS",
+        confidence: DiagnosisConfidence.MODERATE,
+        type: DiagnosisType.QUALITY_CONTROL_FAILURE,
+        evidenceIds: ["a"],
+        missingEvidenceFor: [],
+      });
+      const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
+        totalEvidenceCount: 6,
+      });
+      expect(r.assessment.abstain).toBe(false);
+    });
+
+    it("does not let the new rule rescue/alter an INSUFFICIENT_EVIDENCE case (still abstains via preconditions)", () => {
+      const out = makeOutput({
+        status: "INSUFFICIENT_EVIDENCE",
+        confidence: DiagnosisConfidence.INSUFFICIENT_EVIDENCE,
+        type: DiagnosisType.UNKNOWN,
+        evidenceIds: ["a"],
+        missingEvidenceFor: ["g1"],
+      });
+      const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
+        totalEvidenceCount: 6,
+      });
+      expect(r.assessment.abstain).toBe(true);
+      // committed=false ⇒ evidence-support rule inert; abstention is precondition-driven
+      expect(r.inputs.evidence_support.committed).toBe(false);
+    });
   });
 });

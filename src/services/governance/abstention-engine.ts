@@ -22,6 +22,30 @@ export interface SafetyAssessment {
 }
 
 /**
+ * Evidence-support signal for the evidence-sufficiency rule (Option B).
+ * Production-available only: derived from the engine output's evidence usage
+ * and the engine's own `missingEvidenceFor` declaration. No answer keys, no
+ * monitor flags.
+ */
+export interface EvidenceSupportSignal {
+  /** Did the engine commit to a diagnosis (not INSUFFICIENT_EVIDENCE)? */
+  committed: boolean;
+  /** evidenceIds used by the diagnosis ÷ total evidence available, if known. */
+  supportRatio?: number;
+  /** Did the engine declare unresolved evidence gaps (missingEvidenceFor)? */
+  hasMissingEvidence: boolean;
+}
+
+/**
+ * Evidence-support sufficiency threshold (Option B, RC-3 fix).
+ * A committed diagnosis is expected to rest on at least a majority of the
+ * available evidence; below this, with unresolved gaps, the gate abstains.
+ * This is the ONLY new threshold introduced; existing confidence cutoffs
+ * (0.3 / 0.6 / 0.7) are unchanged.
+ */
+export const LOW_EVIDENCE_SUPPORT_THRESHOLD = 0.5;
+
+/**
  * Evaluate recommendation for unsafe conditions
  */
 export function assessSafety(
@@ -32,7 +56,8 @@ export function assessSafety(
   preconditions_met: boolean,
   irreversibility_score: number,
   operator_capacity_available: boolean,
-  active_conflicts: number
+  active_conflicts: number,
+  evidence_support?: EvidenceSupportSignal
 ): SafetyAssessment {
   const unsafe_conditions: UnsafeCondition[] = [];
   let abstain = false;
@@ -149,6 +174,29 @@ export function assessSafety(
       abstention_state = "CONFLICTING_SIGNALS";
       confidence_adjustment -= 30;
     }
+  }
+
+  // Evidence-support sufficiency (Option B, RC-3 fix): a COMMITTED diagnosis
+  // that rests on insufficient evidence support AND carries unresolved evidence
+  // gaps must not proceed, even when confidence clears the floor. This is the
+  // rule that catches confident-but-undersupported outputs.
+  if (
+    evidence_support?.committed &&
+    evidence_support.hasMissingEvidence &&
+    evidence_support.supportRatio !== undefined &&
+    evidence_support.supportRatio < LOW_EVIDENCE_SUPPORT_THRESHOLD
+  ) {
+    unsafe_conditions.push({
+      condition_type: "MISSING_EVIDENCE",
+      severity: "HIGH",
+      description: `Committed diagnosis rests on insufficient evidence support (ratio ${evidence_support.supportRatio.toFixed(
+        2
+      )} < ${LOW_EVIDENCE_SUPPORT_THRESHOLD}) with unresolved evidence gaps declared`,
+      blocking: true,
+    });
+    abstain = true;
+    abstention_state = "INSUFFICIENT_EVIDENCE";
+    confidence_adjustment -= 25;
   }
 
   return {

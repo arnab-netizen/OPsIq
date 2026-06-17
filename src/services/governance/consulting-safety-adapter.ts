@@ -8,6 +8,7 @@ import {
   createAbstentionDecision,
   requiresEscalation,
   type SafetyAssessment,
+  type EvidenceSupportSignal,
 } from "./abstention-engine";
 import type { AbstentionDecision } from "@/domain/governance/abstention-contracts";
 
@@ -57,6 +58,14 @@ export interface SafetyGateInputs {
   irreversibility_score: number;
   operator_capacity_available: boolean;
   active_conflicts: number;
+  /** Evidence-support sufficiency signal (Option B). */
+  evidence_support: EvidenceSupportSignal;
+}
+
+/** Options carrying production-available signals not present in the memo itself. */
+export interface SafetyDerivationOptions {
+  /** Total evidence items available to the engine for this case, if known. */
+  totalEvidenceCount?: number;
 }
 
 export interface ConsultingSafetyResult {
@@ -71,13 +80,30 @@ export interface ConsultingSafetyResult {
  * Pure and deterministic.
  */
 export function deriveSafetyGateInputs(
-  output: Pick<ConsultingEngineOutput, "status" | "decisionMemo">
+  output: Pick<ConsultingEngineOutput, "status" | "decisionMemo">,
+  opts: SafetyDerivationOptions = {}
 ): SafetyGateInputs {
   const memo: DecisionMemo = output.decisionMemo;
   const confidence_score =
     DIAGNOSIS_CONFIDENCE_SCORE[memo.diagnosisConfidence] ?? 0.1;
-  const has_evidence = (memo.rootCauseDiagnosis.evidenceIds?.length ?? 0) > 0;
+  const usedEvidence = memo.rootCauseDiagnosis.evidenceIds?.length ?? 0;
+  const has_evidence = usedEvidence > 0;
   const preconditions_met = output.status !== "INSUFFICIENT_EVIDENCE";
+
+  // Evidence-support sufficiency (Option B): stop the prior field loss.
+  // committed := the engine actually issued a diagnosis (not INSUFFICIENT_EVIDENCE).
+  const committed = output.status !== "INSUFFICIENT_EVIDENCE";
+  const total = opts.totalEvidenceCount;
+  const supportRatio =
+    total !== undefined && total > 0 ? usedEvidence / total : undefined;
+  const hasMissingEvidence =
+    (memo.rootCauseDiagnosis.missingEvidenceFor?.length ?? 0) > 0;
+
+  const evidence_support: EvidenceSupportSignal = {
+    committed,
+    supportRatio,
+    hasMissingEvidence,
+  };
 
   return {
     confidence_score,
@@ -88,6 +114,7 @@ export function deriveSafetyGateInputs(
     irreversibility_score: 0,
     operator_capacity_available: true,
     active_conflicts: 0,
+    evidence_support,
   };
 }
 
@@ -98,9 +125,10 @@ export function deriveSafetyGateInputs(
 export function assessConsultingOutput(
   output: Pick<ConsultingEngineOutput, "status" | "decisionMemo">,
   recommendationId: string,
-  actor = "abstention-engine"
+  actor = "abstention-engine",
+  opts: SafetyDerivationOptions = {}
 ): ConsultingSafetyResult {
-  const inputs = deriveSafetyGateInputs(output);
+  const inputs = deriveSafetyGateInputs(output, opts);
   const assessment = assessSafety(
     inputs.confidence_score,
     inputs.has_evidence,
@@ -109,7 +137,8 @@ export function assessConsultingOutput(
     inputs.preconditions_met,
     inputs.irreversibility_score,
     inputs.operator_capacity_available,
-    inputs.active_conflicts
+    inputs.active_conflicts,
+    inputs.evidence_support
   );
 
   const escalation_required = requiresEscalation(assessment);

@@ -23,6 +23,10 @@ const round =
   (args.includes("--round") ? args[args.indexOf("--round") + 1] : undefined) ??
   "001";
 
+const outfile =
+  (args.includes("--outfile") ? args[args.indexOf("--outfile") + 1] : undefined) ??
+  "12_abstention_decision.json";
+
 const repoRoot = path.resolve(__dirname, "..");
 const roundDir = path.join(repoRoot, "simulation_runs", `round_${round}`);
 
@@ -58,14 +62,23 @@ for (const dir of caseDirs) {
   // Revive the single Date field the schema requires before re-validation.
   if (typeof memo.timestamp === "string") memo.timestamp = new Date(memo.timestamp);
 
+  // Total evidence available (production-available signal) from the case input.
+  const inputPath = path.join(caseDir, "01_case_input.json");
+  let totalEvidenceCount: number | undefined;
+  if (fs.existsSync(inputPath)) {
+    const input = JSON.parse(fs.readFileSync(inputPath, "utf-8"));
+    totalEvidenceCount = Array.isArray(input.evidence) ? input.evidence.length : undefined;
+  }
+
   const safety = assessConsultingOutput(
     { status: frozen.status, decisionMemo: memo },
     memo.id,
-    "abstention-engine"
+    "abstention-engine",
+    { totalEvidenceCount }
   );
 
   fs.writeFileSync(
-    path.join(caseDir, "12_abstention_decision.json"),
+    path.join(caseDir, outfile),
     JSON.stringify(
       {
         step: "abstention_safety_gate",

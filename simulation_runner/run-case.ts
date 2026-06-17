@@ -331,7 +331,8 @@ async function main() {
   const safety = assessConsultingOutput(
     { status: output.status, decisionMemo: memo },
     memo.id,
-    "abstention-engine"
+    "abstention-engine",
+    { totalEvidenceCount: caseInput.evidence.length }
   );
   write("12_abstention_decision.json", {
     step: "abstention_safety_gate",
