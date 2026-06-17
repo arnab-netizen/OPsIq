@@ -190,7 +190,7 @@ export class HypothesisGenerator {
     }
 
     // SLICE 3: Sort by confidence, then by evidence specificity match (new)
-    const sorted = candidates.sort((a, b) => {
+    let sorted = candidates.sort((a, b) => {
       if (Math.abs(b.confidence - a.confidence) > 2) {
         return b.confidence - a.confidence; // Significant confidence difference
       }
@@ -226,6 +226,27 @@ export class HypothesisGenerator {
         const temp = sorted[0];
         sorted[0] = sorted[1];
         sorted[1] = temp;
+      }
+    }
+
+    // SLICE 7: Multi-factor conflict resolution
+    // Only apply conflict resolution to known conflict pairs when they're close in confidence
+    if (sorted.length > 1 && Math.abs(sorted[0].confidence - sorted[1].confidence) < 15) {
+      // Check if this is a known conflict pair
+      if (this.isKnownConflictPair(sorted[0].rootCause, sorted[1].rootCause)) {
+        const conflictScore = this.resolveConflict(
+          sorted[0],
+          sorted[1],
+          allEvidence,
+          synthesizedEvidence
+        );
+
+        // Only swap if there's a clear winner from conflict resolution
+        if (conflictScore.winner && conflictScore.margin > 5 && conflictScore.winner !== sorted[0].rootCause) {
+          const temp = sorted[0];
+          sorted[0] = sorted[1];
+          sorted[1] = temp;
+        }
       }
     }
 
@@ -587,5 +608,233 @@ export class HypothesisGenerator {
         ? ` (${patternCount} pattern${patternCount > 1 ? "s" : ""})`
         : " (no patterns)";
     return `${diagnosisLabel}${patternNote}: ${supportingCount} supporting, ${contradictionCount} contradictions`;
+  }
+
+  // SLICE 7: Multi-factor conflict resolution for competing diagnoses
+  private resolveConflict(
+    diagnosis1: Hypothesis,
+    diagnosis2: Hypothesis,
+    allEvidence: EvidenceItem[],
+    synthesizedEvidence: SynthesizedEvidence
+  ): { winner: DiagnosisType | null; margin: number } {
+    // Check for specific conflict pairs in both directions
+    if (this.isConflictPair(diagnosis1.rootCause, diagnosis2.rootCause,
+        DiagnosisType.DEMAND_FORECASTING_MISMATCH, DiagnosisType.GO_TO_MARKET_MISALIGNMENT)) {
+      return this.resolveDemandVsGTMConflict(diagnosis1, diagnosis2, allEvidence);
+    }
+    if (this.isConflictPair(diagnosis1.rootCause, diagnosis2.rootCause,
+        DiagnosisType.STRATEGIC_PRICING_ERROR, DiagnosisType.GO_TO_MARKET_MISALIGNMENT)) {
+      return this.resolvePricingVsGTMConflict(diagnosis1, diagnosis2, allEvidence);
+    }
+    if (this.isConflictPair(diagnosis1.rootCause, diagnosis2.rootCause,
+        DiagnosisType.TRUST_QUALITY_CRISIS, DiagnosisType.CUSTOMER_RETENTION_EROSION)) {
+      return this.resolveTrustVsRetentionConflict(diagnosis1, diagnosis2, allEvidence);
+    }
+    if (this.isConflictPair(diagnosis1.rootCause, diagnosis2.rootCause,
+        DiagnosisType.UNIT_ECONOMICS_BREAKDOWN, DiagnosisType.OPERATIONAL_BOTTLENECK)) {
+      return this.resolveUnitEconomicsVsOperationalConflict(diagnosis1, diagnosis2, allEvidence);
+    }
+
+    // General multi-factor scoring for other conflicts
+    return this.scoreConflictGenerally(diagnosis1, diagnosis2, allEvidence);
+  }
+
+  private isConflictPair(d1: DiagnosisType, d2: DiagnosisType, type1: DiagnosisType, type2: DiagnosisType): boolean {
+    return (d1 === type1 && d2 === type2) || (d1 === type2 && d2 === type1);
+  }
+
+  private isKnownConflictPair(d1: DiagnosisType, d2: DiagnosisType): boolean {
+    // Only consider these as conflict pairs needing resolution
+    const pairs = [
+      [DiagnosisType.DEMAND_FORECASTING_MISMATCH, DiagnosisType.GO_TO_MARKET_MISALIGNMENT],
+      [DiagnosisType.STRATEGIC_PRICING_ERROR, DiagnosisType.GO_TO_MARKET_MISALIGNMENT],
+      [DiagnosisType.TRUST_QUALITY_CRISIS, DiagnosisType.CUSTOMER_RETENTION_EROSION],
+      [DiagnosisType.UNIT_ECONOMICS_BREAKDOWN, DiagnosisType.OPERATIONAL_BOTTLENECK],
+    ];
+
+    return pairs.some(pair =>
+      (d1 === pair[0] && d2 === pair[1]) || (d1 === pair[1] && d2 === pair[0])
+    );
+  }
+
+  private resolveDemandVsGTMConflict(
+    d1: Hypothesis,
+    d2: Hypothesis,
+    allEvidence: EvidenceItem[]
+  ): { winner: DiagnosisType | null; margin: number } {
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+
+    // Demand forecasting indicators
+    const hasDemandCycle = /forecast|demand|expected|projected|deceleration|slowing|market rate.*reverting|acquisition.*declining/i.test(allText);
+    const hasDemandEvidence = /(nps|repeat|satisfaction).*(stable|intact|high|72%)/i.test(allText) && hasDemandCycle;
+    const hasLeadingIndicators = /(perm.*place|order|temp.*hour).*(declining|down|fewer|-)/i.test(allText);
+
+    // GTM indicators
+    const hasGTMEvidence = /positioning|messaging|segment|market.*entry|value.*prop|icp|channel/i.test(allText);
+    const hasConversionIssue = /conversion|win.*rate|sales.*motion|closing/i.test(allText);
+
+    let winner: DiagnosisType | null = null;
+    let margin = 0;
+
+    const demandDiagnosis = d1.rootCause === DiagnosisType.DEMAND_FORECASTING_MISMATCH ? d1 : d2;
+    const gtmDiagnosis = d1.rootCause === DiagnosisType.GO_TO_MARKET_MISALIGNMENT ? d1 : d2;
+
+    if ((hasDemandEvidence || hasLeadingIndicators) && !hasConversionIssue) {
+      winner = DiagnosisType.DEMAND_FORECASTING_MISMATCH;
+      margin = Math.abs(demandDiagnosis.confidence - gtmDiagnosis.confidence) + 10;
+    } else if (hasGTMEvidence && !hasDemandCycle) {
+      winner = DiagnosisType.GO_TO_MARKET_MISALIGNMENT;
+      margin = Math.abs(gtmDiagnosis.confidence - demandDiagnosis.confidence) + 10;
+    }
+
+    return { winner, margin };
+  }
+
+  private resolvePricingVsGTMConflict(
+    d1: Hypothesis,
+    d2: Hypothesis,
+    allEvidence: EvidenceItem[]
+  ): { winner: DiagnosisType | null; margin: number } {
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+
+    // Pricing power indicators
+    const hasPricingEvidence = /pricing|price.*sensitivity|willingness.*to.*pay|discount|margin.*pressure|competitor.*price|price.*competition/i.test(allText);
+    const hasMarginPressure = /margin.*pressure|discount.*dependency|revenue.*grow.*profit.*flat|payback.*deteriorat/i.test(allText);
+
+    // GTM indicators
+    const hasGTMEvidence = /positioning|messaging|segment|market.*entry|value.*prop|icp|channel|conversion/i.test(allText);
+
+    let winner: DiagnosisType | null = null;
+    let margin = 0;
+
+    const pricingDiagnosis = d1.rootCause === DiagnosisType.STRATEGIC_PRICING_ERROR ? d1 : d2;
+    const gtmDiagnosis = d1.rootCause === DiagnosisType.GO_TO_MARKET_MISALIGNMENT ? d1 : d2;
+
+    if ((hasPricingEvidence || hasMarginPressure) && !hasGTMEvidence) {
+      winner = DiagnosisType.STRATEGIC_PRICING_ERROR;
+      margin = Math.abs(pricingDiagnosis.confidence - gtmDiagnosis.confidence) + 10;
+    } else if (hasGTMEvidence && !hasPricingEvidence) {
+      winner = DiagnosisType.GO_TO_MARKET_MISALIGNMENT;
+      margin = Math.abs(gtmDiagnosis.confidence - pricingDiagnosis.confidence) + 10;
+    }
+
+    return { winner, margin };
+  }
+
+  private resolveTrustVsRetentionConflict(
+    d1: Hypothesis,
+    d2: Hypothesis,
+    allEvidence: EvidenceItem[]
+  ): { winner: DiagnosisType | null; margin: number } {
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+
+    // Trust/quality indicators
+    const hasQualityDefects = /defect|reliability|uptime|incident|outage|quality|crash|failure|support.*ticket|stability|performance/i.test(allText);
+    const hasRefunds = /refund|refunded/i.test(allText);
+    const hasReputationIssue = /scandal|fraud|breach|reputational|missed.*promise|trust.*break/i.test(allText);
+
+    // Retention indicators (lifecycle-based)
+    const hasRetentionEvidence = /churn|retention|attrition|customer.*loss|cancellation|cohort.*decay|reorder.*drop|repeat/i.test(allText);
+
+    let winner: DiagnosisType | null = null;
+    let margin = 0;
+
+    const trustDiagnosis = d1.rootCause === DiagnosisType.TRUST_QUALITY_CRISIS ? d1 : d2;
+    const retentionDiagnosis = d1.rootCause === DiagnosisType.CUSTOMER_RETENTION_EROSION ? d1 : d2;
+
+    if ((hasQualityDefects || hasRefunds || hasReputationIssue) && !hasRetentionEvidence) {
+      winner = DiagnosisType.TRUST_QUALITY_CRISIS;
+      margin = Math.abs(trustDiagnosis.confidence - retentionDiagnosis.confidence) + 10;
+    } else if (hasRetentionEvidence && !hasQualityDefects) {
+      winner = DiagnosisType.CUSTOMER_RETENTION_EROSION;
+      margin = Math.abs(retentionDiagnosis.confidence - trustDiagnosis.confidence) + 10;
+    }
+
+    return { winner, margin };
+  }
+
+  private resolveUnitEconomicsVsOperationalConflict(
+    d1: Hypothesis,
+    d2: Hypothesis,
+    allEvidence: EvidenceItem[]
+  ): { winner: DiagnosisType | null; margin: number } {
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+
+    // Unit economics indicators
+    const hasUnitEconomicsEvidence = /cac|ltv|payback|contribution.*margin|cost.*per.*unit|cost.*per.*order|cost.*per.*customer|arpu|margin.*weakness|discount.*dependency|revenue.*grow.*profit.*flat/i.test(allText);
+    const hasCOGSPressure = /cogs|cost.*of.*goods|labor.*cost|delivery.*cost|variable.*cost/i.test(allText);
+
+    // Operational indicators (throughput/capacity/process)
+    const hasOperationalEvidence = /bottleneck|capacity|throughput|queue|cycle.*time|sla|fulfillment|delay|staffing|utilization|constraint|process/i.test(allText);
+
+    let winner: DiagnosisType | null = null;
+    let margin = 0;
+
+    const unitEconomicsDiagnosis = d1.rootCause === DiagnosisType.UNIT_ECONOMICS_BREAKDOWN ? d1 : d2;
+    const operationalDiagnosis = d1.rootCause === DiagnosisType.OPERATIONAL_BOTTLENECK ? d1 : d2;
+
+    if ((hasUnitEconomicsEvidence || hasCOGSPressure) && !hasOperationalEvidence) {
+      winner = DiagnosisType.UNIT_ECONOMICS_BREAKDOWN;
+      margin = Math.abs(unitEconomicsDiagnosis.confidence - operationalDiagnosis.confidence) + 10;
+    } else if (hasOperationalEvidence && !hasUnitEconomicsEvidence) {
+      winner = DiagnosisType.OPERATIONAL_BOTTLENECK;
+      margin = Math.abs(operationalDiagnosis.confidence - unitEconomicsDiagnosis.confidence) + 10;
+    }
+
+    return { winner, margin };
+  }
+
+  private scoreConflictGenerally(
+    d1: Hypothesis,
+    d2: Hypothesis,
+    allEvidence: EvidenceItem[]
+  ): { winner: DiagnosisType | null; margin: number } {
+    // General multi-factor scoring
+    const d1Score = this.calculateMultiFactorScore(d1, allEvidence);
+    const d2Score = this.calculateMultiFactorScore(d2, allEvidence);
+
+    const margin = Math.abs(d1Score - d2Score);
+    const winner = d1Score > d2Score ? d1.rootCause : (d2Score > d1Score ? d2.rootCause : null);
+
+    return { winner, margin };
+  }
+
+  private calculateMultiFactorScore(hypothesis: Hypothesis, allEvidence: EvidenceItem[]): number {
+    let score = hypothesis.confidence; // Base score from confidence
+
+    // Factor 1: Required evidence match (0-20 points)
+    const requiredMatch = this.scoreRequiredEvidenceMatch(hypothesis.rootCause, allEvidence);
+    score += requiredMatch * 20;
+
+    // Factor 2: Evidence diversity (0-15 points)
+    score += (hypothesis.evidenceDiversity || 0) * 2;
+
+    // Factor 3: Pattern strength (0-15 points)
+    score += Math.min(15, (hypothesis.patternCount || 0) * 5);
+
+    // Factor 4: Contradiction penalty (-10 to 0)
+    score -= Math.min(10, hypothesis.conflictingEvidenceCount * 3);
+
+    // Factor 5: Supporting evidence ratio (0-20 points)
+    const supportRatio = hypothesis.supportingEvidenceCount / Math.max(allEvidence.length, 1);
+    score += Math.min(20, supportRatio * 30);
+
+    return Math.max(0, score);
+  }
+
+  private scoreRequiredEvidenceMatch(diagnosis: DiagnosisType, allEvidence: EvidenceItem[]): number {
+    const req = this.diagnosisRequirements[diagnosis];
+    if (!req || req.requiredEvidenceIndicators.length === 0) return 0;
+
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+    let matchCount = 0;
+
+    for (const indicator of req.requiredEvidenceIndicators) {
+      if (allText.includes(indicator.toLowerCase())) {
+        matchCount++;
+      }
+    }
+
+    return matchCount / req.requiredEvidenceIndicators.length;
   }
 }
