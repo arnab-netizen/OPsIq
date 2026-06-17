@@ -1,8 +1,17 @@
 {
   "caseId": "R2-D03-S01",
   "businessProblem": "A specialty bakery's gross margin has fallen for four straight quarters while flour and labor costs climb; the owner wants the real driver before touching prices.",
+  "caseType": "single",
+  "industry": "food_and_beverage",
+  "businessModel": "retail_bakery",
+  "businessStage": "established",
   "ownerIntake": {
     "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "food_and_beverage",
+    "size": "small",
+    "revenueImpactUrgency": "MEDIUM"
   },
   "ownerConstraintProfile": {
     "budgetBand": "MEDIUM",

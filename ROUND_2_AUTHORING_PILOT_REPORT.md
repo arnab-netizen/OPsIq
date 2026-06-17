@@ -54,9 +54,25 @@ invalid, so the written files are provably valid.)
   (pre-existing `run-case.ts:149` unchanged). `npx prisma validate`: valid (no
   schema change).
 
-## 6. NEXT STEP
-This pilot proves the authoring workflow (schema → author → validator → admit).
-Next authorized slices: (a) **author the remaining 145 cases** to the manifest
-distribution (each must pass the validator), (b) **build the 6-axis deterministic
-scorer**, (c) **re-trial the engine** under the pre-registered promotion gates and
-fold `R2-ADV-01` into the adversarial suite. **Stage A remains BLOCKED.**
+## 6. HOSTILE AUDIT OUTCOME (post-authoring)
+A hostile pilot-case audit (`ROUND_2_PILOT_CASE_HOSTILE_AUDIT.md`) reviewed all 5
+cases on 11 axes and ran them through the **real diagnosis engine**. Result:
+**3 ACCEPT, 2 ACCEPT_WITH_FIXES, 0 reject.** Two minimal, case-only fixes applied
+(no engine/gate/key change):
+- **R2-AB-01:** reworded one finding to remove diagnosis-trigger vocabulary
+  (`runway`/`burn`) that was spuriously producing `cash_liquidity_crisis [MODERATE]`
+  on a *truly_insufficient* case. Post-fix the engine correctly returns
+  `INSUFFICIENT_EVIDENCE / BLOCKED`.
+- **All 5:** added spec-§4 metadata (`caseType`, `industry`, `businessModel`,
+  `businessStage`, `clientContext`) so cases are runnable through
+  `runConsultingEngine` (which requires `clientContext`).
+Post-fix: **intake validator 5/5**, leakage-clean ×5, benchmark suite 309 pass.
+
+## 7. NEXT STEP
+This pilot proves the authoring workflow (schema → author → validator → trace →
+admit) and surfaced a real authoring hazard before scaling. Next authorized slices:
+(a) **author the remaining 145 cases** to the manifest distribution (each must pass
+the validator **and** the abstention-lexicon / §4-metadata rules from the audit),
+(b) **build the 6-axis deterministic scorer**, (c) **re-trial the engine** under the
+pre-registered promotion gates and fold `R2-ADV-01` into the adversarial suite.
+**Stage A remains BLOCKED.**

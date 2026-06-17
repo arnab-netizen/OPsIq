@@ -1,8 +1,17 @@
 {
   "caseId": "R2-AB-01",
   "businessProblem": "An owner feels the business is 'in trouble' but has not yet provided concrete figures; they want a diagnosis now.",
+  "caseType": "abstention",
+  "industry": "unspecified",
+  "businessModel": "unspecified",
+  "businessStage": "unspecified",
   "ownerIntake": {
     "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "unspecified",
+    "size": "unknown",
+    "revenueImpactUrgency": "MEDIUM"
   },
   "ownerConstraintProfile": {
     "budgetBand": "MEDIUM",
@@ -14,7 +23,7 @@
   "evidence": [
     {
       "dimension": "financial_health",
-      "finding": "Owner reports a vague sense of cash pressure but cannot supply runway, burn, or balance figures yet",
+      "finding": "Owner reports a vague sense of financial pressure but cannot supply any cash-flow, obligation, or balance-sheet figures yet",
       "confidence": "LOW",
       "source": "owner interview",
       "isCritical": true,

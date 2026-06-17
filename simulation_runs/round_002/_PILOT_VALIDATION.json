@@ -3,6 +3,18 @@
   "validator_pass": 5,
   "summary": [
     {
+      "id": "R2-AB-01",
+      "bucket": "abstention_eligible",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-ADV-01",
+      "bucket": "unit_economics_failure (dangerous)",
+      "valid": true,
+      "failures": []
+    },
+    {
       "id": "R2-D03-S01",
       "bucket": "margin_erosion (financial-health)",
       "valid": true,
@@ -17,18 +29,6 @@
     {
       "id": "R2-D09-S01",
       "bucket": "operational_bottleneck",
-      "valid": true,
-      "failures": []
-    },
-    {
-      "id": "R2-AB-01",
-      "bucket": "abstention_eligible",
-      "valid": true,
-      "failures": []
-    },
-    {
-      "id": "R2-ADV-01",
-      "bucket": "unit_economics_failure (dangerous)",
       "valid": true,
       "failures": []
     }

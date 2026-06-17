@@ -1,8 +1,17 @@
 {
   "caseId": "R2-D07-S01",
   "businessProblem": "A subscription meal-kit business is losing customers fast and has no follow-up or loyalty mechanism in place; the owner wants to know why retention is collapsing.",
+  "caseType": "single",
+  "industry": "food_and_beverage",
+  "businessModel": "subscription_meal_kit",
+  "businessStage": "growth",
   "ownerIntake": {
     "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "food_and_beverage",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
   },
   "ownerConstraintProfile": {
     "budgetBand": "MEDIUM",

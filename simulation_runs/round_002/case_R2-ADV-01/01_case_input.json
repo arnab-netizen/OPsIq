@@ -1,8 +1,17 @@
 {
   "caseId": "R2-ADV-01",
   "businessProblem": "A DTC brand has high churn and the founder wants to launch an aggressive sitewide discount to 'buy back' loyalty — but the unit economics are already negative.",
+  "caseType": "adversarial",
+  "industry": "ecommerce",
+  "businessModel": "dtc_ecommerce",
+  "businessStage": "growth",
   "ownerIntake": {
     "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "ecommerce",
+    "size": "small",
+    "revenueImpactUrgency": "CRITICAL"
   },
   "ownerConstraintProfile": {
     "budgetBand": "MEDIUM",

@@ -799,5 +799,33 @@
     "leakage": "clean (no key fields in inputs)",
     "next_step": "author remaining 145 cases -> 6-axis scorer -> re-trial",
     "stage_a": "BLOCKED"
+  },
+  "stage_a_round2_pilot_hostile_audit": {
+    "slice": "Hostile audit of the 5 Round 2 pilot cases (before scaling to 150)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_AUDIT + MINIMAL_CASE_FIXES (no engine/gate/scorer/answer-key change)",
+    "files": [
+      "ROUND_2_PILOT_CASE_HOSTILE_AUDIT.md",
+      "simulation_runner/validate-round2-cases.ts",
+      "simulation_runner/trace-round2-diagnosis.ts",
+      "simulation_runs/round_002/case_R2-*/01_case_input.json",
+      "simulation_runs/round_002/_PILOT_VALIDATION.json",
+      "ROUND_2_AUTHORING_PILOT_REPORT.md"
+    ],
+    "audit_result": "3 ACCEPT, 2 ACCEPT_WITH_FIXES, 0 REJECT",
+    "accepted": "R2-D03-S01, R2-D07-S01, R2-D09-S01",
+    "accepted_with_fixes": "R2-AB-01, R2-ADV-01",
+    "rejected": "none",
+    "critical_finding": "R2-AB-01 (truly_insufficient) produced cash_liquidity_crisis [MODERATE]/READY pre-fix because finding text contained 'runway'/'burn' tripping fin_isLiquidityCrisis lexical regex; reworded -> engine now INSUFFICIENT_EVIDENCE/BLOCKED",
+    "cross_cutting_fix": "added spec-§4 metadata (caseType/industry/businessModel/businessStage/clientContext) to all 5 so cases are runnable through runConsultingEngine (requires clientContext)",
+    "engine_trace_post_fix": "D03 margin_erosion[HIGH], D07 retention[HIGH], D09 bottleneck[MODERATE], ADV unit_economics[HIGH]+cash alt, AB-01 unknown[INSUFFICIENT_EVIDENCE]/BLOCKED",
+    "validator_pass": "5/5 (with hidden keys loaded)",
+    "leakage": "clean x5 after metadata additions",
+    "gates_run": "tsx validate-round2-cases (5/5), tsx trace-round2-diagnosis, tsc (only pre-existing run-case.ts:149), prisma valid, vitest src/__tests__/benchmark 309 pass",
+    "no_new_cases": true,
+    "recommendations_for_scaling": "scrub diagnosis trigger lexicon from abstention findings; carry §4 clientContext on every case; pin trigger-metric semantics; fold §4+abstention-lexicon checks into validator in the scaling slice",
+    "next_step": "author remaining 145 cases (validator + audit rules) -> 6-axis scorer -> re-trial; fold R2-ADV-01 into adversarial suite",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "report": "ROUND_2_PILOT_CASE_HOSTILE_AUDIT.md"
   }
 }

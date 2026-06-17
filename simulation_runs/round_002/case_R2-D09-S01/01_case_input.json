@@ -1,8 +1,17 @@
 {
   "caseId": "R2-D09-S01",
   "businessProblem": "A custom-framing shop has growing demand but slow turnaround; customers complain about wait times and some stop returning.",
+  "caseType": "single",
+  "industry": "retail",
+  "businessModel": "custom_framing_shop",
+  "businessStage": "established",
   "ownerIntake": {
     "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "micro",
+    "revenueImpactUrgency": "MEDIUM"
   },
   "ownerConstraintProfile": {
     "budgetBand": "MEDIUM",
