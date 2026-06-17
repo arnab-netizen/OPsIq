@@ -22,6 +22,7 @@ import {
   type ConsultingEngineInput,
   type EvidenceItem,
 } from "@/domain/consulting-engine/types";
+import { assessConsultingOutput } from "@/services/governance/consulting-safety-adapter";
 
 // ─── CLI args ──────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
@@ -321,6 +322,31 @@ async function main() {
     status: output.status,
     warnings: output.warnings,
     decisionMemo: memo,
+  });
+
+  // ─── Step 12: Abstention/safety gate (engine-produced, post-freeze) ────────
+  // Remediation for STAGE_A_SAFETY_VALIDATION_BLOCKER B1: route the engine
+  // output through the abstention engine so the safety gate actually executes.
+  // Deterministic; does not alter scoring, answer keys, or expected outcomes.
+  const safety = assessConsultingOutput(
+    { status: output.status, decisionMemo: memo },
+    memo.id,
+    "abstention-engine"
+  );
+  write("12_abstention_decision.json", {
+    step: "abstention_safety_gate",
+    caseId,
+    engineEntryPoint: "assessConsultingOutput -> assessSafety/createAbstentionDecision",
+    derived_inputs: safety.inputs,
+    abstain: safety.assessment.abstain,
+    abstention_state: safety.assessment.abstention_state ?? null,
+    is_safe: safety.assessment.is_safe,
+    confidence_adjustment: safety.assessment.confidence_adjustment,
+    unsafe_conditions: safety.assessment.unsafe_conditions,
+    escalation_required: safety.escalation_required,
+    fallback_action: safety.assessment.fallback_action ?? null,
+    abstention_decision: safety.decision,
+    gate_evaluated: true,
   });
 
   console.log(`\n=== DRY RUN COMPLETE: ${caseId} ===`);

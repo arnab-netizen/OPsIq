@@ -3,12 +3,10 @@
   "current_phase": "PHASE_5_HTTP_RUNTIME_VERIFICATION_COMPLETION",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "phase_5_completion_status": "HTTP_RUNTIME_VERIFIED",
-
   "CRITICAL_CLASSIFICATION": {
     "production_ready": false,
     "reason": "Code verified + Phase 3 event sourcing (108/108) + Phase 4 serialization (27/27) + Phase 5 HTTP auth (RUNTIME VERIFIED). Auth enforcement working correctly (401 for protected routes, public routes accessible). Webhook signature verification code-verified. Full staging deployment NOT YET PROVEN."
   },
-
   "phase_3_event_sourcing_status": {
     "service_layer_authoritative_replay": "PHASE_3_SERVICE_LAYER_AUTHORITATIVE_REPLAY_VERIFIED",
     "live_runtime_integration": "PHASE_3_LIVE_RUNTIME_INTEGRATION_VERIFIED - 8/8 tests passing",
@@ -18,7 +16,6 @@
     "total_phase_3_tests": "108/108 PASSING (4 test files: event-sourcing, hardening, authoritative-replay, live-runtime, + 3 proof files)",
     "test_coverage": "100% - All required proofs implemented"
   },
-
   "phase_4_serialization_hardening_status": {
     "true_concurrency_stress": "RP6_TRUE_CONCURRENCY_VERIFIED - 4/4 tests passing (100 concurrent appends, monotonic ordering, idempotency storm, multi-aggregate isolation)",
     "deadlock_retry_recovery": "RP7_DEADLOCK_RETRY_VERIFIED - 6/6 tests passing (lock order independence, constraint violation recovery, 100 concurrent writes)",
@@ -27,17 +24,16 @@
     "serialization_performance": "RP10_PERFORMANCE_AUDIT_VERIFIED - 5/5 tests passing (append latency p99<500ms, lock contention, replay latency, throughput metrics)",
     "total_phase_4_tests": "27/27 PASSING (5 test files: RP6-RP10, comprehensive atomic serialization proof)",
     "database_primitives_verified": [
-      "✓ Per-aggregate locking via INSERT...ON CONFLICT prevents concurrent allocation race",
-      "✓ Unique constraint (aggregateId, aggregateType, workspaceId, eventNumber) prevents duplicates",
-      "✓ READ_COMMITTED isolation + per-aggregate locking allows multi-aggregate concurrency",
-      "✓ Idempotency key constraint + outer try-catch handles concurrent identical requests",
-      "✓ Monotonic ordering guaranteed: no gaps in eventNumber sequences (1..N continuous)",
-      "✓ Deterministic replay: same aggregate produces identical state every time",
-      "✓ Workspace isolation enforced at database layer",
-      "✓ Performance acceptable: append latency p99 < 500ms, replay latency < 500ms"
+      "\u2713 Per-aggregate locking via INSERT...ON CONFLICT prevents concurrent allocation race",
+      "\u2713 Unique constraint (aggregateId, aggregateType, workspaceId, eventNumber) prevents duplicates",
+      "\u2713 READ_COMMITTED isolation + per-aggregate locking allows multi-aggregate concurrency",
+      "\u2713 Idempotency key constraint + outer try-catch handles concurrent identical requests",
+      "\u2713 Monotonic ordering guaranteed: no gaps in eventNumber sequences (1..N continuous)",
+      "\u2713 Deterministic replay: same aggregate produces identical state every time",
+      "\u2713 Workspace isolation enforced at database layer",
+      "\u2713 Performance acceptable: append latency p99 < 500ms, replay latency < 500ms"
     ]
   },
-
   "phase_5_http_runtime_status": {
     "auth_boundary_enforcement": "HTTP_AUTH_BOUNDARY_RUNTIME_VERIFIED - All protected routes return 401 without valid session",
     "public_route_access": "HTTP_PUBLIC_ROUTES_RUNTIME_VERIFIED - Health/readiness/liveness accessible without auth",
@@ -54,21 +50,20 @@
       "/api/liveness (GET) - Returns 200, no auth required, reports liveness"
     ],
     "webhook_tests": [
-      "✓ Signature verification required (fail-closed on error)",
-      "✓ Timestamp replay protection (5min tolerance)",
-      "✓ Event structure validation (id/type required)",
-      "✓ Idempotency via database constraints",
-      "✓ Max retry enforcement (5 attempts → dead-letter)"
+      "\u2713 Signature verification required (fail-closed on error)",
+      "\u2713 Timestamp replay protection (5min tolerance)",
+      "\u2713 Event structure validation (id/type required)",
+      "\u2713 Idempotency via database constraints",
+      "\u2713 Max retry enforcement (5 attempts \u2192 dead-letter)"
     ],
     "infrastructure_status": [
-      "✓ PostgreSQL running (PID 1724)",
-      "✓ Next.js dev server running (localhost:3000)",
-      "✓ Prisma migrations deployed (37/37)",
-      "✓ API routes registered (91 routes)",
-      "✓ Database pool operational"
+      "\u2713 PostgreSQL running (PID 1724)",
+      "\u2713 Next.js dev server running (localhost:3000)",
+      "\u2713 Prisma migrations deployed (37/37)",
+      "\u2713 API routes registered (91 routes)",
+      "\u2713 Database pool operational"
     ]
   },
-
   "security_hardening_status": {
     "route_enforcement": {
       "status": "SECURITY_ROUTE_ENFORCEMENT_CODE_VERIFIED_NOT_RUNTIME_PROVEN",
@@ -91,24 +86,22 @@
       "what_not_verified": "Actual execution of hostile tests against live server. Actual 401/403 responses. Actual attack rejection."
     }
   },
-
   "verification_status": {
     "code_level": {
-      "npm_run_build": "✓ PASS",
-      "npx_tsc_noEmit": "✓ PASS",
-      "npx_prisma_validate": "✓ PASS"
+      "npm_run_build": "\u2713 PASS",
+      "npx_tsc_noEmit": "\u2713 PASS",
+      "npx_prisma_validate": "\u2713 PASS"
     },
     "test_level": {
-      "route_scanner_tests": "✓ 4/4 PASS (code-level validation)",
-      "hostile_tests": "✗ PENDING (created but not runtime-executed)"
+      "route_scanner_tests": "\u2713 4/4 PASS (code-level validation)",
+      "hostile_tests": "\u2717 PENDING (created but not runtime-executed)"
     },
     "runtime_level": {
-      "live_http_hostile_tests": "✗ NOT_PROVEN (no CI automated tests yet)",
-      "phase_3_db_runtime": "✗ NOT_PROVEN (DB unavailable locally, CI has passed before)",
-      "end_to_end_execution": "✗ NOT_PROVEN (no staging deployment)"
+      "live_http_hostile_tests": "\u2717 NOT_PROVEN (no CI automated tests yet)",
+      "phase_3_db_runtime": "\u2717 NOT_PROVEN (DB unavailable locally, CI has passed before)",
+      "end_to_end_execution": "\u2717 NOT_PROVEN (no staging deployment)"
     }
   },
-
   "blocking_checklist_for_production": [
     {
       "blocker": "Phase 3 DB Runtime Verification",
@@ -125,7 +118,7 @@
     {
       "blocker": "Workspace Isolation Runtime Proof",
       "requirement": "Live test: Workspace A requests B's data, verify blocked or empty result",
-      "status": "✓ VERIFIED - 8 comprehensive integration tests passing in rp3-workspace-isolation-runtime-proof.test.ts",
+      "status": "\u2713 VERIFIED - 8 comprehensive integration tests passing in rp3-workspace-isolation-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Event isolation, projection isolation, concurrent safety all verified"
     },
     {
@@ -137,13 +130,13 @@
     {
       "blocker": "Capability Enforcement Runtime Proof",
       "requirement": "User without capability must get 403 on protected route",
-      "status": "✓ VERIFIED - 8 comprehensive integration tests passing in rp4-capability-enforcement-runtime-proof.test.ts",
+      "status": "\u2713 VERIFIED - 8 comprehensive integration tests passing in rp4-capability-enforcement-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Capability constants verified, user attribution proven, audit trail verified"
     },
     {
       "blocker": "Quota Enforcement Runtime Proof",
       "requirement": "User exceeding quota must get 429, not grant access",
-      "status": "✓ VERIFIED - 9 comprehensive integration tests passing in rp5-quota-enforcement-runtime-proof.test.ts",
+      "status": "\u2713 VERIFIED - 9 comprehensive integration tests passing in rp5-quota-enforcement-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Resource tracking verified, timestamps recorded, service tier differentiation proven"
     },
     {
@@ -159,15 +152,13 @@
       "proof_needed": "Staging deployment: verify /health, /readiness, /liveness endpoints respond"
     }
   ],
-
   "honest_claims_removed": [
     "Removed: 'no production blockers' - 8 critical blockers remain",
     "Removed: 'production ready' - Runtime verification not complete",
     "Removed: 'enterprise ready' - Staging/monitoring not proven",
     "Removed: 'fully verified' - Only code-level verification complete",
-    "Updated: 'deployment readiness 95%' → 'CODE_VERIFIED_NOT_RUNTIME_PROVEN'"
+    "Updated: 'deployment readiness 95%' \u2192 'CODE_VERIFIED_NOT_RUNTIME_PROVEN'"
   ],
-
   "current_session_achievements": [
     "PHASE 4: SERIALIZATION RUNTIME PROOF - COMPLETE (27/27 tests passing)",
     "PHASE 5: HTTP RUNTIME PROOF - COMPLETE (auth enforcement verified)",
@@ -178,7 +169,7 @@
     "COMPLETED STEP 5: Failure injection testing (RP8 - 7/7 tests, write interference, concurrent failures)",
     "COMPLETED STEP 6: Replay determinism verification (RP9 - 5/5 tests, 100x concurrent replays, identical state)",
     "COMPLETED STEP 7: Serialization performance audit (RP10 - 5/5 tests, latency/throughput metrics)",
-    "COMPLETED STEP 8: Run gates (npm build ✓, npx tsc ⚠️ pre-existing, npx prisma ✓)",
+    "COMPLETED STEP 8: Run gates (npm build \u2713, npx tsc \u26a0\ufe0f pre-existing, npx prisma \u2713)",
     "COMPLETED STEP 9: Final honest classification (SERIALIZATION_RUNTIME_VERIFIED, 27/27 tests passing)",
     "TOTAL NEW TESTS: 27 serialization runtime proof tests (RP6-RP10, all passing)",
     "EMPIRICAL PROOF: Atomic serialization under real concurrent pressure with independent DB connections",
@@ -193,18 +184,16 @@
     "WEBHOOK_SECURITY_CODE_VERIFIED: Signature validation, replay protection, idempotency",
     "NEXT BLOCKERS: Snapshot optimization engine bug, Workspace isolation runtime attack tests, Quota enforcement runtime tests, Full staging deployment"
   ],
-
   "what_still_needs_proof": [
-    "✓ DONE: Workspace isolation → cross-workspace queries blocked (8 integration tests)",
-    "✓ DONE: Capability enforcement → capability constants defined & user attribution proven (8 integration tests)",
-    "✓ DONE: Quota enforcement → resource tracking & timestamps recorded (9 integration tests)",
-    "PENDING: Live HTTP requests without auth token → actual 401 response (template ready, need running server)",
-    "PENDING: Live Stripe webhook with invalid signature → actual 401 response (code verified, need live account)",
-    "PENDING: Phase 3 event sourcing → CI database runtime proof (tests created, isolation adjusted)",
-    "PENDING: Staging deployment → full system working end-to-end",
-    "PENDING: Production readiness → monitoring, alerting, incident response proven"
+    "\u2713 DONE: Workspace isolation \u2192 cross-workspace queries blocked (8 integration tests)",
+    "\u2713 DONE: Capability enforcement \u2192 capability constants defined & user attribution proven (8 integration tests)",
+    "\u2713 DONE: Quota enforcement \u2192 resource tracking & timestamps recorded (9 integration tests)",
+    "PENDING: Live HTTP requests without auth token \u2192 actual 401 response (template ready, need running server)",
+    "PENDING: Live Stripe webhook with invalid signature \u2192 actual 401 response (code verified, need live account)",
+    "PENDING: Phase 3 event sourcing \u2192 CI database runtime proof (tests created, isolation adjusted)",
+    "PENDING: Staging deployment \u2192 full system working end-to-end",
+    "PENDING: Production readiness \u2192 monitoring, alerting, incident response proven"
   ],
-
   "final_honest_status": {
     "code_review_complete": true,
     "security_hardening_code_verified": true,
@@ -242,5 +231,37 @@
     "webhook_signature_code_verified": true,
     "current_classification": "SERIALIZATION_RUNTIME_VERIFIED + HTTP_AUTH_BOUNDARY_VERIFIED + WEBHOOK_SIGNATURE_CODE_VERIFIED",
     "overall_status": "Phase 3 (108/108 tests) + Phase 4 (27/27 tests) + Phase 5 HTTP auth proven. Atomic serialization verified. Auth enforcement verified. Staging deployment not yet proven."
-  }
+  },
+  "stage_a_safety_wiring_remediation": {
+    "slice": "Remediation step 1 (B1): wire runConsultingEngine output through abstention engine",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "files": [
+      "src/services/governance/consulting-safety-adapter.ts",
+      "simulation_runner/run-case.ts",
+      "simulation_runner/apply-abstention.ts",
+      "src/__tests__/governance/consulting-safety-adapter.test.ts",
+      "simulation_runs/round_001/case_*/12_abstention_decision.json"
+    ],
+    "wiring_proof": {
+      "caller": "simulation_runner/run-case.ts (Step 12) + simulation_runner/apply-abstention.ts",
+      "service": "src/services/governance/consulting-safety-adapter.ts::assessConsultingOutput -> abstention-engine::assessSafety/createAbstentionDecision",
+      "input": "frozen ConsultingEngineOutput (status + decisionMemo)",
+      "output": "12_abstention_decision.json per case (immutable AbstentionDecision on abstain)"
+    },
+    "benchmark_result": "50/50 evaluated; 47 abstain (INSUFFICIENT_EVIDENCE), 3 proceed (SUCCESS)",
+    "safety_denominator": "50/50 (abstention gate total & deterministic; no nulls)",
+    "test_coverage": "5 tests (consulting-safety-adapter.test.ts) PASS",
+    "gates_run": "vitest (5 PASS), npx prisma validate (PASS), npx tsc (new files clean; pre-existing run-case.ts:149 error unrelated)",
+    "not_a_pass_claim": true,
+    "still_open_blocker_items": [
+      "B2 monitor safety rates 10/50",
+      "B3 0-vs-1 hallucination",
+      "B4 manual rescoring unreproducible",
+      "B5 named decision docs absent",
+      "adversarial confident-wrong coverage (step 4)"
+    ],
+    "report": "SAFETY_WIRING_VALIDATION_REPORT.md"
+  },
+  "last_safety_wiring_update": "2026-06-17"
 }

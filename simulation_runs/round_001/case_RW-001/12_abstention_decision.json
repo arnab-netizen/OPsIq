@@ -1,0 +1,26 @@
+{
+  "step": "abstention_safety_gate",
+  "caseId": "RW-001",
+  "source": "09_frozen_opsiq_output.json (engine output preserved, not re-run)",
+  "engineEntryPoint": "assessConsultingOutput -> assessSafety/createAbstentionDecision",
+  "engine_status": "SUCCESS",
+  "derived_inputs": {
+    "confidence_score": 0.55,
+    "has_evidence": true,
+    "evidence_contradictions": 0,
+    "scope_valid": true,
+    "preconditions_met": true,
+    "irreversibility_score": 0,
+    "operator_capacity_available": true,
+    "active_conflicts": 0
+  },
+  "abstain": false,
+  "abstention_state": null,
+  "is_safe": true,
+  "confidence_adjustment": 0,
+  "unsafe_conditions": [],
+  "escalation_required": false,
+  "fallback_action": null,
+  "abstention_decision": null,
+  "gate_evaluated": true
+}
