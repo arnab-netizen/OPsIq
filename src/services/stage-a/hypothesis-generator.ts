@@ -1,5 +1,6 @@
 import { EvidenceItem, DiagnosisType } from "@/domain/consulting-engine/types";
 import { SynthesizedEvidence, EvidencePattern } from "./evidence-synthesis-engine";
+import { CausalDiagnosisAdjudicator } from "./causal-diagnosis-adjudicator";
 
 export interface Hypothesis {
   id: string;
@@ -15,6 +16,8 @@ export interface Hypothesis {
 }
 
 export class HypothesisGenerator {
+  private readonly adjudicator = new CausalDiagnosisAdjudicator();
+
   private readonly allDiagnosisTypes = [
     DiagnosisType.OPERATIONAL_BOTTLENECK,
     DiagnosisType.QUALITY_CONTROL_FAILURE,
@@ -266,6 +269,12 @@ export class HypothesisGenerator {
           sorted[1] = temp;
         }
       }
+    }
+
+    // SLICE_10 (CAUSAL_REWORK_SLICE_1): Apply causal diagnosis adjudication as extreme tiebreaker
+    // Only reorder when top 2 candidates are essentially tied (within 1 confidence point)
+    if (sorted.length > 1 && Math.abs(sorted[0].confidence - sorted[1].confidence) <= 1) {
+      sorted = this.adjudicator.adjudicateCandidates(sorted, allEvidence, synthesizedEvidence);
     }
 
     // Take top 3, but adjust confidence downward if tied
