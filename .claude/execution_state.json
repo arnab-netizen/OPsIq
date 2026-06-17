@@ -520,5 +520,37 @@
       "optional standard-compliant 13-dim quality rescore"
     ],
     "report": "B4_RESCORING_REPRODUCIBILITY_DECISION.md"
+  },
+  "stage_a_b5_decision_docs": {
+    "slice": "Close blocker B5: author the 7 missing ABSTENTION_GATE/STAGE_A decision documents",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DECISION_DOCS_ONLY (no code/scoring/threshold/answer-key/benchmark-output change)",
+    "files": [
+      "ABSTENTION_GATE_FALSIFICATION.md",
+      "ABSTENTION_GATE_OVERFITTING_AUDIT.md",
+      "ABSTENTION_GATE_SAFETY_AUDIT.md",
+      "ABSTENTION_GATE_REGRESSION_RISK.md",
+      "ABSTENTION_GATE_ROOT_CAUSE_REVIEW.md",
+      "ABSTENTION_GATE_PROMOTION_TRIAL.md",
+      "STAGE_A_FINAL_HOSTILE_DECISION.md"
+    ],
+    "b5_status": "CLOSED - 7 docs created from committed evidence",
+    "final_verdict": "DO_NOT_PROMOTE",
+    "rationale": "engine not consultant-grade (47/50 INSUFFICIENT_EVIDENCE, 0/50 pass); quality UNVERIFIED (B4 retracted); RW-005 unresolved; RC-7 semantic residue. Gate may be retained as safety brake.",
+    "blockers_closed": [
+      "B1",
+      "B2",
+      "B3",
+      "B4",
+      "B5"
+    ],
+    "still_open": [
+      "RW-005 human adjudication",
+      "RC-7 semantic residue / model-based verifier",
+      "quality UNVERIFIED (optional rescore)",
+      "engine committed-output capability",
+      "Option D advisory"
+    ],
+    "stage_a": "BLOCKED"
   }
 }
