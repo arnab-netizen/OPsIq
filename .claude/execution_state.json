@@ -881,5 +881,33 @@
       "ROUND_2_SOURCE_BACKING_AUDIT_OF_20_CASES.md",
       "ROUND_2_REAL_CASE_SOURCING_PLAN.md"
     ]
+  },
+  "stage_a_round2_outcome_spectrum": {
+    "slice": "Round 2 outcome-spectrum governance (requirements doc + sourcing-plan update)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "GOVERNANCE_DOCS_ONLY (no engine/gate/scorer/answer-key change; no sourcing; no authoring)",
+    "files": [
+      "ROUND_2_OUTCOME_SPECTRUM_REQUIREMENTS.md",
+      "ROUND_2_REAL_CASE_SOURCING_PLAN.md (updated: added §12 outcome integration + §13 acceptance)"
+    ],
+    "outcome_categories_added": 20,
+    "per_category_min": "8/8/7/8/7/6/6/6/6/6/8/8/6/7/6/6/6/6/6/20 (sum 147 of 150); all 20 non-empty; no category or business-type > 20%",
+    "valence_floors": "GOOD >=30 (cats 4,11,12,13); BAD >=45 (1,2,10,14,15,16,17,18,19); MIXED >=25 (3,5,6,7,8,9); AMBIGUOUS >=20 (cat 20)",
+    "good_required": 30,
+    "bad_required": 45,
+    "mixed_required": 25,
+    "ambiguous_required": 20,
+    "anti_skew": "no category >20%, no business-type >20%, <=25% famous large-caps; >=8 each of small/startup/mid-market/franchise/public/marketplace/SaaS/retail/restaurant/service/manufacturing/asset-heavy",
+    "decision_quality_reqs": "obvious-diagnosis-wrong >=12, abstention-correct >=20, intervention-quality-dominant >=12; both good and bad management decisions present",
+    "outcome_hidden": "outcome_category/outcome_valence/documented_outcome in key.json; outcome_evidence(+citation/locator/date) in source.json; never in 01_case_input.json; LEAKAGE_MARKERS extended to outcome tokens (validator slice); blind-outcome reviewer",
+    "scorer_use": "held-out blind validation: action-direction consistency (winning action in acceptable / losing in unsafe), safety cross-check on dangerous-action BAD cases, abstention check on cat 20, over-intervention penalty on cat 12; outcome never an engine input (B4 reproducibility)",
+    "source_type_by_outcome": "BAD->filings/bankruptcy/regulatory/postmortems; GOOD->earnings calls/survivor 10-Ks/journalism/turnarounds (+capped synthetic for stable-healthy); MIXED->10-Q trends/datasets; AMBIGUOUS->partial-data real + labeled synthetic",
+    "gates_run": "docs only; execution_state.json JSON-validated; no code touched",
+    "next_step": "source-collection slice (web access) writes source.json incl outcome_evidence to source+outcome quotas -> validator slice -> resume authoring -> scorer -> re-trial",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "reports": [
+      "ROUND_2_OUTCOME_SPECTRUM_REQUIREMENTS.md",
+      "ROUND_2_REAL_CASE_SOURCING_PLAN.md"
+    ]
   }
 }

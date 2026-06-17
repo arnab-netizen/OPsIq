@@ -119,8 +119,38 @@ before any scoring.
 4. **6-axis scorer** + **re-trial** under pre-registered promotion gates (incl. the
    ≥60% grounded gate).
 
-## 12. ACCEPTANCE FOR THE PLAN
+## 12. OUTCOME-SPECTRUM INTEGRATION (see ROUND_2_OUTCOME_SPECTRUM_REQUIREMENTS.md)
+Source collection and authoring must satisfy the outcome spectrum **in addition to**
+the source quotas above. Both quota systems apply to the same 150 cases.
+
+**Outcome quota (primary `outcome_category`, of 150):**
+| Valence | Categories | Min cases |
+|---|---|---|
+| GOOD | 4 turnaround, 11 good-action→improvement, 12 stable-healthy, 13 shock→recovery | **≥ 30** |
+| BAD | 1 failure, 2 bankruptcy, 10 wrong-action→worse, 14 demand-collapse, 15 fraud/legal, 16 key-person, 17 capex-mistake, 18 quality-failure, 19 pricing/unit-econ | **≥ 45** |
+| MIXED | 3 distress-survival, 5 partial-recovery, 6 hidden-profitability, 7 revenue-vs-cash, 8 growth→breakdown, 9 mistake→correction | **≥ 25** |
+| AMBIGUOUS | 20 incomplete→abstention | **≥ 20** |
+
+- **Per-category minimums** (8/8/7/8/7/6/6/6/6/6/8/8/6/7/6/6/6/6/6/20) and the rule
+  that **no category and no business-type exceeds 20%** are defined in the outcome
+  requirements doc. **All 20 categories must be non-empty.**
+- **Source-type mix by outcome:** BAD → filings/bankruptcy/regulatory/postmortems;
+  GOOD → earnings calls/survivor 10-Ks/journalism/turnaround write-ups (+capped
+  synthetic for stable-healthy); MIXED → 10-Q trends/datasets; AMBIGUOUS → partial-data
+  real + labeled synthetic. **≤ 25% famous large-caps.**
+- **Hidden labels:** `outcome_category`/`outcome_valence`/`documented_outcome` live in
+  `key.json`; `outcome_evidence` (+citation/locator/date) in `source.json`; never in
+  the engine-visible input. Leakage scan extended to outcome tokens (validator slice).
+- **Scorer use (later slice):** outcome is a held-out blind-validation signal —
+  action-direction consistency (winning action ∈ acceptable / losing action ∈ unsafe),
+  abstention check on cat 20, over-intervention penalty on cat 12 — never an engine
+  input (B4 reproducibility, no leakage).
+
+## 13. ACCEPTANCE FOR THE PLAN
 Round 2 is sourcing-complete only when: ≥ 90 cases REAL_SOURCE_BACKED at A/B
-reliability; every §2 category minimum met; synthetic ≤ 60 (≤ 20 pure) and labeled;
-every grounded case has a validated `source.json`; 0 leakage findings; and the quota
-report is committed. **Stage A stays BLOCKED until then and through re-trial.**
+reliability; every §2 source-category minimum met; **every §12 outcome-category
+minimum and valence floor met (GOOD ≥30, BAD ≥45, MIXED ≥25, AMBIGUOUS ≥20; no
+category/type > 20%; ≤25% large-caps)**; synthetic ≤ 60 (≤ 20 pure) and labeled;
+every grounded case has a validated `source.json` with `outcome_evidence` where
+available; 0 leakage findings; and the quota report (source **and** outcome) is
+committed. **Stage A stays BLOCKED until then and through re-trial.**
