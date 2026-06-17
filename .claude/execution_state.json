@@ -966,5 +966,38 @@
       "ROUND_2_SOURCE_COLLECTION_SLICE_2_REPORT.md",
       "ROUND_2_SOURCE_COVERAGE_GAP_AUDIT.md"
     ]
+  },
+  "stage_a_round2_source_collection_slice3": {
+    "slice": "Round 2 source collection slice 3 (diversity/weak-coverage gap closure; candidate records only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_SOURCE_RECORDS + AUDIT REFRESH (no benchmark cases; no engine/gate/scorer/answer-key change)",
+    "files": [
+      "simulation_runs/round_002_source_candidates/slice_3/SRC-073.json..SRC-108.json",
+      "simulation_runs/round_002_source_candidates/_COMBINED_INDEX.json (refreshed)",
+      "ROUND_2_SOURCE_COLLECTION_SLICE_3_REPORT.md",
+      "ROUND_2_SOURCE_COVERAGE_GAP_AUDIT.md (refreshed for 108 records)"
+    ],
+    "new_records": 36,
+    "total_records": 108,
+    "good_outcome_count": "slice3 12; combined GOOD 23 (floor 30 - short ~7)",
+    "ambiguous_count": "slice3 4; combined AMBIGUOUS 8 (floor 20 - short ~12)",
+    "small_private_franchise_count": "combined ~28 non-large-non-dataset (small 10, mid-market 11, startup 4, franchise 3); large-cap still ~59% of company records",
+    "non_us_count": "slice3 9 (UK x5, SA/Germany, China, Australia, multi-country); combined ~20; still US-heavy",
+    "thin_gaps_remaining": "GOOD<30, AMBIGUOUS<20; large-cap>25%; thin diagnosis pricing_power(2)/margin_erosion(3)/customer_retention(4); US-heavy; founder-postmortem(1)/bankruptcy-docket(2) thin",
+    "valence": "GOOD 23 / BAD 47 (meets floor-stop adding) / MIXED 30 / AMBIGUOUS 8",
+    "source_types": "JOURNALISM 43, SEC_FILING 42, GOVERNMENT_REPORT 12, PUBLIC_DATASET 6, BANKRUPTCY_RESTRUCTURING 2, EARNINGS_CALL 2, FOUNDER_POSTMORTEM 1",
+    "reliability": "A=49, B=56, C=3 (SRC-030 & SRC-066 corroborated by SRC-107/108; SRC-103 Schlitz still uncorroborated C)",
+    "full_text_verified": 0,
+    "records_needing_recheck": "all 108 (WebFetch HTTP 403 in sandbox; all SEARCH_SNIPPET_ONLY)",
+    "real_source_backed_promoted": 0,
+    "hard_rule": "honored - 0 promoted to REAL_SOURCE_BACKED; no benchmark cases authored",
+    "method": "4 parallel research agents, disjoint ranges SRC-073..108, strict no-fabrication, canonical extended schema; 108/108 valid JSON",
+    "gates_run": "108/108 valid JSON + slice3 required-field completeness (node check); no app code touched",
+    "next_step": "FULL-TEXT VERIFICATION slice (gating; confirm each metric vs locator) before source.json conversion; optional slice 4 (GOOD/AMBIGUOUS top-up + reduce large-cap); then validator -> scorer -> re-trial",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "reports": [
+      "ROUND_2_SOURCE_COLLECTION_SLICE_3_REPORT.md",
+      "ROUND_2_SOURCE_COVERAGE_GAP_AUDIT.md"
+    ]
   }
 }

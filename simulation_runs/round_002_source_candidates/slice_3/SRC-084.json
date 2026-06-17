@@ -1,0 +1,52 @@
+{
+  "source_id": "SRC-084",
+  "source_url": "https://www.ons.gov.uk/businessindustryandtrade/business/activitysizeandlocation/bulletins/businessdemography/2023",
+  "source_title": "Business demography, UK: 2023",
+  "source_type": "GOVERNMENT_REPORT",
+  "publisher_issuer": "UK Office for National Statistics (ONS)",
+  "publication_or_filing_date": "2024-11-18",
+  "accessed_date": "2026-06-17",
+  "company_context": "Population-level statistical bulletin, not a single company. ONS Business Demography reports counts of UK business births, deaths, and survival rates derived from the Inter-Departmental Business Register, covering the active enterprise population.",
+  "business_type": "All UK active businesses (cross-sectoral)",
+  "company_size_stage": "Whole-economy enterprise population, dominated by micro and small businesses",
+  "geography": "United Kingdom (national and regional, e.g., Northern Ireland)",
+  "time_period": "Calendar years 2022-2023, with five-year survival cohort statistics",
+  "macro_context": "Post-pandemic normalization with elevated inflation and rising interest rates in 2022-2023; both business birth and death rates fell year over year.",
+  "outcome_category": "12 - stable / healthy base rate (whole-population survival and turnover statistics)",
+  "candidate_diagnosis_bucket": "working_capital_stress",
+  "evidence_summary": "Between 2022 and 2023, UK business births fell from 337,000 to 316,000, lowering the birth rate from 11.5 percent to 11.0 percent, while business deaths fell from 349,000 to 309,000, lowering the death rate from 11.9 percent to 10.8 percent. There were about 2.9 million active businesses in 2023, down about 54,000 from 2022. The region with the highest five-year survival rate was Northern Ireland at 47.7 percent, illustrating that a substantial minority of businesses survive five years. These are population base rates that establish the normal turnover and survival distribution of the UK business stock, appropriate for stable-healthy base-rate calibration and for abstention at the individual-firm level.",
+  "source_backed_metrics": {
+    "business_births_2022": "337,000",
+    "business_births_2023": "316,000",
+    "business_birth_rate_2022": "11.5 percent",
+    "business_birth_rate_2023": "11.0 percent",
+    "business_deaths_2022": "349,000",
+    "business_deaths_2023": "309,000",
+    "business_death_rate_2022": "11.9 percent",
+    "business_death_rate_2023": "10.8 percent",
+    "active_businesses_2023": "approximately 2.9 million (down about 54,000 from 2022)",
+    "highest_regional_five_year_survival_rate": "Northern Ireland at 47.7 percent"
+  },
+  "owner_decision_context": "Not applicable at firm level; the bulletin characterizes aggregate entry, exit, and survival of UK businesses.",
+  "action_taken": "Not applicable; statistical measurement, not an intervention.",
+  "outcome_evidence": "Population-level: both birth and death rates declined in 2023; about 2.9 million active businesses; highest regional five-year survival rate 47.7 percent.",
+  "source_limitations": "Population dataset with no firm-level outcome; cannot support a confident single-company diagnosis. Counts are rounded. Five-year survival figure quoted is the highest regional value (Northern Ireland), not the UK-wide rate. Bulletin page returned HTTP 403 on direct fetch; figures confirmed verbatim in ons.gov.uk primary-domain search snippets.",
+  "directly_stated": [
+    "Business births fell from 337,000 (2022) to 316,000 (2023)",
+    "Business birth rate fell from 11.5 percent to 11.0 percent",
+    "Business deaths fell from 349,000 (2022) to 309,000 (2023)",
+    "Business death rate fell from 11.9 percent to 10.8 percent",
+    "About 2.9 million active UK businesses in 2023, down about 54,000",
+    "Highest regional five-year survival rate: Northern Ireland 47.7 percent"
+  ],
+  "inferred": [
+    "Roughly half of UK businesses do not survive five years, setting a base-rate prior for failure",
+    "Falling birth and death rates together suggest reduced churn rather than a single directional shock"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Authoritative non-US (UK) base rate for business birth, death, and five-year survival. Useful for calibrating stable-healthy base rates (outcome 12) and survival priors, and for teaching OpsIQ that whole-population turnover statistics do not license a confident firm-level diagnosis.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "LOW"
+}

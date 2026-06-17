@@ -1,0 +1,47 @@
+{
+  "source_id": "SRC-106",
+  "source_url": "https://www.cnbc.com/2022/08/25/peloton-pton-reports-q4-2022-losses-mount.html",
+  "source_title": "Peloton (PTON) reports Q4 2022 losses mount (CNBC) - inventory overhang and cash burn",
+  "source_type": "EARNINGS_CALL",
+  "publisher_issuer": "Peloton Interactive, Inc. (FY2022 Form 10-K and Q4 FY2022 results, filed with the SEC); reported by CNBC",
+  "publication_or_filing_date": "2022-08-25",
+  "accessed_date": "2026-06-17",
+  "company_context": "Peloton over-built connected-fitness hardware capacity during the pandemic demand spike, then faced a sharp demand reversal that left excess and obsolete inventory and severe negative cash flow, straining working capital. SUBSTITUTION NOTE: used as the working-capital-stress case because it has explicit SEC-disclosed excess-inventory reserves and cash-burn figures that directly evidence working-capital and cash-conversion deterioration, in place of a generic DSO disclosure that could not be verbatim-verified.",
+  "business_type": "Connected-fitness hardware plus subscription; inventory-heavy with long supply lead times and a fast-reversing demand curve",
+  "company_size_stage": "public growth company past peak demand, in turnaround/cash-preservation",
+  "geography": "United States headquartered; primarily North America revenue",
+  "time_period": "fiscal year 2022 (year ended June 30, 2022), reported August 25, 2022",
+  "macro_context": "Post-pandemic reopening collapsed at-home fitness demand after pandemic-era over-ordering, while rising rates raised the cost of funding negative free cash flow.",
+  "outcome_category": "7 - cash crisis / working-capital and liquidity strain",
+  "candidate_diagnosis_bucket": "working_capital_stress",
+  "evidence_summary": "Peloton's fiscal 2022 results show acute working-capital and cash strain from over-built inventory meeting collapsing demand: the company recorded excess and obsolete inventory reserve adjustments of about $224.9 million in fiscal 2022, and inventory decreased by about $398.6 million as a change in operating assets as it worked down the overhang. It burned about $412 million of cash in fiscal Q4 2022 after averaging roughly negative $650 million of cash flow in each of the prior two quarters, and ended June 2022 with about $1.25 billion of cash plus a $500 million revolving credit facility. It marked Peloton's sixth consecutive quarter of reported losses. The case is working-capital stress driven by inventory-to-demand mismatch and cash-conversion deterioration.",
+  "source_backed_metrics": {
+    "fy2022_excess_and_obsolete_inventory_reserve_usd": "approximately $224.9 million",
+    "fy2022_inventory_decrease_operating_assets_usd": "approximately $398.6 million",
+    "q4_fy2022_cash_burn_usd": "approximately $412 million",
+    "prior_two_quarters_avg_cash_flow_usd": "approximately negative $650 million per quarter",
+    "cash_reserves_end_jun_2022_usd": "approximately $1.25 billion",
+    "revolving_credit_facility_usd": "$500 million",
+    "consecutive_loss_quarters": "sixth consecutive quarter of reported losses"
+  },
+  "owner_decision_context": "Management had committed to large inventory and capacity buys to meet pandemic-era demand; when demand reversed, leadership had to choose between liquidating overstock at a loss to free cash and preserving runway via the credit facility.",
+  "action_taken": "Recognized about $224.9 million of excess/obsolete inventory reserves, worked inventory down by about $398.6 million, cut costs, and relied on about $1.25 billion cash plus a $500 million revolver to fund continued large cash burn during the turnaround.",
+  "outcome_evidence": "About $224.9 million inventory reserve, an approximately $398.6 million inventory drawdown, roughly $412-650 million quarterly cash burn, and six consecutive loss quarters against about $1.25 billion cash confirm working-capital and cash-conversion stress driven by inventory-demand mismatch.",
+  "source_limitations": "WebFetch of CNBC and sec.gov returns HTTP 403 here; figures verified from search snippets of Peloton's FY2022 10-K / Q4 results and CNBC rather than full-text read. The reserve and inventory-change figures are GAAP working-capital line items, not a single DSO/cash-conversion-cycle number; the working-capital deterioration is evidenced through inventory reserves and cash burn (substitution noted).",
+  "directly_stated": [
+    "Excess and obsolete inventory reserve adjustments of about $224.9 million in fiscal 2022",
+    "Inventory decreased by about $398.6 million as a change in operating assets",
+    "About $412 million cash burned in Q4 fiscal 2022 after roughly negative $650 million per quarter in the prior two quarters",
+    "Ended June 2022 with about $1.25 billion cash and a $500 million revolving credit facility; sixth consecutive loss quarter"
+  ],
+  "inferred": [
+    "The working-capital stress was driven by an inventory-to-demand mismatch tying up and then writing down cash",
+    "Cash conversion deteriorated as inventory built ahead of collapsing demand, forcing reserves and liquidation"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Working-capital-stress case (thin category) with hard SEC figures. Tests whether OpsIQ identifies working_capital_stress and cash-conversion deterioration from inventory-demand mismatch, distinct from pure inventory_forecasting_mismatch or a demand failure, and triggers adaptive re-evaluation on cash burn and KPI deterioration.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

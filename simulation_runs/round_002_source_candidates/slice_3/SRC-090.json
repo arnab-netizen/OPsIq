@@ -1,0 +1,47 @@
+{
+  "source_id": "SRC-090",
+  "source_url": "https://www.fedsmallbusiness.org/reports/survey/2024/2024-report-on-employer-firms",
+  "source_title": "2024 Report on Employer Firms: Findings from the 2023 Small Business Credit Survey",
+  "source_type": "GOVERNMENT_REPORT",
+  "publisher_issuer": "Federal Reserve Banks (all 12) / Small Business Credit Survey",
+  "publication_or_filing_date": "2024-03",
+  "accessed_date": "2026-06-17",
+  "company_context": "Population-level survey dataset, not a single company. The Small Business Credit Survey is conducted by all 12 Federal Reserve Banks, covering small employer firms with 1-499 employees across all 50 states. The 2023 survey (reported in the 2024 Report on Employer Firms) was fielded September-November 2023 and measures the financial and operational challenges firms faced over the prior year.",
+  "business_type": "Small U.S. employer firms (1-499 employees), cross-sectoral",
+  "company_size_stage": "Small businesses (employer firms), mixed maturity",
+  "geography": "United States (all 50 states)",
+  "time_period": "Survey fielded September-November 2023; reference period the prior 12 months",
+  "macro_context": "2023 elevated input-cost and wage inflation and higher interest rates squeezing small-business operating budgets and cash flow.",
+  "outcome_category": "20 - ambiguous/insufficient evidence (population prevalence of operating-expense and cash-flow stress, no firm-level outcome)",
+  "candidate_diagnosis_bucket": "working_capital_stress",
+  "evidence_summary": "More than 9 in 10 small employer firms reported experiencing a financial or operational challenge in 2023. Rising costs of goods, services, and/or wages was the most common financial challenge, cited by 75 percent of firms. More than half cited paying operating expenses (56 percent) and uneven or interrupted cash flow (51 percent). The survey covers small employer firms with 1-499 employees across all 50 states and was fielded September-November 2023. These are population prevalence rates for operating-expense and cash-flow stress, establishing a base rate for working-capital pressure rather than a firm-level outcome, and are appropriate for abstention at the individual-firm level.",
+  "source_backed_metrics": {
+    "firms_with_any_financial_or_operational_challenge": "more than 9 in 10 (over 90 percent)",
+    "rising_costs_challenge": "75 percent of firms",
+    "paying_operating_expenses_challenge": "56 percent of firms",
+    "uneven_cash_flow_challenge": "51 percent of firms",
+    "firm_scope": "small employer firms with 1-499 employees, all 50 states",
+    "survey_field_period": "September-November 2023"
+  },
+  "owner_decision_context": "Not applicable at firm level; the report characterizes the prevalence of cost, operating-expense, and cash-flow challenges across small-business owners.",
+  "action_taken": "Not applicable; survey measurement, not a single-firm intervention.",
+  "outcome_evidence": "Population-level prevalence: over 90 percent reported a challenge; 75 percent rising costs; 56 percent paying operating expenses; 51 percent uneven cash flow.",
+  "source_limitations": "Population dataset with no firm-level outcome; cannot support a single-company diagnosis. Self-reported, non-probability convenience sample weighted to population benchmarks. Distinct from any slice-1 Fed SBCS record: this is specifically the 2024 Report on Employer Firms covering the 2023 survey, focused on operating-expense and cash-flow challenges. Report page returned HTTP 403 on direct fetch; figures confirmed verbatim in fedsmallbusiness.org primary-domain search snippets.",
+  "directly_stated": [
+    "More than 9 in 10 firms experienced a financial or operational challenge in 2023",
+    "75 percent cited rising costs of goods, services, and/or wages",
+    "56 percent cited paying operating expenses as a challenge",
+    "51 percent cited uneven or interrupted cash flow",
+    "Covers small employer firms with 1-499 employees across all 50 states; fielded September-November 2023"
+  ],
+  "inferred": [
+    "Operating-expense and cash-flow strain is widespread enough to be a strong base-rate prior for working_capital_stress among small firms",
+    "Population prevalence cannot identify which individual firms are actually distressed"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "An authoritative U.S. base rate for small-business operating-expense and cash-flow stress, distinct from the slice-1 Fed SBCS record. Useful for calibrating working_capital_stress priors and for teaching OpsIQ to abstain (outcome 20) when only population prevalence data is available rather than firm-specific evidence.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "LOW"
+}

@@ -1,0 +1,47 @@
+{
+  "source_id": "SRC-098",
+  "source_url": "https://money.cnn.com/2018/02/23/news/kfc-apology-ad-shortage-chicken/index.html",
+  "source_title": "KFC UK 2018 chicken-supply / distribution crisis (named journalism: CNN, BBC reporting on the DHL distribution switch)",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Named journalism (CNN; corroborated by BBC and contemporaneous UK reporting)",
+  "publication_or_filing_date": "2018-02",
+  "accessed_date": "2026-06-17",
+  "company_context": "KFC's UK operation (largely run through franchisees, ~80% of outlets) switched its logistics/distribution contract from Bidvest Logistics to DHL in February 2018. The new arrangement, run from a single warehouse, failed almost immediately, leaving most UK KFC restaurants without chicken.",
+  "business_type": "Quick-service restaurant (QSR) franchise (fried chicken)",
+  "company_size_stage": "large franchise network (mostly franchisee-operated outlets)",
+  "geography": "United Kingdom (and Ireland)",
+  "time_period": "February 2018",
+  "macro_context": "A cost-driven supplier/logistics change with no transition overlap; the prior distributor (Bidvest) operated six warehouses while the new provider (DHL) relied on a single Rugby depot, removing redundancy from a fresh-food supply chain.",
+  "outcome_category": "13 - temporary operational shock with recovery",
+  "candidate_diagnosis_bucket": "operational_bottleneck",
+  "evidence_summary": "After DHL took over deliveries from Bidvest Logistics on 14 February 2018, the supply chain collapsed within roughly 48 hours. More than two-thirds of KFC's UK outlets closed; by 18 February only 266 of about 870 restaurants in the UK and Ireland remained open. The single-warehouse model lacked the capacity, staffing and redundancy of the previous six-warehouse arrangement, causing mishandling and spoilage. KFC issued a widely praised apology ('FCK') advertisement, and within a few weeks about 97% of restaurants had reopened. KFC subsequently dropped DHL and returned distribution control to Bidvest. Reported same-store sales growth was around -6.8% in the affected period.",
+  "source_backed_metrics": {
+    "distribution_handover_date": "14 February 2018 (Bidvest to DHL)",
+    "outlets_open_18_feb_2018": "266 of approximately 870 (UK and Ireland)",
+    "share_outlets_closed_at_peak": "more than two-thirds",
+    "prior_distributor_warehouses": "6 (Bidvest) vs 1 (DHL, Rugby)",
+    "recovery_share_reopened": "approximately 97% within a few weeks",
+    "same_store_sales_growth_pct": "approximately -6.8% (affected period)",
+    "franchisee_share_of_outlets": "approximately 80%"
+  },
+  "owner_decision_context": "KFC chose DHL primarily for lower cost and cut over from Bidvest overnight with no transition overlap, concentrating fresh-food distribution in a single warehouse and removing the redundancy that had previously absorbed disruptions.",
+  "action_taken": "KFC issued a public apology campaign, prioritised reopening, and within weeks reversed the decision by dropping DHL and returning distribution to Bidvest; franchisees (covering ~80% of outlets) were supported and offered compensation arrangements.",
+  "outcome_evidence": "Rapid reopening (~97% within weeks) and the reversion to Bidvest confirm a recoverable temporary operational shock rather than a solvency event; the brand and network survived intact despite a sharp short-term sales hit (~-6.8% same-store).",
+  "source_limitations": "WebFetch typically 403s here; figures confirmed verbatim in WebSearch snippets attributed to CNN and contemporaneous reporting. The '266 of ~870' and '97% reopened' figures are widely reported; the '-6.8% same-store' and turnover figures appear in secondary supply-chain case writeups rather than a single primary filing, so the -6.8% is treated as reported, not primary-verified.",
+  "directly_stated": [
+    "DHL took over from Bidvest on 14 February 2018",
+    "More than two-thirds of UK outlets closed; only 266 of ~870 open by 18 February 2018",
+    "Bidvest used 6 warehouses vs DHL's single Rugby depot",
+    "~97% of restaurants reopened within a few weeks; KFC reverted to Bidvest"
+  ],
+  "inferred": [
+    "Optimising distribution purely on cost while removing redundancy created a single-point-of-failure operational bottleneck",
+    "The event was a transient shock, recoverable because the underlying demand and brand were intact"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Clean example of a temporary operational-bottleneck shock with full recovery, distinct from financial-distress cases. Tests whether the engine classifies a single-point-of-failure supply-chain disruption as a recoverable operational shock (outcome 13), recommends restoring redundancy, and avoids mislabelling a transient event as terminal failure.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

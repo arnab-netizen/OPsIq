@@ -1,9 +1,12 @@
 {
   "generated": "2026-06-17",
-  "total": 72,
-  "slice_1": 36,
-  "slice_2": 36,
-  "outcome_categories_covered": [
+  "total": 108,
+  "by_slice": {
+    "slice_1": 36,
+    "slice_2": 36,
+    "slice_3": 36
+  },
+  "outcome_covered": [
     1,
     2,
     3,
@@ -26,45 +29,51 @@
     20
   ],
   "outcome_missing": [],
-  "diagnosis_covered": [
-    "cash_liquidity_crisis",
-    "customer_retention_erosion",
-    "debt_solvency_pressure",
-    "demand_generation_failure",
-    "gtm_channel_mismatch",
-    "inventory_forecasting_mismatch",
-    "key_person_risk",
-    "legal_governance_risk",
-    "margin_erosion",
-    "operational_bottleneck",
-    "pricing_power",
-    "quality_trust_failure",
-    "strategic_capex_risk",
-    "unit_economics_failure",
-    "working_capital_stress"
-  ],
   "diagnosis_missing": [],
-  "reliability": {
-    "B": 42,
-    "A": 28,
-    "C": 2
-  },
-  "verification_status": {
-    "(none-slice1)": 36,
-    "SEARCH_SNIPPET_ONLY": 36
-  },
-  "source_type": {
-    "JOURNALISM": 33,
-    "SEC_FILING": 28,
-    "GOVERNMENT_REPORT": 6,
-    "PUBLIC_DATASET": 3,
-    "FOUNDER_POSTMORTEM": 1,
-    "BANKRUPTCY_RESTRUCTURING": 1
+  "diagnosis_counts": {
+    "debt_solvency_pressure": 14,
+    "working_capital_stress": 8,
+    "demand_generation_failure": 10,
+    "unit_economics_failure": 5,
+    "strategic_capex_risk": 7,
+    "customer_retention_erosion": 4,
+    "legal_governance_risk": 6,
+    "quality_trust_failure": 7,
+    "cash_liquidity_crisis": 12,
+    "margin_erosion": 3,
+    "operational_bottleneck": 7,
+    "inventory_forecasting_mismatch": 5,
+    "pricing_power": 2,
+    "gtm_channel_mismatch": 9,
+    "key_person_risk": 9
   },
   "valence": {
-    "GOOD": 11,
-    "BAD": 36,
-    "MIXED": 21,
-    "AMBIGUOUS": 4
-  }
+    "GOOD": 23,
+    "BAD": 47,
+    "MIXED": 30,
+    "AMBIGUOUS": 8
+  },
+  "size_stage": {
+    "other/dataset": 39,
+    "large-cap": 41,
+    "franchise": 3,
+    "mid-market": 11,
+    "small": 10,
+    "startup": 4
+  },
+  "source_type": {
+    "JOURNALISM": 43,
+    "SEC_FILING": 42,
+    "GOVERNMENT_REPORT": 12,
+    "PUBLIC_DATASET": 6,
+    "FOUNDER_POSTMORTEM": 1,
+    "BANKRUPTCY_RESTRUCTURING": 2,
+    "EARNINGS_CALL": 2
+  },
+  "reliability": {
+    "B": 56,
+    "A": 49,
+    "C": 3
+  },
+  "full_text_verified": 0
 }
