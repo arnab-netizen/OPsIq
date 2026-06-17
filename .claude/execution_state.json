@@ -706,5 +706,29 @@
       "ROUND_2_BENCHMARK_ENRICHMENT_SPEC.md",
       "ROUND_2_CASE_PACK_BUILD_PLAN.md"
     ]
+  },
+  "stage_a_round2_intake_validator": {
+    "slice": "Round 2 intake validator (reusable lib + CLI + tests)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING (benchmark tooling; no engine/gate/answer-key change)",
+    "files": [
+      "src/services/benchmark/round2-intake-validator.ts",
+      "simulation_runner/validate-intake.ts",
+      "src/__tests__/benchmark/round2-intake-validator.test.ts",
+      "ROUND_2_INTAKE_VALIDATOR_REPORT.md",
+      "ROUND_1_INTAKE_VALIDATION_RESULTS.json"
+    ],
+    "round1_pass": 0,
+    "round1_fail": 50,
+    "content_valid_only": 2,
+    "top_failure_reasons": "MISSING_*_KEY/LABEL 50 (no keys), TOO_FEW_NUMERIC_SUPPORT 47, TOO_FEW_EVIDENCE 45, TOO_FEW_CRITICAL 43, PLACEHOLDER_FINDING 41",
+    "rules": "13 rejection codes incl trigger-metric (15-diagnosis map), placeholder denylist, leakage scan; abstention-eligible exemption",
+    "tests": "9 pass",
+    "gates_run": "vitest 9 PASS, tsc clean (new files), prisma valid",
+    "scorer_built": false,
+    "cases_authored": false,
+    "next_step": "author 150-case Round 2 pack (must pass validator) -> 6-axis scorer -> re-trial",
+    "stage_a": "BLOCKED",
+    "report": "ROUND_2_INTAKE_VALIDATOR_REPORT.md"
   }
 }
