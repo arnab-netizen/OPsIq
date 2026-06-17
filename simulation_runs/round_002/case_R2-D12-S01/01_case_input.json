@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-D12-S01",
+  "caseType": "single",
+  "industry": "hospitality",
+  "businessModel": "multi_site_operator",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "hospitality",
+    "size": "medium",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "A hospitality operator trades steadily but is carrying heavy debt with covenants tightening; the owner wants to understand the solvency risk.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 8,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Leverage has climbed to 4.2x EBITDA with interest coverage near 1.1x",
+      "confidence": "HIGH",
+      "source": "lender pack",
+      "isCritical": true,
+      "supportingData": {
+        "leverageRatio": 4.2,
+        "interestCoverage": 1.1
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Covenant headroom is nearly exhausted ahead of the next quarterly test",
+      "confidence": "HIGH",
+      "source": "lender pack",
+      "isCritical": true,
+      "supportingData": {
+        "covenantHeadroom": 0.05
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Underlying trading is stable; the pressure is balance-sheet structure, not demand",
+      "confidence": "MEDIUM",
+      "source": "management",
+      "isCritical": false
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operations remain profitable at the EBITDA line across sites",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "ebitdaMargin": 14
+      }
+    }
+  ]
+}

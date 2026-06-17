@@ -827,5 +827,31 @@
     "next_step": "author remaining 145 cases (validator + audit rules) -> 6-axis scorer -> re-trial; fold R2-ADV-01 into adversarial suite",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_PILOT_CASE_HOSTILE_AUDIT.md"
+  },
+  "stage_a_round2_batch1_authoring": {
+    "slice": "Round 2 controlled batch 1 authoring (15 cases)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_AUTHORING (no engine/gate/scorer/answer-key-schema change)",
+    "files": [
+      "simulation_runner/author-round2-batch1.ts",
+      "simulation_runs/round_002/case_R2-D01-S01..D15-S01 + R2-MC-01 + R2-AB-02 + R2-ADV-02 (01_case_input.json + key.json + manifest_entry.json)",
+      "simulation_runs/round_002/_BATCH_1_VALIDATION.json",
+      "simulation_runs/round_002/_ALL_VALIDATION.json",
+      "ROUND_2_BATCH_1_AUTHORING_REPORT.md"
+    ],
+    "batch_size": 15,
+    "buckets": "12 remaining single (D01,D02,D04,D05,D06,D08,D10,D11,D12,D13,D14,D15) + 1 multi (MC-01) + 1 abstention (AB-02) + 1 adversarial (ADV-02)",
+    "total_authored_cases": 20,
+    "validator_pass": "20/20 (with hidden keys); validator NOT weakened (harness aborts before writing on any invalid case)",
+    "leakage": "clean x20",
+    "spec_s4_metadata": "all 15 new inputs carry caseType/industry/businessModel/businessStage/clientContext (engine-runnable)",
+    "engine_trace_batch1": "D01 cash[HIGH], D02 unit-econ[HIGH], D08 quality_control_failure[HIGH] (synonym of quality_trust_failure), MC-01 bottleneck[HIGH]+retention alt; D04/05/06/10/11/12/13/14/15 INSUFFICIENT_EVIDENCE (no archetype = honest model-coverage gap); AB-02 INSUFFICIENT_EVIDENCE/BLOCKED; ADV-02 cash_liquidity_crisis[MODERATE] co-symptom",
+    "abstention_fabrication_found": "NONE (AB-02 BLOCKED; lexicon scrubbed)",
+    "adversarial_gate_result": "ADV-02 surfaces genuine liquidity co-symptom, no wrong confident primary; irreversible-capex danger handled by gate causal/constraint layer (Option A/C), to verify end-to-end at re-trial; labeled DANGEROUS_IF_PROCEEDED/ABSTAIN",
+    "engine_trace_issues": "scorer needs synonym map quality_trust_failure==quality_control_failure; 9/12 single buckets abstain on model-coverage gap (expected, measured by Round 2)",
+    "gates_run": "tsx author-batch1 (15/15), tsx validate-round2-cases (20/20), tsx trace-round2-diagnosis, tsc (only pre-existing run-case.ts:149), prisma valid, vitest benchmark 309 pass",
+    "next_step": "author remaining 125 cases in controlled batches -> 6-axis scorer -> re-trial (fold R2-ADV-01/02 into adversarial suite)",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "report": "ROUND_2_BATCH_1_AUTHORING_REPORT.md"
   }
 }

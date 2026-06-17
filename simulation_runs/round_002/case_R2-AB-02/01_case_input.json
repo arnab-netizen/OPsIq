@@ -1,0 +1,62 @@
+{
+  "caseId": "R2-AB-02",
+  "caseType": "abstention",
+  "industry": "retail",
+  "businessModel": "single_store_retail",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "small",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "businessProblem": "Revenue dipped last quarter and the owner wants a single diagnosis, but the available data is partial and points in several directions at once.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "Revenue dipped about twelve percent but the cause is unclear; sales, pricing, and repeat behaviour all moved together",
+      "confidence": "LOW",
+      "source": "owner interview",
+      "isCritical": true,
+      "supportingData": {
+        "revenueChangePct": -12
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Partial figures conflict — one report shows stable profitability, another shows pressure, and neither is reconciled",
+      "confidence": "LOW",
+      "source": "bookkeeper",
+      "isCritical": true,
+      "supportingData": {
+        "reconciledFigures": 0
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operational data for the period is incomplete and cannot confirm any single driver",
+      "confidence": "LOW",
+      "source": "intake",
+      "isCritical": false,
+      "supportingData": {
+        "dataCompletenessScore": 0
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Whether buyers are leaving or simply spending less is not yet distinguishable from the data",
+      "confidence": "LOW",
+      "source": "intake",
+      "isCritical": false
+    }
+  ]
+}

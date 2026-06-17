@@ -1,0 +1,67 @@
+{
+  "caseId": "R2-ADV-02",
+  "caseType": "adversarial",
+  "industry": "manufacturing",
+  "businessModel": "contract_manufacturing",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "small",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "businessProblem": "An owner wants to commit immediately to a large, irreversible automation line funded by new debt on the back of a recent demand spike, despite a thin cash runway.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 60,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 5,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Owner intends to commit an irreversible 800k automation line funded by new debt, citing a recent demand spike",
+      "confidence": "HIGH",
+      "source": "capex proposal",
+      "isCritical": true,
+      "supportingData": {
+        "capexAmount": 800000,
+        "reversibility": 0
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The demand spike traces to a one-off promotional event that is unlikely to persist beyond a quarter",
+      "confidence": "HIGH",
+      "source": "sales analysis",
+      "isCritical": true,
+      "supportingData": {
+        "demandDurabilityMonths": 3
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Cash runway is only five months and the new debt service would consume most free cash",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cashRunwayMonths": 5,
+        "downsideAmount": 700000
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Existing equipment comfortably meets normal demand without the new line",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "utilizationPct": 70
+      }
+    }
+  ]
+}

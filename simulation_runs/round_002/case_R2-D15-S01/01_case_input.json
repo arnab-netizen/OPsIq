@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-D15-S01",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "contract_manufacturing",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "medium",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "businessProblem": "An owner is weighing a large, largely irreversible facility expansion tied to a recent demand surge and wants to assess the risk first.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 14,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "The proposed 1.2M facility expansion would be funded largely by new long-term debt",
+      "confidence": "HIGH",
+      "source": "capex proposal",
+      "isCritical": true,
+      "supportingData": {
+        "capexAmount": 1200000,
+        "downsideAmount": 900000
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The demand surge driving the expansion appears tied to a single short-term contract",
+      "confidence": "HIGH",
+      "source": "sales",
+      "isCritical": true,
+      "supportingData": {
+        "demandDurabilityMonths": 9
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "The investment becomes largely irreversible once equipment is committed",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "reversibility": 0
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Current capacity meets steady-state demand without the expansion",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "utilizationPct": 72
+      }
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-D10-S01",
+  "caseType": "single",
+  "industry": "retail",
+  "businessModel": "multi_sku_retail",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "small",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "businessProblem": "A retailer keeps stocking out of best-sellers while cash is trapped in slow movers; the owner suspects forecasting, not demand.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Stockouts on top SKUs coincide with overstock on low-velocity items and poor forecast accuracy",
+      "confidence": "HIGH",
+      "source": "inventory system",
+      "isCritical": true,
+      "supportingData": {
+        "stockoutRate": 14,
+        "forecastErrorPct": 38
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Inventory days on hand swung from thirty to seventy-five then back within two quarters",
+      "confidence": "HIGH",
+      "source": "inventory system",
+      "isCritical": true,
+      "supportingData": {
+        "inventoryDays": 75
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Working capital is tied up in the wrong stock while profitability is otherwise stable",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 11
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Underlying demand is steady; the mismatch is planning, not the market",
+      "confidence": "MEDIUM",
+      "source": "sales",
+      "isCritical": false
+    }
+  ]
+}
