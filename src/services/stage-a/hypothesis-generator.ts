@@ -11,6 +11,7 @@ export interface Hypothesis {
   patternCount?: number; // number of patterns supporting this hypothesis
   patternStrengthSum?: number; // sum of pattern strengths
   evidenceDiversity?: number; // how many different dimensions support this
+  causalEvidenceFound?: boolean; // SLICE_8: whether diagnosis-specific causal evidence found
 }
 
 export class HypothesisGenerator {
@@ -30,54 +31,69 @@ export class HypothesisGenerator {
 
   // Diagnosis-specific evidence requirements and boost factors
   // SLICE 3: Added evidence specificity scores to improve discrimination
+  // SLICE_8: Added causal vs symptom distinction and negative indicators
   private readonly diagnosisRequirements: Record<string, {
     preferredDimensions: string[];
     minSupportingItems: number;
     patternBoost: number;
     specificity: number; // 0-1, how specific evidence needs to be (higher = more discriminative)
     requiredEvidenceIndicators: string[]; // Specific evidence indicators required
+    causalIndicators?: string[]; // SLICE_8: causal evidence that directly drives this diagnosis
+    negativeIndicators?: string[]; // SLICE_8: evidence that suggests this diagnosis is WRONG
   }> = {
     [DiagnosisType.UNIT_ECONOMICS_BREAKDOWN]: {
       preferredDimensions: ["financial_health"],
       minSupportingItems: 2,
       patternBoost: 1.3,
-      specificity: 0.95, // SLICE 3: Very high specificity - boost for financial evidence
+      specificity: 0.95,
       requiredEvidenceIndicators: ["cac", "payback", "margin", "ltv", "arpu"],
+      causalIndicators: ["cost per unit", "cac payback", "ltv declining", "margin pressure from costs", "margin declining due to cost"], // SLICE_8: unit cost causal signals (specific to costs, not price)
+      negativeIndicators: ["operations stable", "throughput normal", "utilization healthy", "no capacity issues", "margin pressure from price", "discounting required", "pricing pressure"], // SLICE_8: not economics if pricing or operational issue
     },
     [DiagnosisType.OPERATIONAL_BOTTLENECK]: {
       preferredDimensions: ["operational_efficiency"],
       minSupportingItems: 2,
       patternBoost: 1.2,
-      specificity: 0.65, // SLICE 3: Moderate specificity; SLICE 6: Enhanced with talent/throughput signals
+      specificity: 0.65,
       requiredEvidenceIndicators: ["bottleneck", "capacity", "throughput", "queue", "turnover", "utilization", "constraint"],
+      causalIndicators: ["capacity constraint", "throughput limitation", "queue building", "sla breached", "utilization high"], // SLICE_8: operational constraints
+      negativeIndicators: ["margin pressure", "cac rising", "cost per unit increasing", "contribution margin declining"], // SLICE_8: not bottleneck if financial pressure
     },
     [DiagnosisType.DEMAND_FORECASTING_MISMATCH]: {
       preferredDimensions: ["market_position"],
       minSupportingItems: 2,
       patternBoost: 1.2,
-      specificity: 0.75, // SLICE 3: Moderate specificity; SLICE 6: Enhanced with context signals
+      specificity: 0.75,
       requiredEvidenceIndicators: ["forecast", "expected", "demand", "projected", "growth", "deceleration", "market", "tam"],
+      causalIndicators: ["market growth rate", "tam saturation", "growth deceleration toward market", "competitive consolidation", "acquisition reversion"], // SLICE_8: causal signals
+      negativeIndicators: ["customer satisfaction intact", "nps stable", "repeat rate high"], // SLICE_8: if present, less likely to be demand issue
     },
     [DiagnosisType.GO_TO_MARKET_MISALIGNMENT]: {
       preferredDimensions: ["market_position", "customer_retention"],
       minSupportingItems: 2,
       patternBoost: 1.2,
-      specificity: 0.85, // SLICE 4: Increased from 0.75 - needs market-specific evidence
+      specificity: 0.85,
       requiredEvidenceIndicators: ["gtm", "positioning", "messaging", "segment", "market entry"],
+      causalIndicators: ["positioning mismatch", "messaging rejection", "icp wrong", "value prop unclear", "channel misalignment"], // SLICE_8: GTM-specific causes
+      negativeIndicators: ["customer satisfaction stable", "nps positive", "repeat rate high", "growth deceleration toward market rate", "competitive consolidation"], // SLICE_8: not GTM if market-structural issue
     },
     [DiagnosisType.CUSTOMER_RETENTION_EROSION]: {
       preferredDimensions: ["customer_retention"],
       minSupportingItems: 2,
       patternBoost: 1.1,
-      specificity: 0.75, // SLICE 4: Reduced from 0.8 to avoid over-matching
+      specificity: 0.75,
       requiredEvidenceIndicators: ["churn", "retention", "attrition", "customer loss"],
+      causalIndicators: ["cohort decay", "reorder drop", "repeat rate declining", "customer lifecycle erosion"], // SLICE_8: retention lifecycle signals (NOT churn rising alone)
+      negativeIndicators: ["quality defects", "reliability issues", "support tickets rising", "uptime degraded", "trust breakdown", "growth deceleration", "nps stable", "repeat rate high", "acquisition declining"], // SLICE_8: not retention if other issues or healthy metrics
     },
     [DiagnosisType.TRUST_QUALITY_CRISIS]: {
       preferredDimensions: ["quality_delivery"],
       minSupportingItems: 2,
       patternBoost: 1.1,
-      specificity: 0.9, // SLICE 4: Increased from 0.85 - very specific; SLICE 6: Enhanced with reliability indicators
+      specificity: 0.9,
       requiredEvidenceIndicators: ["trust", "fraud", "breach", "scandal", "reputation", "reliability", "uptime", "incident", "quality"],
+      causalIndicators: ["uptime degraded", "reliability issues", "incidents increasing", "quality defects", "trust breakdown", "refunds due to defects"], // SLICE_8: quality/reliability causal
+      negativeIndicators: ["repeat rate high", "nps positive", "satisfaction stable"], // SLICE_8: not quality if satisfaction intact
     },
     [DiagnosisType.CASH_RUNWAY_CRISIS]: {
       preferredDimensions: ["financial_health"],
@@ -104,8 +120,10 @@ export class HypothesisGenerator {
       preferredDimensions: ["financial_health"],
       minSupportingItems: 1,
       patternBoost: 1.15,
-      specificity: 0.8, // SLICE 4: Added specificity requirement; SLICE 6: Enhanced with pricing power signals
+      specificity: 0.8,
       requiredEvidenceIndicators: ["pricing", "price", "willingness", "sensitivity", "win rate", "monetization"],
+      causalIndicators: ["discounting required", "price sensitivity", "margin pressure from price", "competitor pricing", "willingness to pay declining"], // SLICE_8: pricing power signals
+      negativeIndicators: ["positioning mismatch", "messaging wrong", "icp unclear", "value prop rejected"], // SLICE_8: not pricing if positioning issue
     },
     [DiagnosisType.GOVERNANCE_COMPLIANCE_FAILURE]: {
       preferredDimensions: ["process_maturity"],
@@ -123,8 +141,8 @@ export class HypothesisGenerator {
     contradictory: string[];
   }> = {
     [DiagnosisType.UNIT_ECONOMICS_BREAKDOWN]: {
-      required: ["cac", "unit economics", "payback", "margin", "ltv", "contribution"],
-      supporting: ["pricing", "profitability", "cost per unit", "arpu", "revenue"],
+      required: ["cac", "unit economics", "payback", "ltv"],
+      supporting: ["cost per unit", "profitability", "arpu", "contribution margin", "margin pressure"],
       contradictory: ["perfect operations", "zero issues", "no delays"],
     },
     [DiagnosisType.OPERATIONAL_BOTTLENECK]: {
@@ -277,6 +295,19 @@ export class HypothesisGenerator {
       p.potentialRootCauses.includes(diagnosisType)
     );
 
+    // SLICE_8: Check for causal evidence (not just symptoms)
+    const req = this.diagnosisRequirements[diagnosisType];
+    let hasCausalEvidence = false;
+    if (req && req.causalIndicators) {
+      const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+      for (const causal of req.causalIndicators) {
+        if (allText.includes(causal.toLowerCase())) {
+          hasCausalEvidence = true;
+          break;
+        }
+      }
+    }
+
     // Count supporting evidence weighted by pattern strength
     const supportingIds = new Set<string>();
     let patternStrengthSum = 0;
@@ -294,13 +325,26 @@ export class HypothesisGenerator {
       });
     });
 
-    // Check for contradictions
+    // Check for contradictions and SLICE_8: negative indicators
     const contradictions = this.findContradictions(
       diagnosisType,
       Array.from(supportingIds),
       allEvidence,
       synthesizedEvidence
     );
+
+    // SLICE_8: Apply negative indicator penalties
+    let negativeIndicatorPenalty = 0;
+    if (req && req.negativeIndicators) {
+      const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+      let negCount = 0;
+      for (const negative of req.negativeIndicators) {
+        if (allText.includes(negative.toLowerCase())) {
+          negCount++;
+        }
+      }
+      negativeIndicatorPenalty = negCount * 10; // -10 per negative indicator found
+    }
 
     // Score keyword match to validate or refute the diagnosis
     const keywordMatch = this.scoreKeywordMatch(diagnosisType, allEvidence);
@@ -317,7 +361,6 @@ export class HypothesisGenerator {
       baseConfidence = baseConfidence * patternWeight;
 
       // Apply diagnosis-specific boost
-      const req = this.diagnosisRequirements[diagnosisType];
       if (req) {
         // Boost if preferred dimensions are present
         const dimensionsPresent = Array.from(supportingDimensions).filter((d) =>
@@ -329,13 +372,14 @@ export class HypothesisGenerator {
       }
     }
 
-    // Reduce for contradictions
+    // Reduce for contradictions and SLICE_8: negative indicators
     const scoreAfterContradictions = Math.max(
       0,
-      baseConfidence - contradictions.length * 8
+      baseConfidence - contradictions.length * 8 - negativeIndicatorPenalty
     );
 
     // SLICE 3: Blend pattern-based with keyword validation and evidence specificity
+    // SLICE_8: Apply causal evidence requirement
     let confidence = 0;
     const specificityMatch = this.calculateEvidenceSpecificityMatch(diagnosisType, allEvidence);
 
@@ -356,6 +400,26 @@ export class HypothesisGenerator {
       if (specificityMatch > 0.5) {
         confidence = Math.min(65, confidence + Math.round(specificityMatch * 10));
       }
+
+      // SLICE_8: Boost confidence when strong causal evidence is found
+      if (req && req.causalIndicators && hasCausalEvidence) {
+        // Count how many causal indicators are present
+        const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+        let causalCount = 0;
+        for (const causal of req.causalIndicators) {
+          if (allText.includes(causal.toLowerCase())) {
+            causalCount++;
+          }
+        }
+        // Boost confidence proportionally to number of causal indicators found
+        const causalBoost = Math.min(15, causalCount * 3);
+        confidence = Math.min(65, confidence + causalBoost);
+      }
+
+      // SLICE_8: If no causal evidence found, reduce confidence (only symptoms present)
+      if (req && req.causalIndicators && !hasCausalEvidence && confidence > 40) {
+        confidence = Math.max(25, confidence - 15); // reduce if only symptoms, no causal evidence
+      }
     } else {
       // No patterns - use keyword-based scoring as fallback
       confidence = this.calculateBaselineScore(
@@ -373,6 +437,11 @@ export class HypothesisGenerator {
       if (specificityMatch > 0.5) {
         confidence = Math.min(40, confidence + Math.round(specificityMatch * 8));
       }
+
+      // SLICE_8: Without patterns AND without causal evidence, keep baseline low
+      if (req && req.causalIndicators && !hasCausalEvidence) {
+        confidence = Math.max(0, confidence - 10);
+      }
     }
 
     return {
@@ -384,6 +453,7 @@ export class HypothesisGenerator {
       patternCount: matchingPatterns.length,
       patternStrengthSum,
       evidenceDiversity: supportingDimensions.size,
+      causalEvidenceFound: hasCausalEvidence, // SLICE_8: track whether causal evidence found
       reasoning: this.generateReasoning(
         diagnosisType,
         supportingIds.size,
@@ -623,6 +693,10 @@ export class HypothesisGenerator {
       return this.resolveDemandVsGTMConflict(diagnosis1, diagnosis2, allEvidence);
     }
     if (this.isConflictPair(diagnosis1.rootCause, diagnosis2.rootCause,
+        DiagnosisType.DEMAND_FORECASTING_MISMATCH, DiagnosisType.CUSTOMER_RETENTION_EROSION)) {
+      return this.resolveDemandVsRetentionConflict(diagnosis1, diagnosis2, allEvidence);
+    }
+    if (this.isConflictPair(diagnosis1.rootCause, diagnosis2.rootCause,
         DiagnosisType.STRATEGIC_PRICING_ERROR, DiagnosisType.GO_TO_MARKET_MISALIGNMENT)) {
       return this.resolvePricingVsGTMConflict(diagnosis1, diagnosis2, allEvidence);
     }
@@ -685,6 +759,40 @@ export class HypothesisGenerator {
     } else if (hasGTMEvidence && !hasDemandCycle) {
       winner = DiagnosisType.GO_TO_MARKET_MISALIGNMENT;
       margin = Math.abs(gtmDiagnosis.confidence - demandDiagnosis.confidence) + 10;
+    }
+
+    return { winner, margin };
+  }
+
+  private resolveDemandVsRetentionConflict(
+    d1: Hypothesis,
+    d2: Hypothesis,
+    allEvidence: EvidenceItem[]
+  ): { winner: DiagnosisType | null; margin: number } {
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+
+    // Demand forecasting indicators: market cycle + stable customer health
+    const hasDemandCycle = /deceleration|slowing|market.*rate|acquisition.*declining|competitive.*consolidat|tam.*saturation/i.test(allText);
+    const hasHealthyMetrics = /(nps|repeat|satisfaction).*(stable|intact|high|48|72%)/i.test(allText);
+
+    // Retention indicators: lifecycle-specific (NOT just churn)
+    const hasRetentionLifecycle = /(cohort.*decay|reorder.*drop|repeat.*declining|customer.*lifecycle)/i.test(allText);
+    const hasChurnOnly = /churn.*rising|churn.*increasing/i.test(allText) && !hasRetentionLifecycle;
+
+    let winner: DiagnosisType | null = null;
+    let margin = 0;
+
+    const demandDiagnosis = d1.rootCause === DiagnosisType.DEMAND_FORECASTING_MISMATCH ? d1 : d2;
+    const retentionDiagnosis = d1.rootCause === DiagnosisType.CUSTOMER_RETENTION_EROSION ? d1 : d2;
+
+    if ((hasDemandCycle && hasHealthyMetrics) || (hasChurnOnly && hasHealthyMetrics)) {
+      // Market cycle with stable satisfaction = demand saturation, not retention issue
+      winner = DiagnosisType.DEMAND_FORECASTING_MISMATCH;
+      margin = Math.abs(demandDiagnosis.confidence - retentionDiagnosis.confidence) + 10;
+    } else if (hasRetentionLifecycle && !hasDemandCycle) {
+      // Lifecycle decay without demand signals = retention issue
+      winner = DiagnosisType.CUSTOMER_RETENTION_EROSION;
+      margin = Math.abs(retentionDiagnosis.confidence - demandDiagnosis.confidence) + 10;
     }
 
     return { winner, margin };
