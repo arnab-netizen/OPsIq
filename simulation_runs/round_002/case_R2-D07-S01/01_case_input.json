@@ -1,0 +1,53 @@
+{
+  "caseId": "R2-D07-S01",
+  "businessProblem": "A subscription meal-kit business is losing customers fast and has no follow-up or loyalty mechanism in place; the owner wants to know why retention is collapsing.",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Monthly churn rose to 9% with one-time buyers now dominating new cohorts",
+      "confidence": "HIGH",
+      "source": "subscription analytics",
+      "isCritical": true,
+      "supportingData": {
+        "churnPct": 9
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Repeat purchase rate fell from 61% to 38% over two quarters",
+      "confidence": "HIGH",
+      "source": "cohort report",
+      "isCritical": true,
+      "supportingData": {
+        "repeatRatePct": 38
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "No post-purchase follow-up, win-back, or loyalty program currently exists",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": true
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Contribution margin remains healthy and positive on retained customers",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "contributionMargin": 22
+      }
+    }
+  ]
+}

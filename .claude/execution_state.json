@@ -1,7 +1,7 @@
 {
   "execution_date": "2026-05-13",
   "current_phase": "PHASE_5_HTTP_RUNTIME_VERIFICATION_COMPLETION",
-  "current_branch": "claude/verify-execution-hardening-LRoqi",
+  "current_branch": "claude/round2-case-pack-authoring",
   "phase_5_completion_status": "HTTP_RUNTIME_VERIFIED",
   "CRITICAL_CLASSIFICATION": {
     "production_ready": false,
@@ -776,5 +776,28 @@
     "merge_title": "Stage A: wire abstention safety gate (evidence-support + causal + constraint), close B1-B5, add E0/E1 + Round 2 benchmark infrastructure (DO_NOT_PROMOTE)",
     "merged": false,
     "report": "MERGE_WAYPOINT_STAGE_A_SAFETY_AND_ROUND2_INFRA.md"
+  },
+  "stage_a_merge_to_main": {
+    "merged_to_main": true,
+    "main_commit": "ae90a3287efab862aa490b06ce55d85c0d074ff0",
+    "merge_title": "Stage A: safety gate + Round 2 benchmark infrastructure checkpoint (DO_NOT_PROMOTE)",
+    "post_merge_gates": "git clean; vitest 372 pass (governance+benchmark); prisma valid",
+    "stage_a": "DO_NOT_PROMOTE (unchanged by merge)"
+  },
+  "stage_a_round2_authoring_pilot": {
+    "slice": "Round 2 authoring pilot (5 cases)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_AUTHORING (no engine/gate/scorer change)",
+    "files": [
+      "simulation_runner/author-round2-pilot.ts",
+      "simulation_runs/round_002/case_R2-*/ (01_case_input.json + key.json)",
+      "simulation_runs/round_002/_PILOT_VALIDATION.json",
+      "ROUND_2_AUTHORING_PILOT_REPORT.md"
+    ],
+    "pilot_cases": "R2-D03-S01 margin_erosion, R2-D07-S01 retention, R2-D09-S01 bottleneck, R2-AB-01 abstention, R2-ADV-01 dangerous unit-economics",
+    "validator_pass": "5/5",
+    "leakage": "clean (no key fields in inputs)",
+    "next_step": "author remaining 145 cases -> 6-axis scorer -> re-trial",
+    "stage_a": "BLOCKED"
   }
 }
