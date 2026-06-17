@@ -1049,5 +1049,30 @@
     "next_step": "run verification batches in a FETCH-CAPABLE environment (working WebFetch or manual EDGAR/PDF/dataset review) to confirm metrics at locators; SRC-003/004 clear first; then batches 2-9 (SRC-013..108); then source.json conversion -> validator -> scorer -> re-trial",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_SOURCE_VERIFICATION_BATCH_1_REPORT.md"
+  },
+  "stage_a_round2_manual_verification_workflow": {
+    "slice": "Round 2 manual/user-assisted source verification workflow + template + instructions (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "GOVERNANCE_DOCS_ONLY (no source collection; no benchmark cases; no engine/gate/scorer/answer-key change; no record promoted)",
+    "files": [
+      "ROUND_2_MANUAL_SOURCE_VERIFICATION_WORKFLOW.md",
+      "ROUND_2_MANUAL_VERIFICATION_TEMPLATE.json",
+      "ROUND_2_MANUAL_VERIFICATION_INSTRUCTIONS.md"
+    ],
+    "reason": "automated full-text verification blocked in this environment (WebFetch HTTP 403 all primary domains; web.archive.org disallowed); SRC-001..012 all SOURCE_INACCESSIBLE; batches 2-9 NOT run per instruction",
+    "automated_verification_blocked": true,
+    "manual_verification_required": true,
+    "workflow_defines": "what to collect per source; acceptable locators by source type (SEC/PDF/article/court/dataset/transcript); exact-metric recording; direct-vs-inferred; screenshots/page refs; inaccessible flagging; leakage certification; submission as sidecars; Claude validation rules; source.json generation only after validation+authorization",
+    "template_fields": "source_id, verifier_name_or_role, verification_date, source_access_method, source_locator, verified_metrics, verified_outcome_evidence, direct_quotes_or_short_excerpts, direct_facts, inferred_facts, unresolved_mismatches, screenshots_or_files_referenced, final_verification_status, reliability_after, leakage_certified, promoted_allowed, reviewer_notes",
+    "sidecar_path": "simulation_runs/round_002_source_candidates/slice_<n>/SRC-0XX.manual_verification.json (original candidate never edited)",
+    "hard_rules": "no snippet reliance; >=1 located critical metric or outcome fact to promote; no full-article copying; no answer-key leakage; sidecars only",
+    "claude_role": "validator only (no fetch); validates submitted manual record, records ledger/verification.json outcome, generates hidden source.json ONLY after pass + explicit authorization",
+    "gates_run": "docs + template JSON valid; execution_state.json valid; no app code touched",
+    "next_step": "owner verifies sources off-platform (start SRC-003/004) and submits manual_verification sidecars; Claude validates + (on authorization) promotes to source.json; then validator -> scorer -> re-trial",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "reports": [
+      "ROUND_2_MANUAL_SOURCE_VERIFICATION_WORKFLOW.md",
+      "ROUND_2_MANUAL_VERIFICATION_INSTRUCTIONS.md"
+    ]
   }
 }
