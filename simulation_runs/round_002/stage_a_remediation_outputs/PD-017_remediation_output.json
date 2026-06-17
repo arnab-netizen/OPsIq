@@ -22,9 +22,9 @@
           "operational_efficiency"
         ],
         "supportingItems": [
-          "00d1c349-68b2-461a-aa0a-4f82b5877714",
-          "cb376de1-d22f-4401-a531-b42182975b18",
-          "0a84af40-600c-459a-9c17-11ceb510ca1e"
+          "b3d7ce11-3775-42f3-b76c-81a48244bd1f",
+          "c6cd6b80-63e2-4ae8-bc63-2f39af4d8bf3",
+          "28d25ff5-a61b-4e72-bef5-d11db5149a19"
         ],
         "patternStrength": 6,
         "potentialRootCauses": [
@@ -39,8 +39,8 @@
           "operational_efficiency"
         ],
         "supportingItems": [
-          "1c74b94b-b086-47ee-bbc7-894b6304a77b",
-          "cb376de1-d22f-4401-a531-b42182975b18"
+          "cbcb6991-70cb-46b6-9084-1e4985a8c575",
+          "c6cd6b80-63e2-4ae8-bc63-2f39af4d8bf3"
         ],
         "patternStrength": 4,
         "potentialRootCauses": [
@@ -140,25 +140,25 @@
       "hypothesis": "operational_bottleneck",
       "supporting": [
         {
-          "evidenceId": "cb376de1-d22f-4401-a531-b42182975b18",
+          "evidenceId": "c6cd6b80-63e2-4ae8-bc63-2f39af4d8bf3",
           "strength": 10,
           "reasoning": "operational_efficiency evidence supports operational_bottleneck"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "1c74b94b-b086-47ee-bbc7-894b6304a77b",
+          "evidenceId": "cbcb6991-70cb-46b6-9084-1e4985a8c575",
           "strength": 10,
           "reasoning": "market_position evidence may contradict operational_bottleneck"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "00d1c349-68b2-461a-aa0a-4f82b5877714",
+          "evidenceId": "b3d7ce11-3775-42f3-b76c-81a48244bd1f",
           "reasoning": "financial_health evidence is neutral to operational_bottleneck"
         },
         {
-          "evidenceId": "0a84af40-600c-459a-9c17-11ceb510ca1e",
+          "evidenceId": "28d25ff5-a61b-4e72-bef5-d11db5149a19",
           "reasoning": "financial_health evidence is neutral to operational_bottleneck"
         }
       ],
@@ -168,24 +168,24 @@
       "hypothesis": "unit_economics_breakdown",
       "supporting": [
         {
-          "evidenceId": "00d1c349-68b2-461a-aa0a-4f82b5877714",
+          "evidenceId": "b3d7ce11-3775-42f3-b76c-81a48244bd1f",
           "strength": 10,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         },
         {
-          "evidenceId": "cb376de1-d22f-4401-a531-b42182975b18",
+          "evidenceId": "c6cd6b80-63e2-4ae8-bc63-2f39af4d8bf3",
           "strength": 10,
           "reasoning": "operational_efficiency evidence supports unit_economics_breakdown"
         },
         {
-          "evidenceId": "0a84af40-600c-459a-9c17-11ceb510ca1e",
+          "evidenceId": "28d25ff5-a61b-4e72-bef5-d11db5149a19",
           "strength": 7,
           "reasoning": "financial_health evidence supports unit_economics_breakdown"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "1c74b94b-b086-47ee-bbc7-894b6304a77b",
+          "evidenceId": "cbcb6991-70cb-46b6-9084-1e4985a8c575",
           "strength": 10,
           "reasoning": "market_position evidence may contradict unit_economics_breakdown"
         }
@@ -197,25 +197,25 @@
       "hypothesis": "demand_forecasting_mismatch",
       "supporting": [
         {
-          "evidenceId": "1c74b94b-b086-47ee-bbc7-894b6304a77b",
+          "evidenceId": "cbcb6991-70cb-46b6-9084-1e4985a8c575",
           "strength": 10,
           "reasoning": "market_position evidence supports demand_forecasting_mismatch"
         }
       ],
       "conflicting": [
         {
-          "evidenceId": "cb376de1-d22f-4401-a531-b42182975b18",
+          "evidenceId": "c6cd6b80-63e2-4ae8-bc63-2f39af4d8bf3",
           "strength": 10,
           "reasoning": "operational_efficiency evidence may contradict demand_forecasting_mismatch"
         }
       ],
       "neutral": [
         {
-          "evidenceId": "00d1c349-68b2-461a-aa0a-4f82b5877714",
+          "evidenceId": "b3d7ce11-3775-42f3-b76c-81a48244bd1f",
           "reasoning": "financial_health evidence is neutral to demand_forecasting_mismatch"
         },
         {
-          "evidenceId": "0a84af40-600c-459a-9c17-11ceb510ca1e",
+          "evidenceId": "28d25ff5-a61b-4e72-bef5-d11db5149a19",
           "reasoning": "financial_health evidence is neutral to demand_forecasting_mismatch"
         }
       ],

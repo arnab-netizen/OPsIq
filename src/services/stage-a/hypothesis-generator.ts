@@ -211,6 +211,24 @@ export class HypothesisGenerator {
       return 0;
     });
 
+    // SLICE 5: Validate top hypothesis against keyword requirements
+    // If top diagnosis has weak keyword support AND runner-up has much stronger keyword support,
+    // swap them (tie-breaking improvement)
+    if (sorted.length > 1) {
+      const topKeywords = this.scoreKeywordMatch(sorted[0].rootCause, allEvidence);
+      const runnerUpKeywords = this.scoreKeywordMatch(sorted[1].rootCause, allEvidence);
+
+      // If top diagnosis lacks required keywords but runner-up has them strongly, consider swap
+      if (!topKeywords.hasRequiredKeywords && topKeywords.supportingKeywordCount === 0 &&
+          runnerUpKeywords.hasRequiredKeywords && sorted[0].confidence < 35 &&
+          Math.abs(sorted[0].confidence - sorted[1].confidence) < 8) {
+        // Swap: runner-up has much better keyword support despite lower confidence
+        const temp = sorted[0];
+        sorted[0] = sorted[1];
+        sorted[1] = temp;
+      }
+    }
+
     // Take top 3, but adjust confidence downward if tied
     const top3: Hypothesis[] = [];
     for (let i = 0; i < Math.min(3, sorted.length); i++) {
