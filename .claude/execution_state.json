@@ -392,5 +392,31 @@
       "B5 absent decision docs"
     ],
     "report": "HIGH_SUPPORT_WRONG_ADVERSARIAL_PROBE_REPORT.md"
+  },
+  "stage_a_rc7_verifier_design": {
+    "slice": "ROOT-CAUSE DESIGN: smallest proper runtime fix for RC-7 (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DESIGN_DOCS_ONLY (no code/threshold/scoring/answer-key change)",
+    "files": [
+      "RC7_RUNTIME_VERIFIER_DESIGN_OPTIONS.md",
+      "RC7_RUNTIME_VERIFIER_AUTHORIZATION.md"
+    ],
+    "controlling_finding": "controls are structurally identical to unsafe probes; only semantic polarity of off-archetype evidence separates them -> pure-structural Option B breaks controls",
+    "recommended_fix": "Option A: deterministic rule-based causal-challenge verifier (diagnosis<->problem alignment + adverse off-archetype evidence detection)",
+    "signals_used": "businessProblem, evidence dimension/finding/supportingData/isCritical, rootCauseDiagnosis type/evidenceIds, alternativeExplanations (no answer/probe keys)",
+    "expected_probes_caught": ">=6 of 10 (misalignment+adverse subset); HSW-03/HSW-09 deferred to C/D follow-ons",
+    "expected_controls_preserved": "YES (benign off-dimension evidence does not fire)",
+    "implementation_authorized": false,
+    "deferred": [
+      "Option C constraint-alignment (HSW-03)",
+      "Option D danger/irreversibility (HSW-05/09)",
+      "Option E composite (full RC-7)"
+    ],
+    "still_open": [
+      "implement Option A (needs explicit instruction)",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs"
+    ]
   }
 }
