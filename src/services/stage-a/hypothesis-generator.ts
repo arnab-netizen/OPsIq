@@ -334,13 +334,32 @@ export class HypothesisGenerator {
     );
 
     // SLICE_8: Apply negative indicator penalties
+    // SLICE_9: Enhanced matching to catch phrase variations (not just exact substrings)
     let negativeIndicatorPenalty = 0;
     if (req && req.negativeIndicators) {
       const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
       let negCount = 0;
       for (const negative of req.negativeIndicators) {
-        if (allText.includes(negative.toLowerCase())) {
+        const negLower = negative.toLowerCase();
+
+        // SLICE_9: Try exact match first
+        if (allText.includes(negLower)) {
           negCount++;
+          continue;
+        }
+
+        // SLICE_9: If no exact match, try partial phrase matching
+        // Check if all keywords in the negative indicator are present in the text
+        const keywords = negLower.split(/\s+/).filter(w => w.length > 2);
+        if (keywords.length > 0) {
+          const keywordsFound = keywords.filter(kw => {
+            // Check for exact keyword or word stem match (e.g., "deceleration" matches "decelerat")
+            return allText.includes(kw) || allText.includes(kw.substring(0, Math.max(5, kw.length - 2)));
+          }).length;
+          // If 75%+ of keywords are found, consider it a match (accounts for phrase variations)
+          if (keywordsFound >= Math.ceil(keywords.length * 0.75)) {
+            negCount++;
+          }
         }
       }
       negativeIndicatorPenalty = negCount * 10; // -10 per negative indicator found
