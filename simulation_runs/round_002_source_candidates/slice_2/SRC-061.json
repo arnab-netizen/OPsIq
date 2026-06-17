@@ -1,0 +1,53 @@
+{
+  "source_id": "SRC-061",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001861449/000186144923000220/brds-20231220.htm",
+  "source_title": "Bird Global, Inc. - Form 8-K (Chapter 11 filing, December 2023) with FY2022 results context",
+  "source_type": "BANKRUPTCY_RESTRUCTURING",
+  "publisher_issuer": "Bird Global, Inc. (filed with U.S. SEC, EDGAR CIK 0001861449; corroborated by company earnings releases and named journalism)",
+  "publication_or_filing_date": "2023-12-20",
+  "accessed_date": "2026-06-17",
+  "company_context": "Bird Global was a shared e-scooter / e-bike micromobility operator that grew revenue rapidly post-SPAC listing but never reached durable cash generation. Persistent cash burn and a weak balance sheet produced a going-concern doubt and a December 2023 Chapter 11 filing despite growing revenue, a high-revenue-growth-then-breakdown pattern.",
+  "business_type": "Shared micromobility (e-scooter / e-bike) platform",
+  "company_size_stage": "mid-cap / small-cap public (venture-backed, SPAC-listed startup scaling)",
+  "geography": "United States (operations across North America, Europe, Middle East, Australia)",
+  "time_period": "2021-2023",
+  "macro_context": "2022-2023 tightening capital markets cut off cheap growth funding for unprofitable scale-ups; rising rates and investor flight from cash-burning SPAC-era growth stories left Bird unable to refinance, accelerating its collapse.",
+  "outcome_category": "8 - fast growth then breakdown",
+  "candidate_diagnosis_bucket": "cash_liquidity_crisis",
+  "evidence_summary": "Bird grew full-year 2022 revenue to $244.7 million, up ~28% from $190.5 million in 2021, and reported positive adjusted EBITDA of $6.1 million (versus a $23.8 million loss the prior year), yet disclosed substantial-doubt going-concern language and warned it might need to scale back, discontinue operations, or seek bankruptcy without additional capital. Having lost more than $430 million since the end of 2021, Bird filed for Chapter 11 in the U.S. Bankruptcy Court for the Southern District of Florida on December 20, 2023, listing assets and liabilities of $100 million to $500 million and accessing $25 million of DIP-style financing from MidCap Financial; it had been valued at $2.5 billion in 2019.",
+  "source_backed_metrics": {
+    "revenue_2022_usd": "244.7 million",
+    "revenue_2021_usd": "190.5 million",
+    "revenue_growth_2022_pct": "approximately 28%",
+    "adjusted_ebitda_2022_usd": "6.1 million (positive)",
+    "adjusted_ebitda_2021_usd": "negative 23.8 million",
+    "cumulative_losses_since_end_2021_usd": "over 430 million",
+    "chapter_11_filing_date": "2023-12-20",
+    "petition_assets_and_liabilities_range_usd": "100 million to 500 million",
+    "dip_financing_usd": "25 million (MidCap Financial)",
+    "peak_valuation_2019_usd": "2.5 billion"
+  },
+  "owner_decision_context": "Unable to raise sufficient new capital in a tightened market and burning cash despite revenue growth and a thin positive adjusted EBITDA, management ultimately chose a Chapter 11 restructuring with a restructuring-support agreement and DIP financing rather than a disorderly wind-down.",
+  "action_taken": "Pursued continued capital raising and cost actions, then filed Chapter 11 on December 20, 2023 with a restructuring support agreement from first- and second-lien lenders and $25 million of MidCap financing, operating as debtor-in-possession to restructure or sell the business.",
+  "outcome_evidence": "Despite ~28% revenue growth to $244.7M and positive 2022 adjusted EBITDA, Bird's >$430M cumulative losses, going-concern doubt, and inability to refinance culminated in a December 2023 Chapter 11 filing, confirming fast-growth-then-breakdown driven by a cash/liquidity failure.",
+  "source_limitations": "WebFetch of sec.gov returned 403; figures confirmed verbatim in WebSearch snippets attributed to Bird's FY2022 earnings release / SEC filings and the December 2023 Chapter 11 8-K plus named journalism (Bloomberg, Bloomberg Law, Yahoo Finance, Bicycle Retailer): revenue $244.7M (+28% from $190.5M), adjusted EBITDA $6.1M, >$430M losses since end-2021, 12/20/2023 filing, $100-500M assets/liabilities, $25M MidCap financing, $2.5B 2019 valuation. Exact period-end cash balance not separately confirmed and omitted.",
+  "directly_stated": [
+    "Full-year 2022 revenue was $244.7 million, up about 28% from $190.5 million in 2021",
+    "2022 adjusted EBITDA was $6.1 million versus a $23.8 million loss the prior year",
+    "Bird disclosed substantial doubt about its ability to continue as a going concern",
+    "Bird had lost more than $430 million since the end of 2021",
+    "Bird filed for Chapter 11 on December 20, 2023 in the Southern District of Florida",
+    "The petition listed assets and liabilities of $100 million to $500 million and accessed $25 million of MidCap Financial financing",
+    "Bird had been valued at $2.5 billion in 2019"
+  ],
+  "inferred": [
+    "Revenue growth and even thin positive adjusted EBITDA masked a structurally cash-consuming model dependent on continual outside funding",
+    "Loss of capital-market access (not a demand collapse) was the proximate trigger of bankruptcy"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "High-revenue-growth-then-breakdown (outcome 7 into bankruptcy/2) case where growing revenue and headline-positive adjusted EBITDA coexist with a fatal cash/liquidity failure. Tests whether the engine looks past revenue growth and a vanity EBITDA metric to detect cumulative cash burn and funding-dependence as the true diagnosis, and recognizes loss of capital access as the trigger.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

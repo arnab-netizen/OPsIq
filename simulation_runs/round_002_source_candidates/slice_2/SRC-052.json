@@ -1,0 +1,47 @@
+{
+  "source_id": "SRC-052",
+  "source_url": "https://money.cnn.com/2013/02/28/technology/groupon-ceo-andrew-mason/index.html",
+  "source_title": "Groupon fires CEO Andrew Mason",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CNN Money",
+  "publication_or_filing_date": "2013-02-28",
+  "accessed_date": "2026-06-17",
+  "company_context": "Groupon, the daily-deals marketplace, fired co-founder/CEO Andrew Mason on February 28, 2013, one day after a weak earnings report. Mason published a candid memo ('I was fired today'). The board (chairmen Eric Lefkofsky and Ted Leonsis) ran the company on an interim basis. The company survived but pivoted strategically under new leadership—a key-person change followed by strategic correction.",
+  "business_type": "Local-commerce / daily-deals marketplace (publicly listed)",
+  "company_size_stage": "Post-IPO public company under performance pressure (stock ~25% of IPO price)",
+  "geography": "United States (global operations; HQ Chicago)",
+  "time_period": "2012-2013",
+  "macro_context": "Post-IPO scrutiny of the daily-deals model's durability; investor pressure after disclosure issues and disappointing results.",
+  "outcome_category": "16 - founder/key-person/team failure (founder-CEO fired), resolving toward 9 - strategic mistake then correction",
+  "candidate_diagnosis_bucket": "key_person_risk",
+  "evidence_summary": "Groupon's board fired co-founder and CEO Andrew Mason on February 28, 2013, one day after the company reported a quarterly net loss of $81 million that sent the stock down 24% in a day. Contributing factors cited included controversial metrics in the S-1 filing, a material weakness, two quarters of missing expectations, and a stock price hovering around one-quarter of its IPO price. Mason posted a famously candid memo ('Just kidding -- I was fired today'). Chairmen Eric Lefkofsky and Ted Leonsis led the company on an interim basis while it searched for a new CEO. The company survived and shifted strategy under new leadership.",
+  "source_backed_metrics": {
+    "ceo_firing_date": "February 28, 2013",
+    "quarterly_net_loss": "$81 million net loss reported the prior day",
+    "stock_drop_on_earnings": "down 24% in one day on the earnings",
+    "stock_vs_ipo": "stock around one-quarter of its IPO listing price",
+    "after_hours_reaction_to_firing": "shares jumped ~4% in after-hours trading on the firing news",
+    "interim_leaders": "chairmen Eric Lefkofsky and Ted Leonsis led on interim basis"
+  },
+  "owner_decision_context": "The board judged the founder-CEO accountable for repeated missed expectations, disclosure problems, and a collapsed stock, and decided to remove him to enable a strategic reset.",
+  "action_taken": "Board fired the founder-CEO, installed interim leadership, searched for a new CEO, and subsequently repositioned the business (toward a marketplace/e-commerce model) under new management.",
+  "outcome_evidence": "Company survived the founder removal; the modest positive after-hours stock reaction (~4%) signaled investor relief, and the firm continued operating under new leadership and a revised strategy.",
+  "source_limitations": "Secondary journalism; the underlying earnings/loss figures originate in Groupon's SEC filings (not fetched here). Strategic-correction narrative is summarized from reporting, not a single primary document.",
+  "directly_stated": [
+    "Groupon fired CEO Andrew Mason on February 28, 2013",
+    "the firing came one day after an $81 million net loss",
+    "the loss sent the stock down 24% in a day",
+    "the stock was around one-quarter of its IPO price",
+    "chairmen Lefkofsky and Leonsis led on an interim basis"
+  ],
+  "inferred": [
+    "Investor relief (after-hours gain) suggests the market viewed the founder as part of the problem",
+    "Removing the key person enabled the subsequent strategic correction"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Key-person-risk case where a founder-CEO's accountability for repeated misses and strategic missteps led to removal and a subsequent strategic correction (outcome 9). Useful for modeling owner/founder accountability weakness as a trigger for governed leadership change and re-evaluation of strategy and priorities, with quantified financial context.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

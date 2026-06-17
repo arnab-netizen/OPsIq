@@ -1,0 +1,45 @@
+{
+  "source_id": "SRC-070",
+  "source_url": "https://www.itbrew.com/stories/2025/02/21/how-blackberry-pulled-off-its-cybersecurity-transformation",
+  "source_title": "How BlackBerry pulled off its cybersecurity transformation",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "IT Brew; corroborated by The Daily Upside and BlackBerry SEC filings",
+  "publication_or_filing_date": "2025-02-21",
+  "accessed_date": "2026-06-17",
+  "company_context": "BlackBerry (formerly Research In Motion) once dominated business smartphones but lost the market to the iPhone and Android. In September 2016 it stopped internal hardware development and pivoted to software, security, and embedded systems, anchored by QNX (acquired 2010 for ~$200 million), now used in hundreds of millions of vehicles.",
+  "business_type": "Enterprise software / cybersecurity and embedded systems (formerly smartphone maker)",
+  "company_size_stage": "mid-cap public",
+  "geography": "Canada",
+  "time_period": "2013-2024",
+  "macro_context": "Smartphone platform shift to iOS/Android; growth in automotive embedded software and enterprise cybersecurity; demand for safety-certified real-time operating systems.",
+  "outcome_category": "5 - partial recovery / mixed",
+  "candidate_diagnosis_bucket": "strategic_capex_risk",
+  "evidence_summary": "After its handset business collapsed, BlackBerry announced in September 2016 that it would end all internal hardware development and outsource the brand, redeploying around software where margins were strong. It built on QNX (acquired for ~$200 million in 2010), which now runs in more than 275 million vehicles, with QNX revenue guided to roughly $290-307 million and a backlog around $950 million. The pivot kept the company alive and profitable in software/security, but at a far smaller scale than its smartphone peak: a mixed, partial-recovery outcome via strategic correction.",
+  "source_backed_metrics": {
+    "hardware_exit_announced": "2016-09",
+    "qnx_acquisition_price_usd": "approximately 200 million (2010)",
+    "qnx_vehicles_deployed": "more than 275 million",
+    "qnx_revenue_guidance_usd": "approximately 290-307 million",
+    "qnx_backlog_usd": "approximately 950 million"
+  },
+  "owner_decision_context": "Leadership decided to stop funding money-losing in-house phone hardware and reposition the company around higher-margin software and embedded security, accepting a much smaller revenue base.",
+  "action_taken": "Exited internal handset hardware (Sept 2016), outsourced the brand, and pivoted to software/cybersecurity and embedded QNX systems, surviving as a smaller profitable software company.",
+  "outcome_evidence": "QNX deployed in 275M+ vehicles with ~$950M backlog and ~$290-307M revenue guidance, plus a sustained cybersecurity software business, confirm survival via pivot, while the overall company remains far below its smartphone-era peak (mixed outcome).",
+  "source_limitations": "WebFetch unavailable (403 pattern); QNX figures confirmed across IT Brew, The Daily Upside, and BlackBerry investor materials via WebSearch snippets. QNX revenue/backlog figures are recent guidance and may reflect fiscal-year framing; not fetched in full text from the audited filing.",
+  "directly_stated": [
+    "BlackBerry ended internal hardware development in September 2016 and outsourced the brand",
+    "QNX was acquired for ~$200 million in 2010",
+    "QNX runs in more than 275 million vehicles",
+    "QNX revenue guidance ~$290-307 million with ~$950 million backlog"
+  ],
+  "inferred": [
+    "The pivot preserved the enterprise as a profitable software firm but at much smaller scale (partial recovery/mixed)",
+    "Strategic correction (exit hardware) was the key turning decision"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Outcome-5/9 mixed case: a failing core business corrected via strategic pivot to software/security, yielding survival at smaller scale. Tests whether the engine recognizes a successful corrective pivot while not over-crediting it as a full turnaround.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

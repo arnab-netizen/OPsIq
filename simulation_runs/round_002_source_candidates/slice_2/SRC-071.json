@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-071",
+  "source_url": "https://www.cnbc.com/2024/04/02/ge-completes-three-way-split-breaking-off-from-its-storied-past-.html",
+  "source_title": "GE aviation and energy businesses start trading on NYSE, marking the end of the conglomerate",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CNBC; corroborated by GE Vernova press releases and GE SEC 8-K filings (CIK 0000040545)",
+  "publication_or_filing_date": "2024-04-02",
+  "accessed_date": "2026-06-17",
+  "company_context": "General Electric, a 130-year-old industrial conglomerate, entered severe distress in the late 2010s under heavy debt and weak power/capital businesses. New CEO Larry Culp (2018) cut the dividend to a penny, aggressively reduced debt, and ultimately broke the company into three public companies, completing the split on April 2, 2024 (GE Aerospace, GE Vernova, GE HealthCare spun off January 2023).",
+  "business_type": "Industrial conglomerate (aviation, power/energy, healthcare)",
+  "company_size_stage": "large-cap public",
+  "geography": "United States",
+  "time_period": "2017-2024",
+  "macro_context": "Post-2017 industrial downturn, GE Capital legacy liabilities, power-market weakness; later strong aerospace recovery and energy-transition demand benefiting the separated entities.",
+  "outcome_category": "5 - partial recovery / mixed",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "Facing crisis, GE under Larry Culp slashed its 119-year-old dividend to one cent per share starting 2019 and pursued large-scale debt reduction, targeting more than $75 billion of gross debt reduction from end-2018 through 2021 (including ~$30 billion via the AerCap transaction). The conglomerate was dismantled into three companies: GE HealthCare (spun off January 3, 2023) and GE Aerospace and GE Vernova (April 2, 2024). The outcome was mixed/partial: shareholders who held through the crisis suffered massive value destruction earlier, but the surviving entities (notably GE Aerospace and GE Vernova) recovered strongly post-split.",
+  "source_backed_metrics": {
+    "dividend_cut_to_usd_per_share": "0.01 (announced Oct 30, 2018, effective 2019)",
+    "dividend_age_years": "119",
+    "gross_debt_reduction_target_usd": "more than 75 billion (end-2018 to end-2021)",
+    "aercap_related_debt_reduction_usd": "approximately 30 billion",
+    "healthcare_spinoff_date": "2023-01-03",
+    "aerospace_vernova_split_date": "2024-04-02",
+    "breakup_announced_date": "2021-11-09"
+  },
+  "owner_decision_context": "CEO Larry Culp decided to deleverage aggressively (cutting the dividend, selling assets) and ultimately to abandon the conglomerate structure, separating into focused public companies to restore value.",
+  "action_taken": "Cut the dividend to one cent, reduced gross debt by more than $75 billion, and broke the conglomerate into three independent public companies (HealthCare 2023; Aerospace and Vernova 2024).",
+  "outcome_evidence": "Completion of the three-way split, >$75 billion debt reduction, and strong post-split performance of GE Aerospace and GE Vernova confirm a partial/mixed recovery: severe earlier value destruction followed by restructuring-driven stabilization and recovery.",
+  "source_limitations": "WebFetch of cnbc.com and sec.gov returned HTTP 403; figures confirmed across CNBC, CNN, Motley Fool, GE Vernova press releases, and GE SEC 8-K snippets (CIK 0000040545). The '$134 billion' total-debt framing was not corroborated and is omitted; debt-reduction figures are cited as company-stated targets/achievements.",
+  "directly_stated": [
+    "GE cut its 119-year-old dividend to one cent per share starting 2019 (announced Oct 30, 2018)",
+    "GE targeted/achieved more than $75 billion gross debt reduction from end-2018 to 2021 (~$30B via AerCap)",
+    "Breakup announced Nov 9, 2021; GE HealthCare spun off Jan 3, 2023; Aerospace and Vernova split April 2, 2024"
+  ],
+  "inferred": [
+    "The deleveraging and breakup constituted a strategic correction that stabilized the surviving businesses (partial recovery)",
+    "Earlier shareholders bore heavy losses, making the multi-year outcome mixed rather than a clean turnaround"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Outcome-5 mixed case: severe debt/solvency distress addressed via deleveraging and conglomerate breakup, yielding partial recovery. Tests whether the engine evaluates multi-year restructuring as a mixed outcome and links debt-solvency pressure to the corrective strategic actions.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

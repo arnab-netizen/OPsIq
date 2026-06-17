@@ -934,5 +934,37 @@
     "next_step": "slice 2 source collection (close gaps + small-business/mid-market/franchise + corroborate C) -> full-text verification slice -> convert to source.json+cases -> validator -> scorer -> re-trial",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_SOURCE_COLLECTION_SLICE_1_REPORT.md"
+  },
+  "stage_a_round2_source_collection_slice2": {
+    "slice": "Round 2 source collection slice 2 + coverage gap audit (candidate records only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_SOURCE_RECORDS + AUDIT (no benchmark cases authored; no engine/gate/scorer/answer-key change)",
+    "files": [
+      "simulation_runs/round_002_source_candidates/slice_2/SRC-037.json..SRC-072.json",
+      "simulation_runs/round_002_source_candidates/_COMBINED_INDEX.json",
+      "ROUND_2_SOURCE_COLLECTION_SLICE_2_REPORT.md",
+      "ROUND_2_SOURCE_COVERAGE_GAP_AUDIT.md"
+    ],
+    "new_records": 36,
+    "total_records": 72,
+    "diagnosis_gaps_remaining": "0 (15/15 covered; thin: inventory_forecasting, working_capital, operational_bottleneck)",
+    "outcome_gaps_remaining": "0 (20/20 covered; thin: 7 high-rev-cash-crisis, 10 wrong-action, 12 stable-healthy)",
+    "business_type_gaps_remaining": "large-cap over-represented (>25% rule violated); US-heavy geography; need genuine small-business/private/non-US",
+    "valence_mix": "GOOD 11 / BAD 36 / MIXED 21 / AMBIGUOUS 4 (BAD-heavy; GOOD & AMBIGUOUS light vs final floors 30/45/25/20)",
+    "source_types": "JOURNALISM 33, SEC_FILING 28, GOVERNMENT_REPORT 6, PUBLIC_DATASET 3, FOUNDER_POSTMORTEM 1, BANKRUPTCY_RESTRUCTURING 1 (journalism-heavy)",
+    "reliability": "A=28, B=42, C=2 (SRC-030 Blockbuster, SRC-066 Tropicana need corroboration)",
+    "full_text_verified": 0,
+    "snippet_only": "72 (36 slice2 explicit SEARCH_SNIPPET_ONLY + 36 slice1 equivalently snippet-verified)",
+    "records_needing_recheck": "all 72 before REAL_SOURCE_BACKED promotion (WebFetch HTTP 403 in sandbox; figures from WebSearch snippets)",
+    "real_source_backed_promoted": 0,
+    "hard_rule": "honored - no record promoted to REAL_SOURCE_BACKED without full-text verification",
+    "method": "4 parallel research agents, disjoint ID ranges SRC-037..072, strict no-fabrication; extended schema (size/geo/time/macro/owner-decision/action/verification_status/leakage_risk); all 36 valid + extended fields present",
+    "gates_run": "72/72 valid JSON + slice2 extended-field completeness (node check); no app code touched",
+    "next_step": "slice 3 (GOOD/stable-healthy/abstention + small-business/non-US + top up outcomes 7/10 + primary bankruptcy/postmortems + corroborate C) -> full-text verification slice -> source.json conversion -> validator -> scorer -> re-trial",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "reports": [
+      "ROUND_2_SOURCE_COLLECTION_SLICE_2_REPORT.md",
+      "ROUND_2_SOURCE_COVERAGE_GAP_AUDIT.md"
+    ]
   }
 }

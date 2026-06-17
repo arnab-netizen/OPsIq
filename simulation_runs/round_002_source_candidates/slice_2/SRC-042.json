@@ -1,0 +1,49 @@
+{
+  "source_id": "SRC-042",
+  "source_url": "https://www.restaurantbusinessonline.com/financing/brief-history-quiznos-collapse",
+  "source_title": "A brief history of Quiznos' collapse",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Restaurant Business (Winsight/Informa) - trade journalism",
+  "publication_or_filing_date": "2018",
+  "accessed_date": "2026-06-17",
+  "company_context": "Quiznos was a toasted-sandwich QSR franchise that peaked at roughly 5,000 U.S. locations in the mid-2000s, then collapsed. Its franchisees (independent small-business owners) were squeezed by a corporate supply model and a debt-laden leveraged buyout, leading to mass closures and a 2014 Chapter 11.",
+  "business_type": "Quick-service restaurant franchise system (toasted subs)",
+  "company_size_stage": "franchise system",
+  "geography": "United States",
+  "time_period": "2006-2017 (LBO through post-bankruptcy decline)",
+  "macro_context": "Great Recession demand pressure on QSR, intense competition from Subway, and a private-equity leveraged-buyout debt structure that loaded the parent with obligations.",
+  "outcome_category": "2 - bankruptcy",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "Quiznos' parent took on heavy LBO debt (a 2006 CCMP Capital buyout reportedly added ~$600 million in debt, refinanced up to ~$800 million, and total loan obligations reached ~$875 million by the 2014 filing). The franchise model required franchisees to buy supplies through a corporate distributor at above-market markups (~6-7%), so the parent profited from supply sales more than royalties while franchisee unit economics were crushed. U.S. locations fell from roughly 4,700 in 2007 to fewer than 400 by 2017; thousands of franchisees joined fraud/antitrust/racketeering litigation. Quiznos filed Chapter 11 in the District of Colorado on March 14, 2014.",
+  "source_backed_metrics": {
+    "us_locations_2007": "approximately 4,700",
+    "us_locations_2017": "fewer than 400",
+    "supply_markup_over_market": "approximately 6-7%",
+    "lbo_debt_added_2006_usd": "approximately 600 million",
+    "refinanced_debt_usd": "approximately 800 million",
+    "total_loan_obligations_at_2014_filing_usd": "approximately 875 million",
+    "chapter_11_filing_date": "2014-03-14",
+    "chapter_11_venue": "U.S. Bankruptcy Court, District of Colorado"
+  },
+  "owner_decision_context": "Corporate leadership (under PE ownership) chose to monetize franchisees through forced above-market supply purchases rather than profitable royalty growth, while servicing LBO debt. This destroyed franchisee profitability and trust; franchisees (small-business owners) closed units en masse or litigated.",
+  "action_taken": "Maintained the high-markup captive-supply model and debt load; eventually filed Chapter 11 in 2014 and shed the vast majority of locations; settlements across franchise litigation were estimated at over $200 million.",
+  "outcome_evidence": "Location count collapsed from ~4,700 (2007) to <400 (2017), Chapter 11 filed 2014-03-14 with ~$875M obligations, and large franchisee litigation - confirming a debt-plus-franchisee-economics failure ending in bankruptcy.",
+  "source_limitations": "Primary trade-journalism source (Restaurant Business); WebFetch not used for full text. Figures corroborated across multiple outlets and Wikipedia in search snippets but are journalist-reported, not from a primary filing. Settlement totals and some debt figures are reported estimates. This is a secondary/named-journalism source, not a court docket.",
+  "directly_stated": [
+    "Quiznos filed Chapter 11 on March 14, 2014 in the District of Colorado",
+    "Total loan obligations reached approximately $875 million by the 2014 filing",
+    "U.S. locations fell from ~4,700 in 2007 to fewer than 400 by 2017",
+    "Franchisees were required to buy supplies through a corporate distributor at ~6-7% above-market markups",
+    "A 2006 CCMP Capital LBO added ~$600 million in debt, later refinanced up to ~$800 million"
+  ],
+  "inferred": [
+    "The captive-supply markup destroyed franchisee unit economics, the proximate cause of mass closures",
+    "LBO debt removed capital that could have fixed the franchise model (debt_solvency_pressure compounding unit-economics failure)"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Franchise small-business case where the parent's debt structure and predatory captive-supply model destroyed franchisee economics and trust, ending in bankruptcy. Tests whether the engine separates parent-level debt/solvency pressure from franchisee-level unit-economics destruction and models the human/governance dimension (owner non-compliance, accountability, trust breakdown across a franchise network).",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}
