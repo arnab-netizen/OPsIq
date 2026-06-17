@@ -1,5 +1,5 @@
 {
-  "execution_date": "2026-05-13",
+  "execution_date": "2026-06-17",
   "current_phase": "PHASE_5_HTTP_RUNTIME_VERIFICATION_COMPLETION",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "phase_5_completion_status": "HTTP_RUNTIME_VERIFIED",
@@ -242,5 +242,67 @@
     "webhook_signature_code_verified": true,
     "current_classification": "SERIALIZATION_RUNTIME_VERIFIED + HTTP_AUTH_BOUNDARY_VERIFIED + WEBHOOK_SIGNATURE_CODE_VERIFIED",
     "overall_status": "Phase 3 (108/108 tests) + Phase 4 (27/27 tests) + Phase 5 HTTP auth proven. Atomic serialization verified. Auth enforcement verified. Staging deployment not yet proven."
+  },
+
+  "stage_a_pattern_strength_ignored_investigation": {
+    "current_phase": "OPTION_2_VARIANT_A_DRY_RUN_COMPLETE",
+    "current_branch": "claude/execution-consultant-engine-v2-kobwgj",
+    "contract_defect": "PATTERN_STRENGTH_IGNORED - Pattern strength calculated but not consumed in hypothesis confidence formulas",
+    "baseline_accuracy": "8/21 (38.1%) - SLICE_8 causal evidence",
+    "investigation_status": "COMPLETE",
+
+    "option_2_simulation": {
+      "status": "COMPLETED",
+      "mathematical_simulation_prediction": "9-10/21 (43-48%) with 85% confidence",
+      "simulation_recommendation": "Variant A is SAFE to implement",
+      "files_created": [
+        "OPTION_2_IMPACT_SIMULATION_REPORT.md",
+        "STAGE_A_OPTION_2_SIMULATION_SUMMARY.md"
+      ]
+    },
+
+    "option_2_variant_a_dry_run": {
+      "status": "COMPLETED",
+      "actual_measured_accuracy": "8/21 (38.1%)",
+      "newly_fixed_cases": 0,
+      "regressions": 0,
+      "net_gain": 0,
+      "prediction_accuracy": "FAILED - Simulation predicted 9-10/21 but actual measured 8/21",
+      "key_finding": "Disabling keyword boosts (+5/-15) produces ZERO improvement. Keywords are NOT the primary blocker to pattern strength consumption.",
+      "implementation": "Temporarily disabled keyword boost/penalty logic on hypothesis-generator.ts lines 419-425",
+      "production_code_state": "REVERTED - No permanent modifications",
+      "files_created": [
+        "src/__tests__/services/stage-a/option-2-variant-a-dry-run.test.ts",
+        "OPTION_2_VARIANT_A_DRY_RUN_REPORT.md",
+        "simulation_runs/round_002/stage_a_option_2_variant_a_dry_run_outputs/VARIANT_A_dry_run_summary.json",
+        "simulation_runs/round_002/stage_a_option_2_variant_a_dry_run_outputs/VARIANT_A_dry_run_details.json"
+      ]
+    },
+
+    "decision": "NOT_RECOMMENDED",
+    "rationale": [
+      "Zero accuracy improvement (8/21 → 8/21)",
+      "Mathematical simulation prediction completely failed",
+      "Keyword boosts are not the primary blocker",
+      "Root cause of PATTERN_STRENGTH_IGNORED appears deeper"
+    ],
+
+    "next_recommended_steps": [
+      "OPTION 4: Architectural redesign - investigate full scoring algorithm",
+      "OPTION 5: Pattern strength refactoring - redesign pattern strength calculation/application",
+      "Deep analysis phase: Understand why keyword boost removal had zero effect",
+      "Consider: Increase evidence requirements, refactor diagnosis matching, redesign confidence calculation"
+    ],
+
+    "gates_run": [
+      "npm run build: PASS",
+      "npx tsc --noEmit: PASS",
+      "npm test -- option-2-variant-a-dry-run: PASS (1 test file, 1 test, 4.37s)"
+    ],
+
+    "committed": true,
+    "commit_sha": "5ed591da",
+    "pushed": true,
+    "last_commit_message": "STAGE A: Option 2 Variant A dry-run benchmark complete - no improvement (8/21)"
   }
 }
