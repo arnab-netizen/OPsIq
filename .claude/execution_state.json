@@ -490,5 +490,35 @@
       "B5 absent decision docs"
     ],
     "report": "RC7_OPTION_C_VALIDATION_REPORT.md"
+  },
+  "stage_a_b4_decision": {
+    "slice": "Close blocker B4: retract unreproducible manual-rescoring claim + set replacement standard",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DECISION_DOC_ONLY (no code/scoring/threshold/answer-key/benchmark-output change; old records unedited)",
+    "files": [
+      "B4_RESCORING_REPRODUCIBILITY_DECISION.md"
+    ],
+    "b4_decision": "B - formally retract (reproduction impossible)",
+    "reproduced": "NO",
+    "findings": "/tmp/manual_scoring_results ABSENT; no committed generator in tree/history; 3 distinct recommendation_quality rationales across 50 (templated); all labeled MANUAL_LOCKED_ANSWER_KEY_REVIEW",
+    "retracted_claims": [
+      "'manual' characterization",
+      "5.21/10 avg & 5.00 median as validated",
+      "accuracy analysis -0.85/+1.06/78% too harsh/20% directional",
+      "per-dimension corrected averages as manual"
+    ],
+    "not_retracted": [
+      "frozen 09_* outputs",
+      "abstention decisions 12/14/15/16_*",
+      "reproducible 13_* safety review"
+    ],
+    "replacement_standard": "committed generator + committed inputs (no /tmp) + deterministic re-run + per-case key citation + honest method label + denominator transparency + no leakage; monitor-safety-review.ts is reference impl",
+    "b4_status": "CLOSED by retraction",
+    "still_open": [
+      "B5 absent ABSTENTION_GATE decision docs",
+      "RW-005 human adjudication",
+      "optional standard-compliant 13-dim quality rescore"
+    ],
+    "report": "B4_RESCORING_REPRODUCIBILITY_DECISION.md"
   }
 }
