@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-RC-04",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "toy_manufacturer",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "large",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 7,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A manufacturer over-diversified into unprofitable lines; margins collapsed and the owner wants the recovery that worked for peers.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Operating margin fell into the red as over-diversification spread cost across too many unprofitable lines",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "operatingMargin": -6,
+        "marginPct": -10
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Cost complexity rose sharply across a sprawling product range",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cogsPct": 18
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operations are capable once the range is rationalized to the profitable core",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "throughput": 1000
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The core lines remain strong; the unprofitable extensions diluted focus",
+      "confidence": "MEDIUM",
+      "source": "strategy",
+      "isCritical": false
+    }
+  ]
+}

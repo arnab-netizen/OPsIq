@@ -76,3 +76,43 @@ distress, layoffs-blind), and 3 more GOOD/recovery cases (to lift the GOOD valen
 outcome-spectrum floor). Continue the per-batch loop: author → validator → diagnosis
 trace → fix weak cases. **Stage A remains DO_NOT_PROMOTE / BLOCKED** (engine capability is
 measured by this corpus; the safety gate stays frozen).
+
+---
+
+## BATCH 3 UPDATE (reasoning-trap cases) — after 78 total
+**Cases authored:** +35 (35/35 validator-pass; corpus now **78**: 50 single, 8 multi,
+10 abstention, 10 adversarial). 7 categories ×5: false-root-cause, hidden-constraint,
+prioritization-conflict, delayed-consequence, misleading-KPI, healthy-business, recovery.
+**Diagnosis coverage:** 15/15 buckets + no_single_cause 8 + truly_insufficient 2.
+
+**Benchmark weaknesses FOUND (engine reasoning failures the corpus now exposes — the goal):**
+1. **False root cause (5/5):** the engine confidently diagnoses the surface symptom over
+   the true root cause — FRC-01 cash≠debt, FRC-02 churn≠quality, FRC-03 bottleneck≠
+   key-person, FRC-04 margin≠inventory, FRC-05 unit-econ≠pricing.
+2. **Prioritization (PC-01):** with a 3-month runway the engine diagnoses retention when
+   cash/survival must come first — it does not prioritize survival.
+3. **Model-coverage gap:** debt/legal/working-capital/demand/capex prioritization &
+   misleading-KPI cases abstain (uncovered) — quantifies where archetypes are missing.
+
+**Controls holding (no false positives):** all 5 healthy-business cases →
+INSUFFICIENT_EVIDENCE/BLOCKED (engine never fabricates a problem on a healthy business);
+misleading-KPI margin/retention/bottleneck not fooled by the headline metric; all 5
+recovery cases diagnose correctly.
+
+**Benchmark weaknesses FIXED:** 1 weak case — HC-01 originally encoded the cash
+constraint so severely (2-month runway) that the engine read it as a competing cash
+diagnosis; re-authored as a clean capital-budget constraint → now traces to
+operational_bottleneck [MODERATE] with the budget constraint isolated.
+
+**Remaining corpus gap analysis:** ~72 toward 150. The most valuable next additions are
+MORE false-root-cause and prioritization traps on the COVERED archetypes (where the
+engine fails confidently and the benchmark bites), plus second/third examples deepening
+multi-cause and adversarial. Thin: gtm_channel_mismatch (1), and the uncovered buckets
+need richer cases for when E2+ archetypes land.
+
+**Recommendation for Batch 4:** ~25 cases weighted to (a) 8 more false-root-cause across
+the 6 covered archetypes (maximize confident-wrong exposure), (b) 6 prioritization
+conflicts where survival/safety must precede optimization, (c) 5 misleading-KPI on
+covered archetypes, (d) 3 more healthy/seasonal controls, (e) 3 recovery sequences.
+Continue author → validator → diagnosis trace → fix-weak each batch.
+**Stage A remains DO_NOT_PROMOTE / BLOCKED** (safety gate frozen; corpus measures capability).

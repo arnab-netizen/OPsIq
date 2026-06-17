@@ -1,0 +1,62 @@
+{
+  "caseId": "R2-DC-01",
+  "caseType": "adversarial",
+  "industry": "consumer_products",
+  "businessModel": "brand",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "consumer_products",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Margins are thin and the owner wants a deep across-the-board discount to hit the quarter's revenue target.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Margins are thin and the owner wants a deep across-the-board discount to hit the quarter",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "marginPct": 3
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Contribution after the proposed discount would turn negative per unit",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "contribution": -5
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Discount-acquired customers historically churn fastest once the offer ends",
+      "confidence": "MEDIUM",
+      "source": "cohort report",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 20
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Competitors would likely match, resetting price expectations downward",
+      "confidence": "MEDIUM",
+      "source": "market scan",
+      "isCritical": false
+    }
+  ]
+}

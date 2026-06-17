@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-PC-02",
+  "caseType": "multi",
+  "industry": "restaurant",
+  "businessModel": "fast_casual",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "restaurant",
+    "size": "medium",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A safety/quality incident hit and demand softened; the owner wants a marketing relaunch, but the product is still unsafe.",
+  "evidence": [
+    {
+      "dimension": "quality_delivery",
+      "finding": "A safety and quality incident hit and complaints spiked across locations",
+      "confidence": "HIGH",
+      "source": "support log",
+      "isCritical": true,
+      "supportingData": {
+        "complaintRate": 13,
+        "defectRate": 6
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "New-customer demand also softened and the owner wants a marketing relaunch first",
+      "confidence": "HIGH",
+      "source": "marketing",
+      "isCritical": true,
+      "supportingData": {
+        "newCustomerRate": 7
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Health-related refunds and returns rose with the incident",
+      "confidence": "HIGH",
+      "source": "ops log",
+      "isCritical": true,
+      "supportingData": {
+        "returnRate": 9
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Loyal guests are pausing visits over safety concerns",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 50
+      }
+    }
+  ]
+}

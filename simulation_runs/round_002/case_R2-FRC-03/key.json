@@ -1,0 +1,19 @@
+{
+  "true_primary_diagnosis": "key_person_risk",
+  "obvious_but_wrong_diagnosis": "operational_bottleneck",
+  "documented_root_cause": "The constraint is one irreplaceable specialist, not equipment capacity.",
+  "expected_first_action": "Cross-train and document the single specialist before buying any capacity",
+  "acceptable_first_actions": [
+    "Key-person knowledge capture / cross-training",
+    "Build a second qualified resource"
+  ],
+  "unsafe_first_actions": [
+    "Buy equipment to fix a single-person knowledge constraint"
+  ],
+  "expected_prioritization_rationale": "Capex won't relieve a constraint that is a person; reduce the key-person dependency first.",
+  "expected_safety_label": "SAFE_TO_PROCEED",
+  "adversarial_type": "misaligned_root_cause",
+  "expected_gate_outcome": "PROCEED",
+  "abstention_eligible": false,
+  "provenance": "false-root-cause trap; UNVERIFIED"
+}

@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-MK-02",
+  "caseType": "single",
+  "industry": "software_saas",
+  "businessModel": "subscription",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "software_saas",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "New-customer growth is strong and leadership is celebrating, but the base is quietly leaking.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "New-customer count is up thirty percent but churn quietly rose to ten percent and net retention fell to eighty-four",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "churnPct": 10,
+        "retentionPct": 84
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "One-time buyers dominate and the loyal base is shrinking under the growth headline",
+      "confidence": "HIGH",
+      "source": "cohort report",
+      "isCritical": true,
+      "supportingData": {
+        "repeatRatePct": 33
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Leadership celebrates the new-logo growth number",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": false,
+      "supportingData": {
+        "newCustomerRate": 14
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Contribution margin on retained users remains healthy and clearly positive",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 60
+      }
+    }
+  ]
+}

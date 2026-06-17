@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-HC-03",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "assembler",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "medium",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Margins fell on input-cost inflation and the obvious fix is to switch suppliers, but the firm is locked into a contract.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Gross margin fell as input costs rose; the obvious fix is to switch suppliers",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "marginPct": -9
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Input cost per unit rose sixteen percent year over year",
+      "confidence": "HIGH",
+      "source": "purchasing",
+      "isCritical": true,
+      "supportingData": {
+        "cogsPct": 16
+      }
+    },
+    {
+      "dimension": "process_maturity",
+      "finding": "But the firm is locked into a three-year exclusive supply contract with steep exit penalties",
+      "confidence": "HIGH",
+      "source": "legal",
+      "isCritical": true,
+      "supportingData": {
+        "contractMonthsRemaining": 22,
+        "exitPenaltyAmount": 4000000
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Throughput is stable; this is a cost-versus-price problem within a contractual box",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "throughput": 850
+      }
+    }
+  ]
+}

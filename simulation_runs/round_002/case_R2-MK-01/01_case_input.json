@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-MK-01",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "oem",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Revenue is up sharply and the owner feels great, but the underlying profitability has collapsed.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue grew twenty-two percent but operating margin fell into the red as costs outran price",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "operatingMargin": -4,
+        "marginPct": -8
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Cost per unit rose fifteen percent while the headline revenue masked the profit decline",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cogsPct": 15
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The owner is reassured by the revenue growth figure",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": false
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Volume is up; the problem is profitability, not demand",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "throughput": 1100
+      }
+    }
+  ]
+}

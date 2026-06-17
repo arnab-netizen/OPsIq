@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-HC-05",
+  "caseType": "single",
+  "industry": "logistics",
+  "businessModel": "fulfilment",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "logistics",
+    "size": "small",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 30,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A large irreversible build is proposed to win a contract, with a 30-day decision window and unproven demand.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "A large irreversible automated build is proposed to capture a single new contract",
+      "confidence": "HIGH",
+      "source": "capex proposal",
+      "isCritical": true,
+      "supportingData": {
+        "capexAmount": 25000000,
+        "reversibility": 0
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The decision window is thirty days and the demand is unproven beyond that one contract",
+      "confidence": "HIGH",
+      "source": "strategy",
+      "isCritical": true,
+      "supportingData": {
+        "demandDurabilityMonths": 7
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Cash is adequate but the commitment is irreversible once equipment is ordered",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "downsideAmount": 18000000
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Current capacity covers present demand without the build",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "utilizationPct": 70
+      }
+    }
+  ]
+}

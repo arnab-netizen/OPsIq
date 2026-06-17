@@ -1099,5 +1099,31 @@
     "next_step": "batch 3 (~23: S03 for thin buckets + 4 multi + 4 abstention + 4 adversarial + 3 GOOD/recovery); per-batch loop author->validate->trace->fix",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
+  },
+  "stage_a_round2_case_library_batch3": {
+    "slice": "Round 2 case library batch 3 (35 reasoning-trap cases)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_AUTHORING (no engine/gate/scorer/answer-key change; UNVERIFIED sources -> no REAL_SOURCE_BACKED)",
+    "files": [
+      "simulation_runner/author-round2-batch3.ts",
+      "simulation_runs/round_002/case_R2-{FRC,HC,PC,DC,MK,HB,RC}-* (35 new)",
+      "simulation_runs/round_002/_BATCH_3_VALIDATION.json",
+      "simulation_runs/round_002/_ALL_VALIDATION.json",
+      "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
+    ],
+    "cases_authored_total": 78,
+    "batch3_new": 35,
+    "categories": "FRC false-root-cause 5, HC hidden-constraint 5, PC prioritization 5, DC delayed-consequence(adversarial) 5, MK misleading-KPI 5, HB healthy/do-not-act 5, RC recovery 5",
+    "by_type": "single 50, multi 8, abstention 10, adversarial 10",
+    "diagnosis_coverage": "15/15 buckets + no_single_cause 8 + truly_insufficient 2",
+    "validator": "78/78 valid; leakage-clean",
+    "weaknesses_found": "FRC 5/5 engine picks surface symptom over true root cause (cash!=debt, churn!=quality, bottleneck!=keyperson, margin!=inventory, unitecon!=pricing); PC-01 engine diagnoses retention not cash at 3-mo runway (no survival prioritization); uncovered-bucket abstentions quantify model-coverage gap",
+    "controls_holding": "all 5 healthy-business -> INSUFFICIENT_EVIDENCE/BLOCKED (no false-positive over-diagnosis); misleading-KPI margin/retention/bottleneck not fooled; all 5 recovery diagnose correctly",
+    "weaknesses_fixed": "1 weak case HC-01 re-authored (2-mo runway -> clean capital-budget constraint) so engine -> operational_bottleneck[MODERATE] with constraint isolated",
+    "gates_run": "tsx author-batch3 (35/35 after fix), validate-round2-cases (78/78), trace-round2-diagnosis, tsc only pre-existing run-case.ts:149",
+    "remaining": "~72 toward 150; prioritize more FRC + prioritization traps on covered archetypes",
+    "next_step": "batch 4 ~25 (8 FRC + 6 prioritization + 5 misleading-KPI on covered archetypes + 3 healthy + 3 recovery); per-batch author->validate->trace->fix",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "report": "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
   }
 }

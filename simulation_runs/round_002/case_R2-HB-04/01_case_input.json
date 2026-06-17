@@ -1,0 +1,67 @@
+{
+  "caseId": "R2-HB-04",
+  "caseType": "abstention",
+  "industry": "retail",
+  "businessModel": "seasonal_retail",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "small",
+    "revenueImpactUrgency": "LOW"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 14,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Sales dipped in the off-season as they do every year, and the owner is tempted to make a drastic change.",
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "Sales dipped about seven percent in the off-season exactly as they have every prior year",
+      "confidence": "HIGH",
+      "source": "sales history",
+      "isCritical": true,
+      "supportingData": {
+        "revenueChangePct": -7,
+        "priorYearSeasonalDipPct": -7
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Margins and reserves remain healthy and the dip is fully consistent with the seasonal pattern",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "operatingMargin": 12,
+        "cashMonths": 14
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operations are normal and prior off-seasons recovered fully into peak",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "utilizationPct": 60
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Customer base and repeat behaviour are steady through the cycle",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 80
+      }
+    }
+  ]
+}
