@@ -685,5 +685,26 @@
       "POST_E1_ABSTENTION_ROOT_CAUSE_MATRIX.md",
       "POST_E1_NEXT_SLICE_DECISION.md"
     ]
+  },
+  "stage_a_round2_benchmark_planning": {
+    "slice": "Round 2 benchmark enrichment spec + case-pack build plan (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "PLANNING_DOCS_ONLY (no engine/gate/scoring/answer-key change)",
+    "files": [
+      "ROUND_2_BENCHMARK_ENRICHMENT_SPEC.md",
+      "ROUND_2_CASE_PACK_BUILD_PLAN.md"
+    ],
+    "round2_size": "150 cases (90 single-diagnosis 6xD1-D15 + 20 multi-cause + 20 abstention-eligible + 20 adversarial)",
+    "min_evidence_standard": ">=4 evidence/case, >=2 critical, >=2 numeric supportingData, triggering metric present or abstention-eligible; finding >=40 chars no boilerplate (intake validator)",
+    "diagnosis_coverage": ">=6 cases per D1-D15 + multi-cause + truly-insufficient buckets; each bucket has SAFE/abstain/adversarial variants",
+    "abstention_criteria": ">=25% abstention-eligible: missing trigger metric / ambiguous multi-cause / out-of-model driver / infeasible-under-constraint / contradictory evidence",
+    "scoring_standard": "6 axes (diagnosis, evidence-use, first-action, constraint-fit, safety, abstention) deterministic+committed per B4; evaluated denominators; no /tmp; pre-registered promotion bar",
+    "promotion_gates": "0 dangerous proceed, adversarial 100% caught + controls, >=95% abstention correct, verified quality bar, full D1-D15 coverage, no placeholders",
+    "continue_allowed": "YES for planning; Round 2 authoring/intake-validator/scorer are next implementation slices (need explicit authorization)",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "ROUND_2_BENCHMARK_ENRICHMENT_SPEC.md",
+      "ROUND_2_CASE_PACK_BUILD_PLAN.md"
+    ]
   }
 }
