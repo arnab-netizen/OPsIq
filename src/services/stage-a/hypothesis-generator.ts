@@ -288,10 +288,119 @@ export class HypothesisGenerator {
       top3.push(h);
     }
 
-    return top3.map((h, idx) => ({
+    // STAGE_A_ABSTENTION_GATE: before accepting the top diagnosis, decide whether
+    // the evidence actually supports a safe concrete root cause. If not, abstain
+    // with INSUFFICIENT_EVIDENCE rather than forcing a (possibly high-confidence)
+    // diagnosis. This never fabricates a diagnosis and preserves evidence traces.
+    const gated = this.applyAbstentionGate(top3, allEvidence);
+
+    return gated.map((h, idx) => ({
       ...h,
       id: `hyp-${idx}`,
     }));
+  }
+
+  // STAGE_A_ABSTENTION_GATE thresholds (principled, not benchmark-fitted):
+  // - NO_PATTERN_SUPPORT: a top diagnosis resting on zero synthesized evidence
+  //   patterns and below the pattern-less baseline floor is structurally unsupported.
+  // - PERVASIVE_MISSING_DATA: when the evidence corpus self-declares, on average,
+  //   at least one explicit "data required is missing/unknown" statement per
+  //   evidence item, the analyst input itself asserts insufficiency.
+  private static readonly ABSTAIN_NO_PATTERN_MAX_CONFIDENCE = 40;
+  private static readonly ABSTAIN_MISSING_DATA_DENSITY = 1.0;
+  private static readonly ABSTAIN_MIN_EVIDENCE_FOR_DENSITY = 4;
+  private static readonly ABSTAIN_MIN_EVIDENCE_FOR_NO_PATTERN = 3;
+  private static readonly ABSTENTION_CONFIDENCE = 20;
+
+  // Generic epistemic-uncertainty / missing-data phrases. These describe the
+  // ABSENCE of decision-grade data; they are not tied to any case or answer key.
+  private readonly missingDataPhrases: string[] = [
+    "unknown", "not yet known", "not been", "never computed", "never been",
+    "no detailed analysis", "no win/loss", "not yet", "cannot be", "unclear",
+    "not clear", "only partially", "has not been", "have not been",
+    "not measured", "no cohort", "it is unknown", "undocumented",
+    "uncharacterized", "not quantified", "no analysis", "not substantiated",
+    "unverified", "not been pulled", "not been produced", "not been computed",
+    "not been analyzed",
+  ];
+
+  private computeMissingDataDensity(allEvidence: EvidenceItem[]): number {
+    if (allEvidence.length === 0) return 0;
+    const text = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+    let count = 0;
+    for (const phrase of this.missingDataPhrases) {
+      count += text.split(phrase).length - 1;
+    }
+    return count / allEvidence.length;
+  }
+
+  /**
+   * Decide whether to abstain. Returns the original hypotheses unchanged when a
+   * safe concrete diagnosis is supported; otherwise returns an INSUFFICIENT_EVIDENCE
+   * hypothesis at the top with the original candidates demoted (for traceability).
+   */
+  private applyAbstentionGate(
+    top3: Hypothesis[],
+    allEvidence: EvidenceItem[]
+  ): Hypothesis[] {
+    if (top3.length === 0) return top3;
+    const winner = top3[0];
+
+    const reasons: string[] = [];
+    const missingDataDensity = this.computeMissingDataDensity(allEvidence);
+
+    // Rule A — NO_PATTERN_SUPPORT: top diagnosis backed by no evidence pattern,
+    // below the pattern-less baseline floor, AND the evidence itself contains at
+    // least one explicit missing-data statement. The missing-data requirement
+    // prevents abstaining a strongly-but-narrowly-evidenced single-dimension case
+    // (which legitimately may not form a 2-dimension pattern yet is unambiguous).
+    if (
+      allEvidence.length >= HypothesisGenerator.ABSTAIN_MIN_EVIDENCE_FOR_NO_PATTERN &&
+      (winner.patternCount || 0) === 0 &&
+      winner.confidence < HypothesisGenerator.ABSTAIN_NO_PATTERN_MAX_CONFIDENCE &&
+      missingDataDensity > 0
+    ) {
+      reasons.push(
+        "no evidence pattern supports any diagnosis and the evidence explicitly notes required data is missing"
+      );
+    }
+
+    // Rule B — PERVASIVE_MISSING_DATA: the evidence self-declares missing data.
+    // Require a minimum evidence count: a per-item density threshold is only
+    // statistically meaningful with enough items (tiny inputs trip it spuriously).
+    if (
+      allEvidence.length >= HypothesisGenerator.ABSTAIN_MIN_EVIDENCE_FOR_DENSITY &&
+      missingDataDensity >= HypothesisGenerator.ABSTAIN_MISSING_DATA_DENSITY
+    ) {
+      reasons.push(
+        `evidence pervasively declares the data required for a confident diagnosis is missing (missing-data density ${missingDataDensity.toFixed(
+          2
+        )} per item)`
+      );
+    }
+
+    if (reasons.length === 0) {
+      return top3; // safe concrete diagnosis — do not abstain
+    }
+
+    const abstention: Hypothesis = {
+      id: "hyp-0",
+      rootCause: DiagnosisType.INSUFFICIENT_EVIDENCE,
+      confidence: HypothesisGenerator.ABSTENTION_CONFIDENCE,
+      supportingEvidenceCount: winner.supportingEvidenceCount,
+      conflictingEvidenceCount: winner.conflictingEvidenceCount,
+      reasoning:
+        `INSUFFICIENT_EVIDENCE: withholding a concrete root cause because ${reasons.join(
+          "; and "
+        )}. Strongest non-abstained candidate was '${winner.rootCause}' (conf ${winner.confidence}).`,
+      patternCount: winner.patternCount,
+      patternStrengthSum: winner.patternStrengthSum,
+      evidenceDiversity: winner.evidenceDiversity,
+      causalEvidenceFound: winner.causalEvidenceFound,
+    };
+
+    // Keep original candidates as lower-ranked context for traceability.
+    return [abstention, ...top3];
   }
 
   private scoreHypothesis(

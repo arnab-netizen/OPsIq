@@ -14,6 +14,11 @@ export enum DiagnosisType {
   GOVERNANCE_COMPLIANCE_FAILURE = "governance_compliance_failure",
   TRUST_QUALITY_CRISIS = "trust_quality_crisis",
   CASH_RUNWAY_CRISIS = "cash_runway_crisis",
+  // Abstention marker: emitted by the Stage A abstention gate when evidence does
+  // not support a safe concrete root-cause diagnosis. Distinct from UNKNOWN
+  // (which represents an unscored/empty result) — INSUFFICIENT_EVIDENCE is an
+  // explicit, reasoned decision to withhold a diagnosis.
+  INSUFFICIENT_EVIDENCE = "insufficient_evidence",
   UNKNOWN = "unknown",
 }
 

@@ -161,6 +161,7 @@ export class EvidenceMapper {
       [DiagnosisType.STRATEGIC_PRICING_ERROR]: [DiagnosisType.DEMAND_FORECASTING_MISMATCH],
       [DiagnosisType.GOVERNANCE_COMPLIANCE_FAILURE]: [DiagnosisType.OPERATIONAL_BOTTLENECK],
       [DiagnosisType.CASH_RUNWAY_CRISIS]: [DiagnosisType.DEMAND_FORECASTING_MISMATCH],
+      [DiagnosisType.INSUFFICIENT_EVIDENCE]: [],
       [DiagnosisType.UNKNOWN]: [],
     };
 

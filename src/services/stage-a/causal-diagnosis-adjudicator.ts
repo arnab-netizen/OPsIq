@@ -344,6 +344,7 @@ export class CausalDiagnosisAdjudicator {
       [DiagnosisType.BRAND_EROSION]: ["market_position"],
       [DiagnosisType.GOVERNANCE_COMPLIANCE_FAILURE]: ["process_maturity"],
       [DiagnosisType.CASH_RUNWAY_CRISIS]: ["financial_health"],
+      [DiagnosisType.INSUFFICIENT_EVIDENCE]: [],
       [DiagnosisType.UNKNOWN]: [],
     };
 

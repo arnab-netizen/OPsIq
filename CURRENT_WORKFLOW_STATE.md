@@ -83,6 +83,37 @@ fix_disposition: KEEP (do not revert)
 next_required_step: Implement abstention/INSUFFICIENT_EVIDENCE gate (PRIORITY 3), then re-benchmark — separate run
 ```
 
+---
+
+## STAGE A — ABSTENTION / INSUFFICIENT_EVIDENCE GATE (2026-06-17, authoritative update)
+
+```yaml
+abstention_gate_status: IMPLEMENTED_TESTED_BENCHMARKED
+baseline_before_gate: 10/21 (47.6%) mapping fix
+abstention_gate_result: 13/21 (61.9%) abstention-aware
+net_gain: +3 (ADV-013, ADV-014, BLND-008 now correct abstentions)
+correct_abstentions: 3
+wrong_abstentions: 1 (BLND-009 — already-wrong, correct dx structurally unreachable)
+valid_correct_regressions: 0
+false_high_confidence_removed: 1 (ADV-014 OB@50)
+false_high_confidence_remaining: ADV-011 (UEB@50 — indistinguishable from valid PD-017; documented limitation)
+gate_rules:
+  - RuleA_NO_PATTERN_SUPPORT: evidenceCount>=3 AND patternCount==0 AND conf<40 AND missingDataDensity>0
+  - RuleB_PERVASIVE_MISSING_DATA: evidenceCount>=4 AND missingDataDensity>=1.0
+gate_location: HypothesisGenerator.applyAbstentionGate (post-ranking, pre-return)
+enum_added: DiagnosisType.INSUFFICIENT_EVIDENCE="insufficient_evidence"
+confidence_cap: 65 (intact; abstention emitted at 20)
+evidence_trace_rate: 98.1% (>=85%)
+tests_added: 8 unit (abstention-gate.test.ts) + 6 benchmark (abstention-gate-benchmark.test.ts) = 14 PASS
+new_test_failures_introduced: 0 (6 pre-existing stage-a failures unchanged, out of scope)
+gates: tsc PASS, build PASS
+overfitting: none (no case-ID/answer-key/benchmark coupling)
+disposition: KEEP
+stage_a_promoted: false
+next_required_step: Fresh manual review; then ranking-tie remediation (ADV-012/RW-022/PD-019), dimension canonicalization (BLND-009/RW-024), adoption->CRE (SYN-013), ADV-011 completeness reasoning — separate runs
+continue_allowed: false (single authorized remediation complete; no Stage B)
+```
+
 
 Stage A Slice 1 benchmark execution completed successfully with excellent metrics:
 - 21/21 cases executed without errors (100% success rate)
