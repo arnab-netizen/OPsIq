@@ -664,5 +664,26 @@
       "quality UNVERIFIED"
     ],
     "report": "E1_FINANCIAL_ARCHETYPE_VALIDATION_REPORT.md"
+  },
+  "stage_a_post_e1_bottleneck_analysis": {
+    "slice": "Post-E1 capability bottleneck analysis (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ANALYSIS_DOCS_ONLY (no code/gate/threshold/answer-key change)",
+    "files": [
+      "POST_E1_ABSTENTION_ROOT_CAUSE_MATRIX.md",
+      "POST_E1_NEXT_SLICE_DECISION.md"
+    ],
+    "abstention_causes_49": "INSUFFICIENT_MODEL_COVERAGE 44 (41 undiagnosable placeholders), FINANCIAL_COMMIT_HELD_BY_OFF_ARCHETYPE 2 (RW-003/006), COMMITTED_BUT_CAUSAL_CHALLENGE_FAILED 2 (RW-001/005), TRUE_INSUFFICIENT 1 (RW-004)",
+    "top_cause": "INSUFFICIENT_MODEL_COVERAGE 44 -- but 41 are generic placeholder cases undiagnosable by ANY archetype (benchmark evidence-quality defect, not model gap)",
+    "held_commits": "4 (RW-001/003/005/006) held for legitimate multi-domain/out-of-scope reasons; hold is correct",
+    "best_next_slice": "NOT E2; highest-ROI = (1) benchmark evidence enrichment Round 2, (2) multi-domain synthesis; if forced archetype slice -> E5 (strategic/key-person/capex) for correctness + ~1 proceed (RW-005)",
+    "expected_safe_proceed_gain": "~0 for any single E2-E6 slice on Round 1 (best case ~1 via E5/RW-005)",
+    "safety_risk": "E3/E5 HIGH (financing/capex/legal); E4 HIGH adversarial; all require adversarial-suite expansion",
+    "continue_allowed": "YES for planning; next implementation needs explicit authorization; gate frozen",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "POST_E1_ABSTENTION_ROOT_CAUSE_MATRIX.md",
+      "POST_E1_NEXT_SLICE_DECISION.md"
+    ]
   }
 }
