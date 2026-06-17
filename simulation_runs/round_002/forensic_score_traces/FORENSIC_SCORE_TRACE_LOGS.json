@@ -1,0 +1,1349 @@
+[
+  {
+    "caseId": "BLND-006",
+    "groundTruth": "demand_forecasting_mismatch",
+    "expectedDiagnosis": "demand_forecasting_mismatch",
+    "predictedDiagnosis": "trust_quality_crisis",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "supportingItems": [
+          "e-0.5222680195866407",
+          "e-0.03034252866581344"
+        ],
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ]
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 4,
+        "supportingItems": [
+          "e-0.08718189747098548",
+          "e-0.5222680195866407"
+        ],
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 34,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "trust quality crisis (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 28,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "cash_runway_crisis",
+        "confidence": 24,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": false,
+        "reasoning": "cash runway crisis (no patterns): 0 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "trust_quality_crisis",
+    "winnerConfidence": 34,
+    "scoreGap": 34,
+    "evidenceCount": 5,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "customer_retention",
+      "quality_delivery"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.23457746977024185",
+        "dimension": "financial_health",
+        "finding": "Customer acquisition growth decelerated from 25% MoM (6 months ago) to 15% MoM (current). Simultaneously, churn increased from 4% MoM to 5% MoM. Blended impact: net subscriber growth declining. Marketing spend increased 40% over past 6 months (to push 25% acquisition), suggesting rising CAC or declining conversion efficiency. Company continues to add revenue ($3.3M/month current vs $2.8M 6 months ago) due to growth in existing customer LTV, but new customer acquisition economics deteriorating.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.08718189747098548",
+        "dimension": "market_position",
+        "finding": "Competitive landscape intensifying: Rent the Runway (well-funded competitor) raised $70M Series C and is growing 30% YoY (faster than company's 15%). Resale platforms (Depop, Poshmark) adding rental capabilities and growing customer bases significantly. Market TAM is large ($5B) but consolidation risk is real; well-funded competitors may be winning market share. Company's competitive advantage unclear: not the largest (Rent the Runway), not the fastest growing (Depop), not the most profitable (all are pre-profitable).",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.5222680195866407",
+        "dimension": "customer_retention",
+        "finding": "Churn rising from 4% to 5% MoM (a 25% increase in churn rate). At 5% MoM, annualized churn ~46%. However, repeat purchase rate on rentals is 72% (strong for subscription), and NPS is 48 (neutral, not bad). This suggests customers are not deeply dissatisfied; churn may be driven by affordability concerns (discretionary category hit by economic pressures?) or competitive alternatives discovered. Without detailed exit interviews or customer segmentation, the cause of churn rise is unclear.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.48043453346028797",
+        "dimension": "financial_health",
+        "finding": "Unit economics under pressure: CAC $45, LTV $2,800 estimated (62-month payback). As acquisition slows and becomes more expensive, payback period risk extends. If CAC rises to $60 (possible given 40% marketing spend increase for 15% acquisition growth), payback extends to 83 months. Company burn rate $400k/month, but Series B investors expect path to profitability within 24 months. Continuing aggressive growth acquisition may exceed investor patience and Series C timeline constraints.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "BLND-008",
+    "groundTruth": "insufficient_evidence",
+    "expectedDiagnosis": "insufficient_evidence",
+    "predictedDiagnosis": "go_to_market_misalignment",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "supportingItems": [
+          "e-0.7488910720388622",
+          "e-0.14066390654756344"
+        ],
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ]
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "supportingItems": [
+          "e-0.8455835323674281",
+          "e-0.7488910720388622"
+        ],
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 33,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 29,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "trust quality crisis (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 24,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "customer retention erosion (1 pattern): 2 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "go_to_market_misalignment",
+    "winnerConfidence": 33,
+    "scoreGap": 33,
+    "evidenceCount": 5,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "customer_retention",
+      "quality_delivery"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.41508592268367606",
+        "dimension": "financial_health",
+        "finding": "The standalone business is healthy but sub-scale for premium M&A multiples. ARR $12M at ~35% growth, 79% gross margin, 112% NRR, and roughly breakeven with $4M cash is a fundamentally sound profile. However, comparable transactions price sub-$30M-ARR vertical-SaaS assets at ~6-9x ARR and only award ~10-14x above ~$30M ARR with >120% NRR. The indicated ~$80-95M is therefore a strong (above-comp) headline for a $12M-ARR asset, but its real value depends entirely on the unfinalized cash/stock/earn-out structure.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.8455835323674281",
+        "dimension": "market_position",
+        "finding": "The company holds ~1,900 of ~180,000 addressable locations against 2-3 entrenched incumbents, and the acquirer controls a large distribution channel into the same dental buyer. This cuts two ways: it makes the acquirer a logical strategic owner (channel + product fit) and simultaneously a formidable competitor if the company declines and the acquirer builds or buys a rival. The standalone path to the $30M+ ARR tier (where premium multiples live) is plausible but contested and capital-dependent.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7679650143877017",
+        "dimension": "financial_health",
+        "finding": "The decision is dominated by unresolved structure and standalone uncertainty rather than by a clear operational defect. The offer's true value cannot be compared to the standalone path until the cash/stock/earn-out split, earn-out achievability, and acquirer stock basis are known; and the standalone path's value cannot be estimated without a verified durable growth rate and the probability/capital of reaching the $30M+ tier. Neither the value of accepting nor the value of declining is currently quantified to a decision-grade level.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7488910720388622",
+        "dimension": "customer_retention",
+        "finding": "Retention quality, which drives both the M&A multiple and the standalone trajectory, is only partially characterized. Blended NRR is 112% and logo churn ~9%/yr, which is good, but it is not yet known whether NRR is durable across cohorts or concentrated in a few large accounts, nor what true post-onboarding logo churn is. Adjacent-module expansion (<15% of ARR) is the lever both an acquirer and a standalone plan would rely on.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "BLND-009",
+    "groundTruth": "operational_bottleneck",
+    "expectedDiagnosis": "operational_bottleneck",
+    "predictedDiagnosis": "trust_quality_crisis",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "supportingItems": [
+          "e-0.7924676723147055",
+          "e-0.8736361695794808"
+        ],
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ]
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "supportingItems": [
+          "e-0.8736361695794808",
+          "e-0.41958361773943054"
+        ],
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 29,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "trust quality crisis (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 33,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 24,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "customer retention erosion (1 pattern): 2 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "trust_quality_crisis",
+    "winnerConfidence": 29,
+    "scoreGap": 29,
+    "evidenceCount": 5,
+    "evidenceDimensions": [
+      "financial_health",
+      "quality_delivery",
+      "customer_retention",
+      "market_position"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.28516958034979845",
+        "dimension": "financial_health",
+        "finding": "Earnings are solid but the realizable multiple hinges on diligence-readiness and earnings quality. EBITDA is ~$11M at a 13% margin with modest net debt (~$8M) and a 7-month backlog. Comps suggest ~5-7x EBITDA from financial buyers and ~7-10x from strategics for assets with durable aftermarket and clean diligence. But there is no recent quality-of-earnings study and statements are unaudited, so normalized EBITDA and the achievable multiple are not yet substantiated, leaving a wide and unverified valuation range.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7924676723147055",
+        "dimension": "quality_delivery",
+        "finding": "The dominant transferability risk is key-person and succession dependence. There is no internal CEO successor, and senior engineering plus the top-5 customer relationships (~38% of revenue) are concentrated in the founder and 2-3 long-tenured leaders. A buyer's price and a retain-and-hire plan both depend on how much value survives the founder's exit, which is currently undocumented. This is the central driver of both the achievable multiple and the feasibility of an owner exit within 24 months.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.8736361695794808",
+        "dimension": "customer_retention",
+        "finding": "The higher-margin aftermarket stream (~30% of revenue, ~28% gross vs ~21% on machinery) is the most valuable and most scrutinized asset, but its durability is uncharacterized. It is unknown whether this stream is contracted/recurring or relationship-dependent and therefore at risk in a transition. Buyers (especially strategics paying a premium) will price the aftermarket heavily on its proven recurrence and stickiness through an ownership change.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.41958361773943054",
+        "dimension": "market_position",
+        "finding": "Path feasibility differs sharply by buyer type and by the founder's constraints. A financial buyer offers a faster, standardized process but typically expects management continuity or an earn-out the founder cannot personally provide past 24 months, and prices on multiple. A strategic buyer could pay a synergy premium but may integrate or relocate the plant (conflicting with the workforce/reputation constraint) and is harder to source. Retaining requires hiring a credible professional manager into a key-person-dependent business and defers liquidity. None of the three can be ranked without substantiated transferable value and aftermarket durability.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "BLND-010",
+    "groundTruth": "strategic_pricing_error",
+    "expectedDiagnosis": "strategic_pricing_error",
+    "predictedDiagnosis": "go_to_market_misalignment",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "supportingItems": [
+          "e-0.22063804544398047",
+          "e-0.11803897957308984"
+        ],
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ]
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 2,
+        "supportingItems": [
+          "e-0.610253689149945",
+          "e-0.11803897957308984"
+        ],
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 33,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 2,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 29,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "trust quality crisis (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 29,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "customer retention erosion (1 pattern): 2 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "go_to_market_misalignment",
+    "winnerConfidence": 33,
+    "scoreGap": 33,
+    "evidenceCount": 5,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "quality_delivery",
+      "customer_retention"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.7146841351730551",
+        "dimension": "financial_health",
+        "finding": "The plateau is most visibly a pricing/yield problem, not a cost or demand collapse. Revenue growth fell from ~18% to ~6% while the average billing rate has been flat for two years and net revenue per client is roughly flat; meanwhile loss analysis shows ~35% of competitive losses cite 'lacked specific industry depth/proof' versus only ~20% citing price. This pattern - flat rates plus depth-driven losses - points to under-monetized, insufficiently differentiated positioning rather than a market that has stopped buying.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.610253689149945",
+        "dimension": "market_position",
+        "finding": "There is a concrete, defensible niche signal. In one industry vertical the firm already wins ~50% of proposals (vs ~32% overall) and holds 3 marquee references, and the market is increasingly asking firms to help execute recommendations, not just produce them. This suggests differentiated depth commands both higher win rates and likely higher rates, but the firm has not tested its willingness-to-pay or pricing power if it leaned fully into specialization.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.22063804544398047",
+        "dimension": "quality_delivery",
+        "finding": "Delivery capacity and model are a binding constraint that shapes which strategy is feasible. Utilization is below target (68%) yet the 6 partners are near full load and the junior:senior leverage ratio is lower than larger competitors, so the firm cannot simply 'sell more' of the current model without either raising leverage (quality risk) or adding senior capacity (tight market). It is not yet known whether the 68% utilization reflects a sales-pipeline gap or a partner-bandwidth/staffing-mix problem, which matters for all three options.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.8071675193184946",
+        "dimension": "financial_health",
+        "finding": "The economics that would decide between the options are unquantified. The pricing power achievable through specialization, the at-scale gross margin and staffing model of a managed-services line, and the integration economics/dilution of an acquisition roll-up are all unknown; the managed-services 'evidence' is two small pilots, and the niche pricing power is inferred from win rate, not tested. No option can be ranked on financial merit yet.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "ADV-011",
+    "groundTruth": "insufficient_evidence",
+    "expectedDiagnosis": "insufficient_evidence",
+    "predictedDiagnosis": "unit_economics_breakdown",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "supportingItems": [
+          "e-0.8411802089589515",
+          "e-0.40922515896073675"
+        ],
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ]
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "supportingItems": [
+          "e-0.40922515896073675",
+          "e-0.7151174584955922"
+        ],
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ]
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 2,
+        "supportingItems": [
+          "e-0.7151174584955922",
+          "e-0.7843848574522603"
+        ],
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "unit economics breakdown (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 45,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "demand forecasting mismatch (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 45,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 2,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "unit_economics_breakdown",
+    "winnerConfidence": 50,
+    "scoreGap": 50,
+    "evidenceCount": 4,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "market_position",
+      "customer_retention"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.8411802089589515",
+        "dimension": "financial_health",
+        "finding": "Partnership profit declined from $1.3M (2023) to $0.9M (2024), a 31% YoY decrease. Profitability per partner declined from $433k to $300k. This is a significant decline for a mature professional services firm. Revenue appears flat (~$6.5M both years, ~0% growth), suggesting the profit decline is entirely driven by cost/efficiency deterioration.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.40922515896073675",
+        "dimension": "operational_efficiency",
+        "finding": "Billable utilization declined from 70% (2023) to 55% (2024), a 15 percentage point decline or 21% relative decline. This is a significant operational deterioration. At 65% gross margin, lower utilization directly reduces profitability. Leadership attributes this to 'weak manufacturing economy' and 'fewer transformation project opportunities.' However, no detailed analysis provided of which clients, industries, or project types are declining.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7151174584955922",
+        "dimension": "market_position",
+        "finding": "Leadership reports that 'global consulting firms gaining share in manufacturing transformation space' and 'competition from digital transformation firms intensified.' Clients are expressing desire for digital/technology expertise beyond the firm's core operations transformation. Implying competitive displacement in core business, but no specific win/loss analysis provided.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7843848574522603",
+        "dimension": "customer_retention",
+        "finding": "Top 5 clients represent 45% of revenue. Two partner departures in past 18 months to larger firms. These are concerning signs: high client concentration means firm is vulnerable to individual client loss, and partner departures suggest compensation/career satisfaction issues. No detailed data on whether departing partners took clients with them, or what the stated reasons for departure were.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "ADV-012",
+    "groundTruth": "trust_quality_crisis",
+    "expectedDiagnosis": "trust_quality_crisis",
+    "predictedDiagnosis": "customer_retention_erosion",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 3,
+        "supportingItems": [
+          "e-0.6512746453884743",
+          "e-0.8908370511087118"
+        ],
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ]
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 2,
+        "supportingItems": [
+          "e-0.6512746453884743",
+          "e-0.574185122453216"
+        ],
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 45,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "customer retention erosion (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 40,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "trust quality crisis (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 40,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 2,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 2,
+    "correctDiagnosisConfidence": 40,
+    "winnerDiagnosis": "customer_retention_erosion",
+    "winnerConfidence": 45,
+    "scoreGap": 5,
+    "evidenceCount": 4,
+    "evidenceDimensions": [
+      "financial_health",
+      "customer_retention",
+      "market_position",
+      "quality_delivery"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.8637809320280398",
+        "dimension": "financial_health",
+        "finding": "ARR grew 50% YoY from $8M to $12M, an impressive headline. Over the same period, monthly churn rose from 2% to 4% -- a 100% increase in the churn rate. Net new account growth still appears healthy because acquisition is outpacing churn, but the churn trend is the opposite of what a 'product-market-fit victory' narrative implies.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.6512746453884743",
+        "dimension": "customer_retention",
+        "finding": "Monthly churn of 4% implies roughly 39% annualized logo churn, and blended net revenue retention has slipped to ~96% (below the 100%+ that signals durable retention). The company has not produced cohort retention curves, so whether recent cohorts retain worse than older ones -- the key question for whether growth is healthy -- is unknown.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.574185122453216",
+        "dimension": "market_position",
+        "finding": "The category is dominated by Slack and Microsoft Teams, with limited differentiation and low switching costs. Rising churn in this context could reflect competitive displacement, but no win/loss analysis versus the incumbents has been produced, so the competitive contribution to churn is unmeasured.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.8908370511087118",
+        "dimension": "quality_delivery",
+        "finding": "No engagement-depth or activation metrics by cohort have been analyzed, and no churn-reason/exit-survey data exists. Whether churning accounts ever activated (onboarded to real value) or churned for reliability, usability, or unmet-value reasons is unknown -- precisely the evidence needed to tell a quality/retention problem apart from incidental churn or competitive loss.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "ADV-013",
+    "groundTruth": "insufficient_evidence",
+    "expectedDiagnosis": "insufficient_evidence",
+    "predictedDiagnosis": "unit_economics_breakdown",
+    "correct": false,
+    "patternsGenerated": [],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 26,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": true,
+        "reasoning": "unit economics breakdown (no patterns): 0 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 10,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": false,
+        "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "cash_runway_crisis",
+        "confidence": 10,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": false,
+        "reasoning": "cash runway crisis (no patterns): 0 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "unit_economics_breakdown",
+    "winnerConfidence": 26,
+    "scoreGap": 26,
+    "evidenceCount": 4,
+    "evidenceDimensions": [
+      "financial_health",
+      "unit_economics_cohort_detail",
+      "go_to_market",
+      "customer_retention"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.3607535560919173",
+        "dimension": "financial_health",
+        "finding": "Blended unit economics are strong: CAC payback 10 months, LTV ~$120k, LTV:CAC ~4.1:1, gross margin 78%. These are the metrics in the current board deck and the ones the founder wants to lead the Series B with.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7795915006512302",
+        "dimension": "unit_economics_cohort_detail",
+        "finding": "Cohort CAC payback by acquisition quarter shows a clear deterioration: 2023 H1 ~7mo, 2023 H2 ~9mo, 2024 H1 ~13mo, 2024 H2 (the most recent and largest cohort) ~18mo and still rising. The favorable blended 10-month figure is weighted by older, cheaper cohorts; the marginal new customer pays back in ~18 months, not 10.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.06728071483681508",
+        "dimension": "go_to_market",
+        "finding": "Acquisition channel shifted from ~70% inbound/referral (2023) to ~65% outbound-sourced (2024) after a new VP Sales reorganized AE pods. Outbound deals carry higher fully-loaded acquisition cost. This shift coincides with the rising-payback cohorts but no win-rate, cycle, or fully-loaded CAC bridge has been produced for outbound vs inbound.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7123426650477744",
+        "dimension": "customer_retention",
+        "finding": "Blended NRR 104%, gross retention 88%. LTV (~$120k) is computed at the blended level only. If recent outbound cohorts retain worse, the assumed LTV for those cohorts would be lower while their CAC is higher - compressing LTV:CAC for the exact customers being scaled. NRR/retention have not been cut by cohort or channel.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "ADV-014",
+    "groundTruth": "insufficient_evidence",
+    "expectedDiagnosis": "insufficient_evidence",
+    "predictedDiagnosis": "operational_bottleneck",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "supportingItems": [
+          "e-0.5212356010646888",
+          "e-0.11195757221683333"
+        ],
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "operational bottleneck (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "unit economics breakdown (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "cash_runway_crisis",
+        "confidence": 10,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": false,
+        "reasoning": "cash runway crisis (no patterns): 0 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "operational_bottleneck",
+    "winnerConfidence": 45,
+    "scoreGap": 45,
+    "evidenceCount": 4,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "customer_mix",
+      "competitive_demand"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.5212356010646888",
+        "dimension": "financial_health",
+        "finding": "EBITDA margin fell from 16% to 11% to ~8% over three years while revenue was flat ($14.8M -> $15.0M). Because revenue did not fall, the margin erosion is driven by rising cost-to-deliver per revenue dollar, not by a revenue collapse - which is not what a pure demand-softness story would predict.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.11195757221683333",
+        "dimension": "operational_efficiency",
+        "finding": "Blended billable utilization fell from 74% to 68% but is reported firm-wide only. It has never been split by practice area, grade, or client segment, so it is unknown whether the decline is broad (consistent with market softness) or concentrated (consistent with an internal/practice/segment problem). Bench time rise is attributed to 'fewer projects' without linking idle staff to specific lost engagements.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7482135474207516",
+        "dimension": "customer_mix",
+        "finding": "Client-segment mix shifted materially: mid-market grew from ~25% to ~40% of revenue while large-enterprise shrank, including two anchor enterprise accounts cutting spend. Per-segment profitability has never been computed. If mid-market work carries lower realization and higher delivery cost, the mix shift alone could explain much of the margin decline - independent of any market softness.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.9368689418576621",
+        "dimension": "competitive_demand",
+        "finding": "Partners cite a 'general sense' that clients are delaying projects, but the CRM win-rate and proposal-volume data needed to confirm a true demand drop (vs losing competitive bids) have not been pulled. Whether the two anchor enterprise accounts paused, churned, or were displaced by a competitor was never investigated.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "RW-016",
+    "groundTruth": "go_to_market_misalignment",
+    "expectedDiagnosis": "go_to_market_misalignment",
+    "predictedDiagnosis": "unit_economics_breakdown",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 8,
+        "supportingItems": [
+          "e-0.6744623170051172",
+          "e-0.33587552165587087",
+          "e-0.6723281542357551",
+          "e-0.9621867392965915"
+        ],
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ]
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "supportingItems": [
+          "e-0.33587552165587087",
+          "e-0.08654001109616338",
+          "e-0.9621867392965915"
+        ],
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ]
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "supportingItems": [
+          "e-0.5019658177169124",
+          "e-0.08654001109616338"
+        ],
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "supportingEvidenceCount": 4,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "unit economics breakdown (1 pattern): 4 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "supportingEvidenceCount": 4,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "operational bottleneck (1 pattern): 4 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 40,
+        "supportingEvidenceCount": 3,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "demand forecasting mismatch (1 pattern): 3 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "unit_economics_breakdown",
+    "winnerConfidence": 50,
+    "scoreGap": 50,
+    "evidenceCount": 6,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "customer_retention",
+      "market_position"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.6744623170051172",
+        "dimension": "financial_health",
+        "finding": "Gross margin declined from 42% (2022) to 38% (2024), a 400 basis point contraction. This occurred while revenue remained flat ($183M in 2022, $185M in 2024), indicating either higher input costs (COGS) or increased promotional activity without comparable revenue growth. EBITDA margin compressed from 9.1% to 6.2% over the same period despite flat revenue, suggesting operating expense reduction has not kept pace with margin decline.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.33587552165587087",
+        "dimension": "operational_efficiency",
+        "finding": "Physical store traffic (measured by transaction count across all 42 locations) declined 12% YoY, from 285K transactions in 2023 to 251K in 2024. However, total customer count remained stable (measured by unique customer IDs with at least one purchase in the year). This pattern suggests existing customers are visiting stores less frequently, or new customers are making fewer store visits. Accompanying this, average transaction value in-store has declined from $485 (2023) to $461 (2024), indicating smaller basket sizes.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.6723281542357551",
+        "dimension": "financial_health",
+        "finding": "E-commerce channel is growing 18% YoY (from $22M in 2023 to $26M in 2024) but at lower average order value ($310 in 2024 vs $320 in 2023) and higher customer acquisition cost. Digital marketing spend has increased 35% (from $1.8M to $2.4M annually) while digital customers acquired have grown only 18%, indicating rising CAC per customer. Digital channel operates at an estimated 8-10% margin due to shipping costs and fulfillment overhead, significantly below store margin of 38%.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.5019658177169124",
+        "dimension": "customer_retention",
+        "finding": "Customer churn rate has increased from 5% (2022) to 8% (2024). NPS has declined from 68 (2022) to 62 (2024). Customer satisfaction appears stable on product quality (4.2/5 rating) but declining on pricing perception (3.1/5, down from 3.6/5 in 2022) and store experience (3.4/5, down from 3.8/5 in 2022). Customer interviews (sample of 12 customers, mix of active and churned) indicate price sensitivity: multiple mentions of 'finding similar items at [competitor] for less' and 'not worth the premium anymore.'",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.08654001109616338",
+        "dimension": "market_position",
+        "finding": "Competitive landscape has shifted: Three new direct-to-consumer (DTC) home goods brands launched in the past 18 months with digital-first go-to-market, targeting the same customer demographics with 15-20% lower prices. Additionally, major e-commerce generalists (Amazon, Wayfair, Overstock) have expanded specialty home goods categories, putting downward pressure on pricing. However, customer interviews suggest the company's brand is still valued for 'curated selection' and 'in-person experience,' but this value is being discounted in customers' purchasing decisions relative to price.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "RW-022",
+    "groundTruth": "unit_economics_breakdown",
+    "expectedDiagnosis": "unit_economics_breakdown",
+    "predictedDiagnosis": "demand_forecasting_mismatch",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "supportingItems": [
+          "e-0.688395775993556",
+          "e-0.16676872077019045"
+        ],
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ]
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "supportingItems": [
+          "e-0.16676872077019045",
+          "e-0.7493772680692492"
+        ],
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 50,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "demand forecasting mismatch (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 45,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "unit economics breakdown (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "operational bottleneck (1 pattern): 2 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 2,
+    "correctDiagnosisConfidence": 45,
+    "winnerDiagnosis": "demand_forecasting_mismatch",
+    "winnerConfidence": 50,
+    "scoreGap": 5,
+    "evidenceCount": 3,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "market_position"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.688395775993556",
+        "dimension": "financial_health",
+        "finding": "Growth decelerating (15% YoY current vs. 25% growth two years ago) while margins compressing (15% EBITDA vs. 18%). Revenue per recruiter declining 12% (from $340k to $300k) in two years, suggesting either recruiter productivity falling or bench time increasing. Salary costs rising 18% in 18 months, outpacing revenue growth.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.16676872077019045",
+        "dimension": "operational_efficiency",
+        "finding": "Utilization declining from 82% to 78%, suggesting increased bench time. Recruiter turnover rising to 20% annually (from 12% two years ago), indicating talent retention challenge. Productivity decline could be due to recruiter churn (less experienced team), market conditions (harder to place), or client demand softening.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.7493772680692492",
+        "dimension": "market_position",
+        "finding": "Tech hiring (45% of revenue) growing 18% YoY (healthy), but fintech (40% of revenue) growing only 8% (slower), reflecting macro sensitivity. Executive search premium segment, but junior-mid placement (65% of core) more competitive. Competitive pressure from tech companies hiring directly and larger recruiting firms consolidating.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "RW-024",
+    "groundTruth": "operational_bottleneck",
+    "expectedDiagnosis": "operational_bottleneck",
+    "predictedDiagnosis": "brand_erosion",
+    "correct": false,
+    "patternsGenerated": [],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "brand_erosion",
+        "confidence": 10,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": false,
+        "reasoning": "brand erosion (no patterns): 0 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "cash_runway_crisis",
+        "confidence": 10,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": false,
+        "reasoning": "cash runway crisis (no patterns): 0 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "winnerDiagnosis": "brand_erosion",
+    "winnerConfidence": 10,
+    "scoreGap": 10,
+    "evidenceCount": 3,
+    "evidenceDimensions": [
+      "talent_retention",
+      "financial_health",
+      "market_position"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.02297622735185567",
+        "dimension": "talent_retention",
+        "finding": "Junior turnover doubled (10% → 18% in two years). Exit interviews suggest junior consultants leaving for Big Four strategy roles or corporate positions. Partnership track is narrow: only 2 out of 10 hired consultants reach partner level. This creates perception of limited career advancement.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.791873626670299",
+        "dimension": "financial_health",
+        "finding": "Revenue growth slowing (8% YoY, down from higher historical growth), EBITDA margin compressing toward 12% from historical 15%+. Partner utilization at 72% (below peer 75-80%), suggesting bench time or suboptimal project staffing. Realization rate 85% (below target 90%), indicating discount pressure or project profitability issues.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.06299478101005485",
+        "dimension": "market_position",
+        "finding": "Boutique firm facing consolidation pressure; Big Four expanding in strategy. Client concentration risk: top 3 = 32% of revenue. Limited differentiation vs. larger competitors; pricing pressure from Big Four. Market perception: boutique = smaller, less resourced, riskier than Big Four.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "PD-019",
+    "groundTruth": "unit_economics_breakdown",
+    "expectedDiagnosis": "unit_economics_breakdown",
+    "predictedDiagnosis": "demand_forecasting_mismatch",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "supportingItems": [
+          "e-0.6512069864334697",
+          "e-0.15926583032719366",
+          "e-0.797387441825093"
+        ],
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ]
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "supportingItems": [
+          "e-0.15926583032719366",
+          "e-0.283517810932592",
+          "e-0.797387441825093"
+        ],
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 50,
+        "supportingEvidenceCount": 3,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "demand forecasting mismatch (1 pattern): 3 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 45,
+        "supportingEvidenceCount": 3,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "unit economics breakdown (1 pattern): 3 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "supportingEvidenceCount": 3,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "operational bottleneck (1 pattern): 3 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 2,
+    "correctDiagnosisConfidence": 45,
+    "winnerDiagnosis": "demand_forecasting_mismatch",
+    "winnerConfidence": 50,
+    "scoreGap": 5,
+    "evidenceCount": 4,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "market_position"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.6512069864334697",
+        "dimension": "financial_health",
+        "finding": "EBITDA margin declined from 11.0% (FY2024, $87.1M on $792M) to 8.0% (FY2025, $64M on $800M), a 300 bps compression, even though revenue was essentially flat (+1%). The operating ratio (operating expenses / revenue) deteriorated from 91% to 94%, a 300 bps increase, indicating that operating costs grew materially faster than revenue.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.15926583032719366",
+        "dimension": "operational_efficiency",
+        "finding": "Cost per mile rose sharply in the two largest variable cost lines. Fuel per mile increased 15% to $0.40 (from $0.348), adding ~$0.052/mile. Driver wages and benefits per mile increased 12% to $0.62 (from $0.554), adding ~$0.066/mile. Combined, the two lines added ~$0.118/mile of cost on 500M miles, roughly +$59M of cost year over year. Other cost-per-mile lines: maintenance $0.18, equipment/depreciation $0.16, insurance/other $0.20.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.283517810932592",
+        "dimension": "market_position",
+        "finding": "Revenue per mile fell 3.6% to $1.60 (from $1.66) in a soft, oversupplied freight market. Competitive spot rates are pressuring pricing and the contract fuel surcharge under-recovers: spot freight (~30% of revenue) carries little surcharge and contract surcharge formulas lag the pump. The carrier cannot raise rates unilaterally without ceding volume, so revenue per mile is being squeezed from both base rate and incomplete fuel pass-through.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.797387441825093",
+        "dimension": "operational_efficiency",
+        "finding": "Volumes are roughly stable: total miles ~500M and revenue essentially flat at $800M vs $792M (+1%). This rules out a demand-collapse explanation. The deterioration is concentrated in the gap between revenue per mile ($1.60) and rising cost per mile; the marginal mile now contributes far less, with the combined fuel+wage cost increase (~$0.118/mile) exceeding the revenue-per-mile decline (-$0.06/mile), so contribution per mile has compressed even before fixed costs.",
+        "isCritical": true
+      }
+    ]
+  },
+  {
+    "caseId": "SYN-013",
+    "groundTruth": "customer_retention_erosion",
+    "expectedDiagnosis": "customer_retention_erosion",
+    "predictedDiagnosis": "go_to_market_misalignment",
+    "correct": false,
+    "patternsGenerated": [
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "supportingItems": [
+          "e-0.08230919467950737",
+          "e-0.3421170358802559"
+        ],
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ]
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 33,
+        "supportingEvidenceCount": 2,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "evidenceDiversity": 2,
+        "causalEvidenceFound": false,
+        "reasoning": "go to market misalignment (1 pattern): 2 supporting, 0 contradictions"
+      },
+      {
+        "rank": 2,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 15,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": true,
+        "reasoning": "unit economics breakdown (no patterns): 0 supporting, 0 contradictions"
+      },
+      {
+        "rank": 3,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 10,
+        "supportingEvidenceCount": 0,
+        "conflictingEvidenceCount": 0,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "evidenceDiversity": 0,
+        "causalEvidenceFound": false,
+        "reasoning": "customer retention erosion (no patterns): 0 supporting, 0 contradictions"
+      }
+    ],
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 3,
+    "correctDiagnosisConfidence": 10,
+    "winnerDiagnosis": "go_to_market_misalignment",
+    "winnerConfidence": 33,
+    "scoreGap": 23,
+    "evidenceCount": 5,
+    "evidenceDimensions": [
+      "customer_retention",
+      "product_adoption",
+      "customer_success",
+      "market_position",
+      "unit_economics"
+    ],
+    "criticalEvidence": [
+      {
+        "id": "e-0.08230919467950737",
+        "dimension": "customer_retention",
+        "finding": "Quarterly logo churn rose from 2% to 4% across three consecutive quarters and NRR fell from 108% to 101%. Exit surveys on 22 churned logos cite 'didn't get full value / low adoption' (55%) and 'switched to bundled suite' (23%) far ahead of explicit 'price' (14%). The dominant stated reason is unrealized value inside accounts, not headline competitive loss.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.12291822129258922",
+        "dimension": "product_adoption",
+        "finding": "Adoption is concentrated in one module: recruitment 88%, onboarding 41%, performance 19%; the average account actively uses only 1.4 of 3 modules. Single-module accounts churn at roughly 3x the rate of multi-module accounts in the CS notes, and they generate the expansion shortfall behind the NRR decline. Customers are buying a suite but realizing a point tool.",
+        "isCritical": true
+      },
+      {
+        "id": "e-0.9868521647439681",
+        "dimension": "customer_success",
+        "finding": "Time-to-first-value (first hire fully processed) averages 47 days versus a 21-day target. QBR completion is 38%, and each CSM carries ~80 accounts, well above the 40-50 healthy band for this ACV. Accounts that miss early value rarely expand to a second module, and they over-index in the churn cohort.",
+        "isCritical": true
+      }
+    ]
+  }
+]

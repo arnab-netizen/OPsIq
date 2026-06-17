@@ -7,97 +7,183 @@
 
 ---
 
-## ROOT CAUSE COUNTS (Final Classification)
+## ROOT CAUSE COUNTS (REVISED — Based on Forensic Trace Analysis)
 
-Based on detailed score analysis, the 13 failing cases break down as:
+**CRITICAL UPDATE:** Initial claim of "100% PATTERN_STRENGTH_IGNORED" was INCORRECT.  
+Actual forensic trace data reveals root causes are MIXED and case-dependent.
 
-### Primary Root Cause
+### Root Cause Distribution
 
-**PATTERN_STRENGTH_IGNORED (Core Architectural Defect)**
-- Affects: ALL 13 FAILING CASES
-- Description: Pattern strength calculated (line 326, patternStrengthSum) but never used in confidence formula
-- Evidence: Variant A test disabled keyword boost (+5) and still got 8/21; only way Variant A affects is if pattern strength could become visible, but it never is in formula
+| Root Cause | Count | Cases | Impact | Pattern Strength Relevance |
+|---|---|---|---|---|
+| **DIAGNOSIS_NOT_IN_PATTERN_MAPPING** | 9 (69%) | BLND-006, BLND-008, BLND-009, BLND-010, ADV-011, ADV-013, ADV-014, RW-024, RW-016 | Correct diagnosis never generated (rank 0, confidence 0) | ZERO (pattern never used) |
+| **PATTERN_STRENGTH_UNUSED_IN_RANKING** | 1 (8%) | SYN-013 | Correct diagnosis lacks pattern; winner has pattern strength 3 | YES (pattern exists for winner only) |
+| **EQUAL_PATTERN_STRENGTH_DIFFERENT_BOOSTING** | 3 (23%) | ADV-012, RW-022, PD-019 | Correct diagnosis uses SAME pattern strength as winner | ZERO (boosting decides, not strength) |
 
-**Count: 13/13 cases (100%)**
+**Key Finding:** Disabling keyword boosts (Variant A test) correctly showed NO improvement because 3 of 4 ranking failures use equal pattern strength for both diagnoses. Adding pattern strength to the formula will NOT fix 9 of 13 cases because their correct diagnoses are not mapped to any pattern.
 
-**Secondary Root Cause (manifestation)**
+### Secondary Root Causes (Manifestations)
 
-| Root Cause | Count | Cases | Evidence |
+| Root Cause | Count | Evidence | Explanation |
 |---|---|---|---|
-| WRONG_DIAGNOSIS_BASE_SCORE_TOO_HIGH | 8 | BLND-006, BLND-009, ADV-012, RW-016, RW-022, PD-019, SYN-013, RW-024 | Wrong diagnosis scores 45-50 same as correct diagnosis base scores would; base formula treats them identically |
-| SCORING_FORMULA_FAILURE | 13 | ALL | Base formula: `(supportingEvidence% × patternWeight × patternBoost)` ignores patternStrength |
-| PATTERN_STRENGTH_IGNORED | 13 | ALL | patternStrengthSum calculated but never applied; all patterns weight equally |
-| CORRECT_DIAGNOSIS_NOT_GENERATED | 5 | BLND-008, BLND-010, ADV-011, ADV-013, ADV-014 | System has no mechanism to return INSUFFICIENT_EVIDENCE; must return a top diagnosis even with weak confidence |
-| FINAL_SORT_TIEBREAK_ERROR | 8 | BLND-006, BLND-009, ADV-012, RW-016, RW-022, PD-019, SYN-013, RW-024 | When base scores are tied, tie-breaking (specificity match, pattern count) insufficient to differentiate |
-| HIDDEN_KEYWORD_DOMINANCE | 0 | NONE | Variant A test showed keyword boost not the blocker; confirmed NOT a root cause |
-| CAUSAL_SIGNAL_NOT_DETECTED | 0 | NONE | Causal boost/penalty present; not the primary issue |
-| SPECIFICITY_BOOST_NOT_DECISIVE | 0 | NONE | Specificity included in scoring; not decisive only because base formula is broken |
+| DIAGNOSIS-TO-PATTERN_MAPPING_INCOMPLETE | 9 | BLND-006: demand_forecasting_mismatch not mapped to any pattern; BLND-008: insufficient_evidence not mapped; ADV-013, RW-024: no patterns generated | Pattern system maps diagnoses to fixed potentialRootCauses lists; unmapped diagnoses never scored above floor |
+| PATTERN_GENERATION_INSUFFICIENT_DATA | 2 | ADV-013, RW-024 (empty patternsGenerated arrays) | Evidence mixed/incomplete, pattern creation thresholds not met |
+| KEYWORD_BOOSTING_NOT_DECISIVE | 3 | ADV-012, RW-022, PD-019: 5-point gaps despite equal pattern strength | Score difference created by specificity/diversity matching, not keyword or pattern strength differences |
+| NO_INSUFFICIENT_EVIDENCE_MECHANISM | 4 | ADV-011, ADV-013, ADV-014, BLND-008 | System must return a diagnosis; returns lowest-confidence diagnosis instead of "insufficient" marker |
 
 ---
 
 ## DETAILED ROOT CAUSE ANALYSIS
 
-### THE DEFECT: PATTERN_STRENGTH_IGNORED
+### DEFECT 1: DIAGNOSIS-TO-PATTERN MAPPING INCOMPLETE (9 cases, 69%)
+
+**Problem:** Correct diagnosis not mapped to any pattern's potentialRootCauses list
+
+**Example (BLND-006):**
+```
+Ground truth: demand_forecasting_mismatch
+
+Patterns Generated:
+  1. quality_delivery-customer_retention-pattern (strength 1)
+     → potentialRootCauses: [trust_quality_crisis, customer_retention_erosion]
+  2. market_position-customer_retention-pattern (strength 4)
+     → potentialRootCauses: [go_to_market_misalignment]
+
+Result:
+  - demand_forecasting_mismatch never appears in any pattern
+  - Confidence: 0 (not generated in hypotheses)
+  - Winner: trust_quality_crisis (34)
+```
+
+**Why This Breaks The Algorithm:**
+- Pattern strength (4) is calculated but completely UNUSED
+- Diagnosis never considered, regardless of evidence strength
+- Fixing base confidence formula or pattern strength weighting has ZERO impact
+- Fix required: Redesign pattern system to map all diagnoses to patterns
+
+**Affected Cases:** BLND-006, BLND-008, BLND-009, BLND-010, ADV-011, ADV-013, ADV-014, RW-016, RW-024
+
+---
+
+### DEFECT 2: PATTERN_STRENGTH_UNUSED IN BASE CONFIDENCE (1 case, 8%)
 
 **Code Location:** `src/services/stage-a/hypothesis-generator.ts`, line 326
 
 ```typescript
+let patternStrengthSum = 0;
 matchingPatterns.forEach((p) => {
   patternStrengthSum += (p.patternStrength || 1); // <-- COLLECTED
   p.supportingItems.forEach((id) => {
     supportingIds.add(id);
-    // track dimensions...
   });
 });
+
+// Lines 338-407: Base confidence formula
+const baseConfidence = (supportingIds.size / allEvidenceSize) × patternWeight × patternBoost;
+// patternStrengthSum is NEVER used here
 ```
 
-**What Happens Next:**
-- Line 326: `patternStrengthSum` is accumulated
-- Lines 327-334: Loop continues to collect supporting items
-- Lines 338-407: All subsequent calculations (contradictions, keyword, specificity, causal)
-- **Line 326 reference count after collection: ZERO**
-- Variable is never used, never applied, never mentioned again
+**Problem:** `patternStrengthSum` calculated but never applied to confidence formula
 
-**Impact on Scoring:**
-- F1 validators set `patternStrength = 1` (suppressed) for weak patterns
-- F1 validators set `patternStrength = 8-10` for strong patterns
-- But confidence formula treats both identically:
-  - Both contribute equally to `supportingIds.size`
-  - Both are counted in `matchingPatterns.length`
-  - Neither strength value is used in `baseConfidence = (supportingIds.size / allEvidence.length) × patternWeight × patternBoost`
-
-**Why This Breaks The Algorithm:**
-
-Two diagnoses with same number of supporting evidence items but different pattern strengths score identically:
-
+**Example (SYN-013):**
 ```
-Diagnosis A: 4 supporting items from 1 strong pattern (strength=9)
-  baseConfidence = (4/21) × 1.0 × 1.2 = 22.8 → 23
+Ground truth: customer_retention_erosion
 
-Diagnosis B: 4 supporting items from 2 weak patterns (strength=1, 1)
-  baseConfidence = (4/21) × 1.2 × 1.2 = 27.4 → 27 (HIGHER!)
+Patterns Generated:
+  1. market_position-customer_retention-pattern (strength 3)
+     → potentialRootCauses: [go_to_market_misalignment]
+
+Result:
+  - customer_retention_erosion NOT in pattern potentialRootCauses
+  - confidence(customer_retention_erosion) = ~10 (no pattern)
+  - confidence(go_to_market_misalignment) = 33 (pattern strength 3 used)
+  - Winner: go_to_market_misalignment by 23 points
+
+If pattern strength were used in formula:
+  - customer_retention_erosion needs ITS OWN pattern to compete
+  - Pattern strength alone doesn't solve this (diagnosis unmapped)
 ```
 
-Wrong diagnosis B scores HIGHER despite weaker pattern quality, because it has more patterns (patternWeight=1.2 vs 1.0).
+**Impact:** 
+- Pattern strength only helps diagnoses WITH patterns
+- Correct diagnosis (SYN-013) lacks pattern entirely
+- Fix: Add customer_retention pattern for adoption failures
+
+**Affected Cases:** SYN-013 (1 case)
 
 ---
 
-### SECONDARY DEFECT: NO INSUFFICIENT_EVIDENCE MECHANISM
+### DEFECT 3: EQUAL PATTERN STRENGTH, DIFFERENT CONFIDENCE (3 cases, 23%)
 
-**Code Location:** `src/services/stage-a/hypothesis-generator.ts`, lines 201-294
+**Problem:** Correct diagnosis uses SAME pattern strength as winner; score gap caused by boosting, not strength
 
-**Current Flow:**
-1. Score all 11 diagnoses
-2. Filter out those with confidence = 0
-3. Return all with confidence > 0
+**Example (ADV-012):**
+```
+Ground truth: trust_quality_crisis
+Predicted: customer_retention_erosion
+Gap: 5 points (45 vs 40)
 
-**Problem:**
-- If ALL diagnoses should be rejected (insufficient evidence scenario), at least one will have confidence > 0
-- No threshold to say "all diagnoses are weak, return INSUFFICIENT"
-- Example: ADV-011, ADV-013, ADV-014 should return INSUFFICIENT but return weakest diagnosis
+Both diagnoses use SAME pattern:
+  - quality_delivery-customer_retention-pattern (strength 3)
+  - Both score ~40-45 range based on:
+    - supportingIds.size: 2 (same)
+    - patternWeight: 1.0 (same)
+    - patternBoost: 1.0-1.1 (similar)
+    - keyword boost: +5 (different for each diagnosis)
+    - specificity match: varies by evidence keywords
 
-**Why This Matters:**
-- 4-5 cases explicitly test ability to say "no diagnosis"
+Conclusion:
+  - Pattern strength (3) is identical for both
+  - Score difference (5 pts) is NOT from pattern strength
+  - Difference from keyword matching, specificity, or evidence diversity
+  - Disabling keyword boost (Variant A) showed no improvement because other boosters still active
+```
+
+**Why Adding Pattern Strength Won't Help:**
+- Both diagnoses already calculate strength identically
+- Adding strength to formula doesn't change relative ranking if both use same strength
+- Would need stronger pattern for correct diagnosis, or weaker pattern for winner
+
+**Affected Cases:** ADV-012 (5 pts), RW-022 (5 pts), PD-019 (5 pts)
+
+---
+
+### SECONDARY ISSUES: INSUFFICIENT_EVIDENCE MECHANISM & PATTERN GENERATION THRESHOLDS
+
+**Issue 1: No INSUFFICIENT_EVIDENCE Return Path (4 cases)**
+
+Code: `src/services/stage-a/hypothesis-generator.ts`, lines ~380-410 (hypothesis ranking)
+
+```typescript
+// Current: Always returns top diagnoses with confidence > 0
+const topHypotheses = sortedHypotheses.slice(0, 3).filter(h => h.confidence > 0);
+return topHypotheses;
+
+// Missing: Threshold to return INSUFFICIENT_EVIDENCE
+// Should be: if (allConfidences < threshold) return [{rootCause: 'insufficient_evidence', confidence: 0}]
+```
+
+**Examples:**
+- ADV-011: Confidence 50 (unit_economics_breakdown) — but evidence is incomplete/insufficient
+- ADV-013: Confidence 26 (unit_economics_breakdown) — evidence mixed and contradictory
+- ADV-014: Confidence 45 (operational_bottleneck) — evidence complex and ambiguous
+- BLND-008: Confidence 33 (go_to_market_misalignment) — deal structure insufficiently quantified
+
+**Impact:** System must always return a diagnosis; cannot decline to decide when evidence is weak
+
+**Issue 2: Pattern Generation Thresholds (2 cases)**
+
+Code: `src/services/stage-a/pattern-synthesizer.ts`, pattern matching functions
+
+**Examples:**
+- ADV-013: patternsGenerated = [] (EMPTY)
+  - Evidence: CAC payback deteriorating BUT blended payback strong (conflicting signals)
+  - Pattern thresholds not met due to mixed/incomplete evidence
+- RW-024: patternsGenerated = [] (EMPTY)
+  - Evidence: Talent retention down, market consolidation pressure (separate issues)
+  - Pattern thresholds not met; system defaults to floor confidence
+
+**Impact:** When patterns don't generate, diagnoses default to very low confidence (~10-26 range)
 - System cannot distinguish between "this diagnosis is likely" and "no diagnosis is likely"
 - Adds 5 wrong cases to the 8-9 ranking failures
 
