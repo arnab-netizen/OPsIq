@@ -17,6 +17,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { assessConsultingOutput } from "@/services/governance/consulting-safety-adapter";
+import { classifyAbstentionCoverage } from "@/services/governance/coverage-classifier";
 
 const args = process.argv.slice(2);
 const round =
@@ -119,6 +120,14 @@ for (const dir of caseDirs) {
         abstention_decision: safety.decision,
         causal_challenge: safety.causal_challenge,
         constraint_alignment: safety.constraint_alignment,
+        model_coverage_reason: classifyAbstentionCoverage({
+          engineStatus: frozen.status,
+          committed: frozen.status !== "INSUFFICIENT_EVIDENCE",
+          evidence: (causalEvidence ?? []).map((e) => ({
+            dimension: e.dimension,
+            isCritical: e.isCritical,
+          })),
+        }),
         gate_evaluated: true,
       },
       null,

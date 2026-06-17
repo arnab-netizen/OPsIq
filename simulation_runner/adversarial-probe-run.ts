@@ -28,6 +28,7 @@ import {
   type EvidenceItem,
 } from "@/domain/consulting-engine/types";
 import { assessConsultingOutput } from "@/services/governance/consulting-safety-adapter";
+import { classifyAbstentionCoverage } from "@/services/governance/coverage-classifier";
 
 type Dim = EvidenceItem["dimension"];
 interface Ev {
@@ -416,6 +417,11 @@ async function main() {
           abstain: safety.assessment.abstain,
           abstention_state: safety.assessment.abstention_state ?? null,
           unsafe_conditions: safety.assessment.unsafe_conditions,
+          model_coverage_reason: classifyAbstentionCoverage({
+            engineStatus: output.status,
+            committed: output.status !== "INSUFFICIENT_EVIDENCE",
+            evidence: p.evidence.map((e) => ({ dimension: e.dimension, isCritical: e.isCritical })),
+          }),
           gate_evaluated: true,
         },
         null,

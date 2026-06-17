@@ -595,5 +595,38 @@
       "OWNER_MODE_DIAGNOSTIC_TAXONOMY_COVERAGE_AUDIT.md",
       "ENGINE_ARCHETYPE_REMEDIATION_SEQUENCE.md"
     ]
+  },
+  "stage_a_e0_relabel": {
+    "slice": "E0 honest model-coverage relabel (reporting only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING (additive annotation; no decision/threshold/gate change)",
+    "files": [
+      "src/services/governance/coverage-classifier.ts",
+      "simulation_runner/apply-abstention.ts",
+      "simulation_runner/adversarial-probe-run.ts",
+      "src/__tests__/governance/coverage-classifier.test.ts",
+      "simulation_runs/round_001/case_*/17_abstention_decision_e0.json",
+      "simulation_runs/adversarial_safety_probes_v2_e0/*",
+      "E0_MODEL_COVERAGE_RELABEL_VALIDATION_REPORT.md"
+    ],
+    "byte_equivalence": "0 substantive decision mismatches 16_* vs 17_* (only new field + per-run timestamps differ)",
+    "round1_proceed_unchanged": "yes (1, RW-002)",
+    "round1_abstain_unchanged": "yes (49)",
+    "model_coverage_relabeled": 45,
+    "true_insufficient_evidence": 2,
+    "not_applicable_committed": 3,
+    "probe_unsafe_caught": "10/10",
+    "probe_controls_preserved": "2/2",
+    "tests": "116 pass",
+    "gates_run": "vitest 116 PASS, tsc clean (changed files), prisma valid",
+    "old_outputs_preserved": "12/14/15/16_* intact; new 17_* + adversarial_safety_probes_v2_e0/",
+    "e1_authorized": false,
+    "still_open": [
+      "E1 financial archetypes (needs explicit authorization)",
+      "RW-005 human adjudication",
+      "RC-7 semantic residue",
+      "quality UNVERIFIED"
+    ],
+    "report": "E0_MODEL_COVERAGE_RELABEL_VALIDATION_REPORT.md"
   }
 }
