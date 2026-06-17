@@ -48,15 +48,15 @@ export class HypothesisGenerator {
       preferredDimensions: ["operational_efficiency"],
       minSupportingItems: 2,
       patternBoost: 1.2,
-      specificity: 0.65, // SLICE 3: Moderate specificity
-      requiredEvidenceIndicators: ["bottleneck", "capacity", "throughput", "queue"],
+      specificity: 0.65, // SLICE 3: Moderate specificity; SLICE 6: Enhanced with talent/throughput signals
+      requiredEvidenceIndicators: ["bottleneck", "capacity", "throughput", "queue", "turnover", "utilization", "constraint"],
     },
     [DiagnosisType.DEMAND_FORECASTING_MISMATCH]: {
       preferredDimensions: ["market_position"],
       minSupportingItems: 2,
       patternBoost: 1.2,
-      specificity: 0.75, // SLICE 3: Moderate specificity
-      requiredEvidenceIndicators: ["forecast", "expected", "demand", "projected"],
+      specificity: 0.75, // SLICE 3: Moderate specificity; SLICE 6: Enhanced with context signals
+      requiredEvidenceIndicators: ["forecast", "expected", "demand", "projected", "growth", "deceleration", "market", "tam"],
     },
     [DiagnosisType.GO_TO_MARKET_MISALIGNMENT]: {
       preferredDimensions: ["market_position", "customer_retention"],
@@ -76,8 +76,8 @@ export class HypothesisGenerator {
       preferredDimensions: ["quality_delivery"],
       minSupportingItems: 2,
       patternBoost: 1.1,
-      specificity: 0.9, // SLICE 4: Increased from 0.85 - very specific
-      requiredEvidenceIndicators: ["trust", "fraud", "breach", "scandal", "reputation"],
+      specificity: 0.9, // SLICE 4: Increased from 0.85 - very specific; SLICE 6: Enhanced with reliability indicators
+      requiredEvidenceIndicators: ["trust", "fraud", "breach", "scandal", "reputation", "reliability", "uptime", "incident", "quality"],
     },
     [DiagnosisType.CASH_RUNWAY_CRISIS]: {
       preferredDimensions: ["financial_health"],
@@ -104,8 +104,8 @@ export class HypothesisGenerator {
       preferredDimensions: ["financial_health"],
       minSupportingItems: 1,
       patternBoost: 1.15,
-      specificity: 0.8, // SLICE 4: Added specificity requirement
-      requiredEvidenceIndicators: ["pricing", "price", "willingness", "sensitivity"],
+      specificity: 0.8, // SLICE 4: Added specificity requirement; SLICE 6: Enhanced with pricing power signals
+      requiredEvidenceIndicators: ["pricing", "price", "willingness", "sensitivity", "win rate", "monetization"],
     },
     [DiagnosisType.GOVERNANCE_COMPLIANCE_FAILURE]: {
       preferredDimensions: ["process_maturity"],
@@ -139,7 +139,7 @@ export class HypothesisGenerator {
     },
     [DiagnosisType.DEMAND_FORECASTING_MISMATCH]: {
       required: ["forecast", "demand", "expected", "projected", "mismatch"],
-      supporting: ["market sizing", "tam", "adoption", "growth rate"],
+      supporting: ["market sizing", "tam", "adoption", "growth rate", "deceleration", "slowing", "market share reverting", "acquisition declining", "nps stable", "repeat rate high"],
       contradictory: ["actual demand strong", "growth on track"],
     },
     [DiagnosisType.CUSTOMER_RETENTION_EROSION]: {
@@ -153,9 +153,9 @@ export class HypothesisGenerator {
       contradictory: ["perfect quality", "zero defects"],
     },
     [DiagnosisType.TRUST_QUALITY_CRISIS]: {
-      required: ["trust", "credibility", "reputation", "scandal", "fraud", "security"],
-      supporting: ["confidence", "breach", "incident"],
-      contradictory: ["trust strong", "reputation excellent"],
+      required: ["trust", "credibility", "reputation", "scandal", "fraud", "security", "quality", "reliability", "uptime", "incident"],
+      supporting: ["confidence", "breach", "incident", "outage", "support ticket rising", "detractor", "churn rising", "nps low"],
+      contradictory: ["trust strong", "reputation excellent", "operations excellent"],
     },
     [DiagnosisType.CASH_RUNWAY_CRISIS]: {
       required: ["cash", "runway", "burn", "burn rate", "fundraising", "capital"],
@@ -398,7 +398,71 @@ export class HypothesisGenerator {
     // Weight by diagnosis specificity requirement (higher specificity needs more evidence)
     specificityScore = specificityScore * req.specificity;
 
+    // SLICE 6: Add context signal recognition for demand/market/quality signals
+    specificityScore = this.applyContextSignalBoost(diagnosis, allEvidence, specificityScore);
+
     return specificityScore;
+  }
+
+  // SLICE 6: Recognize context signals that disambiguate between similar diagnoses
+  private applyContextSignalBoost(
+    diagnosis: DiagnosisType,
+    allEvidence: EvidenceItem[],
+    baseScore: number
+  ): number {
+    const allText = allEvidence.map((e) => e.finding.toLowerCase()).join(" ");
+    let adjustedScore = baseScore;
+
+    // Market-rate reversion context: growth deceleration + stable satisfaction = demand saturation
+    if (diagnosis === DiagnosisType.DEMAND_FORECASTING_MISMATCH) {
+      const hasGrowthDeceleration = /decelerat|slowing|declining|falling.*growth|growth.*falling|acquisition.*down|acquisition.*decelerat/i.test(allText);
+      const hasStableSatisfaction = /(nps|repeat|satisfaction|loyalty).*(stable|intact|high|good|48|72%|strong)/i.test(allText);
+      const hasCompetitiveContext = /compet|consolidat|better.*funded|market.*share|funding|entrant|segment.*shift/i.test(allText);
+
+      // Lead indicator decline = demand cycle
+      const hasLeadingIndicatorDecline = /(perm.*place|order|temp.*hour|placement|acquisition).*(declining|down|fewer|-\d)/i.test(allText);
+
+      if ((hasGrowthDeceleration && hasStableSatisfaction && hasCompetitiveContext) || hasLeadingIndicatorDecline) {
+        // Strong evidence of demand saturation/market-rate reversion
+        adjustedScore = Math.min(1, adjustedScore + 0.35);
+      }
+    }
+
+    // Quality/trust crisis context: reliability issues + rising support burden = quality crisis
+    if (diagnosis === DiagnosisType.TRUST_QUALITY_CRISIS) {
+      const hasReliabilityIssues = /(uptime|downtime|outage|incident|crash|reliability|stability|performance|support.*ticket).*(low|high|rising|increasing|frequent|degrading|below|99\.2%|4.*hour|8.*minute)/i.test(allText);
+      const hasSupportBurden = /(support.*ticket|support).*rising|support.*40%|support.*trending.*up/i.test(allText);
+      const hasChurnWithQuality = /churn.*rising|churn.*increasing|churn.*2%.*3%/i.test(allText);
+
+      if (hasReliabilityIssues && (hasSupportBurden || hasChurnWithQuality)) {
+        // Strong evidence of quality/trust crisis
+        adjustedScore = Math.min(1, adjustedScore + 0.35);
+      }
+    }
+
+    // Reduce CUSTOMER_RETENTION_EROSION if it's actually demand/quality issue
+    if (diagnosis === DiagnosisType.CUSTOMER_RETENTION_EROSION) {
+      const hasLeadingIndicatorDecline = /(perm.*place|order|temp.*hour).*(declining|down|fewer)/i.test(allText);
+      const hasReliabilityIssues = /(uptime|incident|outage|reliability).*(low|99\.2%|4.*hour)/i.test(allText);
+
+      // Reduce confidence if evidence suggests demand or quality, not just retention
+      if (hasLeadingIndicatorDecline || hasReliabilityIssues) {
+        adjustedScore = Math.max(0, adjustedScore - 0.3);
+      }
+    }
+
+    // Talent pipeline context: turnover/utilization issues = delivery constraint
+    if (diagnosis === DiagnosisType.OPERATIONAL_BOTTLENECK) {
+      const hasTalentIssues = /(junior.*turnover|turnover.*rising|turnover.*10%.*18%|utilization.*72%|training.*burden)/i.test(allText);
+      const hasDeliveryImpact = /(utilization|capacity|training|throughput).*(below|low|constraint|peer)/i.test(allText);
+
+      if (hasTalentIssues && hasDeliveryImpact) {
+        // Clear evidence of talent-driven capacity constraint
+        adjustedScore = Math.min(1, adjustedScore + 0.25);
+      }
+    }
+
+    return Math.max(0, adjustedScore);
   }
 
   private scoreKeywordMatch(

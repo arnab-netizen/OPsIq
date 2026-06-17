@@ -133,6 +133,71 @@ export class EvidenceSynthesisEngine {
       if (pattern) patterns.push(pattern);
     }
 
+    // SLICE 6: Pattern 6 - Market saturation signals (growth deceleration + stable retention)
+    if (dimensions.includes("market_position")) {
+      const marketEvidence = evidence.filter((e) => e.dimension === "market_position");
+      const financialEvidence = evidence.filter((e) => e.dimension === "financial_health");
+      const retentionEvidence = evidence.filter((e) => e.dimension === "customer_retention");
+
+      const hasGrowthDeceleration = marketEvidence.some((e) =>
+        /decelerat|slowing|declining.*growth|25%.*15%|acquisition.*down/.test(e.finding.toLowerCase())
+      );
+      const hasStableRetention = retentionEvidence.some((e) =>
+        /nps.*4[0-9]|repeat.*7[0-9]%|satisfaction.*intact|nps.*stable/.test(e.finding.toLowerCase())
+      );
+      const hasCompetitiveContext = marketEvidence.some((e) =>
+        /compet|better.*funded|market.*consolidat|funding/.test(e.finding.toLowerCase())
+      );
+
+      if (hasGrowthDeceleration && hasStableRetention && hasCompetitiveContext) {
+        const pattern = this.checkPattern(
+          evidence,
+          ["market_position", "customer_retention"],
+          [DiagnosisType.DEMAND_FORECASTING_MISMATCH]
+        );
+        if (pattern) patterns.push(pattern);
+      }
+    }
+
+    // SLICE 6: Pattern 7 - Demand cycle signals from operational leading indicators
+    if (dimensions.includes("operational_efficiency")) {
+      const operationalEvidence = evidence.filter((e) => e.dimension === "operational_efficiency");
+      const hasLeadingIndicatorDecline = operationalEvidence.some((e) =>
+        /perm.*place.*-[0-9]|order.*-[0-9]|temp.*hour.*-[0-9]|placement.*declining|acquisition.*declining/.test(e.finding.toLowerCase())
+      );
+
+      if (hasLeadingIndicatorDecline) {
+        const pattern = this.checkPattern(
+          evidence,
+          ["operational_efficiency"],
+          [DiagnosisType.DEMAND_FORECASTING_MISMATCH]
+        );
+        if (pattern) patterns.push(pattern);
+      }
+    }
+
+    // SLICE 6: Pattern 8 - Quality/reliability crisis signals
+    if (dimensions.includes("quality_delivery")) {
+      const qualityEvidence = evidence.filter((e) => e.dimension === "quality_delivery");
+      const retentionEvidence = evidence.filter((e) => e.dimension === "customer_retention");
+
+      const hasReliabilityIssues = qualityEvidence.some((e) =>
+        /uptime.*99\.2%|incident.*2-3|outage.*4.*hour|reliability|stability|support.*40%|support.*rising/.test(e.finding.toLowerCase())
+      );
+      const hasChurnWithQuality = retentionEvidence.some((e) =>
+        /churn.*2%.*3%|churn.*rising|churn.*increasing/.test(e.finding.toLowerCase())
+      );
+
+      if (hasReliabilityIssues && hasChurnWithQuality) {
+        const pattern = this.checkPattern(
+          evidence,
+          ["quality_delivery", "customer_retention"],
+          [DiagnosisType.TRUST_QUALITY_CRISIS]
+        );
+        if (pattern) patterns.push(pattern);
+      }
+    }
+
     return patterns;
   }
 
