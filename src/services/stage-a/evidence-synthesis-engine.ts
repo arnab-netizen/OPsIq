@@ -33,6 +33,14 @@ interface EvidenceContentValidator {
     hasDemandEvidence: boolean;
     confidence: number;
   };
+  validateStrategicPricingError(evidence: EvidenceItem[]): {
+    hasPricingEvidence: boolean;
+    confidence: number;
+  };
+  validateOperationalBottleneck(evidence: EvidenceItem[]): {
+    hasBottleneckEvidence: boolean;
+    confidence: number;
+  };
 }
 
 // F1: Content validator implementation
@@ -185,6 +193,87 @@ class PatternContentValidator implements EvidenceContentValidator {
       hasDemandEvidence:
         hasGrowthDeceleration &&
         (hasCompetitiveContext || hasMarketStructuralLimit),
+      confidence,
+    };
+  }
+
+  validateStrategicPricingError(evidence: EvidenceItem[]): {
+    hasPricingEvidence: boolean;
+    confidence: number;
+  } {
+    // Strategic pricing error requires VERY EXPLICIT evidence of pricing power, willingness-to-pay, or pricing-specific issues
+    // NOT just margin pressure, CAC, or generic market issues
+    // This diagnosis is RARE and should only fire for cases explicitly mentioning pricing/monetization as the problem
+    const financialEvidence = evidence.filter((e) => e.dimension === "financial_health");
+    const marketEvidence = evidence.filter((e) => e.dimension === "market_position");
+
+    // VERY explicit pricing language (not just margin-related)
+    const hasPricingSpecificSignals = financialEvidence.some((e) => {
+      const lower = e.finding.toLowerCase();
+      // Only match very specific pricing issues like pricing error, pricing power, willingness to pay
+      return /pricing.*error|price.*wrong|willingness.*to.*pay|price.*power|can't.*raise.*price|pricing.*challenge|price.*sensitivity.*issue|monetiz/.test(
+        lower
+      );
+    });
+
+    const hasNoPricingCompetitorContext = !marketEvidence.some((e) =>
+      /competitor.*cheaper|price.*pressure|price.*competit|competitive.*pricing/.test(
+        e.finding.toLowerCase()
+      )
+    );
+
+    const hasCostPressure = financialEvidence.some((e) =>
+      /cost.*rising|unit.*cost.*up|cac.*rising|cost.*inflation|fuel.*cost|wage.*cost|cogs.*up/.test(
+        e.finding.toLowerCase()
+      )
+    );
+
+    // Pricing error: Only if VERY explicit pricing signals AND NOT just cost/market pressure
+    const confidence = hasPricingSpecificSignals && !hasCostPressure ? 0.9 : 0.05;
+
+    return {
+      hasPricingEvidence: hasPricingSpecificSignals && !hasCostPressure && hasNoPricingCompetitorContext,
+      confidence,
+    };
+  }
+
+  validateOperationalBottleneck(evidence: EvidenceItem[]): {
+    hasBottleneckEvidence: boolean;
+    confidence: number;
+  } {
+    // Operational bottleneck requires throughput constraints, capacity limits, or key-person dependencies
+    // NOT just flat revenue or margin decline
+    const operationalEvidence = evidence.filter((e) => e.dimension === "operational_efficiency");
+    const teamEvidence = evidence.filter((e) => e.dimension === "team_capability");
+    const financialEvidence = evidence.filter((e) => e.dimension === "financial_health");
+
+    const hasThroughputConstraint = operationalEvidence.some((e) =>
+      /bottleneck|capacity|throughput|queue|sla|cycle.*time|wait.*time|queue.*building|constraint|utilization.*high|bench.*time|staff.*utilization/.test(
+        e.finding.toLowerCase()
+      )
+    );
+
+    const hasKeyPersonDependency = teamEvidence.some((e) =>
+      /key.*person|founder.*concentration|key.*talent|successor|key.*leader|single.*point|key.*employee|turnover|senior.*departure|key.*customer.*relationship/.test(
+        e.finding.toLowerCase()
+      )
+    );
+
+    const hasFlatRevenueWithoutCapacityIssues = financialEvidence.some((e) => {
+      const lower = e.finding.toLowerCase();
+      return /revenue.*flat|flat.*revenue|no.*growth|revenue.*decline|growth.*slow/.test(lower);
+    }) && !hasThroughputConstraint;
+
+    // Bottleneck: throughput issues OR key-person dependency (NOT just flat revenue alone)
+    const confidence =
+      (hasThroughputConstraint && hasKeyPersonDependency) ? 0.9 :
+      hasThroughputConstraint ? 0.8 :
+      hasKeyPersonDependency ? 0.7 :
+      hasFlatRevenueWithoutCapacityIssues ? 0.2 : // Suppress if just flat revenue without capacity signals
+      0.3;
+
+    return {
+      hasBottleneckEvidence: hasThroughputConstraint || hasKeyPersonDependency,
       confidence,
     };
   }
@@ -379,6 +468,104 @@ export class EvidenceSynthesisEngine {
           [DiagnosisType.TRUST_QUALITY_CRISIS]
         );
         if (pattern) patterns.push(pattern);
+      }
+    }
+
+    // NEW Pattern 9: Strategic Pricing Error (financial + market with pricing-specific evidence)
+    if (
+      dimensions.includes("financial_health") &&
+      dimensions.includes("market_position")
+    ) {
+      const validation = this.contentValidator.validateStrategicPricingError(
+        evidence
+      );
+
+      if (validation.hasPricingEvidence || validation.confidence >= 0.4) {
+        const pattern = this.checkPatternWithContentValidation(
+          evidence,
+          ["financial_health", "market_position"],
+          [DiagnosisType.STRATEGIC_PRICING_ERROR],
+          validation.confidence
+        );
+        if (pattern) patterns.push(pattern);
+      }
+    }
+
+    // NEW Pattern 10: Demand Forecasting with Financial Context (market + financial showing CAC/acquisition pressure)
+    // ONLY if existing Pattern 6 (market-position-driven) does NOT already cover demand forecasting
+    if (
+      dimensions.includes("financial_health") &&
+      dimensions.includes("market_position")
+    ) {
+      const financialEvidence = evidence.filter((e) => e.dimension === "financial_health");
+      const marketEvidence = evidence.filter((e) => e.dimension === "market_position");
+
+      const hasCACorAcquisitionPressure = financialEvidence.some((e) => {
+        const lower = e.finding.toLowerCase();
+        return /cac.*rising|cac.*up|acquisition.*growth.*down|acquisition.*decelerat|customer.*acquis.*cost|marketing.*spend.*up.*acquisition/.test(
+          lower
+        );
+      });
+
+      const hasMarketDeceleration = marketEvidence.some((e) => {
+        const lower = e.finding.toLowerCase();
+        return /growth.*decelerat|market.*consolidat|compet.*share.*loss|faster.*growing|well.*funded.*compet/.test(
+          lower
+        );
+      });
+
+      const hasStableRetention = evidence.some((e) =>
+        /nps.*4[0-9]|repeat.*7[0-9]%|satisfaction.*intact|nps.*stable|retention.*stable/.test(
+          e.finding.toLowerCase()
+        )
+      );
+
+      if (hasCACorAcquisitionPressure && hasMarketDeceleration && hasStableRetention) {
+        const pattern = this.checkPattern(
+          evidence,
+          ["financial_health", "market_position"],
+          [DiagnosisType.DEMAND_FORECASTING_MISMATCH]
+        );
+        if (pattern) patterns.push(pattern);
+      }
+    }
+
+    // NEW Pattern 11: Operational Bottleneck (team + operational with content validation)
+    if (
+      dimensions.includes("team_capability") ||
+      dimensions.includes("operational_efficiency")
+    ) {
+      const validation = this.contentValidator.validateOperationalBottleneck(
+        evidence
+      );
+
+      if (validation.hasBottleneckEvidence || validation.confidence >= 0.4) {
+        const dims: string[] = [];
+        if (dimensions.includes("team_capability")) dims.push("team_capability");
+        if (dimensions.includes("operational_efficiency"))
+          dims.push("operational_efficiency");
+
+        if (dims.length > 0) {
+          const supportingItems = evidence
+            .filter((e) => dims.includes(e.dimension))
+            .map((e) => e.id);
+
+          if (supportingItems.length >= 1) {
+            const baseStrength = Math.min(10, supportingItems.length * 2);
+            const patternStrength = Math.max(
+              1,
+              Math.round(baseStrength * validation.confidence)
+            );
+
+            patterns.push({
+              name: `${dims.join("-")}-bottleneck-pattern`,
+              dimensions: dims,
+              supportingItems,
+              patternStrength,
+              potentialRootCauses: [DiagnosisType.OPERATIONAL_BOTTLENECK],
+            });
+          }
+        }
       }
     }
 
