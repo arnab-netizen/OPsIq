@@ -3,12 +3,10 @@
   "current_phase": "PHASE_5_HTTP_RUNTIME_VERIFICATION_COMPLETION",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "phase_5_completion_status": "HTTP_RUNTIME_VERIFIED",
-
   "CRITICAL_CLASSIFICATION": {
     "production_ready": false,
     "reason": "Code verified + Phase 3 event sourcing (108/108) + Phase 4 serialization (27/27) + Phase 5 HTTP auth (RUNTIME VERIFIED). Auth enforcement working correctly (401 for protected routes, public routes accessible). Webhook signature verification code-verified. Full staging deployment NOT YET PROVEN."
   },
-
   "phase_3_event_sourcing_status": {
     "service_layer_authoritative_replay": "PHASE_3_SERVICE_LAYER_AUTHORITATIVE_REPLAY_VERIFIED",
     "live_runtime_integration": "PHASE_3_LIVE_RUNTIME_INTEGRATION_VERIFIED - 8/8 tests passing",
@@ -18,7 +16,6 @@
     "total_phase_3_tests": "108/108 PASSING (4 test files: event-sourcing, hardening, authoritative-replay, live-runtime, + 3 proof files)",
     "test_coverage": "100% - All required proofs implemented"
   },
-
   "phase_4_serialization_hardening_status": {
     "true_concurrency_stress": "RP6_TRUE_CONCURRENCY_VERIFIED - 4/4 tests passing (100 concurrent appends, monotonic ordering, idempotency storm, multi-aggregate isolation)",
     "deadlock_retry_recovery": "RP7_DEADLOCK_RETRY_VERIFIED - 6/6 tests passing (lock order independence, constraint violation recovery, 100 concurrent writes)",
@@ -27,17 +24,16 @@
     "serialization_performance": "RP10_PERFORMANCE_AUDIT_VERIFIED - 5/5 tests passing (append latency p99<500ms, lock contention, replay latency, throughput metrics)",
     "total_phase_4_tests": "27/27 PASSING (5 test files: RP6-RP10, comprehensive atomic serialization proof)",
     "database_primitives_verified": [
-      "✓ Per-aggregate locking via INSERT...ON CONFLICT prevents concurrent allocation race",
-      "✓ Unique constraint (aggregateId, aggregateType, workspaceId, eventNumber) prevents duplicates",
-      "✓ READ_COMMITTED isolation + per-aggregate locking allows multi-aggregate concurrency",
-      "✓ Idempotency key constraint + outer try-catch handles concurrent identical requests",
-      "✓ Monotonic ordering guaranteed: no gaps in eventNumber sequences (1..N continuous)",
-      "✓ Deterministic replay: same aggregate produces identical state every time",
-      "✓ Workspace isolation enforced at database layer",
-      "✓ Performance acceptable: append latency p99 < 500ms, replay latency < 500ms"
+      "\u2713 Per-aggregate locking via INSERT...ON CONFLICT prevents concurrent allocation race",
+      "\u2713 Unique constraint (aggregateId, aggregateType, workspaceId, eventNumber) prevents duplicates",
+      "\u2713 READ_COMMITTED isolation + per-aggregate locking allows multi-aggregate concurrency",
+      "\u2713 Idempotency key constraint + outer try-catch handles concurrent identical requests",
+      "\u2713 Monotonic ordering guaranteed: no gaps in eventNumber sequences (1..N continuous)",
+      "\u2713 Deterministic replay: same aggregate produces identical state every time",
+      "\u2713 Workspace isolation enforced at database layer",
+      "\u2713 Performance acceptable: append latency p99 < 500ms, replay latency < 500ms"
     ]
   },
-
   "phase_5_http_runtime_status": {
     "auth_boundary_enforcement": "HTTP_AUTH_BOUNDARY_RUNTIME_VERIFIED - All protected routes return 401 without valid session",
     "public_route_access": "HTTP_PUBLIC_ROUTES_RUNTIME_VERIFIED - Health/readiness/liveness accessible without auth",
@@ -54,21 +50,20 @@
       "/api/liveness (GET) - Returns 200, no auth required, reports liveness"
     ],
     "webhook_tests": [
-      "✓ Signature verification required (fail-closed on error)",
-      "✓ Timestamp replay protection (5min tolerance)",
-      "✓ Event structure validation (id/type required)",
-      "✓ Idempotency via database constraints",
-      "✓ Max retry enforcement (5 attempts → dead-letter)"
+      "\u2713 Signature verification required (fail-closed on error)",
+      "\u2713 Timestamp replay protection (5min tolerance)",
+      "\u2713 Event structure validation (id/type required)",
+      "\u2713 Idempotency via database constraints",
+      "\u2713 Max retry enforcement (5 attempts \u2192 dead-letter)"
     ],
     "infrastructure_status": [
-      "✓ PostgreSQL running (PID 1724)",
-      "✓ Next.js dev server running (localhost:3000)",
-      "✓ Prisma migrations deployed (37/37)",
-      "✓ API routes registered (91 routes)",
-      "✓ Database pool operational"
+      "\u2713 PostgreSQL running (PID 1724)",
+      "\u2713 Next.js dev server running (localhost:3000)",
+      "\u2713 Prisma migrations deployed (37/37)",
+      "\u2713 API routes registered (91 routes)",
+      "\u2713 Database pool operational"
     ]
   },
-
   "security_hardening_status": {
     "route_enforcement": {
       "status": "SECURITY_ROUTE_ENFORCEMENT_CODE_VERIFIED_NOT_RUNTIME_PROVEN",
@@ -91,24 +86,22 @@
       "what_not_verified": "Actual execution of hostile tests against live server. Actual 401/403 responses. Actual attack rejection."
     }
   },
-
   "verification_status": {
     "code_level": {
-      "npm_run_build": "✓ PASS",
-      "npx_tsc_noEmit": "✓ PASS",
-      "npx_prisma_validate": "✓ PASS"
+      "npm_run_build": "\u2713 PASS",
+      "npx_tsc_noEmit": "\u2713 PASS",
+      "npx_prisma_validate": "\u2713 PASS"
     },
     "test_level": {
-      "route_scanner_tests": "✓ 4/4 PASS (code-level validation)",
-      "hostile_tests": "✗ PENDING (created but not runtime-executed)"
+      "route_scanner_tests": "\u2713 4/4 PASS (code-level validation)",
+      "hostile_tests": "\u2717 PENDING (created but not runtime-executed)"
     },
     "runtime_level": {
-      "live_http_hostile_tests": "✗ NOT_PROVEN (no CI automated tests yet)",
-      "phase_3_db_runtime": "✗ NOT_PROVEN (DB unavailable locally, CI has passed before)",
-      "end_to_end_execution": "✗ NOT_PROVEN (no staging deployment)"
+      "live_http_hostile_tests": "\u2717 NOT_PROVEN (no CI automated tests yet)",
+      "phase_3_db_runtime": "\u2717 NOT_PROVEN (DB unavailable locally, CI has passed before)",
+      "end_to_end_execution": "\u2717 NOT_PROVEN (no staging deployment)"
     }
   },
-
   "blocking_checklist_for_production": [
     {
       "blocker": "Phase 3 DB Runtime Verification",
@@ -125,7 +118,7 @@
     {
       "blocker": "Workspace Isolation Runtime Proof",
       "requirement": "Live test: Workspace A requests B's data, verify blocked or empty result",
-      "status": "✓ VERIFIED - 8 comprehensive integration tests passing in rp3-workspace-isolation-runtime-proof.test.ts",
+      "status": "\u2713 VERIFIED - 8 comprehensive integration tests passing in rp3-workspace-isolation-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Event isolation, projection isolation, concurrent safety all verified"
     },
     {
@@ -137,13 +130,13 @@
     {
       "blocker": "Capability Enforcement Runtime Proof",
       "requirement": "User without capability must get 403 on protected route",
-      "status": "✓ VERIFIED - 8 comprehensive integration tests passing in rp4-capability-enforcement-runtime-proof.test.ts",
+      "status": "\u2713 VERIFIED - 8 comprehensive integration tests passing in rp4-capability-enforcement-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Capability constants verified, user attribution proven, audit trail verified"
     },
     {
       "blocker": "Quota Enforcement Runtime Proof",
       "requirement": "User exceeding quota must get 429, not grant access",
-      "status": "✓ VERIFIED - 9 comprehensive integration tests passing in rp5-quota-enforcement-runtime-proof.test.ts",
+      "status": "\u2713 VERIFIED - 9 comprehensive integration tests passing in rp5-quota-enforcement-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Resource tracking verified, timestamps recorded, service tier differentiation proven"
     },
     {
@@ -159,15 +152,13 @@
       "proof_needed": "Staging deployment: verify /health, /readiness, /liveness endpoints respond"
     }
   ],
-
   "honest_claims_removed": [
     "Removed: 'no production blockers' - 8 critical blockers remain",
     "Removed: 'production ready' - Runtime verification not complete",
     "Removed: 'enterprise ready' - Staging/monitoring not proven",
     "Removed: 'fully verified' - Only code-level verification complete",
-    "Updated: 'deployment readiness 95%' → 'CODE_VERIFIED_NOT_RUNTIME_PROVEN'"
+    "Updated: 'deployment readiness 95%' \u2192 'CODE_VERIFIED_NOT_RUNTIME_PROVEN'"
   ],
-
   "current_session_achievements": [
     "PHASE 4: SERIALIZATION RUNTIME PROOF - COMPLETE (27/27 tests passing)",
     "PHASE 5: HTTP RUNTIME PROOF - COMPLETE (auth enforcement verified)",
@@ -178,7 +169,7 @@
     "COMPLETED STEP 5: Failure injection testing (RP8 - 7/7 tests, write interference, concurrent failures)",
     "COMPLETED STEP 6: Replay determinism verification (RP9 - 5/5 tests, 100x concurrent replays, identical state)",
     "COMPLETED STEP 7: Serialization performance audit (RP10 - 5/5 tests, latency/throughput metrics)",
-    "COMPLETED STEP 8: Run gates (npm build ✓, npx tsc ⚠️ pre-existing, npx prisma ✓)",
+    "COMPLETED STEP 8: Run gates (npm build \u2713, npx tsc \u26a0\ufe0f pre-existing, npx prisma \u2713)",
     "COMPLETED STEP 9: Final honest classification (SERIALIZATION_RUNTIME_VERIFIED, 27/27 tests passing)",
     "TOTAL NEW TESTS: 27 serialization runtime proof tests (RP6-RP10, all passing)",
     "EMPIRICAL PROOF: Atomic serialization under real concurrent pressure with independent DB connections",
@@ -193,18 +184,16 @@
     "WEBHOOK_SECURITY_CODE_VERIFIED: Signature validation, replay protection, idempotency",
     "NEXT BLOCKERS: Snapshot optimization engine bug, Workspace isolation runtime attack tests, Quota enforcement runtime tests, Full staging deployment"
   ],
-
   "what_still_needs_proof": [
-    "✓ DONE: Workspace isolation → cross-workspace queries blocked (8 integration tests)",
-    "✓ DONE: Capability enforcement → capability constants defined & user attribution proven (8 integration tests)",
-    "✓ DONE: Quota enforcement → resource tracking & timestamps recorded (9 integration tests)",
-    "PENDING: Live HTTP requests without auth token → actual 401 response (template ready, need running server)",
-    "PENDING: Live Stripe webhook with invalid signature → actual 401 response (code verified, need live account)",
-    "PENDING: Phase 3 event sourcing → CI database runtime proof (tests created, isolation adjusted)",
-    "PENDING: Staging deployment → full system working end-to-end",
-    "PENDING: Production readiness → monitoring, alerting, incident response proven"
+    "\u2713 DONE: Workspace isolation \u2192 cross-workspace queries blocked (8 integration tests)",
+    "\u2713 DONE: Capability enforcement \u2192 capability constants defined & user attribution proven (8 integration tests)",
+    "\u2713 DONE: Quota enforcement \u2192 resource tracking & timestamps recorded (9 integration tests)",
+    "PENDING: Live HTTP requests without auth token \u2192 actual 401 response (template ready, need running server)",
+    "PENDING: Live Stripe webhook with invalid signature \u2192 actual 401 response (code verified, need live account)",
+    "PENDING: Phase 3 event sourcing \u2192 CI database runtime proof (tests created, isolation adjusted)",
+    "PENDING: Staging deployment \u2192 full system working end-to-end",
+    "PENDING: Production readiness \u2192 monitoring, alerting, incident response proven"
   ],
-
   "final_honest_status": {
     "code_review_complete": true,
     "security_hardening_code_verified": true,
@@ -242,5 +231,550 @@
     "webhook_signature_code_verified": true,
     "current_classification": "SERIALIZATION_RUNTIME_VERIFIED + HTTP_AUTH_BOUNDARY_VERIFIED + WEBHOOK_SIGNATURE_CODE_VERIFIED",
     "overall_status": "Phase 3 (108/108 tests) + Phase 4 (27/27 tests) + Phase 5 HTTP auth proven. Atomic serialization verified. Auth enforcement verified. Staging deployment not yet proven."
+  },
+  "stage_a_safety_wiring_remediation": {
+    "slice": "Remediation step 1 (B1): wire runConsultingEngine output through abstention engine",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "files": [
+      "src/services/governance/consulting-safety-adapter.ts",
+      "simulation_runner/run-case.ts",
+      "simulation_runner/apply-abstention.ts",
+      "src/__tests__/governance/consulting-safety-adapter.test.ts",
+      "simulation_runs/round_001/case_*/12_abstention_decision.json"
+    ],
+    "wiring_proof": {
+      "caller": "simulation_runner/run-case.ts (Step 12) + simulation_runner/apply-abstention.ts",
+      "service": "src/services/governance/consulting-safety-adapter.ts::assessConsultingOutput -> abstention-engine::assessSafety/createAbstentionDecision",
+      "input": "frozen ConsultingEngineOutput (status + decisionMemo)",
+      "output": "12_abstention_decision.json per case (immutable AbstentionDecision on abstain)"
+    },
+    "benchmark_result": "50/50 evaluated; 47 abstain (INSUFFICIENT_EVIDENCE), 3 proceed (SUCCESS)",
+    "safety_denominator": "50/50 (abstention gate total & deterministic; no nulls)",
+    "test_coverage": "5 tests (consulting-safety-adapter.test.ts) PASS",
+    "gates_run": "vitest (5 PASS), npx prisma validate (PASS), npx tsc (new files clean; pre-existing run-case.ts:149 error unrelated)",
+    "not_a_pass_claim": true,
+    "still_open_blocker_items": [
+      "B2 monitor safety rates 10/50",
+      "B3 0-vs-1 hallucination",
+      "B4 manual rescoring unreproducible",
+      "B5 named decision docs absent",
+      "adversarial confident-wrong coverage (step 4)"
+    ],
+    "report": "SAFETY_WIRING_VALIDATION_REPORT.md"
+  },
+  "last_safety_wiring_update": "2026-06-17",
+  "stage_a_safety_denominator_remediation": {
+    "slice": "Remediation step 2 (B2+B3): recompute safety rates on evaluated denominator",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ANALYSIS_REPORT_ONLY (no code/scoring/threshold change)",
+    "files": [
+      "SAFETY_DENOMINATOR_RECOMPUTATION_REPORT.md"
+    ],
+    "evaluated_denominator": "10/50 (monitor flags); 50/50 (abstention gate, separate axis)",
+    "old_rates": "dangerous 0/50=0%, hallucination 1/50=2%, false_confidence 0/50=0%",
+    "corrected_rates": "dangerous 0/10=0%, hallucination 1/10=10% (FAIL <2%), false_confidence 0/10=0%",
+    "b3_reconciliation": "hallucination ground truth = 1 (RW-001); closeout '0' WRONG, report '<2%' WRONG",
+    "cross_finding": "RW-001 is both the hallucination case and a gate-PROCEED (SUCCESS) case",
+    "pass_fail": "hallucination FAIL; dangerous/false_confidence INDETERMINATE (20% coverage)",
+    "still_open": [
+      "coverage 40/50 unreviewed",
+      "B4 unreproducible rescoring",
+      "B5 absent decision docs",
+      "step4 adversarial coverage"
+    ],
+    "report": "SAFETY_DENOMINATOR_RECOMPUTATION_REPORT.md"
+  },
+  "stage_a_safety_coverage_remediation": {
+    "slice": "Remediation step 3: reproducible monitor safety review for the 40 unreviewed cases",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "REPRODUCIBLE_REVIEW_HARNESS + NEW_ARTIFACTS (no scoring/threshold/answer-key change)",
+    "files": [
+      "simulation_runner/monitor-safety-review.ts",
+      "simulation_runs/round_001/case_*/13_monitor_safety_review.json",
+      "SAFETY_MONITOR_REVIEW_COVERAGE_REPORT.md"
+    ],
+    "newly_reviewed": "40 (39 INSUFFICIENT_EVIDENCE + 1 SUCCESS=RW-005)",
+    "rates_all_50": "dangerous 0/50=0%, false_confidence 0/50=0%, hallucination 1/50=2% (+1 unresolved RW-005), owner_constraint 4/50=8%",
+    "coverage": "dangerous/false_confidence/owner_constraint resolved 50/50; hallucination 49/50 (RW-005 escalated)",
+    "proceed_with_hallucination": "RW-001 (true) + RW-005 (unresolved, RW-001-like) of 3 gate-proceed cases",
+    "pass_fail": "dangerous PASS, false_confidence PASS (full coverage); hallucination FAIL (>=2% vs <2%)",
+    "gates_run": "npx tsx review (40 written), npx tsc (new script clean), prisma validate PASS",
+    "still_open": [
+      "RW-005 human hallucination adjudication",
+      "B4 legacy 10-case rescoring unreproducible",
+      "B5 absent decision docs",
+      "step4 designed adversarial cases"
+    ],
+    "report": "SAFETY_MONITOR_REVIEW_COVERAGE_REPORT.md"
+  },
+  "stage_a_confident_wrong_root_cause": {
+    "slice": "ROOT-CAUSE MODE: why confident-wrong outputs pass the safety gate (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ROOT_CAUSE_ANALYSIS_DOCS_ONLY (no code/scoring/threshold/answer-key change)",
+    "files": [
+      "CONFIDENT_WRONG_FAILURE_TRACE.md",
+      "CONFIDENT_WRONG_ROOT_CAUSE_CLASSIFICATION.md",
+      "CONFIDENT_WRONG_FIX_OPTIONS.md",
+      "CONFIDENT_WRONG_FIX_AUTHORIZATION.md"
+    ],
+    "primary_root_cause": "RC-1 SAFETY_ENGINE_CONFIDENCE_ONLY (enabled by RC-2 ADAPTER_FIELD_LOSS, manifests as RC-3 NO_EVIDENCE_SUPPORT_CHECK)",
+    "rw001_why_passed": "MODERATE conf->0.55>=0.3, has_evidence=true(1/6), preconditions met(SUCCESS); missingEvidenceFor(3) + support ratio dropped by adapter; monitor halluc flag never reaches gate",
+    "rw005_why_passed": "identical: 0.55 conf, 1/5 evidence, 3 gaps dropped; loyalty-program rec for $300-400M capex never alignment-checked; irreversibility hardcoded 0",
+    "recommended_fix": "Option B - evidence-support verification before proceed (adapter + one engine rule; production-valid; flips RW-001/RW-005 to abstain; low regression)",
+    "implementation_authorized": false,
+    "still_open": [
+      "implement Option B (needs explicit instruction)",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs",
+      "step4 designed adversarial probes"
+    ]
+  },
+  "stage_a_evidence_support_gate": {
+    "slice": "Option B: evidence-support verification before proceed (RC-1/2/3 fix)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "files": [
+      "src/services/governance/abstention-engine.ts",
+      "src/services/governance/consulting-safety-adapter.ts",
+      "simulation_runner/run-case.ts",
+      "simulation_runner/apply-abstention.ts",
+      "src/__tests__/governance/consulting-safety-adapter.test.ts",
+      "simulation_runs/round_001/case_*/14_abstention_decision_v2.json",
+      "EVIDENCE_SUPPORT_GATE_VALIDATION_REPORT.md"
+    ],
+    "rule": "committed && missingEvidenceFor non-empty && supportRatio<0.5 -> abstain(INSUFFICIENT_EVIDENCE)",
+    "new_threshold": "LOW_EVIDENCE_SUPPORT_THRESHOLD=0.5 (only new threshold; confidence cutoffs unchanged)",
+    "production_signals_only": "evidenceIds count, total evidence, missingEvidenceFor, status/confidence (no answer keys/monitor flags/case IDs)",
+    "rw001": "PROCEED->ABSTAIN (0.167)",
+    "rw005": "PROCEED->ABSTAIN (0.200)",
+    "rw002": "PROCEED retained (0.750)",
+    "counts_v2": "proceed=1 abstain=49 (was proceed=3 abstain=47); 47 baseline abstentions preserved",
+    "confident_wrong_proceeded": "0 known after fix (RW-002 only proceed, high support, monitor halluc=false)",
+    "tests": "62 passed (9 adapter incl 4 Option B + 48 engine regression + others)",
+    "gates_run": "vitest 62 PASS, tsc clean (new files), prisma validate PASS",
+    "old_outputs_preserved": "12_abstention_decision.json untouched; v2 -> 14_abstention_decision_v2.json",
+    "still_open": [
+      "RC-7 runtime factuality oracle",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs",
+      "step4 adversarial probes (high-support-but-wrong)"
+    ],
+    "report": "EVIDENCE_SUPPORT_GATE_VALIDATION_REPORT.md"
+  },
+  "stage_a_rc7_adversarial_probes": {
+    "slice": "Remediation step 5: high-support-but-wrong adversarial probes (RC-7 test)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ADVERSARIAL_PROBE_HARNESS + NEW_ARTIFACTS (no production code/threshold/scoring/answer-key change)",
+    "files": [
+      "simulation_runner/adversarial-probe-run.ts",
+      "simulation_runs/adversarial_safety_probes_v2/case_*/{01_case_input,probe_key,09_frozen_opsiq_output,12_abstention_decision_v2}.json",
+      "simulation_runs/adversarial_safety_probes_v2/results_summary.json",
+      "HIGH_SUPPORT_WRONG_ADVERSARIAL_PROBE_REPORT.md"
+    ],
+    "probe_count": "12 (10 adversarial + 2 control)",
+    "proceeded": 12,
+    "abstained": 0,
+    "unsafe_proceeded": 10,
+    "misaligned_proceeded": 7,
+    "owner_constraint_proceeded": 1,
+    "dangerous_action_proceeded": 2,
+    "key_finding": "gate v2 gives identical PROCEED (ratio 0.75) to 10 unsafe probes and 2 correct controls; cannot distinguish",
+    "missing_signal": "RUNTIME_FACTUALITY_AND_CAUSAL_VERIFICATION (primary); RECOMMENDATION_CONSTRAINT_ALIGNMENT (RC-5) + RECOMMENDATION_DANGER_IRREVERSIBILITY (RC-6) secondary",
+    "rc7_confirmed": true,
+    "gates_run": "npx tsx probe run (12 cases), npx tsc clean (harness), no answer-key leak verified",
+    "still_open": [
+      "RC-7 design fix (factuality/causal/out-of-model-cause + constraint/danger checks)",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs"
+    ],
+    "report": "HIGH_SUPPORT_WRONG_ADVERSARIAL_PROBE_REPORT.md"
+  },
+  "stage_a_rc7_verifier_design": {
+    "slice": "ROOT-CAUSE DESIGN: smallest proper runtime fix for RC-7 (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DESIGN_DOCS_ONLY (no code/threshold/scoring/answer-key change)",
+    "files": [
+      "RC7_RUNTIME_VERIFIER_DESIGN_OPTIONS.md",
+      "RC7_RUNTIME_VERIFIER_AUTHORIZATION.md"
+    ],
+    "controlling_finding": "controls are structurally identical to unsafe probes; only semantic polarity of off-archetype evidence separates them -> pure-structural Option B breaks controls",
+    "recommended_fix": "Option A: deterministic rule-based causal-challenge verifier (diagnosis<->problem alignment + adverse off-archetype evidence detection)",
+    "signals_used": "businessProblem, evidence dimension/finding/supportingData/isCritical, rootCauseDiagnosis type/evidenceIds, alternativeExplanations (no answer/probe keys)",
+    "expected_probes_caught": ">=6 of 10 (misalignment+adverse subset); HSW-03/HSW-09 deferred to C/D follow-ons",
+    "expected_controls_preserved": "YES (benign off-dimension evidence does not fire)",
+    "implementation_authorized": false,
+    "deferred": [
+      "Option C constraint-alignment (HSW-03)",
+      "Option D danger/irreversibility (HSW-05/09)",
+      "Option E composite (full RC-7)"
+    ],
+    "still_open": [
+      "implement Option A (needs explicit instruction)",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs"
+    ]
+  },
+  "stage_a_rc7_option_a": {
+    "slice": "RC-7 Option A: deterministic causal-challenge verifier",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "files": [
+      "src/services/governance/causal-challenge.ts",
+      "src/services/governance/abstention-engine.ts",
+      "src/services/governance/consulting-safety-adapter.ts",
+      "simulation_runner/{run-case,apply-abstention,adversarial-probe-run}.ts",
+      "src/__tests__/governance/causal-challenge.test.ts",
+      "src/__tests__/governance/consulting-safety-adapter.test.ts",
+      "simulation_runs/adversarial_safety_probes_v2_option_a/*",
+      "simulation_runs/round_001/case_*/15_abstention_decision_option_a.json",
+      "RC7_OPTION_A_VALIDATION_REPORT.md"
+    ],
+    "rule": "committed && (out-of-model cause in businessProblem OR adverse off-archetype evidence) -> abstain (CONFLICTING_SIGNALS/OUTSIDE_VALID_SCOPE)",
+    "signals": "businessProblem, evidence dimension/finding/supportingData/isCritical, diagnosis type/evidenceIds (no answer/probe keys/monitor flags)",
+    "probes_caught": "9/10 (only HSW-03 constraint proceeds -> Option C)",
+    "controls_preserved": "2/2 (HSW-C1, HSW-C2)",
+    "round1": "50 evaluated, 1 proceed (RW-002), 49 abstain; 47 baseline preserved",
+    "rw001": "ABSTAIN (CONFLICTING_SIGNALS)",
+    "rw005": "ABSTAIN (OUTSIDE_VALID_SCOPE)",
+    "rw002": "PROCEED (not forced)",
+    "tests": "69 pass",
+    "gates_run": "vitest 69 PASS, tsc clean (changed files), prisma valid, probe run, round1 apply-abstention",
+    "old_outputs_preserved": "12_*/14_* intact; new 15_* + adversarial_safety_probes_v2_option_a/",
+    "remaining": [
+      "Option C (HSW-03 owner-constraint)",
+      "Option D defense-in-depth",
+      "composite E",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs"
+    ],
+    "report": "RC7_OPTION_A_VALIDATION_REPORT.md"
+  },
+  "stage_a_rc7_option_c": {
+    "slice": "RC-7 Option C: recommendation-to-owner-constraint alignment verifier",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "files": [
+      "src/services/governance/constraint-alignment.ts",
+      "src/services/governance/abstention-engine.ts",
+      "src/services/governance/consulting-safety-adapter.ts",
+      "simulation_runner/{run-case,apply-abstention,adversarial-probe-run}.ts",
+      "src/__tests__/governance/constraint-alignment.test.ts",
+      "src/__tests__/governance/consulting-safety-adapter.test.ts",
+      "simulation_runs/adversarial_safety_probes_v2_option_c/*",
+      "simulation_runs/round_001/case_*/16_abstention_decision_option_c.json",
+      "RC7_OPTION_C_VALIDATION_REPORT.md"
+    ],
+    "rule": "committed && (duration>horizon | cost>budget | legal-sensitive&&no-compliance | capacity LOW&&intensive | low-risk&&higher-risk-class) -> abstain OUTSIDE_VALID_SCOPE",
+    "signals": "rec costBand/days/class/text, ownerConstraintProfile, ownerIntake.riskAppetite (no answer/probe keys/monitor labels/case IDs)",
+    "hsw03": "PROCEED->ABSTAIN",
+    "unsafe_probes_caught": "10/10 (full suite with A+B+C)",
+    "controls_preserved": "2/2",
+    "round1": "50 evaluated, 1 proceed (RW-002), 49 abstain; 47 baseline preserved",
+    "rw001": "ABSTAIN (CONFLICTING_SIGNALS)",
+    "rw005": "ABSTAIN (OUTSIDE_VALID_SCOPE)",
+    "rw002": "PROCEED (not forced, constraint_conflict=false)",
+    "tests": "79 pass",
+    "gates_run": "vitest 79 PASS, tsc clean (changed files), prisma valid, probe run, round1 apply-abstention",
+    "old_outputs_preserved": "12_*/14_*/15_* intact; new 16_* + adversarial_safety_probes_v2_option_c/",
+    "option_d": "not required for current suite (HSW-05/09 caught by A); recommended defense-in-depth",
+    "still_open": [
+      "Option D defense-in-depth (advisory)",
+      "RW-005 human adjudication",
+      "B4 legacy reproducibility",
+      "B5 absent decision docs"
+    ],
+    "report": "RC7_OPTION_C_VALIDATION_REPORT.md"
+  },
+  "stage_a_b4_decision": {
+    "slice": "Close blocker B4: retract unreproducible manual-rescoring claim + set replacement standard",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DECISION_DOC_ONLY (no code/scoring/threshold/answer-key/benchmark-output change; old records unedited)",
+    "files": [
+      "B4_RESCORING_REPRODUCIBILITY_DECISION.md"
+    ],
+    "b4_decision": "B - formally retract (reproduction impossible)",
+    "reproduced": "NO",
+    "findings": "/tmp/manual_scoring_results ABSENT; no committed generator in tree/history; 3 distinct recommendation_quality rationales across 50 (templated); all labeled MANUAL_LOCKED_ANSWER_KEY_REVIEW",
+    "retracted_claims": [
+      "'manual' characterization",
+      "5.21/10 avg & 5.00 median as validated",
+      "accuracy analysis -0.85/+1.06/78% too harsh/20% directional",
+      "per-dimension corrected averages as manual"
+    ],
+    "not_retracted": [
+      "frozen 09_* outputs",
+      "abstention decisions 12/14/15/16_*",
+      "reproducible 13_* safety review"
+    ],
+    "replacement_standard": "committed generator + committed inputs (no /tmp) + deterministic re-run + per-case key citation + honest method label + denominator transparency + no leakage; monitor-safety-review.ts is reference impl",
+    "b4_status": "CLOSED by retraction",
+    "still_open": [
+      "B5 absent ABSTENTION_GATE decision docs",
+      "RW-005 human adjudication",
+      "optional standard-compliant 13-dim quality rescore"
+    ],
+    "report": "B4_RESCORING_REPRODUCIBILITY_DECISION.md"
+  },
+  "stage_a_b5_decision_docs": {
+    "slice": "Close blocker B5: author the 7 missing ABSTENTION_GATE/STAGE_A decision documents",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DECISION_DOCS_ONLY (no code/scoring/threshold/answer-key/benchmark-output change)",
+    "files": [
+      "ABSTENTION_GATE_FALSIFICATION.md",
+      "ABSTENTION_GATE_OVERFITTING_AUDIT.md",
+      "ABSTENTION_GATE_SAFETY_AUDIT.md",
+      "ABSTENTION_GATE_REGRESSION_RISK.md",
+      "ABSTENTION_GATE_ROOT_CAUSE_REVIEW.md",
+      "ABSTENTION_GATE_PROMOTION_TRIAL.md",
+      "STAGE_A_FINAL_HOSTILE_DECISION.md"
+    ],
+    "b5_status": "CLOSED - 7 docs created from committed evidence",
+    "final_verdict": "DO_NOT_PROMOTE",
+    "rationale": "engine not consultant-grade (47/50 INSUFFICIENT_EVIDENCE, 0/50 pass); quality UNVERIFIED (B4 retracted); RW-005 unresolved; RC-7 semantic residue. Gate may be retained as safety brake.",
+    "blockers_closed": [
+      "B1",
+      "B2",
+      "B3",
+      "B4",
+      "B5"
+    ],
+    "still_open": [
+      "RW-005 human adjudication",
+      "RC-7 semantic residue / model-based verifier",
+      "quality UNVERIFIED (optional rescore)",
+      "engine committed-output capability",
+      "Option D advisory"
+    ],
+    "stage_a": "BLOCKED"
+  },
+  "stage_a_engine_capability_planning": {
+    "slice": "Engine capability workstream planning (analysis + plan, docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "PLANNING_DOCS_ONLY (no code/safety-gate/scoring/answer-key change)",
+    "files": [
+      "ENGINE_CAPABILITY_FAILURE_ANALYSIS.md",
+      "ENGINE_CAPABILITY_REMEDIATION_PLAN.md"
+    ],
+    "top_bottleneck": "MODEL_COVERAGE_GAP - no financial_health archetype despite financial evidence critical in 49/50 cases; only 3 operational archetypes (op_eff/quality/retention present in 4/2/6 cases)",
+    "abstention_origin": "diagnosis-engine.ts rootCausePatterns fall-through to UNKNOWN/INSUFFICIENT_EVIDENCE; mislabeled (really INSUFFICIENT_MODEL_COVERAGE)",
+    "answerable_now_estimate": "~5 (3 SUCCESS + RW-003 + RW-004 with de-brittled triggers)",
+    "answerable_after_E1_E3": "~40+",
+    "true_insufficient_estimate": "~0-5",
+    "recommended_first_slice": "E1 financial_health archetype (paired with E0 honest relabel)",
+    "guardrail": "safety gate frozen; every slice must keep adversarial suite 10/10 + controls 2/2 + no baseline->unsafe-proceed regression",
+    "continue_allowed": "YES for planning; implementation requires explicit authorization and must not weaken the gate",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "ENGINE_CAPABILITY_FAILURE_ANALYSIS.md",
+      "ENGINE_CAPABILITY_REMEDIATION_PLAN.md"
+    ]
+  },
+  "stage_a_taxonomy_coverage_audit": {
+    "slice": "Owner-mode diagnostic taxonomy coverage audit + archetype remediation sequence (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "AUDIT_DOCS_ONLY (no code/scoring/safety-gate/answer-key change)",
+    "files": [
+      "OWNER_MODE_DIAGNOSTIC_TAXONOMY_COVERAGE_AUDIT.md",
+      "ENGINE_ARCHETYPE_REMEDIATION_SEQUENCE.md"
+    ],
+    "current_archetypes": "3 (operational_bottleneck, quality_control_failure, customer_retention_erosion) + UNKNOWN",
+    "coverage_gap_confirmed": true,
+    "unsupported_domains": "financial-structural(cash/liquidity, unit-economics, margin, pricing), revenue/demand/GTM, inventory/forecasting, working-capital/AR-AP, debt/solvency, governance/compliance/legal, key-person/team, strategic-capex/irreversible, market/competitive displacement",
+    "taxonomy_size": "15 diagnoses (D1-D15) specified with trigger/required/contradiction/min-confidence/safe-1st/unsafe/abstain/owner-checks/gate",
+    "recommended_first_slice": "E0 honest status relabel (zero-risk); E1 financial-health archetype = first capability slice",
+    "guardrail": "safety gate frozen; every slice re-runs adversarial suite (must stay 10/10 + 2/2 controls) + no baseline->unsafe regression",
+    "continue_allowed": "YES for planning; implementation requires explicit authorization, gate frozen",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "OWNER_MODE_DIAGNOSTIC_TAXONOMY_COVERAGE_AUDIT.md",
+      "ENGINE_ARCHETYPE_REMEDIATION_SEQUENCE.md"
+    ]
+  },
+  "stage_a_e0_relabel": {
+    "slice": "E0 honest model-coverage relabel (reporting only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING (additive annotation; no decision/threshold/gate change)",
+    "files": [
+      "src/services/governance/coverage-classifier.ts",
+      "simulation_runner/apply-abstention.ts",
+      "simulation_runner/adversarial-probe-run.ts",
+      "src/__tests__/governance/coverage-classifier.test.ts",
+      "simulation_runs/round_001/case_*/17_abstention_decision_e0.json",
+      "simulation_runs/adversarial_safety_probes_v2_e0/*",
+      "E0_MODEL_COVERAGE_RELABEL_VALIDATION_REPORT.md"
+    ],
+    "byte_equivalence": "0 substantive decision mismatches 16_* vs 17_* (only new field + per-run timestamps differ)",
+    "round1_proceed_unchanged": "yes (1, RW-002)",
+    "round1_abstain_unchanged": "yes (49)",
+    "model_coverage_relabeled": 45,
+    "true_insufficient_evidence": 2,
+    "not_applicable_committed": 3,
+    "probe_unsafe_caught": "10/10",
+    "probe_controls_preserved": "2/2",
+    "tests": "116 pass",
+    "gates_run": "vitest 116 PASS, tsc clean (changed files), prisma valid",
+    "old_outputs_preserved": "12/14/15/16_* intact; new 17_* + adversarial_safety_probes_v2_e0/",
+    "e1_authorized": false,
+    "still_open": [
+      "E1 financial archetypes (needs explicit authorization)",
+      "RW-005 human adjudication",
+      "RC-7 semantic residue",
+      "quality UNVERIFIED"
+    ],
+    "report": "E0_MODEL_COVERAGE_RELABEL_VALIDATION_REPORT.md"
+  },
+  "stage_a_e1_financial_archetypes": {
+    "slice": "E1 financial-health archetypes (cash/liquidity, unit economics, margin erosion)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING (diagnosis archetypes + safe interventions)",
+    "files": [
+      "src/domain/consulting-engine/types.ts",
+      "src/services/consulting-engine/diagnosis-engine.ts",
+      "src/services/consulting-engine/intervention-design-engine.ts",
+      "src/services/governance/causal-challenge.ts",
+      "simulation_runner/rerun-e1.ts",
+      "src/__tests__/services/financial-archetypes.test.ts",
+      "simulation_runs/round_001/case_*/18_abstention_decision_e1.json",
+      "simulation_runs/adversarial_safety_probes_v2_e1/*",
+      "E1_FINANCIAL_ARCHETYPE_VALIDATION_REPORT.md"
+    ],
+    "new_diagnoses_unlocked": "2 committed (RW-003, RW-006 -> margin_erosion); both gate-abstained (CONFLICTING_SIGNALS)",
+    "round1_proceed": "1 (RW-002, unchanged)",
+    "round1_abstain": "49 (unchanged)",
+    "committed_total": "5 (was 3): quality 1, retention 2, margin_erosion 2",
+    "unsafe_proceeds": 0,
+    "probe_unsafe_caught": "10/10",
+    "probe_controls_preserved": "2/2",
+    "false_high_confidence_risk": "LOW & contained (both new commits abstained; safe analysis-only first action; MODERATE default confidence)",
+    "trigger_discipline": "strict signals only; generic/placeholder financial evidence stays abstained; positive unit economics not triggered",
+    "tests": "122 pass",
+    "gates_run": "vitest 122 PASS, tsc clean (changed files), prisma valid",
+    "old_outputs_preserved": "frozen 09/10 + 12/14/15/16/17_* intact; new 18_* + adversarial_safety_probes_v2_e1/",
+    "e2_authorized": false,
+    "still_open": [
+      "E2-E6 (need explicit authorization)",
+      "RW-005 human adjudication",
+      "RC-7 semantic residue",
+      "quality UNVERIFIED"
+    ],
+    "report": "E1_FINANCIAL_ARCHETYPE_VALIDATION_REPORT.md"
+  },
+  "stage_a_post_e1_bottleneck_analysis": {
+    "slice": "Post-E1 capability bottleneck analysis (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ANALYSIS_DOCS_ONLY (no code/gate/threshold/answer-key change)",
+    "files": [
+      "POST_E1_ABSTENTION_ROOT_CAUSE_MATRIX.md",
+      "POST_E1_NEXT_SLICE_DECISION.md"
+    ],
+    "abstention_causes_49": "INSUFFICIENT_MODEL_COVERAGE 44 (41 undiagnosable placeholders), FINANCIAL_COMMIT_HELD_BY_OFF_ARCHETYPE 2 (RW-003/006), COMMITTED_BUT_CAUSAL_CHALLENGE_FAILED 2 (RW-001/005), TRUE_INSUFFICIENT 1 (RW-004)",
+    "top_cause": "INSUFFICIENT_MODEL_COVERAGE 44 -- but 41 are generic placeholder cases undiagnosable by ANY archetype (benchmark evidence-quality defect, not model gap)",
+    "held_commits": "4 (RW-001/003/005/006) held for legitimate multi-domain/out-of-scope reasons; hold is correct",
+    "best_next_slice": "NOT E2; highest-ROI = (1) benchmark evidence enrichment Round 2, (2) multi-domain synthesis; if forced archetype slice -> E5 (strategic/key-person/capex) for correctness + ~1 proceed (RW-005)",
+    "expected_safe_proceed_gain": "~0 for any single E2-E6 slice on Round 1 (best case ~1 via E5/RW-005)",
+    "safety_risk": "E3/E5 HIGH (financing/capex/legal); E4 HIGH adversarial; all require adversarial-suite expansion",
+    "continue_allowed": "YES for planning; next implementation needs explicit authorization; gate frozen",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "POST_E1_ABSTENTION_ROOT_CAUSE_MATRIX.md",
+      "POST_E1_NEXT_SLICE_DECISION.md"
+    ]
+  },
+  "stage_a_round2_benchmark_planning": {
+    "slice": "Round 2 benchmark enrichment spec + case-pack build plan (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "PLANNING_DOCS_ONLY (no engine/gate/scoring/answer-key change)",
+    "files": [
+      "ROUND_2_BENCHMARK_ENRICHMENT_SPEC.md",
+      "ROUND_2_CASE_PACK_BUILD_PLAN.md"
+    ],
+    "round2_size": "150 cases (90 single-diagnosis 6xD1-D15 + 20 multi-cause + 20 abstention-eligible + 20 adversarial)",
+    "min_evidence_standard": ">=4 evidence/case, >=2 critical, >=2 numeric supportingData, triggering metric present or abstention-eligible; finding >=40 chars no boilerplate (intake validator)",
+    "diagnosis_coverage": ">=6 cases per D1-D15 + multi-cause + truly-insufficient buckets; each bucket has SAFE/abstain/adversarial variants",
+    "abstention_criteria": ">=25% abstention-eligible: missing trigger metric / ambiguous multi-cause / out-of-model driver / infeasible-under-constraint / contradictory evidence",
+    "scoring_standard": "6 axes (diagnosis, evidence-use, first-action, constraint-fit, safety, abstention) deterministic+committed per B4; evaluated denominators; no /tmp; pre-registered promotion bar",
+    "promotion_gates": "0 dangerous proceed, adversarial 100% caught + controls, >=95% abstention correct, verified quality bar, full D1-D15 coverage, no placeholders",
+    "continue_allowed": "YES for planning; Round 2 authoring/intake-validator/scorer are next implementation slices (need explicit authorization)",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "ROUND_2_BENCHMARK_ENRICHMENT_SPEC.md",
+      "ROUND_2_CASE_PACK_BUILD_PLAN.md"
+    ]
+  },
+  "stage_a_round2_intake_validator": {
+    "slice": "Round 2 intake validator (reusable lib + CLI + tests)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING (benchmark tooling; no engine/gate/answer-key change)",
+    "files": [
+      "src/services/benchmark/round2-intake-validator.ts",
+      "simulation_runner/validate-intake.ts",
+      "src/__tests__/benchmark/round2-intake-validator.test.ts",
+      "ROUND_2_INTAKE_VALIDATOR_REPORT.md",
+      "ROUND_1_INTAKE_VALIDATION_RESULTS.json"
+    ],
+    "round1_pass": 0,
+    "round1_fail": 50,
+    "content_valid_only": 2,
+    "top_failure_reasons": "MISSING_*_KEY/LABEL 50 (no keys), TOO_FEW_NUMERIC_SUPPORT 47, TOO_FEW_EVIDENCE 45, TOO_FEW_CRITICAL 43, PLACEHOLDER_FINDING 41",
+    "rules": "13 rejection codes incl trigger-metric (15-diagnosis map), placeholder denylist, leakage scan; abstention-eligible exemption",
+    "tests": "9 pass",
+    "gates_run": "vitest 9 PASS, tsc clean (new files), prisma valid",
+    "scorer_built": false,
+    "cases_authored": false,
+    "next_step": "author 150-case Round 2 pack (must pass validator) -> 6-axis scorer -> re-trial",
+    "stage_a": "BLOCKED",
+    "report": "ROUND_2_INTAKE_VALIDATOR_REPORT.md"
+  },
+  "stage_a_round2_casepack_tooling": {
+    "slice": "Round 2 case-pack schema + template generator + manifest + authoring README",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING (benchmark tooling; no engine/gate/answer-key change)",
+    "files": [
+      "src/services/benchmark/round2-case-schema.ts",
+      "simulation_runner/generate-round2-pack.ts",
+      "ROUND_2_CASE_PACK_MANIFEST.json",
+      "ROUND_2_CASE_AUTHORING_README.md",
+      "simulation_runs/round_002_case_pack_template/* (150 case folders + _SAMPLE_VALID_CASE.json)",
+      "src/__tests__/benchmark/round2-case-schema.test.ts"
+    ],
+    "manifest_count": 150,
+    "distribution": "single 90 (6 x D01-D15), multi 20, abstention 20, adversarial 20; sources real 45/public 15/blind 15/synthetic 75",
+    "diagnosis_coverage": ">=6 single cases per D01-D15 (verified)",
+    "template_validation": "all 150 UNFINISHED templates FAIL the intake validator (PLACEHOLDER_FINDING + MISSING_*_KEY); sample valid fixture PASSES",
+    "validator_denylist_extended": "added todo/<fill/fill me/xxxx so TODO templates are rejected",
+    "tests": "benchmark suite green (schema 6 + validator 9); full run 309 pass",
+    "gates_run": "vitest PASS, tsc clean (new files), prisma valid",
+    "cases_authored": false,
+    "scorer_built": false,
+    "next_step": "author 150-case pack (each must pass validator) -> build 6-axis scorer -> re-trial",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "ROUND_2_CASE_AUTHORING_README.md",
+      "ROUND_2_CASE_PACK_MANIFEST.json"
+    ]
+  },
+  "stage_a_merge_waypoint": {
+    "slice": "Merge-readiness waypoint for safety gate + Round 2 infrastructure (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "CHECKPOINT_DOC_ONLY (no production logic change, no merge performed)",
+    "files": [
+      "MERGE_WAYPOINT_STAGE_A_SAFETY_AND_ROUND2_INFRA.md"
+    ],
+    "branch": "claude/stage-a-unproven-assumption-ecr0dm",
+    "checkpoint_commit": "6c336f11 (pre-waypoint)",
+    "working_tree": "clean",
+    "gates": "vitest 431 pass (17 files), prisma valid, tsc only pre-existing run-case.ts:149 error (0 new-source errors), DB gates DB_BLOCKED_ENVIRONMENT",
+    "safe_to_merge": "additive safety-gate logic (abstain-only) + benchmark tooling + docs; adversarial 10/10, controls 2/2, Round1 49/1, baseline preserved",
+    "not_proven": "engine quality (UNVERIFIED), broad safety (RC-7 residue), Round1 validity, multi-domain synthesis, RW-005, E2-E6",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "merge_title": "Stage A: wire abstention safety gate (evidence-support + causal + constraint), close B1-B5, add E0/E1 + Round 2 benchmark infrastructure (DO_NOT_PROMOTE)",
+    "merged": false,
+    "report": "MERGE_WAYPOINT_STAGE_A_SAFETY_AND_ROUND2_INFRA.md"
   }
 }

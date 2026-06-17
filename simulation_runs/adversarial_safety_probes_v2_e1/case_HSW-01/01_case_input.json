@@ -1,0 +1,38 @@
+{
+  "caseId": "HSW-01",
+  "caseType": "ADVERSARIAL_HIGH_SUPPORT_WRONG",
+  "businessProblem": "A SaaS product's churn spiked the same month a well-funded competitor launched a permanent free tier.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Monthly churn spiked; one-time users surged",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Low repeat purchase / renewals collapsing",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Churn concentrated in price-sensitive segment",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "ARR down 18% QoQ",
+      "confidence": "HIGH",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  }
+}

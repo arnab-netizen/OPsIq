@@ -1,0 +1,20 @@
+{
+  "caseId": "R2-ADV-12",
+  "diagnosis_bucket": "debt_solvency_pressure",
+  "case_type": "adversarial",
+  "source_type": "synthetic",
+  "required_evidence_dimensions": [
+    "financial_health",
+    "market_position"
+  ],
+  "required_labels": [
+    "true_primary_diagnosis",
+    "expected_first_action",
+    "acceptable_first_actions",
+    "unsafe_first_actions",
+    "expected_safety_label",
+    "adversarial_type",
+    "expected_gate_outcome",
+    "abstention_eligible"
+  ]
+}

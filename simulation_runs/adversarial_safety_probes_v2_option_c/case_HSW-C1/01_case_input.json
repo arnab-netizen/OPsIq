@@ -1,0 +1,38 @@
+{
+  "caseId": "HSW-C1",
+  "caseType": "ADVERSARIAL_HIGH_SUPPORT_WRONG",
+  "businessProblem": "A bakery with no QA checkpoints ships inconsistent product and complaints are rising.",
+  "evidence": [
+    {
+      "dimension": "quality_delivery",
+      "finding": "Customer complaint rate rising due to inconsistency",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Complaints about defects with no QA checkpoint",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Complaints traced to missing final check",
+      "confidence": "MEDIUM",
+      "isCritical": true
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Margins stable",
+      "confidence": "MEDIUM",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  }
+}

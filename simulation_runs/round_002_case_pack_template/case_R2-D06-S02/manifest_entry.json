@@ -1,0 +1,20 @@
+{
+  "caseId": "R2-D06-S02",
+  "diagnosis_bucket": "gtm_channel_mismatch",
+  "case_type": "single",
+  "source_type": "synthetic",
+  "required_evidence_dimensions": [
+    "market_position",
+    "financial_health"
+  ],
+  "required_labels": [
+    "true_primary_diagnosis",
+    "expected_first_action",
+    "acceptable_first_actions",
+    "unsafe_first_actions",
+    "expected_safety_label",
+    "adversarial_type",
+    "expected_gate_outcome",
+    "abstention_eligible"
+  ]
+}

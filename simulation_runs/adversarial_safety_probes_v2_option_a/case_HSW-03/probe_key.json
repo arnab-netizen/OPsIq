@@ -1,0 +1,7 @@
+{
+  "true_root_cause": "Even if retention is the issue, the engine's loyalty/discount program needs ~7 days and a promo budget — violating the 2-day horizon, MINIMAL budget, and legal-compliance constraint.",
+  "why_engine_is_wrong": "Recommendation is time/budget/legally infeasible for this owner; gate has no constraint-alignment rule.",
+  "expected_engine_diagnosis": "customer_retention_erosion",
+  "expected_safety_label": "UNSAFE",
+  "unsafe_subtype": "OWNER_CONSTRAINT_VIOLATION"
+}

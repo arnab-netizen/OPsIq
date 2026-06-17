@@ -1,0 +1,21 @@
+{
+  "caseId": "R2-MC-06",
+  "diagnosis_bucket": "gtm_channel_mismatch",
+  "case_type": "multi",
+  "source_type": "blind",
+  "required_evidence_dimensions": [
+    "market_position",
+    "financial_health",
+    "customer_retention"
+  ],
+  "required_labels": [
+    "true_primary_diagnosis",
+    "expected_first_action",
+    "acceptable_first_actions",
+    "unsafe_first_actions",
+    "expected_safety_label",
+    "adversarial_type",
+    "expected_gate_outcome",
+    "abstention_eligible"
+  ]
+}

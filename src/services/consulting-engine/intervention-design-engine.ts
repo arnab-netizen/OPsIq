@@ -414,6 +414,86 @@ const interventionTemplates: InterventionTemplate[] = [
       },
     ],
   },
+  // ─── E1: financial-health interventions (all low-cost, reversible, no capex/
+  // hiring/discount/irreversible actions) ──────────────────────────────────
+  {
+    rootCauseKeyword: "cash_liquidity",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Build a 13-week cash flow forecast and freeze discretionary spend",
+        class: InterventionClass.CONTAINMENT,
+        objective: "Establish visibility and stop avoidable cash outflow before any structural action",
+        rationale: "A short-horizon cash forecast plus a discretionary-spend freeze are low-cost, reversible, and buy decision time without committing capital.",
+        whyThisNow: "Liquidity pressure requires immediate visibility before any financing or cost decision",
+        ownerRole: "finance_lead",
+        steps: [
+          { sequence: 1, title: "Build 13-week cash flow forecast", description: "List weekly expected inflows and committed outflows for the next 13 weeks.", ownerRole: "finance_lead", estimatedDays: 3, successCriteria: "Forecast shows weekly net cash and the first projected shortfall week" },
+          { sequence: 2, title: "Freeze discretionary spend", description: "Pause non-essential, reversible spend categories; do not touch payroll or contractual obligations.", ownerRole: "owner", estimatedDays: 2, dependsOn: [1], successCriteria: "Discretionary categories identified and paused" },
+        ],
+        estimatedCostBand: "MINIMAL",
+        expectedImpactOnRevenue: "NONE",
+        successMetrics: ["13-week forecast complete", "Discretionary burn reduced"],
+        failureRisks: ["Forecast inputs incomplete", "Shortfall arrives sooner than modeled"],
+        fallbackPlan: "Escalate to owner/board for financing options review (no action taken without owner approval)",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 5,
+        priorityScore: 0,
+      },
+    ],
+  },
+  {
+    rootCauseKeyword: "unit_economics",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Rebuild cohort-level contribution margin before scaling spend",
+        class: InterventionClass.STABILIZATION,
+        objective: "Establish true per-unit/per-customer economics so no growth spend is committed on negative margin",
+        rationale: "Reconstructing contribution margin and CAC payback from existing data is low-cost and reversible, and prevents loss-amplifying scaling.",
+        whyThisNow: "Unit economics appear negative; scaling before confirming would deepen losses",
+        ownerRole: "finance_lead",
+        steps: [
+          { sequence: 1, title: "Reconstruct unit economics", description: "Compute per-unit revenue, variable cost, contribution margin, and CAC payback from existing records.", ownerRole: "finance_lead", estimatedDays: 4, successCriteria: "Contribution margin and CAC payback quantified per cohort" },
+          { sequence: 2, title: "Freeze incremental growth spend", description: "Hold incremental acquisition/discount spend until economics are confirmed (reversible).", ownerRole: "owner", estimatedDays: 1, dependsOn: [1], successCriteria: "No new growth spend committed pending review" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "NONE",
+        successMetrics: ["Cohort contribution margin computed", "CAC payback quantified"],
+        failureRisks: ["Cost allocation data incomplete"],
+        fallbackPlan: "Run a small reversible pricing/cost test on one cohort before any broad change",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 5,
+        priorityScore: 0,
+      },
+    ],
+  },
+  {
+    rootCauseKeyword: "margin_erosion",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Decompose cost drivers and identify margin-recovery levers",
+        class: InterventionClass.STABILIZATION,
+        objective: "Locate the specific drivers of margin decline before any pricing or cost action",
+        rationale: "A cost-driver decomposition is analysis-only, low-cost, and reversible; it avoids blanket price hikes or cuts that could harm volume or quality.",
+        whyThisNow: "Margin is eroding; targeted diagnosis must precede any price/cost change",
+        ownerRole: "finance_lead",
+        steps: [
+          { sequence: 1, title: "Decompose margin by driver", description: "Split margin change into COGS, labor, overhead, and price/mix contributions over recent periods.", ownerRole: "finance_lead", estimatedDays: 4, successCriteria: "Top 3 margin-erosion drivers quantified" },
+          { sequence: 2, title: "Shortlist reversible recovery levers", description: "Identify low-risk levers (supplier terms, waste reduction, mix) — no blanket price change.", ownerRole: "owner", estimatedDays: 2, dependsOn: [1], successCriteria: "Reversible levers shortlisted with expected margin impact" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Margin bridge by driver complete", "Reversible levers shortlisted"],
+        failureRisks: ["Cost data not granular enough to attribute drivers"],
+        fallbackPlan: "Pilot one reversible lever and measure before broader rollout",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 6,
+        priorityScore: 0,
+      },
+    ],
+  },
 ];
 
 export function designInterventions(

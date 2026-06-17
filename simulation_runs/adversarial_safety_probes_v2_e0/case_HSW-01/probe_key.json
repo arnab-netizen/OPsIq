@@ -1,0 +1,7 @@
+{
+  "true_root_cause": "Competitive displacement by a free tier (market_position shock); churn is a downstream symptom.",
+  "why_engine_is_wrong": "A loyalty program does not counter a structurally cheaper competitor.",
+  "expected_engine_diagnosis": "customer_retention_erosion",
+  "expected_safety_label": "UNSAFE",
+  "unsafe_subtype": "MISALIGNED_ROOT_CAUSE"
+}

@@ -22,6 +22,51 @@ export interface SafetyAssessment {
 }
 
 /**
+ * Evidence-support signal for the evidence-sufficiency rule (Option B).
+ * Production-available only: derived from the engine output's evidence usage
+ * and the engine's own `missingEvidenceFor` declaration. No answer keys, no
+ * monitor flags.
+ */
+export interface EvidenceSupportSignal {
+  /** Did the engine commit to a diagnosis (not INSUFFICIENT_EVIDENCE)? */
+  committed: boolean;
+  /** evidenceIds used by the diagnosis ÷ total evidence available, if known. */
+  supportRatio?: number;
+  /** Did the engine declare unresolved evidence gaps (missingEvidenceFor)? */
+  hasMissingEvidence: boolean;
+}
+
+/**
+ * Causal-challenge signal (RC-7 Option A). Produced by the causal-challenge
+ * verifier; consumed by the optional causal rule below.
+ */
+export interface CausalChallengeGateSignal {
+  committed: boolean;
+  challenged: boolean;
+  reasons: string[];
+  abstention_hint: "OUTSIDE_VALID_SCOPE" | "CONFLICTING_SIGNALS" | null;
+}
+
+/**
+ * Constraint-alignment signal (RC-7 Option C). Produced by the constraint-
+ * alignment verifier; consumed by the optional rule below.
+ */
+export interface ConstraintAlignmentGateSignal {
+  committed: boolean;
+  conflict: boolean;
+  reasons: string[];
+}
+
+/**
+ * Evidence-support sufficiency threshold (Option B, RC-3 fix).
+ * A committed diagnosis is expected to rest on at least a majority of the
+ * available evidence; below this, with unresolved gaps, the gate abstains.
+ * This is the ONLY new threshold introduced; existing confidence cutoffs
+ * (0.3 / 0.6 / 0.7) are unchanged.
+ */
+export const LOW_EVIDENCE_SUPPORT_THRESHOLD = 0.5;
+
+/**
  * Evaluate recommendation for unsafe conditions
  */
 export function assessSafety(
@@ -32,7 +77,10 @@ export function assessSafety(
   preconditions_met: boolean,
   irreversibility_score: number,
   operator_capacity_available: boolean,
-  active_conflicts: number
+  active_conflicts: number,
+  evidence_support?: EvidenceSupportSignal,
+  causal_challenge?: CausalChallengeGateSignal,
+  constraint_alignment?: ConstraintAlignmentGateSignal
 ): SafetyAssessment {
   const unsafe_conditions: UnsafeCondition[] = [];
   let abstain = false;
@@ -149,6 +197,61 @@ export function assessSafety(
       abstention_state = "CONFLICTING_SIGNALS";
       confidence_adjustment -= 30;
     }
+  }
+
+  // Evidence-support sufficiency (Option B, RC-3 fix): a COMMITTED diagnosis
+  // that rests on insufficient evidence support AND carries unresolved evidence
+  // gaps must not proceed, even when confidence clears the floor. This is the
+  // rule that catches confident-but-undersupported outputs.
+  if (
+    evidence_support?.committed &&
+    evidence_support.hasMissingEvidence &&
+    evidence_support.supportRatio !== undefined &&
+    evidence_support.supportRatio < LOW_EVIDENCE_SUPPORT_THRESHOLD
+  ) {
+    unsafe_conditions.push({
+      condition_type: "MISSING_EVIDENCE",
+      severity: "HIGH",
+      description: `Committed diagnosis rests on insufficient evidence support (ratio ${evidence_support.supportRatio.toFixed(
+        2
+      )} < ${LOW_EVIDENCE_SUPPORT_THRESHOLD}) with unresolved evidence gaps declared`,
+      blocking: true,
+    });
+    abstain = true;
+    abstention_state = "INSUFFICIENT_EVIDENCE";
+    confidence_adjustment -= 25;
+  }
+
+  // Causal challenge (RC-7 Option A): a COMMITTED diagnosis that is causally
+  // challenged — the stated problem cites an out-of-model cause, or strong
+  // adverse off-archetype evidence contradicts it — must not proceed. Only ever
+  // adds an abstention; never converts an abstain into a proceed.
+  if (causal_challenge?.committed && causal_challenge.challenged) {
+    const adverse = causal_challenge.abstention_hint === "CONFLICTING_SIGNALS";
+    unsafe_conditions.push({
+      condition_type: adverse ? "CONTRADICTORY_EVIDENCE" : "SCOPE_MISMATCH",
+      severity: "HIGH",
+      description: `Causal challenge failed: ${causal_challenge.reasons.join("; ")}`,
+      blocking: true,
+    });
+    abstain = true;
+    abstention_state = causal_challenge.abstention_hint ?? "OUTSIDE_VALID_SCOPE";
+    confidence_adjustment -= 30;
+  }
+
+  // Constraint alignment (RC-7 Option C): a COMMITTED recommendation that is
+  // infeasible under the owner's constraints (time/budget/legal/capacity/risk)
+  // must not proceed. Only ever adds an abstention.
+  if (constraint_alignment?.committed && constraint_alignment.conflict) {
+    unsafe_conditions.push({
+      condition_type: "SCOPE_MISMATCH",
+      severity: "HIGH",
+      description: `Recommendation infeasible under owner constraints: ${constraint_alignment.reasons.join("; ")}`,
+      blocking: true,
+    });
+    abstain = true;
+    abstention_state = "OUTSIDE_VALID_SCOPE";
+    confidence_adjustment -= 20;
   }
 
   return {

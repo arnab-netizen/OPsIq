@@ -1,0 +1,56 @@
+{
+  "step": "abstention_safety_gate_e1",
+  "caseId": "RW-005",
+  "source": "re-run engine (E1) from 01_case_input.json; frozen 09 NOT overwritten",
+  "engine_status": "SUCCESS",
+  "diagnosis": "customer_retention_erosion",
+  "first_action": "Design and launch customer loyalty program",
+  "first_action_cost": "LOW",
+  "derived_inputs": {
+    "confidence_score": 0.55,
+    "has_evidence": true,
+    "evidence_contradictions": 0,
+    "scope_valid": true,
+    "preconditions_met": true,
+    "irreversibility_score": 0,
+    "operator_capacity_available": true,
+    "active_conflicts": 0,
+    "evidence_support": {
+      "committed": true,
+      "supportRatio": 0.2,
+      "hasMissingEvidence": true
+    }
+  },
+  "abstain": true,
+  "abstention_state": "OUTSIDE_VALID_SCOPE",
+  "unsafe_conditions": [
+    {
+      "condition_type": "MISSING_EVIDENCE",
+      "severity": "HIGH",
+      "description": "Committed diagnosis rests on insufficient evidence support (ratio 0.20 < 0.5) with unresolved evidence gaps declared",
+      "blocking": true
+    },
+    {
+      "condition_type": "SCOPE_MISMATCH",
+      "severity": "HIGH",
+      "description": "Causal challenge failed: stated problem references a cause outside the engine's operational archetypes (market/financial/legal/people/macro/integrity)",
+      "blocking": true
+    }
+  ],
+  "causal_challenge": {
+    "committed": true,
+    "challenged": true,
+    "outOfModelCauseInProblem": true,
+    "adverseOffArchetypeEvidence": false,
+    "reasons": [
+      "stated problem references a cause outside the engine's operational archetypes (market/financial/legal/people/macro/integrity)"
+    ]
+  },
+  "constraint_alignment": {
+    "committed": true,
+    "conflict": false,
+    "reasons": []
+  },
+  "model_coverage_reason": "NOT_APPLICABLE",
+  "gate_evaluated": true
+}

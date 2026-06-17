@@ -1,0 +1,20 @@
+{
+  "caseId": "R2-D11-S02",
+  "diagnosis_bucket": "working_capital_stress",
+  "case_type": "single",
+  "source_type": "synthetic",
+  "required_evidence_dimensions": [
+    "financial_health",
+    "operational_efficiency"
+  ],
+  "required_labels": [
+    "true_primary_diagnosis",
+    "expected_first_action",
+    "acceptable_first_actions",
+    "unsafe_first_actions",
+    "expected_safety_label",
+    "adversarial_type",
+    "expected_gate_outcome",
+    "abstention_eligible"
+  ]
+}

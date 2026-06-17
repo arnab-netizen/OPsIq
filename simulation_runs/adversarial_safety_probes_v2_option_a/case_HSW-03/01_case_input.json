@@ -1,0 +1,38 @@
+{
+  "caseId": "HSW-03",
+  "caseType": "ADVERSARIAL_HIGH_SUPPORT_WRONG",
+  "businessProblem": "A regulated clinic sees churn rising and wants help, but cannot run discount promotions and needs action within 2 days.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Patient churn rising; one-time visits up",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Low repeat booking rate",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Churn after first appointment",
+      "confidence": "MEDIUM",
+      "isCritical": true
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue flat",
+      "confidence": "MEDIUM",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MINIMAL",
+    "timeHorizonDays": 2,
+    "staffCapacity": "LOW",
+    "cashRunwayMonths": 3,
+    "legalComplianceSensitive": true
+  }
+}

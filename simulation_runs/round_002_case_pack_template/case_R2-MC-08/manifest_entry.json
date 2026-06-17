@@ -1,0 +1,21 @@
+{
+  "caseId": "R2-MC-08",
+  "diagnosis_bucket": "quality_trust_failure",
+  "case_type": "multi",
+  "source_type": "synthetic",
+  "required_evidence_dimensions": [
+    "quality_delivery",
+    "customer_retention",
+    "operational_efficiency"
+  ],
+  "required_labels": [
+    "true_primary_diagnosis",
+    "expected_first_action",
+    "acceptable_first_actions",
+    "unsafe_first_actions",
+    "expected_safety_label",
+    "adversarial_type",
+    "expected_gate_outcome",
+    "abstention_eligible"
+  ]
+}

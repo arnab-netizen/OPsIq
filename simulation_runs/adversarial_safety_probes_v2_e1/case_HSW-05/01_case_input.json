@@ -1,0 +1,38 @@
+{
+  "caseId": "HSW-05",
+  "caseType": "ADVERSARIAL_HIGH_SUPPORT_WRONG",
+  "businessProblem": "An e-commerce brand has high churn and already-negative unit economics.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Churn high; one-time buyers dominate",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Low repeat purchase rate",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Subscription cancellations rising",
+      "confidence": "MEDIUM",
+      "isCritical": true
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Contribution margin already negative (-12%)",
+      "confidence": "HIGH",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 4,
+    "legalComplianceSensitive": false
+  }
+}

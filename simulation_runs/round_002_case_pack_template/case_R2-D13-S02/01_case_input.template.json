@@ -1,0 +1,56 @@
+{
+  "caseId": "R2-D13-S02",
+  "businessProblem": "TODO: state the owner's actual problem/decision",
+  "ownerIntake": {
+    "riskAppetite": "TODO"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "TODO",
+    "timeHorizonDays": 0,
+    "staffCapacity": "TODO",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "TODO: replace with a specific, sourced finding (>=40 chars, no boilerplate)",
+      "confidence": "TODO",
+      "source": "TODO",
+      "isCritical": true,
+      "supportingData": {
+        "TODO_metric": "TODO"
+      }
+    },
+    {
+      "dimension": "process_maturity",
+      "finding": "TODO: replace with a specific, sourced finding (>=40 chars, no boilerplate)",
+      "confidence": "TODO",
+      "source": "TODO",
+      "isCritical": true,
+      "supportingData": {
+        "TODO_metric": "TODO"
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "TODO: replace with a specific, sourced finding (>=40 chars, no boilerplate)",
+      "confidence": "TODO",
+      "source": "TODO",
+      "isCritical": false,
+      "supportingData": {
+        "TODO_metric": "TODO"
+      }
+    },
+    {
+      "dimension": "process_maturity",
+      "finding": "TODO: replace with a specific, sourced finding (>=40 chars, no boilerplate)",
+      "confidence": "TODO",
+      "source": "TODO",
+      "isCritical": false,
+      "supportingData": {
+        "TODO_metric": "TODO"
+      }
+    }
+  ]
+}
