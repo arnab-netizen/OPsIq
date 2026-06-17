@@ -817,13 +817,13 @@
     "accepted_with_fixes": "R2-AB-01, R2-ADV-01",
     "rejected": "none",
     "critical_finding": "R2-AB-01 (truly_insufficient) produced cash_liquidity_crisis [MODERATE]/READY pre-fix because finding text contained 'runway'/'burn' tripping fin_isLiquidityCrisis lexical regex; reworded -> engine now INSUFFICIENT_EVIDENCE/BLOCKED",
-    "cross_cutting_fix": "added spec-§4 metadata (caseType/industry/businessModel/businessStage/clientContext) to all 5 so cases are runnable through runConsultingEngine (requires clientContext)",
+    "cross_cutting_fix": "added spec-\u00a74 metadata (caseType/industry/businessModel/businessStage/clientContext) to all 5 so cases are runnable through runConsultingEngine (requires clientContext)",
     "engine_trace_post_fix": "D03 margin_erosion[HIGH], D07 retention[HIGH], D09 bottleneck[MODERATE], ADV unit_economics[HIGH]+cash alt, AB-01 unknown[INSUFFICIENT_EVIDENCE]/BLOCKED",
     "validator_pass": "5/5 (with hidden keys loaded)",
     "leakage": "clean x5 after metadata additions",
     "gates_run": "tsx validate-round2-cases (5/5), tsx trace-round2-diagnosis, tsc (only pre-existing run-case.ts:149), prisma valid, vitest src/__tests__/benchmark 309 pass",
     "no_new_cases": true,
-    "recommendations_for_scaling": "scrub diagnosis trigger lexicon from abstention findings; carry §4 clientContext on every case; pin trigger-metric semantics; fold §4+abstention-lexicon checks into validator in the scaling slice",
+    "recommendations_for_scaling": "scrub diagnosis trigger lexicon from abstention findings; carry \u00a74 clientContext on every case; pin trigger-metric semantics; fold \u00a74+abstention-lexicon checks into validator in the scaling slice",
     "next_step": "author remaining 145 cases (validator + audit rules) -> 6-axis scorer -> re-trial; fold R2-ADV-01 into adversarial suite",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_PILOT_CASE_HOSTILE_AUDIT.md"
@@ -888,7 +888,7 @@
     "classification": "GOVERNANCE_DOCS_ONLY (no engine/gate/scorer/answer-key change; no sourcing; no authoring)",
     "files": [
       "ROUND_2_OUTCOME_SPECTRUM_REQUIREMENTS.md",
-      "ROUND_2_REAL_CASE_SOURCING_PLAN.md (updated: added §12 outcome integration + §13 acceptance)"
+      "ROUND_2_REAL_CASE_SOURCING_PLAN.md (updated: added \u00a712 outcome integration + \u00a713 acceptance)"
     ],
     "outcome_categories_added": 20,
     "per_category_min": "8/8/7/8/7/6/6/6/6/6/8/8/6/7/6/6/6/6/6/20 (sum 147 of 150); all 20 non-empty; no category or business-type > 20%",
@@ -998,6 +998,31 @@
     "reports": [
       "ROUND_2_SOURCE_COLLECTION_SLICE_3_REPORT.md",
       "ROUND_2_SOURCE_COVERAGE_GAP_AUDIT.md"
+    ]
+  },
+  "stage_a_round2_source_verification_design": {
+    "slice": "Round 2 source full-text verification system design + workflow (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "GOVERNANCE_DOCS_ONLY (no source collection; no benchmark cases; no engine/gate/scorer/answer-key change; no record promoted)",
+    "files": [
+      "ROUND_2_SOURCE_FULL_TEXT_VERIFICATION_DESIGN.md",
+      "ROUND_2_SOURCE_VERIFICATION_WORKFLOW.md"
+    ],
+    "verification_statuses": "UNVERIFIED -> SEARCH_SNIPPET_ONLY (current 108) -> {FULL_TEXT_VERIFIED, PARTIALLY_VERIFIED, SECONDARY_VERIFIED, NEEDS_RECHECK, SOURCE_INACCESSIBLE, REJECTED}",
+    "evidence_locator_standard": "per-source-type locator (EDGAR accession+form+section+page; transcript speaker+para/timestamp; gov report+section+table+page; dataset id+table+column+row+version; court case_no+docket+page; archive timestamp URL+anchor). Bare domain/homepage NEVER a locator.",
+    "sidecar_schema": "verification.json per candidate (never engine-visible); SRC json never edited in place; derived hidden source.json on promotion",
+    "metric_rules": "each metric -> metric_verification{candidate_value,verified_value,unit,period,locator,match EXACT|ROUNDED|RANGE|MISMATCH|NOT_FOUND,is_critical}; all critical metrics EXACT/ROUNDED at locator for FULL_TEXT_VERIFIED; NOT_FOUND dropped/inferred",
+    "reliability_rules": "A only via primary at locator; corroborated C (SRC-030/066) -> B max; uncorroborated C (SRC-103) not promotable; downgrade/reject on inspection mismatch",
+    "promotion_criteria": "ALL: status in {FULL_TEXT/PARTIALLY (or SECONDARY=B-max)} with located critical metric; 0 unresolved critical MISMATCH; reliability A/B; outcome_evidence_verified; supports_ground_truth YES/PARTIAL; leakage_recheck_passed; dual-review for key-bearing records",
+    "fallback_inaccessible": "archive tier -> official portal -> SOURCE_INACCESSIBLE (quarantined, never promoted, never counted verified); manual human review final fallback; snippets never satisfy verification",
+    "workflow": "batch 12/run (108->9 runs); priority GOOD/AMBIGUOUS-bound + A-grade primaries + C/corroboration trio; automated verifier + human dual-review; append-only ROUND_2_SOURCE_VERIFICATION_LEDGER.json; leakage recheck + 3-file separation preserved",
+    "hard_invariants": "0 promotions on snippet-only; 0 critical metric without locator; 0 key fields in inputs; promoted<=records meeting all criteria",
+    "gates_run": "docs only; execution_state.json JSON-validated; no code touched",
+    "next_step": "execute verification runs (batch 12; needs working fetch/manual review) -> source.json conversion of promoted records -> optional slice 4 GOOD/AMBIGUOUS top-up -> intake/source validator -> scorer -> re-trial",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "reports": [
+      "ROUND_2_SOURCE_FULL_TEXT_VERIFICATION_DESIGN.md",
+      "ROUND_2_SOURCE_VERIFICATION_WORKFLOW.md"
     ]
   }
 }
