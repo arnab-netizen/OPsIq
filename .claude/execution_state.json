@@ -574,5 +574,26 @@
       "ENGINE_CAPABILITY_FAILURE_ANALYSIS.md",
       "ENGINE_CAPABILITY_REMEDIATION_PLAN.md"
     ]
+  },
+  "stage_a_taxonomy_coverage_audit": {
+    "slice": "Owner-mode diagnostic taxonomy coverage audit + archetype remediation sequence (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "AUDIT_DOCS_ONLY (no code/scoring/safety-gate/answer-key change)",
+    "files": [
+      "OWNER_MODE_DIAGNOSTIC_TAXONOMY_COVERAGE_AUDIT.md",
+      "ENGINE_ARCHETYPE_REMEDIATION_SEQUENCE.md"
+    ],
+    "current_archetypes": "3 (operational_bottleneck, quality_control_failure, customer_retention_erosion) + UNKNOWN",
+    "coverage_gap_confirmed": true,
+    "unsupported_domains": "financial-structural(cash/liquidity, unit-economics, margin, pricing), revenue/demand/GTM, inventory/forecasting, working-capital/AR-AP, debt/solvency, governance/compliance/legal, key-person/team, strategic-capex/irreversible, market/competitive displacement",
+    "taxonomy_size": "15 diagnoses (D1-D15) specified with trigger/required/contradiction/min-confidence/safe-1st/unsafe/abstain/owner-checks/gate",
+    "recommended_first_slice": "E0 honest status relabel (zero-risk); E1 financial-health archetype = first capability slice",
+    "guardrail": "safety gate frozen; every slice re-runs adversarial suite (must stay 10/10 + 2/2 controls) + no baseline->unsafe regression",
+    "continue_allowed": "YES for planning; implementation requires explicit authorization, gate frozen",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "OWNER_MODE_DIAGNOSTIC_TAXONOMY_COVERAGE_AUDIT.md",
+      "ENGINE_ARCHETYPE_REMEDIATION_SEQUENCE.md"
+    ]
   }
 }
