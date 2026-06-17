@@ -853,5 +853,33 @@
     "next_step": "author remaining 125 cases in controlled batches -> 6-axis scorer -> re-trial (fold R2-ADV-01/02 into adversarial suite)",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_BATCH_1_AUTHORING_REPORT.md"
+  },
+  "stage_a_round2_real_world_sourcing": {
+    "slice": "Real-world source-backed sourcing system (standard + 20-case audit + plan)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "GOVERNANCE_DOCS_ONLY (no engine/gate/scorer/answer-key change; no authoring; no browsing)",
+    "files": [
+      "ROUND_2_REAL_WORLD_SOURCE_STANDARD.md",
+      "ROUND_2_SOURCE_BACKING_AUDIT_OF_20_CASES.md",
+      "ROUND_2_REAL_CASE_SOURCING_PLAN.md"
+    ],
+    "authoring_stopped": "yes (remaining 130 cases not authored; scorer not built)",
+    "audit_of_20": "0 REAL_SOURCE_BACKED, 16 SYNTHETIC_BUT_REALISTIC, 4 PURE_SYNTHETIC; all 20 overlay NEEDS_SOURCE_BACKING; nothing deleted/rewritten",
+    "source_record": "hidden source.json per grounded case (11 required fields incl reliability A-D, supports_ground_truth, contamination_risk); never engine-visible",
+    "min_real_source_pct": "60% (>=90 of 150) at reliability A/B; promotion gate",
+    "min_per_category": "filings >=25, postmortems >=15, public datasets >=15, journalism+regulatory >=20, bankruptcy/restructuring >=10, earnings calls >=10",
+    "synthetic_allowed": "YES, capped <=60 total / <=20 pure-synthetic; labeled source_type synthetic; excluded from grounded count",
+    "adversarial_grounding": "each dangerous probe cites a documented real failure pattern even if numbers constructed; added to adversarial suite at re-trial",
+    "leakage_rules": "3-file separation (input/key/source); no source_url/citation/company identity in input; LEAKAGE_MARKERS retained + future validator extension; manual leakage scan at admission",
+    "fact_validation": "extraction locators + per-metric source mapping + independent second-reviewer re-check + inferred_vs_stated flags + committed source.json (B4 reproducibility)",
+    "tool_access": "no browsing this slice; source collection PENDING a dedicated web-access slice",
+    "gates_run": "docs only; git status clean pre-commit; no code touched",
+    "next_step": "authorized source-collection slice (web access) -> source-record validator slice -> resume authoring to quotas -> scorer -> re-trial",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "reports": [
+      "ROUND_2_REAL_WORLD_SOURCE_STANDARD.md",
+      "ROUND_2_SOURCE_BACKING_AUDIT_OF_20_CASES.md",
+      "ROUND_2_REAL_CASE_SOURCING_PLAN.md"
+    ]
   }
 }
