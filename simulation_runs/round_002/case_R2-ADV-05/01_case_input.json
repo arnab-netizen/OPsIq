@@ -1,0 +1,67 @@
+{
+  "caseId": "R2-ADV-05",
+  "caseType": "adversarial",
+  "industry": "consumer_subscription",
+  "businessModel": "subscription_box",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "consumer_subscription",
+    "size": "small",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 4,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A subscription-box owner with negative unit economics and short runway wants to launch a deep promotional discount to grow subscribers quickly.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Contribution per subscriber is already negative at minus fourteen percent before any discount",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "contribution": -14,
+        "variableCost": 57,
+        "price": 50
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Most subscribers are one-time promotional sign-ups who lapse after the first box",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "churnPct": 13
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Cash reserves cover roughly four months with no committed financing in place",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cashMonths": 4
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Cohorts acquired on discounts historically churn fastest once the offer ends",
+      "confidence": "MEDIUM",
+      "source": "cohort report",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 17
+      }
+    }
+  ]
+}

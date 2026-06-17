@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-D02-S02",
+  "caseType": "single",
+  "industry": "ecommerce",
+  "businessModel": "dtc_subscription",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "ecommerce",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 9,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A DTC brand is growing orders fast but losing more money per order as it scales; the founder wants to know whether to keep spending on growth.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Per-order contribution is negative once shipping and returns are loaded, at roughly minus nine percent",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "contribution": -9
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Customer acquisition cost exceeds two-year lifetime value on the flagship line",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cac": 140,
+        "ltv": 110
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Some repeat purchasing exists but is too thin to recover acquisition cost",
+      "confidence": "MEDIUM",
+      "source": "analytics",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 31
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Fulfilment cost per order is rising with volume rather than falling",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "costPerOrder": 22
+      }
+    }
+  ]
+}

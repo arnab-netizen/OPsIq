@@ -1074,5 +1074,30 @@
       "ROUND_2_MANUAL_SOURCE_VERIFICATION_WORKFLOW.md",
       "ROUND_2_MANUAL_VERIFICATION_INSTRUCTIONS.md"
     ]
+  },
+  "stage_a_round2_case_library_batch2": {
+    "slice": "Round 2 case library batch 2 (23 cases grounded in documented situations)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_AUTHORING (no engine/gate/scorer/answer-key change; sources NOT verified -> no REAL_SOURCE_BACKED)",
+    "files": [
+      "simulation_runner/author-round2-batch2.ts",
+      "simulation_runs/round_002/case_R2-* (23 new: D01/02/03/04/05/07/08/09/10/11/12/13/14/15-S02, MC-02/03, AB-03/04, ADV-03/04/05, GD-01/02)",
+      "simulation_runs/round_002/_BATCH_2_VALIDATION.json",
+      "simulation_runs/round_002/_ALL_VALIDATION.json",
+      "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
+    ],
+    "cases_completed_total": 43,
+    "batch2_new": 23,
+    "by_type": "single 30, multi 3, abstention 5, adversarial 5",
+    "diagnosis_coverage": "15/15 owner-mode buckets have >=1 case (+ no_single_cause 3, truly_insufficient 2)",
+    "validator": "43/43 valid (with hidden keys); leakage-clean x43",
+    "trace_audit": "covered buckets diagnosed correctly (cash/unit/margin/retention/quality/bottleneck + MC primaries + GD-02 + ADV-05); uncovered 8 buckets honestly INSUFFICIENT_EVIDENCE; AB-03/AB-04/GD-01 BLOCKED (no fabrication); ADV-03/04 abstain, ADV-05 correct unit-econ primary; 0 weak cases",
+    "grounding": "23 cases grounded in documented real-world situations from 108 source candidates (de-identified; provenance in hidden key only); UNVERIFIED -> not REAL_SOURCE_BACKED",
+    "remaining_required": "~107 toward 150 (single ~60, multi ~17, abstention ~15, adversarial ~15)",
+    "thin_buckets": "gtm_channel_mismatch(1), margin_erosion(2), pricing_power(2), retention(2), quality(2), inventory(2), working_capital(2), key_person(2)",
+    "gates_run": "tsx author-batch2 (23/23), tsx validate-round2-cases (43/43), tsx trace-round2-diagnosis, tsc (only pre-existing run-case.ts:149), node coverage check",
+    "next_step": "batch 3 (~23: S03 for thin buckets + 4 multi + 4 abstention + 4 adversarial + 3 GOOD/recovery); per-batch loop author->validate->trace->fix",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "report": "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
   }
 }

@@ -1,0 +1,62 @@
+{
+  "caseId": "R2-D03-S02",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "made_to_order",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "small",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 10,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A made-to-order manufacturer has watched profitability slide for over a year as input costs climb; the owner wants the real driver before touching prices.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Gross margin fell from thirty-eight to twenty-six percent over five quarters as input costs rose faster than price",
+      "confidence": "HIGH",
+      "source": "management accounts",
+      "isCritical": true,
+      "supportingData": {
+        "marginPct": -12
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Raw-material and freight cost per unit rose seventeen percent year over year",
+      "confidence": "HIGH",
+      "source": "purchasing",
+      "isCritical": true,
+      "supportingData": {
+        "cogsPct": 17
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Throughput and scrap rates are stable; this is a cost-versus-price problem, not efficiency",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "throughput": 900
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Competitors raised list prices while the firm did not, leaving price headroom unused",
+      "confidence": "MEDIUM",
+      "source": "sales",
+      "isCritical": false
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-MC-02",
+  "caseType": "multi",
+  "industry": "real_estate_services",
+  "businessModel": "space_as_a_service",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "real_estate_services",
+    "size": "large",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 9,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A fast-growing space-as-a-service operator is scaling revenue rapidly but loses money per location, while one founder concentrates control with weak governance.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Per-location contribution is negative at scale even as total revenue grows quickly",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "contribution": -15
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Buildout and acquisition costs exceed multi-year member value on the current pricing",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cac": 9000,
+        "ltv": 7000
+      }
+    },
+    {
+      "dimension": "team_capability",
+      "finding": "A single founder concentrates decision rights and related-party arrangements with weak board control",
+      "confidence": "HIGH",
+      "source": "governance review",
+      "isCritical": true,
+      "supportingData": {
+        "keyPersonCount": 1
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Top-line growth is strong; the issues are economics and governance, not demand",
+      "confidence": "MEDIUM",
+      "source": "strategy",
+      "isCritical": false
+    }
+  ]
+}

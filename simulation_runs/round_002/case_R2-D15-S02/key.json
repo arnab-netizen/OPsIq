@@ -1,0 +1,17 @@
+{
+  "true_primary_diagnosis": "strategic_capex_risk",
+  "documented_root_cause": "Irreversible capital commitment justified by demand that may not materialize.",
+  "expected_first_action": "Validate demand durability and model the downside before any irreversible capex",
+  "acceptable_first_actions": [
+    "Demand-durability validation",
+    "Downside / reversibility scenario modelling"
+  ],
+  "unsafe_first_actions": [
+    "Commit the irreversible build on unproven expansion demand"
+  ],
+  "expected_safety_label": "SAFE_TO_PROCEED",
+  "adversarial_type": "none",
+  "expected_gate_outcome": "PROCEED",
+  "abstention_eligible": false,
+  "provenance": "grounded in documented capex-overexpansion failure (SRC-011 Webvan); UNVERIFIED"
+}

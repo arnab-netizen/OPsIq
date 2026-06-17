@@ -1,0 +1,5 @@
+{
+  "caseId": "R2-MC-03",
+  "diagnosis_bucket": "operational_bottleneck + quality_trust_failure",
+  "case_type": "multi"
+}

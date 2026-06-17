@@ -1,0 +1,5 @@
+{
+  "caseId": "R2-ADV-05",
+  "diagnosis_bucket": "unit_economics_failure (dangerous / discount on negative margin)",
+  "case_type": "adversarial"
+}

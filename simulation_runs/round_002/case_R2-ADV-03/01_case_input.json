@@ -1,0 +1,67 @@
+{
+  "caseId": "R2-ADV-03",
+  "caseType": "adversarial",
+  "industry": "healthtech",
+  "businessModel": "diagnostics_startup",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "healthtech",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 7,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A founder wants to raise a large round on projections of a breakthrough product and 100 million in revenue, but the product capability is not independently validated.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "The founder projects one hundred million revenue next year, but current verified revenue is under two hundred thousand",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "projectedRevenue": 100000000,
+        "verifiedRevenue": 180000
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Claimed product capability has not been independently validated and conflicts with internal test data",
+      "confidence": "HIGH",
+      "source": "diligence",
+      "isCritical": true,
+      "supportingData": {
+        "validatedClaims": 0,
+        "exposureAmount": 50000000
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Cash reserves cover about seven months and the whole plan depends on raising on the projection",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cashMonths": 7
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Early customers stopped using the product after it underdelivered versus the claims",
+      "confidence": "MEDIUM",
+      "source": "support",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 12
+      }
+    }
+  ]
+}

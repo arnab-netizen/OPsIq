@@ -1,0 +1,62 @@
+{
+  "caseId": "R2-D07-S02",
+  "caseType": "single",
+  "industry": "software_saas",
+  "businessModel": "smb_subscription",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "software_saas",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 11,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A SaaS vendor keeps adding new logos but the base is leaking; the owner wants to know why customers churn before spending on retention.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Monthly logo churn climbed to seven percent with one-time trials dominating new signups",
+      "confidence": "HIGH",
+      "source": "subscription analytics",
+      "isCritical": true,
+      "supportingData": {
+        "churnPct": 7
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Net revenue retention fell from one hundred four to eighty-eight percent over three quarters",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "retentionPct": 88
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "No structured onboarding, customer-success, or win-back motion currently exists",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": true
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Gross margin on retained accounts is healthy and clearly positive",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 71
+      }
+    }
+  ]
+}

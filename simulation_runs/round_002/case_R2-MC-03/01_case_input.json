@@ -1,0 +1,67 @@
+{
+  "caseId": "R2-MC-03",
+  "caseType": "multi",
+  "industry": "manufacturing",
+  "businessModel": "contract_manufacturing",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "medium",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A contract manufacturer has a throughput bottleneck AND rising quality escapes as rushed work under backlog pressure reaches customers.",
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Line turnaround slipped to eleven days against a four-day target; the finishing station is the capacity constraint",
+      "confidence": "HIGH",
+      "source": "job tracker",
+      "isCritical": true,
+      "supportingData": {
+        "turnaroundDays": 11,
+        "utilizationPct": 95
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Backlog grows and the queue cannot clear at current capacity",
+      "confidence": "HIGH",
+      "source": "ops dashboard",
+      "isCritical": true,
+      "supportingData": {
+        "capacityPct": 96
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Rushed work under backlog pressure raised the customer complaint and defect rate",
+      "confidence": "HIGH",
+      "source": "QA log",
+      "isCritical": true,
+      "supportingData": {
+        "complaintRate": 8,
+        "defectRate": 6
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "There is a low repeat rate among delayed and defect-affected customers",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 39
+      }
+    }
+  ]
+}
