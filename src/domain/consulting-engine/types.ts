@@ -6,6 +6,10 @@ export enum DiagnosisType {
   OPERATIONAL_BOTTLENECK = "operational_bottleneck",
   QUALITY_CONTROL_FAILURE = "quality_control_failure",
   CUSTOMER_RETENTION_EROSION = "customer_retention_erosion",
+  // E1 — financial-health archetypes (cash/liquidity, unit economics, margin)
+  CASH_LIQUIDITY_CRISIS = "cash_liquidity_crisis",
+  UNIT_ECONOMICS_FAILURE = "unit_economics_failure",
+  MARGIN_EROSION = "margin_erosion",
   UNKNOWN = "unknown",
 }
 

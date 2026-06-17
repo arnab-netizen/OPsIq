@@ -1,0 +1,56 @@
+{
+  "step": "abstention_safety_gate_e1",
+  "caseId": "RW-001",
+  "source": "re-run engine (E1) from 01_case_input.json; frozen 09 NOT overwritten",
+  "engine_status": "SUCCESS",
+  "diagnosis": "quality_control_failure",
+  "first_action": "Implement complaint tracking and customer outreach",
+  "first_action_cost": "MINIMAL",
+  "derived_inputs": {
+    "confidence_score": 0.55,
+    "has_evidence": true,
+    "evidence_contradictions": 0,
+    "scope_valid": true,
+    "preconditions_met": true,
+    "irreversibility_score": 0,
+    "operator_capacity_available": true,
+    "active_conflicts": 0,
+    "evidence_support": {
+      "committed": true,
+      "supportRatio": 0.16666666666666666,
+      "hasMissingEvidence": true
+    }
+  },
+  "abstain": true,
+  "abstention_state": "CONFLICTING_SIGNALS",
+  "unsafe_conditions": [
+    {
+      "condition_type": "MISSING_EVIDENCE",
+      "severity": "HIGH",
+      "description": "Committed diagnosis rests on insufficient evidence support (ratio 0.17 < 0.5) with unresolved evidence gaps declared",
+      "blocking": true
+    },
+    {
+      "condition_type": "CONTRADICTORY_EVIDENCE",
+      "severity": "HIGH",
+      "description": "Causal challenge failed: strong adverse evidence sits in a dimension the chosen diagnosis ignored (contradictory off-archetype signal)",
+      "blocking": true
+    }
+  ],
+  "causal_challenge": {
+    "committed": true,
+    "challenged": true,
+    "outOfModelCauseInProblem": false,
+    "adverseOffArchetypeEvidence": true,
+    "reasons": [
+      "strong adverse evidence sits in a dimension the chosen diagnosis ignored (contradictory off-archetype signal)"
+    ]
+  },
+  "constraint_alignment": {
+    "committed": true,
+    "conflict": false,
+    "reasons": []
+  },
+  "model_coverage_reason": "NOT_APPLICABLE",
+  "gate_evaluated": true
+}

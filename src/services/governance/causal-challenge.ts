@@ -48,11 +48,19 @@ export interface CausalChallengeSignal {
   abstention_hint: "OUTSIDE_VALID_SCOPE" | "CONFLICTING_SIGNALS" | null;
 }
 
-/** Dimensions each operational archetype actually reasons over. */
+/**
+ * Dimensions each archetype actually reasons over (archetype metadata — NOT a
+ * gate threshold or rule change). Used by the adverse-off-archetype check to
+ * know which dimension is "in-model" (home) for the chosen diagnosis. E1 adds
+ * the three financial archetypes whose home dimension is financial_health.
+ */
 const ARCHETYPE_DIMENSIONS: Record<string, Set<string>> = {
   operational_bottleneck: new Set(["operational_efficiency", "customer_retention"]),
   quality_control_failure: new Set(["quality_delivery"]),
   customer_retention_erosion: new Set(["customer_retention"]),
+  cash_liquidity_crisis: new Set(["financial_health"]),
+  unit_economics_failure: new Set(["financial_health"]),
+  margin_erosion: new Set(["financial_health"]),
 };
 
 /**

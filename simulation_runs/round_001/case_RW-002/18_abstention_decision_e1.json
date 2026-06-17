@@ -1,0 +1,41 @@
+{
+  "step": "abstention_safety_gate_e1",
+  "caseId": "RW-002",
+  "source": "re-run engine (E1) from 01_case_input.json; frozen 09 NOT overwritten",
+  "engine_status": "SUCCESS",
+  "diagnosis": "customer_retention_erosion",
+  "first_action": "Design and launch customer loyalty program",
+  "first_action_cost": "LOW",
+  "derived_inputs": {
+    "confidence_score": 0.8,
+    "has_evidence": true,
+    "evidence_contradictions": 0,
+    "scope_valid": true,
+    "preconditions_met": true,
+    "irreversibility_score": 0,
+    "operator_capacity_available": true,
+    "active_conflicts": 0,
+    "evidence_support": {
+      "committed": true,
+      "supportRatio": 0.75,
+      "hasMissingEvidence": true
+    }
+  },
+  "abstain": false,
+  "abstention_state": null,
+  "unsafe_conditions": [],
+  "causal_challenge": {
+    "committed": true,
+    "challenged": false,
+    "outOfModelCauseInProblem": false,
+    "adverseOffArchetypeEvidence": false,
+    "reasons": []
+  },
+  "constraint_alignment": {
+    "committed": true,
+    "conflict": false,
+    "reasons": []
+  },
+  "model_coverage_reason": "NOT_APPLICABLE",
+  "gate_evaluated": true
+}

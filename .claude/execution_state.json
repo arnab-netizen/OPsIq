@@ -628,5 +628,41 @@
       "quality UNVERIFIED"
     ],
     "report": "E0_MODEL_COVERAGE_RELABEL_VALIDATION_REPORT.md"
+  },
+  "stage_a_e1_financial_archetypes": {
+    "slice": "E1 financial-health archetypes (cash/liquidity, unit economics, margin erosion)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING (diagnosis archetypes + safe interventions)",
+    "files": [
+      "src/domain/consulting-engine/types.ts",
+      "src/services/consulting-engine/diagnosis-engine.ts",
+      "src/services/consulting-engine/intervention-design-engine.ts",
+      "src/services/governance/causal-challenge.ts",
+      "simulation_runner/rerun-e1.ts",
+      "src/__tests__/services/financial-archetypes.test.ts",
+      "simulation_runs/round_001/case_*/18_abstention_decision_e1.json",
+      "simulation_runs/adversarial_safety_probes_v2_e1/*",
+      "E1_FINANCIAL_ARCHETYPE_VALIDATION_REPORT.md"
+    ],
+    "new_diagnoses_unlocked": "2 committed (RW-003, RW-006 -> margin_erosion); both gate-abstained (CONFLICTING_SIGNALS)",
+    "round1_proceed": "1 (RW-002, unchanged)",
+    "round1_abstain": "49 (unchanged)",
+    "committed_total": "5 (was 3): quality 1, retention 2, margin_erosion 2",
+    "unsafe_proceeds": 0,
+    "probe_unsafe_caught": "10/10",
+    "probe_controls_preserved": "2/2",
+    "false_high_confidence_risk": "LOW & contained (both new commits abstained; safe analysis-only first action; MODERATE default confidence)",
+    "trigger_discipline": "strict signals only; generic/placeholder financial evidence stays abstained; positive unit economics not triggered",
+    "tests": "122 pass",
+    "gates_run": "vitest 122 PASS, tsc clean (changed files), prisma valid",
+    "old_outputs_preserved": "frozen 09/10 + 12/14/15/16/17_* intact; new 18_* + adversarial_safety_probes_v2_e1/",
+    "e2_authorized": false,
+    "still_open": [
+      "E2-E6 (need explicit authorization)",
+      "RW-005 human adjudication",
+      "RC-7 semantic residue",
+      "quality UNVERIFIED"
+    ],
+    "report": "E1_FINANCIAL_ARCHETYPE_VALIDATION_REPORT.md"
   }
 }

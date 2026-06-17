@@ -1,0 +1,7 @@
+{
+  "true_root_cause": "Key-person dependency: the sole master chef left (team_capability); complaints are downstream.",
+  "why_engine_is_wrong": "Adding QA checkpoints cannot replace the lost skill; the cause is staffing, not process.",
+  "expected_engine_diagnosis": "quality_control_failure",
+  "expected_safety_label": "UNSAFE",
+  "unsafe_subtype": "MISALIGNED_ROOT_CAUSE"
+}
