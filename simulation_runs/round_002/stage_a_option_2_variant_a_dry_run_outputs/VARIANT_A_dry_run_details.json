@@ -1,0 +1,212 @@
+[
+  {
+    "caseId": "BLND-006",
+    "expected": "demand_forecasting_mismatch",
+    "baselineCorrect": false,
+    "baseline_predicted": "customer_retention_erosion",
+    "variantA_predicted": "trust_quality_crisis",
+    "variantA_correct": false,
+    "variantA_confidence": 24,
+    "changed": true
+  },
+  {
+    "caseId": "BLND-007",
+    "expected": "go_to_market_misalignment",
+    "baselineCorrect": true,
+    "baseline_predicted": "go_to_market_misalignment",
+    "variantA_predicted": "go_to_market_misalignment",
+    "variantA_correct": true,
+    "variantA_confidence": 33,
+    "changed": false
+  },
+  {
+    "caseId": "BLND-008",
+    "expected": "insufficient_evidence",
+    "baselineCorrect": false,
+    "baseline_predicted": "go_to_market_misalignment",
+    "variantA_predicted": "go_to_market_misalignment",
+    "variantA_correct": false,
+    "variantA_confidence": 28,
+    "changed": false
+  },
+  {
+    "caseId": "BLND-009",
+    "expected": "operational_bottleneck",
+    "baselineCorrect": false,
+    "baseline_predicted": "trust_quality_crisis",
+    "variantA_predicted": "trust_quality_crisis",
+    "variantA_correct": false,
+    "variantA_confidence": 24,
+    "changed": false
+  },
+  {
+    "caseId": "BLND-010",
+    "expected": "strategic_pricing_error",
+    "baselineCorrect": false,
+    "baseline_predicted": "go_to_market_misalignment",
+    "variantA_predicted": "trust_quality_crisis",
+    "variantA_correct": false,
+    "variantA_confidence": 29,
+    "changed": true
+  },
+  {
+    "caseId": "ADV-011",
+    "expected": "insufficient_evidence",
+    "baselineCorrect": false,
+    "baseline_predicted": "unit_economics_breakdown",
+    "variantA_predicted": "unit_economics_breakdown",
+    "variantA_correct": false,
+    "variantA_confidence": 45,
+    "changed": false
+  },
+  {
+    "caseId": "ADV-012",
+    "expected": "trust_quality_crisis",
+    "baselineCorrect": false,
+    "baseline_predicted": "customer_retention_erosion",
+    "variantA_predicted": "go_to_market_misalignment",
+    "variantA_correct": false,
+    "variantA_confidence": 40,
+    "changed": true
+  },
+  {
+    "caseId": "ADV-013",
+    "expected": "insufficient_evidence",
+    "baselineCorrect": false,
+    "baseline_predicted": "unit_economics_breakdown",
+    "variantA_predicted": "unit_economics_breakdown",
+    "variantA_correct": false,
+    "variantA_confidence": 21,
+    "changed": false
+  },
+  {
+    "caseId": "ADV-014",
+    "expected": "insufficient_evidence",
+    "baselineCorrect": false,
+    "baseline_predicted": "operational_bottleneck",
+    "variantA_predicted": "operational_bottleneck",
+    "variantA_correct": false,
+    "variantA_confidence": 40,
+    "changed": false
+  },
+  {
+    "caseId": "RW-016",
+    "expected": "go_to_market_misalignment",
+    "baselineCorrect": false,
+    "baseline_predicted": "demand_forecasting_mismatch",
+    "variantA_predicted": "unit_economics_breakdown",
+    "variantA_correct": false,
+    "variantA_confidence": 45,
+    "changed": true
+  },
+  {
+    "caseId": "RW-018",
+    "expected": "unit_economics_breakdown",
+    "baselineCorrect": true,
+    "baseline_predicted": "unit_economics_breakdown",
+    "variantA_predicted": "unit_economics_breakdown",
+    "variantA_correct": true,
+    "variantA_confidence": 45,
+    "changed": false
+  },
+  {
+    "caseId": "RW-020",
+    "expected": "unit_economics_breakdown",
+    "baselineCorrect": true,
+    "baseline_predicted": "unit_economics_breakdown",
+    "variantA_predicted": "unit_economics_breakdown",
+    "variantA_correct": true,
+    "variantA_confidence": 45,
+    "changed": false
+  },
+  {
+    "caseId": "RW-022",
+    "expected": "unit_economics_breakdown",
+    "baselineCorrect": false,
+    "baseline_predicted": "operational_bottleneck",
+    "variantA_predicted": "demand_forecasting_mismatch",
+    "variantA_correct": false,
+    "variantA_confidence": 45,
+    "changed": true
+  },
+  {
+    "caseId": "RW-024",
+    "expected": "operational_bottleneck",
+    "baselineCorrect": false,
+    "baseline_predicted": "brand_erosion",
+    "variantA_predicted": "brand_erosion",
+    "variantA_correct": false,
+    "variantA_confidence": 5,
+    "changed": false
+  },
+  {
+    "caseId": "PD-011",
+    "expected": "unit_economics_breakdown",
+    "baselineCorrect": true,
+    "baseline_predicted": "unit_economics_breakdown",
+    "variantA_predicted": "unit_economics_breakdown",
+    "variantA_correct": true,
+    "variantA_confidence": 45,
+    "changed": false
+  },
+  {
+    "caseId": "PD-013",
+    "expected": "operational_bottleneck",
+    "baselineCorrect": true,
+    "baseline_predicted": "operational_bottleneck",
+    "variantA_predicted": "operational_bottleneck",
+    "variantA_correct": true,
+    "variantA_confidence": 45,
+    "changed": false
+  },
+  {
+    "caseId": "PD-015",
+    "expected": "unit_economics_breakdown",
+    "baselineCorrect": true,
+    "baseline_predicted": "unit_economics_breakdown",
+    "variantA_predicted": "unit_economics_breakdown",
+    "variantA_correct": true,
+    "variantA_confidence": 45,
+    "changed": false
+  },
+  {
+    "caseId": "PD-017",
+    "expected": "demand_forecasting_mismatch",
+    "baselineCorrect": true,
+    "baseline_predicted": "demand_forecasting_mismatch",
+    "variantA_predicted": "demand_forecasting_mismatch",
+    "variantA_correct": true,
+    "variantA_confidence": 45,
+    "changed": false
+  },
+  {
+    "caseId": "PD-019",
+    "expected": "unit_economics_breakdown",
+    "baselineCorrect": false,
+    "baseline_predicted": "demand_forecasting_mismatch",
+    "variantA_predicted": "demand_forecasting_mismatch",
+    "variantA_correct": false,
+    "variantA_confidence": 45,
+    "changed": false
+  },
+  {
+    "caseId": "SYN-011",
+    "expected": "trust_quality_crisis",
+    "baselineCorrect": true,
+    "baseline_predicted": "trust_quality_crisis",
+    "variantA_predicted": "trust_quality_crisis",
+    "variantA_correct": true,
+    "variantA_confidence": 60,
+    "changed": false
+  },
+  {
+    "caseId": "SYN-013",
+    "expected": "customer_retention_erosion",
+    "baselineCorrect": false,
+    "baseline_predicted": "go_to_market_misalignment",
+    "variantA_predicted": "go_to_market_misalignment",
+    "variantA_correct": false,
+    "variantA_confidence": 28,
+    "changed": false
+  }
+]

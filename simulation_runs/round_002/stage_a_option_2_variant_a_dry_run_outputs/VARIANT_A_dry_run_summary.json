@@ -1,0 +1,32 @@
+{
+  "baseline": {
+    "correct": 8,
+    "accuracy": 38.1,
+    "description": "SLICE_8 causal evidence"
+  },
+  "variant_a": {
+    "correct": 8,
+    "accuracy": 38.1,
+    "regressions": 0,
+    "newly_fixed": 0,
+    "net_gain": 0,
+    "confidence_stats": {
+      "max": 60,
+      "min": 5,
+      "mean": 37.24,
+      "median": 45
+    },
+    "correct_cases": [
+      "BLND-007",
+      "RW-018",
+      "RW-020",
+      "PD-011",
+      "PD-013",
+      "PD-015",
+      "PD-017",
+      "SYN-011"
+    ],
+    "regression_cases": [],
+    "newly_fixed_cases": []
+  }
+}
