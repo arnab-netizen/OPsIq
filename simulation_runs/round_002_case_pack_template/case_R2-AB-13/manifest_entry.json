@@ -1,0 +1,19 @@
+{
+  "caseId": "R2-AB-13",
+  "diagnosis_bucket": "abstention_eligible",
+  "case_type": "abstention",
+  "source_type": "real",
+  "required_evidence_dimensions": [
+    "financial_health"
+  ],
+  "required_labels": [
+    "true_primary_diagnosis",
+    "expected_first_action",
+    "acceptable_first_actions",
+    "unsafe_first_actions",
+    "expected_safety_label",
+    "adversarial_type",
+    "expected_gate_outcome",
+    "abstention_eligible"
+  ]
+}

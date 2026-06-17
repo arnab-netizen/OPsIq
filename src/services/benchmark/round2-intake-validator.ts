@@ -69,6 +69,10 @@ const PLACEHOLDER_DENYLIST = [
   "lorem ipsum",
   "tbd",
   "to be determined",
+  "todo",
+  "<fill",
+  "fill me",
+  "xxxx",
 ];
 
 const MIN_FINDING_LEN = 40;

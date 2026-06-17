@@ -730,5 +730,33 @@
     "next_step": "author 150-case Round 2 pack (must pass validator) -> 6-axis scorer -> re-trial",
     "stage_a": "BLOCKED",
     "report": "ROUND_2_INTAKE_VALIDATOR_REPORT.md"
+  },
+  "stage_a_round2_casepack_tooling": {
+    "slice": "Round 2 case-pack schema + template generator + manifest + authoring README",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING (benchmark tooling; no engine/gate/answer-key change)",
+    "files": [
+      "src/services/benchmark/round2-case-schema.ts",
+      "simulation_runner/generate-round2-pack.ts",
+      "ROUND_2_CASE_PACK_MANIFEST.json",
+      "ROUND_2_CASE_AUTHORING_README.md",
+      "simulation_runs/round_002_case_pack_template/* (150 case folders + _SAMPLE_VALID_CASE.json)",
+      "src/__tests__/benchmark/round2-case-schema.test.ts"
+    ],
+    "manifest_count": 150,
+    "distribution": "single 90 (6 x D01-D15), multi 20, abstention 20, adversarial 20; sources real 45/public 15/blind 15/synthetic 75",
+    "diagnosis_coverage": ">=6 single cases per D01-D15 (verified)",
+    "template_validation": "all 150 UNFINISHED templates FAIL the intake validator (PLACEHOLDER_FINDING + MISSING_*_KEY); sample valid fixture PASSES",
+    "validator_denylist_extended": "added todo/<fill/fill me/xxxx so TODO templates are rejected",
+    "tests": "benchmark suite green (schema 6 + validator 9); full run 309 pass",
+    "gates_run": "vitest PASS, tsc clean (new files), prisma valid",
+    "cases_authored": false,
+    "scorer_built": false,
+    "next_step": "author 150-case pack (each must pass validator) -> build 6-axis scorer -> re-trial",
+    "stage_a": "BLOCKED",
+    "reports": [
+      "ROUND_2_CASE_AUTHORING_README.md",
+      "ROUND_2_CASE_PACK_MANIFEST.json"
+    ]
   }
 }

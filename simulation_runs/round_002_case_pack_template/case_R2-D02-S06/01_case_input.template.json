@@ -1,0 +1,56 @@
+{
+  "caseId": "R2-D02-S06",
+  "businessProblem": "TODO: state the owner's actual problem/decision",
+  "ownerIntake": {
+    "riskAppetite": "TODO"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "TODO",
+    "timeHorizonDays": 0,
+    "staffCapacity": "TODO",
+    "cashRunwayMonths": null,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "TODO: replace with a specific, sourced finding (>=40 chars, no boilerplate)",
+      "confidence": "TODO",
+      "source": "TODO",
+      "isCritical": true,
+      "supportingData": {
+        "TODO_metric": "TODO"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "TODO: replace with a specific, sourced finding (>=40 chars, no boilerplate)",
+      "confidence": "TODO",
+      "source": "TODO",
+      "isCritical": true,
+      "supportingData": {
+        "TODO_metric": "TODO"
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "TODO: replace with a specific, sourced finding (>=40 chars, no boilerplate)",
+      "confidence": "TODO",
+      "source": "TODO",
+      "isCritical": false,
+      "supportingData": {
+        "TODO_metric": "TODO"
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "TODO: replace with a specific, sourced finding (>=40 chars, no boilerplate)",
+      "confidence": "TODO",
+      "source": "TODO",
+      "isCritical": false,
+      "supportingData": {
+        "TODO_metric": "TODO"
+      }
+    }
+  ]
+}
