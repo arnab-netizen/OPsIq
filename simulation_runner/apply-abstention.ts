@@ -68,6 +68,7 @@ for (const dir of caseDirs) {
   let causalEvidence:
     | { dimension: string; finding: string; isCritical?: boolean; supportingData?: Record<string, string | number | boolean> }[]
     | undefined;
+  let ownerConstraintProfile: Record<string, unknown> | undefined;
   if (fs.existsSync(inputPath)) {
     const input = JSON.parse(fs.readFileSync(inputPath, "utf-8"));
     if (Array.isArray(input.evidence)) {
@@ -79,13 +80,22 @@ for (const dir of caseDirs) {
         supportingData: e.supportingData as Record<string, string | number | boolean> | undefined,
       }));
     }
+    const ocp = input.ownerConstraintProfile ?? {};
+    ownerConstraintProfile = {
+      budgetBand: ocp.budgetBand,
+      timeHorizonDays: ocp.timeHorizonDays,
+      legalComplianceSensitive: ocp.legalComplianceSensitive,
+      staffCapacity: ocp.staffCapacity,
+      cashRunwayMonths: ocp.cashRunwayMonths,
+      riskAppetite: input.ownerIntake?.riskAppetite,
+    };
   }
 
   const safety = assessConsultingOutput(
     { status: frozen.status, decisionMemo: memo },
     memo.id,
     "abstention-engine",
-    { totalEvidenceCount, evidence: causalEvidence }
+    { totalEvidenceCount, evidence: causalEvidence, ownerConstraintProfile }
   );
 
   fs.writeFileSync(
@@ -108,6 +118,7 @@ for (const dir of caseDirs) {
         fallback_action: safety.assessment.fallback_action ?? null,
         abstention_decision: safety.decision,
         causal_challenge: safety.causal_challenge,
+        constraint_alignment: safety.constraint_alignment,
         gate_evaluated: true,
       },
       null,

@@ -48,6 +48,16 @@ export interface CausalChallengeGateSignal {
 }
 
 /**
+ * Constraint-alignment signal (RC-7 Option C). Produced by the constraint-
+ * alignment verifier; consumed by the optional rule below.
+ */
+export interface ConstraintAlignmentGateSignal {
+  committed: boolean;
+  conflict: boolean;
+  reasons: string[];
+}
+
+/**
  * Evidence-support sufficiency threshold (Option B, RC-3 fix).
  * A committed diagnosis is expected to rest on at least a majority of the
  * available evidence; below this, with unresolved gaps, the gate abstains.
@@ -69,7 +79,8 @@ export function assessSafety(
   operator_capacity_available: boolean,
   active_conflicts: number,
   evidence_support?: EvidenceSupportSignal,
-  causal_challenge?: CausalChallengeGateSignal
+  causal_challenge?: CausalChallengeGateSignal,
+  constraint_alignment?: ConstraintAlignmentGateSignal
 ): SafetyAssessment {
   const unsafe_conditions: UnsafeCondition[] = [];
   let abstain = false;
@@ -226,6 +237,21 @@ export function assessSafety(
     abstain = true;
     abstention_state = causal_challenge.abstention_hint ?? "OUTSIDE_VALID_SCOPE";
     confidence_adjustment -= 30;
+  }
+
+  // Constraint alignment (RC-7 Option C): a COMMITTED recommendation that is
+  // infeasible under the owner's constraints (time/budget/legal/capacity/risk)
+  // must not proceed. Only ever adds an abstention.
+  if (constraint_alignment?.committed && constraint_alignment.conflict) {
+    unsafe_conditions.push({
+      condition_type: "SCOPE_MISMATCH",
+      severity: "HIGH",
+      description: `Recommendation infeasible under owner constraints: ${constraint_alignment.reasons.join("; ")}`,
+      blocking: true,
+    });
+    abstain = true;
+    abstention_state = "OUTSIDE_VALID_SCOPE";
+    confidence_adjustment -= 20;
   }
 
   return {

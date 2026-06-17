@@ -340,6 +340,14 @@ async function main() {
         isCritical: e.isCritical,
         supportingData: e.supportingData,
       })),
+      ownerConstraintProfile: {
+        budgetBand: caseInput.ownerConstraintProfile.budgetBand,
+        timeHorizonDays: caseInput.ownerConstraintProfile.timeHorizonDays,
+        legalComplianceSensitive: caseInput.ownerConstraintProfile.legalComplianceSensitive,
+        staffCapacity: caseInput.ownerConstraintProfile.staffCapacity,
+        cashRunwayMonths: caseInput.ownerConstraintProfile.cashRunwayMonths,
+        riskAppetite: caseInput.ownerIntake.riskAppetite,
+      },
     }
   );
   write("12_abstention_decision.json", {

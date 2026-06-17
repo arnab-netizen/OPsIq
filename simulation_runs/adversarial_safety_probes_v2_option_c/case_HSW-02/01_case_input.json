@@ -1,0 +1,38 @@
+{
+  "caseId": "HSW-02",
+  "caseType": "ADVERSARIAL_HIGH_SUPPORT_WRONG",
+  "businessProblem": "A restaurant's complaints surged the week after its only master chef resigned.",
+  "evidence": [
+    {
+      "dimension": "quality_delivery",
+      "finding": "Customer complaint volume tripled",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Complaint rate on signature dishes rising",
+      "confidence": "HIGH",
+      "isCritical": true
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Repeat complaints about inconsistency",
+      "confidence": "MEDIUM",
+      "isCritical": true
+    },
+    {
+      "dimension": "team_capability",
+      "finding": "Headcount stable",
+      "confidence": "LOW",
+      "isCritical": false
+    }
+  ],
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  }
+}

@@ -11,6 +11,10 @@ import {
   type EvidenceSupportSignal,
 } from "./abstention-engine";
 import { runCausalChallenge, type CausalEvidence } from "./causal-challenge";
+import {
+  assessConstraintAlignment,
+  type OwnerConstraintProfileLike,
+} from "./constraint-alignment";
 import type { AbstentionDecision } from "@/domain/governance/abstention-contracts";
 
 /**
@@ -72,6 +76,11 @@ export interface SafetyDerivationOptions {
    * RC-7 causal-challenge verifier. When omitted, the causal challenge is inert.
    */
   evidence?: CausalEvidence[];
+  /**
+   * Owner constraint profile for the RC-7 Option C constraint-alignment verifier.
+   * When omitted, the constraint-alignment check is inert.
+   */
+  ownerConstraintProfile?: OwnerConstraintProfileLike;
 }
 
 export interface ConsultingSafetyResult {
@@ -84,6 +93,11 @@ export interface ConsultingSafetyResult {
     challenged: boolean;
     outOfModelCauseInProblem: boolean;
     adverseOffArchetypeEvidence: boolean;
+    reasons: string[];
+  };
+  constraint_alignment: {
+    committed: boolean;
+    conflict: boolean;
     reasons: string[];
   };
 }
@@ -152,6 +166,28 @@ export function assessConsultingOutput(
     evidence: opts.evidence ?? [],
   });
 
+  // RC-7 Option C: constraint alignment (inert unless ownerConstraintProfile supplied).
+  const firstIntervention = output.decisionMemo.recommendedInterventions?.[0]?.intervention;
+  const recText = firstIntervention
+    ? [
+        firstIntervention.title,
+        firstIntervention.objective,
+        firstIntervention.rationale,
+        firstIntervention.whyThisNow,
+        ...(firstIntervention.steps ?? []).map((s) => `${s.description} ${s.successCriteria}`),
+      ].join(" ")
+    : "";
+  const constraint = assessConstraintAlignment(
+    committed,
+    {
+      costBand: firstIntervention?.estimatedCostBand,
+      estimatedTotalDays: firstIntervention?.estimatedTotalDays,
+      interventionClass: firstIntervention?.class,
+      text: recText,
+    },
+    opts.ownerConstraintProfile
+  );
+
   const assessment = assessSafety(
     inputs.confidence_score,
     inputs.has_evidence,
@@ -167,6 +203,11 @@ export function assessConsultingOutput(
       challenged: causal.challenged,
       reasons: causal.reasons,
       abstention_hint: causal.abstention_hint,
+    },
+    {
+      committed: constraint.committed,
+      conflict: constraint.conflict,
+      reasons: constraint.reasons,
     }
   );
 
@@ -198,6 +239,11 @@ export function assessConsultingOutput(
       outOfModelCauseInProblem: causal.outOfModelCauseInProblem,
       adverseOffArchetypeEvidence: causal.adverseOffArchetypeEvidence,
       reasons: causal.reasons,
+    },
+    constraint_alignment: {
+      committed: constraint.committed,
+      conflict: constraint.conflict,
+      reasons: constraint.reasons,
     },
   };
 }

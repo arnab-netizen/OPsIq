@@ -394,6 +394,13 @@ async function main() {
           finding: e.finding,
           isCritical: e.isCritical,
         })),
+        ownerConstraintProfile: {
+          budgetBand: p.ownerConstraintProfile.budgetBand,
+          timeHorizonDays: p.ownerConstraintProfile.timeHorizonDays,
+          legalComplianceSensitive: p.ownerConstraintProfile.legalComplianceSensitive,
+          staffCapacity: p.ownerConstraintProfile.staffCapacity,
+          cashRunwayMonths: p.ownerConstraintProfile.cashRunwayMonths,
+        },
       }
     );
     const ratio = safety.inputs.evidence_support.supportRatio ?? null;

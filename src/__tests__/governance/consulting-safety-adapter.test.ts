@@ -25,6 +25,7 @@ function makeOutput(opts: {
   evidenceIds?: string[];
   missingEvidenceFor?: string[];
   businessProblem?: string;
+  intervention?: { estimatedCostBand?: string; estimatedTotalDays?: number; class?: string; title?: string };
 }): EngineOut {
   return {
     status: opts.status,
@@ -38,6 +39,22 @@ function makeOutput(opts: {
         evidenceIds: opts.evidenceIds ?? [],
         missingEvidenceFor: opts.missingEvidenceFor ?? [],
       },
+      recommendedInterventions: opts.intervention
+        ? [
+            {
+              intervention: {
+                title: opts.intervention.title ?? "rec",
+                objective: "obj",
+                rationale: "why",
+                whyThisNow: "now",
+                steps: [],
+                estimatedCostBand: opts.intervention.estimatedCostBand ?? "LOW",
+                estimatedTotalDays: opts.intervention.estimatedTotalDays ?? 7,
+                class: opts.intervention.class ?? "CONTAINMENT",
+              },
+            },
+          ]
+        : [],
     } as unknown as ConsultingEngineOutput["decisionMemo"],
   };
 }
@@ -201,6 +218,48 @@ describe("consulting-safety-adapter (abstention wiring)", () => {
         ],
       });
       expect(r.causal_challenge.challenged).toBe(false);
+      expect(r.assessment.abstain).toBe(false);
+    });
+
+    it("RC-7 Option C wiring: abstains (OUTSIDE_VALID_SCOPE) when recommendation is infeasible under owner constraints", () => {
+      const out = makeOutput({
+        status: "SUCCESS",
+        confidence: DiagnosisConfidence.HIGH,
+        type: DiagnosisType.CUSTOMER_RETENTION_EROSION,
+        evidenceIds: ["a", "b", "c"], // high support so Option B does not fire
+        missingEvidenceFor: [],
+        businessProblem: "Patients are not rebooking.", // no out-of-model cause -> Option A inert
+        intervention: { estimatedCostBand: "LOW", estimatedTotalDays: 7, title: "launch loyalty program" },
+      });
+      const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
+        totalEvidenceCount: 4,
+        evidence: [{ dimension: "customer_retention", finding: "low repeat", isCritical: true }],
+        ownerConstraintProfile: { budgetBand: "MINIMAL", timeHorizonDays: 2, legalComplianceSensitive: true, staffCapacity: "LOW" },
+      });
+      expect(r.constraint_alignment.conflict).toBe(true);
+      expect(r.assessment.abstain).toBe(true);
+      expect(r.assessment.abstention_state).toBe("OUTSIDE_VALID_SCOPE");
+    });
+
+    it("RC-7 Option C wiring: feasible recommendation under generous constraints proceeds", () => {
+      const out = makeOutput({
+        status: "SUCCESS",
+        confidence: DiagnosisConfidence.HIGH,
+        type: DiagnosisType.CUSTOMER_RETENTION_EROSION,
+        evidenceIds: ["a", "b", "c"],
+        missingEvidenceFor: [],
+        businessProblem: "No loyalty mechanism; customers don't rebook.",
+        intervention: { estimatedCostBand: "LOW", estimatedTotalDays: 7 },
+      });
+      const r = assessConsultingOutput(out, out.decisionMemo.id, "abstention-engine", {
+        totalEvidenceCount: 4,
+        evidence: [
+          { dimension: "customer_retention", finding: "low repeat", isCritical: true },
+          { dimension: "financial_health", finding: "healthy positive margins" },
+        ],
+        ownerConstraintProfile: { budgetBand: "MEDIUM", timeHorizonDays: 90, legalComplianceSensitive: false, staffCapacity: "MEDIUM" },
+      });
+      expect(r.constraint_alignment.conflict).toBe(false);
       expect(r.assessment.abstain).toBe(false);
     });
 
