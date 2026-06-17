@@ -1,0 +1,160 @@
+{
+  "slice": "SLICE_6",
+  "timestamp": "2026-06-17T01:13:14.653Z",
+  "cases_run": 21,
+  "correct": 8,
+  "total": 21,
+  "accuracy_percent": 38.1,
+  "baseline_accuracy": 28.6,
+  "improvement_pp": 9.5,
+  "promotion_gate_pass": false,
+  "results": [
+    {
+      "caseId": "BLND-006",
+      "expected": "DEMAND_FORECASTING_MISMATCH",
+      "predicted": "GO_TO_MARKET_MISALIGNMENT",
+      "correct": false,
+      "confidence": 48
+    },
+    {
+      "caseId": "BLND-007",
+      "expected": "GO_TO_MARKET_MISALIGNMENT",
+      "predicted": "GO_TO_MARKET_MISALIGNMENT",
+      "correct": true,
+      "confidence": 48
+    },
+    {
+      "caseId": "BLND-008",
+      "expected": "INSUFFICIENT_EVIDENCE",
+      "predicted": "GO_TO_MARKET_MISALIGNMENT",
+      "correct": false,
+      "confidence": 48
+    },
+    {
+      "caseId": "BLND-009",
+      "expected": "OPERATIONAL_BOTTLENECK",
+      "predicted": "GO_TO_MARKET_MISALIGNMENT",
+      "correct": false,
+      "confidence": 48
+    },
+    {
+      "caseId": "BLND-010",
+      "expected": "STRATEGIC_PRICING_ERROR",
+      "predicted": "GO_TO_MARKET_MISALIGNMENT",
+      "correct": false,
+      "confidence": 53
+    },
+    {
+      "caseId": "ADV-011",
+      "expected": "INSUFFICIENT_EVIDENCE",
+      "predicted": "UNIT_ECONOMICS_BREAKDOWN",
+      "correct": false,
+      "confidence": 65
+    },
+    {
+      "caseId": "ADV-012",
+      "expected": "TRUST_QUALITY_CRISIS",
+      "predicted": "CUSTOMER_RETENTION_EROSION",
+      "correct": false,
+      "confidence": 60
+    },
+    {
+      "caseId": "ADV-013",
+      "expected": "INSUFFICIENT_EVIDENCE",
+      "predicted": "UNIT_ECONOMICS_BREAKDOWN",
+      "correct": false,
+      "confidence": 26
+    },
+    {
+      "caseId": "ADV-014",
+      "expected": "INSUFFICIENT_EVIDENCE",
+      "predicted": "UNIT_ECONOMICS_BREAKDOWN",
+      "correct": false,
+      "confidence": 65
+    },
+    {
+      "caseId": "RW-016",
+      "expected": "GO_TO_MARKET_MISALIGNMENT",
+      "predicted": "DEMAND_FORECASTING_MISMATCH",
+      "correct": false,
+      "confidence": 65
+    },
+    {
+      "caseId": "RW-018",
+      "expected": "UNIT_ECONOMICS_BREAKDOWN",
+      "predicted": "UNIT_ECONOMICS_BREAKDOWN",
+      "correct": true,
+      "confidence": 65
+    },
+    {
+      "caseId": "RW-020",
+      "expected": "UNIT_ECONOMICS_BREAKDOWN",
+      "predicted": "UNIT_ECONOMICS_BREAKDOWN",
+      "correct": true,
+      "confidence": 65
+    },
+    {
+      "caseId": "RW-022",
+      "expected": "UNIT_ECONOMICS_BREAKDOWN",
+      "predicted": "OPERATIONAL_BOTTLENECK",
+      "correct": false,
+      "confidence": 65
+    },
+    {
+      "caseId": "RW-024",
+      "expected": "OPERATIONAL_BOTTLENECK",
+      "predicted": "UNIT_ECONOMICS_BREAKDOWN",
+      "correct": false,
+      "confidence": 25
+    },
+    {
+      "caseId": "PD-011",
+      "expected": "UNIT_ECONOMICS_BREAKDOWN",
+      "predicted": "UNIT_ECONOMICS_BREAKDOWN",
+      "correct": true,
+      "confidence": 65
+    },
+    {
+      "caseId": "PD-013",
+      "expected": "OPERATIONAL_BOTTLENECK",
+      "predicted": "OPERATIONAL_BOTTLENECK",
+      "correct": true,
+      "confidence": 65
+    },
+    {
+      "caseId": "PD-015",
+      "expected": "UNIT_ECONOMICS_BREAKDOWN",
+      "predicted": "UNIT_ECONOMICS_BREAKDOWN",
+      "correct": true,
+      "confidence": 65
+    },
+    {
+      "caseId": "PD-017",
+      "expected": "DEMAND_FORECASTING_MISMATCH",
+      "predicted": "DEMAND_FORECASTING_MISMATCH",
+      "correct": true,
+      "confidence": 65
+    },
+    {
+      "caseId": "PD-019",
+      "expected": "UNIT_ECONOMICS_BREAKDOWN",
+      "predicted": "DEMAND_FORECASTING_MISMATCH",
+      "correct": false,
+      "confidence": 65
+    },
+    {
+      "caseId": "SYN-011",
+      "expected": "TRUST_QUALITY_CRISIS",
+      "predicted": "TRUST_QUALITY_CRISIS",
+      "correct": true,
+      "confidence": 65
+    },
+    {
+      "caseId": "SYN-013",
+      "expected": "CUSTOMER_RETENTION_EROSION",
+      "predicted": "GO_TO_MARKET_MISALIGNMENT",
+      "correct": false,
+      "confidence": 48
+    }
+  ]
+}
