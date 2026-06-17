@@ -1,0 +1,1385 @@
+[
+  {
+    "caseId": "BLND-006",
+    "groundTruth": "demand_forecasting_mismatch",
+    "predicted": "demand_forecasting_mismatch",
+    "correct": true,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "trust_quality_crisis",
+    "runnerUpConfidence": 34,
+    "marginOfVictory": 16,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 50,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "customer_retention",
+      "quality_delivery"
+    ],
+    "patterns": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "financial_health-market_position-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 3
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 2,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 34,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 28,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "BLND-007",
+    "groundTruth": "go_to_market_misalignment",
+    "predicted": "go_to_market_misalignment",
+    "correct": true,
+    "winnerConfidence": 38,
+    "runnerUpDiagnosis": "trust_quality_crisis",
+    "runnerUpConfidence": 34,
+    "marginOfVictory": 4,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 38,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "customer_retention",
+      "quality_delivery"
+    ],
+    "patterns": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 38,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 34,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 34,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "BLND-008",
+    "groundTruth": "insufficient_evidence",
+    "predicted": "go_to_market_misalignment",
+    "correct": false,
+    "winnerConfidence": 33,
+    "runnerUpDiagnosis": "trust_quality_crisis",
+    "runnerUpConfidence": 29,
+    "marginOfVictory": 4,
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "customer_retention",
+      "quality_delivery"
+    ],
+    "patterns": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 33,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 29,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 24,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "BLND-009",
+    "groundTruth": "operational_bottleneck",
+    "predicted": "trust_quality_crisis",
+    "correct": false,
+    "winnerConfidence": 29,
+    "runnerUpDiagnosis": "go_to_market_misalignment",
+    "runnerUpConfidence": 33,
+    "marginOfVictory": -4,
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "evidenceDimensions": [
+      "financial_health",
+      "quality_delivery",
+      "customer_retention",
+      "market_position"
+    ],
+    "patterns": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 29,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 33,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 24,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 80
+  },
+  {
+    "caseId": "BLND-010",
+    "groundTruth": "strategic_pricing_error",
+    "predicted": "strategic_pricing_error",
+    "correct": true,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "go_to_market_misalignment",
+    "runnerUpConfidence": 33,
+    "marginOfVictory": 17,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 50,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "quality_delivery",
+      "customer_retention"
+    ],
+    "patterns": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 1,
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "financial_health-market_position-pattern",
+        "patternStrength": 5,
+        "potentialRootCauses": [
+          "strategic_pricing_error"
+        ],
+        "supportingItemCount": 3
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "strategic_pricing_error",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 5,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 2,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 33,
+        "patternCount": 1,
+        "patternStrengthSum": 2,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 34,
+        "patternCount": 1,
+        "patternStrengthSum": 1,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "ADV-011",
+    "groundTruth": "insufficient_evidence",
+    "predicted": "unit_economics_breakdown",
+    "correct": false,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "demand_forecasting_mismatch",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "market_position",
+      "customer_retention"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 2,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "ADV-012",
+    "groundTruth": "trust_quality_crisis",
+    "predicted": "customer_retention_erosion",
+    "correct": false,
+    "winnerConfidence": 45,
+    "runnerUpDiagnosis": "trust_quality_crisis",
+    "runnerUpConfidence": 40,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 2,
+    "correctDiagnosisConfidence": 40,
+    "evidenceDimensions": [
+      "financial_health",
+      "customer_retention",
+      "market_position",
+      "quality_delivery"
+    ],
+    "patterns": [
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 3,
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 40,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 40,
+        "patternCount": 1,
+        "patternStrengthSum": 2,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "ADV-013",
+    "groundTruth": "insufficient_evidence",
+    "predicted": "unit_economics_breakdown",
+    "correct": false,
+    "winnerConfidence": 26,
+    "runnerUpDiagnosis": "customer_retention_erosion",
+    "runnerUpConfidence": 10,
+    "marginOfVictory": 16,
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "evidenceDimensions": [
+      "financial_health",
+      "unit_economics_cohort_detail",
+      "go_to_market",
+      "customer_retention"
+    ],
+    "patterns": [],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 26,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      },
+      {
+        "rank": 2,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 10,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      },
+      {
+        "rank": 3,
+        "diagnosis": "cash_runway_crisis",
+        "confidence": 10,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "ADV-014",
+    "groundTruth": "insufficient_evidence",
+    "predicted": "operational_bottleneck",
+    "correct": false,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "unit_economics_breakdown",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "customer_mix",
+      "competitive_demand"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "operational_efficiency-bottleneck-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 1
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 50,
+        "patternCount": 2,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "cash_runway_crisis",
+        "confidence": 10,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "RW-016",
+    "groundTruth": "go_to_market_misalignment",
+    "predicted": "unit_economics_breakdown",
+    "correct": false,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "operational_bottleneck",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "customer_retention",
+      "market_position"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 8,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 4
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 3
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "supportingEvidenceCount": 4
+      },
+      {
+        "rank": 2,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "supportingEvidenceCount": 4
+      },
+      {
+        "rank": 3,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 40,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "RW-018",
+    "groundTruth": "unit_economics_breakdown",
+    "predicted": "unit_economics_breakdown",
+    "correct": true,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "operational_bottleneck",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 50,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 10,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 5
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 10,
+        "supportingEvidenceCount": 5
+      },
+      {
+        "rank": 2,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 10,
+        "supportingEvidenceCount": 5
+      },
+      {
+        "rank": 3,
+        "diagnosis": "cash_runway_crisis",
+        "confidence": 10,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "RW-020",
+    "groundTruth": "unit_economics_breakdown",
+    "predicted": "unit_economics_breakdown",
+    "correct": true,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "operational_bottleneck",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 50,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "operational_efficiency"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 8,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 4
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "supportingEvidenceCount": 4
+      },
+      {
+        "rank": 2,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "supportingEvidenceCount": 4
+      },
+      {
+        "rank": 3,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 38,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "RW-022",
+    "groundTruth": "unit_economics_breakdown",
+    "predicted": "demand_forecasting_mismatch",
+    "correct": false,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "operational_bottleneck",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 3,
+    "correctDiagnosisConfidence": 45,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "market_position"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "operational_efficiency-bottleneck-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 1
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "patternCount": 2,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 3,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "RW-024",
+    "groundTruth": "operational_bottleneck",
+    "predicted": "brand_erosion",
+    "correct": false,
+    "winnerConfidence": 10,
+    "runnerUpDiagnosis": "cash_runway_crisis",
+    "runnerUpConfidence": 10,
+    "marginOfVictory": 0,
+    "correctDiagnosisGenerated": false,
+    "correctDiagnosisRank": 0,
+    "correctDiagnosisConfidence": 0,
+    "evidenceDimensions": [
+      "talent_retention",
+      "financial_health",
+      "market_position"
+    ],
+    "patterns": [],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "brand_erosion",
+        "confidence": 10,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      },
+      {
+        "rank": 2,
+        "diagnosis": "cash_runway_crisis",
+        "confidence": 10,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "PD-011",
+    "groundTruth": "unit_economics_breakdown",
+    "predicted": "unit_economics_breakdown",
+    "correct": true,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "operational_bottleneck",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 50,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "operational_efficiency"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 8,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 4
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "supportingEvidenceCount": 4
+      },
+      {
+        "rank": 2,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "supportingEvidenceCount": 4
+      },
+      {
+        "rank": 3,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 38,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "PD-013",
+    "groundTruth": "operational_bottleneck",
+    "predicted": "operational_bottleneck",
+    "correct": true,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "demand_forecasting_mismatch",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 50,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "market_position"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 8,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 4
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 3
+      },
+      {
+        "name": "operational_efficiency-bottleneck-pattern",
+        "patternStrength": 3,
+        "potentialRootCauses": [
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 50,
+        "patternCount": 2,
+        "patternStrengthSum": 11,
+        "supportingEvidenceCount": 4
+      },
+      {
+        "rank": 2,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 3,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 8,
+        "supportingEvidenceCount": 4
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "PD-015",
+    "groundTruth": "unit_economics_breakdown",
+    "predicted": "unit_economics_breakdown",
+    "correct": true,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "operational_bottleneck",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 50,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "market_position"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 3
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 3
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 2,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 3,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "PD-017",
+    "groundTruth": "demand_forecasting_mismatch",
+    "predicted": "demand_forecasting_mismatch",
+    "correct": true,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "operational_bottleneck",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 50,
+    "evidenceDimensions": [
+      "financial_health",
+      "market_position",
+      "operational_efficiency"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 3
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "operational_efficiency-bottleneck-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 1
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "patternCount": 2,
+        "patternStrengthSum": 8,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 3,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "PD-019",
+    "groundTruth": "unit_economics_breakdown",
+    "predicted": "demand_forecasting_mismatch",
+    "correct": false,
+    "winnerConfidence": 50,
+    "runnerUpDiagnosis": "unit_economics_breakdown",
+    "runnerUpConfidence": 45,
+    "marginOfVictory": 5,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 2,
+    "correctDiagnosisConfidence": 45,
+    "evidenceDimensions": [
+      "financial_health",
+      "operational_efficiency",
+      "market_position"
+    ],
+    "patterns": [
+      {
+        "name": "financial_health-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "unit_economics_breakdown",
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 3
+      },
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 3
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 50,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 2,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 3,
+        "diagnosis": "operational_bottleneck",
+        "confidence": 45,
+        "patternCount": 1,
+        "patternStrengthSum": 6,
+        "supportingEvidenceCount": 3
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "SYN-011",
+    "groundTruth": "trust_quality_crisis",
+    "predicted": "trust_quality_crisis",
+    "correct": true,
+    "winnerConfidence": 65,
+    "runnerUpDiagnosis": "customer_retention_erosion",
+    "runnerUpConfidence": 46,
+    "marginOfVictory": 19,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 1,
+    "correctDiagnosisConfidence": 65,
+    "evidenceDimensions": [
+      "quality_delivery",
+      "customer_retention",
+      "operational_efficiency",
+      "market_position"
+    ],
+    "patterns": [
+      {
+        "name": "market_position-operational_efficiency-pattern",
+        "patternStrength": 4,
+        "potentialRootCauses": [
+          "demand_forecasting_mismatch"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 5,
+        "potentialRootCauses": [
+          "trust_quality_crisis",
+          "customer_retention_erosion"
+        ],
+        "supportingItemCount": 3
+      },
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      },
+      {
+        "name": "quality_delivery-customer_retention-pattern",
+        "patternStrength": 6,
+        "potentialRootCauses": [
+          "trust_quality_crisis"
+        ],
+        "supportingItemCount": 3
+      },
+      {
+        "name": "operational_efficiency-bottleneck-pattern",
+        "patternStrength": 2,
+        "potentialRootCauses": [
+          "operational_bottleneck"
+        ],
+        "supportingItemCount": 1
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "trust_quality_crisis",
+        "confidence": 65,
+        "patternCount": 2,
+        "patternStrengthSum": 11,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 2,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 46,
+        "patternCount": 1,
+        "patternStrengthSum": 5,
+        "supportingEvidenceCount": 3
+      },
+      {
+        "rank": 3,
+        "diagnosis": "demand_forecasting_mismatch",
+        "confidence": 33,
+        "patternCount": 1,
+        "patternStrengthSum": 4,
+        "supportingEvidenceCount": 2
+      }
+    ],
+    "evidenceTraceRate": 100
+  },
+  {
+    "caseId": "SYN-013",
+    "groundTruth": "customer_retention_erosion",
+    "predicted": "go_to_market_misalignment",
+    "correct": false,
+    "winnerConfidence": 33,
+    "runnerUpDiagnosis": "unit_economics_breakdown",
+    "runnerUpConfidence": 15,
+    "marginOfVictory": 18,
+    "correctDiagnosisGenerated": true,
+    "correctDiagnosisRank": 3,
+    "correctDiagnosisConfidence": 10,
+    "evidenceDimensions": [
+      "customer_retention",
+      "product_adoption",
+      "customer_success",
+      "market_position",
+      "unit_economics"
+    ],
+    "patterns": [
+      {
+        "name": "market_position-customer_retention-pattern",
+        "patternStrength": 3,
+        "potentialRootCauses": [
+          "go_to_market_misalignment"
+        ],
+        "supportingItemCount": 2
+      }
+    ],
+    "allHypotheses": [
+      {
+        "rank": 1,
+        "diagnosis": "go_to_market_misalignment",
+        "confidence": 33,
+        "patternCount": 1,
+        "patternStrengthSum": 3,
+        "supportingEvidenceCount": 2
+      },
+      {
+        "rank": 2,
+        "diagnosis": "unit_economics_breakdown",
+        "confidence": 15,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      },
+      {
+        "rank": 3,
+        "diagnosis": "customer_retention_erosion",
+        "confidence": 10,
+        "patternCount": 0,
+        "patternStrengthSum": 0,
+        "supportingEvidenceCount": 0
+      }
+    ],
+    "evidenceTraceRate": 80
+  }
+]

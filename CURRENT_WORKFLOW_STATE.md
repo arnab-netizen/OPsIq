@@ -49,6 +49,41 @@ benchmark_blocked: true
 blockers: [STAGE_A_REMEDIATION_REQUIRED - Accuracy 4.8% vs target 40%]
 ```
 
+---
+
+## STAGE A — DIAGNOSIS MAPPING FIX + DEEP VALIDATION (2026-06-17, authoritative update)
+
+```yaml
+mapping_fix_status: IMPLEMENTED_AND_DEEP_VALIDATED
+mapping_fix_commit: 632e2452
+validation_commit_base: cc7363e7
+baseline_accuracy: 8/21 (38.1%)
+mapping_fix_accuracy: 10/21 (47.6%)
+net_gain: +2 (BLND-006 demand_forecasting_mismatch, BLND-010 strategic_pricing_error)
+regressions: 0
+reproduced_independently: 3 harnesses (slice-8 benchmark, forensic trace, all-21 trace)
+benchmark_integrity: VERIFIED_AT_CORRECTNESS_LEVEL
+  - caveat: hardcoded slice7Predicted baseline labels unreliable for intermediate tracking (non-fatal)
+  - caveat: committed FORENSIC_SCORE_TRACE_LOGS.json was stale, regenerated read-only to match final code
+newly_correct_validity: VALID_CORRECT (both won on causal evidence, not accidental)
+overfitting_found: NO (no case-ID/answer-key/benchmark coupling)
+robustness_watch_items:
+  - Pattern 11 (operational bottleneck) trigger is broad — adds OB as runner-up widely (never overtakes a correct winner)
+  - Pattern 9 (pricing) regex phrase-specific — false-negative risk on unseen pricing vocabulary
+remaining_failures: 11
+  - ABSTENTION_REQUIRED: 4 (BLND-008, ADV-011, ADV-013, ADV-014) — insufficient_evidence, ungeneratable
+  - WRONG_CANDIDATE_TOO_HIGH (ranking): 4 (ADV-012, RW-016, RW-022, PD-019)
+  - EVIDENCE_PATTERN_NOT_CREATED (dimension): 2 (BLND-009, RW-024)
+  - CANDIDATE_GENERATED_TOO_LOW (adoption): 1 (SYN-013)
+next_dominant_root_cause: ABSTENTION (4) tied with RANKING (4)
+safety_concern: 2 false-high-confidence wrong answers (ADV-011 UEB@50, ADV-014 OB@50) on insufficient-evidence cases
+promotion_decision: OUTCOME_B + OUTCOME_E (fix valid; promotion withheld pending abstention/insufficient-evidence gate)
+stage_a_promoted: false
+fix_disposition: KEEP (do not revert)
+next_required_step: Implement abstention/INSUFFICIENT_EVIDENCE gate (PRIORITY 3), then re-benchmark — separate run
+```
+
+
 Stage A Slice 1 benchmark execution completed successfully with excellent metrics:
 - 21/21 cases executed without errors (100% success rate)
 - Evidence trace rate 98% (near-perfect, target ≥85%)
