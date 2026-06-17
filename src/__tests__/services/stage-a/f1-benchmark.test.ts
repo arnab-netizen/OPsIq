@@ -82,25 +82,26 @@ describe("F1: Dimension Validation Benchmark (Full 21-Case)", () => {
   let slice9Map: Record<string, any> = {};
 
   beforeAll(() => {
-    // Load SLICE_9 baseline for comparison
-    const slice9ResultsPath =
-      "simulation_runs/round_002/stage_a_remediation_slice_9_pattern_rebalance_outputs/SLICE_9_benchmark_validation.json";
-    if (!fs.existsSync(slice9ResultsPath)) {
+    // Load SLICE_8 baseline for comparison (original causal evidence baseline)
+    // This is the correct baseline before pattern rebalancing and causal adjudication regressions
+    const slice8ResultsPath =
+      "simulation_runs/round_002/stage_a_remediation_slice_8_outputs/SLICE_8_benchmark_validation.json";
+    if (!fs.existsSync(slice8ResultsPath)) {
       console.error(
-        `Error: SLICE_9 results not found at ${slice9ResultsPath}`
+        `Error: SLICE_8 results not found at ${slice8ResultsPath}`
       );
-      throw new Error(`SLICE_9 benchmark results required`);
+      throw new Error(`SLICE_8 benchmark results required`);
     }
 
-    const slice9Results = JSON.parse(
-      fs.readFileSync(slice9ResultsPath, "utf-8")
+    const slice8Results = JSON.parse(
+      fs.readFileSync(slice8ResultsPath, "utf-8")
     );
     slice9Map = {};
-    slice9Results.results.forEach((r: any) => {
+    slice8Results.results.forEach((r: any) => {
       slice9Map[r.caseId] = r;
     });
-    slice9Accuracy = slice9Results.accuracy_percent;
-    slice9CorrectCount = slice9Results.correct;
+    slice9Accuracy = slice8Results.accuracy_percent;
+    slice9CorrectCount = slice8Results.correct;
   });
 
   it("should evaluate all 21 benchmark cases with F1 dimension validation", () => {
@@ -134,11 +135,11 @@ describe("F1: Dimension Validation Benchmark (Full 21-Case)", () => {
           isCritical: e.isCritical || false,
         })) || [];
 
-      // Get SLICE_9 baseline
-      const slice9Result = slice9Map?.[caseId];
-      const slice9Predicted = slice9Result?.predicted || "UNKNOWN";
+      // Get SLICE_8 baseline (original causal evidence baseline)
+      const slice8Result = slice9Map?.[caseId];
+      const slice8Predicted = slice8Result?.slice8Predicted || "UNKNOWN";
 
-      // Run F1 diagnosis
+      // Run OPTION_3_FIX diagnosis (F1 + proportional boosts)
       const synthesized = synthesizer.synthesizeEvidence(evidence);
       const hypotheses = generator.generateHypotheses(synthesized, evidence);
 
@@ -154,8 +155,8 @@ describe("F1: Dimension Validation Benchmark (Full 21-Case)", () => {
       confidenceValues.push(confidence);
 
       const correct = predicted === expected;
-      const newlyCorrect = slice9Predicted !== expected && predicted === expected;
-      const regression = slice9Predicted === expected && predicted !== expected;
+      const newlyCorrect = slice8Predicted.toLowerCase() !== expected && predicted === expected;
+      const regression = slice8Predicted.toLowerCase() === expected && predicted !== expected;
 
       if (correct) correctCount++;
       if (newlyCorrect) newlyCorrectCount++;
@@ -164,7 +165,7 @@ describe("F1: Dimension Validation Benchmark (Full 21-Case)", () => {
       results.push({
         caseId,
         expected,
-        slice9Predicted,
+        slice9Predicted: slice8Predicted,
         f1Predicted: predicted,
         f1Confidence: confidence,
         correct,
@@ -173,9 +174,9 @@ describe("F1: Dimension Validation Benchmark (Full 21-Case)", () => {
         reason: correct
           ? "Correct"
           : newlyCorrect
-            ? "Fixed by F1"
+            ? "Fixed by Option 3"
             : regression
-              ? "Regression (was correct in SLICE_9)"
+              ? "Regression (was correct in SLICE_8)"
               : "Still failing",
       });
     });
@@ -196,7 +197,7 @@ describe("F1: Dimension Validation Benchmark (Full 21-Case)", () => {
       sortedConfidence[Math.floor(sortedConfidence.length / 2)];
 
     const output: F1BenchmarkOutput = {
-      phase: "F1_DIMENSION_VALIDATION",
+      phase: "OPTION_3_FIX_PROPORTIONAL_BOOSTS",
       date: new Date().toISOString(),
       slice9_baseline: {
         accuracy: slice9Accuracy,
@@ -229,28 +230,28 @@ describe("F1: Dimension Validation Benchmark (Full 21-Case)", () => {
 
     // Ensure output directory exists
     const outputDir =
-      "simulation_runs/round_002/stage_a_f1_dimension_validation_outputs";
+      "simulation_runs/round_002/stage_a_pipeline_contract_fix_outputs";
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
     // Write results
     fs.writeFileSync(
-      path.join(outputDir, "F1_benchmark_validation.json"),
+      path.join(outputDir, "OPTION_3_benchmark_validation.json"),
       JSON.stringify(output, null, 2)
     );
 
     // Write details
     fs.writeFileSync(
-      path.join(outputDir, "F1_benchmark_details.json"),
+      path.join(outputDir, "OPTION_3_benchmark_details.json"),
       JSON.stringify(results, null, 2)
     );
 
     // Log summary
-    console.log("\n=== F1 DIMENSION VALIDATION BENCHMARK ===");
-    console.log(`SLICE_9 Baseline: ${slice9CorrectCount}/${totalCases} (${slice9Accuracy}%)`);
+    console.log("\n=== OPTION_3_FIX: PROPORTIONAL BOOSTS BENCHMARK ===");
+    console.log(`SLICE_8 Baseline: ${slice9CorrectCount}/${totalCases} (${slice9Accuracy}%)`);
     console.log(
-      `F1 Result: ${correctCount}/${totalCases} (${Math.round(accuracy * 10) / 10}%)`
+      `Option 3 Result: ${correctCount}/${totalCases} (${Math.round(accuracy * 10) / 10}%)`
     );
     console.log(`Net Gain: ${netGain > 0 ? "+" : ""}${netGain}`);
     console.log(`Newly Correct: ${newlyCorrectCount}`);
