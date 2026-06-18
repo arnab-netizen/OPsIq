@@ -1203,8 +1203,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A evidence-support rule refinement: confidence-gated low-support abstention (over-abstention 10->7, safety 90.3%->93.2%, 0 unsafe/dangerous proceeds)",
-  "pushed": true,
+  "last_commit": "STAGE A diagnosis-engine residual audit (docs only): FRC-11/HC-02/PC-01 trace + decision (IMPLEMENT_PC01_ONLY)",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1593,5 +1593,35 @@
     "regressions": 0,
     "recovery": "prior run interrupted (APIError) after engine edit; diff re-verified, retrial re-run, result reproduced from scratch",
     "gates": "evidence-support-refinement+governance+scorer+narrowing+owner-danger+empirical-discipline 167/167; tsc only pre-existing run-case.ts:149; prisma valid"
+  },
+  "stage_a_diagnosis_engine_residual_audit": {
+    "status": "AUDIT_ONLY_NO_IMPLEMENTATION",
+    "scope": "read-only forensic audit of 3 diagnosis-engine residual over-abstentions (FRC-11, HC-02, PC-01)",
+    "files": [
+      "DIAGNOSIS_ENGINE_RESIDUAL_AUDIT.md",
+      "DIAGNOSIS_ENGINE_RESIDUAL_FIX_DECISION.md",
+      "simulation_runner/audit-diagnosis-engine-residuals.py"
+    ],
+    "cases_audited": [
+      "R2-FRC-11",
+      "R2-HC-02",
+      "R2-PC-01"
+    ],
+    "classification": "FRC-11=A (pattern gap, defer MED regression); HC-02=B (multi-mechanism, hold); PC-01=A (priority bug, fix)",
+    "safe_to_fix": [
+      "R2-PC-01"
+    ],
+    "must_hold": [
+      "R2-HC-02",
+      "R2-FRC-11(defer)",
+      "R2-FRC-04",
+      "R2-FRC-07",
+      "R2-PC-09",
+      "R2-PC-11"
+    ],
+    "decision": "IMPLEMENT_PC01_ONLY (survival-dominance diagnosis-selection rule; next slice, not this run)",
+    "expected_movement": "over_abstention 7->6, diagnosis 95->96 (PC-01 misdiagnosis->correct), safety 96->97; unsafe/dangerous 0",
+    "unsafe_dangerous_risk": "none (cash-survival proceed is low-cost stabilization; gate active)",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED"
   }
 }
