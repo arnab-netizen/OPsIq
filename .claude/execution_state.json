@@ -1204,7 +1204,7 @@
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
   "last_commit": "STAGE A causal-challenge adverse-off-archetype narrowing: release secondary/downstream over-abstentions (over-abstention 27->21, safety 73.8%->79.6%, 0 unsafe/dangerous proceeds, ADV-04 held)",
-  "pushed": false,
+  "pushed": true,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
