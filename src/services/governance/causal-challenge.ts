@@ -226,6 +226,65 @@ function isHoldWorthyOffArchetype(ev: CausalEvidence, diagnosisType: string): bo
   return false;
 }
 
+// ─── Out-of-model arm NARROWING (this slice; adverse-off-archetype arm untouched) ──
+// The blanket rule "any OUT_OF_MODEL_CAUSE_STEMS token in the problem ⇒ abstain" was
+// written when the engine had only three operational archetypes. After R5 slices 1–3
+// most of those domains (cash/WC/debt/pricing/unit-econ/margin/demand/gtm/inventory/
+// legal/key-person/capex) are COVERED, so a stem naming the very cause the engine now
+// diagnoses is no longer "out of model". The narrowed rule holds the out-of-model arm
+// ONLY when a matched stem belongs to a PROTECTED-DANGER family (liquidity / capex /
+// legal-fraud) that the committed diagnosis does NOT subsume — i.e. an unresolved
+// dangerous primary cause the chosen diagnosis ignores (e.g. a capex diagnosis that
+// ignores a thin-runway liquidity threat, as in ADV-02). Now-covered non-dangerous
+// domains (key-person/demand/market/unit-econ) and incidental macro/temporal/integrity
+// mentions no longer abstain on this arm. Severe off-archetype financial/legal evidence
+// is independently caught by the (untouched) adverse-off-archetype arm and the
+// owner-action danger detector, so this only ever REDUCES abstention.
+
+/** Protected-danger stem families: proceeding on an unresolved instance of these is dangerous. */
+const PROTECTED_STEM_DOMAINS: { domain: string; stems: string[] }[] = [
+  { domain: "liquidity", stems: ["runway", "insolven", "cash burn", "out of cash", "cannot make payroll", "missed payroll"] },
+  { domain: "capex", stems: ["capex", "factory investment", "build a new factory", "major investment"] },
+  { domain: "legal", stems: ["regulation", "regulatory", "lawsuit", "compliance ban", "banned", "ban on"] },
+  { domain: "integrity", stems: ["fraud", "theft", "embezzle"] },
+];
+
+/** Which protected-danger domains a committed covered diagnosis SUBSUMES (so they no longer hold). */
+const DIAGNOSIS_SUBSUMES_DOMAIN: Record<string, Set<string>> = {
+  cash_liquidity_crisis: new Set(["liquidity"]),
+  working_capital_stress: new Set(["liquidity"]),
+  debt_solvency_pressure: new Set(["liquidity"]),
+  strategic_capex_risk: new Set(["capex"]),
+  legal_governance_risk: new Set(["legal", "integrity"]),
+};
+
+// A dangerous owner-proposed deep/broad discount stated alongside negative unit
+// economics in the PROBLEM text is a protected danger that NO diagnosis subsumes — it
+// must always hold. (This mirrors the owner-action danger detector, which reads the
+// case EVIDENCE; this catches the same danger when it is stated in the problem text.)
+const PROBLEM_DEEP_DISCOUNT =
+  /(deep|aggressive|sitewide|site-wide|across[- ]the[- ]board|broad|blanket|steep|heavy|large)[\w ,'-]{0,40}?(discount|price cut|markdown|promotion)|discount(?:ing)? (?:deeply|hard|aggressively|heavily)|deep discount/;
+const PROBLEM_NEGATIVE_ECON =
+  /unit economics[\w ]*(?:already )?negativ|negative (?:unit )?(?:economics|margin|contribution)|below cost|contribution[\w ]*negativ|margin[\w ]*negativ|losing money (?:per|on each)/;
+
+function problemNegativeMarginDiscount(t: string): boolean {
+  return PROBLEM_DEEP_DISCOUNT.test(t) && PROBLEM_NEGATIVE_ECON.test(t);
+}
+
+/**
+ * Narrowed out-of-model detection: an out-of-model cause holds only when a matched
+ * stem is a protected-danger family the committed diagnosis does not subsume, or the
+ * problem states a dangerous deep-discount-on-negative-economics owner action.
+ */
+function outOfModelProtectedDanger(businessProblem: string, diagnosisType: string): boolean {
+  const t = businessProblem.toLowerCase();
+  if (problemNegativeMarginDiscount(t)) return true; // never subsumed
+  const subsumed = DIAGNOSIS_SUBSUMES_DOMAIN[diagnosisType] ?? new Set<string>();
+  return PROTECTED_STEM_DOMAINS.some(
+    (g) => !subsumed.has(g.domain) && g.stems.some((s) => s.trim().length > 0 && t.includes(s))
+  );
+}
+
 
 /**
  * Run the causal challenge. Deterministic and pure.
@@ -243,8 +302,14 @@ export function runCausalChallenge(input: CausalChallengeInput): CausalChallenge
     };
   }
 
-  // (1) Does the stated problem reference an out-of-model causal domain?
-  const outOfModelCauseInProblem = hasStem(input.businessProblem, OUT_OF_MODEL_CAUSE_STEMS);
+  // (1) Does the stated problem reference an out-of-model causal domain? NARROWED to a
+  // protected-danger family (liquidity/capex/legal-fraud) the committed diagnosis does
+  // not subsume (see outOfModelProtectedDanger). Covered non-dangerous domains and
+  // incidental macro/temporal mentions no longer abstain on this arm.
+  const outOfModelCauseInProblem = outOfModelProtectedDanger(
+    input.businessProblem,
+    input.diagnosisType
+  );
   if (outOfModelCauseInProblem) {
     reasons.push(
       "stated problem references a cause outside the engine's operational archetypes (market/financial/legal/people/macro/integrity)"

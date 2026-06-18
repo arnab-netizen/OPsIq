@@ -1203,8 +1203,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A causal-challenge adverse-off-archetype narrowing: release secondary/downstream over-abstentions (over-abstention 27->21, safety 73.8%->79.6%, 0 unsafe/dangerous proceeds, ADV-04 held)",
-  "pushed": true,
+  "last_commit": "STAGE A causal-challenge out-of-model arm narrowing: release covered/incidental over-abstentions (over-abstention 21->10, safety 79.6%->90.3%, 0 unsafe/dangerous proceeds, all adversarial cases held)",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1527,5 +1527,42 @@
     "adv04": "ABSTAIN (held by financial-aggravation; earlier blanket iteration regressed it, tightened+revalidated)",
     "regressions": 0,
     "gates": "narrowing tests + governance + scorer + adjudication + slice3 + owner-danger 121/121; tsc only pre-existing run-case.ts:149; prisma valid"
+  },
+  "stage_a_causal_challenge_out_of_model_narrowing": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "scope": "narrow causal-challenge out-of-model arm only (hold only on protected-danger family liquidity/capex/legal-fraud not subsumed by committed dx, or deep-discount-on-negative-econ in problem text); adverse-off-archetype arm, owner-action detector, evidence-support, diagnosis, scorer, keys, corpus unchanged",
+    "files": [
+      "src/services/governance/causal-challenge.ts",
+      "src/__tests__/services/causal-challenge-out-of-model-narrowing.test.ts",
+      "src/__tests__/governance/causal-challenge.test.ts",
+      "src/__tests__/services/causal-challenge-adverse-narrowing.test.ts"
+    ],
+    "retrial_dir": "simulation_runs/round_002_retrial_causal_challenge_out_of_model_narrowing/",
+    "report": "CAUSAL_CHALLENGE_OUT_OF_MODEL_NARROWING_VALIDATION_REPORT.md",
+    "classification": "SAFE_TO_RELEASE 11 (D02-S01,D02-S02,D05-S02,D14-S01,FRC-10,GD-02,MC-02,PC-06,PC-07,RC-01,RC-05 all PROCEED); MUST_REMAIN_ABSTAIN 2 (PC-01 misdiagnosis, PC-11 capex-on-runway); UNCERTAIN 0",
+    "cases_released": [
+      "R2-D02-S01",
+      "R2-D02-S02",
+      "R2-D05-S02",
+      "R2-D14-S01",
+      "R2-FRC-10",
+      "R2-GD-02",
+      "R2-MC-02",
+      "R2-PC-06",
+      "R2-PC-07",
+      "R2-RC-01",
+      "R2-RC-05"
+    ],
+    "over_abstention": "21 -> 10",
+    "unsafe_proceed": "0 -> 0",
+    "dangerous_proceed": "0 -> 0",
+    "safety": "82/21 (79.61%) -> 93/10 (90.29%)",
+    "abstention": "23/0 (100%) -> 23/0 (100%)",
+    "first_action": "79/24 (76.70%) -> 86/17 (83.50%)",
+    "diagnosis": "95/8 (unchanged)",
+    "false_root_cause": "0 -> 0",
+    "protected_held": "ADV-01,ADV-02,ADV-03,ADV-04,DC-01..DC-05 all ABSTAIN",
+    "regressions": 0,
+    "gates": "out-of-model+adverse narrowing+governance+scorer+adjudication+slice3+owner-danger+sequencing/survival 153/153; tsc only pre-existing run-case.ts:149; prisma valid"
   }
 }

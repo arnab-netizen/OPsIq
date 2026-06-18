@@ -123,11 +123,14 @@ describe("causal-challenge — adverse-off-archetype narrowing (still holds)", (
   });
 });
 
-describe("causal-challenge — out-of-model arm is unchanged", () => {
-  it("an out-of-model cause in the business problem still abstains regardless of the narrowing", () => {
+describe("causal-challenge — out-of-model arm (protected-danger) still holds", () => {
+  it("a protected-danger out-of-model cause in the business problem still abstains", () => {
+    // A liquidity threat not subsumed by an operational diagnosis still holds the
+    // out-of-model arm (covered/incidental stems are released — see
+    // causal-challenge-out-of-model-narrowing.test.ts).
     const sig = runCausalChallenge({
       committed: true,
-      businessProblem: "a key-person founder resigned and took the client relationships",
+      businessProblem: "turnaround is slow and the firm is near insolvency with a thin cash runway",
       diagnosisType: "operational_bottleneck",
       evidence: [ev("operational_efficiency", "Turnaround is slow", true, { turnaroundDays: 12 })],
     });
