@@ -1,5 +1,9 @@
 OpsIQ Final Hostile-Audited Owner Mode Reality Loop Contract
 
+**Version:** 2.0 — Phases 0–28 IMPLEMENTED_DB_UNVERIFIED (2026-06-18)
+**Branch:** claude/sleepy-dirac-m4bdb9
+**Next:** Configure DATABASE_URL for LANE_B DB runtime verification
+
 ## CONTROLLING PURPOSE
 
 This file is the strict execution contract for building OpsIQ into a **dynamic long-term business partner** for Owner Mode.
