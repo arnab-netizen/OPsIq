@@ -63,3 +63,4 @@ test.db
 
 # asymmetric signing keys (sensitive - never commit)
 /.keys/
+.claude/worktrees/
