@@ -204,3 +204,107 @@ Requirements:
 - No DB required — typed config + tests only
 - Target status: IMPLEMENTED_STATIC_ONLY
 
+---
+
+---
+
+## SLICE: Phase 2 — System Capability, Risk, and AI-Control Register
+
+**Date**: 2026-06-18
+**Branch**: claude/sleepy-dirac-m4bdb9
+**Status**: IMPLEMENTED_STATIC_ONLY
+
+---
+
+### slice_name
+Phase 2 — System Capability, Risk, and AI-Control Register
+
+### status
+IMPLEMENTED_STATIC_ONLY — typed internal config + tests only; no DB, no UI, no AI services
+
+### branch
+claude/sleepy-dirac-m4bdb9
+
+### files_changed
+- `src/domain/owner-mode/capability-registry.ts` — new (15 capabilities, type definitions, lookup helpers)
+- `src/__tests__/domain/owner-mode/capability-registry.test.ts` — new (122 tests)
+- `.claude/execution_state.json` — updated with reality loop phase tracking
+- `OWNER_MODE_REALITY_LOOP_CLOSEOUT.md` — this append
+
+### models_added_or_changed
+None (no Prisma models — static config only)
+
+### routes_added_or_changed
+None
+
+### services_added_or_changed
+None
+
+### ui_added_or_changed
+None
+
+### tests_added_or_changed
+- `src/__tests__/domain/owner-mode/capability-registry.test.ts` — 122 tests covering:
+  - All 15 capabilities exist and have unique IDs/names
+  - All required fields present (autonomy_level, risk_level, ai_allowed, rollback_path, control_path, description)
+  - No capability defaults to autonomous action
+  - No capability marks AI as source of truth (decide/execute never in ai_allowed_roles)
+  - ai_prohibited_roles non-empty for every capability
+  - Every capability prohibits all 11 core AI control roles
+  - ai_allowed_roles empty when ai_allowed = false
+  - verify_evidence and admit_learning never in ai_allowed_roles
+  - status transitions not controlled by AI (control_status always prohibited)
+  - Critical write-to-owner-approved capabilities require owner_approval_required = true
+  - act_with_owner_approval always paired with owner_approval_required = true
+  - Non-read-only capabilities have rollback_path defined
+  - Specific capability spot-checks (owner_decision_capture, learning_eligibility_gate ai_allowed = false)
+  - All 4 lookup helpers verified
+
+### commands_run
+```
+npx vitest run src/__tests__/domain/owner-mode/capability-registry.test.ts → 122/122 pass
+npm run build                                                                → PASS
+npx tsc --noEmit                                                             → PASS
+npx prisma validate                                                          → PASS
+```
+
+### command_results
+| Command | Result |
+|---|---|
+| npx vitest run capability-registry.test.ts | 122/122 PASS |
+| npm run build | ✓ PASS |
+| npx tsc --noEmit | ✓ PASS |
+| npx prisma validate | ✓ PASS |
+
+### LANE_B_status_if_DB_backed
+N/A — no DB code in this slice
+
+### known_limitations
+1. Phase 2 produces only the capability registry (typed config). The `ownerModeAiControlRegister` referenced in earlier execution.md versions is fully covered by the `ai_allowed_roles` / `ai_prohibited_roles` fields on each capability — no separate register file needed.
+2. Phase 3 (Autonomy/Access-Level Classification) is the next slice; it may reference this registry.
+
+### regressions_found
+None
+
+### regressions_fixed
+None needed
+
+### security_findings
+None — static config only
+
+### tenant_isolation_findings
+Not applicable (static config, no DB, no tenant context)
+
+### dashboard_proof_status
+Not applicable (Phase 23 not yet reached)
+
+### next_required_slice
+**Phase 3 — Autonomy/Access-Level Classification**
+
+Requirements:
+- Formalize the autonomy/access classification rules as typed policy functions
+- Prove each access level maps to exactly one allowed mutation surface
+- Prove no external write paths exist without owner approval
+- No DB required — typed policy + tests only
+- Target status: IMPLEMENTED_STATIC_ONLY
+
