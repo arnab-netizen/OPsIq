@@ -61,8 +61,22 @@
       "lane_b_proof": "NOT_RUN — DATABASE_URL unavailable",
       "note": "Prisma schema valid; migration + tenant isolation tests deferred until DB available"
     },
-    "phase_6_through_28": "NOT_STARTED",
-    "next_automatic_target": "Phase 6 — Diagnosis Evidence Contract (DB-backed)"
+    "phase_6": {
+      "status": "IMPLEMENTED_DB_UNVERIFIED",
+      "classification": "DOMAIN_CONTRACT_WITH_PRISMA_SCHEMA",
+      "files": [
+        "prisma/schema.prisma (OwnerDiagnosisEvidence added)",
+        "src/domain/owner-mode/diagnosis-evidence.ts",
+        "src/__tests__/domain/owner-mode/diagnosis-evidence.test.ts"
+      ],
+      "tests": "36/36 passing",
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓)",
+      "db_required": true,
+      "db_status": "DB_BLOCKED_ENVIRONMENT_MISSING_CREDENTIALS",
+      "lane_b_proof": "NOT_RUN"
+    },
+    "phase_7_through_28": "NOT_STARTED",
+    "next_automatic_target": "Phase 7 — Structured Recommendation Tracking (DB-backed)"
   },
   "gates_status": {
     "build": "PASS",

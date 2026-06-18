@@ -203,6 +203,7 @@ model ClientAccount {
   ownerInputQualityAssessments OwnerInputQualityAssessment[]
   ownerDataProvenanceRecords   OwnerDataProvenanceRecord[]
   ownerMissingDataFlags        OwnerMissingDataFlag[]
+  ownerDiagnosisEvidence       OwnerDiagnosisEvidence[]
 
   @@index([status])
   @@map("client_accounts")
@@ -3288,4 +3289,35 @@ model OwnerMissingDataFlag {
   @@index([inputRecordId])
   @@index([workspaceId, severity])
   @@map("owner_missing_data_flags")
+}
+
+// ─── Owner Mode Reality Loop — Phase 6: Diagnosis Evidence Contract ───────────
+
+model OwnerDiagnosisEvidence {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String   @db.Uuid @map("workspace_id")
+  businessId    String   @db.Uuid @map("business_id")
+  inputRecordId String?  @db.Uuid @map("input_record_id")
+  diagnosisStatus String @map("diagnosis_status")
+  // draft | evidence_reviewed | confidence_assessed | ready_for_recommendation
+  // | rejected | superseded
+  evidenceFor   Json     @map("evidence_for")    // string[]
+  evidenceAgainst Json   @map("evidence_against") // string[]
+  missingData   Json     @map("missing_data")     // string[]
+  assumptions   Json     @map("assumptions")      // string[]
+  confidenceScore Int    @map("confidence_score") // 0–100
+  confidenceReason String @map("confidence_reason") @db.Text
+  riskFlags     Json     @map("risk_flags")        // string[]
+  whatWouldChangeThis String @map("what_would_change_this") @db.Text
+  supersededById String? @db.Uuid @map("superseded_by_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  workspace   ClientAccount @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, businessId])
+  @@index([diagnosisStatus])
+  @@index([workspaceId, createdAt])
+  @@map("owner_diagnosis_evidence")
 }

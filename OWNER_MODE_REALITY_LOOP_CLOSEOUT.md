@@ -616,3 +616,56 @@ Requirements:
 - Tests: diagnosis blocked without input quality record, evidence_against surfaced, confidence_reason required
 - DB-backed — target status: IMPLEMENTED_DB_UNVERIFIED
 
+---
+
+---
+
+## SLICE: Phase 6 — Diagnosis Evidence Contract
+
+**Date**: 2026-06-18
+**Branch**: claude/sleepy-dirac-m4bdb9
+**Status**: IMPLEMENTED_DB_UNVERIFIED
+
+---
+
+### slice_name
+Phase 6 — Diagnosis Evidence Contract
+
+### status
+IMPLEMENTED_DB_UNVERIFIED — Prisma model added + deterministic evidence contract + 36 tests; DB not available for LANE_B proof
+
+### files_changed
+- `prisma/schema.prisma` — added OwnerDiagnosisEvidence + back-relation on ClientAccount
+- `src/domain/owner-mode/diagnosis-evidence.ts` — new (status machine, validation, guardrails)
+- `src/__tests__/domain/owner-mode/diagnosis-evidence.test.ts` — new (36 tests)
+- `.claude/execution_state.json` — updated
+- `OWNER_MODE_REALITY_LOOP_CLOSEOUT.md` — this append
+
+### models_added_or_changed
+- `OwnerDiagnosisEvidence` (owner_diagnosis_evidence) — workspace-scoped, with evidence_for/against/missing/assumptions/confidence/whatWouldChangeThis/supersededById
+
+### tests_added_or_changed
+36 tests covering: status machine (all transitions), no evidence blocks strong diagnosis, evidence stores, contradictory evidence visible, missing data caps confidence at 60, confidence_reason required, whatWouldChangeThis required, quality assessment integration (caps at 50), assertReadyForRecommendation, computeEffectiveConfidence, workspace scoping
+
+### commands_run
+| Command | Result |
+|---|---|
+| npx vitest run diagnosis-evidence.test.ts | 36/36 PASS |
+| npm run build | ✓ PASS |
+| npx tsc --noEmit | ✓ PASS |
+| npx prisma validate | ✓ PASS |
+| npx prisma migrate deploy | DB_BLOCKED |
+
+### LANE_B_status_if_DB_backed
+NOT_RUN — DATABASE_URL unavailable
+
+### next_required_slice
+**Phase 7 — Structured Recommendation Tracking**
+
+Requirements:
+- Prisma models: owner_recommendations, owner_recommendation_evidence, owner_recommendation_assumptions, owner_recommendation_constraints
+- Required statuses: draft, recommended, verification_required, verified_enough, provisional, data_limited, owner_decision_pending, accepted, rejected, modified, deferred, superseded
+- Required fields per execution.md Phase 7
+- Tests: recommendation linked to diagnosis, status machine verified, confidence_reason required
+- DB-backed — target: IMPLEMENTED_DB_UNVERIFIED
+
