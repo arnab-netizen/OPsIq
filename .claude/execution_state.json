@@ -46,8 +46,23 @@
       "security_rules_count": 8,
       "critical_rules": ["SEC-005", "SEC-007", "SEC-008"]
     },
-    "phase_5_through_28": "NOT_STARTED",
-    "next_automatic_target": "Phase 5 — Input Quality Gate + Data Provenance (DB-backed, IMPLEMENTED_DB_UNVERIFIED target)"
+    "phase_5": {
+      "status": "IMPLEMENTED_DB_UNVERIFIED",
+      "classification": "DOMAIN_CONTRACT_WITH_PRISMA_SCHEMA",
+      "files": [
+        "prisma/schema.prisma (OwnerInputRecord, OwnerInputQualityAssessment, OwnerDataProvenanceRecord, OwnerMissingDataFlag added)",
+        "src/domain/owner-mode/input-quality.ts",
+        "src/__tests__/domain/owner-mode/input-quality.test.ts"
+      ],
+      "tests": "26/26 passing (non-DB scoring logic)",
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓)",
+      "db_required": true,
+      "db_status": "DB_BLOCKED_ENVIRONMENT_MISSING_CREDENTIALS",
+      "lane_b_proof": "NOT_RUN — DATABASE_URL unavailable",
+      "note": "Prisma schema valid; migration + tenant isolation tests deferred until DB available"
+    },
+    "phase_6_through_28": "NOT_STARTED",
+    "next_automatic_target": "Phase 6 — Diagnosis Evidence Contract (DB-backed)"
   },
   "gates_status": {
     "build": "PASS",

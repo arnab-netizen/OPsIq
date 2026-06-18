@@ -507,3 +507,112 @@ Requirements:
 - DB-backed — target status: IMPLEMENTED_DB_UNVERIFIED (DB not available in current environment)
 - Tests: complete input permits normal diagnosis, missing margin downgrades recommendation, missing cash runway blocks high-risk action
 
+---
+
+---
+
+## SLICE: Phase 5 — Input Quality Gate + Data Provenance
+
+**Date**: 2026-06-18
+**Branch**: claude/sleepy-dirac-m4bdb9
+**Status**: IMPLEMENTED_DB_UNVERIFIED
+
+---
+
+### slice_name
+Phase 5 — Input Quality Gate + Data Provenance
+
+### status
+IMPLEMENTED_DB_UNVERIFIED — Prisma schema added + deterministic scoring service + 26 tests; DB not available for LANE_B proof
+
+### branch
+claude/sleepy-dirac-m4bdb9
+
+### files_changed
+- `prisma/schema.prisma` — added OwnerInputRecord, OwnerInputQualityAssessment, OwnerDataProvenanceRecord, OwnerMissingDataFlag + back-relations on ClientAccount
+- `src/domain/owner-mode/input-quality.ts` — new (deterministic scoring, guardrails, all 8 quality statuses)
+- `src/__tests__/domain/owner-mode/input-quality.test.ts` — new (26 tests)
+- `.claude/execution_state.json` — updated with Phase 5 status
+- `OWNER_MODE_REALITY_LOOP_CLOSEOUT.md` — this append
+
+### models_added_or_changed
+- `OwnerInputRecord` (owner_input_records) — workspace-scoped input submission with hash checksum
+- `OwnerInputQualityAssessment` (owner_input_quality_assessments) — deterministic quality scoring result
+- `OwnerDataProvenanceRecord` (owner_data_provenance_records) — field-level provenance tracking with freshness + lineage
+- `OwnerMissingDataFlag` (owner_missing_data_flags) — per-field severity flags with high-risk action blocking
+
+### routes_added_or_changed
+None (service logic only in this slice)
+
+### services_added_or_changed
+None (domain logic — service layer comes in later phase)
+
+### ui_added_or_changed
+None
+
+### tests_added_or_changed
+- `src/__tests__/domain/owner-mode/input-quality.test.ts` — 26 tests covering:
+  - CRITICAL_FIELDS and HIGH_RISK_ACTION_BLOCKING_FIELDS field registries
+  - Complete input → complete status, score > 90, allows strong rec + high-risk action
+  - Missing gross_margin → critical_missing, blocks strong rec, critical severity
+  - Missing cash_runway → critical_missing, blocks high-risk action, blocksHighRiskAction flag
+  - Stale critical field → stale/data_limited status, blocks high-risk action
+  - Non-critical stale → does not block strong recommendation
+  - Conflicting data → conflicting status, blocks strong rec
+  - All-estimate input → owner_estimate_only status
+  - Workspace scoping: empty workspaceId throws
+  - assertAllowsStrongRecommendation: throws for critical_missing
+  - assertAllowsHighRiskAction: throws when cash_runway missing
+  - assessedBy always = "InputQualityService"
+
+### commands_run
+```
+npx vitest run src/__tests__/domain/owner-mode/input-quality.test.ts → 26/26 pass
+npm run build                                                         → PASS
+npx tsc --noEmit                                                      → PASS
+npx prisma validate                                                   → PASS
+```
+
+### command_results
+| Command | Result |
+|---|---|
+| npx vitest run input-quality.test.ts | 26/26 PASS |
+| npm run build | ✓ PASS |
+| npx tsc --noEmit | ✓ PASS |
+| npx prisma validate | ✓ PASS |
+| npx prisma migrate deploy | DB_BLOCKED (DATABASE_URL unavailable) |
+
+### LANE_B_status_if_DB_backed
+LANE_B: NOT_RUN — DATABASE_URL unavailable. Migration must be run when DB is available. Tenant isolation tests deferred.
+
+### known_limitations
+1. Migration not applied — DB unavailable. Schema is valid per prisma validate.
+2. No repository service layer yet (OwnerInputQualityService with DB reads/writes) — domain scoring logic only.
+3. Provenance field tracking is modeled but the write path is not wired to an API route yet.
+
+### regressions_found
+None
+
+### regressions_fixed
+None needed
+
+### security_findings
+- All models include `workspaceId` index — workspace scoping enforced at schema level
+- assertWorkspaceScopedQuery called at service entry point
+
+### tenant_isolation_findings
+workspaceId mandatory field on all 4 new models; indexes present; LANE_B isolation test deferred
+
+### dashboard_proof_status
+Not applicable (Phase 23 not yet reached)
+
+### next_required_slice
+**Phase 6 — Diagnosis Evidence Contract**
+
+Requirements:
+- Prisma model: owner_diagnosis_evidence with fields: workspace_id, input_record_id, evidence_for[], evidence_against[], confidence_reason, what_would_change_this, diagnosis_status
+- Diagnosis statuses: draft, evidence_reviewed, confidence_assessed, ready_for_recommendation, rejected, superseded
+- Guardrail: no diagnosis proceeds without a completed input quality assessment
+- Tests: diagnosis blocked without input quality record, evidence_against surfaced, confidence_reason required
+- DB-backed — target status: IMPLEMENTED_DB_UNVERIFIED
+

@@ -199,6 +199,10 @@ model ClientAccount {
   engagements    Engagement[]
   leadRecords    LeadRecord[]
   privateModeAccess PrivateModeAccess[]
+  ownerInputRecords            OwnerInputRecord[]
+  ownerInputQualityAssessments OwnerInputQualityAssessment[]
+  ownerDataProvenanceRecords   OwnerDataProvenanceRecord[]
+  ownerMissingDataFlags        OwnerMissingDataFlag[]
 
   @@index([status])
   @@map("client_accounts")
@@ -3185,4 +3189,103 @@ model PrivateModeAccess {
   @@index([grantedAt])
   @@index([revokedAt])
   @@map("private_mode_access")
+}
+
+// ─── Owner Mode Reality Loop — Phase 5: Input Quality Gate + Data Provenance ──
+
+model OwnerInputRecord {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String   @db.Uuid @map("workspace_id")
+  submittedBy String   @db.Uuid @map("submitted_by")
+  inputPeriod String   @map("input_period") // e.g. "2026-05", "Q2-2026"
+  sourceType  String   @map("source_type")  // InputSourceType
+  rawJson     Json     @map("raw_json")
+  hashChecksum String  @map("hash_checksum") @db.VarChar(64)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace   ClientAccount                   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  qualityAssessments OwnerInputQualityAssessment[]
+  provenanceRecords  OwnerDataProvenanceRecord[]
+  missingDataFlags   OwnerMissingDataFlag[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, inputPeriod])
+  @@index([submittedBy])
+  @@index([createdAt])
+  @@map("owner_input_records")
+}
+
+model OwnerInputQualityAssessment {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String   @db.Uuid @map("workspace_id")
+  inputRecordId String   @db.Uuid @map("input_record_id")
+  qualityStatus String   @map("quality_status")
+  // complete | partial | data_limited | critical_missing | conflicting
+  // | stale | owner_estimate_only | unsafe_for_strong_recommendation
+  overallScore  Int      @map("overall_score") // 0–100
+  missingFields Json     @map("missing_fields") // string[]
+  conflictFlags Json     @map("conflict_flags") // string[]
+  staleFields   Json     @map("stale_fields")   // string[]
+  assessedAt    DateTime @default(now()) @map("assessed_at")
+  assessedBy    String   @map("assessed_by") // "InputQualityService"
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  workspace   ClientAccount    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inputRecord OwnerInputRecord @relation(fields: [inputRecordId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([inputRecordId])
+  @@index([qualityStatus])
+  @@index([workspaceId, assessedAt])
+  @@map("owner_input_quality_assessments")
+}
+
+model OwnerDataProvenanceRecord {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String   @db.Uuid @map("workspace_id")
+  inputRecordId String   @db.Uuid @map("input_record_id")
+  fieldName     String   @map("field_name")
+  sourceType    String   @map("source_type")    // InputSourceType
+  sourceOwner   String   @map("source_owner")   // who provided it
+  uploadedBy    String   @db.Uuid @map("uploaded_by")
+  periodCovered String   @map("period_covered") // e.g. "2026-05"
+  freshness     String   @map("freshness")      // "current" | "30d" | "90d" | "stale"
+  originalFilename String? @map("original_filename")
+  hashChecksum  String?  @map("hash_checksum") @db.VarChar(64)
+  parsedBy      String   @map("parsed_by")      // service name
+  manualEdits   Boolean  @default(false) @map("manual_edits")
+  derivedMetric Boolean  @default(false) @map("derived_metric")
+  lineageToDiagnosis   Boolean @default(false) @map("lineage_to_diagnosis")
+  lineageToRecommendation Boolean @default(false) @map("lineage_to_recommendation")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  workspace   ClientAccount    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inputRecord OwnerInputRecord @relation(fields: [inputRecordId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([inputRecordId])
+  @@index([workspaceId, fieldName])
+  @@map("owner_data_provenance_records")
+}
+
+model OwnerMissingDataFlag {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId   String   @db.Uuid @map("workspace_id")
+  inputRecordId String   @db.Uuid @map("input_record_id")
+  fieldName     String   @map("field_name")
+  severity      String   @map("severity") // "critical" | "high" | "medium" | "low"
+  blocksStrongRecommendation Boolean @default(false) @map("blocks_strong_recommendation")
+  blocksHighRiskAction       Boolean @default(false) @map("blocks_high_risk_action")
+  description   String   @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  workspace   ClientAccount    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inputRecord OwnerInputRecord @relation(fields: [inputRecordId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([inputRecordId])
+  @@index([workspaceId, severity])
+  @@map("owner_missing_data_flags")
 }
