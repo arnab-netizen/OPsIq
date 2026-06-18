@@ -24,14 +24,14 @@
     "serialization_performance": "RP10_PERFORMANCE_AUDIT_VERIFIED - 5/5 tests passing (append latency p99<500ms, lock contention, replay latency, throughput metrics)",
     "total_phase_4_tests": "27/27 PASSING (5 test files: RP6-RP10, comprehensive atomic serialization proof)",
     "database_primitives_verified": [
-      "\u2713 Per-aggregate locking via INSERT...ON CONFLICT prevents concurrent allocation race",
-      "\u2713 Unique constraint (aggregateId, aggregateType, workspaceId, eventNumber) prevents duplicates",
-      "\u2713 READ_COMMITTED isolation + per-aggregate locking allows multi-aggregate concurrency",
-      "\u2713 Idempotency key constraint + outer try-catch handles concurrent identical requests",
-      "\u2713 Monotonic ordering guaranteed: no gaps in eventNumber sequences (1..N continuous)",
-      "\u2713 Deterministic replay: same aggregate produces identical state every time",
-      "\u2713 Workspace isolation enforced at database layer",
-      "\u2713 Performance acceptable: append latency p99 < 500ms, replay latency < 500ms"
+      "✓ Per-aggregate locking via INSERT...ON CONFLICT prevents concurrent allocation race",
+      "✓ Unique constraint (aggregateId, aggregateType, workspaceId, eventNumber) prevents duplicates",
+      "✓ READ_COMMITTED isolation + per-aggregate locking allows multi-aggregate concurrency",
+      "✓ Idempotency key constraint + outer try-catch handles concurrent identical requests",
+      "✓ Monotonic ordering guaranteed: no gaps in eventNumber sequences (1..N continuous)",
+      "✓ Deterministic replay: same aggregate produces identical state every time",
+      "✓ Workspace isolation enforced at database layer",
+      "✓ Performance acceptable: append latency p99 < 500ms, replay latency < 500ms"
     ]
   },
   "phase_5_http_runtime_status": {
@@ -50,18 +50,18 @@
       "/api/liveness (GET) - Returns 200, no auth required, reports liveness"
     ],
     "webhook_tests": [
-      "\u2713 Signature verification required (fail-closed on error)",
-      "\u2713 Timestamp replay protection (5min tolerance)",
-      "\u2713 Event structure validation (id/type required)",
-      "\u2713 Idempotency via database constraints",
-      "\u2713 Max retry enforcement (5 attempts \u2192 dead-letter)"
+      "✓ Signature verification required (fail-closed on error)",
+      "✓ Timestamp replay protection (5min tolerance)",
+      "✓ Event structure validation (id/type required)",
+      "✓ Idempotency via database constraints",
+      "✓ Max retry enforcement (5 attempts → dead-letter)"
     ],
     "infrastructure_status": [
-      "\u2713 PostgreSQL running (PID 1724)",
-      "\u2713 Next.js dev server running (localhost:3000)",
-      "\u2713 Prisma migrations deployed (37/37)",
-      "\u2713 API routes registered (91 routes)",
-      "\u2713 Database pool operational"
+      "✓ PostgreSQL running (PID 1724)",
+      "✓ Next.js dev server running (localhost:3000)",
+      "✓ Prisma migrations deployed (37/37)",
+      "✓ API routes registered (91 routes)",
+      "✓ Database pool operational"
     ]
   },
   "security_hardening_status": {
@@ -88,18 +88,18 @@
   },
   "verification_status": {
     "code_level": {
-      "npm_run_build": "\u2713 PASS",
-      "npx_tsc_noEmit": "\u2713 PASS",
-      "npx_prisma_validate": "\u2713 PASS"
+      "npm_run_build": "✓ PASS",
+      "npx_tsc_noEmit": "✓ PASS",
+      "npx_prisma_validate": "✓ PASS"
     },
     "test_level": {
-      "route_scanner_tests": "\u2713 4/4 PASS (code-level validation)",
-      "hostile_tests": "\u2717 PENDING (created but not runtime-executed)"
+      "route_scanner_tests": "✓ 4/4 PASS (code-level validation)",
+      "hostile_tests": "✗ PENDING (created but not runtime-executed)"
     },
     "runtime_level": {
-      "live_http_hostile_tests": "\u2717 NOT_PROVEN (no CI automated tests yet)",
-      "phase_3_db_runtime": "\u2717 NOT_PROVEN (DB unavailable locally, CI has passed before)",
-      "end_to_end_execution": "\u2717 NOT_PROVEN (no staging deployment)"
+      "live_http_hostile_tests": "✗ NOT_PROVEN (no CI automated tests yet)",
+      "phase_3_db_runtime": "✗ NOT_PROVEN (DB unavailable locally, CI has passed before)",
+      "end_to_end_execution": "✗ NOT_PROVEN (no staging deployment)"
     }
   },
   "blocking_checklist_for_production": [
@@ -118,7 +118,7 @@
     {
       "blocker": "Workspace Isolation Runtime Proof",
       "requirement": "Live test: Workspace A requests B's data, verify blocked or empty result",
-      "status": "\u2713 VERIFIED - 8 comprehensive integration tests passing in rp3-workspace-isolation-runtime-proof.test.ts",
+      "status": "✓ VERIFIED - 8 comprehensive integration tests passing in rp3-workspace-isolation-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Event isolation, projection isolation, concurrent safety all verified"
     },
     {
@@ -130,13 +130,13 @@
     {
       "blocker": "Capability Enforcement Runtime Proof",
       "requirement": "User without capability must get 403 on protected route",
-      "status": "\u2713 VERIFIED - 8 comprehensive integration tests passing in rp4-capability-enforcement-runtime-proof.test.ts",
+      "status": "✓ VERIFIED - 8 comprehensive integration tests passing in rp4-capability-enforcement-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Capability constants verified, user attribution proven, audit trail verified"
     },
     {
       "blocker": "Quota Enforcement Runtime Proof",
       "requirement": "User exceeding quota must get 429, not grant access",
-      "status": "\u2713 VERIFIED - 9 comprehensive integration tests passing in rp5-quota-enforcement-runtime-proof.test.ts",
+      "status": "✓ VERIFIED - 9 comprehensive integration tests passing in rp5-quota-enforcement-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Resource tracking verified, timestamps recorded, service tier differentiation proven"
     },
     {
@@ -157,7 +157,7 @@
     "Removed: 'production ready' - Runtime verification not complete",
     "Removed: 'enterprise ready' - Staging/monitoring not proven",
     "Removed: 'fully verified' - Only code-level verification complete",
-    "Updated: 'deployment readiness 95%' \u2192 'CODE_VERIFIED_NOT_RUNTIME_PROVEN'"
+    "Updated: 'deployment readiness 95%' → 'CODE_VERIFIED_NOT_RUNTIME_PROVEN'"
   ],
   "current_session_achievements": [
     "PHASE 4: SERIALIZATION RUNTIME PROOF - COMPLETE (27/27 tests passing)",
@@ -169,7 +169,7 @@
     "COMPLETED STEP 5: Failure injection testing (RP8 - 7/7 tests, write interference, concurrent failures)",
     "COMPLETED STEP 6: Replay determinism verification (RP9 - 5/5 tests, 100x concurrent replays, identical state)",
     "COMPLETED STEP 7: Serialization performance audit (RP10 - 5/5 tests, latency/throughput metrics)",
-    "COMPLETED STEP 8: Run gates (npm build \u2713, npx tsc \u26a0\ufe0f pre-existing, npx prisma \u2713)",
+    "COMPLETED STEP 8: Run gates (npm build ✓, npx tsc ⚠️ pre-existing, npx prisma ✓)",
     "COMPLETED STEP 9: Final honest classification (SERIALIZATION_RUNTIME_VERIFIED, 27/27 tests passing)",
     "TOTAL NEW TESTS: 27 serialization runtime proof tests (RP6-RP10, all passing)",
     "EMPIRICAL PROOF: Atomic serialization under real concurrent pressure with independent DB connections",
@@ -185,14 +185,14 @@
     "NEXT BLOCKERS: Snapshot optimization engine bug, Workspace isolation runtime attack tests, Quota enforcement runtime tests, Full staging deployment"
   ],
   "what_still_needs_proof": [
-    "\u2713 DONE: Workspace isolation \u2192 cross-workspace queries blocked (8 integration tests)",
-    "\u2713 DONE: Capability enforcement \u2192 capability constants defined & user attribution proven (8 integration tests)",
-    "\u2713 DONE: Quota enforcement \u2192 resource tracking & timestamps recorded (9 integration tests)",
-    "PENDING: Live HTTP requests without auth token \u2192 actual 401 response (template ready, need running server)",
-    "PENDING: Live Stripe webhook with invalid signature \u2192 actual 401 response (code verified, need live account)",
-    "PENDING: Phase 3 event sourcing \u2192 CI database runtime proof (tests created, isolation adjusted)",
-    "PENDING: Staging deployment \u2192 full system working end-to-end",
-    "PENDING: Production readiness \u2192 monitoring, alerting, incident response proven"
+    "✓ DONE: Workspace isolation → cross-workspace queries blocked (8 integration tests)",
+    "✓ DONE: Capability enforcement → capability constants defined & user attribution proven (8 integration tests)",
+    "✓ DONE: Quota enforcement → resource tracking & timestamps recorded (9 integration tests)",
+    "PENDING: Live HTTP requests without auth token → actual 401 response (template ready, need running server)",
+    "PENDING: Live Stripe webhook with invalid signature → actual 401 response (code verified, need live account)",
+    "PENDING: Phase 3 event sourcing → CI database runtime proof (tests created, isolation adjusted)",
+    "PENDING: Staging deployment → full system working end-to-end",
+    "PENDING: Production readiness → monitoring, alerting, incident response proven"
   ],
   "final_honest_status": {
     "code_review_complete": true,
@@ -817,13 +817,13 @@
     "accepted_with_fixes": "R2-AB-01, R2-ADV-01",
     "rejected": "none",
     "critical_finding": "R2-AB-01 (truly_insufficient) produced cash_liquidity_crisis [MODERATE]/READY pre-fix because finding text contained 'runway'/'burn' tripping fin_isLiquidityCrisis lexical regex; reworded -> engine now INSUFFICIENT_EVIDENCE/BLOCKED",
-    "cross_cutting_fix": "added spec-\u00a74 metadata (caseType/industry/businessModel/businessStage/clientContext) to all 5 so cases are runnable through runConsultingEngine (requires clientContext)",
+    "cross_cutting_fix": "added spec-§4 metadata (caseType/industry/businessModel/businessStage/clientContext) to all 5 so cases are runnable through runConsultingEngine (requires clientContext)",
     "engine_trace_post_fix": "D03 margin_erosion[HIGH], D07 retention[HIGH], D09 bottleneck[MODERATE], ADV unit_economics[HIGH]+cash alt, AB-01 unknown[INSUFFICIENT_EVIDENCE]/BLOCKED",
     "validator_pass": "5/5 (with hidden keys loaded)",
     "leakage": "clean x5 after metadata additions",
     "gates_run": "tsx validate-round2-cases (5/5), tsx trace-round2-diagnosis, tsc (only pre-existing run-case.ts:149), prisma valid, vitest src/__tests__/benchmark 309 pass",
     "no_new_cases": true,
-    "recommendations_for_scaling": "scrub diagnosis trigger lexicon from abstention findings; carry \u00a74 clientContext on every case; pin trigger-metric semantics; fold \u00a74+abstention-lexicon checks into validator in the scaling slice",
+    "recommendations_for_scaling": "scrub diagnosis trigger lexicon from abstention findings; carry §4 clientContext on every case; pin trigger-metric semantics; fold §4+abstention-lexicon checks into validator in the scaling slice",
     "next_step": "author remaining 145 cases (validator + audit rules) -> 6-axis scorer -> re-trial; fold R2-ADV-01 into adversarial suite",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_PILOT_CASE_HOSTILE_AUDIT.md"
@@ -888,7 +888,7 @@
     "classification": "GOVERNANCE_DOCS_ONLY (no engine/gate/scorer/answer-key change; no sourcing; no authoring)",
     "files": [
       "ROUND_2_OUTCOME_SPECTRUM_REQUIREMENTS.md",
-      "ROUND_2_REAL_CASE_SOURCING_PLAN.md (updated: added \u00a712 outcome integration + \u00a713 acceptance)"
+      "ROUND_2_REAL_CASE_SOURCING_PLAN.md (updated: added §12 outcome integration + §13 acceptance)"
     ],
     "outcome_categories_added": 20,
     "per_category_min": "8/8/7/8/7/6/6/6/6/6/8/8/6/7/6/6/6/6/6/20 (sum 147 of 150); all 20 non-empty; no category or business-type > 20%",
@@ -1176,7 +1176,7 @@
     ]
   },
   "stage_a_round2_r0_retrial": {
-    "slice": "R0 \u2014 6-axis deterministic scorer + full-pipeline Round 2 re-trial harness (MEASUREMENT UNLOCK)",
+    "slice": "R0 — 6-axis deterministic scorer + full-pipeline Round 2 re-trial harness (MEASUREMENT UNLOCK)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "BENCHMARK_MEASUREMENT_TOOLING",
     "files": [
@@ -1201,10 +1201,10 @@
     },
     "gates_run": "vitest scorer 13/13 PASS; intake validator 103/103 PASS; benchmark intake+schema 15/15 PASS; tsc (only pre-existing run-case.ts:149 error); prisma validate PASS",
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
-    "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
+    "next_automatic_target": "R1 — lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 real-world historical validation: blind-replay harness + grounding schema built; 0 source-verified cases (SOURCING_BLOCKER, fabrication forbidden)",
-  "pushed": true,
+  "last_commit": "Merge Stage A owner-mode baseline into main",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1216,7 +1216,7 @@
     ],
     "scope_guard": "No engine/scorer/gate/threshold/key/validator/corpus/source change. No improvement/promotion/consultant-grade claim.",
     "cases_reviewed": "70 failing of 103 (33 clean); counts taken directly from _CORPUS_SCORE.json/_FAILURE_FLAGS.json and reconciled per-case (MATCH).",
-    "largest_bucket": "A Missing archetype \u2014 38 cases (36.9%)",
+    "largest_bucket": "A Missing archetype — 38 cases (36.9%)",
     "deepest_root_cause": "No causal adjudication (L/B cluster, diagnosis-engine.ts:364-405); drives wrong primaries AND 14 of the over-abstention gate-holds",
     "highest_roi_fix": "R2 causal adjudication (keystone; up to 41 cases reachable)",
     "order": "R0(done) -> R1 || R2 -> R4 -> R3 -> R5 -> R6/R7/R8 -> R9",
@@ -1224,7 +1224,7 @@
     "next_automatic_target": "R1 lexical-trigger hardening and/or R2 causal adjudication [separately authorized]"
   },
   "stage_a_round2_r1_lexical_hardening": {
-    "slice": "R1 lexical-trigger hardening \u2014 polarity-aware semantic guards in diagnosis-engine.ts",
+    "slice": "R1 lexical-trigger hardening — polarity-aware semantic guards in diagnosis-engine.ts",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_DIAGNOSIS_TRIGGER_HARDENING",
     "files": [
@@ -1244,7 +1244,7 @@
     "next_automatic_target": "R2 causal adjudication layer [separately authorized]"
   },
   "stage_a_round2_r2_causal_adjudication": {
-    "slice": "R2 causal adjudication layer \u2014 re-attribute surface symptoms to upstream drivers (KEYSTONE)",
+    "slice": "R2 causal adjudication layer — re-attribute surface symptoms to upstream drivers (KEYSTONE)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_CAUSAL_ADJUDICATION",
     "files": [
@@ -1265,7 +1265,7 @@
     "next_automatic_target": "R4 action-sequencing engine [separately authorized]"
   },
   "stage_a_round2_r4_action_sequencing": {
-    "slice": "R4 action-sequencing layer \u2014 verify/stabilize/constraint-safe first action",
+    "slice": "R4 action-sequencing layer — verify/stabilize/constraint-safe first action",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_ACTION_SEQUENCING",
     "files": [
@@ -1285,7 +1285,7 @@
     "next_automatic_target": "R3 survival prioritization OR R5 archetype expansion [separately authorized]"
   },
   "stage_a_round2_r3_survival_prioritization": {
-    "slice": "R3 survival prioritization \u2014 7-tier first-action priority ladder",
+    "slice": "R3 survival prioritization — 7-tier first-action priority ladder",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_ACTION_PRIORITIZATION",
     "files": [
@@ -1305,7 +1305,7 @@
     "next_automatic_target": "R5 archetype expansion E2+ [separately authorized; R2 prerequisite satisfied]"
   },
   "stage_a_round2_r5_slice1_financial_archetypes": {
-    "slice": "R5 slice 1 \u2014 debt/working-capital/pricing archetypes (E2 financial-structural)",
+    "slice": "R5 slice 1 — debt/working-capital/pricing archetypes (E2 financial-structural)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_ARCHETYPE_EXPANSION",
     "files": [
@@ -1329,7 +1329,7 @@
     "next_automatic_target": "R5 slice 2 (demand/gtm/inventory) OR R5 slice 3 (legal/key-person/capex) [separately authorized]"
   },
   "stage_a_round2_r5_slice2_demand_gtm_inventory": {
-    "slice": "R5 slice 2 \u2014 demand/gtm/inventory archetypes (E2 market/ops)",
+    "slice": "R5 slice 2 — demand/gtm/inventory archetypes (E2 market/ops)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_ARCHETYPE_EXPANSION",
     "files": [
@@ -1696,5 +1696,27 @@
     "recommendation": "do not fabricate; run sourcing+full-text verification in a fetch-capable environment, then run-historical-validation.ts produces the 5 scores",
     "gates": "tsc clean (only pre-existing run-case.ts:149); harness runs and reports NO_CASES honestly",
     "stage_a": "INTERNAL_OWNER_MODE_TRIAL_ONLY; public-ready BLOCKED on source verification (G9)"
+  },
+  "stage_a_merge": {
+    "status": "MERGE_APPROVED_AND_EXECUTED",
+    "branch": "claude/stage-a-unproven-assumption-ecr0dm",
+    "main_before_merge": "82a47be1",
+    "feature_branch_commit": "d497dfe3",
+    "merge_commit": "8efe4e8f",
+    "tag": "owner-mode-v1-baseline",
+    "post_merge_verification": {
+      "unsafe_proceed": 0,
+      "dangerous_proceed": 0,
+      "false_root_cause": 0,
+      "diagnosis_pct": 93.2,
+      "first_action_pct": 87.4,
+      "abstention_recall_pct": 100,
+      "over_abstention": 6,
+      "key_tests": "67/67 pass",
+      "tsc": "only pre-existing run-case.ts:149 (non-blocking)",
+      "prisma": "valid",
+      "regression": "none"
+    },
+    "final_status": "STAGE_A_MERGED_TO_MAIN — INTERNAL_OWNER_MODE_TRIAL_ONLY baseline tagged"
   }
 }
