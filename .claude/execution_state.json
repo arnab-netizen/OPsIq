@@ -1203,7 +1203,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 R2: causal adjudication layer (false_root_cause 12->0, diagnosis 83.5%->96.1%, zero regressions)",
+  "last_commit": "STAGE A Round 2 R4: action-sequencing layer (first-action 34.0%->46.6%, wrong-action 28->15, zero regressions)",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -1263,5 +1263,25 @@
     "gates_run": "R2 14/14, R1 lexical+scorer+governance+adversarial 110/110, diagnosis consumers 41/41, tsc (only pre-existing run-case.ts:149), prisma valid",
     "r3_r4_still_required": "YES (R4 action sequencing now top lever: firstAction 34.0%, correct_dx_wrong_action 28; R3 owns wrong_priority; R5 converts new safe-abstentions to proceeds)",
     "next_automatic_target": "R4 action-sequencing engine [separately authorized]"
+  },
+  "stage_a_round2_r4_action_sequencing": {
+    "slice": "R4 action-sequencing layer \u2014 verify/stabilize/constraint-safe first action",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ENGINE_ACTION_SEQUENCING",
+    "files": [
+      "src/services/consulting-engine/action-sequencing.ts (new, pure)",
+      "src/services/consulting-engine/orchestrator.ts (prepend sequenced first action when overridesTemplate)",
+      "src/__tests__/services/action-sequencing.test.ts (11)",
+      "simulation_runs/round_002_retrial_r4_action_sequencing/ (frozen R4 retrial)",
+      "R4_ACTION_SEQUENCING_VALIDATION_REPORT.md"
+    ],
+    "scope_guard": "No R3/R5, no archetypes, no diagnosis-selection/safety-gate/scorer/key/threshold change. Sequencer runtime-evidence only. Overrides ONLY retention+bottleneck (+legal precedence); cash/unit-econ/margin/quality keep templates. Only emits MINIMAL/LOW-cost STABILIZATION/CONTAINMENT -> cannot un-abstain.",
+    "wiring_proof": "orchestrator: committed && overridesTemplate(dx,evidence) -> sequenceFirstAction -> buildFirstActionIntervention -> prepend as recommendedInterventions[0]; templates preserved as follow-on",
+    "r2_vs_r4": "firstAction 35->48 (34.0%->46.6%); correct_dx_wrong_action 28->15; diagnosis 99/99 unchanged; false_root_cause 0; over_abstention 53 unchanged; unsafe_proceed 1->1; dangerous_proceed 1->1; gate decisions identical per-case",
+    "cases_improved": "13 (retention D07-S01/S02,MK-02/07/10,RC-07,HC-04; bottleneck D09-S01/S02,MC-01,MC-03,PC-08,HC-01)",
+    "cases_worsened": "0 (no first-action regressions; gate decisions identical; no new unsafe proceeds)",
+    "gates_run": "R4 11/11, scorer+R2+R1+governance+adversarial+consumers+scenario 176+36, output consumers 24/24, tsc (only pre-existing run-case.ts:149), prisma valid",
+    "r3_r5_still_required": "YES (R3 owns wrong_priority PC-01 + DC-01 ACTED_WHEN_SHOULD_ABSTAIN; R5 converts the 53 over-abstentions to proceeds)",
+    "next_automatic_target": "R3 survival prioritization OR R5 archetype expansion [separately authorized]"
   }
 }

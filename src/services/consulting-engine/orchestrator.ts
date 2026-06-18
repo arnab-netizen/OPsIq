@@ -10,7 +10,13 @@ import { designInterventions } from "./intervention-design-engine";
 import { prioritizeInterventions } from "./prioritization-engine";
 import { generateScenarios } from "./scenario-engine";
 import { generateDecisionMemo, formatDecisionMemo } from "./decision-memo-engine";
-import { DiagnosisConfidence } from "@/domain/consulting-engine/types";
+import { DiagnosisConfidence, DiagnosisType } from "@/domain/consulting-engine/types";
+import {
+  sequenceFirstAction,
+  buildFirstActionIntervention,
+  overridesTemplate,
+} from "./action-sequencing";
+import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 
 /**
  * Consulting Engine Orchestrator: Coordinates all engines in logical sequence
@@ -71,9 +77,42 @@ export async function runConsultingEngine(
     }
   );
 
+  // Step 5b: R4 action sequencing — choose a constraint-safe, reversible,
+  // verify-first FIRST action from the committed diagnosis + evidence, and place
+  // it at the head of the recommendation. Diagnosis selection is untouched; the
+  // sequencer only runs on a committed diagnosis and produces a low-cost first
+  // move (it cannot make the engine proceed where it would otherwise abstain).
+  let recommendedInterventions: PrioritizedIntervention[] = prioritizedInterventions;
+  const committed =
+    diagnosisResult.confidence !== DiagnosisConfidence.INSUFFICIENT_EVIDENCE &&
+    diagnosisResult.primaryRootCause.type !== DiagnosisType.UNKNOWN;
+  if (
+    committed &&
+    overridesTemplate(diagnosisResult.primaryRootCause.type, input.evidence)
+  ) {
+    const plan = sequenceFirstAction({
+      diagnosisType: diagnosisResult.primaryRootCause.type,
+      committed: true,
+      evidence: input.evidence,
+    });
+    const firstIntervention = buildFirstActionIntervention(
+      plan,
+      diagnosisResult.primaryRootCause.evidenceIds
+    );
+    const sequencedFirst: PrioritizedIntervention = {
+      intervention: firstIntervention,
+      priorityScore: 100,
+      factors: [
+        { factor: "survival/safety/reversibility sequencing", score: 10, rationale: plan.rationale },
+      ],
+      sequencingReason: `${plan.kind}: ${plan.whyThisNow}`,
+    };
+    recommendedInterventions = [sequencedFirst, ...prioritizedInterventions];
+  }
+
   // Step 6: Generate scenarios
   const scenarios = generateScenarios(
-    prioritizedInterventions,
+    recommendedInterventions,
     constraintAnalysis.identifiedConstraints
   );
 
@@ -84,7 +123,7 @@ export async function runConsultingEngine(
     diagnosis: diagnosisResult.primaryRootCause,
     diagnosisConfidence: diagnosisResult.confidence,
     constraints: constraintAnalysis.identifiedConstraints,
-    interventions: prioritizedInterventions,
+    interventions: recommendedInterventions,
     scenarios,
     overallCoverage: evidenceAnalysis.overallCoverage,
     criticalGaps: evidenceAnalysis.criticalEvidenceGaps,
