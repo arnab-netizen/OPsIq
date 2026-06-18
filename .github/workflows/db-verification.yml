@@ -1,0 +1,338 @@
+name: DB Verification
+
+# Verifies DB schema, migration state, and full DB test suite.
+#
+# Two lanes:
+#   LANE_B (default) — spins up a throwaway postgres:16 service container,
+#                      runs prisma migrate deploy against it, then runs the full
+#                      DB test suite. Safe for all branches. No secrets needed.
+#
+#   LANE_A (opt-in)  — triggered via workflow_dispatch with use_neon_secrets=true.
+#                      Uses DATABASE_URL / TEST_DATABASE_URL / MIGRATION_DATABASE_URL
+#                      from GitHub secrets. Runs prisma migrate status (read-only)
+#                      and the DB test suite against TEST_DATABASE_URL.
+#                      Does NOT run prisma migrate deploy — operator runs that
+#                      from a controlled environment once status confirms it is safe.
+#
+# NEVER runs against production.
+# NEVER runs prisma migrate reset or prisma db push.
+# LANE_A migrate deploy is intentionally absent — status + tests only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      use_neon_secrets:
+        description: 'LANE_A: use Neon secrets (DATABASE_URL, TEST_DATABASE_URL, MIGRATION_DATABASE_URL). Requires those secrets to be set. Set true only for staging/test Neon DB.'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+  push:
+    branches:
+      - main
+      - 'claude/**'
+    paths:
+      - .github/workflows/db-verification.yml
+      - prisma/**
+      - 'src/__tests__/**/*.db.test.ts'
+      - src/__tests__/phase-3-db-smoke-verification.test.ts
+      - package.json
+      - package-lock.json
+  pull_request:
+    branches:
+      - main
+    paths:
+      - prisma/**
+      - 'src/__tests__/**/*.db.test.ts'
+
+# ─── LANE B ───────────────────────────────────────────────────────────────────
+jobs:
+  lane-b-db-verify:
+    name: 'LANE_B — Local Postgres (throwaway)'
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.use_neon_secrets != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
+    env:
+      # All three URLs point at the throwaway postgres:16 container above.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      MIGRATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_WITH_DB: 'true'
+      NODE_ENV: test
+      SKIP_ENV_VALIDATION: 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify rolldown native binding
+        run: node -e "require.resolve('@rolldown/binding-linux-x64-gnu'); console.log('✓ rolldown binding present')"
+
+      - name: Configure local test environment
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          MIGRATION_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          NODE_ENV=test
+          SKIP_ENV_VALIDATION=true
+          EOF
+          echo "✓ .env.local written for LANE_B postgres:16 service container"
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Prisma validate
+        id: validate
+        run: npx prisma validate
+
+      # MIGRATION_DATABASE_URL is the local throwaway container — safe to deploy.
+      # migrate reset and db push are NOT run.
+      - name: Prisma migrate deploy (throwaway container)
+        id: migrate-deploy
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.MIGRATION_DATABASE_URL }}
+
+      - name: Run full DB test suite
+        id: db-tests
+        run: |
+          mkdir -p artifacts/db-verification
+          set +e
+          npm test -- --run \
+            src/__tests__/founder-recovery/db-persistence.db.test.ts \
+            src/__tests__/owner-cashflow/services.db.test.ts \
+            src/__tests__/owner-condition/business-condition.db.test.ts \
+            src/__tests__/owner-finance/persistence.db.test.ts \
+            src/__tests__/owner-finance/services.db.test.ts \
+            src/__tests__/owner-home/services.db.test.ts \
+            src/__tests__/owner-intake/services.db.test.ts \
+            src/__tests__/owner-marketing/services.db.test.ts \
+            src/__tests__/owner-operations/services.db.test.ts \
+            src/__tests__/owner-portfolio/services.db.test.ts \
+            src/__tests__/owner-sales/services.db.test.ts \
+            src/__tests__/owner-sop/services.db.test.ts \
+            src/__tests__/owner-strategy/services.db.test.ts \
+            src/__tests__/owner-trust/services.db.test.ts \
+            src/__tests__/services/benchmark/case-library.service.db.test.ts \
+            src/__tests__/services/benchmark/public-dataset.service.db.test.ts \
+            src/__tests__/services/business-condition/business-condition-profile.service.db.test.ts \
+            src/__tests__/services/data-review/fact-review.service.db.test.ts \
+            src/__tests__/services/external-systems/import-persistence.service.db.test.ts \
+            src/__tests__/services/file-intake/persist-file-intake.service.db.test.ts \
+            src/__tests__/services/private-mode/role-access.service.db.test.ts \
+            src/__tests__/phase-3-db-smoke-verification.test.ts \
+            2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
+          TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          exit $TEST_EXIT
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          TEST_DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          TEST_WITH_DB: 'true'
+          NODE_ENV: test
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lane-b-db-verification-logs
+          path: artifacts/db-verification/
+          retention-days: 14
+
+      - name: Write GITHUB_STEP_SUMMARY
+        if: always()
+        run: |
+          VALIDATE="${{ steps.validate.outcome }}"
+          DEPLOY="${{ steps.migrate-deploy.outcome }}"
+          TESTS="${{ steps.db-tests.outcome }}"
+          ok() { [ "$1" = "success" ] && echo "✅" || echo "❌"; }
+          OVERALL=$([ "$TESTS" = "success" ] && echo "✅ LANE_B_DB_VERIFIED" || echo "❌ LANE_B_DB_FAILED")
+          echo "$OVERALL"
+          {
+            echo "## DB Verification — LANE_B (Local Postgres)"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Prisma schema valid | $(ok $VALIDATE) |"
+            echo "| Migrations deployed (throwaway) | $(ok $DEPLOY) |"
+            echo "| DB test suite | $(ok $TESTS) |"
+            echo ""
+            echo "**Lane:** LANE_B — GitHub Actions postgres:16 service container (not Neon, not production)"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> $GITHUB_STEP_SUMMARY
+
+# ─── LANE A ───────────────────────────────────────────────────────────────────
+  lane-a-neon-verify:
+    name: 'LANE_A — Neon Secrets (status + tests, no deploy)'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.use_neon_secrets == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify rolldown native binding
+        run: node -e "require.resolve('@rolldown/binding-linux-x64-gnu'); console.log('✓ rolldown binding present')"
+
+      # Safety gate: MIGRATION_DATABASE_URL must NOT be a pooler URL.
+      # Prisma migrate status requires a direct connection.
+      # If the secret contains '-pooler', stop here before touching any DB.
+      - name: Assert MIGRATION_DATABASE_URL is direct (not pooler)
+        id: pooler-check
+        run: |
+          URL="${{ secrets.MIGRATION_DATABASE_URL }}"
+          if [ -z "$URL" ]; then
+            echo "❌ MIGRATION_DATABASE_URL secret is not set."
+            exit 1
+          fi
+          if echo "$URL" | grep -qi '\-pooler'; then
+            echo "❌ MIGRATION_DATABASE_URL appears to be a pooler URL (contains '-pooler')."
+            echo "   Prisma migrate status/deploy requires a direct (non-pooler) Neon endpoint."
+            echo "   Fix: supply the Neon direct URL (no '-pooler' in hostname) as MIGRATION_DATABASE_URL."
+            exit 1
+          fi
+          LEN=${#URL}
+          echo "✅ MIGRATION_DATABASE_URL is direct (length=$LEN, no '-pooler' detected)."
+
+      - name: Configure Neon environment
+        run: |
+          cat > .env.local <<'EOF'
+          NODE_ENV=test
+          SKIP_ENV_VALIDATION=true
+          EOF
+          echo "✓ .env.local written (DB secrets injected via env: blocks, not written to disk)"
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Prisma validate
+        id: validate
+        run: npx prisma validate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # Read-only status check. Shows applied and pending migrations. No mutations.
+      - name: Prisma migrate status (read-only)
+        id: migrate-status
+        run: npx prisma migrate status
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
+      # DB tests run against TEST_DATABASE_URL (should be direct, non-pooler).
+      # migrate deploy is NOT run in LANE_A — if migrations are pending the tests
+      # will fail, which is the correct signal: deploy first, then re-run verification.
+      - name: Run full DB test suite (Neon TEST_DATABASE_URL)
+        id: db-tests
+        run: |
+          mkdir -p artifacts/db-verification
+          set +e
+          npm test -- --run \
+            src/__tests__/founder-recovery/db-persistence.db.test.ts \
+            src/__tests__/owner-cashflow/services.db.test.ts \
+            src/__tests__/owner-condition/business-condition.db.test.ts \
+            src/__tests__/owner-finance/persistence.db.test.ts \
+            src/__tests__/owner-finance/services.db.test.ts \
+            src/__tests__/owner-home/services.db.test.ts \
+            src/__tests__/owner-intake/services.db.test.ts \
+            src/__tests__/owner-marketing/services.db.test.ts \
+            src/__tests__/owner-operations/services.db.test.ts \
+            src/__tests__/owner-portfolio/services.db.test.ts \
+            src/__tests__/owner-sales/services.db.test.ts \
+            src/__tests__/owner-sop/services.db.test.ts \
+            src/__tests__/owner-strategy/services.db.test.ts \
+            src/__tests__/owner-trust/services.db.test.ts \
+            src/__tests__/services/benchmark/case-library.service.db.test.ts \
+            src/__tests__/services/benchmark/public-dataset.service.db.test.ts \
+            src/__tests__/services/business-condition/business-condition-profile.service.db.test.ts \
+            src/__tests__/services/data-review/fact-review.service.db.test.ts \
+            src/__tests__/services/external-systems/import-persistence.service.db.test.ts \
+            src/__tests__/services/file-intake/persist-file-intake.service.db.test.ts \
+            src/__tests__/services/private-mode/role-access.service.db.test.ts \
+            src/__tests__/phase-3-db-smoke-verification.test.ts \
+            2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
+          TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          exit $TEST_EXIT
+        env:
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          TEST_WITH_DB: ${{ secrets.TEST_WITH_DB }}
+          NODE_ENV: test
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lane-a-db-verification-logs
+          path: artifacts/db-verification/
+          retention-days: 14
+
+      - name: Write GITHUB_STEP_SUMMARY
+        if: always()
+        run: |
+          POOLER="${{ steps.pooler-check.outcome }}"
+          VALIDATE="${{ steps.validate.outcome }}"
+          STATUS="${{ steps.migrate-status.outcome }}"
+          TESTS="${{ steps.db-tests.outcome }}"
+          ok() { [ "$1" = "success" ] && echo "✅" || echo "❌"; }
+          warn() { [ "$1" = "success" ] && echo "✅" || echo "⚠️ pending migrations or unreachable"; }
+          OVERALL=$([ "$TESTS" = "success" ] && echo "✅ LANE_A_DB_VERIFIED" || echo "❌ LANE_A_DB_FAILED")
+          echo "$OVERALL"
+          {
+            echo "## DB Verification — LANE_A (Neon Secrets)"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| MIGRATION_DATABASE_URL is direct (not pooler) | $(ok $POOLER) |"
+            echo "| Prisma schema valid | $(ok $VALIDATE) |"
+            echo "| Migration status (read-only) | $(warn $STATUS) |"
+            echo "| DB test suite (TEST_DATABASE_URL) | $(ok $TESTS) |"
+            echo ""
+            echo "**Lane:** LANE_A — Neon secrets (migrate deploy NOT run — status + tests only)"
+            echo "**Triggered by:** @${{ github.actor }}"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> $GITHUB_STEP_SUMMARY
