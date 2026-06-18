@@ -1204,7 +1204,7 @@
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
   "last_commit": "STAGE A final readiness audit (docs only): PROMOTE_TO_INTERNAL_OWNER_MODE_TRIAL_ONLY (safety gates pass; corpus/source/quality gates unmet)",
-  "pushed": false,
+  "pushed": true,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
