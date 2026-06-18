@@ -1203,8 +1203,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A diagnosis-engine residual audit (docs only): FRC-11/HC-02/PC-01 trace + decision (IMPLEMENT_PC01_ONLY)",
-  "pushed": true,
+  "last_commit": "STAGE A PC-01 survival-dominance diagnosis selection (diagnosis 92.2%->93.2%, over-abstention 7->6, wrong_priority 1->0, 0 unsafe/dangerous proceeds)",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1623,5 +1623,29 @@
     "expected_movement": "over_abstention 7->6, diagnosis 95->96 (PC-01 misdiagnosis->correct), safety 96->97; unsafe/dangerous 0",
     "unsafe_dangerous_risk": "none (cash-survival proceed is low-cost stabilization; gate active)",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED"
+  },
+  "stage_a_pc01_survival_dominance": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "scope": "survival-dominance diagnosis-selection rule (cash beats optimization primary when already-matched cash HIGH/MODERATE + critical survival pressure); selection-only, no new archetype/threshold/gate/scorer/key/corpus change",
+    "files": [
+      "src/services/consulting-engine/diagnosis-engine.ts",
+      "src/__tests__/services/pc01-survival-dominance.test.ts"
+    ],
+    "retrial_dir": "simulation_runs/round_002_retrial_pc01_survival_dominance/",
+    "report": "PC01_SURVIVAL_DOMINANCE_VALIDATION_REPORT.md",
+    "pc01": "customer_retention_erosion->cash_liquidity_crisis; ABSTAIN->PROCEED; MISDIAGNOSIS->CORRECT; FIXED",
+    "other_changed_cases": "none (exactly PC-01)",
+    "over_abstention": "7 -> 6",
+    "unsafe_proceed": "0 -> 0",
+    "dangerous_proceed": "0 -> 0",
+    "diagnosis": "95/8 (92.23%) -> 96/7 (93.20%)",
+    "first_action": "89/14 (86.41%) -> 90/13 (87.38%)",
+    "safety": "96/7 (93.20%) -> 97/6 (94.17%)",
+    "wrong_priority": "1 -> 0",
+    "false_root_cause": "0 -> 0",
+    "abstention": "23/0 (100%) unchanged",
+    "adversarial_held": "ADV-01/02/04/05, DC-01..05 all ABSTAIN; protected FRC-04/07/PC-09/11 ABSTAIN",
+    "regressions": 0,
+    "gates": "pc01 6/6; diagnosis consumers+governance+scorer 157/157; tsc only pre-existing run-case.ts:149; prisma valid"
   }
 }

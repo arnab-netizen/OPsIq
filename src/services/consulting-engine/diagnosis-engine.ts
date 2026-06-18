@@ -831,6 +831,35 @@ function fin_isStrategicCapex(evidence: EvidenceItem[]): boolean {
   return hasCapexInvestment && hasIrreversible && hasFragileDemand;
 }
 
+// ─── Survival-dominance selection helpers (PC-01; selection-only, no new thresholds) ─
+// Optimization/growth diagnoses that survival pressure outranks for PRIMARY. Cash,
+// debt, working-capital, unit-economics, capex, legal, key-person, inventory are NOT
+// here — only genuine optimization/growth archetypes can be demoted by survival.
+const OPTIMIZATION_DIAGNOSES: ReadonlySet<DiagnosisType> = new Set([
+  DiagnosisType.CUSTOMER_RETENTION_EROSION,
+  DiagnosisType.DEMAND_GENERATION_FAILURE,
+  DiagnosisType.GTM_CHANNEL_MISMATCH,
+  DiagnosisType.PRICING_POWER_FAILURE,
+  DiagnosisType.MARGIN_EROSION,
+]);
+
+/**
+ * Critical survival/cash pressure in the runtime evidence: a ≤3-month (~90-day) cash
+ * runway, or an inherently-acute liquidity phrase (payroll/insolvency/cash-shortfall/
+ * supplier-shutdown/liquidity-emergency). Reuses the existing runway numeric (no new
+ * trigger threshold); the ≤3-month bar matches the R3 survival ladder's SURVIVAL_RUNWAY_MONTHS.
+ */
+const SURVIVAL_HARD =
+  /cannot make payroll|missed payroll|cannot meet payroll|out of cash|insolven|cash shortfall|cannot meet (?:its )?obligations|unable to meet (?:its )?obligations|supplier shutdown|liquidity (?:crisis|emergency)/;
+function fin_hasCriticalSurvivalPressure(evidence: EvidenceItem[]): boolean {
+  return evidence.some((e) => {
+    if (e.dimension !== "financial_health") return false;
+    const r = fin_runwayMonths(e);
+    if (r !== undefined && r <= 3) return true;
+    return SURVIVAL_HARD.test(fin_text(e));
+  });
+}
+
 export interface DiagnosisResult {
   primaryRootCause: RootCause;
   alternativeRootCauses: RootCause[];
@@ -897,6 +926,30 @@ export function diagnoseRootCause(
         "Cannot proceed with confident diagnosis. Additional investigation required.",
       ],
     };
+  }
+
+  // ── Survival dominance (PC-01): when cash/liquidity is ALREADY a matched candidate
+  // at HIGH/MODERATE confidence and the evidence shows CRITICAL survival pressure
+  // (≤3-month runway, payroll/insolvency/cash-shortfall, supplier-shutdown), it must
+  // beat a matched OPTIMIZATION diagnosis (retention/demand/gtm/pricing/margin) for
+  // primary — survival precedes optimization. Selection-only: it never creates a cash
+  // match from unmatched evidence, never changes any trigger threshold, and only
+  // reorders already-matched candidates. The downstream R2 adjudication and the safety
+  // gate are unchanged.
+  if (matchedPatterns.length > 1 && fin_hasCriticalSurvivalPressure(evidence)) {
+    const primaryType = matchedPatterns[0].pattern.diagnosis(evidence).type;
+    if (OPTIMIZATION_DIAGNOSES.has(primaryType)) {
+      const cashIdx = matchedPatterns.findIndex(
+        (m) =>
+          m.pattern.diagnosis(evidence).type === DiagnosisType.CASH_LIQUIDITY_CRISIS &&
+          (m.confidence === DiagnosisConfidence.HIGH ||
+            m.confidence === DiagnosisConfidence.MODERATE)
+      );
+      if (cashIdx > 0) {
+        const [cash] = matchedPatterns.splice(cashIdx, 1);
+        matchedPatterns.unshift(cash);
+      }
+    }
   }
 
   // ── R2 causal adjudication: re-attribute a surface symptom to its upstream

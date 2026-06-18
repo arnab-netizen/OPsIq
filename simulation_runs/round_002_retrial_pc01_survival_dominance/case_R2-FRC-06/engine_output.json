@@ -1,0 +1,191 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+    "Causal adjudication: re-ranked to pricing_power over surface customer_retention_erosion — The symptom is driven by a pricing/discounting problem (price realization below market), an upstream cause the engine cannot diagnose.",
+    "1 constraint(s) identified that may block execution"
+  ],
+  "decisionMemo": {
+    "id": "ed466b15-d3ea-4223-841d-9d517774f39e",
+    "engagementId": "5357a4dd-2fde-5c4d-94bf-be1b6cd56e3f",
+    "timestamp": "2026-06-18T07:32:35.999Z",
+    "businessProblem": "Churn jumped and the owner wants to rebuild loyalty, but customers are leaving for a reason loyalty programs won't fix.",
+    "rootCauseDiagnosis": {
+      "id": "06cc4a20-99c3-4fcf-8309-5ff5115a7c21",
+      "type": "pricing_power",
+      "description": "Pricing power failure from under-pricing, discount leakage, or price realization gap",
+      "mechanismDescription": "Realized price sits below comparable competitors or below list through uncontrolled discounting; the gap is price realization, not cost.",
+      "evidenceIds": [
+        "b501b841-f1e2-5351-9a47-9a16fab32510",
+        "12b41577-d987-5e54-a7af-b58785d65417"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "A deliberate penetration-pricing strategy",
+        "Mix shift rather than a price-realization gap"
+      ],
+      "missingEvidenceFor": [
+        "Win/loss price-sensitivity by segment",
+        "Discount-approval governance and leakage by rep"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [
+      {
+        "id": "edb5560c-1ad9-4ca4-b0a2-a43a111fef11",
+        "type": "ORGANIZATIONAL",
+        "description": "No customer relationship management system or loyalty program infrastructure",
+        "severity": "MEDIUM",
+        "blocksActions": [
+          "retention_focus",
+          "relationship_marketing"
+        ],
+        "releasableVia": [
+          "crm_implementation",
+          "loyalty_program_design"
+        ]
+      }
+    ],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "01e575b0-9df0-4060-993f-f3e02e095abd",
+          "title": "Run a price-realization and discount-leakage analysis and a win/loss price-sensitivity review",
+          "class": "STABILIZATION",
+          "objective": "Quantify the price-realization gap and discount leakage before any price change",
+          "rationale": "A price-realization and discount-leakage analysis is analysis-only and reversible, sizing the realized-vs-list gap and discount leakage by deal before any pricing move.",
+          "whyThisNow": "The gap is price realization, not cost; the leakage must be measured before any pricing move",
+          "ownerRole": "finance_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Analyze price realization and discount leakage",
+              "description": "Measure realized vs list price and discount leakage by deal/rep against comparable competitors.",
+              "ownerRole": "finance_lead",
+              "estimatedDays": 4,
+              "successCriteria": "Price-realization gap and discount leakage quantified by segment"
+            },
+            {
+              "sequence": 2,
+              "title": "Run a win/loss price-sensitivity review",
+              "description": "Review win/loss and willingness-to-pay to size reversible price/governance levers — no blanket hike.",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Reversible pricing-governance levers shortlisted with elasticity evidence"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Price-realization / leakage analysis complete",
+            "Win/loss price-sensitivity reviewed"
+          ],
+          "failureRisks": [
+            "Elasticity data may be thin in some segments"
+          ],
+          "fallbackPlan": "Pilot a governed discount-approval policy before any list-price change",
+          "evidenceBasis": [
+            "b501b841-f1e2-5351-9a47-9a16fab32510",
+            "12b41577-d987-5e54-a7af-b58785d65417"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 72,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "d12c6558-6c0f-4613-a549-3b4294f81ff4",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "01e575b0-9df0-4060-993f-f3e02e095abd"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "3b0ed31e-219b-4a8e-bc5d-9c543c153baa",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "01e575b0-9df0-4060-993f-f3e02e095abd"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "01e575b0-9df0-4060-993f-f3e02e095abd",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "01e575b0-9df0-4060-993f-f3e02e095abd"
+      ],
+      "contingencyRequired": true
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "1 constraint(s) must be released before full execution: No customer relationship management system or loyalty program infrastructure",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}
