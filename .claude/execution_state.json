@@ -1151,5 +1151,28 @@
     "next_step": "batch 5: multi-domain competing-surface cases + remaining FRC pairs + diagnosis-correct-action-wrong/delayed-consequence; stop adding healthy/recovery",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
+  },
+  "stage_a_round2_failure_mode_synthesis": {
+    "slice": "Round 2 failure-mode synthesis + remediation roadmap (docs only)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ANALYSIS_DOCS_ONLY (no cases, no scorer, no engine/gate/answer-key change)",
+    "files": [
+      "ROUND_2_FAILURE_MODE_SYNTHESIS.md",
+      "ROUND_2_REMEDIATION_ROADMAP.md"
+    ],
+    "failure_classes": "F1 causal-root-cause-blindness(13), F2 lexical-trigger-false-positive(2+), F3 no-survival-prioritization(1+11), F4 action-sequencing-wrong(13,unmeasured), F5 hidden-constraint-abstain-only(5,unmeasured), F6 model-coverage-gap(dozens,honest), F7 misleading-kpi-latent(10), F8 multi-domain-synthesis(16), F9 recommendation/safety-unmeasured(~35)",
+    "top_failure_mode": "F1 causal root-cause blindness - engine confidently picks surface decoy over true cause 13/13",
+    "code_root_causes": "diagnosis-engine rootCausePatterns lexical+numeric matchers, confidenceOrder sort -> matchedPatterns[0], no causal adjudication (F1/F8); fin_* bare-substring triggers no polarity/numeric (F2); no urgency weighting + intervention templates priorityScore 0 fixed sequence (F3/F4); causal-challenge + constraint-alignment abstain-only not re-attributing/recommending (F4/F5); trace stops at diagnosis -> half corpus unmeasured (F9)",
+    "highest_roi_fix": "R2 causal root-cause adjudication layer (addresses F1+F8); R0 6-axis scorer+re-trial is its measurement prerequisite; R1 lexical-trigger hardening cheap early guard",
+    "ranked_roadmap": "R0 scorer/re-trial -> R1 lexical hardening -> R2 causal adjudication -> R3 survival-prioritization+sequencing -> R4 constraint-aware recommendation -> R5 archetype expansion (R2 BEFORE R5)",
+    "fix_before_more_cases": "YES - F1 13/13 and F2 reproduced twice are decisive; remediate F1/F2/F3 + build scorer before authoring remaining 47 cases",
+    "safety_gate": "frozen; each remediation slice re-runs adversarial suite (10/10 + 2/2 controls) + Round-1 baseline; abstain-only, no threshold change",
+    "gates_run": "docs only; execution_state.json valid; no code touched",
+    "next_step": "R0: build 6-axis deterministic scorer + full-pipeline re-trial harness (runConsultingEngine -> safety adapter over 103 cases), pre-registered bar (B4)",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "reports": [
+      "ROUND_2_FAILURE_MODE_SYNTHESIS.md",
+      "ROUND_2_REMEDIATION_ROADMAP.md"
+    ]
   }
 }
