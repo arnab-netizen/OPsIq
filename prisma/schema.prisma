@@ -208,6 +208,7 @@ model ClientAccount {
   workspaceVerifications        OwnerRecommendationVerification[]  @relation("WorkspaceVerifications")
   workspaceAcknowledgements     OwnerOverrelianceAcknowledgement[] @relation("WorkspaceAcknowledgements")
   workspaceDecisions            OwnerDecision[] @relation("WorkspaceDecisions")
+  workspaceBenefits             OwnerBenefit[]  @relation("WorkspaceBenefits")
 
   @@index([status])
   @@map("client_accounts")
@@ -3498,4 +3499,48 @@ model OwnerDecisionRights {
 
   @@index([workspaceId])
   @@map("owner_decision_rights")
+}
+
+model OwnerBenefit {
+  id                      String    @id @default(cuid())
+  workspaceId             String
+  businessId              String
+  recommendationId        String?
+  actionId                String?
+  expectedBusinessBenefit String    @db.Text
+  benefitType             String    // revenue | profit | cash | margin | retention | conversion | productivity | risk_reduction | cost_reduction | quality_improvement
+  baseline                Float?
+  target                  Float?
+  targetUnit              String?
+  benefitOwner            String
+  realizationDate         DateTime?
+  reviewCadence           String?   // weekly | fortnightly | monthly | quarterly
+  actualBenefit           Float?
+  benefitStatus           String    @default("pending")  // pending | on_track | realized | partially_realized | not_realized | deferred
+  reasonNotRealized       String?   @db.Text
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  workspace               ClientAccount @relation("WorkspaceBenefits", fields: [workspaceId], references: [id])
+  reviews                 OwnerBenefitReview[]
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([benefitStatus])
+  @@map("owner_benefits")
+}
+
+model OwnerBenefitReview {
+  id                  String      @id @default(cuid())
+  workspaceId         String
+  benefitId           String
+  reviewedAt          DateTime    @default(now())
+  actualValueAtReview Float?
+  progressStatus      String      // on_track | behind | at_risk | realized | not_realized
+  reviewNotes         String?     @db.Text
+  reviewedBy          String
+  benefit             OwnerBenefit @relation(fields: [benefitId], references: [id])
+
+  @@index([workspaceId])
+  @@index([benefitId])
+  @@map("owner_benefit_reviews")
 }
