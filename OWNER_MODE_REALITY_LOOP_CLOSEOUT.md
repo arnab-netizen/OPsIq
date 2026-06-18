@@ -308,3 +308,103 @@ Requirements:
 - No DB required — typed policy + tests only
 - Target status: IMPLEMENTED_STATIC_ONLY
 
+---
+
+---
+
+## SLICE: Phase 3 — Autonomy/Access-Level Classification
+
+**Date**: 2026-06-18
+**Branch**: claude/sleepy-dirac-m4bdb9
+**Status**: IMPLEMENTED_STATIC_ONLY
+
+---
+
+### slice_name
+Phase 3 — Autonomy/Access-Level Classification
+
+### status
+IMPLEMENTED_STATIC_ONLY — typed policy functions + tests; no DB, no UI, no AI services
+
+### branch
+claude/sleepy-dirac-m4bdb9
+
+### files_changed
+- `src/domain/owner-mode/autonomy-policy.ts` — new (policy tables, enforcement functions, audit helpers)
+- `src/__tests__/domain/owner-mode/autonomy-policy.test.ts` — new (34 tests)
+- `.claude/execution_state.json` — updated with Phase 3 status
+- `OWNER_MODE_REALITY_LOOP_CLOSEOUT.md` — this append
+
+### models_added_or_changed
+None
+
+### routes_added_or_changed
+None
+
+### services_added_or_changed
+None
+
+### ui_added_or_changed
+None
+
+### tests_added_or_changed
+- `src/__tests__/domain/owner-mode/autonomy-policy.test.ts` — 34 tests covering:
+  - AUTONOMY_POLICIES table: all 5 levels defined, none allow autonomous execution or external action
+  - ACCESS_POLICIES table: all 4 levels defined, none allow external writes
+  - canExecuteAutonomously returns false for every registry capability
+  - canActExternal returns false for every registry capability
+  - canExecuteInternalAction gates correctly on owner approval
+  - High-impact recommendations cannot auto-execute
+  - validateCapabilityAutonomyConstraints detects violations
+  - auditRegistryAutonomyConstraints returns clean results for full registry
+  - assertPhase3Invariants does not throw
+  - Access level → mutation surface mapping (read_only, write_internal, write_owner_approved)
+
+### commands_run
+```
+npx vitest run src/__tests__/domain/owner-mode/autonomy-policy.test.ts → 34/34 pass
+npm run build                                                           → PASS
+npx tsc --noEmit                                                        → PASS
+npx prisma validate                                                     → PASS
+```
+
+### command_results
+| Command | Result |
+|---|---|
+| npx vitest run autonomy-policy.test.ts | 34/34 PASS |
+| npm run build | ✓ PASS |
+| npx tsc --noEmit | ✓ PASS |
+| npx prisma validate | ✓ PASS |
+
+### LANE_B_status_if_DB_backed
+N/A — no DB code in this slice
+
+### known_limitations
+1. Policy is a runtime-enforced typed contract; it does not yet wire into Prisma service methods (those come in Phases 5–22).
+2. `getExternallyProhibitedCapabilities()` returns zero items from current registry since no capability uses `external_action_prohibited` — this is correct and expected.
+
+### regressions_found
+None
+
+### regressions_fixed
+None needed
+
+### security_findings
+None — static policy only
+
+### tenant_isolation_findings
+Not applicable (static policy, no DB)
+
+### dashboard_proof_status
+Not applicable (Phase 23 not yet reached)
+
+### next_required_slice
+**Phase 4 — Security Threat Model for Input, Memory, Evidence, and Tools**
+
+Requirements:
+- Create `OWNER_MODE_SECURITY_THREAT_MODEL.md` covering prompt injection, memory poisoning, evidence manipulation, tool misuse
+- Cover all threat surfaces: malicious pasted text, PDF/screenshot/CSV, spreadsheet payloads, fake outcomes, cross-tenant leakage, public route exposure
+- Create security rule assertions + tests: uploaded content is data (never instruction), evidence cannot override system rules, memory writes require source classification, learning eligibility requires verified source path
+- No DB required — document + typed assertions + tests only
+- Target status: IMPLEMENTED_STATIC_ONLY
+
