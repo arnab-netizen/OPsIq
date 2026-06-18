@@ -216,6 +216,7 @@ model ClientAccount {
   workspaceActionOutcomes        OwnerActionOutcome[] @relation("WorkspaceActionOutcomes")
   workspaceHarmEvents            OwnerHarmEvent[] @relation("WorkspaceHarmEvents")
   workspaceFailureAdjudications  OwnerFailureAdjudication[] @relation("WorkspaceFailureAdjudications")
+  workspaceCausalAttributions    OwnerCausalAttribution[] @relation("WorkspaceCausalAttributions")
 
   @@index([status])
   @@map("client_accounts")
@@ -3780,4 +3781,33 @@ model OwnerFailureAdjudication {
   @@index([businessId])
   @@index([adjudicationVerdict])
   @@map("owner_failure_adjudications")
+}
+
+model OwnerCausalAttribution {
+  id                          String    @id @default(cuid())
+  workspaceId                 String
+  businessId                  String
+  recommendationId            String?
+  actionId                    String?
+  outcomeId                   String?
+  attributionClass            String    // not_assessed | correlation_only | plausible_contributor | likely_caused | confounded | external_event_dominant | insufficient_evidence
+  blocksLearning              Boolean
+  requiresHumanReview         Boolean
+  hasVerifiedCausalLink       Boolean
+  isExternallyDominated       Boolean
+  hasTemporalProximity        Boolean
+  hasControlledComparison     Boolean
+  hasOwnerTestimony           Boolean
+  hasExternalEventDuringPeriod Boolean
+  hasConfoundingFactors       Boolean
+  attributionReason           String    @db.Text
+  confoundingNotes            String?   @db.Text
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+  workspace                   ClientAccount @relation("WorkspaceCausalAttributions", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([attributionClass])
+  @@map("owner_causal_attributions")
 }

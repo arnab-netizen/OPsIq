@@ -130,7 +130,18 @@
       "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 47/47 passing",
       "compilation": "\u2713 TypeScript compiles without errors"
     },
-  "next_automatic_target": "Phase 18 \u2014 Causal Attribution Classification",
+  "phase_18": {
+      "status": "IMPLEMENTED_DB_UNVERIFIED",
+      "files": [
+        "src/domain/owner-mode/causal-attribution.ts",
+        "src/__tests__/domain/owner-mode/causal-attribution.test.ts",
+        "prisma/schema.prisma"
+      ],
+      "tests": "65 (35+ required)",
+      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 65/65 passing",
+      "compilation": "\u2713 TypeScript compiles without errors"
+    },
+  "next_automatic_target": "Phase 19 \u2014 Reassessment and Corrective Action",
   "gates_status": {
     "build": "PASS",
     "typecheck": "PASS",
