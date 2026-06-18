@@ -108,7 +108,18 @@
       "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 53/53 passing",
       "compilation": "\u2713 TypeScript compiles without errors"
     },
-  "next_automatic_target": "Phase 16 \u2014 Harm Tracking",
+    "phase_16": {
+      "status": "IMPLEMENTED_DB_UNVERIFIED",
+      "files": [
+        "src/domain/owner-mode/harm-tracking.ts",
+        "src/__tests__/domain/owner-mode/harm-tracking.test.ts",
+        "prisma/schema.prisma"
+      ],
+      "tests": "54 (30+ required)",
+      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 54/54 passing",
+      "compilation": "\u2713 TypeScript compiles without errors"
+    },
+  "next_automatic_target": "Phase 17 \u2014 Failure Adjudication",
   "gates_status": {
     "build": "PASS",
     "typecheck": "PASS",

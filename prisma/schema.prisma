@@ -214,6 +214,7 @@ model ClientAccount {
   workspaceEvidenceVerifications OwnerEvidenceVerification[] @relation("WorkspaceEvidenceVerifications")
   workspaceValidationCriteria    OwnerValidationCriteria[] @relation("WorkspaceValidationCriteria")
   workspaceActionOutcomes        OwnerActionOutcome[] @relation("WorkspaceActionOutcomes")
+  workspaceHarmEvents            OwnerHarmEvent[] @relation("WorkspaceHarmEvents")
 
   @@index([status])
   @@map("client_accounts")
@@ -3729,4 +3730,30 @@ model OwnerActionOutcome {
   @@index([actionId])
   @@index([outcomeStatus])
   @@map("owner_action_outcomes")
+}
+
+model OwnerHarmEvent {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  businessId          String
+  recommendationId    String?
+  actionId            String?
+  outcomeId           String?
+  harmCategory        String    // none | cash_loss | margin_damage | customer_loss | churn_increase | revenue_loss | compliance_risk | legal_risk | reputation_damage | operational_disruption | staff_overload | service_quality_damage | opportunity_cost | unknown_harm
+  harmSeverity        String    // none | low | medium | high | severe
+  harmAmountEstimate  Float?
+  harmMetric          String?
+  harmDescription     String    @db.Text
+  reversibility       String    // reversible | partially_reversible | irreversible | unknown
+  requiresHumanReview Boolean   @default(false)
+  incidentReviewFlag  Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  workspace           ClientAccount @relation("WorkspaceHarmEvents", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([harmSeverity])
+  @@index([harmCategory])
+  @@map("owner_harm_events")
 }
