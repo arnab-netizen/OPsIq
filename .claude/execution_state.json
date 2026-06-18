@@ -1203,8 +1203,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A final readiness audit (docs only): PROMOTE_TO_INTERNAL_OWNER_MODE_TRIAL_ONLY (safety gates pass; corpus/source/quality gates unmet)",
-  "pushed": true,
+  "last_commit": "STAGE A Round 2 real-world historical validation: blind-replay harness + grounding schema built; 0 source-verified cases (SOURCING_BLOCKER, fabrication forbidden)",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1679,5 +1679,22 @@
     "promotion_allowed": "internal owner-mode trial only (advisory, human-in-loop); NO public/paid",
     "stage_b": "conditionally allowed (groundwork not depending on Stage A public launch)",
     "stage_a": "INTERNAL_OWNER_MODE_TRIAL_ONLY; public-ready remains BLOCKED"
+  },
+  "stage_a_round2_historical_validation": {
+    "status": "BLOCKED_NEEDS_REAL_SOURCES (infrastructure COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE)",
+    "scope": "real-world historical validation: built blind-replay harness + case-grounding schema + integrity gate; no engine/gate/scorer/corpus/key/promotion change",
+    "files": [
+      "simulation_runner/run-historical-validation.ts",
+      "simulation_runs/historical_validation/README.md",
+      "ROUND_2_HISTORICAL_VALIDATION_REPORT.md"
+    ],
+    "cases_collected": 0,
+    "blind_replays": 0,
+    "alignment_score": "N/A (not computed; harness never fabricates)",
+    "sourcing_blocker": "WebFetch HTTP 403 on all primary domains (re-confirmed sec.gov); archive disallowed; snippets != verification per source standard; fabrication forbidden",
+    "integrity_gate": "verified - PURE_SYNTHETIC probe rejected, only REAL_SOURCE_BACKED scored",
+    "recommendation": "do not fabricate; run sourcing+full-text verification in a fetch-capable environment, then run-historical-validation.ts produces the 5 scores",
+    "gates": "tsc clean (only pre-existing run-case.ts:149); harness runs and reports NO_CASES honestly",
+    "stage_a": "INTERNAL_OWNER_MODE_TRIAL_ONLY; public-ready BLOCKED on source verification (G9)"
   }
 }
