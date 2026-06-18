@@ -32,8 +32,22 @@
       "no_autonomous_execution": true,
       "no_external_action": true
     },
-    "phase_4_through_28": "NOT_STARTED",
-    "next_automatic_target": "Phase 4 — Security Threat Model (execution.md Phase 4)"
+    "phase_4": {
+      "status": "IMPLEMENTED_STATIC_ONLY",
+      "classification": "DOMAIN_CONTRACT_ONLY",
+      "files": [
+        "OWNER_MODE_SECURITY_THREAT_MODEL.md",
+        "src/domain/owner-mode/security-rules.ts",
+        "src/__tests__/domain/owner-mode/security-rules.test.ts"
+      ],
+      "tests": "38/38 passing",
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓)",
+      "db_required": false,
+      "security_rules_count": 8,
+      "critical_rules": ["SEC-005", "SEC-007", "SEC-008"]
+    },
+    "phase_5_through_28": "NOT_STARTED",
+    "next_automatic_target": "Phase 5 — Input Quality Gate + Data Provenance (DB-backed, IMPLEMENTED_DB_UNVERIFIED target)"
   },
   "gates_status": {
     "build": "PASS",

@@ -408,3 +408,102 @@ Requirements:
 - No DB required — document + typed assertions + tests only
 - Target status: IMPLEMENTED_STATIC_ONLY
 
+---
+
+---
+
+## SLICE: Phase 4 — Security Threat Model
+
+**Date**: 2026-06-18
+**Branch**: claude/sleepy-dirac-m4bdb9
+**Status**: IMPLEMENTED_STATIC_ONLY
+
+---
+
+### slice_name
+Phase 4 — Security Threat Model for Input, Memory, Evidence, and Tools
+
+### status
+IMPLEMENTED_STATIC_ONLY — threat model document + typed security assertions + 38 tests; no DB, no UI
+
+### branch
+claude/sleepy-dirac-m4bdb9
+
+### files_changed
+- `OWNER_MODE_SECURITY_THREAT_MODEL.md` — new (8 threat surfaces, security rules table, severity matrix)
+- `src/domain/owner-mode/security-rules.ts` — new (SEC-001 through SEC-008 typed assertions)
+- `src/__tests__/domain/owner-mode/security-rules.test.ts` — new (38 tests)
+- `.claude/execution_state.json` — updated with Phase 4 status
+- `OWNER_MODE_REALITY_LOOP_CLOSEOUT.md` — this append
+
+### models_added_or_changed
+None
+
+### routes_added_or_changed
+None
+
+### services_added_or_changed
+None
+
+### ui_added_or_changed
+None
+
+### tests_added_or_changed
+- `src/__tests__/domain/owner-mode/security-rules.test.ts` — 38 tests covering:
+  - SEC-001: external source types classified as data, not instruction; malicious CSV treated as data
+  - SEC-003: owner notes always return stored_as_text, malicious notes not evaluated as instruction
+  - SEC-004: memory write source validation; unclassified sources throw; owner_note not valid
+  - SEC-005: learning eligibility gate: all 4 records required, any missing → learning_rejected
+  - SEC-006: AI_IS_NOT_A_VERIFIER invariant; assertVerifierIsNotAI rejects AI terms
+  - SEC-007/008: assertWorkspaceScopedQuery throws for missing/null/empty/whitespace workspaceId
+  - Security rule registry: 8 rules, unique IDs, critical severity correct, lookup helpers
+
+### commands_run
+```
+npx vitest run src/__tests__/domain/owner-mode/security-rules.test.ts → 38/38 pass
+npm run build                                                          → PASS
+npx tsc --noEmit                                                       → PASS
+npx prisma validate                                                    → PASS
+```
+
+### command_results
+| Command | Result |
+|---|---|
+| npx vitest run security-rules.test.ts | 38/38 PASS |
+| npm run build | ✓ PASS |
+| npx tsc --noEmit | ✓ PASS |
+| npx prisma validate | ✓ PASS |
+
+### LANE_B_status_if_DB_backed
+N/A — no DB code in this slice
+
+### known_limitations
+1. Threat surfaces 2.7 (future tool misuse) and 2.8 (CRM/accounting) are documented as pre-emptive rules only — implementation deferred until relevant phases.
+2. SEC-002 is documented and in the registry but has no separate function; it is enforced by the data-only classification of external inputs (SEC-001) + immutability rules (evidence model in Phase 12).
+
+### regressions_found
+None
+
+### regressions_fixed
+None needed
+
+### security_findings
+None (this slice IS the security findings document)
+
+### tenant_isolation_findings
+Cross-tenant leakage documented as SEC-007/008; workspaceId mandatory filter enforced by assertWorkspaceScopedQuery
+
+### dashboard_proof_status
+Not applicable (Phase 23 not yet reached)
+
+### next_required_slice
+**Phase 5 — Input Quality Gate + Data Provenance**
+
+Requirements:
+- Prisma models: owner_input_records, owner_input_quality_assessments, owner_data_provenance_records, owner_missing_data_flags
+- Input quality statuses: complete, partial, data_limited, critical_missing, conflicting, stale, owner_estimate_only, unsafe_for_strong_recommendation
+- Provenance fields: source_type, source_owner, uploaded_by, created_at, period_covered, freshness, hash_checksum, derived_metrics, lineage_to_diagnosis
+- Guardrails: no high-confidence diagnosis from missing critical inputs, no strong recommendation from stale data
+- DB-backed — target status: IMPLEMENTED_DB_UNVERIFIED (DB not available in current environment)
+- Tests: complete input permits normal diagnosis, missing margin downgrades recommendation, missing cash runway blocks high-risk action
+
