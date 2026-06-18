@@ -206,4 +206,4 @@ The following gates are deferred until DATABASE_URL is configured and network is
 
 ---
 
-**Classification:** COMPLETE_VERIFIED — all non-DB gates pass; DB runtime verified via GitHub Actions LANE_B (postgres:16, run 27793720853, 2026-06-18, 22 test files / 174 tests passed). LANE_A Neon secret verification is optional and can be run when MIGRATION_DATABASE_URL is corrected to a direct endpoint.
+**Classification:** COMPLETE_VERIFIED — all non-DB gates pass; DB runtime verified via GitHub Actions LANE_B (postgres:16, run 27793720853, 2026-06-18, 22 test files / 174 tests passed). LANE_A Neon verification run 27795140566 (2026-06-18): pooler gate ✅, schema valid ✅, migrate status ❌ NEON_DB_PENDING_MIGRATIONS (22 pending migrations + 1 ghost migration `1778679447_add_aggregate_locks`), DB tests ⏭ SKIPPED. Fix: resolve ghost migration, run `prisma migrate deploy` against Neon direct URL, re-trigger LANE_A.

@@ -793,3 +793,49 @@ Requirements:
 Verification is against a throwaway GitHub Actions PostgreSQL 16 service container, not Neon production or staging. LANE_A (Neon secret verification) remains optional and can be triggered via `workflow_dispatch` once `MIGRATION_DATABASE_URL` is corrected to a direct (non-pooler) Neon endpoint in GitHub repository secrets.
 
 - **next_required_slice**: Implement Controlled Learning System (Phases 29–35). Prerequisite (LANE_B DB verification) is now satisfied.
+
+---
+
+## Slice: LANE_A Neon DB Verification — Result: NEON_DB_PENDING_MIGRATIONS
+
+- **slice_name**: LANE_A Neon Secret Verification
+- **status**: NEON_DB_PENDING_MIGRATIONS
+- **branch**: claude/cool-ptolemy-dxrpm7
+- **run_id**: 27795140566
+- **date**: 2026-06-18
+
+### LANE_A CI Evidence
+
+| Check | Result |
+|---|---|
+| GitHub Actions run ID | 27795140566 |
+| Workflow | db-verification.yml |
+| Trigger | workflow_dispatch (use_neon_secrets=true) |
+| Neon host | ep-tiny-breeze-an0qsoje.c-6.us-east-1.aws.neon.tech (direct, not pooler) |
+| Pooler gate (MIGRATION_DATABASE_URL direct check) | ✅ PASSED — no -pooler in hostname |
+| prisma generate | ✅ |
+| prisma validate | ✅ schema valid |
+| prisma migrate status | ❌ FAILED — 22 pending migrations + 1 ghost migration |
+| DB test suite | ⏭ SKIPPED (migrate status exit code 1) |
+| LANE_A conclusion | ❌ LANE_A_DB_FAILED |
+
+### Classification: NEON_DB_PENDING_MIGRATIONS
+
+This is NOT a code failure, NOT a secret failure, NOT a network failure.
+
+The Neon test database is 22 migrations behind the local codebase:
+- Last applied migration in Neon: `20260511_add_aggregate_locks`
+- 22 pending migrations from `20260518_add_startup_status` through `20260615114500_b24_s1_private_mode_access`
+- Ghost migration in Neon DB (NOT in local prisma/migrations/): `1778679447_add_aggregate_locks`
+
+### Fix Required
+
+1. Investigate the ghost migration `1778679447_add_aggregate_locks` — exists in Neon `_prisma_migrations` table but not in local `prisma/migrations/` folder. Resolve schema drift before deploying.
+2. From a network-enabled environment (local machine or authorized CI step): run `prisma migrate deploy` against the Neon direct URL.
+3. Re-trigger LANE_A (`workflow_dispatch`, `use_neon_secrets=true`) to confirm DB tests pass against real Neon.
+
+### Impact on Phase Classification
+
+Phases 0–28 remain **COMPLETE_VERIFIED** — verified via LANE_B (GitHub Actions postgres:16, run 27793720853, 174/174 tests passed). LANE_A Neon verification is supplementary and does not downgrade LANE_B-verified status.
+
+- **next_required_slice**: Resolve ghost migration + run prisma migrate deploy against Neon direct URL → re-trigger LANE_A to achieve LANE_A_NEON_VERIFIED status. Then implement Controlled Learning System (Phases 29–35).

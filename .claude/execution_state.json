@@ -2042,7 +2042,24 @@
     "date": "2026-06-18",
     "commit": "d74cd94fc22f3829a02ef79fb155da872c1b9d06",
     "lane_a": "skipped (push event, use_neon_secrets != true) \u2014 expected",
-    "neon_verification": "optional/pending \u2014 requires MIGRATION_DATABASE_URL to be direct endpoint"
+    "neon_verification": "NEON_DB_PENDING_MIGRATIONS \u2014 see lane_a_evidence below"
+  },
+  "lane_a_evidence": {
+    "run_id": "27795140566",
+    "workflow": "db-verification.yml",
+    "lane": "LANE_A",
+    "trigger": "workflow_dispatch (use_neon_secrets=true)",
+    "date": "2026-06-18",
+    "neon_host": "ep-tiny-breeze-an0qsoje.c-6.us-east-1.aws.neon.tech (direct, not pooler)",
+    "pooler_gate": "pass",
+    "prisma_validate": "pass",
+    "prisma_migrate_status": "fail \u2014 22 pending migrations + 1 ghost migration (1778679447_add_aggregate_locks)",
+    "last_applied_in_neon": "20260511_add_aggregate_locks",
+    "pending_count": 22,
+    "db_tests": "skipped (migrate status exit code 1)",
+    "conclusion": "LANE_A_DB_FAILED",
+    "classification": "NEON_DB_PENDING_MIGRATIONS",
+    "fix_required": "resolve ghost migration; run prisma migrate deploy against Neon direct URL; re-trigger LANE_A"
   },
   "local_build_verification": {
     "date": "2026-06-18",
