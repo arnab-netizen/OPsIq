@@ -193,7 +193,7 @@ describe("consulting-safety-adapter (abstention wiring)", () => {
         totalEvidenceCount: 4,
         evidence: [
           { dimension: "customer_retention", finding: "churn high", isCritical: true },
-          { dimension: "financial_health", finding: "contribution margin negative", supportingData: { m: -12 } },
+          { dimension: "financial_health", finding: "contribution margin negative", isCritical: true, supportingData: { m: -12 } },
         ],
       });
       expect(r.causal_challenge.adverseOffArchetypeEvidence).toBe(true);

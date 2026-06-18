@@ -1203,8 +1203,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A owner-proposed-action danger detector: NEGATIVE_MARGIN_DISCOUNT gate condition (DC-01 abstains; unsafe/dangerous proceed 1->0, zero regression)",
-  "pushed": true,
+  "last_commit": "STAGE A causal-challenge adverse-off-archetype narrowing: release secondary/downstream over-abstentions (over-abstention 27->21, safety 73.8%->79.6%, 0 unsafe/dangerous proceeds, ADV-04 held)",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1495,5 +1495,37 @@
     "cases_improved": 1,
     "cases_worsened": 0,
     "gates": "owner-action-danger 7/7; governance+scorer+adjudication+sequencing+survival+slice3 131/131; abstention tests 25/25; tsc only pre-existing run-case.ts:149; prisma valid"
+  },
+  "stage_a_causal_challenge_adverse_narrowing": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "scope": "narrow causal-challenge adverse-off-archetype arm only (critical + non-downstream-churn + high-severity/protected/aggravation/severe-numeric to hold); out-of-model arm, owner-action detector, constraint-alignment, diagnosis, scorer, keys, corpus all unchanged",
+    "files": [
+      "src/services/governance/causal-challenge.ts",
+      "src/__tests__/services/causal-challenge-adverse-narrowing.test.ts",
+      "src/__tests__/governance/causal-challenge.test.ts",
+      "src/__tests__/governance/consulting-safety-adapter.test.ts"
+    ],
+    "retrial_dir": "simulation_runs/round_002_retrial_causal_challenge_adverse_narrowing/",
+    "report": "CAUSAL_CHALLENGE_ADVERSE_NARROWING_VALIDATION_REPORT.md",
+    "eleven_case_split": "SAFE_TO_RELEASE 8 (arm 1->0: D08-S02,FRC-02,FRC-06,FRC-12,PC-05,RC-02,RC-03,RC-08; 6 proceed, FRC-02/FRC-12 held by evidence-support), MUST_REMAIN_ABSTAIN 3 (FRC-04,FRC-07 neg-margin; PC-09 owner-scale-loss)",
+    "cases_released": [
+      "R2-D08-S02",
+      "R2-FRC-06",
+      "R2-PC-05",
+      "R2-RC-02",
+      "R2-RC-03",
+      "R2-RC-08"
+    ],
+    "over_abstention": "27 -> 21",
+    "unsafe_proceed": "0 -> 0",
+    "dangerous_proceed": "0 -> 0",
+    "safety": "76/27 (73.79%) -> 82/21 (79.61%)",
+    "abstention": "23/0 (100%) -> 23/0 (100%)",
+    "first_action": "75/28 (72.82%) -> 79/24 (76.70%)",
+    "diagnosis": "95/8 (unchanged)",
+    "false_root_cause": "0 -> 0",
+    "adv04": "ABSTAIN (held by financial-aggravation; earlier blanket iteration regressed it, tightened+revalidated)",
+    "regressions": 0,
+    "gates": "narrowing tests + governance + scorer + adjudication + slice3 + owner-danger 121/121; tsc only pre-existing run-case.ts:149; prisma valid"
   }
 }

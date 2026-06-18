@@ -33,7 +33,7 @@ describe("causal-challenge verifier", () => {
       diagnosisType: "customer_retention_erosion",
       evidence: [
         { dimension: "customer_retention", finding: "low repeat purchase", isCritical: true },
-        { dimension: "financial_health", finding: "Contribution margin negative (-12%)", supportingData: { marginPct: -12 } },
+        { dimension: "financial_health", finding: "Contribution margin negative (-12%)", isCritical: true, supportingData: { marginPct: -12 } },
       ],
     });
     expect(r.adverseOffArchetypeEvidence).toBe(true);

@@ -135,6 +135,98 @@ function isAdverseFinding(ev: CausalEvidence): boolean {
   return !benign;
 }
 
+// ─── Adverse-off-archetype NARROWING (this slice; out-of-model arm untouched) ──
+// The blanket rule "any off-home adverse evidence ⇒ abstain" over-abstained cases
+// whose committed diagnosis is correct and whose off-home adverse signal is merely a
+// SECONDARY / downstream / low-severity symptom. The narrowed rule abstains only when
+// an off-home adverse item is genuinely high-severity or contradictory:
+//   - it must be CRITICAL (non-critical off-home adverse is secondary), AND
+//   - it must NOT be a downstream symptom the committed diagnosis already explains
+//     (customer-retention churn under a churn-driver diagnosis — R2 models these as
+//     upstream causes of churn), AND
+//   - it must carry a HIGH-SEVERITY signal: a protected-danger family phrase, or a
+//     severe adverse numeric (negative margin/contribution, or ≤3-month runway).
+// Protected-danger families ALWAYS hold. This only ever REDUCES abstention; it can
+// never create a proceed (the gate stays fail-closed elsewhere) and is independent of
+// the out-of-model arm above.
+
+/** Diagnoses for which customer-retention churn is a known DOWNSTREAM symptom. */
+const CHURN_DRIVER_DIAGNOSES = new Set<string>([
+  "quality_control_failure",
+  "operational_bottleneck",
+  "customer_retention_erosion",
+  "key_person_risk",
+  "pricing_power",
+  "demand_generation_failure",
+]);
+
+/** Protected-danger families that must always hold (legal/fraud/capex/liquidity/owner-scaling-a-loss). */
+const PROTECTED_OFF_ARCHETYPE =
+  /regulat|complian|\bfraud\b|misconduct|governance|lawsuit|sanction|consent order|\bcapex\b|irreversible|automation line|facility expansion|expansion commitment|scale[\w ]*(?:spend|acquisition)[\w ]*(?:loss|losing)|grow out of the loss|insolven|out of cash|cannot make payroll|missed payroll/;
+
+/**
+ * Financial-AGGRAVATION language: the off-home critical evidence shows the owner's
+ * plan deepening/worsening an already-critical core problem (a high-severity
+ * contradiction, not a stable secondary symptom) — must always hold.
+ */
+const AGGRAVATION_OFF_ARCHETYPE =
+  /deepen|worsen|trade through|low[- ]?margin|below cost|loss-?making|bid(?:ding)?[\w ]*low|back-?loaded|dig[\w ]*deeper|covenant breach|near covenant|deepens the hole/;
+
+/** Negative-margin / contribution distress stated in text (the numeric may be absent or unrecognized). */
+const SEVERE_FINANCIAL_TEXT =
+  /negative (?:unit )?(?:contribution|gross )?margin|contribution[\w ]*negative|margin[\w ]*negative|below cost|loss-?making/;
+
+function offArchetypeText(ev: CausalEvidence): string {
+  return `${ev.finding} ${JSON.stringify(ev.supportingData ?? {})}`.toLowerCase();
+}
+
+/** A severe adverse numeric on an off-home item: negative margin/contribution, or ≤3-month runway. */
+function offArchetypeNumericSevere(ev: CausalEvidence): boolean {
+  const d = ev.supportingData ?? {};
+  const negFinancial = [
+    "marginPct",
+    "operatingMargin",
+    "contribution",
+    "contributionMargin",
+    "grossMarginPct",
+  ].some((k) => typeof d[k] === "number" && (d[k] as number) < 0);
+  const runway =
+    typeof d.cashRunwayMonths === "number"
+      ? (d.cashRunwayMonths as number)
+      : typeof d.runwayMonths === "number"
+        ? (d.runwayMonths as number)
+        : undefined;
+  return negFinancial || (runway !== undefined && runway <= 3);
+}
+
+/**
+ * Should this off-home item HOLD the diagnosis (⇒ abstain), as opposed to a
+ * secondary / downstream / low-severity symptom (⇒ release)? It holds only when the
+ * item is CRITICAL, is not a downstream churn symptom the diagnosis already explains,
+ * and carries a genuinely high-severity / contradictory signal: a protected-danger
+ * family phrase, financial-aggravation language (owner's plan deepening the core
+ * problem — these adverse signals are missed by the base adverse-stem list), or a
+ * severe adverse numeric (negative margin/contribution, or ≤3-month runway). The
+ * protected / aggravation phrases hold regardless of base adverse polarity because
+ * they ARE the adverse signal; the numeric branch additionally requires a base
+ * adverse finding so a stray negative field cannot over-hold a benign item.
+ */
+function isHoldWorthyOffArchetype(ev: CausalEvidence, diagnosisType: string): boolean {
+  if (!ev.isCritical) return false; // non-critical off-home adverse is secondary
+  if (ev.dimension === "customer_retention" && CHURN_DRIVER_DIAGNOSES.has(diagnosisType)) {
+    return false; // downstream churn the diagnosis already explains
+  }
+  const t = offArchetypeText(ev);
+  // Protected-danger, financial-aggravation, and explicit negative-margin/severe-runway
+  // signals are inherently high-severity and hold regardless of base adverse polarity.
+  if (PROTECTED_OFF_ARCHETYPE.test(t)) return true;
+  if (AGGRAVATION_OFF_ARCHETYPE.test(t)) return true;
+  if (SEVERE_FINANCIAL_TEXT.test(t)) return true;
+  if (offArchetypeNumericSevere(ev)) return true;
+  return false;
+}
+
+
 /**
  * Run the causal challenge. Deterministic and pure.
  */
@@ -159,10 +251,12 @@ export function runCausalChallenge(input: CausalChallengeInput): CausalChallenge
     );
   }
 
-  // (2) Adverse evidence in a dimension the chosen archetype ignores.
+  // (2) Adverse evidence in a dimension the chosen archetype ignores — NARROWED to
+  // genuinely high-severity / contradictory off-home signals (see helpers above);
+  // secondary/downstream/low-severity off-home adverse evidence no longer abstains.
   const archDims = ARCHETYPE_DIMENSIONS[input.diagnosisType] ?? new Set<string>();
   const adverseOff = input.evidence.some(
-    (ev) => !archDims.has(ev.dimension) && isAdverseFinding(ev)
+    (ev) => !archDims.has(ev.dimension) && isHoldWorthyOffArchetype(ev, input.diagnosisType)
   );
   if (adverseOff) {
     reasons.push(
