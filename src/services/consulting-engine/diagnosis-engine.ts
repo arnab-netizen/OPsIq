@@ -5,6 +5,7 @@ import {
   DiagnosisType,
 } from "@/domain/consulting-engine/types";
 import { v4 as uuidv4 } from "uuid";
+import { adjudicateCausalPrimary, type AdjEvidence } from "./causal-adjudication";
 
 /**
  * Diagnosis Engine: Identifies root causes using pattern matching on evidence
@@ -467,6 +468,56 @@ export function diagnoseRootCause(
     };
   }
 
+  // ── R2 causal adjudication: re-attribute a surface symptom to its upstream
+  // driver before final selection. Pure; uses only runtime evidence (no keys).
+  const candidateTypes = matchedPatterns.map((m) => m.pattern.diagnosis(evidence).type);
+  const adjEvidence: AdjEvidence[] = evidence.map((e) => ({
+    dimension: e.dimension,
+    finding: e.finding,
+    isCritical: e.isCritical,
+    supportingData: e.supportingData,
+  }));
+  const adjudication = adjudicateCausalPrimary({ candidates: candidateTypes, evidence: adjEvidence });
+
+  if (adjudication.action === "abstain") {
+    return {
+      primaryRootCause: {
+        id: uuidv4(),
+        type: DiagnosisType.UNKNOWN,
+        description: "Surface symptom suppressed; root cause is upstream and unmodeled",
+        mechanismDescription:
+          "Causal adjudication found a stronger upstream driver that explains the matched surface symptom; the engine refuses to name the downstream symptom as the root cause.",
+        evidenceIds: evidence.map((e) => e.id),
+        confidence: DiagnosisConfidence.INSUFFICIENT_EVIDENCE,
+        alternativeExplanations: [
+          `Suppressed surface diagnosis: ${adjudication.suppressed}`,
+          adjudication.rationale,
+        ],
+        missingEvidenceFor: [
+          "An archetype for the upstream driver (out of current model coverage)",
+          "Confirmation the surface symptom is not independently the root cause",
+        ],
+      },
+      alternativeRootCauses: [],
+      confidence: DiagnosisConfidence.INSUFFICIENT_EVIDENCE,
+      readinessForIntervention: "BLOCKED",
+      warningFlags: [
+        `Causal adjudication: abstained — ${adjudication.rationale}`,
+        `Raw matched candidates: ${candidateTypes.join(", ")}`,
+      ],
+    };
+  }
+
+  if (adjudication.action === "rerank") {
+    const idx = matchedPatterns.findIndex(
+      (m) => m.pattern.diagnosis(evidence).type === adjudication.newPrimary
+    );
+    if (idx > 0) {
+      const [chosen] = matchedPatterns.splice(idx, 1);
+      matchedPatterns.unshift(chosen);
+    }
+  }
+
   const primary = matchedPatterns[0].pattern.diagnosis(evidence);
   (primary as any).confidence = matchedPatterns[0].confidence;
 
@@ -477,6 +528,11 @@ export function diagnoseRootCause(
   });
 
   const warningFlags: string[] = [];
+  if (adjudication.action === "rerank") {
+    warningFlags.push(
+      `Causal adjudication: re-ranked to ${adjudication.newPrimary} over surface ${adjudication.demoted} — ${adjudication.rationale}`
+    );
+  }
   if (matchedPatterns[0].confidence === DiagnosisConfidence.PROVISIONAL) {
     warningFlags.push(
       "Diagnosis confidence is PROVISIONAL. Recommend deeper investigation before major intervention."

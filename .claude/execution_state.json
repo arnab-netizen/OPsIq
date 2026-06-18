@@ -1203,7 +1203,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 R1: lexical-trigger hardening (polarity-aware semantic guards; zero corpus regression)",
+  "last_commit": "STAGE A Round 2 R2: causal adjudication layer (false_root_cause 12->0, diagnosis 83.5%->96.1%, zero regressions)",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -1242,5 +1242,26 @@
     "gates_run": "lexical 14/14, scorer 13/13, governance+adversarial 83/83, diagnosis consumers 68/68 sweep, tsc (only pre-existing run-case.ts:149), prisma validate PASS",
     "r2_still_required": "YES (R1 is a guard, not a capability; false_root_cause/over_abstention untouched)",
     "next_automatic_target": "R2 causal adjudication layer [separately authorized]"
+  },
+  "stage_a_round2_r2_causal_adjudication": {
+    "slice": "R2 causal adjudication layer \u2014 re-attribute surface symptoms to upstream drivers (KEYSTONE)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ENGINE_CAUSAL_ADJUDICATION",
+    "files": [
+      "src/services/consulting-engine/causal-adjudication.ts (new, pure)",
+      "src/services/consulting-engine/diagnosis-engine.ts (wired after pattern match, before selection)",
+      "src/__tests__/services/causal-adjudication.test.ts (14)",
+      "simulation_runs/round_002_retrial_r2_causal_adjudication/ (frozen R2 retrial)",
+      "R2_CAUSAL_ADJUDICATION_VALIDATION_REPORT.md"
+    ],
+    "scope_guard": "No R3-R9, no archetypes, no safety-gate/scorer/key/threshold change. Adjudicator uses runtime evidence only (no case ids/keys/labels). Re-rank among existing candidates or suppress->abstain; never fabricates an archetype, never turns abstain into commit.",
+    "wiring_proof": "diagnoseRootCause: matchedPatterns -> candidateTypes -> adjudicateCausalPrimary(evidence) -> abstain(UNKNOWN/INSUFFICIENT) | rerank(reorder matchedPatterns) | keep; rationale + raw candidates in warningFlags",
+    "r1_vs_r2": "diagnosis 86->99 (83.5%->96.1%); false_root_cause 12->0; over_abstention 44->53; correct_dx_wrong_action 27->28; unsafe_proceed 1->1; dangerous_proceed 1->1; safety 58->49; abstention recall unchanged",
+    "cases_improved": "13 (ADV-02, FRC-01..10/12/13); FRC-02 reranked to correct quality",
+    "cases_worsened": "0 (zero valid covered-case regressions; 42/42 preserved; danger pairs PC-11/MC-02/PC-03/MK-08/HC-04 held)",
+    "shifted_wrong_to_safe_abstain": 13,
+    "gates_run": "R2 14/14, R1 lexical+scorer+governance+adversarial 110/110, diagnosis consumers 41/41, tsc (only pre-existing run-case.ts:149), prisma valid",
+    "r3_r4_still_required": "YES (R4 action sequencing now top lever: firstAction 34.0%, correct_dx_wrong_action 28; R3 owns wrong_priority; R5 converts new safe-abstentions to proceeds)",
+    "next_automatic_target": "R4 action-sequencing engine [separately authorized]"
   }
 }
