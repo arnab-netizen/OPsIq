@@ -220,6 +220,8 @@ model ClientAccount {
   workspaceReassessmentEvents         OwnerReassessmentEvent[] @relation("WorkspaceReassessmentEvents")
   workspaceLearningEligibilityReviews OwnerLearningEligibilityReview[] @relation("WorkspaceLearningEligibilityReviews")
   workspaceDecisionMemories           OwnerDecisionMemory[] @relation("WorkspaceDecisionMemories")
+  workspaceBusinessSnapshots          OwnerBusinessStateSnapshot[] @relation("WorkspaceBusinessSnapshots")
+  workspaceMetricTimeline             OwnerBusinessMetricTimeline[] @relation("WorkspaceMetricTimeline")
 
   @@index([status])
   @@map("client_accounts")
@@ -3909,4 +3911,41 @@ model OwnerDecisionMemory {
   @@index([category])
   @@index([blocksRepetition])
   @@map("owner_decision_memories")
+}
+
+model OwnerBusinessStateSnapshot {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  businessId   String
+  periodLabel  String
+  snapshotNotes String? @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  workspace    ClientAccount @relation("WorkspaceBusinessSnapshots", fields: [workspaceId], references: [id])
+  metrics      OwnerBusinessMetricTimeline[]
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([periodLabel])
+  @@map("owner_business_state_snapshots")
+}
+
+model OwnerBusinessMetricTimeline {
+  id          String   @id @default(cuid())
+  workspaceId String
+  businessId  String
+  snapshotId  String
+  metricName  String   // BusinessMetricName enum values
+  value       Float
+  periodLabel String
+  unit        String?
+  createdAt   DateTime @default(now())
+  workspace   ClientAccount @relation("WorkspaceMetricTimeline", fields: [workspaceId], references: [id])
+  snapshot    OwnerBusinessStateSnapshot @relation(fields: [snapshotId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([metricName])
+  @@index([periodLabel])
+  @@map("owner_business_metrics_timeline")
 }
