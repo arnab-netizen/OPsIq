@@ -211,6 +211,7 @@ model ClientAccount {
   workspaceBenefits             OwnerBenefit[]  @relation("WorkspaceBenefits")
   workspaceActions              OwnerAction[]   @relation("WorkspaceActions")
   workspaceEvidenceRecords      OwnerEvidenceRecord[] @relation("WorkspaceEvidenceRecords")
+  workspaceEvidenceVerifications OwnerEvidenceVerification[] @relation("WorkspaceEvidenceVerifications")
 
   @@index([status])
   @@map("client_accounts")
@@ -3641,4 +3642,28 @@ model OwnerEvidenceRecord {
   @@index([relatedEntityId])
   @@index([status])
   @@map("owner_evidence_records")
+}
+
+model OwnerEvidenceVerification {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  businessId          String
+  evidenceId          String
+  verificationStatus  String    // verified | rejected | insufficient | conflicting | stale | needs_more_evidence
+  verificationMethod  String    // manual_review | cross_reference | system_audit | external_validation
+  verifierType        String    // owner | system | admin | external_record | test_fixture
+  verifiedAt          DateTime?
+  verificationReason  String    @db.Text
+  sourceType          String?
+  confidenceLevel     String?   // high | medium | low | none
+  conflictNotes       String?   @db.Text
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  workspace           ClientAccount @relation("WorkspaceEvidenceVerifications", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([evidenceId])
+  @@index([verificationStatus])
+  @@map("owner_evidence_verifications")
 }
