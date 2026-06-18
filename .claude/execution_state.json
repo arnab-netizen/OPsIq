@@ -1204,7 +1204,7 @@
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
   "last_commit": "STAGE A R5 slice 3: legal/key-person/strategic-capex archetypes (over-abstention 33->27, first-action 66.0%->71.8%, 11 correct diagnoses, zero new unsafe proceeds)",
-  "pushed": false,
+  "pushed": true,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
