@@ -1,0 +1,221 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+    "Causal adjudication: re-ranked to working_capital_stress over surface cash_liquidity_crisis — Cash pressure is driven by working-capital build (receivables/DSO/cash-conversion), an upstream cause the engine cannot diagnose; refusing to name liquidity as the root."
+  ],
+  "decisionMemo": {
+    "id": "0c076f28-f7ae-40fd-a6e8-de3150e4476f",
+    "engagementId": "b57c1b48-4889-5e09-959d-cd04a4bf117c",
+    "timestamp": "2026-06-18T04:13:03.425Z",
+    "businessProblem": "The owner sees a two-month cash position and fears insolvency, but the cash is not gone — it is somewhere else.",
+    "rootCauseDiagnosis": {
+      "id": "50e214d3-7450-4230-9f9a-4aedbad09269",
+      "type": "working_capital_stress",
+      "description": "Working-capital stress from receivables / payables / cash-conversion cycle",
+      "mechanismDescription": "Cash is trapped in the working-capital cycle — stretched receivables (DSO), payables timing, or a lengthening cash-conversion cycle — not an operating loss.",
+      "evidenceIds": [
+        "40024e74-c4ac-567e-b650-665546abf5ed",
+        "7d7dbc43-1a7b-5c57-bd18-3bf82943ad47"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "A one-off large receivable rather than a structural cycle problem",
+        "Seasonal build that unwinds without intervention"
+      ],
+      "missingEvidenceFor": [
+        "Receivables aging by customer segment",
+        "Payables terms and supplier flexibility"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "26f8c748-36fd-4a3d-9617-0ac5937afaa0",
+          "title": "Stabilize cash first: build a 13-week cash-flow forecast and secure committed liquidity before any optimization",
+          "class": "STABILIZATION",
+          "objective": "Secure survival before any retention, growth, or optimization spend",
+          "rationale": "With a short runway, liquidity is the gating priority over optimization",
+          "whyThisNow": "Optimization spend before cash is secured risks insolvency",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Stabilize cash first: build a 13-week cash-flow forecast and secure committed liquidity before any optimization",
+              "description": "Secure survival before any retention, growth, or optimization spend. With a short runway, liquidity is the gating priority over optimization.",
+              "ownerRole": "consultant",
+              "estimatedDays": 7,
+              "successCriteria": "A 13-week forecast exists and committed liquidity is secured before optimization"
+            }
+          ],
+          "estimatedCostBand": "MINIMAL",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "A 13-week forecast exists and committed liquidity is secured before optimization"
+          ],
+          "failureRisks": [
+            "The first action is necessary but not sufficient; follow-on interventions required"
+          ],
+          "fallbackPlan": "Escalate to a full intervention plan once the root cause is verified",
+          "evidenceBasis": [
+            "40024e74-c4ac-567e-b650-665546abf5ed",
+            "7d7dbc43-1a7b-5c57-bd18-3bf82943ad47"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 100
+        },
+        "priorityScore": 100,
+        "factors": [
+          {
+            "factor": "survival/safety/reversibility prioritization",
+            "score": 10,
+            "rationale": "With a short runway, liquidity is the gating priority over optimization"
+          }
+        ],
+        "sequencingReason": "SURVIVAL_CASH / STABILIZE_CASH: Optimization spend before cash is secured risks insolvency"
+      },
+      {
+        "intervention": {
+          "id": "69639f18-d155-4ab6-bd1c-ffa53c56e212",
+          "title": "Map the cash-conversion cycle and build a receivables segmentation and collections plan",
+          "class": "STABILIZATION",
+          "objective": "Locate where cash is trapped in receivables and payables before any financing decision",
+          "rationale": "Cash-conversion-cycle mapping and a collections plan are low-cost and reversible, locating where cash is trapped in the receivables cycle before any financing decision.",
+          "whyThisNow": "Cash is trapped in working capital; the conversion cycle must be mapped before any financing decision",
+          "ownerRole": "finance_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Map the cash-conversion cycle",
+              "description": "Quantify DSO, DPO, and inventory days into a cash-conversion-cycle map by customer/supplier segment.",
+              "ownerRole": "finance_lead",
+              "estimatedDays": 4,
+              "successCriteria": "Cash-conversion cycle mapped with the largest receivables drivers identified"
+            },
+            {
+              "sequence": 2,
+              "title": "Build a receivables segmentation and collections plan",
+              "description": "Segment receivables and stand up a prioritized collections plan for the slowest-paying accounts.",
+              "ownerRole": "owner",
+              "estimatedDays": 4,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Collections plan live for the top overdue receivables"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Cash-conversion cycle mapped",
+            "Collections plan live"
+          ],
+          "failureRisks": [
+            "Large customers may resist tighter terms"
+          ],
+          "fallbackPlan": "Negotiate selective, non-punitive financing only after the cycle is mapped",
+          "evidenceBasis": [
+            "40024e74-c4ac-567e-b650-665546abf5ed",
+            "7d7dbc43-1a7b-5c57-bd18-3bf82943ad47"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 75,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 6,
+            "rationale": "Expected revenue impact: MINOR. Urgency: CRITICAL"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Critical revenue urgency requires immediate stabilization"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "9d135997-9b13-489a-829e-5f39c3abd8d7",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "26f8c748-36fd-4a3d-9617-0ac5937afaa0",
+          "69639f18-d155-4ab6-bd1c-ffa53c56e212"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "f3b2c65d-dbad-49f5-a600-95cac4294da3",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "26f8c748-36fd-4a3d-9617-0ac5937afaa0",
+          "69639f18-d155-4ab6-bd1c-ffa53c56e212"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "26f8c748-36fd-4a3d-9617-0ac5937afaa0",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "26f8c748-36fd-4a3d-9617-0ac5937afaa0"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

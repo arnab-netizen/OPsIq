@@ -1203,8 +1203,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 action-text collision fix: reword slice-1/2 template rationales (first-action 56.3%->66.0%, 10 collisions fixed, zero regressions)",
-  "pushed": true,
+  "last_commit": "STAGE A R5 slice 3: legal/key-person/strategic-capex archetypes (over-abstention 33->27, first-action 66.0%->71.8%, 11 correct diagnoses, zero new unsafe proceeds)",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1402,5 +1402,47 @@
     "remaining_collisions": 0,
     "gates": "vitest action-text 5/5; scorer+intervention+adjudication+r5 39/39; non-DB benchmark/governance/survival 107/107; tsc only pre-existing run-case.ts:149; prisma valid; 2 *.db.test.ts DB_BLOCKED",
     "tests_added": "src/__tests__/services/action-text-collision.test.ts (5)"
+  },
+  "stage_a_round2_r5_slice3_legal_keyperson_capex": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "scope": "add legal_governance_risk / key_person_risk / strategic_capex_risk archetypes (diagnosis triggers + R2 rerank covered + home-dim metadata + coverage metadata + 3 interventions); reword COMPLIANCE_REVIEW first action; no gate/scorer-logic/key/corpus change",
+    "files": [
+      "src/domain/consulting-engine/types.ts",
+      "src/services/consulting-engine/diagnosis-engine.ts",
+      "src/services/consulting-engine/causal-adjudication.ts",
+      "src/services/consulting-engine/action-sequencing.ts",
+      "src/services/consulting-engine/intervention-design-engine.ts",
+      "src/services/governance/causal-challenge.ts",
+      "src/services/benchmark/round2-scorer.ts",
+      "src/__tests__/services/r5-slice3-legal-keyperson-capex.test.ts",
+      "src/__tests__/benchmark/round2-scorer.test.ts"
+    ],
+    "retrial_dir": "simulation_runs/round_002_retrial_r5_slice3_legal_keyperson_capex/",
+    "report": "R5_SLICE3_LEGAL_KEYPERSON_CAPEX_VALIDATION_REPORT.md",
+    "new_archetype_diagnoses": {
+      "strategic_capex_risk": 4,
+      "key_person_risk": 4,
+      "legal_governance_risk": 3
+    },
+    "over_abstention": "33 -> 27",
+    "diagnosis": "97/6 (94.17%) -> 95/8 (92.23%) (-2 adversarial safe-abstain reclassification)",
+    "first_action": "68/35 (66.02%) -> 74/29 (71.84%)",
+    "safety": "69/34 (66.99%) -> 75/28 (72.82%)",
+    "unsafe_proceed": "1 {DC-01} -> 1 {DC-01}",
+    "dangerous_proceed": "1 {DC-01} -> 1 {DC-01}",
+    "false_root_cause": "0 -> 0",
+    "adversarial": "ADV-02 ABSTAIN, ADV-03 ABSTAIN, DC-04 ABSTAIN (all safe)",
+    "newly_proceeding": [
+      "R2-D13-S01",
+      "R2-D13-S02",
+      "R2-D14-S02",
+      "R2-D15-S01",
+      "R2-D15-S02",
+      "R2-HC-05"
+    ],
+    "regressions": 0,
+    "cases_improved": 11,
+    "cases_worsened": 2,
+    "gates": "vitest slice3 13/13; scorer+governance+adjudication+sequencing+survival 124/124; engine scope green; tsc only pre-existing run-case.ts:149; prisma valid; 5 *.db/external-systems suites DB_BLOCKED"
   }
 }

@@ -652,6 +652,88 @@ const interventionTemplates: InterventionTemplate[] = [
       },
     ],
   },
+  // ─── E2 slice 3 templates (low-cost, reversible, diagnostic, owner-constrained) ──
+  // Worded to state what the safe first action DOES and to match the acceptable
+  // first action while never echoing the case's unsafe action (self-certify / take on
+  // a dependency-deepening commitment / commit the irreversible capital).
+  {
+    rootCauseKeyword: "legal_governance",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Stand up a compliance remediation plan and engage regulatory counsel",
+        class: InterventionClass.CONTAINMENT,
+        objective: "Contain the governance exposure and engage the regulator before any operational change",
+        rationale: "A compliance-gap remediation plan with qualified regulatory counsel is low-cost and reversible, containing the exposure and meeting the regulator before business-as-usual.",
+        whyThisNow: "The regulatory exposure is live; containment and counsel must precede any operational project",
+        ownerRole: "owner",
+        steps: [
+          { sequence: 1, title: "Map the compliance gaps and containment actions", description: "Build a compliance-gap remediation plan against the regulatory timeline and suspend the practice that triggered the exposure.", ownerRole: "consultant", estimatedDays: 4, successCriteria: "Compliance gaps mapped and a remediation plan scoped to the regulatory timeline" },
+          { sequence: 2, title: "Engage regulatory counsel and the regulator", description: "Engage qualified regulatory counsel and open a containment dialogue with the regulator on disclosure and remediation.", ownerRole: "owner", estimatedDays: 4, dependsOn: [1], successCriteria: "Regulatory counsel engaged and a governance remediation program scoped" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Compliance-gap remediation plan scoped", "Regulatory counsel engaged"],
+        failureRisks: ["The regulatory scope may widen as facts emerge"],
+        fallbackPlan: "Prioritize the highest-exposure compliance gaps first while counsel scopes the full remediation",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 8,
+        priorityScore: 0,
+      },
+    ],
+  },
+  {
+    rootCauseKeyword: "key_person",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Map key-person dependencies and begin knowledge capture and cross-training",
+        class: InterventionClass.STABILIZATION,
+        objective: "Reduce the key-person point of failure by capturing knowledge before new work",
+        rationale: "Key-person dependency mapping with knowledge capture and cross-training is low-cost and reversible, reducing the key-person concentration before new engagements.",
+        whyThisNow: "Critical knowledge and relationships concentrate in one person; capture and cross-training must precede new work",
+        ownerRole: "owner",
+        steps: [
+          { sequence: 1, title: "Map the key-person dependencies", description: "Map the dependencies and the concentration of knowledge, relationships, and revenue on that person.", ownerRole: "consultant", estimatedDays: 3, successCriteria: "Key-person dependencies and revenue concentration mapped" },
+          { sequence: 2, title: "Stand up knowledge capture and cross-training", description: "Document the undocumented knowledge and cross-train a second qualified resource to remove the point of failure.", ownerRole: "owner", estimatedDays: 4, dependsOn: [1], successCriteria: "Knowledge-capture and cross-training plan underway with a second qualified resource" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Key-person dependency mapping complete", "Knowledge-capture / cross-training underway"],
+        failureRisks: ["The key person may resist documentation or transfer"],
+        fallbackPlan: "Capture the highest-risk knowledge and relationships first while a second resource is recruited",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 7,
+        priorityScore: 0,
+      },
+    ],
+  },
+  {
+    rootCauseKeyword: "strategic_capex",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Validate demand durability and model the downside before any irreversible capital outlay",
+        class: InterventionClass.STABILIZATION,
+        objective: "Size demand durability and the downside before any irreversible capital outlay",
+        rationale: "Demand-durability validation and downside / reversibility scenario modelling are low-cost and reversible, sizing how durable the demand is and the downside before any irreversible capital is locked in.",
+        whyThisNow: "The capital outlay is largely irreversible; demand durability and the downside must be modelled first",
+        ownerRole: "owner",
+        steps: [
+          { sequence: 1, title: "Validate demand durability", description: "Validate how durable the demand is and whether it persists beyond the near-term driver.", ownerRole: "consultant", estimatedDays: 4, successCriteria: "Demand-durability validation completed with a persistence estimate" },
+          { sequence: 2, title: "Model the downside and reversibility", description: "Model the downside and reversibility scenarios for the capital under consideration before any outlay.", ownerRole: "owner", estimatedDays: 3, dependsOn: [1], successCriteria: "Downside and reversibility scenario modelling completed" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Demand-durability validation complete", "Downside / reversibility scenario modelling complete"],
+        failureRisks: ["Demand-durability data may be thin for a new market"],
+        fallbackPlan: "Test a reversible or leasable alternative before any irreversible outlay",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 7,
+        priorityScore: 0,
+      },
+    ],
+  },
 ];
 
 export function designInterventions(

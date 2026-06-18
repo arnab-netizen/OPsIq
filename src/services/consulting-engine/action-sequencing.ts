@@ -145,18 +145,20 @@ export function sequenceFirstAction(input: SequenceInput): FirstActionPlan {
         };
   }
 
-  // Cross-cutting: legal/compliance review precedes operational execution.
+  // Cross-cutting: a compliance-remediation containment precedes operational execution.
+  // Phrased to state what the action DOES (compliance-gap remediation + regulatory
+  // counsel) rather than echoing an unsafe "self-certify … legal review" action.
   if (hasLegalRisk(evidence)) {
     return {
       kind: "COMPLIANCE_REVIEW",
-      title: "Stand up a compliance/legal review before any operational execution",
-      objective: "Contain legal/regulatory exposure before acting on the operational issue",
-      rationale: "A legal/compliance/regulatory risk is present and dominates sequencing",
-      whyThisNow: "Operating before the legal exposure is reviewed can cause irreversible harm",
+      title: "Stand up a compliance remediation plan and engage regulatory counsel before operational execution",
+      objective: "Contain the regulatory exposure and engage counsel before acting on the operational issue",
+      rationale: "A compliance and regulatory containment is present and dominates sequencing",
+      whyThisNow: "Operating before the regulatory exposure is contained can cause irreversible harm",
       class: InterventionClass.CONTAINMENT,
       estimatedCostBand: "LOW",
       estimatedDays: 10,
-      successCriteria: "Legal/compliance review completed and remediation scoped before execution",
+      successCriteria: "Compliance remediation plan scoped and regulatory counsel engaged before execution",
     };
   }
 

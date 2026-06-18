@@ -50,6 +50,12 @@ export const COVERED_DIAGNOSES: ReadonlySet<string> = new Set([
   "demand_generation_failure",
   "gtm_channel_mismatch",
   "inventory_forecasting_mismatch",
+  // E2 slice 3 — legal-governance / key-person / strategic-capex archetypes. Same
+  // measurement-accuracy registration of newly-emittable archetypes (the engine enum
+  // value equals the answer-key label); NOT a scoring-axis or threshold change.
+  "legal_governance_risk",
+  "key_person_risk",
+  "strategic_capex_risk",
 ]);
 
 /** True-cause labels for which the correct engine behavior is to abstain. */

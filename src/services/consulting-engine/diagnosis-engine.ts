@@ -455,6 +455,113 @@ const rootCausePatterns: RootCausePattern[] = [
       ],
     }),
   },
+  // ─── E2 slice 3: legal-governance / key-person / strategic-capex archetypes ──
+  // Each requires strong, specific, archetype-home evidence with a corroborating
+  // numeric. Generic poor performance / management issue / customer complaint
+  // (legal), generic labour shortage / operational delay (key-person), and generic
+  // capacity / growth / cash pressure (capex) do NOT fire. The first actions are
+  // low-cost, reversible, diagnostic, and owner-constrained (intervention engine /
+  // R3 survival ladder). These triggers deliberately do NOT fire on the adversarial
+  // proposed-cut / immediate-commit framings — those stay abstained at the gate.
+  {
+    name: "Legal / Governance Risk",
+    // A safety/quality recall case that merely MENTIONS a regulatory constraint is a
+    // quality_control_failure, not a legal-governance case — the quality archetype
+    // owns it. Legal fires only when the governance/regulatory breach is the issue and
+    // no critical safety/recall/defect quality signal is competing.
+    pattern: (evidence) =>
+      evidence.some((e) => fin_isLegalGovernance(e)) && !fin_hasCriticalSafetyQuality(evidence),
+    confidence: (evidence) => {
+      const sev = evidence.some(
+        (e) =>
+          fin_isLegalGovernance(e) &&
+          ((fin_num(e, "complianceGapCount") !== undefined && (fin_num(e, "complianceGapCount") as number) >= 1) ||
+            (fin_num(e, "regulatoryDeadlineDays") !== undefined && (fin_num(e, "regulatoryDeadlineDays") as number) <= 60))
+      );
+      return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.LEGAL_GOVERNANCE_RISK,
+      description: "Legal / governance / regulatory exposure requiring containment and counsel",
+      mechanismDescription:
+        "A regulatory, compliance, governance, or conduct breach has surfaced; the exposure is legal/regulatory and must be contained and met with qualified counsel before operational change.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "process_maturity" || e.dimension === "market_position")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "An isolated administrative lapse rather than a systemic governance failure",
+        "A regulator enquiry that closes without remediation exposure",
+      ],
+      missingEvidenceFor: [
+        "Scope of the regulatory requirement and the remediation timeline",
+        "Counsel assessment of liability and disclosure obligations",
+      ],
+    }),
+  },
+  {
+    name: "Key-Person Dependency",
+    pattern: (evidence) => evidence.some((e) => fin_isKeyPerson(e)),
+    confidence: (evidence) => {
+      const sev = evidence.some(
+        (e) =>
+          fin_isKeyPerson(e) &&
+          ((fin_num(e, "keyPersonCount") !== undefined && (fin_num(e, "keyPersonCount") as number) <= 1) ||
+            (fin_num(e, "successionReady") !== undefined && (fin_num(e, "successionReady") as number) === 0))
+      );
+      return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.KEY_PERSON_RISK,
+      description: "Key-person dependency: critical knowledge / relationships concentrated in one person",
+      mechanismDescription:
+        "Critical system knowledge, client relationships, or revenue are concentrated in a single undocumented person with no succession — a single point of failure that survives any program-level fix.",
+      evidenceIds: evidence.filter((e) => e.dimension === "team_capability").map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "A general staffing constraint rather than a single-person dependency",
+        "A documented role that can be back-filled without knowledge loss",
+      ],
+      missingEvidenceFor: [
+        "The exact knowledge and relationships held only by that person",
+        "Cross-training / succession readiness of the next-best resource",
+      ],
+    }),
+  },
+  {
+    name: "Strategic Capex Misallocation",
+    pattern: (evidence) => fin_isStrategicCapex(evidence),
+    confidence: (evidence) => {
+      const fragile = evidence.some(
+        (e) =>
+          e.dimension === "market_position" &&
+          fin_num(e, "demandDurabilityMonths") !== undefined &&
+          (fin_num(e, "demandDurabilityMonths") as number) <= 12
+      );
+      return fragile ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.STRATEGIC_CAPEX_RISK,
+      description: "Strategic capex misallocation: large irreversible capital weighed against non-durable demand",
+      mechanismDescription:
+        "A large, largely irreversible capital investment is being weighed against demand whose durability is unproven; committing before durability is validated risks a value-destroying, irreversible loss.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "financial_health" || e.dimension === "market_position")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "Demand that proves durable, making the investment sound",
+        "A reversible / leasable alternative that removes the irreversibility",
+      ],
+      missingEvidenceFor: [
+        "Independent validation of demand durability beyond the near-term driver",
+        "Downside / reversibility modelling of the committed capital",
+      ],
+    }),
+  },
 ];
 
 // ─── R1 lexical-trigger hardening: semantic guards ────────────────────────────
@@ -652,6 +759,76 @@ function fin_isInventoryMismatch(e: EvidenceItem): boolean {
   // an inventory-days swing) — a stockout-only proposed CUT or generic cash/margin
   // pressure does NOT fire.
   return forecastErr || overstockStockout || swing;
+}
+
+// ─── E2 slice 3 legal / key-person / strategic-capex triggers (strict) ────────
+// Home dimensions: legal → process_maturity/market_position; key-person →
+// team_capability; capex → financial_health (+ market_position demand-durability).
+// Each requires specific archetype vocabulary AND a corroborating numeric so generic
+// performance / management / capacity / growth / cash framings do NOT fire.
+const LEGAL_TEXT =
+  /regulat\w*|complian\w*|non-?complian\w*|governance|misconduct|\bfraud\b|\baudit\b|enforcement|licens\w*|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction|penalt\w*|\bbreach\b/;
+function fin_isLegalGovernance(e: EvidenceItem): boolean {
+  if (e.dimension !== "process_maturity" && e.dimension !== "market_position") return false;
+  const t = fin_text(e);
+  if (!LEGAL_TEXT.test(t)) return false;
+  // Corroborate with a regulatory/compliance/exposure numeric; bare governance
+  // vocabulary in a generic-performance finding (no numeric) does NOT fire.
+  return (
+    fin_num(e, "complianceGapCount") !== undefined ||
+    fin_num(e, "regulatoryDeadlineDays") !== undefined ||
+    fin_num(e, "exposureAmount") !== undefined
+  );
+}
+function fin_hasCriticalSafetyQuality(evidence: EvidenceItem[]): boolean {
+  return evidence.some(
+    (e) =>
+      e.dimension === "quality_delivery" &&
+      e.isCritical &&
+      /recall|safety|defect|contamination|hazard|health-related/.test(fin_text(e))
+  );
+}
+
+const KEYPERSON_TEXT =
+  /founder-?engineer|owner-?operator|single (founder|owner|senior|specialist|operator|engineer|principal)|one (senior )?(specialist|person|engineer|operator|principal)|only one (senior|person|specialist|engineer)|sole (operator|specialist|owner|principal|trader)|rainmaker|key[- ]person|single point of failure|holds all (the )?(critical|client|system|pricing|recurring)|undocumented|no (documentation|backup|succession|cross-training)|senior (departure|rainmaker)|senior \w+ (left|departed)|took (their|the) client/;
+function fin_isKeyPerson(e: EvidenceItem): boolean {
+  if (e.dimension !== "team_capability") return false;
+  const t = fin_text(e);
+  if (!KEYPERSON_TEXT.test(t)) return false;
+  // Corroborate with a key-person numeric (single count / no succession / revenue
+  // concentration). A generic labour shortage or staffing gap has none of these.
+  return (
+    fin_num(e, "keyPersonCount") !== undefined ||
+    fin_num(e, "successionReady") !== undefined ||
+    fin_num(e, "revenueConcentrationPct") !== undefined
+  );
+}
+
+// Capex is multi-signal: a capital INVESTMENT amount + an irreversibility signal +
+// fragile/unproven demand — components that legitimately span several evidence items.
+// A capex CUT (capexCutAmount, e.g. cancelling maintenance) is NOT an investment and
+// does NOT fire; the adversarial immediate-commit / runway cases are held at the gate.
+// The capexAmount numeric is the strong investment guard (a capex CUT carries
+// capexCutAmount, not capexAmount), so the text only needs to confirm a capital-
+// investment framing. Kept broad enough to catch "irreversible automated build",
+// "facility expansion", "automated-warehouse build", "automation line", etc.
+const CAPEX_INVEST_TEXT =
+  /facility|expansion|automat\w*|warehouse|\bplant\b|\bbuild\b|equipment|capacity (expansion|build)|capital (expenditure|investment|commitment)|\bcapex\b|irreversible/;
+function fin_isStrategicCapex(evidence: EvidenceItem[]): boolean {
+  const fh = evidence.filter((e) => e.dimension === "financial_health");
+  const mp = evidence.filter((e) => e.dimension === "market_position");
+  const hasCapexInvestment = fh.some(
+    (e) => fin_num(e, "capexAmount") !== undefined && CAPEX_INVEST_TEXT.test(fin_text(e))
+  );
+  const hasIrreversible = fh.some(
+    (e) => fin_num(e, "reversibility") === 0 || /irreversible/.test(fin_text(e))
+  );
+  const hasFragileDemand = mp.some(
+    (e) =>
+      fin_num(e, "demandDurabilityMonths") !== undefined ||
+      /unproven|short-term contract|single (new )?contract|one[- ]off|not (yet )?proven|unlikely to persist/.test(fin_text(e))
+  );
+  return hasCapexInvestment && hasIrreversible && hasFragileDemand;
 }
 
 export interface DiagnosisResult {

@@ -18,6 +18,13 @@ export enum DiagnosisType {
   DEMAND_GENERATION_FAILURE = "demand_generation_failure",
   GTM_CHANNEL_MISMATCH = "gtm_channel_mismatch",
   INVENTORY_FORECASTING_MISMATCH = "inventory_forecasting_mismatch",
+  // E2 slice 3 — legal-governance / key-person / strategic-capex archetypes (R5 slice 3).
+  // Enum VALUES equal the frozen answer-key labels (…_risk) so the scorer needs no
+  // new synonym; the constant names describe the archetype the prompt requested
+  // (legal/governance failure, key-person dependency, strategic-capex misallocation).
+  LEGAL_GOVERNANCE_RISK = "legal_governance_risk",
+  KEY_PERSON_RISK = "key_person_risk",
+  STRATEGIC_CAPEX_RISK = "strategic_capex_risk",
   UNKNOWN = "unknown",
 }
 

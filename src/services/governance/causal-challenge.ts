@@ -71,6 +71,11 @@ const ARCHETYPE_DIMENSIONS: Record<string, Set<string>> = {
   demand_generation_failure: new Set(["market_position"]),
   gtm_channel_mismatch: new Set(["market_position", "financial_health"]),
   inventory_forecasting_mismatch: new Set(["operational_efficiency"]),
+  // E2 slice 3 archetype metadata (home dimensions) — same metadata-only registration;
+  // the off-archetype check needs each new archetype's home dimension to evaluate it.
+  legal_governance_risk: new Set(["process_maturity", "market_position"]),
+  key_person_risk: new Set(["team_capability"]),
+  strategic_capex_risk: new Set(["financial_health", "market_position"]),
 };
 
 /**

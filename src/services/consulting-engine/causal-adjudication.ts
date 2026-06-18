@@ -117,11 +117,14 @@ const DRIVERS: DriverSpec[] = [
   {
     id: "strategic_capex_drives_cash",
     explains: new Set([DiagnosisType.CASH_LIQUIDITY_CRISIS]),
-    covered: null,
-    vocab: /irreversible|automation line|capital expenditure|\bcapex\b|expansion commitment/,
+    // E2 slice 3: strategic capex is now a covered archetype, so a cash surface with
+    // a contemplated irreversible capex on non-durable demand re-ranks to capex when
+    // capex independently matched (else it still suppresses the surface and abstains).
+    covered: DiagnosisType.STRATEGIC_CAPEX_RISK,
+    vocab: /irreversible|automation line|capital expenditure|\bcapex\b|expansion commitment|facility expansion|automated?[- ]warehouse/,
     numericsAll: ["reversibility", "demandDurabilityMonths"],
     rationale:
-      "Cash pressure stems from a contemplated irreversible capex on non-durable demand (strategic capex risk), an upstream cause the engine cannot diagnose.",
+      "Cash pressure stems from a contemplated irreversible capex on non-durable demand (strategic capex risk), an upstream cause better named as the capex archetype.",
   },
   {
     id: "pricing_drives_symptom",
@@ -171,12 +174,15 @@ const DRIVERS: DriverSpec[] = [
       DiagnosisType.OPERATIONAL_BOTTLENECK,
       DiagnosisType.CUSTOMER_RETENTION_EROSION,
     ]),
-    covered: null,
+    // E2 slice 3: key-person is now a covered archetype, so an operational/retention
+    // surface driven by a single-specialist/rainmaker dependency re-ranks to the
+    // key-person archetype when it independently matched (else it suppresses + abstains).
+    covered: DiagnosisType.KEY_PERSON_RISK,
     dims: new Set(["team_capability"]),
-    vocab: /key person|key-person|single (senior )?specialist|only one (senior|person|specialist)|sole (specialist|owner)|rainmaker|senior departure|senior .*(left|departed)|founder dependenc|succession|undocumented/,
+    vocab: /key person|key-person|single (senior )?specialist|only one (senior|person|specialist)|sole (specialist|owner)|rainmaker|senior departure|senior .*(left|departed)|founder dependenc|succession|undocumented|took (their|the) client/,
     numerics: ["keyPersonCount", "successionReady", "revenueConcentrationPct"],
     rationale:
-      "The symptom is driven by a key-person dependency (single specialist/rainmaker, no succession), an upstream cause the engine cannot diagnose.",
+      "The symptom is driven by a key-person dependency (single specialist/rainmaker, no succession), better named as the key-person archetype.",
   },
 ];
 
