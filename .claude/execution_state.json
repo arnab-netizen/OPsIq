@@ -246,7 +246,21 @@
     "incident_classes": "all 10 classes: harmful_recommendation, privacy_leak, cross_tenant_exposure, learning_gate_bypass, wrong_high_confidence_advice, dashboard_misreporting, evidence_verification_bypass, db_migration_data_loss, prompt_injection_success, security_gate_failure",
     "committed": "pending"
   },
-  "next_automatic_target": "Phase 28 \u2014 Model/Prompt/Ruleset Versioning and Change Control",
+  "phase_28": {
+    "status": "IMPLEMENTED_DB_UNVERIFIED",
+    "files": [
+      "src/domain/owner-mode/model-versioning.ts",
+      "src/__tests__/domain/owner-mode/model-versioning.test.ts"
+    ],
+    "tests": "68 (68/68 passing)",
+    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 68/68",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery at all entry points",
+    "version_rules": "VERSION-RULE-1: high/critical requires regression; VERSION-RULE-2: rollback plan always required; VERSION-RULE-3: approvedBy always required (AI cannot self-approve); VERSION-RULE-4: featureFlag always required",
+    "structures": "owner_model_change_log, owner_prompt_template_versions, owner_ruleset_versions, owner_evaluation_versions",
+    "committed": "pending"
+  },
+  "next_automatic_target": "LATER-USE controlled learning system (deferred until Phases 0-28 complete \u2014 checking execution.md for any remaining phases)",
   "gates_status": {
     "build": "PASS",
     "typecheck": "PASS",
