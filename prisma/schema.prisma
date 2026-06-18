@@ -217,6 +217,7 @@ model ClientAccount {
   workspaceHarmEvents            OwnerHarmEvent[] @relation("WorkspaceHarmEvents")
   workspaceFailureAdjudications  OwnerFailureAdjudication[] @relation("WorkspaceFailureAdjudications")
   workspaceCausalAttributions    OwnerCausalAttribution[] @relation("WorkspaceCausalAttributions")
+  workspaceReassessmentEvents    OwnerReassessmentEvent[] @relation("WorkspaceReassessmentEvents")
 
   @@index([status])
   @@map("client_accounts")
@@ -3810,4 +3811,35 @@ model OwnerCausalAttribution {
   @@index([businessId])
   @@index([attributionClass])
   @@map("owner_causal_attributions")
+}
+
+model OwnerReassessmentEvent {
+  id                           String   @id @default(cuid())
+  workspaceId                  String
+  businessId                   String
+  recommendationId             String?
+  actionId                     String?
+  outcomeId                    String?
+  failureAdjudicationId        String?
+  causalAttributionId          String?
+  harmEventId                  String?
+  trigger                      String   // failed_outcome | disputed_outcome | harmful_outcome | external_event_invalidation | execution_invalidation | owner_dispute | evidence_retraction | new_contradicting_evidence
+  triggerDescription           String   @db.Text
+  status                       String   // pending | in_progress | diagnosis_reopened | corrective_action_issued | closed_no_correction_needed | closed_with_correction | blocked_awaiting_human_review
+  requiresHumanReview          Boolean
+  reopensDiagnosis             Boolean
+  assumptionsChecked           Boolean
+  invalidatedAssumptions       String   @db.Text  // JSON array
+  proposedCorrectiveActionClass String?  // retry_same_action | modify_action_parameters | switch_action_type | escalate_to_owner | defer_pending_evidence | close_as_external_cause | close_as_invalid_test | reopen_diagnosis
+  correctiveActionRationale    String?  @db.Text
+  ownerAcknowledged            Boolean
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+  workspace                    ClientAccount @relation("WorkspaceReassessmentEvents", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([trigger])
+  @@index([status])
+  @@map("owner_reassessment_events")
 }
