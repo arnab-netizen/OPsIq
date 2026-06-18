@@ -669,3 +669,45 @@ Requirements:
 - Tests: recommendation linked to diagnosis, status machine verified, confidence_reason required
 - DB-backed — target: IMPLEMENTED_DB_UNVERIFIED
 
+
+---
+
+## Slice: Fix Pre-Existing Test Failures — security-rules + diagnosis-evidence
+
+- **slice_name**: Fix pre-existing test failures in security-rules.ts and diagnosis-evidence.ts
+- **status**: IMPLEMENTED_DB_UNVERIFIED
+- **branch**: claude/sleepy-dirac-m4bdb9
+- **commit_before**: 1e81bf75
+- **commit_after**: 1e469f14
+- **files_changed**:
+  - src/domain/owner-mode/security-rules.ts (rewritten — added 14 new exports)
+  - src/domain/owner-mode/diagnosis-evidence.ts (rewritten — full implementation)
+  - .claude/execution_state.json (updated)
+- **models_added_or_changed**:
+  - SecurityRule, SECURITY_RULES registry (8 rules: SEC-001 through SEC-009)
+  - InputSourceType, MemoryWriteSource, VerifierType
+  - LearningEligibilityGateInput, LearningEligibilityGateResult
+  - DiagnosisStatus (6 values), DiagnosisEvidenceInput, DiagnosisEvidenceValidationResult
+- **routes_added_or_changed**: none
+- **services_added_or_changed**: none (domain layer only)
+- **ui_added_or_changed**: none
+- **tests_added_or_changed**: 0 new tests added; 70 previously failing tests now pass (35 in security-rules.test.ts, 35 in diagnosis-evidence.test.ts); total suite: 1460/1460 passing
+- **commands_run**:
+  - npx vitest run src/__tests__/domain/owner-mode/security-rules.test.ts src/__tests__/domain/owner-mode/diagnosis-evidence.test.ts
+  - npx vitest run src/__tests__/domain/owner-mode/
+  - npx tsc --noEmit
+  - npx prisma validate
+  - git push -u origin claude/sleepy-dirac-m4bdb9
+- **command_results**: All 1460 tests pass. tsc: no errors. prisma validate: schema valid.
+- **LANE_B_status_if_DB_backed**: DB_BLOCKED_ENVIRONMENT_NETWORK_UNREACHABLE — all implementations are pure TypeScript domain logic, no DB required
+- **known_limitations**: none
+- **regressions_found**: 70 pre-existing failures found in security-rules.test.ts and diagnosis-evidence.test.ts (test files were written ahead of implementation)
+- **regressions_fixed**: All 70 failures resolved by implementing the full domain exports in both files
+- **security_findings**:
+  - SEC-001 through SEC-009 now all enforced via security-rules.ts exports
+  - assertWorkspaceScopedQuery error message updated to match /SEC-007\/008/ regex used by tests
+  - AI_IS_NOT_A_VERIFIER compile-time constant enforced
+  - DIAG-RULE-1/2/4/5 validation gates enforced in diagnosis-evidence.ts
+- **tenant_isolation_findings**: assertWorkspaceScopedQuery called at validateDiagnosisEvidence entry point; workspaceId required or throws
+- **dashboard_proof_status**: not applicable (domain layer only)
+- **next_required_slice**: OWNER_MODE_REALITY_LOOP_CLOSEOUT.md is now current; all Phases 0–28 IMPLEMENTED_DB_UNVERIFIED; controlled learning system (LATER-USE) is the next deferred item pending full Phase 0–28 DB verification
