@@ -215,6 +215,7 @@ model ClientAccount {
   workspaceValidationCriteria    OwnerValidationCriteria[] @relation("WorkspaceValidationCriteria")
   workspaceActionOutcomes        OwnerActionOutcome[] @relation("WorkspaceActionOutcomes")
   workspaceHarmEvents            OwnerHarmEvent[] @relation("WorkspaceHarmEvents")
+  workspaceFailureAdjudications  OwnerFailureAdjudication[] @relation("WorkspaceFailureAdjudications")
 
   @@index([status])
   @@map("client_accounts")
@@ -3756,4 +3757,27 @@ model OwnerHarmEvent {
   @@index([harmSeverity])
   @@index([harmCategory])
   @@map("owner_harm_events")
+}
+
+model OwnerFailureAdjudication {
+  id                    String    @id @default(cuid())
+  workspaceId           String
+  businessId            String
+  recommendationId      String?
+  actionId              String?
+  outcomeId             String?
+  failureClass          String    // wrong_diagnosis | wrong_priority | wrong_action | wrong_timing | wrong_segment | wrong_assumption | constraint_ignored | bad_execution | partial_execution | not_executed | missing_data | bad_measurement | too_early_to_judge | external_event | insufficient_evidence | owner_preference_conflict | safety_or_compliance_risk | valid_recommendation_but_unproven
+  adjudicationVerdict   String    // invalid_test | validated_failure | validated_success | reassessment_required | insufficient_evidence | too_early_to_judge
+  executionValid        Boolean
+  evidenceSufficient    Boolean
+  adjudicationReason    String    @db.Text
+  learningEligible      Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  workspace             ClientAccount @relation("WorkspaceFailureAdjudications", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([adjudicationVerdict])
+  @@map("owner_failure_adjudications")
 }
