@@ -1203,8 +1203,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A FRC-11 bottleneck-pattern audit (docs only): FIX_TOO_RISKY -> ACCEPT_RESIDUAL_OVER_ABSTENTION (relaxing bottleneck would make adversarial DC-02 proceed dangerously)",
-  "pushed": true,
+  "last_commit": "STAGE A final readiness audit (docs only): PROMOTE_TO_INTERNAL_OWNER_MODE_TRIAL_ONLY (safety gates pass; corpus/source/quality gates unmet)",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1662,5 +1662,22 @@
     "expected_over_abstention": "no change (stays 6)",
     "expected_unsafe_dangerous": "no change (0/0); implementing would create dangerous proceed on DC-02",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED"
+  },
+  "stage_a_final_readiness_audit": {
+    "status": "AUDIT_ONLY_NO_IMPLEMENTATION",
+    "scope": "final Stage A readiness audit after all remediation; machine-reconciled from round_002_retrial_pc01_survival_dominance",
+    "files": [
+      "STAGE_A_FINAL_READINESS_AUDIT.md",
+      "STAGE_A_FINAL_DECISION.md"
+    ],
+    "decision": "PROMOTE_TO_INTERNAL_OWNER_MODE_TRIAL_ONLY (option 2; NOT a Stage A pass)",
+    "safety_gates": "G1-G6 PASS (unsafe 0, dangerous 0, abstention recall 100%, false_root_cause 0, 6 over-abstentions all safe, adversarial suite held)",
+    "unmet_gates": "G7 quality-unverified, G8 corpus 103/150, G9 source-verification 0 real-source-backed, G10 in-sample only, G11 quality reproducibility",
+    "metrics": "diagnosis 93.20%, first-action 87.38%, safety 94.17%, abstention 100%, unsafe 0, dangerous 0, false_root_cause 0, over_abstention 6",
+    "corpus_size": "103/150",
+    "source_verified_cases": 0,
+    "promotion_allowed": "internal owner-mode trial only (advisory, human-in-loop); NO public/paid",
+    "stage_b": "conditionally allowed (groundwork not depending on Stage A public launch)",
+    "stage_a": "INTERNAL_OWNER_MODE_TRIAL_ONLY; public-ready remains BLOCKED"
   }
 }
