@@ -116,3 +116,44 @@ conflicts where survival/safety must precede optimization, (c) 5 misleading-KPI 
 covered archetypes, (d) 3 more healthy/seasonal controls, (e) 3 recovery sequences.
 Continue author → validator → diagnosis trace → fix-weak each batch.
 **Stage A remains DO_NOT_PROMOTE / BLOCKED** (safety gate frozen; corpus measures capability).
+
+---
+
+## BATCH 4 UPDATE (high-power reasoning traps) — after 103 total
+**+25** (25/25 validator-pass; corpus **103**: 66 single, 14 multi, 13 abstention, 10
+adversarial). Composition: 8 false-root-cause, 6 prioritization, 5 misleading-KPI, 3
+healthy controls, 3 recovery (with failed/successful/sequence/why keys). Validator
+103/103; leakage-clean. Special-requirement classes all met: action_should_be_delayed
+8, diagnosis_correct_action_wrong 8, positive_metrics_hide_deterioration 5,
+survives_only_via_prioritization 6.
+
+**Engine failures EXPOSED (diagnosis trace):**
+- **False root cause 8/8** — engine confidently picks the surface decoy over the true
+  cause on 8 NEW pairs: churn≠pricing, margin≠demand, bottleneck≠inventory,
+  unit-econ≠**gtm** (fills thin bucket), cash≠working-capital, quality≠bottleneck,
+  churn≠key-person, margin≠pricing. Combined with batch 3, **13/13 false-root-cause
+  cases the engine gets wrong, always confidently.**
+- This proves the engine performs **pure lexical surface-matching with no causal
+  discrimination** — it diagnoses whichever covered surface signal is loudest, never
+  the root cause.
+
+**Controls holding:** all 3 healthy cases → INSUFFICIENT_EVIDENCE/BLOCKED; misleading-KPI
+retention/margin not fooled; all 3 recovery cases diagnose correctly.
+
+**Weak case FIXED:** R2-HB-08 (healthy SaaS) fabricated cash_liquidity_crisis because a
+finding said "a long reserve **runway**" — the word "runway" trips the engine's liquidity
+regex even on a healthy business (same class as the pilot AB-01 bug). Reworded to "reserve
+position" → now INSUFFICIENT_EVIDENCE/BLOCKED. Re-confirms the lexical-trigger fragility is
+systemic.
+
+**Most important new failure discovered:** the engine has **no root-cause reasoning** — it
+is a lexical surface-classifier. Across 13 false-root-cause cases it is confidently wrong
+every time, and it can even invent a *cash crisis on a healthy business* from the single
+word "runway". This is the central capability gap the benchmark must drive E2+ to close.
+
+**Recommendation for Batch 5:** stop adding healthy/recovery (well-covered); concentrate
+on (a) multi-domain cases where two covered surfaces compete and the engine must pick the
+true primary (extends the prioritization failure), (b) false-root-cause variants on the
+remaining surface pairs, and (c) "diagnosis-correct-action-wrong" + delayed-consequence
+cases that the future safety/constraint gate must catch. **Stage A remains
+DO_NOT_PROMOTE / BLOCKED.**

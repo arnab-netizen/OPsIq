@@ -1,0 +1,182 @@
+{
+  "batch": 4,
+  "authored": 25,
+  "validator_pass": 25,
+  "summary": [
+    {
+      "id": "R2-FRC-06",
+      "bucket": "false_root_cause: surface churn, true pricing",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-07",
+      "bucket": "false_root_cause: surface margin, true demand",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-08",
+      "bucket": "false_root_cause: surface bottleneck, true inventory",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-09",
+      "bucket": "false_root_cause: surface unit-econ, true gtm channel",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-10",
+      "bucket": "false_root_cause: surface cash, true working capital",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-11",
+      "bucket": "false_root_cause: surface quality, true bottleneck",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-12",
+      "bucket": "false_root_cause: surface churn, true key-person",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-13",
+      "bucket": "false_root_cause: surface margin, true pricing/discounting",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-06",
+      "bucket": "prioritization: cash survival before growth",
+      "caseType": "multi",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-07",
+      "bucket": "prioritization: debt reduction before inventory purchase",
+      "caseType": "multi",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-08",
+      "bucket": "prioritization: process improvement before hiring",
+      "caseType": "multi",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-09",
+      "bucket": "prioritization: fix unit economics before scaling growth",
+      "caseType": "multi",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-10",
+      "bucket": "prioritization: resolve quality before expansion",
+      "caseType": "multi",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-11",
+      "bucket": "prioritization: liquidity before efficiency capex",
+      "caseType": "multi",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-06",
+      "bucket": "misleading_kpi: revenue up, cash down",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-07",
+      "bucket": "misleading_kpi: customers up, retention down",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-08",
+      "bucket": "misleading_kpi: growth up, margin collapsing",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-09",
+      "bucket": "misleading_kpi: EBITDA positive, working capital collapsing",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-10",
+      "bucket": "misleading_kpi: profit up, churn hidden",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-06",
+      "bucket": "healthy_business: steady distributor",
+      "caseType": "abstention",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-07",
+      "bucket": "healthy_business: steady clinic",
+      "caseType": "abstention",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-08",
+      "bucket": "healthy_business: SaaS healthy within capacity",
+      "caseType": "abstention",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-06",
+      "bucket": "recovery: liquidity crisis survived via sequence",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-07",
+      "bucket": "recovery: retention fixed at the driver, not the program",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-08",
+      "bucket": "recovery: margin restored by selective pricing, not a blanket hike",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    }
+  ]
+}

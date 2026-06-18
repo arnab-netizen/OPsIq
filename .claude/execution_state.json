@@ -1125,5 +1125,31 @@
     "next_step": "batch 4 ~25 (8 FRC + 6 prioritization + 5 misleading-KPI on covered archetypes + 3 healthy + 3 recovery); per-batch author->validate->trace->fix",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
+  },
+  "stage_a_round2_case_library_batch4": {
+    "slice": "Round 2 case library batch 4 (25 high-power reasoning-trap cases)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "BENCHMARK_AUTHORING (no engine/gate/scorer/answer-key change; UNVERIFIED -> no REAL_SOURCE_BACKED)",
+    "files": [
+      "simulation_runner/author-round2-batch4.ts",
+      "simulation_runs/round_002/case_R2-{FRC-06..13,PC-06..11,MK-06..10,HB-06..08,RC-06..08}",
+      "simulation_runs/round_002/_BATCH_4_VALIDATION.json",
+      "simulation_runs/round_002/_ALL_VALIDATION.json",
+      "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
+    ],
+    "batch_size": 25,
+    "total_corpus": 103,
+    "by_type": "single 66, multi 14, abstention 13, adversarial 10",
+    "validator": "103/103 valid; leakage-clean",
+    "composition": "FRC 8, PC 6, MK 5, HB controls 3, RC recovery 3",
+    "special_requirements": "action_should_be_delayed 8, diagnosis_correct_action_wrong 8, positive_metrics_hide_deterioration 5, survives_only_via_prioritization 6 (all >=5)",
+    "engine_failures_exposed": "false-root-cause 8/8 NEW pairs (churn!=pricing, margin!=demand, bottleneck!=inventory, unitecon!=gtm, cash!=workingcapital, quality!=bottleneck, churn!=keyperson, margin!=pricing); combined with batch3 = 13/13 confident-wrong",
+    "most_important_new_failure": "engine has NO causal root-cause reasoning - it is a lexical surface-classifier confidently wrong on all 13 false-root-cause cases and can fabricate a cash crisis on a HEALTHY business from the word 'runway'",
+    "controls_holding": "3/3 healthy -> INSUFFICIENT_EVIDENCE/BLOCKED; misleading-KPI retention/margin not fooled; 3/3 recovery correct",
+    "weak_cases_fixed": "1 - HB-08 fabricated cash_liquidity from 'reserve runway' wording; reworded to 'reserve position' -> BLOCKED (systemic lexical-trigger fragility reconfirmed)",
+    "gates_run": "tsx author-batch4 (25/25 after fix), validate-round2-cases (103/103), trace-round2-diagnosis, tsc only pre-existing run-case.ts:149",
+    "next_step": "batch 5: multi-domain competing-surface cases + remaining FRC pairs + diagnosis-correct-action-wrong/delayed-consequence; stop adding healthy/recovery",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED",
+    "report": "ROUND_2_CASE_LIBRARY_BUILD_STATUS.md"
   }
 }

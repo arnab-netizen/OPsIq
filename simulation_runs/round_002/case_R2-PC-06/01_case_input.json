@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-PC-06",
+  "caseType": "multi",
+  "industry": "consumer_products",
+  "businessModel": "brand",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "consumer_products",
+    "size": "small",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 3,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Cash runway is three months and a major growth opportunity appeared; the owner wants to fund the growth now.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Cash runway is three months with fixed obligations due inside the window",
+      "confidence": "HIGH",
+      "source": "treasury",
+      "isCritical": true,
+      "supportingData": {
+        "cashRunwayMonths": 3,
+        "monthlyBurn": 50000
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "A major growth opportunity appeared and the owner wants to fund it immediately",
+      "confidence": "HIGH",
+      "source": "strategy",
+      "isCritical": true,
+      "supportingData": {
+        "newCustomerRate": 15
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Funding the growth now would consume the remaining runway",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cashBalance": 150000
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operations are viable; this is purely a sequencing decision",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 6
+      }
+    }
+  ]
+}

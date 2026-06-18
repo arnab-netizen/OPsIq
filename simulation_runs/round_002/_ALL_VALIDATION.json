@@ -1,6 +1,6 @@
 {
-  "authored": 78,
-  "validator_pass": 78,
+  "authored": 103,
+  "validator_pass": 103,
   "summary": [
     {
       "id": "R2-AB-01",
@@ -291,6 +291,54 @@
       "failures": []
     },
     {
+      "id": "R2-FRC-06",
+      "bucket": "false_root_cause: surface churn, true pricing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-07",
+      "bucket": "false_root_cause: surface margin, true demand",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-08",
+      "bucket": "false_root_cause: surface bottleneck, true inventory",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-09",
+      "bucket": "false_root_cause: surface unit-econ, true gtm channel",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-10",
+      "bucket": "false_root_cause: surface cash, true working capital",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-11",
+      "bucket": "false_root_cause: surface quality, true bottleneck",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-12",
+      "bucket": "false_root_cause: surface churn, true key-person",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-13",
+      "bucket": "false_root_cause: surface margin, true pricing/discounting",
+      "valid": true,
+      "failures": []
+    },
+    {
       "id": "R2-GD-01",
       "bucket": "stable_healthy (over-intervention control)",
       "valid": true,
@@ -329,6 +377,24 @@
     {
       "id": "R2-HB-05",
       "bucket": "healthy_business: healthy growth within capacity",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-06",
+      "bucket": "healthy_business: steady distributor",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-07",
+      "bucket": "healthy_business: steady clinic",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-08",
+      "bucket": "healthy_business: SaaS healthy within capacity",
       "valid": true,
       "failures": []
     },
@@ -411,6 +477,36 @@
       "failures": []
     },
     {
+      "id": "R2-MK-06",
+      "bucket": "misleading_kpi: revenue up, cash down",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-07",
+      "bucket": "misleading_kpi: customers up, retention down",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-08",
+      "bucket": "misleading_kpi: growth up, margin collapsing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-09",
+      "bucket": "misleading_kpi: EBITDA positive, working capital collapsing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-10",
+      "bucket": "misleading_kpi: profit up, churn hidden",
+      "valid": true,
+      "failures": []
+    },
+    {
       "id": "R2-PC-01",
       "bucket": "prioritization: cash before retention",
       "valid": true,
@@ -441,6 +537,42 @@
       "failures": []
     },
     {
+      "id": "R2-PC-06",
+      "bucket": "prioritization: cash survival before growth",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-07",
+      "bucket": "prioritization: debt reduction before inventory purchase",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-08",
+      "bucket": "prioritization: process improvement before hiring",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-09",
+      "bucket": "prioritization: fix unit economics before scaling growth",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-10",
+      "bucket": "prioritization: resolve quality before expansion",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-11",
+      "bucket": "prioritization: liquidity before efficiency capex",
+      "valid": true,
+      "failures": []
+    },
+    {
       "id": "R2-RC-01",
       "bucket": "recovery: near-insolvency to focus+financing",
       "valid": true,
@@ -467,6 +599,24 @@
     {
       "id": "R2-RC-05",
       "bucket": "recovery: demand collapse to channel/model pivot",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-06",
+      "bucket": "recovery: liquidity crisis survived via sequence",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-07",
+      "bucket": "recovery: retention fixed at the driver, not the program",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-08",
+      "bucket": "recovery: margin restored by selective pricing, not a blanket hike",
       "valid": true,
       "failures": []
     }

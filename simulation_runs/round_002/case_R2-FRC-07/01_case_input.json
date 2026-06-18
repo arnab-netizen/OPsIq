@@ -1,0 +1,64 @@
+{
+  "caseId": "R2-FRC-07",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "make_to_order",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Operating margin went negative and the owner is hunting for cost cuts, but costs are not what changed.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Operating margin fell into the red this year and the owner assumes a cost problem",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "marginPct": -7,
+        "operatingMargin": -3
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The real driver is a forty-five percent collapse in new-customer volume spreading fixed costs over far fewer units",
+      "confidence": "HIGH",
+      "source": "sales",
+      "isCritical": true,
+      "supportingData": {
+        "newCustomerRate": 5,
+        "leadVolume": 60
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Unit costs are unchanged; the margin hit is volume deleverage, not input cost",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "throughput": 400
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Existing customers remain loyal and are not the issue",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false
+    }
+  ]
+}
