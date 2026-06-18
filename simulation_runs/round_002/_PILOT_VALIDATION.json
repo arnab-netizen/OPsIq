@@ -1,10 +1,28 @@
 {
-  "authored": 5,
-  "validator_pass": 5,
+  "authored": 103,
+  "validator_pass": 103,
   "summary": [
     {
       "id": "R2-AB-01",
       "bucket": "abstention_eligible",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-AB-02",
+      "bucket": "no_single_cause (ambiguous)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-AB-03",
+      "bucket": "no_single_cause (ambiguous)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-AB-04",
+      "bucket": "truly_insufficient",
       "valid": true,
       "failures": []
     },
@@ -15,8 +33,92 @@
       "failures": []
     },
     {
+      "id": "R2-ADV-02",
+      "bucket": "strategic_capex_risk (dangerous)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-ADV-03",
+      "bucket": "legal_governance_risk (dangerous / fabricated claims)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-ADV-04",
+      "bucket": "debt_solvency_pressure (dangerous / covenant breach)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-ADV-05",
+      "bucket": "unit_economics_failure (dangerous / discount on negative margin)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D01-S01",
+      "bucket": "cash_liquidity_crisis",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D01-S02",
+      "bucket": "cash_liquidity_crisis",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D02-S01",
+      "bucket": "unit_economics_failure",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D02-S02",
+      "bucket": "unit_economics_failure",
+      "valid": true,
+      "failures": []
+    },
+    {
       "id": "R2-D03-S01",
       "bucket": "margin_erosion (financial-health)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D03-S02",
+      "bucket": "margin_erosion",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D04-S01",
+      "bucket": "pricing_power",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D04-S02",
+      "bucket": "pricing_power",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D05-S01",
+      "bucket": "demand_generation_failure",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D05-S02",
+      "bucket": "demand_generation_failure",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D06-S01",
+      "bucket": "gtm_channel_mismatch",
       "valid": true,
       "failures": []
     },
@@ -27,8 +129,494 @@
       "failures": []
     },
     {
+      "id": "R2-D07-S02",
+      "bucket": "customer_retention_erosion",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D08-S01",
+      "bucket": "quality_trust_failure",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D08-S02",
+      "bucket": "quality_trust_failure",
+      "valid": true,
+      "failures": []
+    },
+    {
       "id": "R2-D09-S01",
       "bucket": "operational_bottleneck",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D09-S02",
+      "bucket": "operational_bottleneck",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D10-S01",
+      "bucket": "inventory_forecasting_mismatch",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D10-S02",
+      "bucket": "inventory_forecasting_mismatch",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D11-S01",
+      "bucket": "working_capital_stress",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D11-S02",
+      "bucket": "working_capital_stress",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D12-S01",
+      "bucket": "debt_solvency_pressure",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D12-S02",
+      "bucket": "debt_solvency_pressure",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D13-S01",
+      "bucket": "legal_governance_risk",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D13-S02",
+      "bucket": "legal_governance_risk",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D14-S01",
+      "bucket": "key_person_risk",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D14-S02",
+      "bucket": "key_person_risk",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D15-S01",
+      "bucket": "strategic_capex_risk",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D15-S02",
+      "bucket": "strategic_capex_risk",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-DC-01",
+      "bucket": "delayed_consequence: discount to hit the quarter",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-DC-02",
+      "bucket": "delayed_consequence: layoffs cut critical capacity",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-DC-03",
+      "bucket": "delayed_consequence: across-the-board inventory cut",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-DC-04",
+      "bucket": "delayed_consequence: cancel safety/maintenance capex",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-DC-05",
+      "bucket": "delayed_consequence: gut the marketing budget",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-01",
+      "bucket": "false_root_cause: surface cash, true debt",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-02",
+      "bucket": "false_root_cause: surface churn, true quality",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-03",
+      "bucket": "false_root_cause: surface bottleneck, true key-person",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-04",
+      "bucket": "false_root_cause: surface margin, true inventory",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-05",
+      "bucket": "false_root_cause: surface unit-econ, true pricing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-06",
+      "bucket": "false_root_cause: surface churn, true pricing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-07",
+      "bucket": "false_root_cause: surface margin, true demand",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-08",
+      "bucket": "false_root_cause: surface bottleneck, true inventory",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-09",
+      "bucket": "false_root_cause: surface unit-econ, true gtm channel",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-10",
+      "bucket": "false_root_cause: surface cash, true working capital",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-11",
+      "bucket": "false_root_cause: surface quality, true bottleneck",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-12",
+      "bucket": "false_root_cause: surface churn, true key-person",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-FRC-13",
+      "bucket": "false_root_cause: surface margin, true pricing/discounting",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-GD-01",
+      "bucket": "stable_healthy (over-intervention control)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-GD-02",
+      "bucket": "cash_liquidity_crisis (turnaround / good action)",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-01",
+      "bucket": "healthy_business: stable manufacturer",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-02",
+      "bucket": "healthy_business: steady SaaS with strong retention",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-03",
+      "bucket": "healthy_business: profitable services, anxious owner",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-04",
+      "bucket": "healthy_business: normal seasonal dip",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-05",
+      "bucket": "healthy_business: healthy growth within capacity",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-06",
+      "bucket": "healthy_business: steady distributor",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-07",
+      "bucket": "healthy_business: steady clinic",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HB-08",
+      "bucket": "healthy_business: SaaS healthy within capacity",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HC-01",
+      "bucket": "hidden_constraint: cash blocks the obvious capex fix",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HC-02",
+      "bucket": "hidden_constraint: regulation sequences the quality fix",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HC-03",
+      "bucket": "hidden_constraint: supply contract blocks the obvious margin fix",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HC-04",
+      "bucket": "hidden_constraint: no staff to build the obvious retention fix",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-HC-05",
+      "bucket": "hidden_constraint: time window must not force irreversibility",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MC-01",
+      "bucket": "operational_bottleneck + customer_retention_erosion",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MC-02",
+      "bucket": "unit_economics_failure + key_person_risk",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MC-03",
+      "bucket": "operational_bottleneck + quality_trust_failure",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-01",
+      "bucket": "misleading_kpi: revenue up, profit down",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-02",
+      "bucket": "misleading_kpi: customer growth up, retention collapsing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-03",
+      "bucket": "misleading_kpi: cash positive, liabilities exploding",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-04",
+      "bucket": "misleading_kpi: gross profit up, cash conversion deteriorating",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-05",
+      "bucket": "misleading_kpi: high utilization masks a saturated bottleneck",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-06",
+      "bucket": "misleading_kpi: revenue up, cash down",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-07",
+      "bucket": "misleading_kpi: customers up, retention down",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-08",
+      "bucket": "misleading_kpi: growth up, margin collapsing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-09",
+      "bucket": "misleading_kpi: EBITDA positive, working capital collapsing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MK-10",
+      "bucket": "misleading_kpi: profit up, churn hidden",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-01",
+      "bucket": "prioritization: cash before retention",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-02",
+      "bucket": "prioritization: quality before marketing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-03",
+      "bucket": "prioritization: deliver before raising price",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-04",
+      "bucket": "prioritization: solvency before growth",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-05",
+      "bucket": "prioritization: governance before operations",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-06",
+      "bucket": "prioritization: cash survival before growth",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-07",
+      "bucket": "prioritization: debt reduction before inventory purchase",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-08",
+      "bucket": "prioritization: process improvement before hiring",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-09",
+      "bucket": "prioritization: fix unit economics before scaling growth",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-10",
+      "bucket": "prioritization: resolve quality before expansion",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-PC-11",
+      "bucket": "prioritization: liquidity before efficiency capex",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-01",
+      "bucket": "recovery: near-insolvency to focus+financing",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-02",
+      "bucket": "recovery: quality crisis to product fix then relaunch",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-03",
+      "bucket": "recovery: over-expansion to close + refocus",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-04",
+      "bucket": "recovery: over-diversification to simplify + cost discipline",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-05",
+      "bucket": "recovery: demand collapse to channel/model pivot",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-06",
+      "bucket": "recovery: liquidity crisis survived via sequence",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-07",
+      "bucket": "recovery: retention fixed at the driver, not the program",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-RC-08",
+      "bucket": "recovery: margin restored by selective pricing, not a blanket hike",
       "valid": true,
       "failures": []
     }
