@@ -139,7 +139,7 @@ const DRIVERS: DriverSpec[] = [
   {
     id: "demand_drives_margin",
     explains: new Set([DiagnosisType.MARGIN_EROSION]),
-    covered: null,
+    covered: DiagnosisType.DEMAND_GENERATION_FAILURE,
     dims: new Set(["market_position"]),
     vocab: /new-customer (volume|collapse|count)|demand (collapse|fell|softened|generation)|lead volume|top of funnel|acquisition volume|pipeline (collapse|fell)|volume collapse|volume deleverage/,
     numerics: ["newCustomerRate", "leadVolume"],
@@ -149,7 +149,7 @@ const DRIVERS: DriverSpec[] = [
   {
     id: "inventory_drives_symptom",
     explains: new Set([DiagnosisType.MARGIN_EROSION, DiagnosisType.OPERATIONAL_BOTTLENECK]),
-    covered: null,
+    covered: DiagnosisType.INVENTORY_FORECASTING_MISMATCH,
     vocab: /overstock|stock-?out|forecast error|forecast accuracy|inventory days|markdown|clearance|missing component|component (stockout|availab)|glut/,
     numerics: ["forecastErrorPct", "inventoryDays", "stockoutRate"],
     rationale:
@@ -158,7 +158,7 @@ const DRIVERS: DriverSpec[] = [
   {
     id: "gtm_drives_unit_economics",
     explains: new Set([DiagnosisType.UNIT_ECONOMICS_FAILURE]),
-    covered: null,
+    covered: DiagnosisType.GTM_CHANNEL_MISMATCH,
     dims: new Set(["market_position"]),
     vocab: /channel|paid-social|paid social|go-to-market|\bgtm\b/,
     numerics: ["channelCac", "channelMix", "channelConversionPct"],

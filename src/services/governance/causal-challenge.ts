@@ -67,6 +67,10 @@ const ARCHETYPE_DIMENSIONS: Record<string, Set<string>> = {
   debt_solvency_pressure: new Set(["financial_health"]),
   working_capital_stress: new Set(["financial_health"]),
   pricing_power: new Set(["market_position", "financial_health"]),
+  // E2 slice 2 archetype metadata (home dimensions) — same metadata-only registration.
+  demand_generation_failure: new Set(["market_position"]),
+  gtm_channel_mismatch: new Set(["market_position", "financial_health"]),
+  inventory_forecasting_mismatch: new Set(["operational_efficiency"]),
 };
 
 /**

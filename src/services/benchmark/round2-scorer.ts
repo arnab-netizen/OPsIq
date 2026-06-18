@@ -47,6 +47,9 @@ export const COVERED_DIAGNOSES: ReadonlySet<string> = new Set([
   "debt_solvency_pressure",
   "working_capital_stress",
   "pricing_power",
+  "demand_generation_failure",
+  "gtm_channel_mismatch",
+  "inventory_forecasting_mismatch",
 ]);
 
 /** True-cause labels for which the correct engine behavior is to abstain. */

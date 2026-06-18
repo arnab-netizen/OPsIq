@@ -14,6 +14,10 @@ export enum DiagnosisType {
   DEBT_SOLVENCY_PRESSURE = "debt_solvency_pressure",
   WORKING_CAPITAL_STRESS = "working_capital_stress",
   PRICING_POWER_FAILURE = "pricing_power",
+  // E2 slice 2 — demand / GTM / inventory archetypes (R5 slice 2)
+  DEMAND_GENERATION_FAILURE = "demand_generation_failure",
+  GTM_CHANNEL_MISMATCH = "gtm_channel_mismatch",
+  INVENTORY_FORECASTING_MISMATCH = "inventory_forecasting_mismatch",
   UNKNOWN = "unknown",
 }
 

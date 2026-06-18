@@ -369,6 +369,92 @@ const rootCausePatterns: RootCausePattern[] = [
       ],
     }),
   },
+  // ─── E2 slice 2: demand / GTM / inventory archetypes ────────────────────────
+  // Each requires strong, specific, ADVERSE domain evidence; generic revenue /
+  // margin / cash pressure (and proposed-cut adversarial framings) do NOT fire.
+  {
+    name: "Demand Generation Failure",
+    pattern: (evidence) => evidence.some((e) => fin_isDemandFailure(e)),
+    confidence: (evidence) => {
+      const sev = evidence.some(
+        (e) => fin_isDemandFailure(e) && (fin_num(e, "newCustomerRate") !== undefined || fin_num(e, "leadVolume") !== undefined)
+      );
+      return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.DEMAND_GENERATION_FAILURE,
+      description: "Demand-generation failure: top-of-funnel / new-customer demand has deteriorated",
+      mechanismDescription:
+        "New-customer acquisition, lead flow, or top-of-funnel demand has collapsed; the gap is new demand, not unit economics or cost.",
+      evidenceIds: evidence.filter((e) => e.dimension === "market_position").map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "A temporary seasonal dip rather than a structural demand problem",
+        "A tracking/attribution gap rather than a real demand fall",
+      ],
+      missingEvidenceFor: [
+        "Channel-level lead-source attribution",
+        "Funnel conversion by stage",
+      ],
+    }),
+  },
+  {
+    name: "GTM / Channel Mismatch",
+    pattern: (evidence) => evidence.some((e) => fin_isGtmMismatch(e)),
+    confidence: (evidence) => {
+      const sev = evidence.some(
+        (e) => fin_isGtmMismatch(e) && (fin_num(e, "channelCac") !== undefined || fin_num(e, "channelMix") !== undefined)
+      );
+      return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.GTM_CHANNEL_MISMATCH,
+      description: "Go-to-market / channel mismatch: spend concentrated in an underperforming acquisition channel",
+      mechanismDescription:
+        "Acquisition is concentrated in a channel with poor conversion or punitive CAC; the issue is channel allocation, not the product or blended economics.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "market_position" || e.dimension === "financial_health")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "A short-term channel-pricing fluctuation rather than a structural mismatch",
+        "An attribution gap masking a profitable channel",
+      ],
+      missingEvidenceFor: [
+        "Channel-level CAC / payback",
+        "Channel-level conversion and reallocation headroom",
+      ],
+    }),
+  },
+  {
+    name: "Inventory / Forecasting Mismatch",
+    pattern: (evidence) => evidence.some((e) => fin_isInventoryMismatch(e)),
+    confidence: (evidence) => {
+      const sev = evidence.some(
+        (e) => fin_isInventoryMismatch(e) && fin_num(e, "forecastErrorPct") !== undefined
+      );
+      return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.INVENTORY_FORECASTING_MISMATCH,
+      description: "Inventory / forecasting mismatch: stock misallocated against demand (stockouts + overstock)",
+      mechanismDescription:
+        "Forecast error misallocates stock — stockouts on fast lines alongside overstock on slow lines — trapping cash and forcing markdowns; the issue is planning, not demand or cost.",
+      evidenceIds: evidence.filter((e) => e.dimension === "operational_efficiency").map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "A one-off supplier disruption rather than a forecasting problem",
+        "A deliberate stock build rather than a forecast error",
+      ],
+      missingEvidenceFor: [
+        "Forecast accuracy by SKU/ABC class",
+        "Demand variability and lead-time data",
+      ],
+    }),
+  },
 ];
 
 // ─── R1 lexical-trigger hardening: semantic guards ────────────────────────────
@@ -533,6 +619,39 @@ function fin_isPricingPower(e: EvidenceItem): boolean {
     (fin_num(e, "realizedPrice") !== undefined && fin_num(e, "listPrice") !== undefined &&
       (fin_num(e, "realizedPrice") as number) < (fin_num(e, "listPrice") as number));
   return numeric || /priced (well )?below|below (comparable|competitor)|self-inflicted discount|no pricing governance|no discount-approval/.test(t);
+}
+
+// ─── E2 slice 2 demand / GTM / inventory triggers (strict; adverse-specific) ──
+const DEMAND_TEXT = /new-customer (acquisition|demand|volume|footfall|count).*(stall|collaps|fell|fall|weak|down)|collaps\w*[^.]{0,40}new[- ]?customer|acquisition has stalled|top-of-funnel.*(collaps|fell|weak)|lead volume (collaps|fell|weak|down)|demand (collaps|fell|softened|deteriorat|dried)|funnel.*(collaps|deteriorat)|online sessions (fell|collaps)|traffic (fell|collaps|weak)|volume deleverage|new[- ]customer demand collaps/;
+function fin_isDemandFailure(e: EvidenceItem): boolean {
+  if (e.dimension !== "market_position") return false;
+  const t = fin_text(e);
+  // Require ADVERSE demand framing (collapse/stall/fell/weak) AND a demand numeric;
+  // a generic revenue/margin decline or a proposed marketing CUT does NOT fire.
+  if (!DEMAND_TEXT.test(t)) return false;
+  return fin_num(e, "newCustomerRate") !== undefined || fin_num(e, "leadVolume") !== undefined || fin_num(e, "pipelineValue") !== undefined || fin_num(e, "funnelConversionPct") !== undefined;
+}
+
+const GTM_TEXT = /paid[- ]search|paid[- ]social|channel mix|channel-driven|acquisition (cost|channel)|go-to-market|\bgtm\b|distribution channel|sales motion|market segment|channel attribution/;
+function fin_isGtmMismatch(e: EvidenceItem): boolean {
+  if (e.dimension !== "market_position") return false;
+  const t = fin_text(e);
+  // Require channel/distribution evidence with a channel-economics numeric; a generic
+  // growth slowdown (no channel signal) does NOT fire.
+  if (!GTM_TEXT.test(t)) return false;
+  return fin_num(e, "channelCac") !== undefined || fin_num(e, "channelMix") !== undefined || fin_num(e, "channelConversionPct") !== undefined;
+}
+
+function fin_isInventoryMismatch(e: EvidenceItem): boolean {
+  if (e.dimension !== "operational_efficiency") return false;
+  const t = fin_text(e);
+  const forecastErr = fin_num(e, "forecastErrorPct") !== undefined || /forecast (error|accuracy)|demand[- ]planning mismatch/.test(t);
+  const overstockStockout = /overstock/.test(t) && /stock-?out/.test(t);
+  const swing = /(inventory|stock).*(swung|swing|ballooned)|inventory (turns|aging) (deteriorat|fell|worsen)/.test(t);
+  // Require a forecasting-mismatch signal (forecast error, BOTH overstock+stockout, or
+  // an inventory-days swing) — a stockout-only proposed CUT or generic cash/margin
+  // pressure does NOT fire.
+  return forecastErr || overstockStockout || swing;
 }
 
 export interface DiagnosisResult {

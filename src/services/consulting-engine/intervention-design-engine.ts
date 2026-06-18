@@ -573,6 +573,85 @@ const interventionTemplates: InterventionTemplate[] = [
       },
     ],
   },
+  // ─── E2 slice 2 templates (verify-first, low-cost, reversible, owner-safe) ──
+  {
+    rootCauseKeyword: "demand_generation",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Run a demand and funnel diagnostic and a lead-source attribution review",
+        class: InterventionClass.STABILIZATION,
+        objective: "Locate where new-customer demand is leaking before any spend change",
+        rationale: "A demand/funnel diagnostic and lead-source attribution are analysis-only and reversible; they avoid cutting or scaling spend blindly.",
+        whyThisNow: "New demand has deteriorated; the funnel must be diagnosed before any marketing change",
+        ownerRole: "consultant",
+        steps: [
+          { sequence: 1, title: "Run a demand and funnel diagnostic", description: "Map top-of-funnel volume, conversion by stage, and channel demand to find the demand leak.", ownerRole: "consultant", estimatedDays: 4, successCriteria: "The dominant demand/funnel leak is identified by stage and channel" },
+          { sequence: 2, title: "Run a lead-source attribution review", description: "Attribute new-customer flow by source to size reversible recovery levers before any spend change.", ownerRole: "owner", estimatedDays: 3, dependsOn: [1], successCriteria: "Lead sources attributed and a reversible volume-recovery shortlist drafted" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Demand/funnel diagnostic complete", "Lead-source attribution reviewed"],
+        failureRisks: ["Attribution data may be incomplete across channels"],
+        fallbackPlan: "Run an incrementality test on one channel before reallocating spend",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 7,
+        priorityScore: 0,
+      },
+    ],
+  },
+  {
+    rootCauseKeyword: "gtm_channel",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Run a channel attribution and channel-level CAC/payback analysis",
+        class: InterventionClass.STABILIZATION,
+        objective: "Quantify channel-level economics before any budget reallocation",
+        rationale: "Channel attribution and channel-level CAC analysis are analysis-only and reversible; they avoid blindly scaling or cutting a channel.",
+        whyThisNow: "Spend is concentrated in an underperforming channel; channel economics must be measured before reallocation",
+        ownerRole: "consultant",
+        steps: [
+          { sequence: 1, title: "Run a channel attribution analysis", description: "Attribute acquisition and conversion by channel to isolate the underperforming channel.", ownerRole: "consultant", estimatedDays: 4, successCriteria: "Channel-level conversion and spend attributed" },
+          { sequence: 2, title: "Run a channel-level CAC/payback review", description: "Compute CAC and payback by channel to size a reversible reallocation toward profitable channels.", ownerRole: "owner", estimatedDays: 3, dependsOn: [1], successCriteria: "Channel-level CAC/payback computed and a reversible reallocation drafted" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Channel attribution complete", "Channel-level CAC/payback reviewed"],
+        failureRisks: ["Channel attribution may be noisy with overlapping touchpoints"],
+        fallbackPlan: "Shift a small test budget to the candidate channel and measure before full reallocation",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 7,
+        priorityScore: 0,
+      },
+    ],
+  },
+  {
+    rootCauseKeyword: "inventory_forecasting",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Run a forecast-accuracy and ABC inventory analysis with a demand-segmentation review",
+        class: InterventionClass.STABILIZATION,
+        objective: "Locate the forecast/stock mismatch before any blanket inventory change",
+        rationale: "A forecast-accuracy and ABC inventory analysis is analysis-only and reversible; it avoids an across-the-board inventory cut that would stock out best-sellers.",
+        whyThisNow: "Stock is misallocated against demand; the forecast mismatch must be measured before any inventory move",
+        ownerRole: "consultant",
+        steps: [
+          { sequence: 1, title: "Run a forecast-accuracy / ABC inventory analysis", description: "Measure forecast error by SKU/ABC class and quantify stockouts vs overstock.", ownerRole: "consultant", estimatedDays: 4, successCriteria: "Forecast error and stock misallocation quantified by SKU class" },
+          { sequence: 2, title: "Run a demand-segmentation review", description: "Segment demand variability to right-size stock by velocity — protecting best-sellers, trimming slow lines.", ownerRole: "owner", estimatedDays: 3, dependsOn: [1], successCriteria: "Velocity-segmented stock plan drafted protecting best-sellers" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Forecast-accuracy / ABC analysis complete", "Demand-segmentation reviewed"],
+        failureRisks: ["SKU-level demand history may be sparse for new lines"],
+        fallbackPlan: "Apply velocity-segmented adjustments to the worst SKUs first before a broader change",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 7,
+        priorityScore: 0,
+      },
+    ],
+  },
 ];
 
 export function designInterventions(
