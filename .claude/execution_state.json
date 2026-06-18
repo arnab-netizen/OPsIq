@@ -1203,8 +1203,8 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A R5 slice 3: legal/key-person/strategic-capex archetypes (over-abstention 33->27, first-action 66.0%->71.8%, 11 correct diagnoses, zero new unsafe proceeds)",
-  "pushed": true,
+  "last_commit": "STAGE A post-R5-slice-3 safety-gate forensic audit (docs only): failure map + fix options + next decision (BUILD_OWNER_PROPOSED_ACTION_DANGER_DETECTOR)",
+  "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
@@ -1444,5 +1444,26 @@
     "cases_improved": 11,
     "cases_worsened": 2,
     "gates": "vitest slice3 13/13; scorer+governance+adjudication+sequencing+survival 124/124; engine scope green; tsc only pre-existing run-case.ts:149; prisma valid; 5 *.db/external-systems suites DB_BLOCKED"
+  },
+  "stage_a_post_r5_slice3_safety_gate_audit": {
+    "status": "AUDIT_ONLY_NO_IMPLEMENTATION",
+    "scope": "read-only forensic audit of remaining safety-gate/abstention failures after R5 slice 3",
+    "files": [
+      "POST_R5_SLICE3_SAFETY_GATE_FAILURE_MAP.md",
+      "SAFETY_GATE_FIX_OPTIONS_AFTER_R5.md",
+      "NEXT_SAFETY_GATE_DECISION.md",
+      "simulation_runner/audit-post-r5-slice3-safety-gate.py"
+    ],
+    "cases_reviewed": 34,
+    "unsafe_proceed": 1,
+    "dangerous_proceed": 1,
+    "over_abstentions": 27,
+    "good_abstentions": 22,
+    "bad_abstentions": 27,
+    "largest_bucket": "B causal-challenge overreach (23)",
+    "dc01_root_cause": "missing owner-proposed-action danger signal in gate (negativeMarginDiscount exists in R3 hasIrreversibleDanger but not wired to gate); irreversibility_score hardcoded 0",
+    "decision": "BUILD_OWNER_PROPOSED_ACTION_DANGER_DETECTOR (negativeMarginDiscount arm; machine-proven to hit only DC-01, zero regression)",
+    "expected_cases_fixed": "DC-01 (unsafe/dangerous proceed -> 0)",
+    "stage_a": "DO_NOT_PROMOTE / BLOCKED"
   }
 }
