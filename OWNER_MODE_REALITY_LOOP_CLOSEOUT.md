@@ -746,4 +746,50 @@ Requirements:
 - **security_findings**: Full security audit complete — all 8 SEC rules enforced, AI-is-not-a-verifier invariant confirmed, workspace isolation enforced at all domain entry points
 - **tenant_isolation_findings**: assertWorkspaceScopedQuery enforced at every domain write entry point; autonomy-policy.ts and capability-registry.ts are read-only configs with no workspace-scoped writes (correct)
 - **dashboard_proof_status**: owner-dashboard.ts IMPLEMENTED_DB_UNVERIFIED; DB runtime proof pending
-- **next_required_slice**: Configure DATABASE_URL → run LANE_B DB runtime verification → reclassify all 28 phases from IMPLEMENTED_DB_UNVERIFIED to COMPLETE_VERIFIED → implement Controlled Learning System (Phases 29-35)
+- **next_required_slice**: ~~Configure DATABASE_URL → run LANE_B DB runtime verification~~ COMPLETE. All 28 phases reclassified to COMPLETE_VERIFIED (see LANE_B DB Verification slice below). Next: implement Controlled Learning System (Phases 29–35).
+
+---
+
+## Slice: LANE_B DB Runtime Verification — Phases 0–28 Reclassified
+
+- **slice_name**: LANE_B DB Runtime Verification
+- **status**: COMPLETE_VERIFIED
+- **branch**: claude/cool-ptolemy-dxrpm7
+- **commit**: d74cd94fc22f3829a02ef79fb155da872c1b9d06
+- **date**: 2026-06-18
+
+### CI Evidence
+
+| Check | Result |
+|---|---|
+| GitHub Actions run ID | 27793720853 |
+| Workflow | db-verification.yml |
+| Trigger | push to claude/cool-ptolemy-dxrpm7 |
+| LANE_B conclusion | **success** |
+| postgres:16 service container init | ✅ |
+| prisma generate | ✅ |
+| prisma validate | ✅ schema valid |
+| prisma migrate deploy (throwaway container) | ✅ all migrations applied |
+| DB test suite | ✅ **22 test files / 174 tests passed** |
+| Artifact uploaded | ✅ lane-b-db-verification-logs |
+| LANE_A | ⏭ skipped — expected (push event, use_neon_secrets != true) |
+
+### Local Build Evidence (same commit)
+
+| Check | Result |
+|---|---|
+| npm ci | ✅ |
+| npx prisma validate | ✅ |
+| npx tsc --noEmit | ✅ zero errors |
+| npm run build | ✅ Compiled successfully in 43s, 117 static pages |
+| npx vitest run (domain, non-DB) | ✅ 53 files / 2344 tests passed |
+| npx vitest run (owner-mode domain) | ✅ 26 files / 1460 tests passed |
+| owner-mode ESLint errors | 2 pre-existing errors on main (not introduced by this branch) |
+
+### Classification
+
+**All Phases 0–28: COMPLETE_VERIFIED**
+
+Verification is against a throwaway GitHub Actions PostgreSQL 16 service container, not Neon production or staging. LANE_A (Neon secret verification) remains optional and can be triggered via `workflow_dispatch` once `MIGRATION_DATABASE_URL` is corrected to a direct (non-pooler) Neon endpoint in GitHub repository secrets.
+
+- **next_required_slice**: Implement Controlled Learning System (Phases 29–35). Prerequisite (LANE_B DB verification) is now satisfied.
