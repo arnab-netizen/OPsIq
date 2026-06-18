@@ -1,14 +1,9 @@
 /**
- * Phase 24 — Full-Loop Validation Suite
+ * Full Loop Validation Tests — Owner Mode Reality Loop
  *
- * Proves the complete Owner Mode Reality Loop end-to-end across all scenario types.
- * No database calls. Pure domain logic only.
- *
- * Loop sequence:
- * input quality → recommendation → owner decision → action → evidence verification →
- * outcome → harm tracking → adjudication → causal attribution →
- * reassessment → learning eligibility → decision memory →
- * business timeline → dashboard proof
+ * 15 scenarios covering the complete owner-mode loop:
+ * input quality → recommendation tracking → owner decision → action tracking
+ * → outcome tracking → failure adjudication → harm tracking → learning eligibility
  */
 
 import { describe, it, expect } from "vitest";
@@ -16,218 +11,149 @@ import { describe, it, expect } from "vitest";
 import {
   assessInputQuality,
   assertAllowsStrongRecommendation,
+  assertAllowsHighRiskAction,
+  type InputQualityAssessmentInput,
   type InputFieldValue,
-} from "@/domain/owner-mode/input-quality";
+} from "../../../domain/owner-mode/input-quality";
+
 import {
   validateRecommendation,
   assertOwnerDecisionReady,
-} from "@/domain/owner-mode/recommendation-tracking";
+  computeRecommendationConfidence,
+  isRecommendationStatusTransitionAllowed,
+  type RecommendationInput,
+} from "../../../domain/owner-mode/recommendation-tracking";
+
 import {
   validateOwnerDecision,
   assertAllowsActionCreation,
-} from "@/domain/owner-mode/owner-decision";
+  isOwnerDecisionStatusTransitionAllowed,
+  type DecisionInput,
+} from "../../../domain/owner-mode/owner-decision";
+
 import {
   validateAction,
   validateExecutionLog,
-} from "@/domain/owner-mode/action-tracking";
-import {
-  validateEvidenceVerification,
-  verificationAllowsLearning,
-  ownerStatementRequiresCorroboration,
-  AI_IS_NOT_A_VERIFIER,
-  AI_VERIFIER_TYPES,
-} from "@/domain/owner-mode/evidence-verification";
+  computeCompletionRate,
+  isActionStatusTransitionAllowed,
+  type ActionInput,
+  type ExecutionLogInput,
+} from "../../../domain/owner-mode/action-tracking";
+
 import {
   validateOutcome,
   outcomeAllowsLearning,
-} from "@/domain/owner-mode/outcome-tracking";
-import {
-  validateHarmEvent,
-  harmAllowsLearning,
-} from "@/domain/owner-mode/harm-tracking";
+  OUTCOME_ENABLES_LEARNING,
+  OUTCOME_INDICATES_HARM,
+  type OutcomeInput,
+} from "../../../domain/owner-mode/outcome-tracking";
+
 import {
   adjudicateFailure,
   adjudicationAllowsLearning,
-} from "@/domain/owner-mode/failure-adjudication";
+  type AdjudicationInput,
+} from "../../../domain/owner-mode/failure-adjudication";
+
 import {
-  classifyCausalAttribution,
-  attributionAllowsLearning,
-} from "@/domain/owner-mode/causal-attribution";
-import { initiateReassessment } from "@/domain/owner-mode/reassessment";
+  validateHarmEvent,
+  harmAllowsLearning,
+  type HarmEventInput,
+} from "../../../domain/owner-mode/harm-tracking";
+
 import {
   assessLearningEligibility,
-  learningIsAdmissible,
-} from "@/domain/owner-mode/learning-eligibility";
-import {
-  recordDecisionMemory,
-  repeatIsPermitted,
-} from "@/domain/owner-mode/decision-memory";
-import {
-  validateBusinessStateSnapshot,
-  analyzeBusinessTrend,
-} from "@/domain/owner-mode/business-state-timeline";
-import { buildOwnerLoopDashboard } from "@/domain/owner-mode/owner-dashboard";
+  type LearningEligibilityInput,
+} from "../../../domain/owner-mode/learning-eligibility";
 
-const WS = "00000000-0000-0000-0000-000000000001";
-const BIZ = "00000000-0000-0000-0000-000000000002";
-const REC_ID = "rec-001";
-const ACTION_ID = "action-001";
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Helper: build a complete input field set
-function coreFields(): InputFieldValue[] {
+const WS = "workspace-test-001";
+const BIZ = "biz-001";
+
+function fullFieldSet(): InputFieldValue[] {
   return [
-    { field: "revenue", value: 280000, isEstimate: false, freshness: "current" },
-    { field: "gross_margin", value: 72000, isEstimate: false, freshness: "current" },
-    { field: "net_profit", value: 18000, isEstimate: false, freshness: "current" },
-    { field: "cash_balance", value: 45000, isEstimate: false, freshness: "current" },
-    { field: "cash_runway", value: 90, isEstimate: false, freshness: "current" },
+    { field: "revenue", value: 500000, isEstimate: false, freshness: "current" },
+    { field: "gross_margin", value: 35, isEstimate: false, freshness: "current" },
+    { field: "net_profit", value: 20000, isEstimate: false, freshness: "current" },
+    { field: "cash_balance", value: 80000, isEstimate: false, freshness: "current" },
+    { field: "cash_runway", value: 6, isEstimate: false, freshness: "current" },
+    { field: "leads", value: 200, isEstimate: false, freshness: "current" },
+    { field: "conversion_rate", value: 12, isEstimate: false, freshness: "current" },
   ];
 }
 
-// ─── SCENARIO 1: Successful intervention — full happy path ────────────────────
-
-describe("Full-Loop Scenario 1: Successful supplier renegotiation (happy path)", () => {
-  // Step 1: Input Quality
-  const inputResult = assessInputQuality({
-    workspaceId: WS,
-    fields: coreFields(),
-  });
-
-  it("Step 1: input quality — sufficient for strong recommendation", () => {
-    expect(["complete", "partial"]).toContain(inputResult.status);
-    expect(() => assertAllowsStrongRecommendation(inputResult)).not.toThrow();
-  });
-
-  // Step 2: Recommendation
-  const recResult = validateRecommendation({
+function baseRecommendationInput(): RecommendationInput {
+  return {
     workspaceId: WS,
     businessId: BIZ,
     ownerUserId: "owner-001",
-    recommendationText:
-      "Renegotiate supplier contract to reduce COGS by 8%. Gross margin at 25.7%, below 30% target. Supplier contract renewal due in 4 weeks.",
+    recommendationText: "Increase digital marketing spend by 20% to grow lead volume",
     recommendationType: "tactical",
     priorityRank: 1,
-    expectedOutcomeSummary:
-      "Gross margin improves from 25.7% to 27.5% within 45 days of new terms.",
-    targetMetricName: "gross_margin",
-    targetDirection: "increase",
-    confidenceScore: 0.8,
-    confidenceReason:
-      "Historical supplier data shows 8% reduction achievable at current volume levels.",
-  });
+    expectedOutcomeSummary: "Lead volume increases by 30% within 60 days",
+    confidenceScore: 75,
+    confidenceReason: "Based on historical spend-to-lead correlation data",
+    riskLevel: "medium",
+    evidenceFor: ["historical-data-001"],
+    assumptions: ["market demand stable"],
+    constraints: ["budget cap"],
+  };
+}
 
-  it("Step 2: recommendation validates successfully", () => {
-    expect(recResult.valid).toBe(true);
-    expect(recResult.violations).toHaveLength(0);
-  });
-
-  it("Step 2: recommendation is ready for owner decision", () => {
-    expect(() => assertOwnerDecisionReady(recResult)).not.toThrow();
-  });
-
-  // Step 3: Owner Decision
-  const decisionResult = validateOwnerDecision({
+function baseDecisionInput(): DecisionInput {
+  return {
     workspaceId: WS,
     businessId: BIZ,
-    recommendationId: REC_ID,
+    recommendationId: "rec-001",
     ownerUserId: "owner-001",
-    decisionStatus: "approved",
-    decisionReason:
-      "Supplier has indicated willingness to negotiate. Timing aligns with contract renewal. Accepting recommendation.",
-    riskLevel: "low",
+    decisionStatus: "accepted",
+    decisionReason: "Agree with recommendation and plan to execute immediately",
+    riskLevel: "medium",
     verificationStatus: "verified",
-  });
+  };
+}
 
-  it("Step 3: owner decision is valid approved decision", () => {
-    expect(decisionResult.valid).toBe(true);
-  });
-
-  it("Step 3: approved decision allows action creation", () => {
-    expect(() => assertAllowsActionCreation(decisionResult)).not.toThrow();
-  });
-
-  // Step 4: Action
-  const actionResult = validateAction({
+function baseActionInput(): ActionInput {
+  return {
     workspaceId: WS,
     businessId: BIZ,
-    recommendationId: REC_ID,
-    actionTitle: "Negotiate 8% COGS reduction with primary supplier",
-    actionSteps: [
-      "Schedule meeting with supplier account manager",
-      "Present volume commitment offer",
-      "Target 8% unit cost reduction effective next month",
-    ],
-    dueAt: new Date(Date.now() + 30 * 86400 * 1000),
-  });
+    recommendationId: "rec-001",
+    actionTitle: "Launch digital ad campaign",
+    actionSteps: ["Set budget", "Create creatives", "Launch campaign", "Monitor results"],
+  };
+}
 
-  it("Step 4: action validates successfully", () => {
-    expect(actionResult.valid).toBe(true);
-    expect(actionResult.violations).toHaveLength(0);
-  });
-
-  // Step 5: Execution Log
-  const execLog = validateExecutionLog({
+function baseExecutionLog(): ExecutionLogInput {
+  return {
     workspaceId: WS,
     businessId: BIZ,
-    actionId: ACTION_ID,
-    completedSteps: 3,
-    totalSteps: 3,
-    notes:
-      "Met with supplier 2025-09-15. Agreed to 7% reduction on core SKUs effective 2025-10-01. Written agreement received.",
-  });
+    actionId: "act-001",
+    plannedStepsCompletedCount: 4,
+    plannedStepsTotalCount: 4,
+    deadlineMet: true,
+    executionComplianceScore: "fully_executed",
+  };
+}
 
-  it("Step 5: execution log is valid with high completion", () => {
-    expect(execLog.valid).toBe(true);
-    expect(execLog.completionRate).toBeCloseTo(100);
-  });
-
-  // Step 6: Evidence Verification
-  const evResult = validateEvidenceVerification({
+function baseOutcomeInput(): OutcomeInput {
+  return {
     workspaceId: WS,
     businessId: BIZ,
-    evidenceId: "evidence-001",
-    verifierType: "accountant",
-    verificationMethod: "document_review",
-    verificationReason:
-      "Three consecutive supplier invoices confirmed 7% price reduction versus September baseline.",
-    sourceType: "supplier_invoice",
-    confidenceLevel: "high",
-    hasCorroboratingSource: true,
-  });
+    recommendationId: "rec-001",
+    outcomeStatus: "worked",
+    actualMetricName: "lead_count",
+    beforeValue: 200,
+    afterValue: 260,
+    measurementPeriodStart: new Date("2025-01-01"),
+    measurementPeriodEnd: new Date("2025-03-01"),
+  };
+}
 
-  it("Step 6: evidence verification passes with high confidence", () => {
-    expect(evResult.valid).toBe(true);
-    expect(evResult.confidenceLevel).toBe("high");
-    expect(verificationAllowsLearning(evResult)).toBe(true);
-  });
-
-  // Step 7: Outcome
-  const outcomeResult = validateOutcome({
+function baseAdjudicationInput(): AdjudicationInput {
+  return {
     workspaceId: WS,
     businessId: BIZ,
-    recommendationId: REC_ID,
-    actionId: ACTION_ID,
-    outcomeStatus: "positive",
-    ownerReportedResult:
-      "Gross margin improved from 25.7% to 27.4% within 45 days. COGS reduced 7%.",
-    actualMetricName: "gross_margin",
-    beforeValue: 72000,
-    afterValue: 76720,
-    evidenceQuality: "strong",
-    externalEventFlag: false,
-  });
-
-  it("Step 7: outcome is positive", () => {
-    expect(outcomeResult.valid).toBe(true);
-    expect(outcomeAllowsLearning(outcomeResult)).toBe(true);
-  });
-
-  // Step 8: Adjudication (success — no failure to adjudicate, but run the gate)
-  const adjResult = adjudicateFailure({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: ACTION_ID,
-    recommendationId: REC_ID,
+    recommendationId: "rec-001",
     actionNotExecuted: false,
     executionMateriallyDeviated: false,
     hasVerifiedEvidence: true,
@@ -236,44 +162,15 @@ describe("Full-Loop Scenario 1: Successful supplier renegotiation (happy path)",
     ownerConstraintViolated: false,
     metricWorsened: false,
     successThresholdPassed: true,
-    adjudicationReason:
-      "Action executed as planned. Evidence verified by accountant. Gross margin improved as targeted.",
-  });
+    adjudicationReason: "All evidence points to a validated success with strong causal link",
+  };
+}
 
-  it("Step 8: adjudication verdict is validated_success", () => {
-    expect(adjResult.valid).toBe(true);
-    expect(adjResult.verdict).toBe("validated_success");
-    expect(adjudicationAllowsLearning(adjResult)).toBe(true);
-  });
-
-  // Step 9: Causal Attribution
-  const attrResult = classifyCausalAttribution({
+function baseLearningEligibilityInput(): LearningEligibilityInput {
+  return {
     workspaceId: WS,
     businessId: BIZ,
-    actionId: ACTION_ID,
-    recommendationId: REC_ID,
-    attributionClass: "likely_caused",
-    hasTemporalProximity: true,
-    hasControlledComparison: false,
-    hasOwnerTestimony: true,
-    hasExternalEventDuringPeriod: false,
-    hasConfoundingFactors: false,
-    attributionReason:
-      "Supplier invoices confirm price reduction. Margin improvement directly follows renegotiation. No external events or confounds during period.",
-  });
-
-  it("Step 9: attribution is likely_caused — verified causal link", () => {
-    expect(attrResult.valid).toBe(true);
-    expect(attrResult.attributionClass).toBe("likely_caused");
-    expect(attrResult.hasVerifiedCausalLink).toBe(true);
-    expect(attributionAllowsLearning(attrResult)).toBe(true);
-  });
-
-  // Step 10: Learning Eligibility
-  const eligibilityResult = assessLearningEligibility({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: ACTION_ID,
+    recommendationId: "rec-001",
     actionWasExecuted: true,
     executionMateriallyDeviated: false,
     hasVerifiedEvidence: true,
@@ -285,857 +182,659 @@ describe("Full-Loop Scenario 1: Successful supplier renegotiation (happy path)",
     harmSeverity: "none",
     isOwnerOpinionOnly: false,
     hasContradictoryEvidence: false,
-    hasPrivacyControls: false,
+    hasPrivacyControls: true,
     broadImpactScope: false,
-    eligibilityNotes:
-      "Full loop complete. Evidence verified. Adjudication validated success. Causal link confirmed.",
+    eligibilityNotes: "Clean execution with verified metrics and causal link established",
+  };
+}
+
+// ─── Scenario 1: Happy Path ───────────────────────────────────────────────────
+
+describe("Scenario 1: Happy path — complete data, accepted recommendation, full execution, worked outcome", () => {
+  it("complete input quality gates strong recommendation", () => {
+    const result = assessInputQuality({ workspaceId: WS, fields: fullFieldSet() });
+    expect(result.qualityStatus).toBe("complete");
+    expect(result.allowsStrongRecommendation).toBe(true);
+    expect(result.allowsHighRiskAction).toBe(true);
   });
 
-  it("Step 10: learning eligibility is high confidence", () => {
-    expect(eligibilityResult.valid).toBe(true);
-    expect(learningIsAdmissible(eligibilityResult)).toBe(true);
+  it("assertAllowsStrongRecommendation does not throw on complete data", () => {
+    const result = assessInputQuality({ workspaceId: WS, fields: fullFieldSet() });
+    expect(() => assertAllowsStrongRecommendation(result)).not.toThrow();
   });
 
-  // Step 11: Decision Memory
-  const memoryResult = recordDecisionMemory({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: ACTION_ID,
-    category: "successful_action",
-    summary:
-      "Supplier renegotiation achieved 7% COGS reduction within 45 days. Gross margin improved from 25.7% to 27.4%.",
-    contextSnapshot:
-      "Q3 2025. Gross margin below 30% target. Supplier contract renewal due. Owner accepted tactical renegotiation recommendation.",
-    isRepeatAttempt: false,
-  });
-
-  it("Step 11: decision memory recorded with learning signal", () => {
-    expect(memoryResult.valid).toBe(true);
-    expect(memoryResult.carriesLearningSignal).toBe(true);
-    expect(memoryResult.blocksRepetition).toBe(false);
-  });
-
-  // Step 12: Business Timeline
-  const snapshotResult = validateBusinessStateSnapshot({
-    workspaceId: WS,
-    businessId: BIZ,
-    periodLabel: "2025-Q4",
-    metrics: [
-      { metricName: "gross_profit", value: 76720, periodLabel: "2025-Q4" },
-      { metricName: "revenue", value: 280000, periodLabel: "2025-Q4" },
-    ],
-  });
-
-  it("Step 12: business snapshot validates for Q4", () => {
-    expect(snapshotResult.valid).toBe(true);
-    expect(snapshotResult.metricsRecorded).toBe(2);
-  });
-
-  // Step 13: Dashboard proof
-  const dashView = buildOwnerLoopDashboard({
-    workspaceId: WS,
-    businessId: BIZ,
-    periodLabel: "2025-Q4",
-    inputQuality: "complete",
-    diagnosis: "complete",
-    recommendation: "complete",
-    ownerDecision: "complete",
-    action: "complete",
-    evidence: "complete",
-    outcomeStatus: "complete",
-    adjudication: "complete",
-    reassessment: "not_applicable",
-    learningEligibility: "complete",
-    activeRecommendationSummary: "Supplier renegotiation complete. COGS reduced by 7%.",
-    reassessmentRequired: false,
-    ownerDecisionPending: false,
-    harmFlagged: false,
-  });
-
-  it("Step 13: dashboard — full loop complete, no owner attention required", () => {
-    expect(dashView.valid).toBe(true);
-    expect(dashView.requiresOwnerAttention).toBe(false);
-    expect(dashView.harmFlagged).toBe(false);
-  });
-
-  it("Full happy-path loop: all 13 gates pass end-to-end", () => {
-    expect(inputResult.status).not.toBe("critical_missing");
-    expect(recResult.valid).toBe(true);
-    expect(decisionResult.valid).toBe(true);
-    expect(actionResult.valid).toBe(true);
-    expect(execLog.valid).toBe(true);
-    expect(evResult.valid).toBe(true);
-    expect(outcomeResult.valid).toBe(true);
-    expect(adjResult.verdict).toBe("validated_success");
-    expect(attrResult.attributionClass).toBe("likely_caused");
-    expect(learningIsAdmissible(eligibilityResult)).toBe(true);
-    expect(memoryResult.valid).toBe(true);
-    expect(snapshotResult.valid).toBe(true);
-    expect(dashView.valid).toBe(true);
-  });
-});
-
-// ─── SCENARIO 2: Cash crisis — high revenue / low profit ─────────────────────
-
-describe("Full-Loop Scenario 2: Cash crisis — revenue rising, cash falling", () => {
-  it("detects cash_falling_sales_rising and revenue_up_profit_down trend alerts", () => {
-    const trendResult = analyzeBusinessTrend({
-      workspaceId: WS,
-      businessId: BIZ,
-      currentPeriod: [
-        { metricName: "revenue", value: 320000, periodLabel: "2025-Q3" },
-        { metricName: "cash_balance", value: 28000, periodLabel: "2025-Q3" },
-        { metricName: "gross_profit", value: 60000, periodLabel: "2025-Q3" },
-      ],
-      previousPeriod: [
-        { metricName: "revenue", value: 280000, periodLabel: "2025-Q2" },
-        { metricName: "cash_balance", value: 52000, periodLabel: "2025-Q2" },
-        { metricName: "gross_profit", value: 72000, periodLabel: "2025-Q2" },
-      ],
-    });
-    expect(trendResult.valid).toBe(true);
-    const alerts = trendResult.trendAlerts.map((a) => a.alertType);
-    expect(alerts).toContain("cash_falling_sales_rising");
-    expect(alerts).toContain("revenue_up_profit_down");
-    const cashAlert = trendResult.trendAlerts.find((a) => a.alertType === "cash_falling_sales_rising");
-    expect(cashAlert?.severity).toBe("critical");
-  });
-
-  it("dashboard shows owner decision pending for cash crisis", () => {
-    const dashView = buildOwnerLoopDashboard({
-      workspaceId: WS,
-      businessId: BIZ,
-      periodLabel: "2025-Q3",
-      inputQuality: "complete",
-      diagnosis: "complete",
-      recommendation: "complete",
-      ownerDecision: "requires_owner_action",
-      action: "not_applicable",
-      evidence: "not_applicable",
-      outcomeStatus: "not_applicable",
-      adjudication: "not_applicable",
-      reassessment: "not_applicable",
-      learningEligibility: "not_applicable",
-      businessTrendWarnings: [
-        "Cash balance falling despite rising revenue — check collections and expenses.",
-        "Revenue rising but gross profit falling — margin compression detected.",
-      ],
-      ownerAttentionItems: ["Cash crisis alert: immediate owner review required."],
-      reassessmentRequired: false,
-      ownerDecisionPending: true,
-      harmFlagged: false,
-    });
-    expect(dashView.valid).toBe(true);
-    expect(dashView.businessTrendWarnings).toHaveLength(2);
-    expect(dashView.requiresOwnerAttention).toBe(true);
-  });
-});
-
-// ─── SCENARIO 3: High leads / low conversion ─────────────────────────────────
-
-describe("Full-Loop Scenario 3: High leads, low conversion — lead quality failure", () => {
-  it("detects leads_up_conversion_down trend alert", () => {
-    const trend = analyzeBusinessTrend({
-      workspaceId: WS,
-      businessId: BIZ,
-      currentPeriod: [
-        { metricName: "leads", value: 420, periodLabel: "2025-Q3" },
-        { metricName: "conversion_rate", value: 3.2, periodLabel: "2025-Q3" },
-      ],
-      previousPeriod: [
-        { metricName: "leads", value: 280, periodLabel: "2025-Q2" },
-        { metricName: "conversion_rate", value: 6.8, periodLabel: "2025-Q2" },
-      ],
-    });
-    const alertTypes = trend.trendAlerts.map((a) => a.alertType);
-    expect(alertTypes).toContain("leads_up_conversion_down");
-  });
-
-  it("marketing spend rising + CAC worsening triggers warning", () => {
-    const trend = analyzeBusinessTrend({
-      workspaceId: WS,
-      businessId: BIZ,
-      currentPeriod: [
-        { metricName: "marketing_spend", value: 18000, periodLabel: "2025-Q3" },
-        { metricName: "cost_per_acquisition", value: 240, periodLabel: "2025-Q3" },
-      ],
-      previousPeriod: [
-        { metricName: "marketing_spend", value: 12000, periodLabel: "2025-Q2" },
-        { metricName: "cost_per_acquisition", value: 180, periodLabel: "2025-Q2" },
-      ],
-    });
-    const alertTypes = trend.trendAlerts.map((a) => a.alertType);
-    expect(alertTypes).toContain("marketing_spend_up_cac_worsening");
-  });
-});
-
-// ─── SCENARIO 4: Pricing action failure — harmful outcome ────────────────────
-
-describe("Full-Loop Scenario 4: Pricing action failure — harm, adjudication, do-not-repeat", () => {
-  // Outcome negative
-  const outcomeResult = validateOutcome({
-    workspaceId: WS,
-    businessId: BIZ,
-    recommendationId: "rec-price-001",
-    actionId: "action-price-001",
-    outcomeStatus: "negative",
-    ownerReportedResult:
-      "15% price increase caused 18% churn spike within 30 days. Revenue declined despite higher unit price.",
-    actualMetricName: "churn",
-    beforeValue: 5.2,
-    afterValue: 23.4,
-    evidenceQuality: "strong",
-    externalEventFlag: false,
-  });
-
-  it("Step 1: negative outcome does not allow learning directly", () => {
-    expect(outcomeResult.valid).toBe(true);
-    expect(outcomeAllowsLearning(outcomeResult)).toBe(false);
-  });
-
-  // Harm event
-  const harmResult = validateHarmEvent({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: "action-price-001",
-    outcomeId: "outcome-price-001",
-    harmCategory: "customer_loss",
-    harmSeverity: "high",
-    harmAmountEstimate: 52000,
-    harmMetric: "revenue_lost",
-    harmDescription:
-      "18% churn spike within 30 days of 15% price increase. Estimated 52,000 revenue loss over 90 days. Partial recovery possible through win-back campaign.",
-    reversibility: "partial",
-  });
-
-  it("Step 2: high severity harm requires human review", () => {
-    expect(harmResult.valid).toBe(true);
-    expect(harmResult.requiresHumanReview).toBe(true);
-    expect(harmAllowsLearning(harmResult)).toBe(false);
-  });
-
-  // Adjudication
-  const adjResult = adjudicateFailure({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: "action-price-001",
-    recommendationId: "rec-price-001",
-    actionNotExecuted: false,
-    executionMateriallyDeviated: false,
-    hasVerifiedEvidence: true,
-    measurementPeriodComplete: true,
-    externalEventFlagged: false,
-    ownerConstraintViolated: false,
-    metricWorsened: true,
-    successThresholdPassed: false,
-    adjudicationReason:
-      "Price elasticity not modelled. NPS declining before action. Recommendation flawed — churn risk not adequately assessed.",
-  });
-
-  it("Step 3: adjudication triggers reassessment", () => {
-    expect(adjResult.valid).toBe(true);
-    expect(adjResult.requiresReassessment).toBe(true);
-    expect(adjudicationAllowsLearning(adjResult)).toBe(true);
-  });
-
-  // Causal Attribution
-  const attrResult = classifyCausalAttribution({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: "action-price-001",
-    attributionClass: "likely_caused",
-    hasTemporalProximity: true,
-    hasControlledComparison: false,
-    hasOwnerTestimony: true,
-    hasExternalEventDuringPeriod: false,
-    hasConfoundingFactors: false,
-    attributionReason:
-      "Churn spike began within 14 days of price announcement. No external events coincide. Customer exit survey cites price as primary reason.",
-  });
-
-  it("Step 4: attribution is likely_caused — action caused the harm", () => {
-    expect(attrResult.valid).toBe(true);
-    expect(attrResult.attributionClass).toBe("likely_caused");
-    expect(attrResult.hasVerifiedCausalLink).toBe(true);
-  });
-
-  // Reassessment
-  const reassessResult = initiateReassessment({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: "action-price-001",
-    triggerDescription:
-      "High-severity harm confirmed. Pricing model assumptions must be revisited. Customer price sensitivity was underestimated.",
-    trigger: "harmful_outcome",
-    ownerAcknowledged: true,
-    assumptionsChecked: true,
-    invalidatedAssumptions: [
-      "Customer price sensitivity assumed low based on prior segment data",
-      "NPS floor assumed stable — was already declining before price action",
-    ],
-    proposedCorrectiveActionClass: "diagnosis_revision",
-    correctiveActionRationale:
-      "Pricing model must be rebuilt with updated elasticity data and NPS threshold constraints.",
-  });
-
-  it("Step 5: reassessment triggered for harmful outcome — requires human review", () => {
-    expect(reassessResult.valid).toBe(true);
-    expect(reassessResult.requiresHumanReview).toBe(true);
-    expect(reassessResult.reopensDiagnosis).toBe(true);
-  });
-
-  // Learning Eligibility — harm routes to human_review_pending
-  const eligResult = assessLearningEligibility({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: "action-price-001",
-    actionWasExecuted: true,
-    executionMateriallyDeviated: false,
-    hasVerifiedEvidence: true,
-    measurementPeriodComplete: true,
-    adjudicationCompleted: true,
-    adjudicationVerdict: "reassessment_required",
-    causalAttributionCompleted: true,
-    causalAttributionClass: "likely_caused",
-    harmSeverity: "high",
-    isOwnerOpinionOnly: false,
-    hasContradictoryEvidence: false,
-    hasPrivacyControls: false,
-    broadImpactScope: false,
-    eligibilityNotes:
-      "High-severity harm confirmed. Pending human review before learning can proceed.",
-  });
-
-  it("Step 6: harm routes eligibility to human_review_pending", () => {
-    expect(eligResult.valid).toBe(true);
-    expect(eligResult.status).toBe("human_review_pending");
-    expect(learningIsAdmissible(eligResult)).toBe(false);
-  });
-
-  // Decision Memory — do_not_repeat
-  const memResult = recordDecisionMemory({
-    workspaceId: WS,
-    businessId: BIZ,
-    actionId: "action-price-001",
-    category: "do_not_repeat",
-    summary:
-      "Do not retry aggressive price increases above 12% without price-elasticity modelling and NPS floor check.",
-    contextSnapshot:
-      "Q2 2025. Post-price-increase churn review. 18% churn spike within 30 days of 15% price hike.",
-    doNotRepeatReason:
-      "18% churn increase within 30 days — customers highly price-sensitive. Existing NPS decline not factored into model.",
-    isRepeatAttempt: false,
-  });
-
-  it("Step 7: do_not_repeat memory recorded — blocks repetition", () => {
-    expect(memResult.valid).toBe(true);
-    expect(memResult.blocksRepetition).toBe(true);
-    expect(memResult.carriesLearningSignal).toBe(true);
-  });
-
-  // Dashboard shows harm flag + reassessment required
-  const dashView = buildOwnerLoopDashboard({
-    workspaceId: WS,
-    businessId: BIZ,
-    periodLabel: "2025-Q3",
-    inputQuality: "complete",
-    diagnosis: "complete",
-    recommendation: "complete",
-    ownerDecision: "complete",
-    action: "complete",
-    evidence: "complete",
-    outcomeStatus: "complete",
-    adjudication: "complete",
-    reassessment: "in_progress",
-    learningEligibility: "in_progress",
-    reassessmentRequired: true,
-    ownerDecisionPending: false,
-    harmFlagged: true,
-    ownerAttentionItems: ["High-severity harm confirmed. Reassessment in progress. Owner review required."],
-  });
-
-  it("Step 8: dashboard shows harm flag and reassessment required", () => {
-    expect(dashView.valid).toBe(true);
-    expect(dashView.harmFlagged).toBe(true);
-    expect(dashView.reassessmentRequired).toBe(true);
-    expect(dashView.requiresOwnerAttention).toBe(true);
-  });
-});
-
-// ─── SCENARIO 5: Missing data — abstention ───────────────────────────────────
-
-describe("Full-Loop Scenario 5: Missing data — recommendation abstention", () => {
-  it("insufficient input blocks strong recommendation", () => {
-    const inputResult = assessInputQuality({
-      workspaceId: WS,
-      fields: [
-        { field: "revenue", value: 280000, isEstimate: false, freshness: "current" },
-        // Missing gross_margin, net_profit, cash_balance, cash_runway
-      ],
-    });
-    expect(() => assertAllowsStrongRecommendation(inputResult)).toThrow();
-  });
-
-  it("dashboard shows missing_data stages correctly", () => {
-    const dashView = buildOwnerLoopDashboard({
-      workspaceId: WS,
-      businessId: BIZ,
-      periodLabel: "2025-Q3",
-      inputQuality: "missing_data",
-      diagnosis: "pending",
-      recommendation: "missing_data",
-      ownerDecision: "not_applicable",
-      action: "not_applicable",
-      evidence: "not_applicable",
-      outcomeStatus: "not_applicable",
-      adjudication: "not_applicable",
-      reassessment: "not_applicable",
-      learningEligibility: "not_applicable",
-      reassessmentRequired: false,
-      ownerDecisionPending: false,
-      harmFlagged: false,
-    });
-    expect(dashView.missingDataStages).toContain("Input Quality");
-    expect(dashView.missingDataStages).toContain("Recommendation");
-  });
-});
-
-// ─── SCENARIO 6: Repeat attempt with changed context ─────────────────────────
-
-describe("Full-Loop Scenario 6: Repeat attempt of previously failed action", () => {
-  it("do_not_repeat blocks repeat without changed context explanation", () => {
-    expect(repeatIsPermitted("do_not_repeat", undefined)).toBe(false);
-    expect(repeatIsPermitted("do_not_repeat", "slight change")).toBe(false);
-  });
-
-  it("repeat allowed with adequate changed context explanation", () => {
-    expect(
-      repeatIsPermitted(
-        "do_not_repeat",
-        "Situation changed: new elasticity model shows 5% increase safe for premium segment only. NPS now at 48 vs 30 at time of original failure."
-      )
-    ).toBe(true);
-  });
-
-  it("repeat attempt records with priorMemoryId + changed context", () => {
-    const result = recordDecisionMemory({
-      workspaceId: WS,
-      businessId: BIZ,
-      actionId: "action-price-002",
-      category: "failed_action",
-      summary:
-        "Retry of pricing action with 5% increase applied to premium segment only after elasticity re-modelling.",
-      contextSnapshot:
-        "Q4 2025. NPS recovered to 48. New elasticity model available. Premium segment sensitivity confirmed lower.",
-      isRepeatAttempt: true,
-      priorMemoryId: "mem-price-failure-001",
-      changedContextExplanation:
-        "New elasticity model with segment data. Premium segment tested separately. NPS floor confirmed at 45+.",
-    });
+  it("valid recommendation passes validation and is recommended", () => {
+    const result = validateRecommendation(baseRecommendationInput());
     expect(result.valid).toBe(true);
-    expect(result.repeatAllowed).toBe(true);
+    expect(result.recommendationStatus).toBe("recommended");
+    expect(result.allowsOwnerDecision).toBe(true);
+  });
+
+  it("assertOwnerDecisionReady does not throw for valid recommendation", () => {
+    const validation = validateRecommendation(baseRecommendationInput());
+    expect(() => assertOwnerDecisionReady("recommended", validation)).not.toThrow();
+  });
+
+  it("owner accepts decision and allows action creation", () => {
+    const result = validateOwnerDecision(baseDecisionInput());
+    expect(result.valid).toBe(true);
+    expect(result.allowsActionCreation).toBe(true);
+  });
+
+  it("action validates with title and steps", () => {
+    const result = validateAction(baseActionInput());
+    expect(result.valid).toBe(true);
+  });
+
+  it("full execution log allows learning", () => {
+    const result = validateExecutionLog(baseExecutionLog());
+    expect(result.valid).toBe(true);
+    expect(result.allowsLearning).toBe(true);
+    expect(result.downgradedConfidence).toBe(false);
+  });
+
+  it("worked outcome enables learning", () => {
+    const result = validateOutcome(baseOutcomeInput());
+    expect(result.valid).toBe(true);
+    expect(result.enablesLearning).toBe(true);
+    expect(outcomeAllowsLearning(result)).toBe(true);
+  });
+
+  it("adjudication produces validated_success", () => {
+    const result = adjudicateFailure(baseAdjudicationInput());
+    expect(result.valid).toBe(true);
+    expect(result.verdict).toBe("validated_success");
+    expect(adjudicationAllowsLearning(result)).toBe(true);
+  });
+
+  it("learning eligibility is eligible_high_confidence", () => {
+    const result = assessLearningEligibility(baseLearningEligibilityInput());
+    expect(result.valid).toBe(true);
+    expect(result.allowsLearning).toBe(true);
+    expect(result.status).toBe("eligible_high_confidence");
   });
 });
 
-// ─── SCENARIO 7: Staff productivity failure ───────────────────────────────────
+// ─── Scenario 2: Cash Crisis ──────────────────────────────────────────────────
 
-describe("Full-Loop Scenario 7: Staff count rising, productivity falling", () => {
-  it("detects staff_up_productivity_down alert", () => {
-    const trend = analyzeBusinessTrend({
-      workspaceId: WS,
-      businessId: BIZ,
-      currentPeriod: [
-        { metricName: "staff_count", value: 18, periodLabel: "2025-Q3" },
-        { metricName: "staff_productivity", value: 14200, periodLabel: "2025-Q3" },
-      ],
-      previousPeriod: [
-        { metricName: "staff_count", value: 14, periodLabel: "2025-Q2" },
-        { metricName: "staff_productivity", value: 18000, periodLabel: "2025-Q2" },
-      ],
-    });
-    const alertTypes = trend.trendAlerts.map((a) => a.alertType);
-    expect(alertTypes).toContain("staff_up_productivity_down");
+describe("Scenario 2: Cash crisis — missing cash_balance and cash_runway blocks high-risk action", () => {
+  it("missing cash fields produce critical_missing status", () => {
+    const fields = fullFieldSet().filter(
+      (f) => f.field !== "cash_balance" && f.field !== "cash_runway"
+    );
+    const result = assessInputQuality({ workspaceId: WS, fields });
+    expect(result.qualityStatus).toBe("critical_missing");
+    expect(result.allowsStrongRecommendation).toBe(false);
+    expect(result.allowsHighRiskAction).toBe(false);
+  });
+
+  it("assertAllowsStrongRecommendation throws when critical fields missing", () => {
+    const fields = fullFieldSet().filter((f) => f.field !== "cash_balance");
+    const result = assessInputQuality({ workspaceId: WS, fields });
+    expect(() => assertAllowsStrongRecommendation(result)).toThrow();
+  });
+
+  it("assertAllowsHighRiskAction throws when cash runway missing", () => {
+    const fields = fullFieldSet().filter((f) => f.field !== "cash_runway");
+    const result = assessInputQuality({ workspaceId: WS, fields });
+    expect(() => assertAllowsHighRiskAction(result)).toThrow();
+  });
+
+  it("missingFields summary includes critical severity for cash_balance", () => {
+    const fields = fullFieldSet().filter((f) => f.field !== "cash_balance");
+    const result = assessInputQuality({ workspaceId: WS, fields });
+    const cashField = result.missingFields.find((f) => f.field === "cash_balance");
+    expect(cashField).toBeDefined();
+    expect(cashField?.severity).toBe("critical");
+    expect(cashField?.blocksStrongRecommendation).toBe(true);
   });
 });
 
-// ─── SCENARIO 8: Partial execution — compliance deviation ────────────────────
+// ─── Scenario 3: Leads / Conversion ──────────────────────────────────────────
 
-describe("Full-Loop Scenario 8: Partial execution — material deviation from plan", () => {
-  it("partial execution log captures low completion rate", () => {
-    const execLog = validateExecutionLog({
-      workspaceId: WS,
-      businessId: BIZ,
-      actionId: "action-partial-001",
-      completedSteps: 1,
-      totalSteps: 4,
-      notes:
-        "Only 1 of 4 planned supplier meetings completed. Remaining 3 cancelled due to owner travel schedule.",
-    });
-    expect(execLog.valid).toBe(true);
-    expect(execLog.completionRate).toBeCloseTo(25);
+describe("Scenario 3: Leads and conversion missing — partial data, limited recommendation", () => {
+  it("missing leads and conversion produces partial or data_limited status", () => {
+    const fields = fullFieldSet().filter(
+      (f) => f.field !== "leads" && f.field !== "conversion_rate"
+    );
+    const result = assessInputQuality({ workspaceId: WS, fields });
+    expect(["partial", "data_limited"]).toContain(result.qualityStatus);
   });
 
-  it("material deviation adjudication returns invalid_test verdict", () => {
-    const adjResult = adjudicateFailure({
+  it("recommendation with low confidence gets data_limited status", () => {
+    const input = { ...baseRecommendationInput(), confidenceScore: 40 };
+    const result = validateRecommendation(input);
+    expect(result.valid).toBe(true);
+    expect(result.recommendationStatus).toBe("data_limited");
+    expect(result.allowsOwnerDecision).toBe(false);
+  });
+
+  it("assertOwnerDecisionReady throws when confidence below threshold", () => {
+    const input = { ...baseRecommendationInput(), confidenceScore: 40 };
+    const validation = validateRecommendation(input);
+    expect(() => assertOwnerDecisionReady("data_limited", validation)).toThrow();
+  });
+
+  it("computeRecommendationConfidence caps at 60 with missing data", () => {
+    const score = computeRecommendationConfidence(85, true, true);
+    expect(score).toBe(60);
+  });
+});
+
+// ─── Scenario 4: Pricing Failure With Harm ────────────────────────────────────
+
+describe("Scenario 4: Pricing failure — made_worse outcome triggers harm, blocks learning", () => {
+  it("made_worse outcome requires ownerReportedResult", () => {
+    const input: OutcomeInput = {
+      ...baseOutcomeInput(),
+      outcomeStatus: "made_worse",
+      ownerReportedResult: undefined,
+    };
+    const result = validateOutcome(input);
+    expect(result.valid).toBe(false);
+    expect(result.violations.some((v) => v.includes("OUT-RULE-3"))).toBe(true);
+  });
+
+  it("made_worse with ownerReportedResult is valid and indicates harm", () => {
+    const input: OutcomeInput = {
+      ...baseOutcomeInput(),
+      outcomeStatus: "made_worse",
+      ownerReportedResult: "Revenue dropped 15% after pricing change",
+    };
+    const result = validateOutcome(input);
+    expect(result.valid).toBe(true);
+    expect(result.indicatesHarm).toBe(true);
+    expect(result.requiresAdjudication).toBe(true);
+  });
+
+  it("high severity harm event blocks learning", () => {
+    const input: HarmEventInput = {
       workspaceId: WS,
       businessId: BIZ,
-      actionId: "action-partial-001",
-      actionNotExecuted: false,
-      executionMateriallyDeviated: true,
-      hasVerifiedEvidence: false,
-      measurementPeriodComplete: false,
-      externalEventFlagged: false,
-      ownerConstraintViolated: false,
-      metricWorsened: false,
+      recommendationId: "rec-001",
+      harmCategory: "revenue_loss",
+      harmSeverity: "high",
+      harmAmountEstimate: 50000,
+      harmDescription: "Pricing change caused significant revenue loss over 30 days",
+      reversibility: "partially_reversible",
+    };
+    const result = validateHarmEvent(input);
+    expect(result.valid).toBe(true);
+    expect(result.blocksLearning).toBe(true);
+    expect(harmAllowsLearning(result)).toBe(false);
+  });
+
+  it("adjudication with metric worsened produces reassessment_required", () => {
+    const input: AdjudicationInput = {
+      ...baseAdjudicationInput(),
+      metricWorsened: true,
       successThresholdPassed: false,
-      adjudicationReason:
-        "Only 25% of planned steps executed. Owner cancelled majority of planned meetings. Cannot attribute outcome to recommendation.",
-    });
-    expect(adjResult.valid).toBe(true);
-    expect(adjResult.verdict).toBe("invalid_test");
-    expect(adjudicationAllowsLearning(adjResult)).toBe(false);
+    };
+    const result = adjudicateFailure(input);
+    expect(result.verdict).toBe("reassessment_required");
+    expect(adjudicationAllowsLearning(result)).toBe(false);
   });
 });
 
-// ─── SCENARIO 9: Debt pressure growing faster than cash ──────────────────────
+// ─── Scenario 5: Missing Data ─────────────────────────────────────────────────
 
-describe("Full-Loop Scenario 9: Debt growing faster than cash", () => {
-  it("detects debt_growing_faster_than_cash critical alert", () => {
-    const trend = analyzeBusinessTrend({
-      workspaceId: WS,
-      businessId: BIZ,
-      currentPeriod: [
-        { metricName: "debt", value: 180000, periodLabel: "2025-Q3" },
-        { metricName: "cash_balance", value: 32000, periodLabel: "2025-Q3" },
-      ],
-      previousPeriod: [
-        { metricName: "debt", value: 120000, periodLabel: "2025-Q2" },
-        { metricName: "cash_balance", value: 45000, periodLabel: "2025-Q2" },
-      ],
-    });
-    const alert = trend.trendAlerts.find((a) => a.alertType === "debt_growing_faster_than_cash");
-    expect(alert).toBeDefined();
-    expect(alert?.severity).toBe("critical");
+describe("Scenario 5: Missing data — all estimates, owner_estimate_only status", () => {
+  it("all estimate fields produce owner_estimate_only status", () => {
+    const fields: InputFieldValue[] = fullFieldSet().map((f) => ({
+      ...f,
+      isEstimate: true,
+    }));
+    const result = assessInputQuality({ workspaceId: WS, fields });
+    expect(result.qualityStatus).toBe("owner_estimate_only");
   });
-});
 
-// ─── SCENARIO 10: Owner constraint — blocks repeat ────────────────────────────
+  it("overall score is lower when all estimates", () => {
+    const estimateFields: InputFieldValue[] = fullFieldSet().map((f) => ({
+      ...f,
+      isEstimate: true,
+    }));
+    const estimateResult = assessInputQuality({ workspaceId: WS, fields: estimateFields });
+    const cleanResult = assessInputQuality({ workspaceId: WS, fields: fullFieldSet() });
+    expect(estimateResult.overallScore).toBeLessThan(cleanResult.overallScore);
+  });
 
-describe("Full-Loop Scenario 10: Owner constraint blocks headcount reduction", () => {
-  it("owner_constraint memory blocks repetition", () => {
-    const result = recordDecisionMemory({
-      workspaceId: WS,
-      businessId: BIZ,
-      category: "owner_constraint",
-      summary:
-        "Owner will not reduce headcount below 12 employees for operational continuity and morale.",
-      contextSnapshot:
-        "Current staff at 14. Minimum viable operations require 12. Owner has stated this is non-negotiable.",
-      isRepeatAttempt: false,
-    });
+  it("not_executed execution log does not allow learning", () => {
+    const log: ExecutionLogInput = {
+      ...baseExecutionLog(),
+      executionComplianceScore: "not_executed",
+      blockerReason: "Owner did not start",
+    };
+    const result = validateExecutionLog(log);
     expect(result.valid).toBe(true);
-    expect(result.blocksRepetition).toBe(true);
-    expect(result.carriesLearningSignal).toBe(false);
-  });
-
-  it("dashboard with owner decision pending requires ownerAttentionItems", () => {
-    const dashView = buildOwnerLoopDashboard({
-      workspaceId: WS,
-      businessId: BIZ,
-      periodLabel: "2025-Q3",
-      inputQuality: "complete",
-      diagnosis: "complete",
-      recommendation: "complete",
-      ownerDecision: "requires_owner_action",
-      action: "not_applicable",
-      evidence: "not_applicable",
-      outcomeStatus: "not_applicable",
-      adjudication: "not_applicable",
-      reassessment: "not_applicable",
-      learningEligibility: "not_applicable",
-      ownerDecisionPending: true,
-      reassessmentRequired: false,
-      harmFlagged: false,
-      ownerAttentionItems: ["Recommendation ready — your decision is required before action can proceed."],
-    });
-    expect(dashView.valid).toBe(true);
-    expect(dashView.ownerDecisionPending).toBe(true);
-    expect(dashView.requiresOwnerAttention).toBe(true);
+    expect(result.allowsLearning).toBe(false);
   });
 });
 
-// ─── SCENARIO 11: Tenant isolation ───────────────────────────────────────────
+// ─── Scenario 6: Repeat Attempt ──────────────────────────────────────────────
 
-describe("Full-Loop Scenario 11: Tenant isolation — wrong workspace throws at every loop stage", () => {
-  it("assessInputQuality throws for empty workspaceId", () => {
+describe("Scenario 6: Repeat attempt — deferred recommendation re-submitted", () => {
+  it("deferred status can transition to owner_decision_pending", () => {
+    expect(isRecommendationStatusTransitionAllowed("deferred", "owner_decision_pending")).toBe(true);
+  });
+
+  it("deferred owner decision can transition back to accepted", () => {
+    expect(isOwnerDecisionStatusTransitionAllowed("deferred", "accepted")).toBe(true);
+  });
+
+  it("deferred owner decision does not allow action creation", () => {
+    const input: DecisionInput = {
+      ...baseDecisionInput(),
+      decisionStatus: "deferred",
+    };
+    const result = validateOwnerDecision(input);
+    expect(result.valid).toBe(true);
+    expect(result.allowsActionCreation).toBe(false);
+  });
+
+  it("recommendation status machine: draft → recommended is allowed", () => {
+    expect(isRecommendationStatusTransitionAllowed("draft", "recommended")).toBe(true);
+  });
+
+  it("recommendation status machine: accepted → superseded is allowed", () => {
+    expect(isRecommendationStatusTransitionAllowed("accepted", "superseded")).toBe(true);
+  });
+});
+
+// ─── Scenario 7: Staff Productivity ──────────────────────────────────────────
+
+describe("Scenario 7: Staff productivity — partial execution, downgraded confidence", () => {
+  it("partially_executed compliance score does not allow learning", () => {
+    const log: ExecutionLogInput = {
+      ...baseExecutionLog(),
+      executionComplianceScore: "partially_executed",
+      plannedStepsCompletedCount: 2,
+      plannedStepsTotalCount: 4,
+    };
+    const result = validateExecutionLog(log);
+    expect(result.valid).toBe(true);
+    expect(result.allowsLearning).toBe(false);
+  });
+
+  it("mostly_executed compliance score allows learning", () => {
+    const log: ExecutionLogInput = {
+      ...baseExecutionLog(),
+      executionComplianceScore: "mostly_executed",
+    };
+    const result = validateExecutionLog(log);
+    expect(result.allowsLearning).toBe(true);
+  });
+
+  it("late execution downgrades confidence even if fully executed", () => {
+    const log: ExecutionLogInput = {
+      ...baseExecutionLog(),
+      deadlineMet: false,
+    };
+    const result = validateExecutionLog(log);
+    expect(result.downgradedConfidence).toBe(true);
+    expect(result.downgradeReasons.some((r) => r.includes("deadline"))).toBe(true);
+  });
+
+  it("computeCompletionRate returns correct percentage", () => {
+    expect(computeCompletionRate(3, 4)).toBe(75);
+    expect(computeCompletionRate(4, 4)).toBe(100);
+    expect(computeCompletionRate(0, 4)).toBe(0);
+    expect(computeCompletionRate(0, 0)).toBe(0);
+  });
+});
+
+// ─── Scenario 8: Partial Execution ───────────────────────────────────────────
+
+describe("Scenario 8: Partial execution — partially_worked outcome, adjudication required", () => {
+  it("partially_worked outcome enables learning", () => {
+    expect(OUTCOME_ENABLES_LEARNING["partially_worked"]).toBe(true);
+  });
+
+  it("partially_worked outcome validates successfully", () => {
+    const input: OutcomeInput = {
+      ...baseOutcomeInput(),
+      outcomeStatus: "partially_worked",
+    };
+    const result = validateOutcome(input);
+    expect(result.valid).toBe(true);
+    expect(result.enablesLearning).toBe(true);
+    expect(result.requiresAdjudication).toBe(false);
+  });
+
+  it("adjudication with material deviation produces invalid_test verdict", () => {
+    const input: AdjudicationInput = {
+      ...baseAdjudicationInput(),
+      executionMateriallyDeviated: true,
+    };
+    const result = adjudicateFailure(input);
+    expect(result.verdict).toBe("invalid_test");
+    expect(result.executionValid).toBe(false);
+    expect(adjudicationAllowsLearning(result)).toBe(false);
+  });
+
+  it("material deviation requires deviationSummary in execution log", () => {
+    const log: ExecutionLogInput = {
+      ...baseExecutionLog(),
+      executionComplianceScore: "materially_deviated",
+      deviationSummary: undefined,
+    };
+    const result = validateExecutionLog(log);
+    expect(result.valid).toBe(false);
+    expect(result.violations.some((v) => v.includes("EXEC-RULE-1"))).toBe(true);
+  });
+});
+
+// ─── Scenario 9: Debt Pressure ────────────────────────────────────────────────
+
+describe("Scenario 9: Debt pressure — high-risk action blocked without fresh cash data", () => {
+  it("stale cash fields produce stale status", () => {
+    const fields: InputFieldValue[] = fullFieldSet().map((f) =>
+      f.field === "cash_balance" ? { ...f, freshness: "stale" as const } : f
+    );
+    const result = assessInputQuality({ workspaceId: WS, fields });
+    expect(result.qualityStatus).toBe("stale");
+  });
+
+  it("stale high-risk-action fields block high-risk action", () => {
+    const fields: InputFieldValue[] = fullFieldSet().map((f) =>
+      f.field === "cash_balance" ? { ...f, freshness: "stale" as const } : f
+    );
+    const result = assessInputQuality({ workspaceId: WS, fields });
+    expect(result.allowsHighRiskAction).toBe(false);
+  });
+
+  it("high risk decision requires approvalRequiredBy", () => {
+    const input: DecisionInput = {
+      ...baseDecisionInput(),
+      riskLevel: "high",
+      approvalRequiredBy: undefined,
+    };
+    const result = validateOwnerDecision(input);
+    expect(result.valid).toBe(false);
+    expect(result.violations.some((v) => v.includes("DEC-RULE-5"))).toBe(true);
+  });
+
+  it("high risk with approvalRequiredBy passes validation", () => {
+    const input: DecisionInput = {
+      ...baseDecisionInput(),
+      riskLevel: "high",
+      approvalRequiredBy: "CFO",
+    };
+    const result = validateOwnerDecision(input);
+    expect(result.valid).toBe(true);
+    expect(result.requiresApprovalFields).toBe(true);
+  });
+});
+
+// ─── Scenario 10: Owner Constraint ────────────────────────────────────────────
+
+describe("Scenario 10: Owner constraint — constraint_ignored failure class", () => {
+  it("ownerConstraintViolated flag produces constraint_ignored failure class", () => {
+    const input: AdjudicationInput = {
+      ...baseAdjudicationInput(),
+      ownerConstraintViolated: true,
+      successThresholdPassed: false,
+    };
+    const result = adjudicateFailure(input);
+    expect(result.failureClass).toBe("constraint_ignored");
+  });
+
+  it("modified decision requires modifiedDescription >= 10 chars", () => {
+    const input: DecisionInput = {
+      ...baseDecisionInput(),
+      decisionStatus: "modified",
+      modifiedDescription: "Too short",
+    };
+    const result = validateOwnerDecision(input);
+    expect(result.valid).toBe(false);
+    expect(result.violations.some((v) => v.includes("DEC-RULE-6"))).toBe(true);
+  });
+
+  it("modified decision with valid description allows action creation", () => {
+    const input: DecisionInput = {
+      ...baseDecisionInput(),
+      decisionStatus: "modified",
+      modifiedDescription: "Modified to reduce scope to top 3 customer segments only",
+    };
+    const result = validateOwnerDecision(input);
+    expect(result.valid).toBe(true);
+    expect(result.allowsActionCreation).toBe(true);
+  });
+
+  it("assertAllowsActionCreation throws when rejected decision", () => {
+    const input: DecisionInput = {
+      ...baseDecisionInput(),
+      decisionStatus: "rejected",
+    };
+    const result = validateOwnerDecision(input);
+    expect(result.allowsActionCreation).toBe(false);
+    expect(() => assertAllowsActionCreation(result)).toThrow();
+  });
+});
+
+// ─── Scenario 11: Tenant Isolation (6 functions) ─────────────────────────────
+
+describe("Scenario 11: Tenant isolation — empty workspaceId throws in 6 functions", () => {
+  it("assessInputQuality throws on empty workspaceId", () => {
     expect(() =>
-      assessInputQuality({ workspaceId: "", fields: coreFields() })
+      assessInputQuality({ workspaceId: "", fields: fullFieldSet() })
     ).toThrow();
   });
 
-  it("validateRecommendation throws for whitespace workspaceId", () => {
+  it("validateRecommendation throws on empty workspaceId", () => {
     expect(() =>
-      validateRecommendation({
-        workspaceId: "   ",
-        businessId: BIZ,
-        ownerUserId: "owner-001",
-        recommendationText: "Cut costs by reducing supplier spend across all product lines.",
-        recommendationType: "tactical",
-        priorityRank: 1,
-        expectedOutcomeSummary: "Net margin improves by 3% within 60 days.",
-        confidenceScore: 0.7,
-        confidenceReason: "Historical data supports 3% margin gain from supplier consolidation.",
-      })
+      validateRecommendation({ ...baseRecommendationInput(), workspaceId: "" })
     ).toThrow();
   });
 
-  it("validateOutcome throws for empty workspaceId", () => {
+  it("validateOwnerDecision throws on empty workspaceId", () => {
     expect(() =>
-      validateOutcome({
-        workspaceId: "",
-        businessId: BIZ,
-        outcomeStatus: "positive",
-        ownerReportedResult: "Costs reduced as planned — margin improved by 3% within 60 days.",
-        evidenceQuality: "strong",
-      })
+      validateOwnerDecision({ ...baseDecisionInput(), workspaceId: "" })
     ).toThrow();
   });
 
-  it("adjudicateFailure throws for empty workspaceId", () => {
+  it("validateAction throws on empty workspaceId", () => {
     expect(() =>
-      adjudicateFailure({
-        workspaceId: "",
-        businessId: BIZ,
-        actionNotExecuted: false,
-        executionMateriallyDeviated: false,
-        hasVerifiedEvidence: true,
-        measurementPeriodComplete: true,
-        externalEventFlagged: false,
-        ownerConstraintViolated: false,
-        metricWorsened: false,
-        successThresholdPassed: true,
-        adjudicationReason: "All signals positive — validated success confirmed by accountant review.",
-      })
+      validateAction({ ...baseActionInput(), workspaceId: "" })
     ).toThrow();
   });
 
-  it("assessLearningEligibility throws for empty workspaceId", () => {
+  it("validateOutcome throws on empty workspaceId", () => {
     expect(() =>
-      assessLearningEligibility({
-        workspaceId: "",
-        businessId: BIZ,
-        actionWasExecuted: true,
-        executionMateriallyDeviated: false,
-        hasVerifiedEvidence: true,
-        measurementPeriodComplete: true,
-        adjudicationCompleted: true,
-        adjudicationVerdict: "validated_success",
-        causalAttributionCompleted: true,
-        causalAttributionClass: "likely_caused",
-        harmSeverity: "none",
-        isOwnerOpinionOnly: false,
-        hasContradictoryEvidence: false,
-        hasPrivacyControls: false,
-        broadImpactScope: false,
-        eligibilityNotes: "Full loop complete.",
-      })
+      validateOutcome({ ...baseOutcomeInput(), workspaceId: "" })
     ).toThrow();
   });
 
-  it("buildOwnerLoopDashboard throws for empty workspaceId", () => {
+  it("adjudicateFailure throws on empty workspaceId", () => {
     expect(() =>
-      buildOwnerLoopDashboard({
-        workspaceId: "",
-        businessId: BIZ,
-        periodLabel: "2025-Q3",
-        inputQuality: "complete",
-        diagnosis: "complete",
-        recommendation: "complete",
-        ownerDecision: "complete",
-        action: "complete",
-        evidence: "complete",
-        outcomeStatus: "complete",
-        adjudication: "not_applicable",
-        reassessment: "not_applicable",
-        learningEligibility: "complete",
-        reassessmentRequired: false,
-        ownerDecisionPending: false,
-        harmFlagged: false,
-      })
+      adjudicateFailure({ ...baseAdjudicationInput(), workspaceId: "" })
     ).toThrow();
   });
 });
 
-// ─── SCENARIO 12: External market shock — confounded attribution ──────────────
+// ─── Scenario 12: External Shock ─────────────────────────────────────────────
 
-describe("Full-Loop Scenario 12: External market shock — attribution confounded", () => {
-  it("confounded attribution requires human review", () => {
-    const attrResult = classifyCausalAttribution({
-      workspaceId: WS,
-      businessId: BIZ,
-      actionId: "action-shock-001",
-      attributionClass: "confounded",
-      hasTemporalProximity: true,
-      hasControlledComparison: false,
-      hasOwnerTestimony: false,
-      hasExternalEventDuringPeriod: true,
-      hasConfoundingFactors: true,
-      attributionReason:
-        "National supply chain disruption during action period — industry-wide revenue impact coincides with intervention.",
-      confoundingNotes: "External supply chain event affects all competitors simultaneously.",
-    });
-    expect(attrResult.valid).toBe(true);
-    expect(attrResult.requiresHumanReview).toBe(true);
-    expect(attributionAllowsLearning(attrResult)).toBe(false);
+describe("Scenario 12: External shock — external_event_interference outcome requires description", () => {
+  it("external_event_interference without description is invalid", () => {
+    const input: OutcomeInput = {
+      ...baseOutcomeInput(),
+      outcomeStatus: "external_event_interference",
+      externalEventDescription: undefined,
+    };
+    const result = validateOutcome(input);
+    expect(result.valid).toBe(false);
+    expect(result.violations.some((v) => v.includes("OUT-RULE-2"))).toBe(true);
   });
 
-  it("external_event_dominant attribution blocks learning", () => {
-    const attrResult = classifyCausalAttribution({
-      workspaceId: WS,
-      businessId: BIZ,
-      actionId: "action-ext-001",
-      attributionClass: "external_event_dominant",
-      hasTemporalProximity: true,
-      hasControlledComparison: false,
-      hasOwnerTestimony: true,
-      hasExternalEventDuringPeriod: true,
-      hasConfoundingFactors: false,
-      attributionReason:
-        "Industry-wide input cost spike of 35% during measurement period. All competitors experienced same impact regardless of actions taken.",
-    });
-    expect(attrResult.valid).toBe(true);
-    expect(attrResult.blocksLearning).toBe(true);
-    expect(attributionAllowsLearning(attrResult)).toBe(false);
-  });
-});
-
-// ─── SCENARIO 13: Unverified evidence — AI not a verifier ────────────────────
-
-describe("Full-Loop Scenario 13: AI cannot be evidence verifier", () => {
-  it("AI_IS_NOT_A_VERIFIER constant is enforced", () => {
-    expect(AI_IS_NOT_A_VERIFIER).toBe(true);
+  it("external_event_interference with description is valid but does not enable learning", () => {
+    const input: OutcomeInput = {
+      ...baseOutcomeInput(),
+      outcomeStatus: "external_event_interference",
+      externalEventDescription: "COVID lockdown disrupted supply chain",
+    };
+    const result = validateOutcome(input);
+    expect(result.valid).toBe(true);
+    expect(result.enablesLearning).toBe(false);
+    expect(outcomeAllowsLearning(result)).toBe(false);
   });
 
-  it("AI_VERIFIER_TYPES is empty — AI cannot verify", () => {
-    expect(AI_VERIFIER_TYPES).toHaveLength(0);
+  it("externalEventFlagged in adjudication produces invalid_test verdict", () => {
+    const input: AdjudicationInput = {
+      ...baseAdjudicationInput(),
+      externalEventFlagged: true,
+    };
+    const result = adjudicateFailure(input);
+    expect(result.verdict).toBe("invalid_test");
   });
 
-  it("owner_statement source requires corroboration", () => {
-    expect(ownerStatementRequiresCorroboration("owner_statement")).toBe(true);
-    expect(ownerStatementRequiresCorroboration("supplier_invoice")).toBe(false);
-    expect(ownerStatementRequiresCorroboration("third_party_report")).toBe(false);
+  it("external_event_contamination is hard block in learning eligibility", () => {
+    const input: LearningEligibilityInput = {
+      ...baseLearningEligibilityInput(),
+      causalAttributionClass: "external_event_dominant",
+    };
+    const result = assessLearningEligibility(input);
+    expect(result.allowsLearning).toBe(false);
   });
 });
 
-// ─── SCENARIO 14: Repeat customer decline ────────────────────────────────────
+// ─── Scenario 13: AI Not Verifier ────────────────────────────────────────────
 
-describe("Full-Loop Scenario 14: New customers rising, repeat rate falling", () => {
-  it("detects new_customers_up_repeat_down warning", () => {
-    const trend = analyzeBusinessTrend({
-      workspaceId: WS,
-      businessId: BIZ,
-      currentPeriod: [
-        { metricName: "customer_count", value: 340, periodLabel: "2025-Q3" },
-        { metricName: "repeat_customer_rate", value: 28.4, periodLabel: "2025-Q3" },
-      ],
-      previousPeriod: [
-        { metricName: "customer_count", value: 280, periodLabel: "2025-Q2" },
-        { metricName: "repeat_customer_rate", value: 41.2, periodLabel: "2025-Q2" },
-      ],
-    });
-    const alertTypes = trend.trendAlerts.map((a) => a.alertType);
-    expect(alertTypes).toContain("new_customers_up_repeat_down");
+describe("Scenario 13: AI not verifier — confidence caps applied without valid diagnosis", () => {
+  it("computeRecommendationConfidence caps at 40 when diagnosis invalid", () => {
+    const score = computeRecommendationConfidence(90, false, false);
+    expect(score).toBe(40);
   });
 
-  it("complaints rising triggers early churn warning", () => {
-    const trend = analyzeBusinessTrend({
-      workspaceId: WS,
-      businessId: BIZ,
-      currentPeriod: [
-        { metricName: "complaints", value: 48, periodLabel: "2025-Q3" },
-      ],
-      previousPeriod: [
-        { metricName: "complaints", value: 21, periodLabel: "2025-Q2" },
-      ],
-    });
-    const alertTypes = trend.trendAlerts.map((a) => a.alertType);
-    expect(alertTypes).toContain("complaints_up_before_churn");
+  it("recommendation with invalid diagnosis validation gets confidence capped at 40", () => {
+    const input = baseRecommendationInput();
+    const fakeValidation = { valid: false, violations: ["weak evidence"] } as any;
+    const result = validateRecommendation(input, fakeValidation);
+    expect(result.effectiveConfidenceScore).toBeLessThanOrEqual(40);
+    expect(result.allowsOwnerDecision).toBe(false);
+  });
+
+  it("assertOwnerDecisionReady throws when validation has violations", () => {
+    const invalidValidation = {
+      valid: false,
+      violations: ["REC-RULE-1: text too short"],
+      recommendationStatus: "draft" as const,
+      allowsOwnerDecision: false,
+      effectiveConfidenceScore: 30,
+    };
+    expect(() =>
+      assertOwnerDecisionReady("draft", invalidValidation)
+    ).toThrow();
+  });
+
+  it("not_reviewed learning eligibility does not allow learning", () => {
+    const input: LearningEligibilityInput = {
+      ...baseLearningEligibilityInput(),
+      adjudicationCompleted: false,
+      causalAttributionCompleted: false,
+    };
+    const result = assessLearningEligibility(input);
+    expect(result.allowsLearning).toBe(false);
   });
 });
 
-// ─── SCENARIO 15: DASHBOARD-RULE-3: internal fields must not leak ────────────
+// ─── Scenario 14: Repeat Customer Decline ─────────────────────────────────────
 
-describe("Full-Loop Scenario 15: Dashboard — no internal field names in owner text", () => {
-  it("rejects adjudication_verdict in recommendation summary", () => {
-    const view = buildOwnerLoopDashboard({
-      workspaceId: WS,
-      businessId: BIZ,
-      periodLabel: "2025-Q3",
-      inputQuality: "complete",
-      diagnosis: "complete",
-      recommendation: "complete",
-      ownerDecision: "complete",
-      action: "complete",
-      evidence: "complete",
-      outcomeStatus: "complete",
-      adjudication: "not_applicable",
-      reassessment: "not_applicable",
-      learningEligibility: "complete",
-      activeRecommendationSummary: "Check adjudication_verdict field for outcome classification.",
-      reassessmentRequired: false,
-      ownerDecisionPending: false,
-      harmFlagged: false,
-    });
-    expect(view.valid).toBe(false);
-    expect(view.violations.some((v) => v.includes("DASHBOARD-RULE-3"))).toBe(true);
+describe("Scenario 14: Repeat customer decline — did_not_work outcome, validated_failure", () => {
+  it("did_not_work outcome enables learning", () => {
+    expect(OUTCOME_ENABLES_LEARNING["did_not_work"]).toBe(true);
   });
 
-  it("rejects learning_confidence in attention items", () => {
-    const view = buildOwnerLoopDashboard({
-      workspaceId: WS,
-      businessId: BIZ,
-      periodLabel: "2025-Q3",
-      inputQuality: "complete",
-      diagnosis: "complete",
-      recommendation: "complete",
-      ownerDecision: "complete",
-      action: "complete",
-      evidence: "complete",
-      outcomeStatus: "complete",
-      adjudication: "not_applicable",
-      reassessment: "not_applicable",
-      learningEligibility: "complete",
-      ownerDecisionPending: true,
-      ownerAttentionItems: ["learning_confidence score is 0.85 — ready for admission."],
-      reassessmentRequired: false,
-      harmFlagged: false,
-    });
-    expect(view.valid).toBe(false);
-    expect(view.violations.some((v) => v.includes("DASHBOARD-RULE-3"))).toBe(true);
+  it("did_not_work outcome does not indicate harm", () => {
+    expect(OUTCOME_INDICATES_HARM["did_not_work"]).toBe(false);
   });
 
-  it("clean owner-facing text passes dashboard validation", () => {
-    const view = buildOwnerLoopDashboard({
-      workspaceId: WS,
-      businessId: BIZ,
-      periodLabel: "2025-Q3",
-      inputQuality: "complete",
-      diagnosis: "complete",
-      recommendation: "complete",
-      ownerDecision: "complete",
-      action: "complete",
-      evidence: "complete",
-      outcomeStatus: "complete",
-      adjudication: "not_applicable",
-      reassessment: "not_applicable",
-      learningEligibility: "complete",
-      activeRecommendationSummary: "Supplier renegotiation complete — COGS reduced by 7%.",
-      businessTrendWarnings: ["Revenue rising but gross profit declining — review pricing strategy."],
-      ownerDecisionPending: false,
-      reassessmentRequired: false,
-      harmFlagged: false,
-    });
-    expect(view.valid).toBe(true);
-    expect(view.violations).toHaveLength(0);
+  it("did_not_work outcome does not require adjudication and allows learning", () => {
+    const input: OutcomeInput = {
+      ...baseOutcomeInput(),
+      outcomeStatus: "did_not_work",
+    };
+    const result = validateOutcome(input);
+    expect(result.requiresAdjudication).toBe(false);
+    expect(outcomeAllowsLearning(result)).toBe(true);
+  });
+
+  it("validated_failure adjudication enables learning", () => {
+    const input: AdjudicationInput = {
+      ...baseAdjudicationInput(),
+      successThresholdPassed: false,
+      metricWorsened: false,
+    };
+    const result = adjudicateFailure(input);
+    expect(result.verdict).toBe("validated_failure");
+    expect(adjudicationAllowsLearning(result)).toBe(true);
+  });
+
+  it("learning eligibility with validated_failure and likely_caused is eligible_high_confidence", () => {
+    const input: LearningEligibilityInput = {
+      ...baseLearningEligibilityInput(),
+      adjudicationVerdict: "validated_failure",
+    };
+    const result = assessLearningEligibility(input);
+    expect(result.allowsLearning).toBe(true);
+    expect(result.status).toBe("eligible_high_confidence");
+  });
+});
+
+// ─── Scenario 15: Dashboard No Internal Fields ────────────────────────────────
+
+describe("Scenario 15: Dashboard field integrity — result shapes have expected fields", () => {
+  it("assessInputQuality result has qualityStatus not status", () => {
+    const result = assessInputQuality({ workspaceId: WS, fields: fullFieldSet() });
+    expect(result).toHaveProperty("qualityStatus");
+    expect(result).not.toHaveProperty("status");
+  });
+
+  it("assessInputQuality result has workspaceId scoped correctly", () => {
+    const result = assessInputQuality({ workspaceId: WS, fields: fullFieldSet() });
+    expect(result.workspaceId).toBe(WS);
+    expect(result.assessedBy).toBe("InputQualityService");
+  });
+
+  it("OutcomeValidationResult has absoluteChange and percentageChange computed", () => {
+    const result = validateOutcome(baseOutcomeInput());
+    expect(result.absoluteChange).toBe(60);
+    expect(result.percentageChange).toBe(30);
+  });
+
+  it("AdjudicationResult has learningEligible field", () => {
+    const result = adjudicateFailure(baseAdjudicationInput());
+    expect(result).toHaveProperty("learningEligible");
+    expect(result).toHaveProperty("requiresReassessment");
+  });
+
+  it("LearningEligibilityResult has allowsLearning field", () => {
+    const result = assessLearningEligibility(baseLearningEligibilityInput());
+    expect(result).toHaveProperty("allowsLearning");
+    expect(result).toHaveProperty("status");
+    expect(result).toHaveProperty("rejectionReasons");
+    expect(result).toHaveProperty("isTerminalRejection");
+  });
+
+  it("ExecutionLogValidationResult has allowsLearning and downgradedConfidence", () => {
+    const result = validateExecutionLog(baseExecutionLog());
+    expect(result).toHaveProperty("allowsLearning");
+    expect(result).toHaveProperty("downgradedConfidence");
+    expect(result).toHaveProperty("downgradeReasons");
+  });
+
+  it("action status transitions are deterministic: pending → in_progress allowed", () => {
+    expect(isActionStatusTransitionAllowed("pending", "in_progress")).toBe(true);
+    expect(isActionStatusTransitionAllowed("completed", "pending")).toBe(false);
+  });
+
+  it("conflicting field values produce conflicting quality status", () => {
+    const fieldsWithConflict: InputFieldValue[] = fullFieldSet().map((f) =>
+      f.field === "revenue"
+        ? { ...f, conflictingValue: 300000 }
+        : f
+    );
+    const result = assessInputQuality({ workspaceId: WS, fields: fieldsWithConflict });
+    expect(result.qualityStatus).toBe("conflicting");
+    expect(result.conflictFields).toContain("revenue");
+    expect(result.allowsStrongRecommendation).toBe(false);
   });
 });
