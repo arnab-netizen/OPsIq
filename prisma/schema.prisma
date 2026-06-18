@@ -213,6 +213,7 @@ model ClientAccount {
   workspaceEvidenceRecords      OwnerEvidenceRecord[] @relation("WorkspaceEvidenceRecords")
   workspaceEvidenceVerifications OwnerEvidenceVerification[] @relation("WorkspaceEvidenceVerifications")
   workspaceValidationCriteria    OwnerValidationCriteria[] @relation("WorkspaceValidationCriteria")
+  workspaceActionOutcomes        OwnerActionOutcome[] @relation("WorkspaceActionOutcomes")
 
   @@index([status])
   @@map("client_accounts")
@@ -3698,4 +3699,34 @@ model OwnerValidationCriteria {
   @@index([recommendationId])
   @@index([actionId])
   @@map("owner_validation_criteria")
+}
+
+model OwnerActionOutcome {
+  id                       String    @id @default(cuid())
+  workspaceId              String
+  businessId               String
+  recommendationId         String?
+  actionId                 String?
+  outcomeStatus            String    // worked | partially_worked | did_not_work | made_worse | not_measurable | too_early_to_judge | invalid_test | executed_differently | external_event_interference
+  ownerReportedResult      String?   @db.Text
+  actualMetricName         String?
+  beforeValue              Float?
+  afterValue               Float?
+  absoluteChange           Float?
+  percentageChange         Float?
+  measurementPeriodStart   DateTime?
+  measurementPeriodEnd     DateTime?
+  evidenceQuality          String?   // strong | moderate | weak | anecdotal | none
+  externalEventFlag        Boolean   @default(false)
+  externalEventDescription String?   @db.Text
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  workspace                ClientAccount @relation("WorkspaceActionOutcomes", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([recommendationId])
+  @@index([actionId])
+  @@index([outcomeStatus])
+  @@map("owner_action_outcomes")
 }
