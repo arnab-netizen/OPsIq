@@ -231,7 +231,22 @@
     "public_boundary": "\u2713 modelProvider, modelName, modelVersion, promptTemplateVersion, rulesetVersion, retrievalContextVersion excluded from PublicAiTraceEventView",
     "committed": "pending"
   },
-  "next_automatic_target": "Phase 27 \u2014 Incident Response and Circuit Breakers",
+  "phase_27": {
+    "status": "IMPLEMENTED_DB_UNVERIFIED",
+    "files": [
+      "OWNER_MODE_INCIDENT_RESPONSE.md",
+      "src/domain/owner-mode/incident-response.ts",
+      "src/__tests__/domain/owner-mode/incident-response.test.ts"
+    ],
+    "tests": "73 (73/73 passing)",
+    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 73/73",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery at all entry points; cross-tenant blocked on incident update and circuit breaker resolution",
+    "human_operator_required": "\u2713 tripCircuitBreaker + resolveCircuitBreaker require non-empty trippedByUserId/resolvedByUserId \u2014 AI cannot autonomously trip or resolve breakers",
+    "incident_classes": "all 10 classes: harmful_recommendation, privacy_leak, cross_tenant_exposure, learning_gate_bypass, wrong_high_confidence_advice, dashboard_misreporting, evidence_verification_bypass, db_migration_data_loss, prompt_injection_success, security_gate_failure",
+    "committed": "pending"
+  },
+  "next_automatic_target": "Phase 28 \u2014 Model/Prompt/Ruleset Versioning and Change Control",
   "gates_status": {
     "build": "PASS",
     "typecheck": "PASS",
