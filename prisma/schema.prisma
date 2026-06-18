@@ -210,6 +210,7 @@ model ClientAccount {
   workspaceDecisions            OwnerDecision[] @relation("WorkspaceDecisions")
   workspaceBenefits             OwnerBenefit[]  @relation("WorkspaceBenefits")
   workspaceActions              OwnerAction[]   @relation("WorkspaceActions")
+  workspaceEvidenceRecords      OwnerEvidenceRecord[] @relation("WorkspaceEvidenceRecords")
 
   @@index([status])
   @@map("client_accounts")
@@ -3614,4 +3615,30 @@ model OwnerBlocker {
   @@index([workspaceId])
   @@index([actionId])
   @@map("owner_blockers")
+}
+
+model OwnerEvidenceRecord {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  businessId          String
+  relatedEntityType   String    // action | recommendation | diagnosis | benefit | outcome
+  relatedEntityId     String
+  submittedBy         String
+  sourceType          String    // owner_statement | document | photo | spreadsheet | system_export | third_party
+  evidenceText        String?   @db.Text
+  attachmentUrl       String?
+  originalFilename    String?
+  hashChecksum        String?
+  periodCovered       String?
+  submittedAt         DateTime  @default(now())
+  status              String    @default("submitted")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  workspace           ClientAccount @relation("WorkspaceEvidenceRecords", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([relatedEntityId])
+  @@index([status])
+  @@map("owner_evidence_records")
 }
