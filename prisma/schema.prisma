@@ -207,6 +207,7 @@ model ClientAccount {
   workspaceRecommendations     OwnerRecommendation[] @relation("WorkspaceRecommendations")
   workspaceVerifications        OwnerRecommendationVerification[]  @relation("WorkspaceVerifications")
   workspaceAcknowledgements     OwnerOverrelianceAcknowledgement[] @relation("WorkspaceAcknowledgements")
+  workspaceDecisions            OwnerDecision[] @relation("WorkspaceDecisions")
 
   @@index([status])
   @@map("client_accounts")
@@ -3454,4 +3455,47 @@ model OwnerOverrelianceAcknowledgement {
   @@index([workspaceId])
   @@index([recommendationId])
   @@map("owner_overreliance_acknowledgements")
+}
+
+model OwnerDecision {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  businessId          String
+  recommendationId    String
+  ownerUserId         String
+  decisionStatus      String    @default("needs_more_data")
+  decisionReason      String    @db.Text
+  modifiedDescription String?   @db.Text
+  deferredUntil       DateTime?
+  approvedBy          String?
+  approvedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  workspace           ClientAccount @relation("WorkspaceDecisions", fields: [workspaceId], references: [id])
+  decisionRights      OwnerDecisionRights?
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([recommendationId])
+  @@map("owner_decisions")
+}
+
+model OwnerDecisionRights {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  decisionId          String    @unique
+  decisionOwner       String
+  executionOwner      String?
+  reviewOwner         String?
+  benefitOwner        String?
+  riskOwner           String?
+  approvalRequiredBy  String?
+  approvedBy          String?
+  approvedAt          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  decision            OwnerDecision @relation(fields: [decisionId], references: [id])
+
+  @@index([workspaceId])
+  @@map("owner_decision_rights")
 }
