@@ -65,7 +65,7 @@ If the above loop is not implemented and proven, OpsIQ is still a one-shot advis
 The user may instruct Claude with:
 
 ```text
-/continue-owner-mode-reality-loop
+/continue-build
 ```
 
 This command means exactly:
@@ -102,6 +102,62 @@ hostile audit
 ```
 
 No silent continuation. No broad implementation. No false completion.
+
+---
+
+# AI ROLE LIMITATION — SUPPORT ONLY
+
+OpsIQ uses AI as a support layer only. AI must never be the source of truth.
+
+## Allowed AI roles
+
+```text
+summarize
+explain
+challenge
+suggest
+draft
+compare options
+identify contradictions
+prepare human-readable reassessment narratives
+```
+
+## Prohibited AI roles
+
+```text
+decide
+execute
+verify evidence as final truth
+approve owner decisions
+admit learning
+control status transitions
+override deterministic rules
+override owner constraints
+bypass human review
+train or update itself from raw feedback
+act on external systems
+```
+
+## Critical AI-control rules
+
+**All state transitions must be deterministic and testable.** AI may draft or suggest, but deterministic services/rules must decide statuses.
+
+**If an AI output conflicts with deterministic rules, evidence verification, owner constraints, or status-transition rules, the AI output loses automatically.**
+
+The product backbone is:
+
+```text
+deterministic workflow
+database state
+evidence
+verification
+rules
+audit trail
+dashboard proof
+owner decisions
+```
+
+AI is only a support/review/explanation layer on top of this backbone. AI must not be built before the backbone exists.
 
 ---
 
@@ -484,7 +540,7 @@ Implement in this exact order unless repo inspection proves a slice is already C
 ```text
 0. Repository inspection and baseline proof
 1. Roadmap/scope lockdown
-2. AI use-case inventory and risk register
+2. System Capability, Risk, and AI-Control Register
 3. Autonomy/access-level classification
 4. Security threat model for input, memory, evidence, and tools
 5. Input quality gate + data provenance
@@ -505,12 +561,19 @@ Implement in this exact order unless repo inspection proves a slice is already C
 20. Learning eligibility gate with human review statuses
 21. Decision memory
 22. Business state timeline
-23. AI observability trace layer
-24. Incident response and circuit breakers
-25. Model/prompt/ruleset versioning and change control
-26. Owner dashboard proof
-27. Full-loop validation suite
-28. Owner pilot checklist
+23. Owner dashboard proof
+24. Full-loop validation suite
+25. Owner pilot checklist
+26. AI observability trace layer
+27. Incident response and circuit breakers
+28. Model/prompt/ruleset versioning and change control
+```
+
+**Important:** Phases 26–28 are governance and reliability support layers. They do not permit building AI-heavy functionality. They must not delay the deterministic owner loop (phases 5–25) unless required for safety. The real product implementation path after phases 2–4 is:
+
+```text
+input quality → diagnosis evidence → recommendation tracking → owner decision
+→ action/evidence/outcome/reassessment → learning eligibility → dashboard proof
 ```
 
 Later only, after phases 0–28 are COMPLETE_VERIFIED:
@@ -645,75 +708,111 @@ Roadmap clearly prevents scope drift.
 
 ---
 
-# PHASE 2 — AI USE-CASE INVENTORY AND RISK REGISTER
+# PHASE 2 — SYSTEM CAPABILITY, RISK, AND AI-CONTROL REGISTER
 
 ## Objective
 
-Govern OpsIQ as an AI decision-support system, not just app features.
+List all Owner Mode capabilities, define risk/autonomy levels, and explicitly restrict AI to support-only functions. **This is not an AI implementation phase.**
+
+This phase produces a typed internal config and tests that describe what OpsIQ can do, who decides each action, and where AI is categorically prohibited from deciding. It is not permission to build AI features. It is the control register that governs every phase that follows.
 
 ## Required structures
 
-Create/extend:
+Create/extend (typed internal config only — no DB, no UI, no AI services):
 
 ```text
-owner_ai_use_case_inventory
-owner_ai_risk_register
+ownerModeCapabilityRegistry (typed config, no persistence required yet)
+ownerModeAiControlRegister (typed config, no persistence required yet)
 ```
 
-If DB-backed implementation is too early, create a typed internal config plus tests first, but DB-backed eventual state remains required.
-
-## Required fields
+## Required fields per capability
 
 ```text
 id
-use_case_name
-business_purpose
-owner_facing_or_internal
-autonomy_level
+capability_name
+description
 risk_level
-data_used
-reads_data
-writes_data
-human_approval_required
-failure_modes
-controls_required
-monitoring_required
+autonomy_level
+access_level
+ai_allowed
+ai_allowed_roles (support-only list: summarize | explain | challenge | suggest | draft | compare_options | identify_contradictions | prepare_narrative)
+ai_prohibited_roles (decide | execute | verify_evidence | approve | admit_learning | control_status | override_rules | override_constraints | bypass_review | train_self | act_external)
+owner_approval_required
 rollback_path
-last_reviewed_at
-status
+control_path
 created_at
-updated_at
 ```
 
-## Required use cases to register
+## Required capabilities to register
 
 ```text
-input quality assessment
-diagnosis
-recommendation generation
-recommendation verification
-owner decision capture
-action tracking
-evidence verification
-outcome tracking
-failure adjudication
-causal attribution
-reassessment
-learning eligibility
-decision memory
-business timeline
-dashboard summarization
+input_quality_assessment
+diagnosis_generation
+recommendation_generation
+recommendation_verification
+owner_decision_capture
+action_tracking
+evidence_verification
+outcome_tracking
+failure_adjudication
+causal_attribution
+reassessment_generation
+learning_eligibility_gate
+decision_memory
+business_timeline
+dashboard_summarization
+```
+
+## Required autonomy levels
+
+```text
+observe_only
+advise_only
+draft_action
+act_with_owner_approval
+autonomous_action_prohibited
+```
+
+## Required access levels
+
+```text
+read_only
+write_internal_tracking_only
+write_owner_approved_internal_action
+external_action_prohibited
 ```
 
 ## Required tests
 
 ```text
-all required use cases exist
-each use case has autonomy level
-each use case has risk level
-high-risk use cases require human approval flag
-rollback path exists for non-read-only use cases
+all 15 required capabilities exist in registry
+each capability has autonomy_level defined
+each capability has risk_level defined
+each capability has ai_allowed flag
+no capability defaults to autonomous action
+no capability marks AI as source_of_truth
+high-risk capabilities require owner_approval_required = true
+non-read-only capabilities have rollback_path defined
+ai_prohibited_roles list is non-empty for every capability
+status transitions are not controlled by AI in any capability
 ```
+
+## Hard rule
+
+For now, OpsIQ must be limited to:
+
+```text
+observe_only
+advise_only
+draft_action
+write_internal_tracking_only
+```
+
+unless the action is owner-approved internal tracking.
+
+## Acceptance gate
+
+Registry exists as typed config. All tests pass. No AI service code introduced.
 
 ---
 
@@ -2073,11 +2172,193 @@ detect leads up/conversion down
 
 ---
 
-# PHASE 23 — AI OBSERVABILITY TRACE LAYER
+# PHASE 23 — OWNER DASHBOARD PROOF
 
 ## Objective
 
-Trace every advisory cycle end-to-end.
+If the owner cannot see/use the loop, it does not exist.
+
+## Required dashboard display
+
+Owner dashboard must show:
+
+```text
+input quality status
+critical missing data
+diagnosis status
+recommendations
+verification status
+owner decision status
+actions
+execution status
+evidence status
+outcome status
+benefit status
+harm flag if any
+adjudication status
+reassessment queue
+learning eligibility status
+business trend warnings
+incidents requiring owner attention
+```
+
+## Required guardrails
+
+```text
+Do not expose hidden controlled learning internals.
+Do not expose public learning hints.
+Show owner-useful statuses, not internal machinery.
+Wrong workspace forbidden.
+```
+
+## Required tests
+
+```text
+dashboard loads
+shows active recommendation
+shows missing data
+shows action status
+shows evidence verification
+shows outcome
+shows reassessment required
+does not expose hidden learning internals publicly
+```
+
+---
+
+# PHASE 24 — FULL-LOOP VALIDATION SUITE
+
+## Objective
+
+Prove the full loop, not only first-pass diagnosis.
+
+## Required full-loop test
+
+At minimum:
+
+```text
+input record
+→ input quality
+→ diagnosis
+→ recommendation
+→ recommendation verification
+→ owner decision
+→ benefit record
+→ action
+→ execution
+→ evidence
+→ evidence verification
+→ validation criteria
+→ outcome
+→ harm tracking
+→ adjudication
+→ causal attribution
+→ reassessment
+→ learning eligibility
+→ decision memory
+→ business timeline
+→ dashboard proof
+```
+
+## Required scenario cases
+
+```text
+cash crisis
+high revenue / low profit
+high leads / low conversion
+repeat customer decline
+bad marketing ROI
+staff productivity failure
+pricing action failure
+inventory/cash lockup
+debt pressure
+partial execution
+external market shock
+missing data
+owner constraint conflict
+harmful recommendation
+prompt injection attempt
+unverified evidence attempt
+```
+
+## Required tests
+
+```text
+root-cause accuracy
+first-action usefulness
+constraint awareness
+missing-data abstention
+execution feasibility
+outcome tracking
+harm tracking
+failure adjudication
+causal attribution
+corrective diagnosis
+learning rejection
+learning eligibility
+trend detection
+dashboard proof
+tenant isolation
+LANE_B DB proof
+```
+
+---
+
+# PHASE 25 — OWNER PILOT CHECKLIST
+
+## Objective
+
+Prepare controlled real-business Owner Mode use before public SaaS.
+
+## Required file
+
+Create/update:
+
+```text
+OWNER_MODE_REAL_BUSINESS_PILOT_CHECKLIST.md
+```
+
+## Required sections
+
+```text
+required business inputs
+input quality checklist
+first 30-day operating cadence
+minimum metrics
+owner decision process
+action tracking process
+evidence submission process
+evidence verification process
+outcome reporting process
+harm reporting process
+failure reassessment process
+learning eligibility process
+dashboard review process
+weekly review process
+monthly review process
+pilot success criteria
+pilot stop conditions
+```
+
+## Candidate business types to support
+
+Do not hardcode, but support:
+
+```text
+laundry/dry-cleaning
+commercial housekeeping
+boutique/clothing
+food/beverage
+local service business
+```
+
+---
+
+# PHASE 26 — AI OBSERVABILITY TRACE LAYER
+
+## Objective
+
+Trace every advisory cycle end-to-end so AI contributions are auditable and separate from deterministic decisions.
 
 ## Required structures
 
@@ -2147,7 +2428,7 @@ trace does not expose public learning data
 
 ---
 
-# PHASE 24 — INCIDENT RESPONSE AND CIRCUIT BREAKERS
+# PHASE 27 — INCIDENT RESPONSE AND CIRCUIT BREAKERS
 
 ## Objective
 
@@ -2221,11 +2502,11 @@ rollback path documented
 
 ---
 
-# PHASE 25 — MODEL/PROMPT/RULESET VERSIONING AND CHANGE CONTROL
+# PHASE 28 — MODEL/PROMPT/RULESET VERSIONING AND CHANGE CONTROL
 
 ## Objective
 
-Prevent invisible changes from degrading advice.
+Prevent invisible changes to AI support layer from degrading deterministic advice.
 
 ## Required structures
 
@@ -2278,189 +2559,6 @@ version change recorded
 high-risk change requires regression
 rollback plan required
 output trace records version
-```
-
----
-
-# PHASE 26 — OWNER DASHBOARD PROOF
-
-## Objective
-
-If the owner cannot see/use the loop, it does not exist.
-
-## Required dashboard display
-
-Owner dashboard must show:
-
-```text
-input quality status
-critical missing data
-diagnosis status
-recommendations
-verification status
-owner decision status
-actions
-execution status
-evidence status
-outcome status
-benefit status
-harm flag if any
-adjudication status
-reassessment queue
-learning eligibility status
-business trend warnings
-incidents requiring owner attention
-```
-
-## Required guardrails
-
-```text
-Do not expose hidden controlled learning internals.
-Do not expose public learning hints.
-Show owner-useful statuses, not internal machinery.
-Wrong workspace forbidden.
-```
-
-## Required tests
-
-```text
-dashboard loads
-shows active recommendation
-shows missing data
-shows action status
-shows evidence verification
-shows outcome
-shows reassessment required
-does not expose hidden learning internals publicly
-```
-
----
-
-# PHASE 27 — FULL-LOOP VALIDATION SUITE
-
-## Objective
-
-Prove the full loop, not only first-pass diagnosis.
-
-## Required full-loop test
-
-At minimum:
-
-```text
-input record
-→ input quality
-→ diagnosis
-→ recommendation
-→ recommendation verification
-→ owner decision
-→ benefit record
-→ action
-→ execution
-→ evidence
-→ evidence verification
-→ validation criteria
-→ outcome
-→ harm tracking
-→ adjudication
-→ causal attribution
-→ reassessment
-→ learning eligibility
-→ decision memory
-→ business timeline
-→ observability trace
-→ dashboard proof
-```
-
-## Required scenario cases
-
-```text
-cash crisis
-high revenue / low profit
-high leads / low conversion
-repeat customer decline
-bad marketing ROI
-staff productivity failure
-pricing action failure
-inventory/cash lockup
-debt pressure
-partial execution
-external market shock
-missing data
-owner constraint conflict
-harmful recommendation
-prompt injection attempt
-unverified evidence attempt
-```
-
-## Required tests
-
-```text
-root-cause accuracy
-first-action usefulness
-constraint awareness
-missing-data abstention
-execution feasibility
-outcome tracking
-harm tracking
-failure adjudication
-causal attribution
-corrective diagnosis
-learning rejection
-learning eligibility
-trend detection
-dashboard proof
-tenant isolation
-LANE_B DB proof
-```
-
----
-
-# PHASE 28 — OWNER PILOT CHECKLIST
-
-## Objective
-
-Prepare controlled real-business Owner Mode use before public SaaS.
-
-## Required file
-
-Create/update:
-
-```text
-OWNER_MODE_REAL_BUSINESS_PILOT_CHECKLIST.md
-```
-
-## Required sections
-
-```text
-required business inputs
-input quality checklist
-first 30-day operating cadence
-minimum metrics
-owner decision process
-action tracking process
-evidence submission process
-evidence verification process
-outcome reporting process
-harm reporting process
-failure reassessment process
-learning eligibility process
-dashboard review process
-weekly review process
-monthly review process
-pilot success criteria
-pilot stop conditions
-```
-
-## Candidate business types to support
-
-Do not hardcode, but support:
-
-```text
-laundry/dry-cleaning
-commercial housekeeping
-boutique/clothing
-food/beverage
-local service business
 ```
 
 ---
@@ -2666,7 +2764,7 @@ Owner Mode can be called COMPLETE_VERIFIED only when all below are true:
 ```text
 1. Repository baseline was inspected and documented.
 2. Roadmap freezes premature public/SaaS/billing/Product Hunt/external intelligence work.
-3. AI use-case inventory and risk register exist.
+3. System Capability, Risk, and AI-Control Register exists with all 15 capabilities, autonomy levels, risk levels, and AI-control prohibitions.
 4. Autonomy/access classifications exist and block autonomous business action.
 5. Security threat model covers input, memory, evidence, and tools.
 6. Input quality and provenance gate exists.
@@ -2688,16 +2786,17 @@ Owner Mode can be called COMPLETE_VERIFIED only when all below are true:
 22. Learning eligibility gate exists and cannot be bypassed.
 23. Decision memory exists.
 24. Business state timeline exists.
-25. AI observability trace layer exists.
-26. Incident response and circuit breakers exist.
-27. Model/prompt/ruleset versioning and change control exist.
-28. Owner dashboard proves the loop without exposing hidden learning internals.
-29. Full-loop validation suite passes.
-30. Owner pilot checklist exists.
+25. Owner dashboard proves the loop without exposing hidden learning internals.
+26. Full-loop validation suite passes.
+27. Owner pilot checklist exists.
+28. AI observability trace layer exists.
+29. Incident response and circuit breakers exist.
+30. Model/prompt/ruleset versioning and change control exist.
 31. Owner/public separation is proven.
 32. Tenant isolation is proven.
 33. DB-backed slices have LANE_B real PostgreSQL proof.
 34. No false COMPLETE has been claimed.
+35. AI is confirmed support-only in every phase: no AI controls status transitions, no AI verifies evidence, no AI approves decisions, no AI admits learning.
 ```
 
 Anything less is not complete.
