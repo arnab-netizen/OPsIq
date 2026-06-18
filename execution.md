@@ -1,1493 +1,2746 @@
-# OpsIQ Full Owner Mode — Hostile Audit + Slice Execution Protocol v3
+OpsIQ Final Hostile-Audited Owner Mode Reality Loop Contract
 
-## Status of this file
+## CONTROLLING PURPOSE
 
-This file replaces the previous `execution.md` protocol if the goal is strict, hostile, skeptical execution. Earlier versions were directionally useful but had loopholes that could allow broad interpretation, undocumented acceptance, weak module proof, false completion, build-loop drift, command misuse, and status-report trust without repo proof.
+This file is the strict execution contract for building OpsIQ into a **dynamic long-term business partner** for Owner Mode.
 
-This v3 protocol is intentionally stricter. It includes the additional hostile-audit hardening rules added after auditing the zero-prompt build-loop version. It forces repo-first inspection, explicit module proof, smallest-slice implementation, evidence-backed closeout, negative testing, status discipline, and no completion claims without command evidence.
+The purpose is not to create a nicer report generator.
 
----
-
-# 0. Controlling Principle
-
-Claude must treat every Full Owner Mode module as incomplete until the repository proves otherwise.
-
-Evidence hierarchy:
+The purpose is to make OpsIQ capable of this loop:
 
 ```text
-1. Passing command output from current repo state
-2. Tests that assert the required behaviour
-3. Runtime/API/smoke proof
-4. Implementation code wired to product flow
-5. Persistence schema and migrations
-6. Status documentation
-7. Prior chat claims
+input quality
+→ diagnosis
+→ recommendation
+→ owner decision
+→ action
+→ execution evidence
+→ evidence verification
+→ expected benefit/outcome
+→ outcome measurement
+→ harm tracking
+→ failure adjudication
+→ causal attribution
+→ reassessment
+→ corrective action
+→ learning eligibility
+→ decision memory
+→ business timeline
+→ dashboard proof
+→ repeat
 ```
 
-Only levels 1–4 can prove implementation. Status documentation and chat claims are never proof by themselves.
-
----
-
-# 1. Absolute Prohibitions
-
-Claude must not:
+OpsIQ must move from:
 
 ```text
-- claim COMPLETE without command evidence
-- start coding before repo reality scan and module audit
-- use prior chat/status reports as proof of completion
-- use UI presence as proof of backend functionality
-- use mocked/demo-only success as proof of production path
-- skip negative tests for auth, bad input, missing data, and cross-workspace access
-- weaken existing tests, wrappers, auth checks, or validation to make tests pass
-- hide failing commands behind “environment issue” without exact error output
-- retry unavailable DB/Docker repeatedly instead of reporting exact blocker
-- broad-rewrite current modules unless repo evidence proves existing path is unusable
-- add future/post-owner modules before current Full Owner Mode is verified
-- implement CRM/browser/API/import/simulation/learning/growth modules in this phase
+Input
+→ Diagnosis
+→ Recommendation
+→ End
 ```
 
----
-
-# 2. Allowed Status Values
-
-Use only these status values:
+to:
 
 ```text
-NOT_STARTED
-FOUND_EXISTING_UNVERIFIED
-PARTIAL_IMPLEMENTATION
-IMPLEMENTED_UNTESTED
-TESTED_PARTIAL
-RUNTIME_DB_UNVERIFIED
-BLOCKED_WITH_EVIDENCE
-VERIFIED_COMPLETE
+Input
+→ Diagnosis
+→ Recommendation
+→ Owner Decision
+→ Action
+→ Evidence
+→ Verification
+→ Outcome
+→ Reassessment
+→ Corrected Recommendation
+→ Verified Learning Eligibility
+→ Future Better Recommendation
+```
+
+If the above loop is not implemented and proven, OpsIQ is still a one-shot advisor, not a long-term business partner.
+
+---
+
+# SINGLE LOOP COMMAND
+
+The user may instruct Claude with:
+
+```text
+/continue-owner-mode-reality-loop
+```
+
+This command means exactly:
+
+```text
+1. Read this execution.md completely.
+2. Do not ask questions.
+3. Inspect current repo state.
+4. Run a hostile audit of current implementation against this file.
+5. Confirm exact current status and next incomplete slice.
+6. Run pre-slice breakage checks.
+7. If anything is already broken, document whether it is pre-existing.
+8. If the next slice can be safely implemented, implement only the next incomplete slice.
+9. Do not skip dependency order.
+10. Do not implement public SaaS, billing, Product Hunt, external intelligence, ML, cohort priors, forecasting, or Decision Intelligence UI.
+11. Run post-slice tests/proofs.
+12. If anything broke, stop and fix it before continuing.
+13. If DB-backed, obtain LANE_B real PostgreSQL proof before COMPLETE_VERIFIED.
+14. Write/update closeout report.
+15. Commit only the slice changes if committing is available.
+16. Stop after the slice unless explicitly instructed to continue.
+```
+
+One loop command must perform:
+
+```text
+hostile audit
+→ status confirmation
+→ baseline proof
+→ next-slice implementation
+→ regression check
+→ fix if broken
+→ closeout
+```
+
+No silent continuation. No broad implementation. No false completion.
+
+---
+
+# ABSOLUTE NON-NEGOTIABLE RULES
+
+## Rule 1 — Owner Mode only
+
+This work is for Owner Mode only.
+
+Do not modify or build:
+
+```text
+public SaaS flows
+Product Hunt launch flows
+billing
+Lemon Squeezy
+Stripe
+public onboarding
+external lead intelligence
+CRM/accounting integrations
+browser automation
+ML forecasting
+cohort priors
+Decision Intelligence UI
+public marketing pages
+```
+
+unless a later instruction explicitly changes scope.
+
+## Rule 2 — Deterministic reality loop before advanced intelligence
+
+Do not build:
+
+```text
+advanced simulation
+ML learning
+cross-business learning
+privacy-safe aggregation
+external market intelligence
+forecasting
+cohort priors
+agentic automation
+```
+
+until the deterministic Owner Mode reality loop is COMPLETE_VERIFIED.
+
+The deterministic loop is:
+
+```text
+input quality
+→ diagnosis evidence
+→ recommendation
+→ owner decision
+→ action
+→ evidence
+→ evidence verification
+→ validation criteria
+→ outcome
+→ harm tracking
+→ adjudication
+→ causal attribution
+→ reassessment
+→ learning eligibility
+→ dashboard proof
+```
+
+## Rule 3 — No raw feedback learning
+
+Wrong:
+
+```text
+User says recommendation failed
+→ store learning that recommendation was wrong
+```
+
+Correct:
+
+```text
+User reports result
+→ execution checked
+→ evidence verified
+→ outcome measured
+→ harm tracked
+→ failure adjudicated
+→ causal attribution classified
+→ reassessment created
+→ learning eligibility admitted/rejected
+```
+
+## Rule 4 — No public learning hints
+
+Public users must not see or infer hidden learning machinery.
+
+Prohibited:
+
+```text
+public UI mentioning hidden learning
+public routes exposing learning internals
+marketing copy saying user data improves hidden system
+public dashboard showing controlled learning internals
+cross-tenant learning without explicit future consent architecture
+```
+
+## Rule 5 — Fail closed
+
+If evidence is weak, data is missing, execution deviated, measurement is invalid, or causation is unclear, OpsIQ must classify the output as limited.
+
+Allowed limited statuses include:
+
+```text
+data_limited
+critical_missing
+insufficient_evidence
+invalid_test
+too_early_to_judge
+correlation_only
+confounded
+external_event_dominant
+learning_rejected
+human_review_required
+```
+
+Do not output high-confidence advice from weak data.
+
+## Rule 6 — No false COMPLETE
+
+A slice may end only with one of these statuses:
+
+```text
+COMPLETE_VERIFIED
+IMPLEMENTED_STATIC_ONLY
+IMPLEMENTED_DB_UNVERIFIED
+BLOCKED_BY_PRE_EXISTING_FAILURE
+FAILED_NEEDS_FIX
 ```
 
 Definitions:
 
 ```text
-NOT_STARTED:
-  No meaningful implementation found.
+COMPLETE_VERIFIED:
+  All required build/test/type/db/runtime/tenant checks passed.
+  If DB-backed, LANE_B real PostgreSQL proof passed.
 
-FOUND_EXISTING_UNVERIFIED:
-  Files or functions exist but wiring/tests/runtime proof are missing.
+IMPLEMENTED_STATIC_ONLY:
+  Code exists and static/build tests pass.
+  Runtime/DB proof is not applicable or not run.
 
-PARTIAL_IMPLEMENTATION:
-  Some implementation exists but required behaviour is missing.
+IMPLEMENTED_DB_UNVERIFIED:
+  DB code/migration exists, but real PostgreSQL/LANE_B proof has not passed.
 
-IMPLEMENTED_UNTESTED:
-  Code exists but no targeted test has proven the behaviour.
+BLOCKED_BY_PRE_EXISTING_FAILURE:
+  Baseline was already failing before the slice.
+  Exact pre-existing failure is documented.
 
-TESTED_PARTIAL:
-  Some tests pass but not the full module gate.
-
-RUNTIME_DB_UNVERIFIED:
-  Static/unit proof exists, but DB/runtime path could not be verified because the exact infrastructure command failed.
-
-BLOCKED_WITH_EVIDENCE:
-  Progress is blocked by exact repo/environment constraint with command output.
-
-VERIFIED_COMPLETE:
-  Full module/slice gate passed with implementation, wiring, persistence where required, negative tests, and command evidence.
+FAILED_NEEDS_FIX:
+  Slice introduced or exposed a failure.
+  Must be fixed before proceeding.
 ```
 
-Forbidden labels:
+If DB is touched and LANE_B did not pass, status cannot be COMPLETE_VERIFIED.
+
+## Rule 7 — LANE_B DB proof is mandatory for DB-backed work
+
+A slice is DB-backed if it touches:
 
 ```text
-DONE
-COMPLETE
-FIXED
-READY
-PRODUCTION READY
-CONSULTANT-GRADE
-FULLY IMPLEMENTED
+database schema
+Prisma models
+migrations
+repository methods
+persistence
+tenant isolation
+owner history
+recommendations
+actions
+evidence
+outcomes
+adjudications
+learning eligibility
+decision memory
+business timeline
+dashboard persisted queries
+audit logs
 ```
 
----
+DB-backed slices require:
 
-# 3. Repo Reality Scan — Mandatory First Step
+```text
+real PostgreSQL-backed tests through LANE_B GitHub PostgreSQL service or equivalent CI PostgreSQL service
+migration applies cleanly
+migration non-destructive risk assessed
+tenant isolation tested against real persisted records
+```
 
-No implementation may start before this section is completed.
+SQLite, mocks, TypeScript build, and `prisma validate` are not enough.
 
-## 3.1 Required discovery commands
+## Rule 8 — Before every slice, prove nothing is already broken
 
-Run from repo root:
+Run discovered equivalents of:
 
 ```bash
 git status --short
 git branch --show-current
-git rev-parse --short HEAD
-pwd
-find . -maxdepth 3 -type f | sort | sed 's#^./##' | head -300
+git log -1 --oneline
+npm run build
+npm test
+npx prisma validate
+```
+
+If the repo uses `pnpm`, `yarn`, or different scripts, use the discovered equivalents.
+
+If a command fails because environment variables are unavailable, document:
+
+```text
+command attempted
+exact error
+whether failure existed before slice
+safer substitute command
+impact on completion status
+```
+
+## Rule 9 — After every slice, prove nothing was broken
+
+Run all relevant checks:
+
+```bash
+npm run build
+npm test
+npm run lint
+npm run typecheck
+npm run test:db
+npm run test:integration
+npx prisma validate
+```
+
+Use available equivalents.
+
+If the slice touched DB, run LANE_B/equivalent real PostgreSQL proof.
+
+## Rule 10 — If anything breaks, fix before continuing
+
+Claude must not proceed if:
+
+```text
+build fails
+tests fail
+typecheck fails
+lint fails
+Prisma validation fails
+migration fails
+DB tests fail
+tenant isolation fails
+owner/public separation fails
+dashboard proof fails
+learning gate is bypassable
+evidence verification is bypassable
+existing proven Owner Mode behavior regresses
+```
+
+The immediate next step must be fixing the breakage.
+
+## Rule 11 — No rebuilding proven work
+
+Before adding any new model, route, service, component, or test, search for existing equivalents.
+
+Required search concepts:
+
+```text
+owner recommendation
+owner action
+owner decision
+input quality
+evidence
+verification
+validation criteria
+outcome
+harm
+adjudication
+causal attribution
+reassessment
+learning eligibility
+decision memory
+business timeline
+dashboard proof
+AI use case
+risk register
+autonomy
+incident
+observability
+benefits realization
+model version
+prompt version
+ruleset version
+```
+
+Extend existing safe code instead of duplicating.
+
+## Rule 12 — No destructive overwrites
+
+Never overwrite historical business records.
+
+Preserve audit trail for:
+
+```text
+input
+diagnosis
+recommendation
+verification
+owner decision
+action
+evidence
+outcome
+harm
+adjudication
+causal attribution
+reassessment
+corrective action
+learning eligibility
+dashboard proof
+incident
+model/ruleset version
+```
+
+Supersede records with status changes. Do not erase original reasoning.
+
+## Rule 13 — Human review for sensitive decisions
+
+Human/owner review is required when:
+
+```text
+harm severity is medium/high/severe
+legal/compliance/safety risk exists
+recommendation is high-impact
+recommendation changes price/staff/debt/legal/customer policy
+learning affects future recommendation priority
+evidence is contradictory
+case creates do-not-repeat rule
+cross-business aggregation is proposed
+```
+
+## Rule 14 — Autonomy is restricted
+
+OpsIQ may:
+
+```text
+observe
+diagnose
+recommend
+draft action
+assign internal action for tracking
+request owner approval
+track execution
+measure outcome
+reassess
+```
+
+OpsIQ must not:
+
+```text
+execute business actions autonomously
+send customer messages autonomously
+spend money
+change pricing
+hire/fire staff
+commit legal/compliance actions
+modify external systems
+publish public content
+train on private data
+share business data across tenants
+```
+
+without explicit future scope and controls.
+
+---
+
+# FINAL IMPLEMENTATION ORDER
+
+Implement in this exact order unless repo inspection proves a slice is already COMPLETE_VERIFIED.
+
+```text
+0. Repository inspection and baseline proof
+1. Roadmap/scope lockdown
+2. AI use-case inventory and risk register
+3. Autonomy/access-level classification
+4. Security threat model for input, memory, evidence, and tools
+5. Input quality gate + data provenance
+6. Diagnosis evidence contract
+7. Structured recommendation tracking
+8. Recommendation verification + anti-overreliance gate
+9. Owner decision capture + decision-rights model
+10. Benefits realization register
+11. Action and execution tracking
+12. Evidence capture
+13. Evidence verification
+14. Expected outcome and validation criteria
+15. Outcome tracking
+16. Harm tracking
+17. Failure adjudication
+18. Causal attribution classification
+19. Reassessment and corrective action
+20. Learning eligibility gate with human review statuses
+21. Decision memory
+22. Business state timeline
+23. AI observability trace layer
+24. Incident response and circuit breakers
+25. Model/prompt/ruleset versioning and change control
+26. Owner dashboard proof
+27. Full-loop validation suite
+28. Owner pilot checklist
+```
+
+Later only, after phases 0–28 are COMPLETE_VERIFIED:
+
+```text
+29. Controlled learning/reliability candidate store
+30. Privacy, consent, retention, minimization controls
+31. Human review workflow for broader reliability
+32. Regression gate suite for reliability changes
+33. Staged rollout and rollback framework
+34. Privacy-safe aggregation design, only if explicitly approved
+35. Reliability monitoring and rollback drills
+```
+
+Do not jump to Phase 29 before Phases 0–28 are COMPLETE_VERIFIED.
+
+---
+
+# PHASE 0 — REPOSITORY INSPECTION AND BASELINE PROOF
+
+## Objective
+
+Know exactly what exists before changing anything.
+
+## Required commands
+
+Run discovered equivalents of:
+
+```bash
+git status --short
+git branch --show-current
+git log -1 --oneline
 ls
+find . -maxdepth 4 -type f \( -name "package.json" -o -name "pnpm-lock.yaml" -o -name "yarn.lock" -o -name "package-lock.json" -o -name "schema.prisma" -o -name "CURRENT_WORKFLOW_STATE.md" -o -name "OWNER_MODE_STATUS_REPORT.md" -o -name "execution.md" \) | sort
+npm run build
+npm test
+npx prisma validate
 ```
 
-## 3.2 Package manager detection
+## Required repo search
 
-Inspect lockfiles before running package commands:
-
-```bash
-ls package.json pnpm-lock.yaml package-lock.json yarn.lock bun.lockb 2>/dev/null || true
-cat package.json
-```
-
-Rules:
+Search for:
 
 ```text
-- If pnpm-lock.yaml exists, prefer pnpm.
-- If package-lock.json exists and no pnpm-lock.yaml, prefer npm.
-- If yarn.lock exists and no npm/pnpm lockfile, prefer yarn.
-- Do not change package manager.
-- Do not regenerate lockfiles unless dependency change is necessary and justified.
+Owner Mode
+owner recommendation
+owner action
+owner decision
+input quality
+evidence verification
+outcome
+adjudication
+reassessment
+learning
+decision memory
+business timeline
+dashboard
+risk register
+autonomy
+incident response
+observability
+benefits realization
 ```
 
-## 3.3 Required source inspection targets
+## Required output file
 
-Check if present:
+Create/update:
 
 ```text
-execution.md
-OWNER_MODE_STATUS_REPORT.md
-README.md
-package.json
-prisma/schema.prisma
-src/
-app/
-lib/
-services/
-components/
-tests/
-__tests__/
-e2e/
-playwright.config.*
-vitest.config.*
-jest.config.*
+OWNER_MODE_REALITY_BASELINE_REPORT.md
 ```
 
-If paths differ, discover actual equivalents and document them.
-
-## 3.4 Required grep/search commands
-
-```bash
-grep -R "Owner Mode\|owner mode\|OWNER_MODE\|ownerMode" -n . --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=dist --exclude-dir=.git || true
-
-grep -R "diagnosis\|Diagnosis\|recommendation\|Recommendation\|action\|Action\|verification\|Verification\|evidence\|Evidence" -n src app lib services components tests __tests__ e2e 2>/dev/null || true
-
-grep -R "mock\|stub\|TODO\|FIXME\|placeholder\|fake\|demo-only\|hardcoded" -n src app lib services components tests __tests__ e2e 2>/dev/null || true
-
-grep -R "workspaceId\|workspace_id\|userId\|auth\|capability\|role" -n src app lib services components tests __tests__ e2e 2>/dev/null || true
-```
-
-## 3.5 Required repo scan output
-
-Claude must output exactly this structure before coding:
+Must include:
 
 ```text
-REPO_REALITY_SCAN:
-  branch:
-  commit:
-  working_tree_status:
-  package_manager:
-  scripts_found:
-  app_framework:
-  database_layer:
-  auth_layer:
-  test_frameworks:
-  owner_mode_related_files:
-  owner_mode_related_tests:
-  status_docs_found:
-  schema_models_relevant_to_owner_mode:
-  api_routes_relevant_to_owner_mode:
-  ui_routes_relevant_to_owner_mode:
-  mock_placeholder_todo_hits:
-  immediate_blockers:
+branch
+latest commit
+working tree status
+package manager
+test commands
+build commands
+database tooling
+existing Owner Mode models
+existing Owner Mode routes
+existing Owner Mode services
+existing Owner Mode UI
+existing tests
+baseline build result
+baseline test result
+baseline DB/prisma result
+known pre-existing failures
+confirmed gaps
+selected next slice
 ```
 
-If any field is unknown, Claude must write `UNKNOWN_WITH_EVIDENCE:` and explain what was checked.
+## Acceptance gate
+
+No code implementation may begin before the baseline report exists.
 
 ---
 
-# 4. Current Full Owner Mode Scope Boundary
+# PHASE 1 — ROADMAP/SCOPE LOCKDOWN
 
-This execution file applies only to the current Full Owner Mode modules.
+## Objective
 
-Explicitly out of scope until all M01–M15 are `VERIFIED_COMPLETE`:
+Prevent drift into premature public/SaaS/shiny work.
+
+## Required update
+
+Create/update current workflow/status file, preferably:
 
 ```text
-- real-world case-study benchmark library
-- public dataset harness
-- synthetic scenario simulator
-- adversarial test suite beyond module-level negative tests
-- blind outcome testing
-- learning from every output
-- online growth intelligence
-- lead research
-- CRM/API/OAuth integrations
-- browser-login/browser-assisted import
-- sales pitch generator
-- public SaaS polish beyond current Owner Mode
+CURRENT_WORKFLOW_STATE.md
 ```
 
-If Claude finds code for those future modules, it may document their existence but must not implement them in this phase.
+Required statement:
+
+```text
+Owner Mode is not complete until the deterministic reality loop is COMPLETE_VERIFIED:
+input quality → diagnosis → recommendation → owner decision → action → evidence → verification → outcome → harm/adjudication/causality → reassessment → learning eligibility → dashboard proof.
+```
+
+Required freeze:
+
+```text
+Public SaaS, Product Hunt, billing, external intelligence, ML, forecasting, cohort priors, Decision Intelligence UI, and integrations remain frozen until deterministic Owner Mode phases 0–28 are COMPLETE_VERIFIED.
+```
+
+## Acceptance gate
+
+Roadmap clearly prevents scope drift.
 
 ---
 
-# 5. Mandatory Full Owner Mode Module Inventory
+# PHASE 2 — AI USE-CASE INVENTORY AND RISK REGISTER
 
-Audit these modules at minimum:
+## Objective
+
+Govern OpsIQ as an AI decision-support system, not just app features.
+
+## Required structures
+
+Create/extend:
 
 ```text
-M01 Business Profile / Owner Context
-M02 Data Intake / Input Capture
-M03 Diagnosis Engine
-M04 Evidence Model / Evidence Attachment
-M05 Recommendation Engine
-M06 Action Plan Generator
-M07 Owner Dashboard
-M08 Operator / Action Completion Flow
-M09 Verification / Outcome Tracking
-M10 Constraint Handling
-M11 Audit Logging / Traceability
-M12 Access Control / Workspace Isolation
-M13 Demo / Seed / Smoke Data Integrity
-M14 Error Handling / Fail-Closed Behaviour
-M15 Tests / Smoke / CI Verification
+owner_ai_use_case_inventory
+owner_ai_risk_register
 ```
 
-If repository contains additional current Owner Mode modules, add them as M16+ and audit them using the same standard.
+If DB-backed implementation is too early, create a typed internal config plus tests first, but DB-backed eventual state remains required.
 
----
-
-# 6. Required Module Audit Output
-
-For every module, Claude must output:
+## Required fields
 
 ```text
-MODULE_AUDIT:
-  module_id:
-  module_name:
-  status:
-  implementation_files:
-  api_routes:
-  ui_files:
-  persistence_models:
-  service_functions:
-  tests:
-  commands_or_static_checks_used:
-  current_wiring_proof:
-  data_source_proof:
-  workspace_isolation_proof:
-  failure_mode_proof:
-  mock_or_placeholder_risk:
-  missing_contracts:
-  missing_tests:
-  runtime_risks:
-  exact_acceptance_gaps:
-  next_required_slice:
+id
+use_case_name
+business_purpose
+owner_facing_or_internal
+autonomy_level
+risk_level
+data_used
+reads_data
+writes_data
+human_approval_required
+failure_modes
+controls_required
+monitoring_required
+rollback_path
+last_reviewed_at
+status
+created_at
+updated_at
 ```
 
-Rules:
+## Required use cases to register
 
 ```text
-- Empty fields are not allowed.
-- Use NONE_FOUND only after search evidence.
-- Use UNKNOWN only with exact reason.
-- A module with no negative test cannot be VERIFIED_COMPLETE.
-- A module with no workspace isolation proof cannot be VERIFIED_COMPLETE if it touches user/business data.
-- A module with only UI proof cannot be VERIFIED_COMPLETE.
+input quality assessment
+diagnosis
+recommendation generation
+recommendation verification
+owner decision capture
+action tracking
+evidence verification
+outcome tracking
+failure adjudication
+causal attribution
+reassessment
+learning eligibility
+decision memory
+business timeline
+dashboard summarization
+```
+
+## Required tests
+
+```text
+all required use cases exist
+each use case has autonomy level
+each use case has risk level
+high-risk use cases require human approval flag
+rollback path exists for non-read-only use cases
 ```
 
 ---
 
-# 7. Module Acceptance Gates
+# PHASE 3 — AUTONOMY/ACCESS-LEVEL CLASSIFICATION
 
-A module is `VERIFIED_COMPLETE` only if all applicable gates are satisfied.
+## Objective
 
-## Universal gates
+Prevent OpsIQ from behaving like an uncontrolled agent.
+
+## Required autonomy levels
 
 ```text
-implementation_present: true
-wired_to_product_flow: true
-real_data_path_or_valid_no_persistence_reason: true
-workspace_scoped_where_required: true
-auth_checked_where_required: true
-validation_present: true
-negative_tests_present: true
-happy_path_tests_present: true
-failure_mode_defined: true
-no_mock_only_success_path: true
-no_silent_failure_path: true
-commands_passed: true
-status_doc_updated: true
+observe_only
+advise_only
+draft_action
+act_with_owner_approval
+autonomous_action_prohibited
 ```
 
-## Business critical gates
-
-For M03–M09 and M11–M14:
+## Required access levels
 
 ```text
-auditability_present: true
-evidence_or_trace_present: true
-transaction_safety_considered: true
-bad_input_handled_fail_closed: true
+read_only
+write_internal_tracking_only
+write_owner_approved_internal_action
+external_action_prohibited
 ```
 
-## User-facing gates
+## Hard rule
 
-For M01, M02, M07, M08, M09, M10:
+For now, OpsIQ must be limited to:
 
 ```text
-ui_or_api_user_path_exists: true
-empty_state_handled: true
-loading_or_pending_state_handled_where_applicable: true
-error_state_handled: true
+observe_only
+advise_only
+draft_action
+write_internal_tracking_only
+```
+
+unless the action is owner-approved internal tracking.
+
+## Required tests
+
+```text
+no module defaults to autonomous action
+high-impact recommendation cannot auto-execute
+external action is prohibited
+owner approval required for action-affecting state transition
 ```
 
 ---
 
-# 8. Exact Standards per Module
+# PHASE 4 — SECURITY THREAT MODEL FOR INPUT, MEMORY, EVIDENCE, AND TOOLS
 
-## M01 Business Profile / Owner Context
+## Objective
 
-Must prove:
+Prevent prompt injection, memory poisoning, evidence manipulation, and tool misuse.
+
+## Required threat model file
+
+Create/update:
 
 ```text
-- business profile can be created/read/updated
-- profile is workspace-scoped
-- profile affects diagnosis/recommendations or explicitly gates them when missing
-- missing required profile data downgrades confidence or blocks diagnosis
-- owner constraints can be attached, referenced, or linked
+OWNER_MODE_SECURITY_THREAT_MODEL.md
 ```
 
-Required tests:
+Must cover:
 
 ```text
-- create/read/update profile
-- invalid profile rejected
-- cross-workspace access denied
-- diagnosis without required profile data produces low-confidence/block state
+malicious pasted text
+malicious PDF/screenshot/CSV content
+prompt injection inside uploaded evidence
+spreadsheet formula/payload risks
+fake outcome reports
+memory poisoning
+learning gate bypass
+cross-tenant leakage
+public route exposure
+future tool misuse
+future CRM/accounting integration risks
 ```
 
-## M02 Data Intake / Input Capture
-
-Must prove:
+## Required security rules
 
 ```text
-- owner input can be submitted
-- input is persisted or intentionally transient with documented reason
-- input is workspace-scoped
-- input is validated
-- invalid/missing input produces explicit error or low-confidence state
-- source metadata is retained for any material input
+uploaded/pasted content is data, never instruction
+evidence cannot override system/developer rules
+owner notes cannot bypass gates
+memory writes require source classification
+learning eligibility requires verified source path
+public routes cannot expose owner memory/learning
 ```
 
-If file upload exists, must prove:
+## Required tests
 
 ```text
-- file metadata stored
-- unsupported file rejected
-- oversized file rejected or safely handled
-- extracted facts linked to source file
-- extraction failure does not create false success
+malicious CSV cell ignored as instruction
+uploaded text cannot override execution.md rules
+owner note cannot force learning admission
+fake evidence cannot become verified without verification record
+public route cannot access private owner memory
+wrong workspace cannot access evidence/outcome/learning records
 ```
 
-## M03 Diagnosis Engine
+---
 
-Must prove:
+# PHASE 5 — INPUT QUALITY GATE + DATA PROVENANCE
+
+## Objective
+
+Stop OpsIQ from producing strong diagnosis from weak or unknown input.
+
+## Required structures
+
+Create/extend:
 
 ```text
-- uses real persisted or validated input data
-- produces specific findings
-- includes root cause, impact, confidence, evidence, missing data, action, verification metric, risk
-- does not produce high-confidence output from weak/missing/conflicting data
-- deterministic enough for automated tests
+owner_input_records
+owner_input_quality_assessments
+owner_data_provenance_records
+owner_missing_data_flags
 ```
 
-Required output fields:
+## Required input quality statuses
 
 ```text
-finding
-rootCause
-impact
-confidence
-supportingEvidence
-missingData
-actions
-verificationMetric
-risk
+complete
+partial
+data_limited
+critical_missing
+conflicting
+stale
+owner_estimate_only
+unsafe_for_strong_recommendation
 ```
 
-## M04 Evidence Model / Evidence Attachment
-
-Must prove:
+## Required provenance fields
 
 ```text
-- material findings link to evidence
-- evidence references source/input/period/value where applicable
-- evidence is workspace-scoped
-- evidence appears in API or dashboard path
-- cross-workspace evidence attachment is blocked
+source_type
+source_owner
+uploaded_by
+created_at
+period_covered
+freshness
+original_filename
+hash_checksum
+parsed_by
+manual_edits
+derived_metrics
+lineage_to_diagnosis
+lineage_to_recommendation
 ```
 
-Minimum evidence fields where data-based:
+## Critical business inputs
+
+Track availability/quality for:
 
 ```text
-sourceType
-sourceId
-metric
-value
-period
-confidence
-```
-
-## M05 Recommendation Engine
-
-Must prove:
-
-```text
-- recommendations link to diagnosis findings
-- recommendations include priority, expected impact, risk/trade-off, verification metric
-- recommendations respect constraints where available
-- recommendations are not generic filler
-- recommendations downgrade or block when evidence is weak
-```
-
-## M06 Action Plan Generator
-
-Must prove:
-
-```text
-- actions are created from recommendations
-- actions link back to diagnosis/recommendation
-- actions have status, owner/operator where applicable, due date where applicable
-- multi-record creation is transactional where partial write risk exists
-- action creation failure does not leave orphaned records
-```
-
-## M07 Owner Dashboard
-
-Must prove:
-
-```text
-- dashboard reads backend/persisted data
-- dashboard displays diagnosis, evidence, recommendations, actions, verification status
-- dashboard handles empty/loading/error states
-- dashboard filters client-visible records correctly where applicable
-- dashboard cannot display another workspace's data
-```
-
-## M08 Operator / Action Completion Flow
-
-Must prove:
-
-```text
-- operator can complete assigned/allowed action
-- completion records actual outcome
-- completion validates required fields
-- completion updates action status correctly
-- unauthorized action completion is blocked
-- completion cannot update wrong workspace/action
-```
-
-## M09 Verification / Outcome Tracking
-
-Must prove:
-
-```text
-- verification links to action/diagnosis
-- verification state supports unverified/verified/disputed/failed or repo-equivalent states
-- verification uses actual outcome or evidence
-- verification does not auto-pass without evidence
-- dashboard reflects verification state
-```
-
-## M10 Constraint Handling
-
-Must prove:
-
-```text
-- constraints are captured, derived, or explicitly marked unavailable
-- recommendations check constraints
-- constraint violations are surfaced
-- high-cost/high-time actions are not recommended blindly
-```
-
-Minimum constraints:
-
-```text
-budget
-time
+revenue
+gross margin
+net profit
+cash balance
+cash runway
+debt/EMI
+receivables
+payables
+leads
+conversion
+repeat customers
+churn
+complaints
+capacity
 staffing
-cash_runway
-data_availability
-business_stage
-risk_tolerance
+marketing spend
+inventory
+pricing
+owner constraints
 ```
 
-## M11 Audit Logging / Traceability
-
-Must prove critical event traceability for:
+## Required guardrails
 
 ```text
-business_profile_changed
-input_submitted
-diagnosis_created
-evidence_attached
-recommendation_created
+No high-confidence diagnosis when critical inputs are missing.
+No strong profit recommendation without margin/cash data or explicit data_limited status.
+No recommendation based on stale data without warning.
+Conflicting data must be surfaced before recommendation.
+```
+
+## Required tests
+
+```text
+complete input permits normal diagnosis
+missing margin downgrades recommendation
+missing cash runway blocks high-risk action
+stale data marks data_limited
+conflicting data blocks strong recommendation
+owner estimate only lowers confidence
+```
+
+---
+
+# PHASE 6 — DIAGNOSIS EVIDENCE CONTRACT
+
+## Objective
+
+Every diagnosis must state what evidence supports it, what evidence is missing, and what could make it wrong.
+
+## Required fields
+
+```text
+diagnosis_id
+workspace_id
+business_id
+evidence_for
+evidence_against
+missing_data
+assumptions
+confidence_score
+confidence_reason
+risk_flags
+what_would_change_this_diagnosis
+created_at
+updated_at
+```
+
+## Required guardrails
+
+```text
+No diagnosis without evidence_for.
+No high confidence with unresolved critical missing data.
+No diagnosis may hide contradictory evidence.
+No diagnosis may proceed to recommendation without confidence_reason.
+```
+
+## Required tests
+
+```text
+diagnosis stores evidence
+diagnosis stores assumptions
+contradictory evidence is visible
+missing data lowers confidence
+no evidence blocks strong diagnosis
+```
+
+---
+
+# PHASE 7 — STRUCTURED RECOMMENDATION TRACKING
+
+## Objective
+
+Recommendations must become accountable records, not loose text.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_recommendations
+owner_recommendation_evidence
+owner_recommendation_assumptions
+owner_recommendation_constraints
+```
+
+## Required fields
+
+```text
+id
+workspace_id
+business_id
+owner_user_id
+diagnosis_id
+recommendation_text
+recommendation_type
+priority_rank
+expected_outcome_summary
+target_metric_name
+baseline_value
+target_value
+target_direction
+measurement_window_days
+deadline_at
+confidence_score
+confidence_reason
+risk_level
+status
+created_at
+updated_at
+```
+
+## Required statuses
+
+```text
+draft
+recommended
+verification_required
+verified_enough
+provisional
+data_limited
+owner_decision_pending
+accepted
+rejected
+modified
+deferred
+converted_to_action
+in_progress
+outcome_pending
+outcome_reported
+reassessment_required
+superseded
+validated_success
+validated_failure
+learning_review_pending
+closed
+```
+
+## Required tests
+
+```text
+create recommendation
+link recommendation to diagnosis
+recommendation stores evidence/assumptions/constraints
+recommendation status transition works
+wrong workspace forbidden
+public access forbidden
+```
+
+---
+
+# PHASE 8 — RECOMMENDATION VERIFICATION + ANTI-OVERRELIANCE GATE
+
+## Objective
+
+OpsIQ must challenge its own recommendation before the owner accepts it.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_recommendation_verifications
+owner_assumption_checks
+owner_evidence_checks
+owner_contradiction_checks
+owner_overreliance_acknowledgements
+```
+
+## Required verification questions
+
+Every important recommendation must answer:
+
+```text
+What evidence supports this?
+What evidence contradicts this?
+What data is missing?
+What assumptions are being made?
+What would make this wrong?
+What would a rival consultant argue?
+Has this action failed before?
+Does this violate owner constraints?
+Does this fit cash runway?
+Is there a safer test?
+What is the downside if wrong?
+What is the stop-loss?
+```
+
+## Required verification statuses
+
+```text
+verified_enough
+provisional
+data_limited
+high_risk_requires_owner_approval
+unsafe_to_recommend
+reassessment_required
+```
+
+## Anti-overreliance rule
+
+For medium/high-impact recommendations, owner must acknowledge:
+
+```text
+key assumption
+main downside risk
+stop condition
+evidence limitation
+owner remains decision-maker
+```
+
+before accepting.
+
+## Required tests
+
+```text
+missing data downgrades recommendation
+constraint violation blocks recommendation
+past failed action requires explanation
+cash-risk action requires owner acknowledgement
+medium/high risk requires anti-overreliance acknowledgement
+unsafe recommendation cannot be accepted
+```
+
+---
+
+# PHASE 9 — OWNER DECISION CAPTURE + DECISION-RIGHTS MODEL
+
+## Objective
+
+Recommendations do not become actions until owner decision is captured.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_decisions
+owner_decision_rights
+```
+
+## Required owner decision statuses
+
+```text
+accepted
+rejected
+modified
+deferred
+needs_more_data
+needs_human_review
+```
+
+## Required decision-rights fields
+
+```text
+decision_owner
+execution_owner
+review_owner
+benefit_owner
+risk_owner
+approval_required_by
+approved_by
+approved_at
+decision_reason
+created_at
+updated_at
+```
+
+## Required guardrails
+
+```text
+No action without accepted or modified owner decision.
+Rejected recommendation cannot become action.
+Deferred recommendation cannot become action.
+High-risk recommendation requires approval fields.
+Owner remains accountable decision-maker.
+```
+
+## Required tests
+
+```text
+accept recommendation
+reject recommendation
+modify recommendation
+defer recommendation
+needs more data
+high-risk requires approval
+rejected cannot convert to action
+```
+
+---
+
+# PHASE 10 — BENEFITS REALIZATION REGISTER
+
+## Objective
+
+Track business benefit, not only task completion.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_benefits
+owner_benefit_reviews
+```
+
+## Required fields
+
+```text
+benefit_id
+workspace_id
+business_id
+recommendation_id
+action_id
+expected_business_benefit
+benefit_type
+baseline
+target
+benefit_owner
+realization_date
+review_cadence
+actual_benefit
+benefit_status
+reason_not_realized
+created_at
+updated_at
+```
+
+## Benefit types
+
+```text
+revenue
+profit
+cash
+margin
+retention
+conversion
+productivity
+risk_reduction
+cost_reduction
+quality_improvement
+```
+
+## Required tests
+
+```text
+benefit created from recommendation
+benefit linked to owner/action
+benefit has baseline and target
+benefit review updates actual value
+unrealized benefit requires reason
+```
+
+---
+
+# PHASE 11 — ACTION AND EXECUTION TRACKING
+
+## Objective
+
+Know whether the owner/team actually executed the accepted action.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_actions
+owner_action_execution_logs
+owner_action_execution_evidence
+owner_execution_deviations
+owner_blockers
+```
+
+## Required action fields
+
+```text
+id
+workspace_id
+business_id
+recommendation_id
+owner_decision_id
+assigned_to_role
+assigned_to_user_id
+action_title
+action_steps
+due_at
+status
+created_at
+updated_at
+```
+
+## Required execution fields
+
+```text
+id
+workspace_id
+business_id
+action_id
+executed_by_role
+executed_by_user_id
+started_at
+completed_at
+actual_steps_taken
+planned_steps_completed_count
+planned_steps_total_count
+sample_size_actual
+deadline_met
+proof_text
+proof_attachment_url
+deviation_summary
+deviation_severity
+blocker_reason
+execution_compliance_score
+created_at
+updated_at
+```
+
+## Execution compliance values
+
+```text
+not_executed
+materially_deviated
+partially_executed
+mostly_executed
+fully_executed
+over_executed
+```
+
+## Required guardrails
+
+```text
+Not-executed action cannot be judged as failed recommendation.
+Material deviation blocks high-confidence learning.
+Late execution must be visible to adjudication.
+Small sample size must downgrade outcome confidence.
+```
+
+## Required tests
+
+```text
+fully executed
+partially executed
+materially deviated
+not executed
+blocked
+late
+sample below minimum
+wrong workspace forbidden
+```
+
+---
+
+# PHASE 12 — EVIDENCE CAPTURE
+
+## Objective
+
+Capture evidence as raw submitted material without pretending it is verified.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_evidence_records
+```
+
+## Required fields
+
+```text
+id
+workspace_id
+business_id
+related_entity_type
+related_entity_id
+submitted_by
+source_type
+evidence_text
+attachment_url
+original_filename
+hash_checksum
+period_covered
+submitted_at
+status
+created_at
+updated_at
+```
+
+## Evidence statuses
+
+```text
+submitted
+pending_verification
+verified
+rejected
+conflicting
+stale
+insufficient
+```
+
+## Required tests
+
+```text
+submit text evidence
+submit attachment evidence metadata
+evidence starts unverified
+wrong workspace forbidden
+public access forbidden
+```
+
+---
+
+# PHASE 13 — EVIDENCE VERIFICATION
+
+## Objective
+
+Uploaded/submitted evidence is not true until verified.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_evidence_verifications
+```
+
+## Required fields
+
+```text
+id
+workspace_id
+business_id
+evidence_id
+verification_status
+verification_method
+verifier_type
+verified_at
+verification_reason
+source_type
+confidence_level
+conflict_notes
+created_at
+updated_at
+```
+
+## Verifier types
+
+```text
+owner
+system
+admin
+external_record
+test_fixture
+```
+
+## Verification statuses
+
+```text
+verified
+rejected
+insufficient
+conflicting
+stale
+needs_more_evidence
+```
+
+## Required guardrails
+
+```text
+No evidence is verified without verification record.
+Owner statement alone is owner_opinion unless supported by source.
+Verified evidence must keep provenance.
+Conflicting evidence blocks high confidence.
+```
+
+## Required tests
+
+```text
+verify evidence
+reject evidence
+mark conflicting
+mark stale
+owner opinion not treated as verified record
+learning cannot use unverified evidence
+```
+
+---
+
+# PHASE 14 — EXPECTED OUTCOME AND VALIDATION CRITERIA
+
+## Objective
+
+Define how success/failure will be judged before outcome is reported.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_validation_criteria
+owner_action_success_thresholds
+owner_action_failure_thresholds
+owner_stop_loss_rules
+owner_escalation_rules
+```
+
+## Required fields
+
+```text
+id
+workspace_id
+business_id
+recommendation_id
+action_id
+metric_name
+baseline_value
+target_value
+minimum_sample_size
+measurement_start_at
+measurement_end_at
+success_condition
+partial_success_condition
+failure_condition
+stop_condition
+escalation_condition
+review_at
+created_at
+updated_at
+```
+
+## Required guardrails
+
+```text
+No accepted recommendation without validation criteria unless explicitly provisional/data_limited.
+No high-risk action without stop-loss.
+No outcome validation without criteria.
+```
+
+## Required tests
+
+```text
+create validation criteria
+block accepted strong recommendation without criteria
+high-risk requires stop-loss
+criteria linked to action/recommendation
+```
+
+---
+
+# PHASE 15 — OUTCOME TRACKING
+
+## Objective
+
+Record what happened after action.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_action_outcomes
+owner_outcome_metrics
+owner_outcome_evidence
+owner_external_events
+```
+
+## Required fields
+
+```text
+id
+workspace_id
+business_id
+recommendation_id
+action_id
+outcome_status
+owner_reported_result
+actual_metric_name
+before_value
+after_value
+absolute_change
+percentage_change
+measurement_period_start
+measurement_period_end
+evidence_quality
+external_event_flag
+external_event_description
+created_at
+updated_at
+```
+
+## Outcome statuses
+
+```text
+worked
+partially_worked
+did_not_work
+made_worse
+not_measurable
+too_early_to_judge
+invalid_test
+executed_differently
+external_event_interference
+```
+
+## Required tests
+
+```text
+worked outcome
+partial outcome
+failed outcome
+made worse outcome
+too early
+invalid test
+external event
+missing metric
+wrong workspace forbidden
+```
+
+---
+
+# PHASE 16 — HARM TRACKING
+
+## Objective
+
+Track adverse impact from recommendations/actions.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_harm_events
+```
+
+## Harm categories
+
+```text
+none
+cash_loss
+margin_damage
+customer_loss
+churn_increase
+revenue_loss
+compliance_risk
+legal_risk
+reputation_damage
+operational_disruption
+staff_overload
+service_quality_damage
+opportunity_cost
+unknown_harm
+```
+
+## Required fields
+
+```text
+id
+workspace_id
+business_id
+recommendation_id
+action_id
+outcome_id
+harm_category
+harm_severity
+harm_amount_estimate
+harm_metric
+harm_description
+reversibility
+requires_human_review
+created_at
+updated_at
+```
+
+## Harm severity
+
+```text
+none
+low
+medium
+high
+severe
+```
+
+## Required guardrails
+
+```text
+Medium/high/severe harm requires human review.
+High/severe harm blocks automatic learning admission.
+Legal/compliance harm triggers incident review.
+```
+
+## Required tests
+
+```text
+record no harm
+record cash loss
+record churn increase
+medium harm requires review
+severe harm blocks learning
+legal risk triggers incident path
+```
+
+---
+
+# PHASE 17 — FAILURE ADJUDICATION
+
+## Objective
+
+Classify why outcome succeeded, failed, or cannot be judged.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_failure_adjudications
+owner_failure_reasons
+owner_adjudication_evidence
+```
+
+## Failure classes
+
+```text
+wrong_diagnosis
+wrong_priority
+wrong_action
+wrong_timing
+wrong_segment
+wrong_assumption
+constraint_ignored
+bad_execution
+partial_execution
+not_executed
+missing_data
+bad_measurement
+too_early_to_judge
+external_event
+insufficient_evidence
+owner_preference_conflict
+safety_or_compliance_risk
+valid_recommendation_but_unproven
+```
+
+## Deterministic rules
+
+```text
+if action not_executed → invalid_test / not_executed
+if execution materially_deviated → bad_execution
+if no verified evidence → insufficient_evidence
+if measurement period incomplete → too_early_to_judge
+if external event flag true → external_event
+if owner constraint violated → constraint_ignored
+if execution valid + metric worsened → reassessment_required
+if execution valid + success threshold passed → validated_success
+```
+
+## Required guardrails
+
+```text
+No learning before adjudication.
+No reassessment without adjudication.
+No validated failure if execution invalid.
+No validated success if evidence insufficient.
+```
+
+## Required tests
+
+```text
+good recommendation badly executed
+bad recommendation properly executed
+missing metric
+too early
+external event
+constraint ignored
+made worse
+not executed but reported failed
+```
+
+---
+
+# PHASE 18 — CAUSAL ATTRIBUTION CLASSIFICATION
+
+## Objective
+
+Prevent false learning from mere correlation.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_causal_attribution_reviews
+```
+
+## Attribution classes
+
+```text
+not_assessed
+correlation_only
+plausible_contributor
+likely_caused
+confounded
+external_event_dominant
+insufficient_evidence
+```
+
+## Required guardrails
+
+```text
+Learning cannot claim action effectiveness if attribution is correlation_only.
+High-confidence learning requires likely_caused or multiple verified supporting cases later.
+External_event_dominant blocks action-effectiveness learning.
+Confounded requires human review before any learning admission.
+```
+
+## Required tests
+
+```text
+correlation only blocks learning
+plausible contributor allows low/medium eligibility
+likely caused allows high eligibility if other gates pass
+external event dominant blocks learning
+confounded requires human review
+```
+
+---
+
+# PHASE 19 — REASSESSMENT AND CORRECTIVE ACTION
+
+## Objective
+
+When a recommendation fails or is disputed, OpsIQ must reopen diagnosis and produce corrected action.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_reassessment_events
+owner_corrective_diagnoses
+owner_corrective_actions
+owner_hypothesis_revisions
+```
+
+## Required reassessment flow
+
+```text
+failed/disputed outcome
+→ evidence verification
+→ harm tracking
+→ failure adjudication
+→ causal attribution
+→ original diagnosis reopened
+→ assumptions checked
+→ new evidence added
+→ hypotheses re-ranked
+→ corrected diagnosis
+→ corrective action
+→ new validation criteria
+```
+
+## Required tests
+
+```text
+price increase partially failed
+execution invalid customer reactivation
+missing margin caused flawed recommendation
+external event invalidates outcome
+harmful action triggers human review
+```
+
+---
+
+# PHASE 20 — LEARNING ELIGIBILITY GATE WITH HUMAN REVIEW STATUSES
+
+## Objective
+
+Decide whether a case is eligible to become business-specific learning.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_learning_eligibility_reviews
+owner_learning_admission_decisions
+owner_learning_rejection_reasons
+```
+
+## Eligibility statuses
+
+```text
+not_reviewed
+rejected
+eligible_low_confidence
+eligible_medium_confidence
+eligible_high_confidence
+needs_more_cases
+quarantined
+human_review_pending
+human_approved
+human_rejected
+```
+
+## Rejection reasons
+
+```text
+opinion_only
+not_executed
+material_execution_deviation
+missing_metric
+unverified_evidence
+invalid_measurement_window
+external_event_contamination
+single_weak_case
+case_too_unique
+insufficient_evidence
+contradictory_evidence
+causation_not_supported
+harm_review_required
+privacy_controls_missing
+```
+
+## Required guardrails
+
+```text
+No learning from opinion-only feedback.
+No learning from unexecuted actions.
+No learning from materially deviated execution.
+No learning from unverified evidence.
+No learning without adjudication.
+No learning without causal attribution.
+No high-confidence learning without human review if impact is broad or harm exists.
+```
+
+## Required tests
+
+```text
+reject opinion only
+reject not executed
+reject material deviation
+reject unverified evidence
+reject correlation only
+human review required for harm
+admit eligible valid local learning
+quarantine contradictory case
+```
+
+---
+
+# PHASE 21 — DECISION MEMORY
+
+## Objective
+
+Remember business-specific history with evidence links.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_decision_memory
+owner_business_decision_history
+owner_recommendation_history
+owner_do_not_repeat_rules
+owner_preference_constraints
+```
+
+## Memory categories
+
+```text
+owner_goal
+owner_constraint
+accepted_recommendation
+rejected_recommendation
+successful_action
+failed_action
+invalid_test
+corrected_diagnosis
+repeated_execution_issue
+do_not_repeat
+owner_preference
+business_specific_rule
+```
+
+## Required guardrail
+
+Do not repeat previously failed advice unless explaining:
+
+```text
+why situation changed
+what changed
+how execution differs
+why prior failure does not invalidate new action
+```
+
+## Required tests
+
+```text
+stores accepted/rejected/success/failed actions
+do-not-repeat blocks repeat
+repeat allowed only with changed context explanation
+wrong workspace forbidden
+```
+
+---
+
+# PHASE 22 — BUSINESS STATE TIMELINE
+
+## Objective
+
+Shift from snapshot diagnosis to trend-based support.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_business_state_snapshots
+owner_business_metrics_timeline
+owner_metric_events
+owner_trend_detections
+```
+
+## Required metrics
+
+```text
+revenue
+gross_profit
+net_profit
+cash_balance
+cash_runway_days
+debt
+emi_burden
+receivables
+payables
+leads
+conversion_rate
+repeat_customer_rate
+churn
+average_order_value
+customer_count
+marketing_spend
+cost_per_lead
+cost_per_acquisition
+inventory
+staff_count
+staff_productivity
+capacity_utilization
+complaints
+refunds
+rework_rate
+delivery_delay_rate
+```
+
+## Required trend detections
+
+```text
+revenue rising but profit falling
+cash falling despite sales rising
+leads rising but conversion falling
+new customers rising but repeat rate falling
+marketing spend rising but CAC worsening
+staff count rising but productivity falling
+complaints rising before churn rises
+debt burden increasing faster than cash generation
+```
+
+## Required tests
+
+```text
+create monthly snapshot
+compare month vs previous
+compare month vs 3-month average
+detect revenue up/profit down
+detect cash runway worsening
+detect leads up/conversion down
+```
+
+---
+
+# PHASE 23 — AI OBSERVABILITY TRACE LAYER
+
+## Objective
+
+Trace every advisory cycle end-to-end.
+
+## Required structures
+
+Create/extend:
+
+```text
+owner_ai_traces
+owner_ai_trace_events
+```
+
+## Required trace fields
+
+```text
+trace_id
+workspace_id
+business_id
+user_id
+module
+event_type
+timestamp
+inputs_used
+decision_made
+confidence_score
+risk_flags
+blocked_gates
+latency_ms
+error_code
+model_provider
+model_name
+model_version
+prompt_template_version
+ruleset_version
+retrieval_context_version
+created_at
+```
+
+## Required traced events
+
+```text
+input_received
+input_quality_assessed
+diagnosis_generated
+recommendation_generated
+recommendation_verified
+owner_decision_recorded
 action_created
-action_completed
-verification_changed
-recommendation_accepted_or_rejected_where_applicable
+evidence_submitted
+evidence_verified
+outcome_reported
+harm_recorded
+adjudication_completed
+causal_attribution_completed
+reassessment_created
+learning_eligibility_decided
+dashboard_updated
 ```
 
-If audit logging does not exist, first acceptable slice is to introduce minimal audit events around one critical path, not to build a massive audit framework.
-
-## M12 Access Control / Workspace Isolation
-
-Must prove:
+## Required tests
 
 ```text
-- all current Owner Mode API routes require auth
-- all records are workspace-scoped where business data is involved
-- cross-workspace reads are blocked
-- cross-workspace writes are blocked
-- role/capability checks match canonical policy
-- no client-supplied workspace_id is trusted without server-side authorization
-```
-
-## M13 Demo / Seed / Smoke Data Integrity
-
-Must prove:
-
-```text
-- demo data is clearly marked
-- demo data does not mask real-data failure
-- demo records are client_visible where required by dashboard
-- smoke path exercises real product path where possible
-- fake-only proof routes are not used as completion evidence
-```
-
-## M14 Error Handling / Fail-Closed Behaviour
-
-Must prove:
-
-```text
-- invalid input returns clear error
-- missing data does not crash silently
-- conflicting data downgrades confidence or blocks conclusion
-- transaction failure rolls back partial writes
-- external failure does not create false success
-- stale data is labelled stale, not current
-```
-
-## M15 Tests / Smoke / CI Verification
-
-Must prove:
-
-```text
-- unit tests exist for core logic
-- integration/API tests exist for data path
-- smoke/e2e exists for critical journey or exact blocker is documented
-- negative tests exist for unauthorized/missing/invalid/conflicting states
-- commands are documented
-- CI or local equivalent can run them
+trace created for full loop
+blocked gate appears in trace
+model/ruleset version recorded when applicable
+wrong workspace forbidden
+trace does not expose public learning data
 ```
 
 ---
 
-# 9. Hostile Audit Checklist Before and After Every Slice
+# PHASE 24 — INCIDENT RESPONSE AND CIRCUIT BREAKERS
 
-A slice fails if any of these are true.
+## Objective
 
-## 9.1 Mock-only success
+Define what happens when OpsIQ harms, leaks, or misleads.
+
+## Required structures/files
+
+Create/update:
 
 ```text
-- hardcoded demo data proves production behaviour
-- static fake response used in real route
-- mock service is imported in production path
-- placeholder recommendation is treated as diagnosis
-- always-pass verification exists
-- UI status changes without backend state
+OWNER_MODE_INCIDENT_RESPONSE.md
+owner_incident_events
+owner_circuit_breakers
 ```
 
-## 9.2 Data integrity failure
+## Required incident classes
 
 ```text
-- business data not tied to workspace/user
-- diagnosis can read another workspace's data
-- action completion can update wrong action
-- verification can be written without valid action/diagnosis link
-- evidence is not traceable to source
-- partial writes can leave inconsistent state
+harmful_recommendation
+privacy_leak
+cross_tenant_exposure
+learning_gate_bypass
+wrong_high_confidence_advice
+dashboard_misreporting
+evidence_verification_bypass
+db_migration_data_loss
+prompt_injection_success
+security_gate_failure
 ```
 
-## 9.3 Consultant-quality failure
+## Required fields
 
 ```text
-- recommendation is generic
-- recommendation has no evidence
-- recommendation ignores business context
-- recommendation ignores constraints
-- recommendation has no expected impact
-- recommendation has no verification metric
-- recommendation has no risk/trade-off
+incident_id
+severity
+trigger
+detected_at
+affected_workspace_id
+affected_business_id
+containment_step
+feature_flag_shutdown
+rollback_step
+owner_notification_required
+post_incident_review_required
+status
+created_at
+updated_at
 ```
 
-## 9.4 Owner usefulness failure
+## Circuit breaker triggers
 
 ```text
-- owner cannot see what is wrong
-- owner cannot see why it matters
-- owner cannot see what to do next
-- owner cannot see who should do it
-- owner cannot see when to do it
-- owner cannot see how improvement will be verified
-- owner cannot see missing data/confidence
+high/severe harm
+learning gate bypass
+tenant isolation failure
+prompt injection success
+evidence verification bypass
+dashboard wrong outcome status
+DB migration data loss risk
 ```
 
-## 9.5 Fail-closed failure
+## Required tests
 
 ```text
-- missing critical data produces confident recommendation
-- conflicting data is hidden
-- failed verification shows success
-- failed import/sync shows current data
-- caught error returns fake success
-```
-
-## 9.6 Security failure
-
-```text
-- workspace_id is optional where required
-- user authorization is skipped
-- client-supplied workspace_id is trusted blindly
-- role/capability checks are inconsistent
-- server-only secret reaches client
-- cross-tenant data access is possible
+learning bypass triggers incident
+tenant isolation failure path exists
+severe harm triggers circuit breaker
+evidence bypass triggers incident
+rollback path documented
 ```
 
 ---
 
-# 10. Slice Execution Loop
+# PHASE 25 — MODEL/PROMPT/RULESET VERSIONING AND CHANGE CONTROL
 
-Claude must execute one small slice at a time.
+## Objective
 
-## 10.1 Slice size rule
+Prevent invisible changes from degrading advice.
 
-A slice should normally:
+## Required structures
 
-```text
-- target one module
-- fix one behaviour
-- touch the smallest practical file set
-- add or update tests for that behaviour
-- run targeted verification and one regression command
-```
-
-Acceptable slices:
+Create/extend:
 
 ```text
-- Add evidence relation to diagnosis response and test it.
-- Block cross-workspace action completion and test it.
-- Add missing-data confidence downgrade and test it.
-- Make dashboard display verification status from backend and test it.
+owner_model_change_log
+owner_prompt_template_versions
+owner_ruleset_versions
+owner_evaluation_versions
 ```
 
-Unacceptable slices:
+## Required fields
 
 ```text
-- Rebuild Owner Mode.
-- Implement all modules.
-- Rewrite diagnosis, dashboard, action flow, and verification together.
-- Add external integrations or simulations before current Owner Mode is verified.
+id
+version_type
+version_name
+previous_version
+new_version
+change_reason
+risk_level
+regression_required
+regression_result
+feature_flag
+rollback_plan
+approved_by
+created_at
 ```
 
-## 10.2 Required slice start output
+## Required behavior
+
+Before changing model/provider/prompt/ruleset:
+
+```text
+run regression suite
+compare outputs
+check genericness
+check safety overrides
+check owner constraints
+check tenant isolation
+feature-flag rollout
+define rollback plan
+```
+
+## Required tests
+
+```text
+version change recorded
+high-risk change requires regression
+rollback plan required
+output trace records version
+```
+
+---
+
+# PHASE 26 — OWNER DASHBOARD PROOF
+
+## Objective
+
+If the owner cannot see/use the loop, it does not exist.
+
+## Required dashboard display
+
+Owner dashboard must show:
+
+```text
+input quality status
+critical missing data
+diagnosis status
+recommendations
+verification status
+owner decision status
+actions
+execution status
+evidence status
+outcome status
+benefit status
+harm flag if any
+adjudication status
+reassessment queue
+learning eligibility status
+business trend warnings
+incidents requiring owner attention
+```
+
+## Required guardrails
+
+```text
+Do not expose hidden controlled learning internals.
+Do not expose public learning hints.
+Show owner-useful statuses, not internal machinery.
+Wrong workspace forbidden.
+```
+
+## Required tests
+
+```text
+dashboard loads
+shows active recommendation
+shows missing data
+shows action status
+shows evidence verification
+shows outcome
+shows reassessment required
+does not expose hidden learning internals publicly
+```
+
+---
+
+# PHASE 27 — FULL-LOOP VALIDATION SUITE
+
+## Objective
+
+Prove the full loop, not only first-pass diagnosis.
+
+## Required full-loop test
+
+At minimum:
+
+```text
+input record
+→ input quality
+→ diagnosis
+→ recommendation
+→ recommendation verification
+→ owner decision
+→ benefit record
+→ action
+→ execution
+→ evidence
+→ evidence verification
+→ validation criteria
+→ outcome
+→ harm tracking
+→ adjudication
+→ causal attribution
+→ reassessment
+→ learning eligibility
+→ decision memory
+→ business timeline
+→ observability trace
+→ dashboard proof
+```
+
+## Required scenario cases
+
+```text
+cash crisis
+high revenue / low profit
+high leads / low conversion
+repeat customer decline
+bad marketing ROI
+staff productivity failure
+pricing action failure
+inventory/cash lockup
+debt pressure
+partial execution
+external market shock
+missing data
+owner constraint conflict
+harmful recommendation
+prompt injection attempt
+unverified evidence attempt
+```
+
+## Required tests
+
+```text
+root-cause accuracy
+first-action usefulness
+constraint awareness
+missing-data abstention
+execution feasibility
+outcome tracking
+harm tracking
+failure adjudication
+causal attribution
+corrective diagnosis
+learning rejection
+learning eligibility
+trend detection
+dashboard proof
+tenant isolation
+LANE_B DB proof
+```
+
+---
+
+# PHASE 28 — OWNER PILOT CHECKLIST
+
+## Objective
+
+Prepare controlled real-business Owner Mode use before public SaaS.
+
+## Required file
+
+Create/update:
+
+```text
+OWNER_MODE_REAL_BUSINESS_PILOT_CHECKLIST.md
+```
+
+## Required sections
+
+```text
+required business inputs
+input quality checklist
+first 30-day operating cadence
+minimum metrics
+owner decision process
+action tracking process
+evidence submission process
+evidence verification process
+outcome reporting process
+harm reporting process
+failure reassessment process
+learning eligibility process
+dashboard review process
+weekly review process
+monthly review process
+pilot success criteria
+pilot stop conditions
+```
+
+## Candidate business types to support
+
+Do not hardcode, but support:
+
+```text
+laundry/dry-cleaning
+commercial housekeeping
+boutique/clothing
+food/beverage
+local service business
+```
+
+---
+
+# LATER-USE PRIVATE CONTROLLED LEARNING & RELIABILITY SYSTEM
+
+Do not implement this until Phases 0–28 are COMPLETE_VERIFIED.
+
+## Later hard gates
+
+```text
+verified outcomes only
+no public learning hints
+no unverified feedback ingestion
+tenant isolation
+privacy-safe aggregation
+consent/retention controls
+causal attribution
+harm tracking
+human review
+regression gates
+staged rollout
+rollback
+LANE_B DB verification
+no false COMPLETE
+```
+
+## Later structures
+
+```text
+controlled_learning_candidates
+controlled_learning_reviews
+controlled_learning_admissions
+controlled_learning_rejections
+controlled_learning_harm_events
+controlled_learning_attribution_reviews
+controlled_learning_privacy_controls
+controlled_learning_consent_records
+controlled_learning_retention_policies
+controlled_learning_rollout_flags
+controlled_learning_regression_results
+controlled_learning_rollback_events
+```
+
+## Later pipeline
+
+```text
+verified owner outcome
+→ evidence verification
+→ execution verification
+→ adjudication
+→ harm classification
+→ causal attribution
+→ privacy/consent/retention check
+→ human review when required
+→ regression test candidate
+→ staged rollout
+→ monitor
+→ admit / quarantine / rollback
+```
+
+## Later prohibitions
+
+```text
+No unverified feedback ingestion.
+No model training from raw owner comments.
+No cross-tenant data use without explicit consent and anonymization.
+No public UI hints of hidden learning.
+No high-impact learning without human review.
+No reliability rollout without rollback plan.
+No DB-backed reliability slice without LANE_B proof.
+No COMPLETE without proof.
+```
+
+---
+
+# CROSS-CUTTING TEST REQUIREMENTS
+
+Every relevant slice must include tests for:
+
+```text
+authenticated owner can access own records
+wrong workspace forbidden
+unauthenticated user rejected
+public route cannot access owner records
+tenant isolation preserved
+audit trail preserved
+invalid status transition blocked
+DB persistence works if DB-backed
+dashboard query does not leak hidden internals
+```
+
+Status transition tests must block:
+
+```text
+recommendation → learning without adjudication
+not_executed action → validated failure
+opinion-only evidence → verified outcome
+unverified evidence → learning eligibility
+correlation_only attribution → high confidence learning
+medium/high/severe harm → automatic learning admission
+rejected owner decision → action creation
+public user → owner memory access
+```
+
+---
+
+# REQUIRED CLOSEOUT AFTER EVERY SLICE
+
+Create/update:
+
+```text
+OWNER_MODE_REALITY_LOOP_CLOSEOUT.md
+```
+
+Append:
+
+```text
+slice_name
+status
+branch
+commit_before
+commit_after
+files_changed
+models_added_or_changed
+routes_added_or_changed
+services_added_or_changed
+ui_added_or_changed
+tests_added_or_changed
+commands_run
+command_results
+LANE_B_status_if_DB_backed
+known_limitations
+regressions_found
+regressions_fixed
+security_findings
+tenant_isolation_findings
+dashboard_proof_status
+next_required_slice
+```
+
+No closeout, no completion.
+
+---
+
+# REQUIRED COMMIT RULE
+
+After each verified slice:
+
+```bash
+git status --short
+git add <only files changed for this slice>
+git commit -m "<clear slice message>"
+```
+
+If committing is unavailable, document:
+
+```text
+commit not made
+reason
+exact files changed
+diff summary
+```
+
+---
+
+# HARD STOP CONDITIONS
+
+Claude must stop and report immediately if:
+
+```text
+current repo state cannot be inspected
+baseline cannot be established
+scope requires public/SaaS/billing/Product Hunt changes
+DB-backed slice lacks LANE_B proof but is being called COMPLETE_VERIFIED
+database migration risk is unclear
+Prisma schema conflicts are unresolved
+auth/tenant isolation cannot be verified
+public route exposes owner data
+input can override instructions
+evidence verification can be bypassed
+learning eligibility can be bypassed
+owner decision can be skipped
+action can be created from rejected recommendation
+not-executed action can validate recommendation failure
+harm is observed but not recorded
+medium/high/severe harm bypasses human review
+causal attribution is missing before learning eligibility
+cross-business learning is attempted
+privacy/consent/retention controls are required but missing
+rollout lacks feature flag or rollback plan
+model/prompt/ruleset change lacks regression gate
+build/test/typecheck fails and cannot be fixed safely
+existing proven Owner Mode behavior regresses
+```
+
+---
+
+# FINAL COMPLETION STANDARD
+
+Owner Mode can be called COMPLETE_VERIFIED only when all below are true:
+
+```text
+1. Repository baseline was inspected and documented.
+2. Roadmap freezes premature public/SaaS/billing/Product Hunt/external intelligence work.
+3. AI use-case inventory and risk register exist.
+4. Autonomy/access classifications exist and block autonomous business action.
+5. Security threat model covers input, memory, evidence, and tools.
+6. Input quality and provenance gate exists.
+7. Diagnosis evidence contract exists.
+8. Recommendations are structured and tracked.
+9. Recommendations are verified before owner decision.
+10. Anti-overreliance acknowledgement exists for medium/high-impact recommendations.
+11. Owner decision and decision-rights are captured.
+12. Benefits realization register exists.
+13. Actions and execution are tracked.
+14. Evidence is captured separately from verification.
+15. Evidence verification records verifier metadata.
+16. Validation criteria and stop/escalation rules exist.
+17. Outcomes are tracked.
+18. Harm events are tracked.
+19. Failure adjudication exists.
+20. Causal attribution classification exists.
+21. Reassessment and corrective action exist.
+22. Learning eligibility gate exists and cannot be bypassed.
+23. Decision memory exists.
+24. Business state timeline exists.
+25. AI observability trace layer exists.
+26. Incident response and circuit breakers exist.
+27. Model/prompt/ruleset versioning and change control exist.
+28. Owner dashboard proves the loop without exposing hidden learning internals.
+29. Full-loop validation suite passes.
+30. Owner pilot checklist exists.
+31. Owner/public separation is proven.
+32. Tenant isolation is proven.
+33. DB-backed slices have LANE_B real PostgreSQL proof.
+34. No false COMPLETE has been claimed.
+```
+
+Anything less is not complete.
+
+---
+
+# FINAL INSTRUCTION TO CLAUDE
+
+Implement only the next incomplete slice.
 
 Before implementation:
 
 ```text
-SLICE_START:
-  slice_id:
-  target_module:
-  defect_or_gap:
-  evidence_from_repo:
-  why_this_is_highest_risk_next:
-  intended_change:
-  files_expected_to_touch:
-  tests_expected_to_add_or_update:
-  commands_expected_to_run:
-  rollback_risk:
+inspect repo
+hostile audit current state
+confirm exact status
+run baseline checks
 ```
 
-## 10.3 Required implementation discipline
+During implementation:
 
 ```text
-1. Inspect existing implementation first.
-2. Reuse existing patterns and wrappers.
-3. Do not invent parallel architecture.
-4. Keep response contracts compatible unless a documented contract change is required.
-5. Add migrations only when required.
-6. Add tests before or with implementation.
-7. Do not weaken existing tests.
-8. Do not remove existing guardrails.
-9. Do not bypass type errors.
-10. Do not hide lint/type/build failures.
-11. Do not continue to a second slice until closeout is complete.
+make smallest safe change
+preserve proven work
+avoid unrelated scope
+write tests
+protect tenant boundaries
+preserve audit trail
 ```
 
-## 10.4 Required slice closeout output
-
-After implementation/testing:
+After implementation:
 
 ```text
-SLICE_CLOSEOUT:
-  slice_id:
-  files_changed:
-  implementation_summary:
-  tests_added_or_updated:
-  commands_run:
-  command_results:
-  acceptance_gate_check:
-  hostile_audit_result:
-  remaining_risks:
-  status:
+run all relevant checks
+run LANE_B if DB-backed
+fix breakage immediately
+write closeout
+commit if available
+stop
 ```
 
-Status must be one of:
+Do not claim completion without proof.
 
-```text
-VERIFIED_COMPLETE
-IMPLEMENTED_UNTESTED
-TESTED_PARTIAL
-RUNTIME_DB_UNVERIFIED
-BLOCKED_WITH_EVIDENCE
-```
+Do not proceed if broken.
 
----
-
-# 11. Required Test Command Discovery
-
-Claude must determine actual commands from package.json and repo config.
-
-Common possibilities only if present:
-
-```bash
-npm run typecheck
-npm run lint
-npm test
-npm run test
-npm run test:ci
-npm run build
-npm run smoke
-npm run e2e
-```
-
-If scripts differ, use actual scripts only.
-
-## 11.1 Minimum verification per slice
-
-Each slice requires:
-
-```text
-- targeted test for changed behaviour
-- one regression command where feasible
-- typecheck/build/lint when relevant and available
-```
-
-If no relevant tests exist, the slice must add tests unless blocked by exact repo limitation.
-
-## 11.2 DB unavailable protocol
-
-Do not repeatedly attempt DB startup.
-
-Required output:
-
-```text
-DB_BLOCKER:
-  command_attempted:
-  exact_error:
-  database_expected_by_repo:
-  docker_available:
-  local_db_available:
-  tests_that_could_run_without_db:
-  tests_not_run:
-  verification_status: RUNTIME_DB_UNVERIFIED
-```
-
-Allowed after DB blocker:
-
-```text
-- static analysis
-- typecheck
-- unit tests not requiring DB
-- contract tests not requiring DB
-- documentation of exact missing runtime proof
-```
-
-Forbidden after DB blocker:
-
-```text
-- claiming runtime journey complete
-- repeatedly retrying same unavailable DB command
-- editing tests to avoid DB without explicit test-scope reason
-```
-
----
-
-# 12. Mandatory Customer Journey Proof
-
-Full Owner Mode cannot be accepted without this journey being proven by automated smoke/e2e, API-level integration test, or exact command-backed equivalent.
-
-```text
-signup/login
-↓
-workspace created/selected
-↓
-business profile created
-↓
-owner inputs business data
-↓
-diagnosis generated
-↓
-finding/recommendation/action/evidence persisted
-↓
-owner dashboard displays same records
-↓
-operator/action route completes an action
-↓
-actual outcome is recorded
-↓
-verification status updates
-↓
-owner dashboard reflects updated status
-```
-
-Required assertions:
-
-```text
-- no cross-workspace leakage
-- no mock-only success
-- diagnosis response includes evidence/confidence/missing data
-- action has valid status transition
-- verification does not auto-pass without outcome/evidence
-- dashboard reads persisted records
-- invalid/missing input path fails closed
-```
-
-If this cannot run, status is not `VERIFIED_COMPLETE`.
-
----
-
-# 13. Documentation Requirements
-
-Every slice must update `OWNER_MODE_STATUS_REPORT.md` if it exists. If it does not exist, create it.
-
-Required module status entry:
-
-```text
-module:
-status:
-verified_by:
-commands_run:
-files_changed:
-known_gaps:
-remaining_risks:
-next_slice:
-```
-
-Rules:
-
-```text
-- Do not write marketing language.
-- Do not write “done” without evidence.
-- Do not erase previous unresolved risks.
-- Do not mark module VERIFIED_COMPLETE unless all gates are satisfied.
-```
-
----
-
-# 14. Final Full Owner Mode Acceptance Gate
-
-Full Owner Mode is accepted only when every module is `VERIFIED_COMPLETE`:
-
-```text
-FINAL_OWNER_MODE_ACCEPTANCE:
-  M01 Business Profile: VERIFIED_COMPLETE
-  M02 Data Intake: VERIFIED_COMPLETE
-  M03 Diagnosis Engine: VERIFIED_COMPLETE
-  M04 Evidence Model: VERIFIED_COMPLETE
-  M05 Recommendation Engine: VERIFIED_COMPLETE
-  M06 Action Plan: VERIFIED_COMPLETE
-  M07 Owner Dashboard: VERIFIED_COMPLETE
-  M08 Operator Completion: VERIFIED_COMPLETE
-  M09 Verification Tracking: VERIFIED_COMPLETE
-  M10 Constraint Handling: VERIFIED_COMPLETE
-  M11 Audit Logging: VERIFIED_COMPLETE
-  M12 Access Control: VERIFIED_COMPLETE
-  M13 Demo/Smoke Data: VERIFIED_COMPLETE
-  M14 Fail-Closed Errors: VERIFIED_COMPLETE
-  M15 Tests/CI: VERIFIED_COMPLETE
-```
-
-And this journey passes:
-
-```text
-signup -> workspace -> business profile -> input -> diagnosis -> dashboard -> action completion -> verification -> dashboard update
-```
-
-And this command set passes or has exact blocker evidence:
-
-```text
-typecheck
-lint
-unit tests
-integration/API tests
-build
-smoke/e2e customer journey
-```
-
-If any required runtime command is blocked, the final status cannot be `VERIFIED_COMPLETE`; it must be `RUNTIME_DB_UNVERIFIED` or `BLOCKED_WITH_EVIDENCE`.
-
----
-
-# 15. First Execution Instruction for Claude
-
-```text
-Read execution.md fully.
-
-Perform the Repo Reality Scan from section 3.
-
-Then audit all current Full Owner Mode modules using sections 5–9.
-
-Do not implement anything until the repo-backed module audit is complete.
-
-After the audit, select the single smallest highest-risk incomplete slice.
-
-Output SLICE_START.
-
-Implement only that slice.
-
-Run targeted tests and one regression command.
-
-Update OWNER_MODE_STATUS_REPORT.md.
-
-Output SLICE_CLOSEOUT with command evidence.
-
-Repeat until every module is VERIFIED_COMPLETE or blocked with exact evidence.
-```
-
----
-
-# 16. Mobile-Safe Short Prompt
-
-```text
-Read execution.md. Follow it exactly. Repo scan first. Audit M01–M15. No coding before audit. Then implement the smallest highest-risk incomplete slice only. Test, update OWNER_MODE_STATUS_REPORT.md, close out with evidence, repeat. No assumptions. No broad rewrites. No false COMPLETE.
-```
-
----
-
-# 17. Zero-Prompt Build Loop Command
-
-Purpose: allow the owner to continue the next slice with a short command instead of pasting a full prompt.
-
-Claude must support a repository-resident command named:
-
-```text
-/continue-build
-```
-
-## 17.1 Required command file
-
-If the repo uses Claude Code slash commands, create this file:
-
-```text
-.claude/commands/continue-build.md
-```
-
-with this exact content:
-
-```text
-Read execution.md from repo root and follow it exactly.
-
-Continue Full Owner Mode from the latest repo-proven state only.
-
-Mandatory sequence:
-1. Read execution.md.
-2. Read OWNER_MODE_STATUS_REPORT.md if present.
-3. Run a minimal repo reality check:
-   - git status --short
-   - git rev-parse --short HEAD
-   - cat package.json
-4. Determine the next incomplete M01–M15 slice from repo evidence, not chat memory.
-5. Output SLICE_START using execution.md format.
-6. Implement only the single smallest highest-risk incomplete slice.
-7. Run the targeted test for that slice.
-8. Run one relevant regression command.
-9. Update OWNER_MODE_STATUS_REPORT.md.
-10. Output SLICE_CLOSEOUT using execution.md format.
-
-Rules:
-- No broad rewrites.
-- No future/post-owner modules.
-- No CRM/API/browser import/growth/simulation/learning modules.
-- No skipped audit gates.
-- No false COMPLETE.
-- If DB/Docker/runtime is unavailable, capture exact command and error once, mark RUNTIME_DB_UNVERIFIED or BLOCKED_WITH_EVIDENCE, then continue with non-DB-verifiable slices only.
-- Do not repeatedly retry blocked infrastructure.
-```
-
-## 17.2 If Claude Code slash commands are unavailable
-
-Create this fallback command file:
-
-```text
-opsiq-continue-build.md
-```
-
-with the same content as `.claude/commands/continue-build.md`.
-
-Then the short command/prompt to use is:
-
-```text
-Run opsiq-continue-build.md
-```
-
-## 17.3 Required startup behaviour when `/continue-build` is used
-
-On every `/continue-build`, Claude must not ask what to do next. It must:
-
-```text
-1. Inspect repo state.
-2. Read status report.
-3. Identify next incomplete slice.
-4. Start SLICE_START.
-5. Implement one slice.
-6. Test it.
-7. Update status.
-8. Output SLICE_CLOSEOUT.
-```
-
-## 17.4 Required closeout behaviour
-
-At the end of every `/continue-build` run, Claude must state one of these:
-
-```text
-NEXT_RUN_READY: /continue-build
-```
-
-or
-
-```text
-BLOCKED_NEXT_RUN_NOT_SAFE:
-  reason:
-  exact_command_failed:
-  exact_error_summary:
-  human_action_required:
-```
-
-Claude must not end with a vague question such as:
-
-```text
-What would you like me to do next?
-```
-
-## 17.5 Command must not bypass gates
-
-The short command is only a trigger. It does not weaken any audit requirement in this execution file.
-
-`/continue-build` must still obey:
-
-```text
-- repo evidence hierarchy
-- M01–M15 module scope
-- smallest-slice execution
-- targeted test requirement
-- regression command requirement
-- status report update requirement
-- no false VERIFIED_COMPLETE rule
-```
-
-
----
-
-# 18. v3 Hostile Hardening Addendum — Mandatory
-
-This section fixes loopholes found after auditing the zero-prompt build-loop version. It overrides any weaker wording above.
-
-## 18.1 Dirty working tree policy
-
-Before any `/continue-build` implementation, Claude must inspect the working tree.
-
-Required command:
-
-```bash
-git status --short
-```
-
-Rules:
-
-```text
-- If the working tree has uncommitted changes, Claude must classify them before editing.
-- If changes appear to be from the previous slice and are documented in OWNER_MODE_STATUS_REPORT.md, Claude may continue.
-- If changes are undocumented, unrelated, or ambiguous, Claude must stop before editing and output DIRTY_TREE_BLOCKER.
-- Claude must not overwrite, delete, reformat, or silently absorb unrelated user/worktree changes.
-```
-
-Required output if blocked:
-
-```text
-DIRTY_TREE_BLOCKER:
-  changed_files:
-  suspected_origin:
-  risk:
-  safe_next_action:
-```
-
-## 18.2 Status report is not a source of truth
-
-`OWNER_MODE_STATUS_REPORT.md` is only a navigation aid.
-
-Rules:
-
-```text
-- Status report entries do not prove completion.
-- Every claimed completed slice must be re-checked against code/tests/commands before relying on it.
-- If status report and repo evidence disagree, repo evidence wins.
-- If status report marks VERIFIED_COMPLETE but required tests are absent or failing, downgrade the module.
-```
-
-## 18.3 Build-loop bootstrap must be implemented as its own first slice if missing
-
-The zero-prompt command cannot be assumed to exist.
-
-Before normal module work, Claude must check:
-
-```text
-.claude/commands/continue-build.md
-opsiq-continue-build.md
-```
-
-Rules:
-
-```text
-- If neither exists, the first permitted slice is BUILD_LOOP_BOOTSTRAP.
-- BUILD_LOOP_BOOTSTRAP may create only the command file(s), not product logic.
-- After bootstrap, Claude must output NEXT_RUN_READY: /continue-build.
-- Bootstrap does not count as M01–M15 verification.
-```
-
-Required bootstrap closeout:
-
-```text
-BUILD_LOOP_BOOTSTRAP_CLOSEOUT:
-  command_files_created:
-  content_matches_execution_md: true/false
-  product_files_touched: must be NONE
-  next_run_command:
-```
-
-## 18.4 Full audit is not required on every continuation, but delta audit is mandatory
-
-The first execution after installing this file must perform the full M01–M15 audit.
-
-For later `/continue-build` runs:
-
-```text
-- Claude must not re-run the entire expensive audit unless repo evidence changed materially.
-- Claude must read the prior audit/status report.
-- Claude must run a delta audit for the selected next slice.
-- Claude must verify that the selected module status is still supported by current repo evidence.
-```
-
-Required output on continuation:
-
-```text
-DELTA_AUDIT:
-  prior_status_source:
-  files_rechecked:
-  commands_or_searches_rechecked:
-  status_confirmed_or_downgraded:
-  reason:
-```
-
-## 18.5 Evidence artifacts must be durable
-
-Closeout cannot rely only on prose.
-
-For every command run, Claude must capture or summarize command evidence with enough specificity to verify later.
-
-Required:
-
-```text
-- exact command
-- exit code
-- pass/fail
-- relevant output excerpt
-- if available, log file path under logs/owner-mode/
-```
-
-Recommended log convention:
-
-```text
-logs/owner-mode/<YYYYMMDD-HHMM>-<slice_id>-<command-name>.log
-```
-
-If log files are not created, Claude must explain why and include output excerpts in SLICE_CLOSEOUT.
-
-## 18.6 Test modification restriction
-
-Claude must not make tests pass by weakening the test suite.
-
-Forbidden unless explicitly justified as a test-correction slice:
-
-```text
-- deleting failing tests
-- skipping tests
-- replacing assertions with weaker assertions
-- changing production expectations to match broken behaviour
-- changing fixtures to hide real defects
-- excluding failing files from test config
-```
-
-If tests are changed, closeout must include:
-
-```text
-TEST_CHANGE_JUSTIFICATION:
-  tests_changed:
-  why_change_was_required:
-  production_behaviour_asserted:
-  did_assertion_strength_increase: true/false
-```
-
-If `did_assertion_strength_increase` is false, the slice cannot be `VERIFIED_COMPLETE` without separate justification.
-
-## 18.7 Migration and schema-change controls
-
-Schema changes are high-risk.
-
-Before editing Prisma/schema/migrations/database types, Claude must output:
-
-```text
-SCHEMA_CHANGE_PRECHECK:
-  reason_schema_change_is_required:
-  existing_models_checked:
-  backward_compatibility_risk:
-  migration_required: true/false
-  data_backfill_required: true/false
-  rollback_plan:
-```
-
-Rules:
-
-```text
-- Do not add duplicate models if an equivalent model exists.
-- Do not rename/delete fields without migration/backward-compatibility analysis.
-- Do not introduce nullable fields to bypass required data without documenting why.
-- Do not mark schema-related module VERIFIED_COMPLETE if migration cannot be verified and runtime DB verification is required.
-```
-
-## 18.8 API contract controls
-
-Any changed API route/service response must have a documented response contract.
-
-Required when touching API/service outputs:
-
-```text
-API_CONTRACT_CHECK:
-  route_or_function:
-  request_shape:
-  response_shape:
-  error_shape:
-  auth_required:
-  workspace_scope_source:
-  backward_compatibility:
-  tests_covering_contract:
-```
-
-Rules:
-
-```text
-- Do not silently change response field names.
-- Do not remove fields used by UI/tests without updating all consumers.
-- Do not return raw internal errors to the client.
-- Do not return success=true when persistence/action failed.
-```
-
-## 18.9 UI contract controls
-
-Any changed UI path must be tied to backend data or explicitly marked as mock/demo.
-
-Required when touching UI:
-
-```text
-UI_CONTRACT_CHECK:
-  page_or_component:
-  backend_source:
-  loading_state:
-  empty_state:
-  error_state:
-  unauthorized_state:
-  stale_data_state_where_applicable:
-  tests_or_static_proof:
-```
-
-Rules:
-
-```text
-- UI cannot be accepted if it only renders static placeholder content.
-- UI must not hide backend error states as empty success states.
-- Dashboard data must be traced to API/service/persistence path.
-```
-
-## 18.10 Auth and workspace isolation proof must include negative checks
-
-For any slice touching user/business data, closeout must include one of:
-
-```text
-- automated cross-workspace negative test, or
-- existing test path re-run with exact command, or
-- exact blocker explaining why it could not be run.
-```
-
-Static inspection alone cannot make access-control-sensitive work `VERIFIED_COMPLETE` unless the module is purely non-runtime and no route/service writes/reads user data.
-
-## 18.11 DB blocker does not permit indefinite avoidance of DB-required modules
-
-If DB/runtime is unavailable:
-
-```text
-- Claude may continue only with slices whose acceptance gates do not require DB/runtime proof.
-- Claude must maintain a DB_BLOCKED_QUEUE listing modules/slices that cannot be verified.
-- Claude must not mark the overall Full Owner Mode as VERIFIED_COMPLETE.
-- Claude must not repeatedly choose low-value non-DB slices while high-risk DB-required slices remain blocked without stating that limitation.
-```
-
-Required output when DB is blocked and work continues:
-
-```text
-DB_BLOCKED_QUEUE:
-  blocked_slices:
-  reason_each_requires_db:
-  non_db_slice_selected:
-  why_non_db_slice_is_safe_and_useful:
-```
-
-## 18.12 Slice priority must be deterministic
-
-After audit, next slice selection must follow this priority unless a blocker exists:
-
-```text
-P0: security/workspace isolation/auth failure
-P1: data integrity/persistence/transaction failure
-P2: diagnosis/evidence/recommendation correctness failure
-P3: action completion/verification/customer journey failure
-P4: dashboard visibility/error-state failure
-P5: tests/status/audit documentation hardening
-```
-
-Required in SLICE_START:
-
-```text
-priority_class:
-why_no_higher_priority_slice_selected:
-```
-
-## 18.13 No hidden dependency installation
-
-Claude must not install packages just to complete a slice unless required.
-
-Before adding dependencies:
-
-```text
-DEPENDENCY_CHANGE_PRECHECK:
-  package:
-  why_needed:
-  alternatives_in_repo:
-  security_or_maintenance_risk:
-  lockfile_to_change:
-```
-
-Rules:
-
-```text
-- Prefer existing dependencies.
-- Do not add large new frameworks for a small slice.
-- Do not change package manager.
-```
-
-## 18.14 Environment variable and secret handling
-
-Claude must not require unavailable secrets for normal verification unless unavoidable.
-
-Rules:
-
-```text
-- Do not print secrets.
-- Do not add real secrets to files.
-- Document required env vars with placeholder names only.
-- Tests should use safe test env values or mocks where appropriate.
-- Missing env vars must produce explicit fail-closed errors, not fake success.
-```
-
-## 18.15 Completion language restriction applies to final responses too
-
-Claude must not end a slice with vague positive language.
-
-Forbidden final phrases unless the strict status supports them:
-
-```text
-all done
-fully complete
-production ready
-ready to launch
-works perfectly
-no issues
-```
-
-Required ending:
-
-```text
-NEXT_RUN_READY: /continue-build
-```
-
-or:
-
-```text
-BLOCKED_NEXT_RUN_NOT_SAFE:
-  reason:
-  exact_command_failed:
-  exact_error_summary:
-  human_action_required:
-```
-
-## 18.16 The `/continue-build` command content must include v3 hardening
-
-If `.claude/commands/continue-build.md` or `opsiq-continue-build.md` exists but does not mention this v3 hardening section, Claude must update it before continuing product work.
-
-Minimum command-file line required:
-
-```text
-Also obey section 18 v3 Hostile Hardening Addendum in execution.md; it overrides weaker instructions.
-```
-
-## 18.17 Final acceptance requires fresh verification, not accumulated claims
-
-Before final Full Owner Mode acceptance, Claude must run a fresh verification pass from current repo state.
-
-Required:
-
-```text
-FINAL_FRESH_VERIFICATION:
-  branch:
-  commit:
-  working_tree_status:
-  commands_run:
-  module_statuses_rechecked:
-  customer_journey_result:
-  unresolved_blockers:
-  final_status:
-```
-
-If any verification command is skipped, blocked, or stale, final status cannot be `VERIFIED_COMPLETE`.
+Do not skip the loop.
