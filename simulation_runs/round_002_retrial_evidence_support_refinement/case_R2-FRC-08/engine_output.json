@@ -1,0 +1,205 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+    "2 constraint(s) identified that may block execution"
+  ],
+  "decisionMemo": {
+    "id": "c157a50c-e34a-453a-891c-5588d5503714",
+    "engagementId": "6192ccc9-9cbc-5dcc-b54a-eaf70d348656",
+    "timestamp": "2026-06-18T07:14:41.761Z",
+    "businessProblem": "Turnaround is slow and staff blame an assembly bottleneck, but the line keeps stopping for a different reason.",
+    "rootCauseDiagnosis": {
+      "id": "c1aef52f-5bdf-429d-9803-3b0567a9bf09",
+      "type": "inventory_forecasting_mismatch",
+      "description": "Inventory / forecasting mismatch: stock misallocated against demand (stockouts + overstock)",
+      "mechanismDescription": "Forecast error misallocates stock — stockouts on fast lines alongside overstock on slow lines — trapping cash and forcing markdowns; the issue is planning, not demand or cost.",
+      "evidenceIds": [
+        "aefc4a77-76bd-5d62-8c68-32884de854b2",
+        "2125d1fa-9b27-5482-a46e-2099b44adfb9"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "A one-off supplier disruption rather than a forecasting problem",
+        "A deliberate stock build rather than a forecast error"
+      ],
+      "missingEvidenceFor": [
+        "Forecast accuracy by SKU/ABC class",
+        "Demand variability and lead-time data"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [
+      {
+        "id": "ad1650eb-6f3f-46e8-801c-a91918c43aed",
+        "type": "ORGANIZATIONAL",
+        "description": "No customer relationship management system or loyalty program infrastructure",
+        "severity": "MEDIUM",
+        "blocksActions": [
+          "retention_focus",
+          "relationship_marketing"
+        ],
+        "releasableVia": [
+          "crm_implementation",
+          "loyalty_program_design"
+        ]
+      },
+      {
+        "id": "e9589e3b-0268-4266-994c-d22829bbf391",
+        "type": "RESOURCE",
+        "description": "Limited production/service capacity requires capital investment",
+        "severity": "HIGH",
+        "blocksActions": [
+          "volume_increase",
+          "market_expansion",
+          "aggressive_growth"
+        ],
+        "releasableVia": [
+          "equipment_investment",
+          "facility_upgrade"
+        ]
+      }
+    ],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "e0aad296-6d3a-4b38-8b33-17abc2a73dde",
+          "title": "Run a forecast-accuracy and ABC inventory analysis with a demand-segmentation review",
+          "class": "STABILIZATION",
+          "objective": "Locate the forecast/stock mismatch before any blanket inventory change",
+          "rationale": "A forecast-accuracy and ABC inventory analysis is analysis-only and reversible, sizing forecast error and stock misallocation by SKU class before any replenishment change.",
+          "whyThisNow": "Stock is misallocated against demand; the forecast mismatch must be measured before any inventory move",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Run a forecast-accuracy / ABC inventory analysis",
+              "description": "Measure forecast error by SKU/ABC class and quantify stockouts vs overstock.",
+              "ownerRole": "consultant",
+              "estimatedDays": 4,
+              "successCriteria": "Forecast error and stock misallocation quantified by SKU class"
+            },
+            {
+              "sequence": 2,
+              "title": "Run a demand-segmentation review",
+              "description": "Segment demand variability to right-size stock by velocity — protecting best-sellers, trimming slow lines.",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Velocity-segmented stock plan drafted protecting best-sellers"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Forecast-accuracy / ABC analysis complete",
+            "Demand-segmentation reviewed"
+          ],
+          "failureRisks": [
+            "SKU-level demand history may be sparse for new lines"
+          ],
+          "fallbackPlan": "Apply velocity-segmented adjustments to the worst SKUs first before a broader change",
+          "evidenceBasis": [
+            "aefc4a77-76bd-5d62-8c68-32884de854b2",
+            "2125d1fa-9b27-5482-a46e-2099b44adfb9"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 72,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "bffd2522-2965-4711-997b-c53019dbb2cc",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "e0aad296-6d3a-4b38-8b33-17abc2a73dde"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "001db1e0-94c2-4b1c-a3f9-3e6849d4048d",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "e0aad296-6d3a-4b38-8b33-17abc2a73dde"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "e0aad296-6d3a-4b38-8b33-17abc2a73dde",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "e0aad296-6d3a-4b38-8b33-17abc2a73dde"
+      ],
+      "contingencyRequired": true
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "2 constraint(s) must be released before full execution: No customer relationship management system or loyalty program infrastructure; Limited production/service capacity requires capital investment",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

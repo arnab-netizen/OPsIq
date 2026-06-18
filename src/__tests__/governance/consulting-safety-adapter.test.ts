@@ -130,10 +130,13 @@ describe("consulting-safety-adapter (abstention wiring)", () => {
 
   // ── Option B: evidence-support sufficiency rule ─────────────────────────────
   describe("evidence-support sufficiency gate (Option B)", () => {
-    it("ABSTAINS on a committed diagnosis with low support AND missing-evidence gaps (RW-001/RW-005 pattern)", () => {
+    it("ABSTAINS on a committed diagnosis with low support AND missing-evidence gaps AND weak confidence (RW-001/RW-005 pattern)", () => {
+      // Post-refinement: the evidence-support rule abstains on low support only when
+      // confidence is below the MODERATE sufficiency floor. A PROVISIONAL diagnosis
+      // (0.35, still above the 0.3 hard floor) with low support + gaps abstains here.
       const out = makeOutput({
         status: "SUCCESS",
-        confidence: DiagnosisConfidence.MODERATE,
+        confidence: DiagnosisConfidence.PROVISIONAL,
         type: DiagnosisType.QUALITY_CONTROL_FAILURE,
         evidenceIds: ["a"], // 1 used
         missingEvidenceFor: ["g1", "g2", "g3"],

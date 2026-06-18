@@ -77,6 +77,17 @@ export interface OwnerActionDangerGateSignal {
 export const LOW_EVIDENCE_SUPPORT_THRESHOLD = 0.5;
 
 /**
+ * Confidence sufficiency floor (MODERATE) for the evidence-support rule. At or above
+ * this confidence, a committed diagnosis resting on its critical trigger evidence is
+ * NOT abstained for a low support ratio alone — only genuinely weak (PROVISIONAL/
+ * INSUFFICIENT) diagnoses with low support and unresolved gaps abstain on this rule.
+ * Mirrors DIAGNOSIS_CONFIDENCE_SCORE[MODERATE] = 0.55 in the safety adapter. This is a
+ * scoping guard on an EXISTING rule, not a new global threshold; the confidence cutoffs
+ * (0.3 / 0.6 / 0.7) and the 0.5 support threshold are unchanged.
+ */
+export const EVIDENCE_SUPPORT_CONFIDENCE_FLOOR = 0.55;
+
+/**
  * Evaluate recommendation for unsafe conditions
  */
 export function assessSafety(
@@ -210,22 +221,29 @@ export function assessSafety(
     }
   }
 
-  // Evidence-support sufficiency (Option B, RC-3 fix): a COMMITTED diagnosis
-  // that rests on insufficient evidence support AND carries unresolved evidence
-  // gaps must not proceed, even when confidence clears the floor. This is the
-  // rule that catches confident-but-undersupported outputs.
+  // Evidence-support sufficiency (Option B, RC-3 fix) — REFINED. A low support ratio
+  // with unresolved gaps abstains ONLY when the diagnosis confidence is NOT sufficient
+  // (below MODERATE). A confident committed diagnosis (MODERATE+) resting on its
+  // critical, direct trigger evidence is no longer abstained merely for citing a
+  // minority of the available evidence ids — in the misaligned-root-cause cases the
+  // "missing" items are downstream/decoy symptoms in other dimensions, not gaps
+  // material to the safe verify-first first action. Genuine danger is still caught:
+  // the confidence floor (< 0.3) below, plus the causal-challenge, owner-action-danger,
+  // and constraint-alignment rules (which set abstain independently and are unaffected
+  // by this guard). This narrows over-abstention without weakening any danger gate.
   if (
     evidence_support?.committed &&
     evidence_support.hasMissingEvidence &&
     evidence_support.supportRatio !== undefined &&
-    evidence_support.supportRatio < LOW_EVIDENCE_SUPPORT_THRESHOLD
+    evidence_support.supportRatio < LOW_EVIDENCE_SUPPORT_THRESHOLD &&
+    confidence_score < EVIDENCE_SUPPORT_CONFIDENCE_FLOOR
   ) {
     unsafe_conditions.push({
       condition_type: "MISSING_EVIDENCE",
       severity: "HIGH",
       description: `Committed diagnosis rests on insufficient evidence support (ratio ${evidence_support.supportRatio.toFixed(
         2
-      )} < ${LOW_EVIDENCE_SUPPORT_THRESHOLD}) with unresolved evidence gaps declared`,
+      )} < ${LOW_EVIDENCE_SUPPORT_THRESHOLD}) with unresolved evidence gaps declared, and confidence is below the sufficiency floor`,
       blocking: true,
     });
     abstain = true;

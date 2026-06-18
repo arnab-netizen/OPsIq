@@ -1,0 +1,72 @@
+{
+  "inputs": {
+    "confidence_score": 0.8,
+    "has_evidence": true,
+    "evidence_contradictions": 0,
+    "scope_valid": true,
+    "preconditions_met": true,
+    "irreversibility_score": 0,
+    "operator_capacity_available": true,
+    "active_conflicts": 0,
+    "evidence_support": {
+      "committed": true,
+      "supportRatio": 0.5,
+      "hasMissingEvidence": true
+    }
+  },
+  "assessment": {
+    "is_safe": false,
+    "unsafe_conditions": [
+      {
+        "condition_type": "HIGH_IRREVERSIBILITY",
+        "severity": "CRITICAL",
+        "description": "Dangerous owner-proposed action (NEGATIVE_MARGIN_DISCOUNT): owner proposes a deep/broad across-the-board discount while contribution is negative (or the cut would turn it negative) — value-destroying and effectively irreversible",
+        "blocking": true
+      }
+    ],
+    "confidence_adjustment": -40,
+    "abstain": true,
+    "abstention_state": "HIGH_RISK_UNCERTAIN",
+    "fallback_action": "escalate_to_operator"
+  },
+  "escalation_required": true,
+  "causal_challenge": {
+    "committed": true,
+    "challenged": false,
+    "outOfModelCauseInProblem": false,
+    "adverseOffArchetypeEvidence": false,
+    "reasons": []
+  },
+  "constraint_alignment": {
+    "committed": true,
+    "conflict": false,
+    "reasons": []
+  },
+  "owner_action_danger": {
+    "danger": true,
+    "type": "NEGATIVE_MARGIN_DISCOUNT",
+    "reasons": [
+      "owner proposes a deep/broad across-the-board discount while contribution is negative (or the cut would turn it negative) — value-destroying and effectively irreversible"
+    ]
+  },
+  "decision": {
+    "recommendation_id": "b453f237-a96b-5763-aa3a-baa9a20bb5bd",
+    "abstention_state": "HIGH_RISK_UNCERTAIN",
+    "metadata": {
+      "reason": "Recommendation abstained: HIGH_RISK_UNCERTAIN",
+      "blocking_factors": [
+        "HIGH_IRREVERSIBILITY"
+      ],
+      "missing_evidence": [],
+      "violated_constraints": [],
+      "confidence_score": 0.8,
+      "escalation_required": true,
+      "safe_fallback_action": "escalate_to_operator",
+      "review_trigger": "OPERATOR_REVIEW_REQUIRED",
+      "review_date": "2026-06-18T07:14:41.749Z"
+    },
+    "timestamp": "2026-06-18T07:14:41.749Z",
+    "actor": "round2-retrial",
+    "immutable": true
+  }
+}
