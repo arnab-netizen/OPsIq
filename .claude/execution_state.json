@@ -1203,7 +1203,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 R5 slice 2: demand/gtm/inventory archetypes (over_abstention 39->33, no committed regressions, no new unsafe proceeds)",
+  "last_commit": "STAGE A Round 2 R5 post-slice-2 forensic gap audit (docs only): failure map + slice-3 ROI + next-build decision",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -1351,5 +1351,23 @@
     "audits": "AUDIT 5 committed flips NONE; 10 newly diagnosed all correct; 6 newly proceeding; 6 abstain->proceed; no proceed->abstain",
     "gates_run": "R5s2 14/14, full sweep 256 (20 files), validator 103/103, tsc (only pre-existing run-case.ts:149), prisma valid",
     "next_automatic_target": "R5 slice 3 (legal/key-person/strategic-capex) [separately authorized]"
+  },
+  "stage_a_round2_r5_post_slice2_gap_audit": {
+    "slice": "R5 post-slice-2 forensic gap audit (docs only)",
+    "status": "COMPLETE_DOCS_ONLY",
+    "classification": "FORENSIC_ANALYSIS",
+    "files": [
+      "R5_POST_SLICE2_REMAINING_FAILURE_MAP.md",
+      "R5_SLICE3_ROI_AUDIT.md",
+      "NEXT_BUILD_DECISION_AFTER_R5_SLICE2.md"
+    ],
+    "scope_guard": "No engine/adjudication/intervention/gate/scorer/threshold/key/corpus/validator change. Counts machine-reconciled (ALL MATCH).",
+    "cases_reviewed": "48 failing of 103",
+    "largest_bucket": "E safety-gate gap = 21 (correctly-diagnosed cases the causal-challenge holds + DC-01 dangerous proceed)",
+    "over_abstention_partition": "33 = 10 uncovered-slice3-domain honest-abstain + 21 covered-correct GATE-HELD + 2 coverage-edge",
+    "slice3_exact": "diagnosis gain 0 (already honest-abstain PASS); proceed gain +7 (legal+2,key-person+2,capex+3; 3/10 gate-held); first-action +7; introduces dangerous-proceed risk on ADV-02/ADV-03/DC-04",
+    "unsafe_eq_dangerous": "DC-01 (same single case); root cause = safety gate cannot see dangerous proposed action",
+    "recommended_decision": "BUILD_ACTION_FIX_FIRST (reword slice-1/2 template rationales; +~10 first-action, zero safety risk) then guarded Slice 3, gate-fix last",
+    "next_automatic_target": "BUILD_ACTION_FIX_FIRST (intervention-text rationale rewording) [separately authorized]"
   }
 }
