@@ -1204,7 +1204,7 @@
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
   "last_commit": "STAGE A FRC-11 bottleneck-pattern audit (docs only): FIX_TOO_RISKY -> ACCEPT_RESIDUAL_OVER_ABSTENTION (relaxing bottleneck would make adversarial DC-02 proceed dangerously)",
-  "pushed": false,
+  "pushed": true,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
     "status": "COMPLETE_DOCS_ONLY",
