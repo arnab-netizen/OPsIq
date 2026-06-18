@@ -217,7 +217,8 @@ model ClientAccount {
   workspaceHarmEvents            OwnerHarmEvent[] @relation("WorkspaceHarmEvents")
   workspaceFailureAdjudications  OwnerFailureAdjudication[] @relation("WorkspaceFailureAdjudications")
   workspaceCausalAttributions    OwnerCausalAttribution[] @relation("WorkspaceCausalAttributions")
-  workspaceReassessmentEvents    OwnerReassessmentEvent[] @relation("WorkspaceReassessmentEvents")
+  workspaceReassessmentEvents         OwnerReassessmentEvent[] @relation("WorkspaceReassessmentEvents")
+  workspaceLearningEligibilityReviews OwnerLearningEligibilityReview[] @relation("WorkspaceLearningEligibilityReviews")
 
   @@index([status])
   @@map("client_accounts")
@@ -3842,4 +3843,42 @@ model OwnerReassessmentEvent {
   @@index([trigger])
   @@index([status])
   @@map("owner_reassessment_events")
+}
+
+model OwnerLearningEligibilityReview {
+  id                          String   @id @default(cuid())
+  workspaceId                 String
+  businessId                  String
+  actionId                    String?
+  recommendationId            String?
+  outcomeId                   String?
+  status                      String   // not_reviewed | rejected | eligible_low_confidence | eligible_medium_confidence | eligible_high_confidence | needs_more_cases | quarantined | human_review_pending | human_approved | human_rejected
+  rejectionReasons            String   @db.Text  // JSON array of LearningRejectionReason
+  requiresHumanReview         Boolean
+  allowsLearning              Boolean
+  isTerminalRejection         Boolean
+  // Input signals snapshot
+  actionWasExecuted           Boolean
+  executionMateriallyDeviated Boolean
+  hasVerifiedEvidence         Boolean
+  measurementPeriodComplete   Boolean
+  adjudicationCompleted       Boolean
+  adjudicationVerdict         String
+  causalAttributionCompleted  Boolean
+  causalAttributionClass      String
+  harmSeverity                String
+  isOwnerOpinionOnly          Boolean
+  hasContradictoryEvidence    Boolean
+  hasPrivacyControls          Boolean
+  broadImpactScope            Boolean
+  eligibilityNotes            String   @db.Text
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+  workspace                   ClientAccount @relation("WorkspaceLearningEligibilityReviews", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([status])
+  @@index([allowsLearning])
+  @@map("owner_learning_eligibility_reviews")
 }
