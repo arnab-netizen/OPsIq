@@ -260,7 +260,7 @@
     "structures": "owner_model_change_log, owner_prompt_template_versions, owner_ruleset_versions, owner_evaluation_versions",
     "committed": "pending"
   },
-  "next_automatic_target": "LATER-USE controlled learning system (deferred until Phases 0-28 complete \u2014 checking execution.md for any remaining phases)",
+  "next_automatic_target": "Create OWNER_MODE_REALITY_LOOP_CLOSEOUT.md per execution.md requirement",
   "gates_status": {
     "build": "PASS",
     "typecheck": "PASS",
@@ -1987,5 +1987,17 @@
       "regression": "none"
     },
     "final_status": "STAGE_A_MERGED_TO_MAIN \u2014 INTERNAL_OWNER_MODE_TRIAL_ONLY baseline tagged"
+  },
+  "fix_pre_existing_test_failures": {
+    "status": "IMPLEMENTED_DB_UNVERIFIED",
+    "description": "Fixed 70 pre-existing test failures in security-rules.ts and diagnosis-evidence.ts",
+    "files": [
+      "src/domain/owner-mode/security-rules.ts",
+      "src/domain/owner-mode/diagnosis-evidence.ts"
+    ],
+    "tests": "1460 passing (all owner-mode domain tests)",
+    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 1460/1460 passing",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "committed": "pending"
   }
 }
