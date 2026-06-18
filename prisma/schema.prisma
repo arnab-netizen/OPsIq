@@ -209,6 +209,7 @@ model ClientAccount {
   workspaceAcknowledgements     OwnerOverrelianceAcknowledgement[] @relation("WorkspaceAcknowledgements")
   workspaceDecisions            OwnerDecision[] @relation("WorkspaceDecisions")
   workspaceBenefits             OwnerBenefit[]  @relation("WorkspaceBenefits")
+  workspaceActions              OwnerAction[]   @relation("WorkspaceActions")
 
   @@index([status])
   @@map("client_accounts")
@@ -3543,4 +3544,74 @@ model OwnerBenefitReview {
   @@index([workspaceId])
   @@index([benefitId])
   @@map("owner_benefit_reviews")
+}
+
+model OwnerAction {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  businessId        String
+  recommendationId  String?
+  ownerDecisionId   String?
+  assignedToRole    String?
+  assignedToUserId  String?
+  actionTitle       String
+  actionSteps       Json
+  dueAt             DateTime?
+  status            String    @default("pending")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  workspace         ClientAccount @relation("WorkspaceActions", fields: [workspaceId], references: [id])
+  executionLogs     OwnerActionExecutionLog[]
+  blockers          OwnerBlocker[]
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([status])
+  @@map("owner_actions")
+}
+
+model OwnerActionExecutionLog {
+  id                          String    @id @default(cuid())
+  workspaceId                 String
+  businessId                  String
+  actionId                    String
+  executedByRole              String?
+  executedByUserId            String?
+  startedAt                   DateTime?
+  completedAt                 DateTime?
+  actualStepsTaken            Json?
+  plannedStepsCompletedCount  Int       @default(0)
+  plannedStepsTotalCount      Int       @default(0)
+  sampleSizeActual            Int?
+  deadlineMet                 Boolean   @default(false)
+  proofText                   String?   @db.Text
+  proofAttachmentUrl          String?
+  deviationSummary            String?   @db.Text
+  deviationSeverity           String?
+  blockerReason               String?   @db.Text
+  executionComplianceScore    String    @default("not_executed")
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+  action                      OwnerAction @relation(fields: [actionId], references: [id])
+
+  @@index([workspaceId])
+  @@index([actionId])
+  @@map("owner_action_execution_logs")
+}
+
+model OwnerBlocker {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  actionId        String
+  blockerText     String    @db.Text
+  blockerType     String
+  resolvedAt      DateTime?
+  resolutionNotes String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  action          OwnerAction @relation(fields: [actionId], references: [id])
+
+  @@index([workspaceId])
+  @@index([actionId])
+  @@map("owner_blockers")
 }
