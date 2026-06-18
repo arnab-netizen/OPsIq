@@ -5,6 +5,181 @@
  * visible only to workspace owners and admins.
  */
 
+import { assertWorkspaceScopedQuery } from "./security-rules";
+
+// ─── Phase 23: Reality Loop Stage Proof ──────────────────────────────────────
+
+export type LoopStageStatus =
+  | "complete"
+  | "in_progress"
+  | "pending"
+  | "requires_owner_action"
+  | "blocked"
+  | "not_applicable"
+  | "missing_data";
+
+export interface LoopStageSnapshot {
+  stage: string;
+  status: LoopStageStatus;
+  requiresOwnerAction: boolean;
+  summary?: string;
+}
+
+export interface OwnerLoopDashboardInput {
+  workspaceId: string;
+  businessId: string;
+  periodLabel: string;
+  inputQuality: LoopStageStatus;
+  diagnosis: LoopStageStatus;
+  recommendation: LoopStageStatus;
+  ownerDecision: LoopStageStatus;
+  action: LoopStageStatus;
+  evidence: LoopStageStatus;
+  outcomeStatus: LoopStageStatus;
+  adjudication: LoopStageStatus;
+  reassessment: LoopStageStatus;
+  learningEligibility: LoopStageStatus;
+  businessTrendWarnings?: string[];
+  activeRecommendationSummary?: string;
+  openBlockers?: string[];
+  ownerAttentionItems?: string[];
+  reassessmentRequired: boolean;
+  ownerDecisionPending: boolean;
+  harmFlagged: boolean;
+}
+
+export interface OwnerLoopDashboardView {
+  valid: boolean;
+  violations: string[];
+  workspaceId: string;
+  businessId: string;
+  periodLabel: string;
+  stages: LoopStageSnapshot[];
+  activeRecommendationSummary: string | null;
+  businessTrendWarnings: string[];
+  openBlockers: string[];
+  ownerAttentionItems: string[];
+  harmFlagged: boolean;
+  requiresOwnerAttention: boolean;
+  reassessmentRequired: boolean;
+  ownerDecisionPending: boolean;
+  missingDataStages: string[];
+}
+
+// DASHBOARD-RULE-3: internal field names must not appear in owner-visible text
+const INTERNAL_FIELD_PATTERNS: ReadonlyArray<RegExp> = [
+  /adjudication_verdict/i,
+  /attribution_class/i,
+  /learning_confidence/i,
+  /model_hint/i,
+  /prompt_result/i,
+  /causal_class/i,
+  /eligibility_score/i,
+  /internal_/i,
+  /raw_score/i,
+  /llm_output/i,
+];
+
+function containsInternalField(text: string): boolean {
+  return INTERNAL_FIELD_PATTERNS.some((re) => re.test(text));
+}
+
+function checkText(label: string, text: string | undefined, violations: string[]): void {
+  if (text && containsInternalField(text)) {
+    violations.push(`${label} must not expose internal field names (DASHBOARD-RULE-3)`);
+  }
+}
+
+const OWNER_ACTION_STAGES: ReadonlySet<string> = new Set([
+  "ownerDecision",
+  "reassessment",
+]);
+
+const STAGE_LABELS: ReadonlyArray<{ key: keyof OwnerLoopDashboardInput; label: string }> = [
+  { key: "inputQuality", label: "Input Quality" },
+  { key: "diagnosis", label: "Diagnosis" },
+  { key: "recommendation", label: "Recommendation" },
+  { key: "ownerDecision", label: "Owner Decision" },
+  { key: "action", label: "Action" },
+  { key: "evidence", label: "Evidence" },
+  { key: "outcomeStatus", label: "Outcome" },
+  { key: "adjudication", label: "Adjudication" },
+  { key: "reassessment", label: "Reassessment" },
+  { key: "learningEligibility", label: "Learning Eligibility" },
+];
+
+// DASHBOARD-RULE-1: workspaceId enforced by assertWorkspaceScopedQuery
+// DASHBOARD-RULE-2: periodLabel required
+// DASHBOARD-RULE-3: no internal field names in owner-visible text
+// DASHBOARD-RULE-4: ownerAttentionItems required when reassessmentRequired or ownerDecisionPending
+
+export function buildOwnerLoopDashboard(input: OwnerLoopDashboardInput): OwnerLoopDashboardView {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
+
+  const violations: string[] = [];
+
+  // DASHBOARD-RULE-2
+  if (!input.periodLabel || input.periodLabel.trim().length === 0) {
+    violations.push("periodLabel is required (DASHBOARD-RULE-2)");
+  }
+
+  // DASHBOARD-RULE-3
+  checkText("activeRecommendationSummary", input.activeRecommendationSummary, violations);
+  for (const w of input.businessTrendWarnings ?? []) checkText("businessTrendWarnings item", w, violations);
+  for (const b of input.openBlockers ?? []) checkText("openBlockers item", b, violations);
+  for (const a of input.ownerAttentionItems ?? []) checkText("ownerAttentionItems item", a, violations);
+
+  // DASHBOARD-RULE-4
+  if ((input.reassessmentRequired || input.ownerDecisionPending) &&
+      (!input.ownerAttentionItems || input.ownerAttentionItems.length === 0)) {
+    violations.push(
+      "ownerAttentionItems must be provided when reassessmentRequired or ownerDecisionPending (DASHBOARD-RULE-4)"
+    );
+  }
+
+  const stages: LoopStageSnapshot[] = STAGE_LABELS.map(({ key, label }) => {
+    const status = input[key] as LoopStageStatus;
+    const requiresOwnerAction =
+      status === "requires_owner_action" ||
+      (OWNER_ACTION_STAGES.has(key) && status === "in_progress");
+    return { stage: label, status, requiresOwnerAction };
+  });
+
+  const missingDataStages = stages
+    .filter((s) => s.status === "missing_data" || s.status === "not_applicable")
+    .map((s) => s.stage);
+
+  const requiresOwnerAttention =
+    input.reassessmentRequired ||
+    input.ownerDecisionPending ||
+    input.harmFlagged ||
+    stages.some((s) => s.requiresOwnerAction);
+
+  return {
+    valid: violations.length === 0,
+    violations,
+    workspaceId: input.workspaceId,
+    businessId: input.businessId,
+    periodLabel: input.periodLabel,
+    stages,
+    activeRecommendationSummary: input.activeRecommendationSummary ?? null,
+    businessTrendWarnings: input.businessTrendWarnings ?? [],
+    openBlockers: input.openBlockers ?? [],
+    ownerAttentionItems: input.ownerAttentionItems ?? [],
+    harmFlagged: input.harmFlagged,
+    requiresOwnerAttention,
+    reassessmentRequired: input.reassessmentRequired,
+    ownerDecisionPending: input.ownerDecisionPending,
+    missingDataStages,
+  };
+}
+
+export function loopDashboardRequiresOwnerAttention(view: OwnerLoopDashboardView): boolean {
+  return view.requiresOwnerAttention;
+}
+
+// ─── Workspace Health Dashboard (existing) ────────────────────────────────────
+
 export enum HealthStatus {
   CRITICAL = "critical",
   AT_RISK = "at_risk",
