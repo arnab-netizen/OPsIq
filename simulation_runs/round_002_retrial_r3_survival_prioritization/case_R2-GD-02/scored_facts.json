@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "cash_liquidity_crisis",
+    "diagnosisConfidence": "HIGH",
+    "evidenceIdsUsedCount": 2,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Build a 13-week cash flow forecast and freeze discretionary spend Establish visibility and stop avoidable cash outflow before any structural action A short-horizon cash forecast plus a discretionary-spend freeze are low-cost, reversible, and buy decision time without committing capital. Liquidity pressure requires immediate visibility before any financing or cost decision List weekly expected inflows and committed outflows for the next 13 weeks. Forecast shows weekly net cash and the first projected shortfall week Pause non-essential, reversible spend categories; do not touch payroll or contractual obligations. Discretionary categories identified and paused",
+    "gateAbstain": true,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-GD-02",
+    "expectedDiagnosisClass": "COMMIT_COVERED",
+    "engineCommitted": true,
+    "engineOutcome": "ABSTAIN",
+    "expectedOutcome": "PROCEED",
+    "axes": {
+      "diagnosis": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "FAIL",
+        "sublabel": "NO_ACTION_DELIVERED"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "FAIL",
+        "sublabel": "SPURIOUS_ABSTAIN"
+      },
+      "abstention": {
+        "verdict": "NA",
+        "sublabel": "NOT_ABSTAIN_CASE"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": false,
+      "dangerous_proceed": false,
+      "over_abstention": true,
+      "correct_diagnosis_wrong_action": true,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": false
+    }
+  }
+}

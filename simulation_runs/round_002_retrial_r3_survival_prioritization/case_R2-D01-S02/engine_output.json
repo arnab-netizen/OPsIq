@@ -1,0 +1,195 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "907cb93b-ba8b-4690-8a50-d1deeb1887e0",
+    "engagementId": "542bfcfb-2241-5d2b-bf47-9530869684c4",
+    "timestamp": "2026-06-18T02:15:06.269Z",
+    "businessProblem": "A capital-goods manufacturer hit by a credit-market shock is solvent on paper but is running dangerously low on cash; the owner wants the right first move.",
+    "rootCauseDiagnosis": {
+      "id": "5e2ad802-6c57-4e54-a6b7-2fe5a7cf56cd",
+      "type": "cash_liquidity_crisis",
+      "description": "Cash runway / liquidity under acute pressure",
+      "mechanismDescription": "Cash outflows are outpacing inflows and available runway is short, threatening the ability to meet near-term obligations.",
+      "evidenceIds": [
+        "f00a01c1-7188-5eb3-a89d-44d4fd639da7",
+        "06bf2051-f799-584a-96c4-fdeffdd8f254"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "One-off timing of payments rather than structural burn",
+        "Undrawn financing available that offsets the shortfall"
+      ],
+      "missingEvidenceFor": [
+        "13-week cash flow detail",
+        "Committed vs discretionary obligations",
+        "Available financing headroom"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "e3194035-09eb-43aa-a32f-31ce567f6d9c",
+          "title": "Build a 13-week cash flow forecast and freeze discretionary spend",
+          "class": "CONTAINMENT",
+          "objective": "Establish visibility and stop avoidable cash outflow before any structural action",
+          "rationale": "A short-horizon cash forecast plus a discretionary-spend freeze are low-cost, reversible, and buy decision time without committing capital.",
+          "whyThisNow": "Liquidity pressure requires immediate visibility before any financing or cost decision",
+          "ownerRole": "finance_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Build 13-week cash flow forecast",
+              "description": "List weekly expected inflows and committed outflows for the next 13 weeks.",
+              "ownerRole": "finance_lead",
+              "estimatedDays": 3,
+              "successCriteria": "Forecast shows weekly net cash and the first projected shortfall week"
+            },
+            {
+              "sequence": 2,
+              "title": "Freeze discretionary spend",
+              "description": "Pause non-essential, reversible spend categories; do not touch payroll or contractual obligations.",
+              "ownerRole": "owner",
+              "estimatedDays": 2,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Discretionary categories identified and paused"
+            }
+          ],
+          "estimatedCostBand": "MINIMAL",
+          "expectedImpactOnRevenue": "NONE",
+          "successMetrics": [
+            "13-week forecast complete",
+            "Discretionary burn reduced"
+          ],
+          "failureRisks": [
+            "Forecast inputs incomplete",
+            "Shortfall arrives sooner than modeled"
+          ],
+          "fallbackPlan": "Escalate to owner/board for financing options review (no action taken without owner approval)",
+          "evidenceBasis": [
+            "f00a01c1-7188-5eb3-a89d-44d4fd639da7",
+            "06bf2051-f799-584a-96c4-fdeffdd8f254"
+          ],
+          "estimatedTotalDays": 5,
+          "priorityScore": 0
+        },
+        "priorityScore": 59,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 3,
+            "rationale": "Expected revenue impact: NONE. Urgency: CRITICAL"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 5 days. Team capacity: HIGH. Cost: MINIMAL"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 9,
+            "rationale": "Failure risks: 2. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 4,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 0.5,
+            "rationale": "Cost band: MINIMAL vs Expected impact: NONE"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "a9de5c51-4da3-431f-bc7d-9bff44ff1413",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "e3194035-09eb-43aa-a32f-31ce567f6d9c"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "ca509ca3-382d-4a46-9428-fe5fba7ed5c5",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "e3194035-09eb-43aa-a32f-31ce567f6d9c"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      },
+      {
+        "id": "d93d7d4b-9420-4078-92df-4ea4fe2523c3",
+        "name": "Defensive Hold (Minimal Risk)",
+        "description": "Execute containment interventions only to stabilize immediate crisis",
+        "assumptions": [
+          "Longer-term structural fixes deferred 6+ months",
+          "Focus on preserving cash and customer base",
+          "External investment or M&A may be needed for growth"
+        ],
+        "interventionSubset": [
+          "e3194035-09eb-43aa-a32f-31ce567f6d9c"
+        ],
+        "expectedOutcome": "Stabilize revenue decline, buy time for external support",
+        "risks": [
+          "Does not address root causes; temporary relief only",
+          "Competitors gain market share during hold period",
+          "Team morale declines with no visible improvement"
+        ],
+        "likelihood": "MODERATE"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "e3194035-09eb-43aa-a32f-31ce567f6d9c",
+      "totalEstimatedDays": 5,
+      "criticalPathInterventions": [
+        "e3194035-09eb-43aa-a32f-31ce567f6d9c"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

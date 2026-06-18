@@ -1203,7 +1203,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 R4: action-sequencing layer (first-action 34.0%->46.6%, wrong-action 28->15, zero regressions)",
+  "last_commit": "STAGE A Round 2 R3: survival prioritization (action-layer ladder; zero regressions, no new unsafe proceeds)",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -1283,5 +1283,25 @@
     "gates_run": "R4 11/11, scorer+R2+R1+governance+adversarial+consumers+scenario 176+36, output consumers 24/24, tsc (only pre-existing run-case.ts:149), prisma valid",
     "r3_r5_still_required": "YES (R3 owns wrong_priority PC-01 + DC-01 ACTED_WHEN_SHOULD_ABSTAIN; R5 converts the 53 over-abstentions to proceeds)",
     "next_automatic_target": "R3 survival prioritization OR R5 archetype expansion [separately authorized]"
+  },
+  "stage_a_round2_r3_survival_prioritization": {
+    "slice": "R3 survival prioritization \u2014 7-tier first-action priority ladder",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ENGINE_ACTION_PRIORITIZATION",
+    "files": [
+      "src/services/consulting-engine/survival-prioritization.ts (new, pure)",
+      "src/services/consulting-engine/orchestrator.ts (chooseFirstAction wraps R4 sequencing)",
+      "src/__tests__/services/survival-prioritization.test.ts (10)",
+      "simulation_runs/round_002_retrial_r3_survival_prioritization/ (frozen R3 retrial)",
+      "R3_SURVIVAL_PRIORITIZATION_VALIDATION_REPORT.md"
+    ],
+    "scope_guard": "Action-layer only. No diagnosis-selection change, no archetypes, no safety-gate/threshold/scorer/key change. Runtime evidence only. Only emits MINIMAL/LOW-cost STABILIZATION/CONTAINMENT -> cannot un-abstain. SURVIVAL_RUNWAY_MONTHS=3 is a new prioritization param (not a gate threshold).",
+    "wiring_proof": "orchestrator: committed -> chooseFirstAction(dx,evidence) -> survival/legal/defer/safety override OR R4 base OR null -> prepend as recommendedInterventions[0]",
+    "r4_vs_r3": "ALL scorer metrics identical (wrong_priority 1, dangerous_proceed 1, unsafe_proceed 1, firstAction 48, correct_dx_wrong_action 15, diagnosis 99, over_abstention 53); per-case first-action verdicts/gate/diagnosis identical",
+    "action_content_changed": "2 cases (PC-01 -> SURVIVAL_CASH stabilize-first; DC-01 -> DEFER_IRREVERSIBLE) -- correct behavior, unscored because PC-01 gate abstains (causal-challenge) and DC-01 gate proceeds-when-should-abstain; both blocked by no-diagnosis-change/no-gate-change constraints",
+    "cases_worsened": "0 (zero first-action regressions, gate/diagnosis identical, no new unsafe proceeds)",
+    "gates_run": "R3 10/10, full sweep 222 (17 files), tsc (only pre-existing run-case.ts:149), prisma valid",
+    "r5_still_required": "YES (R5 converts 53 over-abstentions to proceeds and is the path to clear PC-01 wrong_priority via diagnosis-ranking; DC-01 dangerous_proceed needs a future gate-input enhancement)",
+    "next_automatic_target": "R5 archetype expansion E2+ [separately authorized; R2 prerequisite satisfied]"
   }
 }

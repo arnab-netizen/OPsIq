@@ -12,10 +12,9 @@ import { generateScenarios } from "./scenario-engine";
 import { generateDecisionMemo, formatDecisionMemo } from "./decision-memo-engine";
 import { DiagnosisConfidence, DiagnosisType } from "@/domain/consulting-engine/types";
 import {
-  sequenceFirstAction,
   buildFirstActionIntervention,
-  overridesTemplate,
 } from "./action-sequencing";
+import { chooseFirstAction } from "./survival-prioritization";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 
 /**
@@ -86,28 +85,31 @@ export async function runConsultingEngine(
   const committed =
     diagnosisResult.confidence !== DiagnosisConfidence.INSUFFICIENT_EVIDENCE &&
     diagnosisResult.primaryRootCause.type !== DiagnosisType.UNKNOWN;
-  if (
-    committed &&
-    overridesTemplate(diagnosisResult.primaryRootCause.type, input.evidence)
-  ) {
-    const plan = sequenceFirstAction({
+  if (committed) {
+    // R3 survival prioritization wraps R4 action sequencing: it returns the
+    // highest-priority FIRST action (survival/legal/defer/safety) or the R4 action,
+    // or null to keep the diagnosis template. It never changes the diagnosis or the
+    // safety gate, so it cannot convert an abstention into a proceed.
+    const prioritized = chooseFirstAction({
       diagnosisType: diagnosisResult.primaryRootCause.type,
       committed: true,
       evidence: input.evidence,
     });
-    const firstIntervention = buildFirstActionIntervention(
-      plan,
-      diagnosisResult.primaryRootCause.evidenceIds
-    );
-    const sequencedFirst: PrioritizedIntervention = {
-      intervention: firstIntervention,
-      priorityScore: 100,
-      factors: [
-        { factor: "survival/safety/reversibility sequencing", score: 10, rationale: plan.rationale },
-      ],
-      sequencingReason: `${plan.kind}: ${plan.whyThisNow}`,
-    };
-    recommendedInterventions = [sequencedFirst, ...prioritizedInterventions];
+    if (prioritized) {
+      const firstIntervention = buildFirstActionIntervention(
+        prioritized.plan,
+        diagnosisResult.primaryRootCause.evidenceIds
+      );
+      const sequencedFirst: PrioritizedIntervention = {
+        intervention: firstIntervention,
+        priorityScore: 100,
+        factors: [
+          { factor: "survival/safety/reversibility prioritization", score: 10, rationale: prioritized.plan.rationale },
+        ],
+        sequencingReason: `${prioritized.tier} / ${prioritized.plan.kind}: ${prioritized.plan.whyThisNow}`,
+      };
+      recommendedInterventions = [sequencedFirst, ...prioritizedInterventions];
+    }
   }
 
   // Step 6: Generate scenarios
