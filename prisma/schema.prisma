@@ -204,6 +204,7 @@ model ClientAccount {
   ownerDataProvenanceRecords   OwnerDataProvenanceRecord[]
   ownerMissingDataFlags        OwnerMissingDataFlag[]
   ownerDiagnosisEvidence       OwnerDiagnosisEvidence[]
+  workspaceRecommendations     OwnerRecommendation[] @relation("WorkspaceRecommendations")
 
   @@index([status])
   @@map("client_accounts")
@@ -3320,4 +3321,87 @@ model OwnerDiagnosisEvidence {
   @@index([diagnosisStatus])
   @@index([workspaceId, createdAt])
   @@map("owner_diagnosis_evidence")
+}
+
+// ─── Owner Mode Reality Loop — Phase 7: Structured Recommendation Tracking ────
+
+model OwnerRecommendation {
+  id                     String   @id @default(cuid())
+  workspaceId            String
+  businessId             String
+  ownerUserId            String
+  diagnosisId            String?
+  recommendationText     String   @db.Text
+  recommendationType     String   // tactical | strategic | operational | emergency
+  priorityRank           Int      @default(0)
+  expectedOutcomeSummary String   @db.Text
+  targetMetricName       String?
+  baselineValue          Float?
+  targetValue            Float?
+  targetDirection        String?  // increase | decrease | stabilize
+  measurementWindowDays  Int?
+  deadlineAt             DateTime?
+  confidenceScore        Int
+  confidenceReason       String   @db.Text
+  riskLevel              String   // low | medium | high | critical
+  status                 String   @default("draft")
+  supersededById         String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  workspace    ClientAccount                    @relation("WorkspaceRecommendations", fields: [workspaceId], references: [id])
+  evidence     OwnerRecommendationEvidence[]
+  assumptions  OwnerRecommendationAssumption[]
+  constraints  OwnerRecommendationConstraint[]
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([status])
+  @@map("owner_recommendations")
+}
+
+model OwnerRecommendationEvidence {
+  id               String              @id @default(cuid())
+  workspaceId      String
+  recommendationId String
+  evidenceText     String              @db.Text
+  evidenceType     String              // supporting | contradicting | neutral
+  sourceType       String
+  createdAt        DateTime            @default(now())
+
+  recommendation   OwnerRecommendation @relation(fields: [recommendationId], references: [id])
+
+  @@index([workspaceId])
+  @@index([recommendationId])
+  @@map("owner_recommendation_evidence")
+}
+
+model OwnerRecommendationAssumption {
+  id               String              @id @default(cuid())
+  workspaceId      String
+  recommendationId String
+  assumptionText   String              @db.Text
+  validUntil       DateTime?
+  createdAt        DateTime            @default(now())
+
+  recommendation   OwnerRecommendation @relation(fields: [recommendationId], references: [id])
+
+  @@index([workspaceId])
+  @@index([recommendationId])
+  @@map("owner_recommendation_assumptions")
+}
+
+model OwnerRecommendationConstraint {
+  id               String              @id @default(cuid())
+  workspaceId      String
+  recommendationId String
+  constraintText   String              @db.Text
+  constraintType   String              // resource | time | capability | regulatory | owner_preference
+  createdAt        DateTime            @default(now())
+
+  recommendation   OwnerRecommendation @relation(fields: [recommendationId], references: [id])
+
+  @@index([workspaceId])
+  @@index([recommendationId])
+  @@map("owner_recommendation_constraints")
 }
