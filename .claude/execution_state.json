@@ -1203,7 +1203,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 forensic root-cause failure map + remediation dependency graph + implementation order (docs only)",
+  "last_commit": "STAGE A Round 2 R1: lexical-trigger hardening (polarity-aware semantic guards; zero corpus regression)",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -1222,5 +1222,25 @@
     "order": "R0(done) -> R1 || R2 -> R4 -> R3 -> R5 -> R6/R7/R8 -> R9",
     "fix_before_more_authoring": "YES (R2)",
     "next_automatic_target": "R1 lexical-trigger hardening and/or R2 causal adjudication [separately authorized]"
+  },
+  "stage_a_round2_r1_lexical_hardening": {
+    "slice": "R1 lexical-trigger hardening \u2014 polarity-aware semantic guards in diagnosis-engine.ts",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ENGINE_DIAGNOSIS_TRIGGER_HARDENING",
+    "files": [
+      "src/services/consulting-engine/diagnosis-engine.ts",
+      "src/__tests__/services/diagnosis-lexical-hardening.test.ts",
+      "simulation_runner/run-round2-retrial.ts (additive --label flag; R0 default unchanged)",
+      "simulation_runs/round_002_retrial_r1_lexical_hardening/ (frozen R1 retrial)",
+      "R1_LEXICAL_HARDENING_VALIDATION_REPORT.md"
+    ],
+    "scope_guard": "Only lexical triggers hardened. No R2-R9, no archetypes, no safety-gate/scorer/answer-key/threshold change. No case ids or keys at runtime.",
+    "unit_tests": "14/14 (all required phrase->outcome cases) via real diagnoseRootCause",
+    "retrial_r0_vs_r1": "0 per-case diffs; diagnosis 86/86, false_root_cause 12/12, over_abstention 44/44, unsafe_proceed 1/1, dangerous_proceed 1/1; healthy-control false positives 0/0",
+    "false_positives_fixed": "0 in corpus (controls pre-reworded); robustness proven by unit tests+probe. A broadened first attempt that newly fired on AB-01/MK-06 was caught by the retrial and narrowed (LIQUIDITY_TOPIC=runway|liquidity|burn rate).",
+    "regressions": "none (0 valid-distress regressions; adversarial+governance 83/83 green)",
+    "gates_run": "lexical 14/14, scorer 13/13, governance+adversarial 83/83, diagnosis consumers 68/68 sweep, tsc (only pre-existing run-case.ts:149), prisma validate PASS",
+    "r2_still_required": "YES (R1 is a guard, not a capability; false_root_cause/over_abstention untouched)",
+    "next_automatic_target": "R2 causal adjudication layer [separately authorized]"
   }
 }

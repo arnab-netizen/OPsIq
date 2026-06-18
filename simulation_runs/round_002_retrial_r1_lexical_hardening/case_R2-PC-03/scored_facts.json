@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "operational_bottleneck",
+    "diagnosisConfidence": "MODERATE",
+    "evidenceIdsUsedCount": 3,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Implement waitlist system to manage demand Reduce customer frustration by setting expectations and freeing capacity for retention While turnaround time remains high, a waitlist prevents customer abandonment Immediate relief for customer experience while longer-term capacity fix is designed Create customer communication explaining wait time and providing estimated completion date Template tested with 3 customers, feedback incorporated Use spreadsheet or simple tool to track order position and manage customer expectations All customer orders tracked, completion estimates accurate within 10% Collect feedback on waitlist experience via follow-up call or survey Satisfaction score improves to 7+/10, repeat customer inquiry rate increases",
+    "gateAbstain": false,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-PC-03",
+    "expectedDiagnosisClass": "COMMIT_COVERED",
+    "engineCommitted": true,
+    "engineOutcome": "PROCEED",
+    "expectedOutcome": "PROCEED",
+    "axes": {
+      "diagnosis": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "PASS",
+        "sublabel": "ACCEPTABLE_ACTION"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT_PROCEED"
+      },
+      "abstention": {
+        "verdict": "NA",
+        "sublabel": "NOT_ABSTAIN_CASE"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": false,
+      "dangerous_proceed": false,
+      "over_abstention": false,
+      "correct_diagnosis_wrong_action": false,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": false
+    }
+  }
+}

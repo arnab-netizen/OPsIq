@@ -1,0 +1,172 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "30c384b7-1bf5-46ca-a695-f53623dd8ed7",
+    "engagementId": "b6d24ff3-7be0-5cf9-8309-ef8ecc58e396",
+    "timestamp": "2026-06-18T01:17:17.473Z",
+    "businessProblem": "Operating margin went negative and the owner is hunting for cost cuts, but costs are not what changed.",
+    "rootCauseDiagnosis": {
+      "id": "ae47070e-aa3e-4458-ad46-73627894c3ca",
+      "type": "margin_erosion",
+      "description": "Margin erosion driven by cost inflation or declining profitability",
+      "mechanismDescription": "Costs are rising faster than price, or operating profitability is declining, compressing margin over time.",
+      "evidenceIds": [
+        "85286b8c-987e-5df9-a65f-394664e7eda1"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "A one-off cost event rather than a sustained trend",
+        "Deliberate margin investment for growth"
+      ],
+      "missingEvidenceFor": [
+        "Multi-period margin trend",
+        "Cost-driver decomposition (COGS vs labor vs overhead)",
+        "Pricing headroom"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "37131310-eda5-4ce5-80a5-571d65509c88",
+          "title": "Decompose cost drivers and identify margin-recovery levers",
+          "class": "STABILIZATION",
+          "objective": "Locate the specific drivers of margin decline before any pricing or cost action",
+          "rationale": "A cost-driver decomposition is analysis-only, low-cost, and reversible; it avoids blanket price hikes or cuts that could harm volume or quality.",
+          "whyThisNow": "Margin is eroding; targeted diagnosis must precede any price/cost change",
+          "ownerRole": "finance_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Decompose margin by driver",
+              "description": "Split margin change into COGS, labor, overhead, and price/mix contributions over recent periods.",
+              "ownerRole": "finance_lead",
+              "estimatedDays": 4,
+              "successCriteria": "Top 3 margin-erosion drivers quantified"
+            },
+            {
+              "sequence": 2,
+              "title": "Shortlist reversible recovery levers",
+              "description": "Identify low-risk levers (supplier terms, waste reduction, mix) — no blanket price change.",
+              "ownerRole": "owner",
+              "estimatedDays": 2,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Reversible levers shortlisted with expected margin impact"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Margin bridge by driver complete",
+            "Reversible levers shortlisted"
+          ],
+          "failureRisks": [
+            "Cost data not granular enough to attribute drivers"
+          ],
+          "fallbackPlan": "Pilot one reversible lever and measure before broader rollout",
+          "evidenceBasis": [
+            "85286b8c-987e-5df9-a65f-394664e7eda1"
+          ],
+          "estimatedTotalDays": 6,
+          "priorityScore": 0
+        },
+        "priorityScore": 72,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 6 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "adcd5054-8005-490f-8649-14c53c278959",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "37131310-eda5-4ce5-80a5-571d65509c88"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "bb99f4fb-c7ca-4937-b22b-fc3cc6523a65",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "37131310-eda5-4ce5-80a5-571d65509c88"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "37131310-eda5-4ce5-80a5-571d65509c88",
+      "totalEstimatedDays": 6,
+      "criticalPathInterventions": [
+        "37131310-eda5-4ce5-80a5-571d65509c88"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

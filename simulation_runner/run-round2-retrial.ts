@@ -50,9 +50,15 @@ const NS = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
 
 const args = process.argv.slice(2);
 const round = (args.includes("--round") ? args[args.indexOf("--round") + 1] : undefined) ?? "002";
+// --label selects the output directory suffix so a re-trial (e.g. an engine-fix
+// variant) writes to its own frozen dir and never overwrites the committed R0
+// baseline. The default `current` preserves the original R0 behavior. The two R0
+// markdown reports are (re)written ONLY for the `current` label; other labels emit
+// their own corpus-score JSON and leave the R0 reports untouched.
+const label = (args.includes("--label") ? args[args.indexOf("--label") + 1] : undefined) ?? "current";
 const repoRoot = path.resolve(__dirname, "..");
 const roundDir = path.join(repoRoot, "simulation_runs", `round_${round}`);
-const outDir = path.join(repoRoot, "simulation_runs", `round_${round}_retrial_current`);
+const outDir = path.join(repoRoot, "simulation_runs", `round_${round}_retrial_${label}`);
 
 interface RawEvidence {
   dimension: string;
@@ -227,7 +233,9 @@ async function main(): Promise<void> {
     Object.fromEntries(Object.entries(corpus.flags).map(([k, v]) => [k, v]))
   );
 
-  writeReports(corpus, scores);
+  // Only the canonical R0 run rewrites the R0 markdown reports; labeled variants
+  // (e.g. r1_lexical_hardening) leave them untouched and are reported separately.
+  if (label === "current") writeReports(corpus, scores);
   printSummary(corpus, scores.length);
 }
 
