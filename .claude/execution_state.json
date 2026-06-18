@@ -14,6 +14,18 @@
       "gates_run": "npm run build (pre-existing failure unrelated to Phase 7), npx tsc (no new errors), npx prisma validate (\u2713)",
       "compilation": "\u2713 TypeScript compiles without errors in new files",
       "committed": "594b2954"
+    },
+    "phase_8": {
+      "status": "IMPLEMENTED_DB_UNVERIFIED",
+      "files": [
+        "src/domain/owner-mode/recommendation-verification.ts",
+        "src/__tests__/domain/owner-mode/recommendation-verification.test.ts",
+        "prisma/schema.prisma"
+      ],
+      "tests": "68 (45+ required)",
+      "gates_run": "npx tsc (no new errors), npx prisma validate (\u2713), vitest 68/68 passing",
+      "compilation": "\u2713 TypeScript compiles without errors",
+      "committed": "pending"
     }
   },
   "gates_status": {
@@ -1743,5 +1755,5 @@
     },
     "final_status": "STAGE_A_MERGED_TO_MAIN \u2014 INTERNAL_OWNER_MODE_TRIAL_ONLY baseline tagged"
   },
-  "next_automatic_target": "Phase 8 \u2014 Owner Decision Tracking"
+  "next_automatic_target": "Phase 9 \u2014 Owner Decision Capture + Decision-Rights Model"
 }

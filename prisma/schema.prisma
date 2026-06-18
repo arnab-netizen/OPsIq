@@ -205,6 +205,8 @@ model ClientAccount {
   ownerMissingDataFlags        OwnerMissingDataFlag[]
   ownerDiagnosisEvidence       OwnerDiagnosisEvidence[]
   workspaceRecommendations     OwnerRecommendation[] @relation("WorkspaceRecommendations")
+  workspaceVerifications        OwnerRecommendationVerification[]  @relation("WorkspaceVerifications")
+  workspaceAcknowledgements     OwnerOverrelianceAcknowledgement[] @relation("WorkspaceAcknowledgements")
 
   @@index([status])
   @@map("client_accounts")
@@ -3404,4 +3406,52 @@ model OwnerRecommendationConstraint {
   @@index([workspaceId])
   @@index([recommendationId])
   @@map("owner_recommendation_constraints")
+}
+
+model OwnerRecommendationVerification {
+  id                        String    @id @default(cuid())
+  workspaceId               String
+  businessId                String
+  recommendationId          String
+  verificationStatus        String    @default("pending")
+  evidenceSupporting        String?   @db.Text
+  evidenceContradicting     String?   @db.Text
+  missingData               String?   @db.Text
+  assumptionsMade           String?   @db.Text
+  whatWouldMakeThisWrong    String?   @db.Text
+  rivalConsultantArgument   String?   @db.Text
+  hasFailedBefore           Boolean   @default(false)
+  pastFailureContext        String?   @db.Text
+  violatesOwnerConstraints  Boolean   @default(false)
+  constraintViolationDetail String?   @db.Text
+  fitsWithinCashRunway      Boolean   @default(true)
+  downsideIfWrong           String?   @db.Text
+  stopLossCondition         String?   @db.Text
+  saferTestAvailable        String?   @db.Text
+  verifiedBy                String
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  workspace                 ClientAccount @relation("WorkspaceVerifications", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([recommendationId])
+  @@map("owner_recommendation_verifications")
+}
+
+model OwnerOverrelianceAcknowledgement {
+  id                        String    @id @default(cuid())
+  workspaceId               String
+  recommendationId          String
+  ownerUserId               String
+  keyAssumptionAcknowledged Boolean   @default(false)
+  mainDownsideAcknowledged  Boolean   @default(false)
+  stopConditionAcknowledged Boolean   @default(false)
+  evidenceLimitAcknowledged Boolean   @default(false)
+  ownerIsDecisionMaker      Boolean   @default(false)
+  acknowledgedAt            DateTime?
+  workspace                 ClientAccount @relation("WorkspaceAcknowledgements", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([recommendationId])
+  @@map("owner_overreliance_acknowledgements")
 }
