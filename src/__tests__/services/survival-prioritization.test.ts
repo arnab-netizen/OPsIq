@@ -134,7 +134,7 @@ describe("R3 end-to-end through runConsultingEngine", () => {
     return { engagementId: uuid(), businessProblem: "owner wants retention fixed", evidence, clientContext: { industry: "subscription", size: "small", revenueImpactUrgency: "CRITICAL" } };
   }
 
-  it("a retention diagnosis under a 3-month runway leads with cash stabilization, not retention", async () => {
+  it("cash survival dominates a co-matched retention signal under a 3-month runway (PC-01)", async () => {
     const out = await runConsultingEngine(
       input([
         evi("financial_health", "Cash runway is three months and obligations are fixed in the near term", true, { cashRunwayMonths: 3 }),
@@ -143,8 +143,12 @@ describe("R3 end-to-end through runConsultingEngine", () => {
       ])
     );
     const first = out.decisionMemo.recommendedInterventions[0].intervention;
-    expect(first.title.toLowerCase()).toContain("stabilize cash");
-    // diagnosis selection is unchanged (still retention) — R3 only re-prioritizes the action
-    expect(out.decisionMemo.rootCauseDiagnosis.type).toBe(DiagnosisType.CUSTOMER_RETENTION_EROSION);
+    // PC-01 survival-dominance: under a critically short runway with cash co-matched,
+    // cash_liquidity_crisis wins PRIMARY over the optimization (retention) diagnosis, and
+    // the first action is cash stabilization. (Previously the diagnosis stayed retention
+    // and R3 only re-prioritized the action; survival dominance now resolves it at the
+    // diagnosis layer — the cash-first outcome is preserved.)
+    expect(out.decisionMemo.rootCauseDiagnosis.type).toBe(DiagnosisType.CASH_LIQUIDITY_CRISIS);
+    expect(first.title.toLowerCase()).toContain("cash flow forecast");
   });
 });
