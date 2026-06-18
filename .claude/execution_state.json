@@ -1203,6 +1203,24 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 R0: 6-axis deterministic scorer + full-pipeline re-trial harness (measurement unlock)",
-  "pushed": false
+  "last_commit": "STAGE A Round 2 forensic root-cause failure map + remediation dependency graph + implementation order (docs only)",
+  "pushed": false,
+  "stage_a_round2_root_cause_failure_map": {
+    "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
+    "status": "COMPLETE_DOCS_ONLY",
+    "classification": "FORENSIC_ANALYSIS",
+    "files": [
+      "ROOT_CAUSE_FAILURE_MAP.md",
+      "REMEDIATION_DEPENDENCY_GRAPH.md",
+      "R2_IMPLEMENTATION_ORDER.md"
+    ],
+    "scope_guard": "No engine/scorer/gate/threshold/key/validator/corpus/source change. No improvement/promotion/consultant-grade claim.",
+    "cases_reviewed": "70 failing of 103 (33 clean); counts taken directly from _CORPUS_SCORE.json/_FAILURE_FLAGS.json and reconciled per-case (MATCH).",
+    "largest_bucket": "A Missing archetype \u2014 38 cases (36.9%)",
+    "deepest_root_cause": "No causal adjudication (L/B cluster, diagnosis-engine.ts:364-405); drives wrong primaries AND 14 of the over-abstention gate-holds",
+    "highest_roi_fix": "R2 causal adjudication (keystone; up to 41 cases reachable)",
+    "order": "R0(done) -> R1 || R2 -> R4 -> R3 -> R5 -> R6/R7/R8 -> R9",
+    "fix_before_more_authoring": "YES (R2)",
+    "next_automatic_target": "R1 lexical-trigger hardening and/or R2 causal adjudication [separately authorized]"
+  }
 }
