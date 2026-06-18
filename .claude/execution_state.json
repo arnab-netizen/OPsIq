@@ -59,10 +59,23 @@
       ],
       "tests": "50 (45+ required)",
       "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 50/50 passing",
-      "compilation": "\u2713 TypeScript compiles without errors"
+      "compilation": "\u2713 TypeScript compiles without errors",
+      "committed": "d8827f1d"
+    },
+    "phase_12": {
+      "status": "IMPLEMENTED_DB_UNVERIFIED",
+      "files": [
+        "src/domain/owner-mode/evidence-capture.ts",
+        "src/__tests__/domain/owner-mode/evidence-capture.test.ts",
+        "prisma/schema.prisma"
+      ],
+      "tests": "33 (30+ required)",
+      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 33/33 passing",
+      "compilation": "\u2713 TypeScript compiles without errors",
+      "committed": "38fd9807"
     }
   },
-  "next_automatic_target": "Phase 12 \u2014 Outcome Measurement and Causal Attribution",
+  "next_automatic_target": "Phase 13 \u2014 Evidence Verification",
   "gates_status": {
     "build": "PASS",
     "typecheck": "PASS",
