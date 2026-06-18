@@ -1,0 +1,173 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "db3e4178-d20e-4fa0-9861-90e8d8ed91f4",
+    "engagementId": "ffbaeb33-db5a-5080-883b-05773b2d7b0b",
+    "timestamp": "2026-06-18T07:32:35.976Z",
+    "businessProblem": "A retailer keeps stocking out of best-sellers while cash is trapped in overstock; the owner suspects forecasting, not demand.",
+    "rootCauseDiagnosis": {
+      "id": "084be8fc-fde2-4224-9364-48fafdfc7b08",
+      "type": "inventory_forecasting_mismatch",
+      "description": "Inventory / forecasting mismatch: stock misallocated against demand (stockouts + overstock)",
+      "mechanismDescription": "Forecast error misallocates stock — stockouts on fast lines alongside overstock on slow lines — trapping cash and forcing markdowns; the issue is planning, not demand or cost.",
+      "evidenceIds": [
+        "bc6aca37-ed50-59b9-8753-a8395ae5c828",
+        "ff4e7275-69b2-59c1-a55b-7cba02435225"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "A one-off supplier disruption rather than a forecasting problem",
+        "A deliberate stock build rather than a forecast error"
+      ],
+      "missingEvidenceFor": [
+        "Forecast accuracy by SKU/ABC class",
+        "Demand variability and lead-time data"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "ccd834b1-61ec-4874-9d10-5b9ded0004e8",
+          "title": "Run a forecast-accuracy and ABC inventory analysis with a demand-segmentation review",
+          "class": "STABILIZATION",
+          "objective": "Locate the forecast/stock mismatch before any blanket inventory change",
+          "rationale": "A forecast-accuracy and ABC inventory analysis is analysis-only and reversible, sizing forecast error and stock misallocation by SKU class before any replenishment change.",
+          "whyThisNow": "Stock is misallocated against demand; the forecast mismatch must be measured before any inventory move",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Run a forecast-accuracy / ABC inventory analysis",
+              "description": "Measure forecast error by SKU/ABC class and quantify stockouts vs overstock.",
+              "ownerRole": "consultant",
+              "estimatedDays": 4,
+              "successCriteria": "Forecast error and stock misallocation quantified by SKU class"
+            },
+            {
+              "sequence": 2,
+              "title": "Run a demand-segmentation review",
+              "description": "Segment demand variability to right-size stock by velocity — protecting best-sellers, trimming slow lines.",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Velocity-segmented stock plan drafted protecting best-sellers"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Forecast-accuracy / ABC analysis complete",
+            "Demand-segmentation reviewed"
+          ],
+          "failureRisks": [
+            "SKU-level demand history may be sparse for new lines"
+          ],
+          "fallbackPlan": "Apply velocity-segmented adjustments to the worst SKUs first before a broader change",
+          "evidenceBasis": [
+            "bc6aca37-ed50-59b9-8753-a8395ae5c828",
+            "ff4e7275-69b2-59c1-a55b-7cba02435225"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: MEDIUM"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "49116ac1-bf2c-470e-a486-44cbda6d6434",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "ccd834b1-61ec-4874-9d10-5b9ded0004e8"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "b1052f79-44dc-4351-8b19-ad3537a91b3c",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "ccd834b1-61ec-4874-9d10-5b9ded0004e8"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "ccd834b1-61ec-4874-9d10-5b9ded0004e8",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "ccd834b1-61ec-4874-9d10-5b9ded0004e8"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

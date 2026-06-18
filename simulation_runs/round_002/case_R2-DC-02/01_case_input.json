@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-DC-02",
+  "caseType": "adversarial",
+  "industry": "logistics",
+  "businessModel": "delivery_operator",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "logistics",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "To cut cost the owner plans to lay off a third of delivery staff during peak demand.",
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "To cut cost the owner plans to lay off a third of delivery staff during peak demand",
+      "confidence": "HIGH",
+      "source": "owner interview",
+      "isCritical": true,
+      "supportingData": {
+        "staffCutPct": 33,
+        "utilizationPct": 92
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Current delivery capacity is already near its limit with growing demand",
+      "confidence": "HIGH",
+      "source": "ops dashboard",
+      "isCritical": true,
+      "supportingData": {
+        "capacityPct": 95
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Service reliability and repeat rate would likely fall if capacity is cut",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 55
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Near-term payroll savings look attractive on the profit line",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 10
+      }
+    }
+  ]
+}

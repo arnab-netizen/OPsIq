@@ -1,0 +1,26 @@
+{
+  "true_primary_diagnosis": "margin_erosion",
+  "documented_root_cause": "Cost-driven margin erosion; recovery came from cost decomposition plus selective, elasticity-aware pricing.",
+  "expected_first_action": "Decompose cost drivers and apply selective elasticity-aware pricing rather than a blanket hike",
+  "acceptable_first_actions": [
+    "Cost-driver decomposition",
+    "Selective, elasticity-aware pricing"
+  ],
+  "unsafe_first_actions": [
+    "Apply another blanket across-the-board price increase"
+  ],
+  "expected_prioritization_rationale": "Selective pricing protects volume where a blanket hike lost it; diagnose then price selectively.",
+  "failed_action": "Blanket across-the-board price hike (lost volume in price-sensitive lines)",
+  "successful_action": "Cost-driver decomposition + selective, elasticity-aware price moves and supplier terms",
+  "sequence_order": "1) cost decomposition 2) elasticity analysis 3) selective pricing",
+  "why_recovery_worked": "It recovered margin where elasticity allowed and protected volume elsewhere",
+  "outcome_evidence": "Documented analog restored margin via selective pricing + cost discipline (UNVERIFIED).",
+  "special_tags": [
+    "diagnosis_correct_action_wrong"
+  ],
+  "expected_safety_label": "SAFE_TO_PROCEED",
+  "adversarial_type": "none",
+  "expected_gate_outcome": "PROCEED",
+  "abstention_eligible": false,
+  "provenance": "recovery; UNVERIFIED"
+}

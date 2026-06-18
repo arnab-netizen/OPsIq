@@ -1,0 +1,244 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "d71c45c6-bb32-4a47-a338-3f3d099a1b4f",
+    "engagementId": "85f25ee2-28d4-5140-abb3-d7eb0146049f",
+    "timestamp": "2026-06-18T04:13:03.402Z",
+    "businessProblem": "A regulated firm discovers an incentive scheme drove staff misconduct and a regulator has opened an inquiry; the owner wants to contain the exposure.",
+    "rootCauseDiagnosis": {
+      "id": "33bc93b8-9d2a-42c9-a365-075bd5acf315",
+      "type": "legal_governance_risk",
+      "description": "Legal / governance / regulatory exposure requiring containment and counsel",
+      "mechanismDescription": "A regulatory, compliance, governance, or conduct breach has surfaced; the exposure is legal/regulatory and must be contained and met with qualified counsel before operational change.",
+      "evidenceIds": [
+        "3bcc6d8f-c940-5cfe-a916-6154599628af",
+        "7662e152-a1f2-533f-bfae-85e78096ae3d",
+        "ce65a1fb-c18b-5f85-82b9-98769347a9cc"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "An isolated administrative lapse rather than a systemic governance failure",
+        "A regulator enquiry that closes without remediation exposure"
+      ],
+      "missingEvidenceFor": [
+        "Scope of the regulatory requirement and the remediation timeline",
+        "Counsel assessment of liability and disclosure obligations"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "1e5d8de0-19e8-4fef-bd71-b3b5a3a5383e",
+          "title": "Stand up a compliance remediation plan and engage regulatory counsel before operational execution",
+          "class": "CONTAINMENT",
+          "objective": "Contain the regulatory exposure and engage counsel before acting on the operational issue",
+          "rationale": "A compliance and regulatory containment is present and dominates sequencing",
+          "whyThisNow": "Operating before the regulatory exposure is contained can cause irreversible harm",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Stand up a compliance remediation plan and engage regulatory counsel before operational execution",
+              "description": "Contain the regulatory exposure and engage counsel before acting on the operational issue. A compliance and regulatory containment is present and dominates sequencing.",
+              "ownerRole": "consultant",
+              "estimatedDays": 10,
+              "successCriteria": "Compliance remediation plan scoped and regulatory counsel engaged before execution"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Compliance remediation plan scoped and regulatory counsel engaged before execution"
+          ],
+          "failureRisks": [
+            "The first action is necessary but not sufficient; follow-on interventions required"
+          ],
+          "fallbackPlan": "Escalate to a full intervention plan once the root cause is verified",
+          "evidenceBasis": [
+            "3bcc6d8f-c940-5cfe-a916-6154599628af",
+            "7662e152-a1f2-533f-bfae-85e78096ae3d",
+            "ce65a1fb-c18b-5f85-82b9-98769347a9cc"
+          ],
+          "estimatedTotalDays": 10,
+          "priorityScore": 100
+        },
+        "priorityScore": 100,
+        "factors": [
+          {
+            "factor": "survival/safety/reversibility prioritization",
+            "score": 10,
+            "rationale": "A compliance and regulatory containment is present and dominates sequencing"
+          }
+        ],
+        "sequencingReason": "LEGAL_CONTAINMENT / COMPLIANCE_REVIEW: Operating before the regulatory exposure is contained can cause irreversible harm"
+      },
+      {
+        "intervention": {
+          "id": "44e84e38-670e-4714-ae05-6d62dec13657",
+          "title": "Stand up a compliance remediation plan and engage regulatory counsel",
+          "class": "CONTAINMENT",
+          "objective": "Contain the governance exposure and engage the regulator before any operational change",
+          "rationale": "A compliance-gap remediation plan with qualified regulatory counsel is low-cost and reversible, containing the exposure and meeting the regulator before business-as-usual.",
+          "whyThisNow": "The regulatory exposure is live; containment and counsel must precede any operational project",
+          "ownerRole": "owner",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Map the compliance gaps and containment actions",
+              "description": "Build a compliance-gap remediation plan against the regulatory timeline and suspend the practice that triggered the exposure.",
+              "ownerRole": "consultant",
+              "estimatedDays": 4,
+              "successCriteria": "Compliance gaps mapped and a remediation plan scoped to the regulatory timeline"
+            },
+            {
+              "sequence": 2,
+              "title": "Engage regulatory counsel and the regulator",
+              "description": "Engage qualified regulatory counsel and open a containment dialogue with the regulator on disclosure and remediation.",
+              "ownerRole": "owner",
+              "estimatedDays": 4,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Regulatory counsel engaged and a governance remediation program scoped"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Compliance-gap remediation plan scoped",
+            "Regulatory counsel engaged"
+          ],
+          "failureRisks": [
+            "The regulatory scope may widen as facts emerge"
+          ],
+          "fallbackPlan": "Prioritize the highest-exposure compliance gaps first while counsel scopes the full remediation",
+          "evidenceBasis": [
+            "3bcc6d8f-c940-5cfe-a916-6154599628af",
+            "7662e152-a1f2-533f-bfae-85e78096ae3d",
+            "ce65a1fb-c18b-5f85-82b9-98769347a9cc"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 71,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 6,
+            "rationale": "Expected revenue impact: MINOR. Urgency: CRITICAL"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 4,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "c5694ab6-8f00-4460-a756-7dd2de066c30",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "1e5d8de0-19e8-4fef-bd71-b3b5a3a5383e",
+          "44e84e38-670e-4714-ae05-6d62dec13657"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "1d0f8b56-235a-4706-8126-de51f042dc57",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "1e5d8de0-19e8-4fef-bd71-b3b5a3a5383e",
+          "44e84e38-670e-4714-ae05-6d62dec13657"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      },
+      {
+        "id": "89a52d4e-d043-40cd-844d-a5421fe68ca2",
+        "name": "Defensive Hold (Minimal Risk)",
+        "description": "Execute containment interventions only to stabilize immediate crisis",
+        "assumptions": [
+          "Longer-term structural fixes deferred 6+ months",
+          "Focus on preserving cash and customer base",
+          "External investment or M&A may be needed for growth"
+        ],
+        "interventionSubset": [
+          "1e5d8de0-19e8-4fef-bd71-b3b5a3a5383e",
+          "44e84e38-670e-4714-ae05-6d62dec13657"
+        ],
+        "expectedOutcome": "Stabilize revenue decline, buy time for external support",
+        "risks": [
+          "Does not address root causes; temporary relief only",
+          "Competitors gain market share during hold period",
+          "Team morale declines with no visible improvement"
+        ],
+        "likelihood": "MODERATE"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "1e5d8de0-19e8-4fef-bd71-b3b5a3a5383e",
+      "totalEstimatedDays": 10,
+      "criticalPathInterventions": [
+        "1e5d8de0-19e8-4fef-bd71-b3b5a3a5383e"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-053",
+  "source_url": "https://finance.yahoo.com/news/gerald-ratner-became-byword-corporate-080000197.html",
+  "source_title": "Gerald Ratner became a byword for corporate disaster - but he had a point",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Yahoo Finance (syndicated UK press reporting)",
+  "publication_or_filing_date": "2023",
+  "accessed_date": "2026-06-17",
+  "company_context": "Ratners Group, a dominant UK high-street jewellery retailer led by CEO Gerald Ratner. On 23 April 1991, in a speech to the Institute of Directors at the Royal Albert Hall, Ratner joked that some of his products were 'total crap' and that a set of earrings was cheaper than, and would last less long than, a Marks & Spencer prawn sandwich. The remarks—made by the key leader/figurehead—destroyed customer trust and roughly £500m of shareholder value, nearly collapsing the company.",
+  "business_type": "High-street jewellery retail chain (publicly listed)",
+  "company_size_stage": "Large established public retailer (~25,000 employees, hundreds of stores)",
+  "geography": "United Kingdom",
+  "time_period": "1991-1993",
+  "macro_context": "Early-1990s UK recession; value/discount jewellery positioning that depended heavily on customer trust and price-value perception.",
+  "outcome_category": "16 - founder/key-person/team failure combined with 10 - wrong action worsened (a self-inflicted leadership statement that worsened the firm's condition)",
+  "candidate_diagnosis_bucket": "key_person_risk",
+  "evidence_summary": "At the 23 April 1991 Institute of Directors convention, CEO Gerald Ratner described some of his own products as 'total crap' and quipped that a pair of earrings was cheaper than an M&S prawn sandwich and would not last as long. The remarks, widely publicized, shattered the discount chain's customer trust. The Ratners share price cratered, wiping out about £500m of shareholder value; by the end of 1991 the stock was down roughly 80%. The company closed hundreds of stores and cut a large share of its ~25,000-person workforce. Ratner left the business in 1993, and the episode coined the phrase 'doing a Ratner.'",
+  "source_backed_metrics": {
+    "speech_date": "23 April 1991 (Institute of Directors, Royal Albert Hall)",
+    "shareholder_value_destroyed": "approximately £500 million",
+    "stock_decline_1991": "down about 80% by end of 1991",
+    "workforce_context": "roughly 25,000 employees; hundreds of stores closed",
+    "ceo_departure": "Gerald Ratner left the business in 1993"
+  },
+  "owner_decision_context": "The key leader's own public statement—not an external shock—was the cause. The board and company then had to decide how to salvage trust, ultimately distancing from and removing the figurehead and rebranding (the group was later renamed Signet).",
+  "action_taken": "After the trust collapse, the company closed stores, cut staff, removed Ratner (left 1993), and ultimately rebranded away from the toxic name (becoming Signet Group).",
+  "outcome_evidence": "A self-inflicted, leader-caused catastrophe: ~£500m of value destroyed, ~80% stock decline in 1991, mass store closures and layoffs, and the CEO's eventual departure. The episode is the canonical example of a leader's words worsening the firm's condition.",
+  "source_limitations": "Secondary journalism (and widely retold business history); the £500m and 80% figures are consistently reported across UK press but are not drawn from a single primary filing here. Some figures are round/approximate.",
+  "directly_stated": [
+    "Ratner called products 'total crap' at the IoD on 23 April 1991",
+    "the prawn-sandwich earrings remark",
+    "about £500m of shareholder value was wiped out",
+    "the stock was down about 80% by end of 1991",
+    "Ratner left the business in 1993; the phrase 'doing a Ratner' was coined"
+  ],
+  "inferred": [
+    "The leader's public credibility was the company's intangible asset; destroying it destroyed demand",
+    "The near-collapse stemmed from a single key-person action rather than market or operational failure"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Canonical key-person-risk + wrong-action case where a single statement by the key leader destroyed trust, demand, and shareholder value, nearly collapsing a healthy retailer. Ideal for modeling owner/key-person communication risk as a catastrophic trigger requiring immediate adaptive re-evaluation of business condition, brand trust, and leadership.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

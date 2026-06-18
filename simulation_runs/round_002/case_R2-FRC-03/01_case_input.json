@@ -1,0 +1,67 @@
+{
+  "caseId": "R2-FRC-03",
+  "caseType": "single",
+  "industry": "professional_services",
+  "businessModel": "specialist_practice",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "professional_services",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Turnaround is slow and the owner wants to buy capacity at the constrained station, but the real constraint is not a machine.",
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Turnaround slipped to twelve days; the owner calls it a capacity bottleneck at one station",
+      "confidence": "HIGH",
+      "source": "job tracker",
+      "isCritical": true,
+      "supportingData": {
+        "turnaroundDays": 12,
+        "utilizationPct": 96
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Backlog grows and the queue cannot clear at the current capacity",
+      "confidence": "HIGH",
+      "source": "ops dashboard",
+      "isCritical": true,
+      "supportingData": {
+        "capacityPct": 97
+      }
+    },
+    {
+      "dimension": "team_capability",
+      "finding": "Only one senior specialist can perform the constrained step, undocumented, with no backup",
+      "confidence": "HIGH",
+      "source": "ops review",
+      "isCritical": true,
+      "supportingData": {
+        "keyPersonCount": 1,
+        "successionReady": 0
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "There is a low repeat rate among customers who waited the longest",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 42
+      }
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-D08-S01",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "made_to_order",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "A made-to-order manufacturer is seeing a surge in customer complaints and rework; the owner wants the root cause before reorganizing the floor.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "quality_delivery",
+      "finding": "Customer complaint rate has tripled this quarter with recurring defects in finished orders",
+      "confidence": "HIGH",
+      "source": "support log",
+      "isCritical": true,
+      "supportingData": {
+        "complaintRate": 9,
+        "defectRate": 6
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Return and rework rate climbed sharply, consuming production capacity",
+      "confidence": "HIGH",
+      "source": "QA log",
+      "isCritical": true,
+      "supportingData": {
+        "returnRate": 12
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Several long-standing customers cite quality as the reason they reduced orders",
+      "confidence": "MEDIUM",
+      "source": "account notes",
+      "isCritical": false
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Production volume is normal; the problem is defects, not raw throughput",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "defectiveUnits": 140
+      }
+    }
+  ]
+}

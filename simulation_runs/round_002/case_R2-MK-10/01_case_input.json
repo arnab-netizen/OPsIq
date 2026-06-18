@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-MK-10",
+  "caseType": "single",
+  "industry": "consumer_subscription",
+  "businessModel": "subscription",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "consumer_subscription",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Reported profit rose and the owner feels secure, but the loyal base is quietly accelerating its exit.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Reported profit rose but churn quietly climbed to nine percent and the repeat rate fell",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "churnPct": 9,
+        "repeatRatePct": 36
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "The profitable-looking quarter masks an accelerating loss of the loyal base",
+      "confidence": "HIGH",
+      "source": "cohort report",
+      "isCritical": true,
+      "supportingData": {
+        "retentionPct": 86
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "The profit line looks healthy this period",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 20
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The owner is reassured by the profit figure",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": false
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-MK-06",
+  "caseType": "single",
+  "industry": "wholesale",
+  "businessModel": "distributor",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "wholesale",
+    "size": "medium",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Revenue is growing fast and the owner feels great, but the bank balance keeps falling.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue grew twenty-five percent but operating cash flow turned negative as working capital absorbed it",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "dso": 80,
+        "cashConversionDays": 95
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "The cash balance is steadily falling despite the revenue growth as receivables build",
+      "confidence": "HIGH",
+      "source": "treasury",
+      "isCritical": true,
+      "supportingData": {
+        "receivablesAging": 60
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Delivery is fine; cash is trapped in receivables and stock as volume grows",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The owner is reassured by the revenue-growth headline",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 15
+      }
+    }
+  ]
+}

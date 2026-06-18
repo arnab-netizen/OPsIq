@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-095",
+  "source_url": "https://amabhungane.org/inside-the-pwc-report-what-really-brought-steinhoff-to-its-knees/",
+  "source_title": "Steinhoff accounting scandal 2017 (named investigative journalism on the PwC forensic report; corroborated by company disclosures and JSE/Frankfurt market data)",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Named journalism (amaBhungane Centre for Investigative Journalism) reporting on the PwC forensic report; corroborated by company writedown disclosures",
+  "publication_or_filing_date": "2017-12 (scandal); PwC report findings reported 2019",
+  "accessed_date": "2026-06-17",
+  "company_context": "Steinhoff International was a global retail holding company with a primary listing on the Frankfurt Stock Exchange and a secondary listing in Johannesburg, owning furniture and household-goods retail brands across Europe, Africa, the US and Australasia. In December 2017 CEO Markus Jooste resigned as accounting irregularities surfaced.",
+  "business_type": "Multinational retail holding company (furniture / household goods)",
+  "company_size_stage": "large-cap public (dual-listed, South Africa/Germany)",
+  "geography": "South Africa and Germany (global operations)",
+  "time_period": "2009-2017",
+  "macro_context": "A serial-acquisition retail roll-up whose reported growth and asset values were inflated by fictitious and irregular transactions over nearly a decade; the unwinding triggered a near-total equity collapse and one of the largest corporate frauds in South African and European history.",
+  "outcome_category": "15 - fraud / accounting misstatement driven failure",
+  "candidate_diagnosis_bucket": "legal_governance_risk",
+  "evidence_summary": "A PwC forensic investigation found that Steinhoff recorded fictitious or irregular transactions totalling approximately €6.5 billion (around $7.4 billion) between 2009 and 2017, inflating profit and asset values. CEO Markus Jooste resigned on 5 December 2017 just before the irregularities became public. In the first day after his resignation the shares fell about 58% on Frankfurt and 56% on Johannesburg; within two weeks they had lost almost 90% of their value. In 2018 Steinhoff announced roughly a $12 billion writedown reversing overstated revenues, profits and asset values. The company avoided immediate liquidation but underwent years of restructuring and litigation, with equity holders nearly wiped out.",
+  "source_backed_metrics": {
+    "fictitious_irregular_transactions_eur": "approximately 6.5 billion (approximately $7.4 billion), 2009-2017",
+    "share_price_drop_day_one_frankfurt_pct": "approximately 58%",
+    "share_price_drop_day_one_johannesburg_pct": "approximately 56%",
+    "share_price_drop_two_weeks_pct": "almost 90%",
+    "writedown_2018_usd": "approximately 12 billion",
+    "ceo_resignation_date": "5 December 2017"
+  },
+  "owner_decision_context": "Senior leadership, led by the CEO and close associates, allegedly orchestrated fictitious and irregular transactions to inflate reported profits and asset values over nearly a decade, so the board, auditors and investors relied on materially false financials until the scheme collapsed and immediate refinancing/restructuring became unavoidable.",
+  "action_taken": "On disclosure the CEO resigned (5 Dec 2017); the company commissioned the PwC forensic investigation, restated accounts with a ~$12bn writedown, negotiated debt standstills and a multi-year restructuring with creditors, and entered prolonged litigation and a global settlement with shareholders.",
+  "outcome_evidence": "Near-total equity collapse (almost 90% in two weeks), ~$12bn writedown, PwC finding of ~€6.5bn irregular transactions, and years of creditor restructuring confirm a fraud/governance-driven destruction of value rather than a market or operational downturn.",
+  "source_limitations": "WebFetch typically 403s here; figures confirmed verbatim in WebSearch snippets attributed to named journalism (amaBhungane on the PwC report, BizNews, Moneyweb) and a Wikipedia summary citing company disclosures. The €6.5bn/$7.4bn figure is PwC's reported finding; the $12bn writedown is a company restatement figure. Final litigation/settlement totals are later events and excluded here.",
+  "directly_stated": [
+    "PwC found ~€6.5bn (~$7.4bn) of fictitious/irregular transactions 2009-2017",
+    "CEO Markus Jooste resigned on 5 December 2017",
+    "Shares fell ~58% (Frankfurt) and ~56% (Johannesburg) on day one, almost 90% within two weeks",
+    "2018 writedown of approximately $12bn reversing overstated revenues, profits and asset values"
+  ],
+  "inferred": [
+    "Reported acquisition-driven growth and balance-sheet strength were substantially illusory, so conventional ratio analysis would have validated a false picture",
+    "The collapse was governance/control failure at the apex of the company, not an operating-market problem"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Non-US, dual-listed large-cap fraud where a decade of fabricated transactions inflated both income statement and balance sheet. Tests whether the engine treats audited financials as potentially unreliable when governance red flags exist, classifies a fraud-driven value collapse, and triggers re-evaluation on new critical evidence (CEO resignation, forensic findings).",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": true,
+  "source_leakage_risk": "HIGH"
+}

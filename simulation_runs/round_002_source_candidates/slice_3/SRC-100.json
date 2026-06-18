@@ -1,0 +1,52 @@
+{
+  "source_id": "SRC-100",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001874178/000187417824000014/rivn-20231231.htm",
+  "source_title": "Rivian Automotive, Inc. Form 10-K for fiscal year ended December 31, 2023",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Rivian Automotive, Inc. (filed with U.S. Securities and Exchange Commission); full-year 2023 figures corroborated by Rivian Q4/FY2023 earnings release and Reuters/CNBC-class reporting",
+  "publication_or_filing_date": "2024-02-21",
+  "accessed_date": "2026-06-17",
+  "company_context": "Rivian is a US electric-vehicle manufacturer (R1T pickup, R1S SUV, and commercial vans). In fiscal 2023 it scaled production sharply while still consuming large amounts of cash per vehicle, a classic high-revenue-ramp-with-heavy-burn profile typical of capital-intensive manufacturing scale-up.",
+  "business_type": "Capital-intensive EV manufacturing and direct sales; large fixed-cost plant ramp with negative unit economics during scale-up",
+  "company_size_stage": "large-cap public, early commercial-scale manufacturer (pre-profitability ramp)",
+  "geography": "United States (primary manufacturing in Normal, Illinois)",
+  "time_period": "fiscal year 2023 (year ended December 31, 2023)",
+  "macro_context": "Post-2022 EV demand softening, high interest rates raising the cost of capital for cash-burning growth companies, and intense EV price competition led by Tesla price cuts.",
+  "outcome_category": "7 - high revenue but cash crisis / heavy burn",
+  "candidate_diagnosis_bucket": "cash_liquidity_crisis",
+  "evidence_summary": "Rivian grew 2023 revenue to about $4.43 billion (up roughly 167% from $1.66 billion in 2022) and produced 57,232 vehicles while delivering 50,122, beating its own raised production guidance. Despite the revenue ramp, the company posted a net loss of about $5.43 billion and used roughly $4.87 billion of cash in operating activities, ending 2023 with about $7.86 billion in cash and cash equivalents (about $9.37 billion including short-term investments, and about $10.47 billion of total liquidity including the revolving credit facility). This is the canonical high-revenue, high-burn manufacturing scale-up where the binding constraint is cash runway and operational cost-down rather than top-line demand alone.",
+  "source_backed_metrics": {
+    "fy2023_revenue_usd": "approximately $4.434 billion",
+    "fy2022_revenue_usd": "approximately $1.658 billion",
+    "revenue_growth_yoy_pct": "approximately 167%",
+    "fy2023_net_loss_usd": "approximately $5.432 billion",
+    "fy2022_net_loss_usd": "approximately $6.752 billion",
+    "fy2023_net_cash_used_in_operating_activities_usd": "approximately $4.866 billion",
+    "fy2023_cash_and_cash_equivalents_usd": "approximately $7.857 billion",
+    "fy2023_cash_plus_short_term_investments_usd": "approximately $9.368 billion",
+    "fy2023_total_liquidity_incl_revolver_usd": "approximately $10.468 billion",
+    "fy2023_vehicles_produced": "57,232",
+    "fy2023_vehicles_delivered": "50,122"
+  },
+  "owner_decision_context": "Management chose to keep scaling production capacity and a high cost base ahead of profitability, betting that volume ramp and cost-down would outrun the cash burn while preserving multi-year runway via large cash reserves.",
+  "action_taken": "Continued aggressive production ramp and plant investment while consuming roughly $4.9 billion of operating cash in the year; relied on a large existing cash balance plus a revolving credit facility for runway rather than an emergency raise.",
+  "outcome_evidence": "Year-end liquidity of about $9.37 billion (about $10.47 billion including revolver) against roughly $4.87 billion annual operating cash burn documents a multi-quarter but finite runway, defining the case as a high-revenue cash-management problem rather than a demand collapse.",
+  "source_limitations": "WebFetch of sec.gov returns HTTP 403 in this environment; figures are verified from the FY2023 10-K / Q4-FY2023 earnings release as reported verbatim in search snippets from primary (sec.gov, Rivian) and credible secondary domains, not from full-text read of the filing. Operating cash burn and revenue are GAAP; total-liquidity figure includes undrawn revolver capacity.",
+  "directly_stated": [
+    "FY2023 revenue approximately $4.434 billion versus $1.658 billion in 2022",
+    "FY2023 net loss approximately $5.432 billion versus $6.752 billion in 2022",
+    "Net cash used in operating activities approximately $4.866 billion in 2023",
+    "Year-end 2023 cash and equivalents approximately $7.857 billion; about $9.368 billion with short-term investments; about $10.468 billion total liquidity including revolver",
+    "Produced 57,232 vehicles and delivered 50,122 in 2023"
+  ],
+  "inferred": [
+    "At roughly $4.9 billion annual operating burn, the binding constraint is cash runway and per-unit cost-down, not aggregate demand",
+    "The case is an operational-cost-and-liquidity problem (scale-up economics) rather than a solvency or demand-collapse event"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Clean outcome-7 high-revenue / heavy-burn manufacturing case with audited SEC figures. Tests whether OpsIQ recognizes a cash_liquidity_crisis and operational_bottleneck (cost-down / throughput) profile in a growing company, rather than mislabeling strong revenue growth as health. Strong for runway-aware adaptive re-evaluation and capex-risk modeling.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

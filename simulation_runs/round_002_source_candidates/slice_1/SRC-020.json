@@ -1,0 +1,40 @@
+{
+  "source_id": "SRC-020",
+  "source_url": "https://www.sec.gov/newsroom/press-releases/2018-41",
+  "source_title": "Theranos, CEO Holmes, and Former President Balwani Charged With Massive Fraud",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "U.S. Securities and Exchange Commission",
+  "publication_or_filing_date": "2018-03-14",
+  "accessed_date": "2026-06-17",
+  "company_context": "Theranos Inc. was a privately held Silicon Valley healthcare/blood-testing startup that claimed its proprietary technology could run a full range of tests from a few drops of blood. The SEC charged the company, founder/CEO Elizabeth Holmes, and former president Ramesh 'Sunny' Balwani with an elaborate, years-long fraud against investors.",
+  "business_type": "Healthcare diagnostics startup (private)",
+  "outcome_category": "15 - fraud/governance/legal crisis",
+  "candidate_diagnosis_bucket": "legal_governance_risk",
+  "evidence_summary": "The SEC alleged Theranos, Holmes, and Balwani raised more than $700 million from investors through false statements about the company's technology, business, and financial performance. They falsely claimed Theranos products were deployed by the U.S. Department of Defense on the battlefield in Afghanistan and on medevac helicopters, and that the company would generate more than $100 million in 2014 revenue. In reality the technology was never deployed by DoD and the company generated little more than $100,000 in 2014 revenue. Holmes settled by agreeing to a $500,000 penalty, surrendering majority voting control, returning equity, and accepting a 10-year bar from serving as officer/director of a public company.",
+  "source_backed_metrics": {
+    "investor_funds_raised_usd": "more than 700 million",
+    "claimed_2014_revenue_usd": "more than 100 million",
+    "actual_2014_revenue_usd": "a little more than 100,000",
+    "holmes_penalty_usd": "500,000",
+    "holmes_officer_director_bar_years": "10",
+    "release_date": "2018-03-14"
+  },
+  "outcome_evidence": "SEC charged the company and executives with massive fraud on 14 March 2018; Holmes and Theranos settled, with Holmes paying a $500,000 penalty, giving up voting control and equity, and accepting a 10-year public-company officer/director bar. (Holmes was later criminally convicted of investor fraud in 2022 in a separate DOJ case.)",
+  "source_limitations": "SEC page returned HTTP 403 to automated fetch; figures recorded are quoted verbatim from SEC.gov search-result snippets of the official press release. Criminal-trial outcome is from a separate DOJ proceeding, not this release.",
+  "directly_stated": [
+    "raised more than $700 million from investors",
+    "claimed more than $100 million 2014 revenue vs actual little more than $100,000",
+    "false claim of DoD battlefield/medevac deployment",
+    "$500,000 penalty for Holmes",
+    "10-year officer/director bar; surrender of voting control and equity"
+  ],
+  "inferred": [
+    "the company had no viable unit economics behind the marketed technology",
+    "investor due diligence was defeated by fabricated capability and revenue claims"
+  ],
+  "reliability_rating": "A",
+  "why_useful_for_opsiq": "Canonical fraud case where headline narrative (revolutionary tech, imminent $100M revenue) is fabricated and the obvious investment/scale-up action worsens loss. Strong adversarial test for distinguishing claimed capability from validated capability and routing to legal_governance_risk.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": true,
+  "keep_source_text_out_of_input": true
+}

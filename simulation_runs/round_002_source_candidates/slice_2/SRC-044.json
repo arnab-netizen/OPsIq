@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-044",
+  "source_url": "https://www.qsrmagazine.com/story/subways-u-s-count-keeps-declining/",
+  "source_title": "Subway's U.S. Count Keeps Declining",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "QSR Magazine (Food News Media) - trade journalism",
+  "publication_or_filing_date": "2023",
+  "accessed_date": "2026-06-17",
+  "company_context": "Subway is the largest U.S. restaurant chain by footprint and a franchise system of small-business operators. After peaking at more than 27,000 U.S. locations in 2015, it has closed thousands of units amid market oversaturation and low average unit volumes, while it works to consolidate franchisees and reposition.",
+  "business_type": "Quick-service restaurant franchise system (sandwiches)",
+  "company_size_stage": "franchise system",
+  "geography": "United States",
+  "time_period": "2014-2023",
+  "macro_context": "Oversaturated sandwich/QSR market, value-perception erosion, and franchisee profitability pressure from too many nearby units cannibalizing sales.",
+  "outcome_category": "5 - partial recovery/mixed",
+  "candidate_diagnosis_bucket": "gtm_channel_mismatch",
+  "evidence_summary": "Subway expanded its franchise footprint past the point of profitable demand: U.S. units peaked above 27,000 in 2015, and operators have closed more locations than they opened every year since, including over 1,000 closures in 2018, 2020, and 2021. The brand fell below 20,000 domestic units (e.g., reported at 19,502), the first time in roughly two decades. Closures reflect oversaturated markets and low average unit volume - a distribution/footprint mismatch where too many outlets undermined per-unit demand. The chain remains the largest U.S. footprint and is pursuing repositioning, making the outcome mixed.",
+  "source_backed_metrics": {
+    "us_peak_units_2015": "more than 27,000",
+    "annual_closures_2018_2020_2021_each": "over 1,000",
+    "domestic_units_below_20000": "approximately 19,502",
+    "first_time_below_20000_in_years": "approximately 20"
+  },
+  "owner_decision_context": "Corporate historically prioritized rapid unit growth (low-cost franchising) that oversaturated trade areas, depressing franchisee average unit volume. Leadership has had to reverse course - closing weak units, consolidating franchisees, and repositioning the brand - trading footprint size for per-unit health.",
+  "action_taken": "Net unit reductions (closing more stores than opening) since 2015, franchisee consolidation, menu/brand repositioning, and remodels aimed at lifting per-unit volume.",
+  "outcome_evidence": "Sustained net closures (peak >27,000 in 2015 to ~19,502 domestic units; >1,000 closures in 2018, 2020, 2021) confirm a footprint/demand mismatch correction; the brand survives as the largest U.S. footprint, a mixed/partial outcome.",
+  "source_limitations": "Primary source is trade journalism (QSR Magazine), corroborated by Restaurant Business and Restaurant Dive in search snippets. Subway is privately held, so unit counts are company-reported figures relayed by trade press, not audited SEC filings. Exact average-unit-volume figures were not confirmable and are omitted. Some cited closure counts are reported ranges.",
+  "directly_stated": [
+    "Subway peaked at more than 27,000 U.S. units in 2015",
+    "Operators have closed more locations than they opened every year since 2015",
+    "Closures exceeded 1,000 units in 2018, 2020, and 2021",
+    "The chain fell below 20,000 domestic units (reported ~19,502), the first time in about 20 years",
+    "Subway remains the largest U.S. restaurant chain by footprint",
+    "Franchisees faced oversaturated markets and low average unit volume"
+  ],
+  "inferred": [
+    "Over-franchising (footprint/distribution expansion past profitable demand) cannibalized per-unit sales (gtm/channel-footprint mismatch)",
+    "Net closures represent a corrective rationalization of an over-extended distribution network"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Franchise system where aggressive footprint/distribution expansion oversaturated markets and depressed franchisee unit economics, requiring a multi-year correction. Tests whether the engine recognizes a channel/footprint-saturation mismatch (vs simple demand decline) and models the franchisee small-business reality and review-cadence adjustment during a long rationalization.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

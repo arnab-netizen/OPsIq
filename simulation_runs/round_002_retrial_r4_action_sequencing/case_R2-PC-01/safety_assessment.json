@@ -1,0 +1,68 @@
+{
+  "inputs": {
+    "confidence_score": 0.8,
+    "has_evidence": true,
+    "evidence_contradictions": 0,
+    "scope_valid": true,
+    "preconditions_met": true,
+    "irreversibility_score": 0,
+    "operator_capacity_available": true,
+    "active_conflicts": 0,
+    "evidence_support": {
+      "committed": true,
+      "supportRatio": 0.5,
+      "hasMissingEvidence": true
+    }
+  },
+  "assessment": {
+    "is_safe": false,
+    "unsafe_conditions": [
+      {
+        "condition_type": "SCOPE_MISMATCH",
+        "severity": "HIGH",
+        "description": "Causal challenge failed: stated problem references a cause outside the engine's operational archetypes (market/financial/legal/people/macro/integrity)",
+        "blocking": true
+      }
+    ],
+    "confidence_adjustment": -30,
+    "abstain": true,
+    "abstention_state": "OUTSIDE_VALID_SCOPE",
+    "fallback_action": "escalate_to_operator"
+  },
+  "escalation_required": false,
+  "causal_challenge": {
+    "committed": true,
+    "challenged": true,
+    "outOfModelCauseInProblem": true,
+    "adverseOffArchetypeEvidence": false,
+    "reasons": [
+      "stated problem references a cause outside the engine's operational archetypes (market/financial/legal/people/macro/integrity)"
+    ]
+  },
+  "constraint_alignment": {
+    "committed": true,
+    "conflict": false,
+    "reasons": []
+  },
+  "decision": {
+    "recommendation_id": "f67d27f7-1c31-54c0-9406-c4f84e8d173e",
+    "abstention_state": "OUTSIDE_VALID_SCOPE",
+    "metadata": {
+      "reason": "Recommendation abstained: OUTSIDE_VALID_SCOPE",
+      "blocking_factors": [
+        "SCOPE_MISMATCH"
+      ],
+      "missing_evidence": [],
+      "violated_constraints": [
+        "scope_constraint"
+      ],
+      "confidence_score": 0.8,
+      "escalation_required": false,
+      "safe_fallback_action": "revalidate_later",
+      "review_date": "2026-06-18T01:57:53.490Z"
+    },
+    "timestamp": "2026-06-18T01:57:53.490Z",
+    "actor": "round2-retrial",
+    "immutable": true
+  }
+}

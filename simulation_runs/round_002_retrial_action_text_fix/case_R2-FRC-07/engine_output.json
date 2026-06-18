@@ -1,0 +1,172 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+    "Causal adjudication: re-ranked to demand_generation_failure over surface margin_erosion — Margin erosion is driven by a demand/volume collapse (volume deleverage), an upstream cause the engine cannot diagnose."
+  ],
+  "decisionMemo": {
+    "id": "62163d2f-f20d-404a-b377-0d79709405a4",
+    "engagementId": "b6d24ff3-7be0-5cf9-8309-ef8ecc58e396",
+    "timestamp": "2026-06-18T03:42:04.593Z",
+    "businessProblem": "Operating margin went negative and the owner is hunting for cost cuts, but costs are not what changed.",
+    "rootCauseDiagnosis": {
+      "id": "ea1a932d-3e97-45d5-8d08-2ecd6dac0c46",
+      "type": "demand_generation_failure",
+      "description": "Demand-generation failure: top-of-funnel / new-customer demand has deteriorated",
+      "mechanismDescription": "New-customer acquisition, lead flow, or top-of-funnel demand has collapsed; the gap is new demand, not unit economics or cost.",
+      "evidenceIds": [
+        "5925dc21-a72e-5f84-8b67-12fcc01318a7"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "A temporary seasonal dip rather than a structural demand problem",
+        "A tracking/attribution gap rather than a real demand fall"
+      ],
+      "missingEvidenceFor": [
+        "Channel-level lead-source attribution",
+        "Funnel conversion by stage"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "8f3510f9-5125-4258-abc1-f33eaa48d3c8",
+          "title": "Run a demand and funnel diagnostic and a lead-source attribution review",
+          "class": "STABILIZATION",
+          "objective": "Locate where new-customer demand is leaking before any spend change",
+          "rationale": "A demand/funnel diagnostic and lead-source attribution are analysis-only and reversible; they avoid cutting or scaling spend blindly.",
+          "whyThisNow": "New demand has deteriorated; the funnel must be diagnosed before any marketing change",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Run a demand and funnel diagnostic",
+              "description": "Map top-of-funnel volume, conversion by stage, and channel demand to find the demand leak.",
+              "ownerRole": "consultant",
+              "estimatedDays": 4,
+              "successCriteria": "The dominant demand/funnel leak is identified by stage and channel"
+            },
+            {
+              "sequence": 2,
+              "title": "Run a lead-source attribution review",
+              "description": "Attribute new-customer flow by source to size reversible recovery levers before any spend change.",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Lead sources attributed and a reversible volume-recovery shortlist drafted"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Demand/funnel diagnostic complete",
+            "Lead-source attribution reviewed"
+          ],
+          "failureRisks": [
+            "Attribution data may be incomplete across channels"
+          ],
+          "fallbackPlan": "Run an incrementality test on one channel before reallocating spend",
+          "evidenceBasis": [
+            "5925dc21-a72e-5f84-8b67-12fcc01318a7"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 72,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "9de7bba1-05e4-4b27-b728-2e9a559e8729",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "8f3510f9-5125-4258-abc1-f33eaa48d3c8"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "aa268a7e-3e87-4302-8f5d-a606c5c8b53b",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "8f3510f9-5125-4258-abc1-f33eaa48d3c8"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "8f3510f9-5125-4258-abc1-f33eaa48d3c8",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "8f3510f9-5125-4258-abc1-f33eaa48d3c8"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

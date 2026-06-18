@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-FRC-04",
+  "caseType": "single",
+  "industry": "retail",
+  "businessModel": "multi_sku_retail",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Margins turned negative and the owner blames cost inflation, but the margin hit is coming from somewhere else.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Gross margin fell into negative territory and the owner blames general cost inflation",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "marginPct": -6
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "The margin hit is markdowns: heavy overstock on slow lines forces clearance while best-sellers stock out",
+      "confidence": "HIGH",
+      "source": "inventory system",
+      "isCritical": true,
+      "supportingData": {
+        "stockoutRate": 13,
+        "forecastErrorPct": 36
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Inventory days on hand swung from forty to one hundred within two quarters",
+      "confidence": "HIGH",
+      "source": "inventory system",
+      "isCritical": true,
+      "supportingData": {
+        "inventoryDays": 100
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Underlying demand and input prices are stable; the driver is planning, not cost",
+      "confidence": "MEDIUM",
+      "source": "sales",
+      "isCritical": false
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "caseId": "R2-HC-05",
+  "diagnosis_bucket": "hidden_constraint: time window must not force irreversibility",
+  "case_type": "single"
+}

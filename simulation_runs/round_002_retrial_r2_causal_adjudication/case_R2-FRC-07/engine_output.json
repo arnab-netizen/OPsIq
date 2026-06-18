@@ -1,0 +1,180 @@
+{
+  "status": "INSUFFICIENT_EVIDENCE",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+    "Causal adjudication: abstained — Margin erosion is driven by a demand/volume collapse (volume deleverage), an upstream cause the engine cannot diagnose.",
+    "Raw matched candidates: margin_erosion"
+  ],
+  "decisionMemo": {
+    "id": "a081e47d-391f-42b0-b472-8dccb3adaa00",
+    "engagementId": "b6d24ff3-7be0-5cf9-8309-ef8ecc58e396",
+    "timestamp": "2026-06-18T01:35:26.260Z",
+    "businessProblem": "Operating margin went negative and the owner is hunting for cost cuts, but costs are not what changed.",
+    "rootCauseDiagnosis": {
+      "id": "7e8cf48f-7df3-43e1-9226-0876de96da35",
+      "type": "unknown",
+      "description": "Surface symptom suppressed; root cause is upstream and unmodeled",
+      "mechanismDescription": "Causal adjudication found a stronger upstream driver that explains the matched surface symptom; the engine refuses to name the downstream symptom as the root cause.",
+      "evidenceIds": [
+        "85286b8c-987e-5df9-a65f-394664e7eda1",
+        "5925dc21-a72e-5f84-8b67-12fcc01318a7",
+        "327646b2-e474-51b3-b551-742d516ed537",
+        "26ac3a05-ba05-5099-b546-cf5797f28662"
+      ],
+      "confidence": "INSUFFICIENT_EVIDENCE",
+      "alternativeExplanations": [
+        "Suppressed surface diagnosis: margin_erosion",
+        "Margin erosion is driven by a demand/volume collapse (volume deleverage), an upstream cause the engine cannot diagnose."
+      ],
+      "missingEvidenceFor": [
+        "An archetype for the upstream driver (out of current model coverage)",
+        "Confirmation the surface symptom is not independently the root cause"
+      ]
+    },
+    "diagnosisConfidence": "INSUFFICIENT_EVIDENCE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "7eeafc87-fc4a-429e-b26c-8da194c5afb0",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Causal adjudication found a stronger upstream driver that explains the matched surface symptom; the engine refuses to name the downstream symptom as the root cause.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "85286b8c-987e-5df9-a65f-394664e7eda1",
+            "5925dc21-a72e-5f84-8b67-12fcc01318a7",
+            "327646b2-e474-51b3-b551-742d516ed537",
+            "26ac3a05-ba05-5099-b546-cf5797f28662"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 72,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "ea9ef0e3-7c84-4953-bcdc-891ad30689cd",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "7eeafc87-fc4a-429e-b26c-8da194c5afb0"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "f6dc0338-4ad4-4ee9-9a13-41fc00f1e00f",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "7eeafc87-fc4a-429e-b26c-8da194c5afb0"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "7eeafc87-fc4a-429e-b26c-8da194c5afb0",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "7eeafc87-fc4a-429e-b26c-8da194c5afb0"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Insufficient evidence for definitive diagnosis. Recommend phase 1 investigation before committing to full intervention plan.",
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

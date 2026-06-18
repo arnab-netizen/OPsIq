@@ -1,0 +1,47 @@
+{
+  "source_id": "SRC-087",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0000320187/000032018722000038/nke-20220531.htm",
+  "source_title": "NIKE, Inc. Form 10-K, fiscal year ended May 31, 2022 (with fiscal 2023 first-quarter and full-year follow-on)",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "NIKE, Inc. (SEC Form 10-K and related results releases)",
+  "publication_or_filing_date": "2022-07-21",
+  "accessed_date": "2026-06-17",
+  "company_context": "NIKE, Inc. is a global athletic footwear and apparel company. Through fiscal 2022 and into fiscal 2023, Nike carried elevated inventories driven by extended lead times and supply-chain disruption that pushed large volumes of product in-transit, later compounded by softer-than-expected demand that required markdowns to clear.",
+  "business_type": "Global branded athletic footwear and apparel (wholesale and direct-to-consumer)",
+  "company_size_stage": "Large, mature, public multinational",
+  "geography": "Global (headquartered United States; significant North America, EMEA, Greater China, APLA segments)",
+  "time_period": "Fiscal 2022 (ended May 31, 2022), fiscal 2023 Q1 (ended August 31, 2022), and fiscal 2023 (ended May 31, 2023)",
+  "macro_context": "2021-2023 global supply-chain disruption and extended ocean/logistics lead times, followed by a 2022 demand softening in discretionary goods and elevated promotional activity across apparel retail.",
+  "outcome_category": "8 - fast-growth/operational breakdown contained (elevated inventory and markdown pressure that is subsequently worked down)",
+  "candidate_diagnosis_bucket": "inventory_forecasting_mismatch",
+  "evidence_summary": "Nike ended fiscal 2022 (May 31, 2022) with inventories of $8,420 million (about $8.4 billion), up about 23 percent year over year, driven by elevated in-transit inventories from extended lead times amid supply-chain disruption, partially offset by strong consumer demand. The mismatch peaked in fiscal 2023 first quarter (ended August 31, 2022), when inventories reached about $9.7 billion, up 44 percent year over year, again driven by elevated in-transit inventory amid supply-chain volatility. By fiscal year-end 2023 (May 31, 2023) inventories were about $8.5 billion, roughly flat versus the prior year, and North America inventories had been reduced from $4,098 million (2022) to $3,806 million (2023), indicating the glut was actively worked down through markdowns and tighter buying. This is a documented inventory-forecasting/lead-time mismatch with quantified build-up and subsequent normalization.",
+  "source_backed_metrics": {
+    "fy2022_ending_inventory_may_31_2022": "$8,420 million (about $8.4 billion), up about 23 percent year over year",
+    "fy2023_q1_inventory_aug_31_2022": "approximately $9.7 billion, up 44 percent year over year",
+    "fy2023_ending_inventory_may_31_2023": "approximately $8.5 billion (roughly flat year over year)",
+    "north_america_inventory_2022": "$4,098 million",
+    "north_america_inventory_2023": "$3,806 million",
+    "primary_cited_cause": "elevated in-transit inventories from extended lead times and supply-chain disruption"
+  },
+  "owner_decision_context": "Management attributed the build-up to in-transit inventory from supply-chain lead times rather than weak demand, and over fiscal 2023 prioritized clearing excess through markdowns and disciplined buying, especially in North America.",
+  "action_taken": "Markdowns and promotional clearance plus tighter inventory buying through fiscal 2023 to normalize inventory levels, particularly in North America.",
+  "outcome_evidence": "Inventory rose from $8.4 billion (FY2022) to a $9.7 billion peak (Q1 FY2023, +44 percent) then was worked back down to about $8.5 billion (flat) by FY2023 year-end, with North America inventory falling from $4,098 million to $3,806 million.",
+  "source_limitations": "SEC EDGAR filing pages returned HTTP 403 on direct fetch; the inventory values, percentage changes, and cited causes were confirmed verbatim in Nike investor-relations, Business Wire, and SEC-indexed primary-domain search snippets rather than read in full filing text. The 44 percent peak and the $9.7 billion figure come from the fiscal 2023 first-quarter results release; the $8.4 billion and $8.5 billion year-end figures come from the fiscal 2022 and fiscal 2023 10-Ks respectively.",
+  "directly_stated": [
+    "Fiscal 2022 ending inventory $8,420 million, up about 23 percent year over year",
+    "Fiscal 2023 Q1 inventory about $9.7 billion, up 44 percent year over year",
+    "Build-up driven by elevated in-transit inventories from extended lead times / supply-chain disruption",
+    "Fiscal 2023 ending inventory about $8.5 billion, roughly flat",
+    "North America inventory fell from $4,098 million (2022) to $3,806 million (2023)"
+  ],
+  "inferred": [
+    "The glut originated in lead-time/in-transit forecasting rather than a structural demand collapse",
+    "Active markdowns and tighter buying normalized inventory within roughly a year"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "A large-cap inventory_forecasting_mismatch driven primarily by supply-chain lead times rather than demand failure, with a clear build-up-then-normalization trajectory. Useful for testing whether OpsIQ separates an in-transit/forecasting inventory problem from a demand or pricing-power problem, and for modeling adaptive re-evaluation across a KPI deterioration that is subsequently contained.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "MED"
+}

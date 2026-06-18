@@ -1,0 +1,48 @@
+{
+  "source_id": "SRC-089",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001621832/000143774924009870/aqms20231231_10k.htm",
+  "source_title": "Aqua Metals, Inc. Form 10-K (fiscal year ended December 31, 2023) - going-concern disclosure",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Aqua Metals, Inc. (SEC Form 10-K)",
+  "publication_or_filing_date": "2024-03",
+  "accessed_date": "2026-06-17",
+  "company_context": "Aqua Metals, Inc. is a small-cap U.S. company developing lithium battery recycling technology, still pre-commercial scale with recurring operating losses. Its fiscal 2023 10-K carried a going-concern qualification, yet the company also reported a non-trivial cash balance and positive working capital at year-end, creating a genuinely ambiguous near-term picture.",
+  "business_type": "Pre-revenue / early-commercial cleantech (battery materials recycling), R&D and pilot-plant intensive",
+  "company_size_stage": "Small-cap / micro-cap, pre-profitability, public",
+  "geography": "United States",
+  "time_period": "Fiscal year ended December 31, 2023",
+  "macro_context": "2023 tight financing environment for unprofitable small-cap cleantech, elevated cost of capital, and pressure to fund continued operations from limited liquidity.",
+  "outcome_category": "20 - ambiguous/insufficient evidence (going-concern flag coexisting with positive working capital; outcome not determinable from disclosed figures)",
+  "candidate_diagnosis_bucket": "cash_liquidity_crisis",
+  "evidence_summary": "Aqua Metals' fiscal 2023 audit included an explanatory paragraph describing conditions that raise substantial doubt about its ability to continue as a going concern within one year of issuance, citing recurring losses, negative operating cash flow, and limited capital resources. The net loss widened to about $23.9 million in 2023 (up about 55 percent year over year), including a roughly $9.11 million non-cash impairment and asset-disposal loss tied to the sale of a property, and the company cut spending through workforce reductions. Yet at December 31, 2023 the company reported about $16.5 million in cash and about $13.7 million in working capital. The combination of a formal going-concern warning with still-positive liquidity and working capital makes the near-term outcome genuinely indeterminate from the disclosed figures, which is exactly the abstention-appropriate profile: the source signals risk but does not provide enough to confidently classify survival, recovery, or failure.",
+  "source_backed_metrics": {
+    "going_concern": "audit explanatory paragraph: substantial doubt about ability to continue as a going concern within one year of issuance",
+    "net_loss_2023": "approximately $23.9 million (up about 55 percent year over year)",
+    "impairment_and_asset_disposal_loss_2023": "approximately $9.11 million (non-cash, tied to a property sale)",
+    "cash_dec_31_2023": "approximately $16.5 million",
+    "working_capital_dec_31_2023": "approximately $13.7 million",
+    "cost_actions": "workforce reductions and reduced plant/R&D spending"
+  },
+  "owner_decision_context": "Management faced the classic early-stage-cleantech dilemma: continue funding a pre-commercial technology against recurring losses with finite cash, while disclosing substantial going-concern doubt and pursuing cost cuts and potential strategic transactions.",
+  "action_taken": "Workforce reductions, reduced plant and R&D spending, asset disposal (property sale), and pursuit of strategic options to extend runway.",
+  "outcome_evidence": "Disclosed but indeterminate: a going-concern warning alongside about $16.5 million cash and about $13.7 million working capital at year-end. The 10-K does not establish whether the company subsequently failed, recovered, or was acquired, so no confident outcome is supportable from this source.",
+  "source_limitations": "Deliberately selected as an ambiguous/insufficient-evidence case. SEC EDGAR page returned HTTP 403 on direct fetch; the going-concern language and the net-loss, impairment, cash, and working-capital figures were confirmed in SEC-indexed and named-secondary (StockTitan, Simply Wall St) primary/secondary search snippets rather than read in full filing text. Forward outcome is not disclosed in this filing, so survival/failure cannot be determined. Small-cap with thin coverage; some figures (net loss, impairment) are corroborated by secondary sources rather than verbatim primary text.",
+  "directly_stated": [
+    "Going-concern explanatory paragraph: substantial doubt about continuing within one year",
+    "Recurring losses, negative operating cash flow, and limited capital resources cited",
+    "2023 net loss about $23.9 million, up about 55 percent year over year",
+    "Approximately $9.11 million non-cash impairment / asset-disposal loss",
+    "About $16.5 million cash and about $13.7 million working capital at December 31, 2023",
+    "Workforce reductions and reduced plant/R&D spending"
+  ],
+  "inferred": [
+    "Going-concern doubt plus still-positive working capital makes the near-term outcome genuinely uncertain",
+    "A confident survival-or-failure classification is not supportable from the disclosed figures alone"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "A real abstention-appropriate case: a formal going-concern flag coexisting with positive liquidity and working capital. Useful for testing whether OpsIQ correctly returns insufficient-evidence / outcome-20 rather than over-committing to a cash_liquidity_crisis failure label when the disclosed evidence is genuinely mixed, and for exercising the mandatory adaptive re-evaluation trigger (going-concern note as new critical evidence) without forcing a premature outcome.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": true,
+  "source_leakage_risk": "LOW"
+}

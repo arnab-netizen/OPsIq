@@ -1,0 +1,42 @@
+{
+  "source_id": "SRC-021",
+  "source_url": "https://www.sec.gov/newsroom/press-releases/2020-319",
+  "source_title": "Luckin Coffee Agrees to Pay $180 Million Penalty to Settle Accounting Fraud Charges",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "U.S. Securities and Exchange Commission",
+  "publication_or_filing_date": "2020-12-16",
+  "accessed_date": "2026-06-17",
+  "company_context": "Luckin Coffee Inc. was a fast-growing Chinese coffee retail chain that positioned itself as a Starbucks rival and listed on Nasdaq. The SEC charged it with materially misstating revenue, expenses, and net operating loss to appear to achieve rapid growth and profitability and to meet earnings estimates.",
+  "business_type": "Coffee retail / restaurant chain (formerly Nasdaq-listed, China)",
+  "outcome_category": "15 - fraud/governance/legal crisis",
+  "candidate_diagnosis_bucket": "legal_governance_risk",
+  "evidence_summary": "From at least April 2019 through January 2020, Luckin intentionally fabricated more than $300 million in retail sales using related parties to create false transactions through three purchasing schemes. Employees concealed the fraud by inflating expenses by more than $190 million, building a fake operations database, and altering accounting and bank records. Luckin settled SEC charges for a $180 million penalty without admitting or denying the allegations. It was delisted from Nasdaq in June 2020, filed Chapter 15 in February 2021, restructured roughly $460M of debt, and emerged from all bankruptcy proceedings on 11 April 2022 — surviving as an operating company.",
+  "source_backed_metrics": {
+    "fabricated_retail_sales_usd": "more than 300 million",
+    "inflated_expenses_usd": "more than 190 million",
+    "sec_penalty_usd": "180 million",
+    "fraud_period": "April 2019 through January 2020",
+    "settlement_release_date": "2020-12-16",
+    "chapter15_emergence_date": "2022-04-11",
+    "restructured_debt_usd": "approximately 460 million"
+  },
+  "outcome_evidence": "SEC announced the $180 million settlement on 16 December 2020. Luckin was delisted from Nasdaq (June 2020), filed Chapter 15 bankruptcy (Feb 2021), and emerged from all bankruptcy proceedings on 11 April 2022; it continued operating and recovered (later reported as a multi-billion-dollar valuation and exploring U.S. relisting). Outcome sequence: 15 (fraud crisis) then 3 (severe distress but survival).",
+  "source_limitations": "SEC press-release page returned HTTP 403 to automated fetch; settlement figures are quoted verbatim from SEC.gov search-result snippets. Survival/emergence details corroborated by Luckin investor relations, SEC EDGAR 6-K (FY2022), Bloomberg Law, and Nasdaq/CNBC reporting.",
+  "directly_stated": [
+    "fabricated more than $300 million in retail sales",
+    "inflated expenses by more than $190 million",
+    "$180 million SEC penalty",
+    "fraud period April 2019 through January 2020",
+    "emerged from all bankruptcy proceedings 11 April 2022",
+    "restructured approximately $460 million of debt"
+  ],
+  "inferred": [
+    "underlying business had real demand but reported growth/profitability was materially overstated",
+    "survival shows fraud crisis is not always terminal when the core operation has genuine cash-generating customers"
+  ],
+  "reliability_rating": "A",
+  "why_useful_for_opsiq": "Two-phase case: fraud/governance crisis followed by documented survival/turnaround. Excellent for testing whether OpsIQ separates governance crisis from operational viability, routes to legal_governance_risk, and then re-evaluates BusinessConditionProfile after restructuring (mandatory adaptive rule).",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": true,
+  "keep_source_text_out_of_input": true
+}

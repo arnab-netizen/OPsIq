@@ -1,0 +1,45 @@
+{
+  "source_id": "SRC-051",
+  "source_url": "https://www.cnbc.com/2020/01/13/away-co-founder-steph-korey-back-as-co-ceo-after-social-media-uproar.html",
+  "source_title": "Away co-founder Steph Korey back as co-CEO after social media uproar",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CNBC",
+  "publication_or_filing_date": "2020-01-13",
+  "accessed_date": "2026-06-17",
+  "company_context": "Away, a direct-to-consumer luggage startup co-founded by CEO Steph Korey and Jen Rubio. In December 2019 a Verge investigation (Zoe Schiffer) detailed a toxic internal culture centered on Slack and on Korey's management style. Korey announced she would step down as CEO, then reversed course in January 2020 to become co-CEO, then stepped down again in October 2020. A messy, leadership-driven culture crisis with a mixed outcome.",
+  "business_type": "Direct-to-consumer travel/luggage brand (venture-backed startup)",
+  "company_size_stage": "High-growth venture-backed DTC startup (had raised at a ~$1.4B valuation in 2019)",
+  "geography": "United States (HQ New York)",
+  "time_period": "December 2019 - October 2020",
+  "macro_context": "Peak DTC-startup era; intense media scrutiny of startup workplace culture and founder management practices.",
+  "outcome_category": "16 - founder/key-person/team failure (leadership/culture crisis), resolving toward 5 - partial recovery / mixed",
+  "candidate_diagnosis_bucket": "key_person_risk",
+  "evidence_summary": "In December 2019 The Verge published an investigation by Zoe Schiffer alleging a toxic workplace at Away, including restrictive Slack-based communication policies and public shaming/berating of staff and pressure to work long hours, much of it tied to CEO Steph Korey's management style. Korey announced she would step down as CEO, with Lululemon's former COO Stuart Haselden named successor. After a social-media backlash about the coverage, Korey reversed her resignation on January 13, 2020 and became co-CEO alongside Haselden. The arrangement lasted until October 2020, when Haselden became sole CEO and Korey stepped down entirely; Haselden then left in early 2021 and co-founder Jen Rubio took over as interim CEO. A leadership/team failure with an unstable, mixed resolution.",
+  "source_backed_metrics": {
+    "verge_investigation_date": "December 2019",
+    "initial_resignation": "Korey announced she would step down as CEO (December 9, 2019), succeeded by Stuart Haselden",
+    "reversal_date": "January 13, 2020 (Korey renounced resignation, became co-CEO)",
+    "korey_full_step_down": "October 2020 (Haselden became sole CEO)",
+    "haselden_departure": "February 2021 (left after ~13 months; Jen Rubio became interim CEO)"
+  },
+  "owner_decision_context": "Founders and board confronted a culture crisis attributable to the founder-CEO's management style; they oscillated between removing her, restoring her, and finally transitioning leadership, reflecting unresolved key-person/team-management risk.",
+  "action_taken": "Initial plan to replace the founder-CEO with an outside executive, reversed into a co-CEO structure, then a full leadership transition to the outside CEO before further turnover.",
+  "outcome_evidence": "Mixed/partial: the company survived but went through repeated, unstable leadership changes (founder out, back as co-CEO, out again; successor then departed), indicating an unresolved leadership/team-management problem.",
+  "source_limitations": "Secondary journalism; private company with no public financials, so business-condition impact (sales/morale) is qualitative. Characterizations of culture are from reporting and former-employee accounts, contested by the founder.",
+  "directly_stated": [
+    "The Verge published a toxic-culture investigation in December 2019",
+    "Korey announced she would step down as CEO, then reversed to co-CEO on January 13, 2020",
+    "Korey stepped down entirely in October 2020 as Haselden became sole CEO",
+    "Haselden left in early 2021 and Jen Rubio became interim CEO"
+  ],
+  "inferred": [
+    "The repeated leadership reversals reflect an unresolved founder/management-capability risk",
+    "Morale fragility and communication-breakdown dynamics were central operational human variables"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Key-person/team-management-risk case with a mixed, unstable outcome—useful because it is NOT a clean reinstatement-and-recovery story. Demonstrates communication breakdown, morale fragility, and management-capability as business-operational human variables, and shows how unresolved key-person risk produces oscillating governance decisions requiring repeated adaptive re-evaluation.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

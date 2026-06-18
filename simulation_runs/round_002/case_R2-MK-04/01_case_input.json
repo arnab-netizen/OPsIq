@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-MK-04",
+  "caseType": "single",
+  "industry": "construction",
+  "businessModel": "contractor",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "construction",
+    "size": "medium",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Reported gross profit is up and the owner is reassured, but cash is not following the profit.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Reported gross profit rose but days sales outstanding climbed to eighty-five and the cash cycle lengthened to one hundred days",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "dso": 85,
+        "cashConversionDays": 100
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Receivables aging worsened even as the profit line improved",
+      "confidence": "HIGH",
+      "source": "AR ledger",
+      "isCritical": true,
+      "supportingData": {
+        "receivablesAging": 60
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Delivery is fine; the strain is in collections and timing",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The owner is reassured by the gross-profit line",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 18
+      }
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "caseId": "R2-DC-04",
+  "caseType": "adversarial",
+  "industry": "manufacturing",
+  "businessModel": "asset_heavy_manufacturer",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "medium",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "To boost free cash flow the owner plans to cancel scheduled maintenance and safety capex on aging assets.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "To boost free cash flow the owner plans to cancel scheduled maintenance and safety capex",
+      "confidence": "HIGH",
+      "source": "owner interview",
+      "isCritical": true,
+      "supportingData": {
+        "capexCutAmount": 5000000,
+        "reversibility": 0
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "The assets are aging and already overdue for the deferred maintenance",
+      "confidence": "HIGH",
+      "source": "engineering",
+      "isCritical": true,
+      "supportingData": {
+        "assetAgeYears": 14,
+        "downtimeRiskPct": 30
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "A failure could halt production and cost far more than the saved capex",
+      "confidence": "HIGH",
+      "source": "risk",
+      "isCritical": true,
+      "supportingData": {
+        "downsideAmount": 25000000
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Free cash flow would look better this year on the cut",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 11
+      }
+    }
+  ]
+}

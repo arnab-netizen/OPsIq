@@ -1,0 +1,51 @@
+{
+  "source_id": "SRC-101",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001813756/000181375623000059/we-20230630.htm",
+  "source_title": "WeWork Inc. Form 10-Q for quarterly period ended June 30, 2023 (going-concern disclosure)",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "WeWork Inc. (filed with U.S. Securities and Exchange Commission); corroborated by CNBC, NPR, TechCrunch coverage of the August 2023 going-concern disclosure and November 2023 Chapter 11 filing",
+  "publication_or_filing_date": "2023-08-08",
+  "accessed_date": "2026-06-17",
+  "company_context": "WeWork is a flexible-workspace / coworking platform that scaled to billions in annual revenue but never reached sustained profitability. In its Q2 2023 10-Q (released August 8, 2023) it disclosed substantial doubt about its ability to continue as a going concern despite high revenue, and filed for Chapter 11 bankruptcy on November 6, 2023. SUBSTITUTION NOTE: used in place of a pure-software SaaS because it is the strongest documented case of a high-revenue, recurring-membership growth company hitting an explicit going-concern/cash crisis with primary SEC disclosure.",
+  "business_type": "Asset-heavy, recurring-membership flexible workspace platform; long-term lease liabilities against shorter-term member revenue, structurally negative free cash flow",
+  "company_size_stage": "large public company (formerly ~$47B peak private valuation), high-revenue but unprofitable",
+  "geography": "United States headquartered; global operations",
+  "time_period": "Q2 2023 (quarter ended June 30, 2023) through Chapter 11 filing November 6, 2023",
+  "macro_context": "Post-pandemic office-demand shift, elevated interest rates raising refinancing cost, and rising member churn pressuring a heavily lease-encumbered model.",
+  "outcome_category": "7 - high revenue but cash crisis / going concern",
+  "candidate_diagnosis_bucket": "cash_liquidity_crisis",
+  "evidence_summary": "WeWork reported Q2 2023 consolidated revenue of about $844 million (up about 4% year over year) yet disclosed, as a result of losses, projected cash needs, and rising member churn combined with current liquidity levels, that substantial doubt existed about its ability to continue as a going concern. As of June 30, 2023 it held about $205 million in cash and cash equivalents and about $680 million in total liquidity. The net loss for the quarter was about $397 million. The company filed for Chapter 11 on November 6, 2023, reporting about $18.65 billion in total debts against about $15.06 billion in total assets. This is a high-revenue company whose binding constraint was liquidity and lease obligations, not lack of sales.",
+  "source_backed_metrics": {
+    "q2_2023_revenue_usd": "approximately $844 million",
+    "q2_2023_revenue_growth_yoy_pct": "approximately 4%",
+    "q2_2023_net_loss_usd": "approximately $397 million",
+    "cash_and_equivalents_jun_30_2023_usd": "approximately $205 million",
+    "total_liquidity_jun_30_2023_usd": "approximately $680 million",
+    "going_concern_disclosed_date": "August 8, 2023 (Q2 2023 10-Q)",
+    "chapter_11_filing_date": "November 6, 2023",
+    "total_debts_at_filing_usd": "approximately $18.65 billion",
+    "total_assets_at_filing_usd": "approximately $15.06 billion",
+    "peak_valuation_usd": "approximately $47 billion (prior private peak)"
+  },
+  "owner_decision_context": "Management had pursued rapid lease-funded expansion to grow revenue and valuation, leaving the company with large long-term lease liabilities that, combined with churn and high rates, outran available liquidity.",
+  "action_taken": "Disclosed going-concern doubt in August 2023, pursued lease restructuring and a debt-restructuring agreement with about 92% of lenders, and ultimately filed Chapter 11 in November 2023 to renegotiate or reject leases.",
+  "outcome_evidence": "About $844 million quarterly revenue alongside only about $205 million cash and an explicit going-concern statement, followed by a November 6, 2023 Chapter 11 filing with debts of about $18.65 billion, confirm a high-revenue liquidity/solvency crisis rather than a demand failure.",
+  "source_limitations": "WebFetch of sec.gov returns HTTP 403 here; figures verified from the Q2 2023 10-Q and bankruptcy filing as reported verbatim in search snippets from primary (sec.gov) and credible secondary outlets (CNBC, NPR, TechCrunch), not full-text read. WeWork is workspace-platform rather than pure software SaaS (substitution noted).",
+  "directly_stated": [
+    "Q2 2023 revenue approximately $844 million, up about 4% year over year",
+    "Substantial doubt about ability to continue as a going concern disclosed in the Q2 2023 10-Q",
+    "Cash and equivalents about $205 million and total liquidity about $680 million as of June 30, 2023",
+    "Q2 2023 net loss about $397 million",
+    "Chapter 11 filed November 6, 2023 with about $18.65 billion debts and about $15.06 billion assets"
+  ],
+  "inferred": [
+    "Long-term lease liabilities against shorter-duration member revenue were the structural driver of the liquidity gap",
+    "The crisis was solvency/liquidity-driven (cash and obligations), not a top-line demand collapse"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Outcome-7 case where high and still-growing revenue coexists with an explicit SEC going-concern disclosure. Tests whether OpsIQ separates revenue health from liquidity/solvency and triggers adaptive re-evaluation on a going-concern signal and unresolved critical blocker (lease overhang). Strong for debt_solvency and cash_liquidity modeling.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

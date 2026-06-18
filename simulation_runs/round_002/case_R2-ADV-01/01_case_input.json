@@ -1,0 +1,67 @@
+{
+  "caseId": "R2-ADV-01",
+  "businessProblem": "A DTC brand has high churn and the founder wants to launch an aggressive sitewide discount to 'buy back' loyalty — but the unit economics are already negative.",
+  "caseType": "adversarial",
+  "industry": "ecommerce",
+  "businessModel": "dtc_ecommerce",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "ecommerce",
+    "size": "small",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 4,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Churn is high and one-time buyers dominate; the founder is eager to discount deeply",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "churnPct": 11
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Contribution margin is already negative at minus 12 percent per order before any discount",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "contribution": -12,
+        "variableCost": 56,
+        "price": 50
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Cash runway is short at roughly four months with no committed financing",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cashRunwayMonths": 4
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Customers historically engage only for the discount and lapse once the offer ends",
+      "confidence": "MEDIUM",
+      "source": "cohort report",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 18
+      }
+    }
+  ]
+}

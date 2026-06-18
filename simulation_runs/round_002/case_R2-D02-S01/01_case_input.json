@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-D02-S01",
+  "caseType": "single",
+  "industry": "software_saas",
+  "businessModel": "smb_subscription",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "software_saas",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "A SaaS startup is growing revenue but losing more money per customer as it scales; the founder wants to know whether to keep pushing growth.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 10,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Per-customer contribution is negative once support and onboarding costs are fully loaded",
+      "confidence": "HIGH",
+      "source": "finance model",
+      "isCritical": true,
+      "supportingData": {
+        "contribution": -8
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Blended acquisition cost now exceeds eighteen-month lifetime value on the core tier",
+      "confidence": "HIGH",
+      "source": "finance model",
+      "isCritical": true,
+      "supportingData": {
+        "cac": 420,
+        "ltv": 300
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Repeat usage is moderate but does not offset the per-unit economic loss",
+      "confidence": "MEDIUM",
+      "source": "product analytics",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 55
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Fulfilment effort per account is increasing with volume rather than falling",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "costPerAccount": 38
+      }
+    }
+  ]
+}

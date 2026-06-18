@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-D01-S01",
+  "caseType": "single",
+  "industry": "professional_services",
+  "businessModel": "project_consultancy",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "professional_services",
+    "size": "small",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "businessProblem": "A project consultancy is profitable on paper but is running dangerously low on cash as collections lag payroll; the owner wants to know what to do first.",
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 3,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Cash runway has fallen to roughly three months as outflows outpace collections",
+      "confidence": "HIGH",
+      "source": "treasury report",
+      "isCritical": true,
+      "supportingData": {
+        "cashRunwayMonths": 3
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Monthly net cash burn is approximately 45k against a thinning bank balance",
+      "confidence": "HIGH",
+      "source": "management accounts",
+      "isCritical": true,
+      "supportingData": {
+        "monthlyBurn": 45000,
+        "cashBalance": 135000
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Billing and collections have slowed, delaying inbound cash by several weeks",
+      "confidence": "MEDIUM",
+      "source": "ops review",
+      "isCritical": false,
+      "supportingData": {
+        "collectionsDelayDays": 22
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Revenue pipeline is stable and demand is not the underlying issue here",
+      "confidence": "MEDIUM",
+      "source": "sales",
+      "isCritical": false
+    }
+  ]
+}

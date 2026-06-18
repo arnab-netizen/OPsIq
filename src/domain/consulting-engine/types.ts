@@ -10,6 +10,21 @@ export enum DiagnosisType {
   CASH_LIQUIDITY_CRISIS = "cash_liquidity_crisis",
   UNIT_ECONOMICS_FAILURE = "unit_economics_failure",
   MARGIN_EROSION = "margin_erosion",
+  // E2 slice 1 — financial-structural archetypes (R5 slice 1)
+  DEBT_SOLVENCY_PRESSURE = "debt_solvency_pressure",
+  WORKING_CAPITAL_STRESS = "working_capital_stress",
+  PRICING_POWER_FAILURE = "pricing_power",
+  // E2 slice 2 — demand / GTM / inventory archetypes (R5 slice 2)
+  DEMAND_GENERATION_FAILURE = "demand_generation_failure",
+  GTM_CHANNEL_MISMATCH = "gtm_channel_mismatch",
+  INVENTORY_FORECASTING_MISMATCH = "inventory_forecasting_mismatch",
+  // E2 slice 3 — legal-governance / key-person / strategic-capex archetypes (R5 slice 3).
+  // Enum VALUES equal the frozen answer-key labels (…_risk) so the scorer needs no
+  // new synonym; the constant names describe the archetype the prompt requested
+  // (legal/governance failure, key-person dependency, strategic-capex misallocation).
+  LEGAL_GOVERNANCE_RISK = "legal_governance_risk",
+  KEY_PERSON_RISK = "key_person_risk",
+  STRATEGIC_CAPEX_RISK = "strategic_capex_risk",
   UNKNOWN = "unknown",
 }
 

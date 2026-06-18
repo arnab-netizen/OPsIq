@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-D12-S02",
+  "caseType": "single",
+  "industry": "retail",
+  "businessModel": "lbo_retail",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "large",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 9,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A retailer carrying heavy post-LBO debt faces a large maturity and tightening covenants; the owner wants to understand the solvency risk.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Leverage sits at five point one times EBITDA with interest coverage near one point two times after the buyout",
+      "confidence": "HIGH",
+      "source": "lender pack",
+      "isCritical": true,
+      "supportingData": {
+        "leverageRatio": 5.1,
+        "interestCoverage": 1.2
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "A large maturity falls due next year with thin covenant headroom ahead of the test",
+      "confidence": "HIGH",
+      "source": "lender pack",
+      "isCritical": true,
+      "supportingData": {
+        "covenantHeadroom": 0.04
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Underlying trading is stable; the pressure is balance-sheet structure, not demand",
+      "confidence": "MEDIUM",
+      "source": "management",
+      "isCritical": false
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Stores remain profitable at the operating line across the estate",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 8
+      }
+    }
+  ]
+}

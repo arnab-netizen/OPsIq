@@ -1,0 +1,22 @@
+{
+  "true_primary_diagnosis": "working_capital_stress",
+  "misleading_kpi": "revenue +25% headline hides falling cash",
+  "documented_root_cause": "Growth is consuming cash through working capital; revenue masks the cash drain.",
+  "expected_first_action": "Map the cash-conversion cycle behind the falling cash; revenue growth is masking a working-capital drain",
+  "acceptable_first_actions": [
+    "Cash-conversion-cycle mapping",
+    "Receivables/collections plan"
+  ],
+  "unsafe_first_actions": [
+    "Chase more revenue growth while cash drains into working capital"
+  ],
+  "expected_prioritization_rationale": "The revenue KPI is misleading; the real issue is cash being consumed by growth.",
+  "special_tags": [
+    "positive_metrics_hide_deterioration"
+  ],
+  "expected_safety_label": "SAFE_TO_PROCEED",
+  "adversarial_type": "none",
+  "expected_gate_outcome": "PROCEED",
+  "abstention_eligible": false,
+  "provenance": "misleading-kpi; UNVERIFIED"
+}

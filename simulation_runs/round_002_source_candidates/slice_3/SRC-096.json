@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-096",
+  "source_url": "https://www.cnbc.com/2021/09/17/china-developer-evergrande-debt-crisis-bond-default-and-investor-risks.html",
+  "source_title": "China Evergrande 2021 debt/liquidity crisis (named journalism: CNBC, Reuters, World Economic Forum summary)",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Named journalism (CNBC, Reuters via Investing.com, World Economic Forum) reporting on Evergrande filings and bond payments",
+  "publication_or_filing_date": "2021-09",
+  "accessed_date": "2026-06-17",
+  "company_context": "China Evergrande Group was one of China's largest property developers and, by 2021, the world's most indebted real-estate company. A liquidity crisis in 2021 raised fears of default with potential contagion across China's property sector and beyond.",
+  "business_type": "Property developer (residential real estate; diversified conglomerate)",
+  "company_size_stage": "large-cap public (Hong Kong-listed)",
+  "geography": "China (Hong Kong-listed; offshore USD bondholders globally)",
+  "time_period": "2021",
+  "macro_context": "China's 'three red lines' deleveraging policy tightened developer access to financing; the property sector accounted for roughly a quarter of China's economy, and a large share of Evergrande's obligations were pre-payments from homebuyers on undelivered units, creating acute social and systemic risk.",
+  "outcome_category": "7 - severe liquidity / debt crisis (near-default / restructuring)",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "By September 2021 Evergrande had more than $300 billion in liabilities and was warning investors it could default. Ratings agencies signalled imminent failure (Fitch said default 'appears probable'; Moody's said Evergrande was 'out of cash and time'). An estimated two-thirds of obligations were to homebuyers who had pre-paid for close to 1.4 million residential properties that remained undeveloped. In late September 2021 Evergrande sent $83.5 million to a Citibank trustee account to cover interest on a US-dollar bond, temporarily averting an immediate default, but the crisis reverberated across the ~$5 trillion Chinese property sector. (The company was ultimately ordered into liquidation by a Hong Kong court in January 2024 in a later development.)",
+  "source_backed_metrics": {
+    "total_liabilities_usd": "over 300 billion (approximately $305 billion)",
+    "undeveloped_pre_sold_properties": "close to 1.4 million",
+    "share_of_obligations_to_homebuyers": "approximately two-thirds",
+    "usd_bond_coupon_payment_sept_2021_usd": "83.5 million (sent to Citibank trustee)",
+    "chinese_property_sector_size_usd": "approximately 5 trillion"
+  },
+  "owner_decision_context": "Management had pursued debt-fuelled expansion and diversification, then faced a binary liquidity squeeze under tightened financing rules: whether to prioritise offshore bond coupons, supplier/wealth-product obligations, or completing pre-sold homes, with insufficient cash to meet all.",
+  "action_taken": "Evergrande prioritised partial payments (e.g., the $83.5m coupon transfer in September 2021) and asset disposals to stave off formal default while negotiating with creditors; it pursued an extended offshore-debt restructuring over subsequent years.",
+  "outcome_evidence": "Public default warnings, ratings agencies declaring default probable, >$300bn liabilities, and reliance on last-minute coupon transfers confirm a severe, systemically significant liquidity/solvency crisis (later culminating in a 2024 court-ordered liquidation).",
+  "source_limitations": "WebFetch typically 403s here; figures confirmed verbatim in WebSearch snippets attributed to CNBC, Reuters (via Investing.com) and the World Economic Forum. The '$300bn+ liabilities' and '1.4 million units' figures are widely reported from Evergrande disclosures/filings but not read by me in the primary filing. The 2024 liquidation order is a later event noted for context, not part of the 2021 source.",
+  "directly_stated": [
+    "Liabilities of over $300 billion (~$305bn)",
+    "~two-thirds of obligations owed to homebuyers on ~1.4 million undeveloped pre-sold properties",
+    "Fitch: default 'appears probable'; Moody's: 'out of cash and time'",
+    "$83.5m sent to a Citibank trustee for a USD bond coupon in September 2021, temporarily averting default",
+    "Chinese property sector ~$5 trillion, ~a quarter of the economy"
+  ],
+  "inferred": [
+    "Heavy reliance on homebuyer pre-payments as a financing source created a working-capital/solvency dependence that collapsed when new sales/financing slowed",
+    "The crisis was a leverage-driven solvency problem, not a temporary cash-timing issue"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Non-US large-cap debt/solvency-and-liquidity crisis with systemic dimensions and an unusual financing model (homebuyer pre-payments as quasi-working-capital). Tests whether the engine identifies leverage-driven solvency pressure, distinguishes a near-term coupon payment from underlying insolvency, and routes ratings/default warnings into urgent re-evaluation.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

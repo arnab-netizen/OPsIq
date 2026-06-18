@@ -1,0 +1,41 @@
+{
+  "source_id": "SRC-002",
+  "source_url": "https://www.cbc.ca/news/business/sears-bankruptcy-1.4862825",
+  "source_title": "Sears in U.S. files for bankruptcy protection amid plunging sales, massive debt",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CBC News",
+  "publication_or_filing_date": "2018-10-15",
+  "accessed_date": "2026-06-17",
+  "company_context": "Sears Holdings Corporation, the once-dominant US department-store and catalog retailer, filed voluntary Chapter 11 petitions on October 15, 2018 in the US Bankruptcy Court for the Southern District of New York after decades of declining sales and accumulating debt and operating losses under chairman Edward Lampert and his ESL hedge fund.",
+  "business_type": "Brick-and-mortar department-store retail (Sears and Kmart), asset-heavy with large owned/leased store base",
+  "outcome_category": "2 - bankruptcy/restructuring",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "Sears Holdings filed for Chapter 11 on October 15, 2018, buckling under roughly $11.3 billion of debt plus operating losses, after failing to make a $134 million debt payment due that day. The decline was structural and prolonged: sales had been falling since the 1990s. The workforce shrank from a peak of about 350,000 to roughly 68,000 at filing, and the store count fell to fewer than 900 from a 2012 peak of about 4,000. The company secured $300 million in DIP financing from banks and negotiated an additional $300 million loan from Lampert's ESL hedge fund to continue operating.",
+  "source_backed_metrics": {
+    "debt_at_filing_usd": "$11.3 billion",
+    "missed_payment_usd": "$134 million (due October 15, 2018)",
+    "dip_financing_bank_usd": "$300 million",
+    "additional_esl_loan_negotiated_usd": "$300 million",
+    "workforce_at_filing": "approximately 68,000 (down from a peak of ~350,000)",
+    "store_count_at_filing": "fewer than 900 (down from ~4,000 in 2012)"
+  },
+  "outcome_evidence": "Filed Chapter 11 on October 15, 2018; failed to make a $134 million payment that day; secured $300 million bank DIP financing to keep operating while negotiating restructuring.",
+  "source_limitations": "Named journalism summarizing the filing; the underlying SEC 8-K (CIK 0001310067) returned access-blocked when fetched directly. Figures are as-reported and rounded.",
+  "directly_stated": [
+    "Filed Chapter 11 on October 15, 2018 in SDNY",
+    "Approximately $11.3 billion of debt",
+    "Failed to make a $134 million payment due that day",
+    "Workforce down from ~350,000 to ~68,000 at filing",
+    "Fewer than 900 stores at filing, down from ~4,000 in 2012",
+    "$300 million bank DIP financing secured"
+  ],
+  "inferred": [
+    "Decades-long revenue erosion compounded the debt-service burden into insolvency",
+    "Under-investment in stores accelerated the structural decline"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "A long-horizon structural decline that ends in debt-driven insolvency, distinct from a sudden shock. Useful for testing whether OpsIQ separates chronic margin_erosion / demand decline from the proximate debt_solvency_pressure trigger (a missed $134 million payment), and for modeling cadence escalation as a slow-moving condition crosses a liquidity cliff.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

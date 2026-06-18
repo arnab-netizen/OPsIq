@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-105",
+  "source_url": "https://corporate.walmart.com/news/2022/05/17/walmart-releases-q1-fy23-earnings",
+  "source_title": "Walmart Releases Q1 FY23 Earnings (May 17, 2022) - inventory build and markdowns",
+  "source_type": "EARNINGS_CALL",
+  "publisher_issuer": "Walmart Inc. (Q1 FY2023 earnings release and call, filed via Form 8-K with the SEC); corroborated by CNBC reporting",
+  "publication_or_filing_date": "2022-05-17",
+  "accessed_date": "2026-06-17",
+  "company_context": "In Q1 of fiscal 2023 (quarter ended late April 2022, reported May 17, 2022), Walmart's US inventory rose sharply after it made aggressive forward buys to stay in stock amid inflation, while consumer demand mix shifted and some seasonal goods arrived late or lingered. The mismatch forced markdowns, compressed profit, and cut the profit outlook, a clean inventory-forecasting/demand-mismatch event distinct from the Target and Nike cases.",
+  "business_type": "Large-format omnichannel retail; high-volume general merchandise and grocery with seasonal/discretionary mix exposure",
+  "company_size_stage": "mega-cap public retailer",
+  "geography": "United States (Walmart US segment primarily)",
+  "time_period": "fiscal Q1 2023 (quarter ended approximately April 30, 2022)",
+  "macro_context": "2022 inflation surge, supply-chain whiplash, and a consumer shift from discretionary goods toward food/essentials that left earlier merchandise bets stranded.",
+  "outcome_category": "8 - operational/margin disruption from inventory mismatch",
+  "candidate_diagnosis_bucket": "inventory_forecasting_mismatch",
+  "evidence_summary": "Walmart reported that inventory rose about 32-33% year over year as it bought aggressively ahead of inflation to keep shelves stocked, while seasonal and discretionary items (such as apparel and landscaping goods) lingered as demand shifted and spring weather lagged. The company stepped up apparel markdowns (rollbacks), missed fiscal-Q1 earnings expectations on cost pressure from higher inventory, fuel, and overstaffing, and lowered its full-year profit outlook even as it raised the sales outlook. Shares fell about 11.4% to a 52-week low on the report. This is a forecasting/demand mismatch that produced excess inventory and margin-eroding markdowns.",
+  "source_backed_metrics": {
+    "inventory_increase_yoy_pct": "approximately 32-33%",
+    "earnings_outcome": "missed fiscal Q1 2023 EPS expectations; lowered full-year profit outlook while raising sales outlook",
+    "stock_reaction_pct": "approximately -11.4% on the day (to a 52-week low)",
+    "stock_close_usd": "approximately $131.35",
+    "markdown_action": "stepped-up apparel rollbacks/markdowns",
+    "cost_pressures_cited": "higher inventory levels, fuel prices, and overstaffing"
+  },
+  "owner_decision_context": "Management chose to over-buy inventory to avoid stockouts during inflation and supply uncertainty, accepting the risk that a demand-mix shift would leave discretionary and seasonal goods overstocked and requiring markdowns.",
+  "action_taken": "Increased inventory roughly 32-33% via aggressive forward buying, then marked down excess apparel and seasonal goods, lowered the profit outlook, and worked to clear overstock over subsequent quarters.",
+  "outcome_evidence": "An approximately 32-33% inventory build, stepped-up markdowns, a fiscal-Q1 earnings miss, a lowered profit outlook, and an approximately 11.4% single-day stock drop confirm that an inventory-forecasting/demand mismatch eroded margin and profit.",
+  "source_limitations": "WebFetch of Walmart corporate and sec.gov returns HTTP 403 here; figures verified from search snippets of Walmart's Q1 FY2023 earnings materials and CNBC reporting rather than full-text read. The exact inventory-increase percentage is reported as 'about 32%' to 'about 33%' across sources; treat as approximate. Stock and outlook figures are as reported on May 17, 2022.",
+  "directly_stated": [
+    "Inventory increased about 32-33% as Walmart bought aggressively ahead of inflation",
+    "Seasonal/discretionary items lingered and the company stepped up apparel markdowns",
+    "Walmart missed fiscal Q1 2023 earnings expectations and lowered its full-year profit outlook",
+    "Shares fell about 11.4% to a 52-week low, closing near $131.35"
+  ],
+  "inferred": [
+    "Excess inventory from over-forecasting plus a demand-mix shift was the proximate margin driver",
+    "This is inventory_forecasting_mismatch causing margin/operational disruption, not a solvency or demand-collapse event"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Inventory-forecasting-mismatch case (thin category) at a healthy, solvent retailer, distinct from Target/Nike. Tests whether OpsIQ flags inventory_forecasting_mismatch and margin_erosion from over-buying plus a demand-mix shift, and triggers adaptive re-evaluation on inventory/KPI deterioration without mislabeling it as a liquidity crisis.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

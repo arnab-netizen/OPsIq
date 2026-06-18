@@ -1,0 +1,48 @@
+{
+  "source_id": "SRC-040",
+  "source_url": "https://fintel.io/doc/sec-bed-bath-beyond-inc-886158-10k-2023-june-14-19522-8328",
+  "source_title": "Bed Bath & Beyond Inc. - Form 10-K (Fiscal 2022, as of February 25, 2023) and Fiscal 2022 results coverage",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Bed Bath & Beyond Inc. (filed with U.S. SEC, EDGAR CIK 886158); corroborating coverage from Home Textiles Today and company press releases",
+  "publication_or_filing_date": "2023-06-14",
+  "accessed_date": "2026-06-17",
+  "company_context": "Bed Bath & Beyond was a large home-goods retailer that attempted a turnaround pivot - heavy private-label/'Owned Brands' push and a digital/e-commerce reorientation - while cutting coupons and stores. The pivot failed: comparable sales collapsed in both stores and digital, gross profit halved, and the company filed Chapter 11 in April 2023.",
+  "business_type": "Big-box home-goods retail with omnichannel/e-commerce pivot",
+  "company_size_stage": "large-cap public",
+  "geography": "United States and Canada",
+  "time_period": "Fiscal 2022 (ended February 25, 2023)",
+  "macro_context": "Post-pandemic demand normalization in home goods, high inflation pressuring discretionary spend, supply-chain and inventory availability problems, and tightening credit availability for distressed retailers.",
+  "outcome_category": "1 - failure",
+  "candidate_diagnosis_bucket": "gtm_channel_mismatch",
+  "evidence_summary": "Bed Bath & Beyond's strategic pivot - dropping its signature 20%-off coupon traffic driver, leaning into private 'Owned Brands,' and reorienting toward digital - removed the channel/value proposition that had driven store and online traffic without building a working replacement. In fiscal 2022 comparable sales fell about 29.7%, with digital comps declining as steeply as store comps (e.g., Q3 net sales of $1.259B down 33%, with digital comps down ~33%). Gross profit fell roughly 50.3% to about $1.2 billion and the operating loss was about $2.78 billion (~51.9% of net sales). The company filed Chapter 11 on April 23, 2023.",
+  "source_backed_metrics": {
+    "fy2022_comparable_sales_change": "approximately -29.7%",
+    "q3_fy2022_net_sales_usd": "1.259 billion (down 33% YoY)",
+    "q3_fy2022_digital_comp_change": "approximately -33%",
+    "q3_fy2022_store_comp_change": "approximately -31%",
+    "fy2022_gross_profit_usd": "approximately 1.2 billion (down ~50.3%)",
+    "fy2022_operating_loss_usd": "approximately 2.78 billion (~51.9% of net sales)",
+    "chapter_11_filing_date": "2023-04-23"
+  },
+  "owner_decision_context": "Prior management bet that eliminating coupon-driven traffic and shifting to higher-margin private label plus digital would lift margins. When that removed the actual demand-generation channel and inventory/assortment gaps worsened, leadership had to reverse course (reinstating coupons, cutting stores) under deepening cash and credit constraints.",
+  "action_taken": "Reversed parts of the strategy (brought back coupons, cut Owned Brands), closed stores, raised emergency financing, and ultimately filed Chapter 11 to wind down the business.",
+  "outcome_evidence": "Comparable sales down ~29.7% for fiscal 2022 with digital comps falling as fast as store comps, gross profit roughly halved, operating loss ~$2.78B, and Chapter 11 on 2023-04-23 - confirming the channel/value-proposition pivot did not generate replacement demand and the company failed.",
+  "source_limitations": "WebFetch of sec.gov returned HTTP 403; the 10-K is referenced via a filing-document aggregator (fintel.io) link returned by search, and the financial figures are corroborated by named coverage (Home Textiles Today, Retail Insight Network) and company press releases. Digital vs store comp figures cited are quarterly (Q3 FY2022); the -29.7% is the full-year comp. Exact digital-channel revenue dollars were not cleanly confirmable and are omitted.",
+  "directly_stated": [
+    "Fiscal 2022 comparable sales declined approximately 29.7%",
+    "Q3 fiscal 2022 net sales were $1.259 billion, down 33%, with digital comps down ~33% and store comps down ~31%",
+    "Fiscal 2022 gross profit fell ~50.3% to about $1.2 billion",
+    "Fiscal 2022 operating loss was about $2.78 billion (~51.9% of net sales)",
+    "Bed Bath & Beyond filed Chapter 11 on April 23, 2023"
+  ],
+  "inferred": [
+    "Removing coupon-driven traffic without a working replacement channel was a GTM/demand-generation failure",
+    "The digital pivot failed to offset lost store/coupon-driven demand"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Shows a deliberate channel/value-proposition pivot (killing coupon traffic, betting on private label + digital) that destroyed demand rather than improving margins - a wrong strategic action that worsened the position into failure. Tests whether the engine flags GTM/demand-generation channel mismatch and routes a failed strategic pivot into adaptive re-evaluation.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

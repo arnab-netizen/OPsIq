@@ -1,0 +1,48 @@
+{
+  "source_id": "SRC-078",
+  "source_url": "https://investors.nucor.com/news/news-details/2019/Nucor-Reports-Record-Annual-Earnings-for-2018-01-29-2019/default.aspx",
+  "source_title": "Nucor Reports Record Annual Earnings for 2018 (Q4 and Full Year 2018 Results)",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Nucor Corporation (investor press release; corresponds to Form 8-K exhibit, EDGAR CIK 0000073309)",
+  "publication_or_filing_date": "2019-01-29",
+  "accessed_date": "2026-06-17",
+  "company_context": "Nucor is the largest U.S. steel producer, built on an electric-arc-furnace mini-mill model, decentralized operations, scrap recycling, and disciplined capacity management. Its operational excellence and flexible cost structure let it run profitably across steel-price cycles. Fiscal 2018 was a record year, illustrating steady operational management of throughput and cost rather than a rescue.",
+  "business_type": "Steel manufacturing and recycling (electric-arc-furnace mini-mills)",
+  "company_size_stage": "large-cap public",
+  "geography": "United States (with some international operations)",
+  "time_period": "FY2018 (year ended December 31, 2018)",
+  "macro_context": "Strong 2018 U.S. steel demand and pricing, aided by Section 232 steel tariffs and robust construction/industrial activity; cyclical industry where capacity utilization and cost discipline determine profitability.",
+  "outcome_category": "12 - stable healthy",
+  "candidate_diagnosis_bucket": "operational_bottleneck",
+  "evidence_summary": "Nucor's disciplined operational and capacity management converted strong 2018 demand into record results. Consolidated net earnings were $2.36 billion ($7.42 per diluted share), surpassing its prior record of $5.98 per diluted share set in 2008. Consolidated net sales increased 24% to about $25 billion, from $20.25 billion in 2017. Total tons shipped to outside customers were a record 27,899,000, up 5% from 2017, while average sales price per ton rose 18%, and the fourth quarter was the strongest fourth quarter in company history. The record throughput with maintained profitability reflects effective management of production capacity (an operational-bottleneck dimension) rather than a turnaround from distress.",
+  "source_backed_metrics": {
+    "net_earnings_fy2018_usd": "2.36 billion",
+    "diluted_eps_fy2018_usd": "7.42 (record; prior record 5.98 in 2008)",
+    "net_sales_fy2018_usd": "approximately 25 billion (up 24%)",
+    "net_sales_fy2017_usd": "20.25 billion",
+    "tons_shipped_to_outside_customers_fy2018": "27,899,000 (record, up 5% YoY)",
+    "average_sales_price_per_ton_change_fy2018": "up 18%",
+    "q4_2018_note": "strongest fourth quarter in company history"
+  },
+  "owner_decision_context": "Management sustained its long-run model of flexible, low-cost mini-mill production, decentralized accountability, and disciplined capacity utilization, positioning the company to capture favorable demand and pricing without overextending, rather than chasing growth through high fixed-cost expansion.",
+  "action_taken": "Ran mills at high utilization to a record shipment level while maintaining cost discipline and capturing higher per-ton pricing, consistent with Nucor's established operational-excellence playbook.",
+  "outcome_evidence": "Record FY2018 net earnings of $2.36B ($7.42 diluted EPS, beating the 2008 record), net sales up 24% to ~$25B, and record shipments of 27,899,000 tons confirm steady, well-managed operational performance.",
+  "source_limitations": "WebFetch typically returns HTTP 403 here; figures confirmed verbatim in WebSearch snippets attributed to Nucor's January 29, 2019 record-2018-earnings press release (filed as an 8-K exhibit). The press release URL is the Nucor investor-relations canonical page surfaced in search; the equivalent EDGAR 8-K exhibit exists under CIK 0000073309. Net sales stated as 'approximately $25 billion' / '24% increase' per the release wording.",
+  "directly_stated": [
+    "FY2018 consolidated net earnings were $2.36 billion, or $7.42 per diluted share",
+    "The $7.42 diluted EPS surpassed the prior record of $5.98 set in 2008",
+    "Consolidated net sales increased 24% to about $25 billion from $20.25 billion in 2017",
+    "Total tons shipped to outside customers were a record 27,899,000, up 5% from 2017, with average price per ton up 18%",
+    "The fourth quarter of 2018 was the strongest fourth quarter in company history"
+  ],
+  "inferred": [
+    "Record shipment volume achieved profitably indicates effective management of production capacity and throughput (no binding operational bottleneck)",
+    "Strong cyclical-peak performance from an established low-cost model is best classified as stable-healthy operational excellence rather than a turnaround"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "A manufacturing 'stable healthy' anchor where operational discipline (capacity utilization, cost structure) converts favorable conditions into record results. Tests whether the engine distinguishes well-managed cyclical strength from fragile growth and recognizes operational excellence as a sustained, not rescued, state.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

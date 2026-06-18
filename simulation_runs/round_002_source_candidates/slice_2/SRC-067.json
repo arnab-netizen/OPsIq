@@ -1,0 +1,49 @@
+{
+  "source_id": "SRC-067",
+  "source_url": "https://www.consumerfinance.gov/about-us/newsroom/consumer-financial-protection-bureau-fines-wells-fargo-100-million-widespread-illegal-practice-secretly-opening-unauthorized-accounts/",
+  "source_title": "Consumer Financial Protection Bureau Fines Wells Fargo $100 Million for Widespread Illegal Practice of Secretly Opening Unauthorized Accounts",
+  "source_type": "GOVERNMENT_REPORT",
+  "publisher_issuer": "U.S. Consumer Financial Protection Bureau (CFPB); corroborated by OCC and CNN",
+  "publication_or_filing_date": "2016-09-08",
+  "accessed_date": "2026-06-17",
+  "company_context": "Wells Fargo, one of the largest U.S. banks, built a culture around aggressive cross-selling ('eight is great' product-per-household targets) enforced via sales quotas and compensation incentives. To hit targets, employees secretly opened accounts customers never authorized.",
+  "business_type": "Diversified commercial and consumer bank",
+  "company_size_stage": "large-cap public",
+  "geography": "United States",
+  "time_period": "2011-2016 (penalty September 2016)",
+  "macro_context": "Post-crisis banking; intense focus on fee income and cross-sell ratios as a growth metric; heightened regulatory scrutiny of consumer financial practices.",
+  "outcome_category": "15 - fraud/governance/legal",
+  "candidate_diagnosis_bucket": "legal_governance_risk",
+  "evidence_summary": "Spurred by sales targets and incentive compensation, Wells Fargo employees opened more than 2 million unauthorized deposit and credit-card accounts, often funding them by moving customer money without consent and creating fake email enrollments. On September 8, 2016 the CFPB fined the bank $100 million, with $35 million to the OCC and $50 million to the City and County of Los Angeles ($185 million combined), plus customer restitution. The bank had already fired about 5,300 employees. The aggressive cross-sell incentive design was the wrong action that produced widespread fraud and reputational and regulatory damage.",
+  "source_backed_metrics": {
+    "cfpb_penalty_usd": "100 million",
+    "occ_penalty_usd": "35 million",
+    "la_city_county_penalty_usd": "50 million",
+    "combined_penalties_usd": "185 million",
+    "unauthorized_accounts": "more than 2 million deposit and credit-card accounts",
+    "unauthorized_deposit_accounts": "about 1.5 million",
+    "unauthorized_credit_card_applications": "565,443",
+    "employees_terminated": "approximately 5,300",
+    "consent_order_date": "2016-09-08"
+  },
+  "owner_decision_context": "Senior management set and enforced aggressive product-per-customer cross-sell targets tied to incentive compensation, creating pressure that drove employees to fabricate accounts; leadership maintained the incentive structure despite warning signs.",
+  "action_taken": "Imposed aggressive cross-selling sales quotas and incentive compensation (the wrong action), which drove employees to open millions of unauthorized accounts; the bank then terminated ~5,300 employees and entered consent orders, but the incentive design had already produced systemic fraud.",
+  "outcome_evidence": "CFPB/OCC/LA consent orders totaling $185 million, ~5,300 firings, mandated restitution and sales-practice overhaul, plus CEO departure and multiyear reputational damage, confirm the incentive action worsened the franchise.",
+  "source_limitations": "WebFetch of consumerfinance.gov returned HTTP 403; all figures confirmed verbatim across CFPB and OCC .gov press releases and named journalism (CNN, NPR, Congress.gov CRS). Account counts are the bank's own internal-analysis estimates as cited by CFPB; later reviews raised the potential figure to ~3.5 million, not used here.",
+  "directly_stated": [
+    "CFPB fined Wells Fargo $100 million on September 8, 2016; combined penalties $185 million",
+    "Employees opened more than 2 million unauthorized deposit and credit-card accounts (~1.5M deposit, 565,443 credit-card applications)",
+    "About 5,300 employees were terminated",
+    "Practices were driven by sales targets and compensation incentives"
+  ],
+  "inferred": [
+    "The incentive/quota design was the proximate governance failure that produced the fraud",
+    "Reputational and leadership consequences extended well beyond the monetary penalties"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Outcome-10/15 governance case where a management incentive decision (the action) directly caused systemic fraud and regulatory penalty. Tests whether the engine flags incentive/governance design as the root cause and routes to legal-governance risk re-evaluation rather than treating it as isolated employee misconduct.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

@@ -1,0 +1,47 @@
+{
+  "source_id": "SRC-069",
+  "source_url": "https://www.lightreading.com/smartphones-devices/nokia-sells-devices-business-to-microsoft",
+  "source_title": "Nokia Sells Devices Business to Microsoft",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Light Reading; corroborated by Nokia SEC Form 6-K filings (CIK 0000924613)",
+  "publication_or_filing_date": "2013-09 (deal closed April 2014)",
+  "accessed_date": "2026-06-17",
+  "company_context": "Nokia, once the world's dominant mobile-handset maker, failed to respond effectively to the iPhone and Android and lost its smartphone leadership. Rather than collapse, it sold its Devices & Services business to Microsoft and pivoted to its remaining businesses, principally Nokia Networks (telecom infrastructure), plus HERE maps and Technologies/patents.",
+  "business_type": "Telecom equipment and (formerly) mobile handsets",
+  "company_size_stage": "large-cap public",
+  "geography": "Finland",
+  "time_period": "2011-2014",
+  "macro_context": "Smartphone platform shift to iOS/Android; feature-phone collapse; consolidation in telecom network infrastructure (with Ericsson, Huawei).",
+  "outcome_category": "5 - partial recovery / mixed",
+  "candidate_diagnosis_bucket": "strategic_capex_risk",
+  "evidence_summary": "Nokia's Devices & Services business generated about EUR 14.9 billion ($19.6 billion) revenue in 2012 but carried an operating loss exceeding EUR 1 billion. In September 2013 Nokia agreed to sell that business to Microsoft for about EUR 5.44 billion ($7.2 billion), with roughly 32,000 employees transferring; the deal closed in 2014. Nokia survived by pivoting to three remaining businesses, led by Nokia Networks, exiting the loss-making handset operation. The outcome was mixed: the iconic handset business was lost, but the company endured as a profitable network-equipment firm.",
+  "source_backed_metrics": {
+    "devices_business_2012_revenue_eur": "approximately 14.9 billion (about $19.6 billion)",
+    "devices_business_2012_operating_loss_eur": "more than 1 billion",
+    "microsoft_purchase_price_eur": "approximately 5.44 billion (about $7.2 billion)",
+    "employees_transferred": "approximately 32,000",
+    "handsets_sold_2013": "approximately 251 million units",
+    "deal_announced": "2013-09",
+    "deal_closed": "2014"
+  },
+  "owner_decision_context": "Nokia leadership decided to exit the structurally loss-making handset business by selling it to Microsoft and redeploying around the profitable Networks unit rather than continuing to fund handset losses.",
+  "action_taken": "Sold the Devices & Services (handset) business to Microsoft for ~EUR 5.44 billion and pivoted the company to Networks/HERE/Technologies, surviving via the network-equipment business.",
+  "outcome_evidence": "Exit of a >EUR 1 billion operating-loss business and refocus on Networks allowed Nokia to survive as a profitable infrastructure company, a partial/mixed outcome: the core consumer franchise was lost but the firm endured.",
+  "source_limitations": "WebFetch unavailable (403 pattern); figures confirmed across Light Reading, Slidebean, and Nokia SEC Form 6-K snippets (CIK 0000924613). The handset operating-loss and unit figures are reported approximations from the period; precise audited annual figures not fetched in full text.",
+  "directly_stated": [
+    "Devices & Services had ~EUR 14.9 billion ($19.6B) revenue in 2012 with >EUR 1 billion operating loss",
+    "Nokia sold the business to Microsoft for ~EUR 5.44 billion ($7.2B); ~32,000 employees transferred",
+    "Nokia refocused on Networks, HERE, and Technologies",
+    "Nokia sold ~251 million handsets in 2013"
+  ],
+  "inferred": [
+    "Exiting handsets was a strategic pivot that preserved the firm (survival) but ended its consumer leadership (mixed)",
+    "The Networks business provided the durable, profitable core"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Outcome-5 partial/mixed case: a major business decline managed via divestiture and pivot to survive. Tests whether the engine credits a strategic pivot that preserves the enterprise while acknowledging loss of the original franchise, without labeling it a clean failure or turnaround.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

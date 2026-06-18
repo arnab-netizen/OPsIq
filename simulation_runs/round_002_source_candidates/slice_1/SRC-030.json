@@ -1,0 +1,41 @@
+{
+  "source_id": "SRC-030",
+  "source_url": "https://en.wikipedia.org/wiki/Blockbuster_LLC",
+  "source_title": "Blockbuster (retailer) - Wikipedia (decline, Netflix acquisition offer, and 2010 Chapter 11)",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Wikipedia (tertiary encyclopedia, citing CNBC/Variety/contemporaneous press); figures corroborated by CNBC and contemporaneous reporting",
+  "publication_or_filing_date": "2010-09-23",
+  "accessed_date": "2026-06-17",
+  "company_context": "Blockbuster was the dominant US video-rental retail and franchise chain. It declined an opportunity to acquire Netflix for roughly $50 million around 2000, leaned heavily on late-fee revenue, and was slow to pivot to mail-order and streaming. Peak revenue reached roughly $6.1 billion in 2004; the company filed for Chapter 11 in September 2010 and was effectively wound down over the following years.",
+  "business_type": "Brick-and-mortar video-rental retail and franchise, large store footprint, demand exposed to streaming substitution",
+  "outcome_category": "14 - market shift/demand collapse",
+  "candidate_diagnosis_bucket": "demand_generation_failure",
+  "evidence_summary": "Blockbuster grew to peak revenue of roughly $6.1 billion in 2004 but failed to adapt to the shift toward mail-order and streaming video, embodied by its reported refusal to acquire Netflix for about $50 million circa 2000. Late fees reportedly generated about $800 million per year, around 16% of revenue, creating an incentive to protect the legacy model rather than cannibalize it with digital alternatives. The company filed for Chapter 11 bankruptcy protection on September 23, 2010 with about $900 million in debt amid competition from Netflix, Redbox, and video-on-demand. Its remaining roughly 1,700 stores were acquired by Dish Network in 2011, and the last roughly 300 company-owned stores closed by 2014. This is a classic demand collapse driven by a strategic refusal to disrupt a profitable legacy revenue stream.",
+  "source_backed_metrics": {
+    "peak_revenue_2004_usd": "approximately $6.1 billion",
+    "declined_netflix_acquisition_price_usd": "approximately $50 million (circa 2000)",
+    "annual_late_fee_revenue_usd": "approximately $800 million per year (~16% of revenue)",
+    "chapter_11_filing_date": "September 23, 2010",
+    "debt_at_filing_usd": "approximately $900 million",
+    "stores_acquired_by_dish_2011": "approximately 1,700",
+    "remaining_company_owned_stores_closed_by_2014": "approximately 300"
+  },
+  "outcome_evidence": "Chapter 11 filing on September 23, 2010; remaining stores sold to Dish Network in 2011; last company-owned stores closed by 2014, effectively ending the chain.",
+  "source_limitations": "Primary source is a tertiary encyclopedia entry corroborated by contemporaneous business journalism (CNBC and others). The $50 million Netflix figure and the ~$800 million late-fee figure are widely reported but originate from secondary/retrospective accounts rather than an audited filing; treat as approximate. The underlying 2010 10-K/bankruptcy docket was not directly fetched (sec.gov/court access blocked in this environment).",
+  "directly_stated": [
+    "Peak revenue roughly $6.1 billion in 2004",
+    "Chapter 11 filed September 23, 2010 with about $900 million in debt",
+    "Declined to acquire Netflix for about $50 million circa 2000",
+    "Late fees generated roughly $800 million per year",
+    "~1,700 stores acquired by Dish in 2011; last ~300 closed by 2014"
+  ],
+  "inferred": [
+    "Dependence on late-fee revenue created a structural disincentive to embrace streaming",
+    "The failure was a strategic-mistake-driven demand collapse rather than an isolated liquidity event"
+  ],
+  "reliability_rating": "C",
+  "why_useful_for_opsiq": "Canonical strategic-mistake / market-shift case. Tests whether OpsIQ identifies demand_generation_failure driven by substitution and a deliberate refusal to disrupt a legacy revenue stream, versus mislabeling it as pure debt_solvency_pressure. Strong for modeling resistance-to-change and management-capability human factors and adaptive re-evaluation on a structural demand shock.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

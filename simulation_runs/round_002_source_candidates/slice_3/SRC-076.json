@@ -1,0 +1,48 @@
+{
+  "source_id": "SRC-076",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0000063908/000006390816000103/mcd-12312015x10k.htm",
+  "source_title": "McDonald's Corporation - Form 10-K (Fiscal Year Ended December 31, 2015)",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "McDonald's Corporation (filed with U.S. SEC, EDGAR CIK 0000063908, accession 0000063908-16-000103)",
+  "publication_or_filing_date": "2016-02",
+  "accessed_date": "2026-06-17",
+  "company_context": "After roughly six consecutive quarters of declining same-store sales, McDonald's named Steve Easterbrook CEO in March 2015. In May 2015 he announced a 'Turnaround Plan' to reset the business, including menu simplification, value and choice, operational changes, and refranchising. The headline operational move was the U.S. launch of All Day Breakfast in October 2015.",
+  "business_type": "Quick-service restaurant franchisor (QSR; predominantly franchised)",
+  "company_size_stage": "large-cap public",
+  "geography": "Global, with United States as the lead segment",
+  "time_period": "FY2015 (year ended December 31, 2015), including Q4 2015",
+  "macro_context": "Intensifying QSR and fast-casual competition, shifting consumer preferences toward customization and convenience, and prior multi-quarter traffic declines that pressured franchisee economics.",
+  "outcome_category": "4 - successful turnaround",
+  "candidate_diagnosis_bucket": "demand_generation_failure",
+  "evidence_summary": "Easterbrook's Turnaround Plan reversed McDonald's declining comparable sales within the year. In the fourth quarter of 2015 U.S. comparable sales increased 5.7%, benefiting from the October launch of All Day Breakfast (and, to a lesser extent, mild weather), and International Lead segment comparable sales rose 4.2%. Management reported positive comparable sales across all segments for both the quarter and the full year, ending a prolonged stretch of decline. The company returned $9.4 billion to shareholders for the full year ($2.3 billion in Q4).",
+  "source_backed_metrics": {
+    "us_comparable_sales_q4_2015": "5.7%",
+    "international_lead_comparable_sales_q4_2015": "4.2%",
+    "full_year_2015_segment_comparable_sales": "positive across all segments (quarter and full year)",
+    "capital_returned_to_shareholders_fy2015_usd": "9.4 billion",
+    "capital_returned_to_shareholders_q4_2015_usd": "2.3 billion",
+    "turnaround_plan_announced": "May 2015",
+    "all_day_breakfast_us_launch": "October 2015"
+  },
+  "owner_decision_context": "New leadership chose decisive, urgent operational and menu changes (notably All Day Breakfast, menu simplification, and refranchising) to reverse a multi-quarter traffic and comparable-sales decline rather than incremental tinkering.",
+  "action_taken": "Launched All Day Breakfast in the U.S. (October 2015), simplified the menu, emphasized choice and value, advanced refranchising, and executed the broader Turnaround Plan announced in May 2015.",
+  "outcome_evidence": "Q4 2015 U.S. comparable sales up 5.7% and International Lead up 4.2%, with positive comparable sales across all segments for the quarter and the full year, confirm the turnaround reversed the prior decline; $9.4B returned to shareholders for the year.",
+  "source_limitations": "WebFetch of sec.gov typically returns HTTP 403 here; figures confirmed verbatim in WebSearch snippets attributed to McDonald's FY2015 10-K and the McDonald's corporate Q4/full-year 2015 results press release. The exact full-year global comparable-sales percentage was not captured verbatim in retrieved snippets and is therefore not asserted as a number; only the directional statement (positive across all segments) is used.",
+  "directly_stated": [
+    "U.S. fourth quarter 2015 comparable sales increased 5.7%, benefiting from the October launch of All Day Breakfast",
+    "International Lead segment Q4 2015 comparable sales increased 4.2%",
+    "Positive comparable sales across all segments for both the quarter and the full year 2015",
+    "McDonald's returned $9.4 billion to shareholders for the full year and $2.3 billion in Q4 2015",
+    "The Turnaround Plan was announced in May 2015; All Day Breakfast launched in the U.S. in October 2015"
+  ],
+  "inferred": [
+    "The sharp Q4 U.S. comp inflection tied to a specific operational change (All Day Breakfast) indicates the diagnosis was a fixable demand/operations problem, not structural decline",
+    "Returning to positive comps across all segments after multiple quarters of decline marks a successful turnaround"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "A franchise QSR turnaround where a concrete operational/menu intervention produces a measurable same-store-sales inflection. Tests whether the engine links a specific corrective action to the demand recovery and recognizes the reversal across a franchised network.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

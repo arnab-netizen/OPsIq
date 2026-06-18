@@ -1,0 +1,62 @@
+{
+  "caseId": "R2-D05-S01",
+  "caseType": "single",
+  "industry": "consumer_services",
+  "businessModel": "local_services",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "consumer_services",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "businessProblem": "A local services business has seen new-customer volume collapse after a key referral source dried up; existing clients are fine.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "New-customer acquisition has stalled with monthly new accounts down sixty percent year over year",
+      "confidence": "HIGH",
+      "source": "CRM",
+      "isCritical": true,
+      "supportingData": {
+        "newCustomerRate": 8
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Top-of-funnel lead volume collapsed after the main referral channel dried up",
+      "confidence": "HIGH",
+      "source": "marketing",
+      "isCritical": true,
+      "supportingData": {
+        "leadVolume": 120
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Marketing spend is flat yet funnel conversion has not meaningfully improved",
+      "confidence": "MEDIUM",
+      "source": "marketing",
+      "isCritical": false,
+      "supportingData": {
+        "funnelConversionPct": 1.8
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Existing customers are stable and satisfied; the gap is new demand, not loyalty",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false
+    }
+  ]
+}

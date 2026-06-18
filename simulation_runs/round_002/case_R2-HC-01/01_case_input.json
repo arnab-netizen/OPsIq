@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-HC-01",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "made_to_order",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "LOW",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 10,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A throughput bottleneck is real and the obvious fix is a second machine, but there is no capital budget available for it.",
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "A throughput bottleneck at the line pushes turnaround to ten days against a three-day target",
+      "confidence": "HIGH",
+      "source": "job tracker",
+      "isCritical": true,
+      "supportingData": {
+        "turnaroundDays": 10,
+        "utilizationPct": 95
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Backlog grows; the obvious fix is a second machine the owner wants to buy now",
+      "confidence": "HIGH",
+      "source": "ops dashboard",
+      "isCritical": true,
+      "supportingData": {
+        "capacityPct": 96
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "But there is no capital budget available for equipment this year and free cash is fully committed elsewhere",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "capitalAvailable": 0
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "There is a low repeat rate among the most delayed customers",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 43
+      }
+    }
+  ]
+}

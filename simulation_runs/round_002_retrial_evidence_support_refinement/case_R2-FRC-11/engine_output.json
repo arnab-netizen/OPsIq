@@ -1,0 +1,197 @@
+{
+  "status": "INSUFFICIENT_EVIDENCE",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited",
+    "Causal adjudication: abstained — Complaints are downstream of an operational bottleneck (critical wait/turnaround signal), not a product-quality failure.",
+    "Raw matched candidates: quality_control_failure",
+    "1 constraint(s) identified that may block execution"
+  ],
+  "decisionMemo": {
+    "id": "6e04c393-87cc-470f-8232-d0eaab16aa20",
+    "engagementId": "fe51a3e5-46db-5a15-82f9-a37fd4257698",
+    "timestamp": "2026-06-18T07:14:41.764Z",
+    "businessProblem": "Complaints spiked and the team reads it as a product-quality failure, but customers are complaining about something else.",
+    "rootCauseDiagnosis": {
+      "id": "129e3be6-0541-4665-80a8-856f204e7d1f",
+      "type": "unknown",
+      "description": "Surface symptom suppressed; root cause is upstream and unmodeled",
+      "mechanismDescription": "Causal adjudication found a stronger upstream driver that explains the matched surface symptom; the engine refuses to name the downstream symptom as the root cause.",
+      "evidenceIds": [
+        "e321788b-82d4-5c5e-a37b-13d50ec476cf",
+        "53e7f18f-8b62-5662-ac43-f4711fbb1834",
+        "d39bef49-6d29-5fd0-abc6-55740bfd23eb",
+        "b47c1718-c96a-5439-a568-4c579618a6cf"
+      ],
+      "confidence": "INSUFFICIENT_EVIDENCE",
+      "alternativeExplanations": [
+        "Suppressed surface diagnosis: quality_control_failure",
+        "Complaints are downstream of an operational bottleneck (critical wait/turnaround signal), not a product-quality failure."
+      ],
+      "missingEvidenceFor": [
+        "An archetype for the upstream driver (out of current model coverage)",
+        "Confirmation the surface symptom is not independently the root cause"
+      ]
+    },
+    "diagnosisConfidence": "INSUFFICIENT_EVIDENCE",
+    "criticalConstraints": [
+      {
+        "id": "24c33f31-1858-44bc-9c1d-e97f7ccb9f3f",
+        "type": "SKILL",
+        "description": "Quality control processes not documented; team quality assurance capability limited",
+        "severity": "MEDIUM",
+        "blocksActions": [
+          "scale_quality",
+          "automated_quality"
+        ],
+        "releasableVia": [
+          "training_program",
+          "process_documentation"
+        ]
+      }
+    ],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "1a6b84c1-db1d-4336-b6b2-612c5b463660",
+          "title": "Further root cause investigation required",
+          "class": "STABILIZATION",
+          "objective": "Gather additional evidence to refine diagnosis",
+          "rationale": "Causal adjudication found a stronger upstream driver that explains the matched surface symptom; the engine refuses to name the downstream symptom as the root cause.",
+          "whyThisNow": "Current evidence does not match standard root cause patterns",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Conduct deeper investigation",
+              "description": "Interview team, observe processes, review financial data to understand root cause mechanism",
+              "ownerRole": "consultant",
+              "estimatedDays": 5,
+              "successCriteria": "Additional evidence gathered on root cause factors"
+            },
+            {
+              "sequence": 2,
+              "title": "Refined diagnosis and intervention design",
+              "description": "Based on new evidence, design targeted interventions with higher confidence",
+              "ownerRole": "consultant",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Revised diagnosis confidence level HIGH or better"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Root cause confidence increases to HIGH",
+            "Interventions designed with >80% confidence"
+          ],
+          "failureRisks": [
+            "Investigation reveals multiple root causes requiring different solutions"
+          ],
+          "fallbackPlan": "Implement parallel low-risk interventions while continuing investigation",
+          "evidenceBasis": [
+            "e321788b-82d4-5c5e-a37b-13d50ec476cf",
+            "53e7f18f-8b62-5662-ac43-f4711fbb1834",
+            "d39bef49-6d29-5fd0-abc6-55740bfd23eb",
+            "b47c1718-c96a-5439-a568-4c579618a6cf"
+          ],
+          "estimatedTotalDays": 8,
+          "priorityScore": 0
+        },
+        "priorityScore": 72,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 8 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "1cd2da74-afc7-4389-8a7c-6800504d50cf",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "1a6b84c1-db1d-4336-b6b2-612c5b463660"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "be55686d-b6b3-4b21-9a3c-eb27b25701dc",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "1a6b84c1-db1d-4336-b6b2-612c5b463660"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "1a6b84c1-db1d-4336-b6b2-612c5b463660",
+      "totalEstimatedDays": 8,
+      "criticalPathInterventions": [
+        "1a6b84c1-db1d-4336-b6b2-612c5b463660"
+      ],
+      "contingencyRequired": true
+    },
+    "limitations": [
+      "Insufficient evidence for definitive diagnosis. Recommend phase 1 investigation before committing to full intervention plan.",
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited",
+      "1 constraint(s) must be released before full execution: Quality control processes not documented; team quality assurance capability limited",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

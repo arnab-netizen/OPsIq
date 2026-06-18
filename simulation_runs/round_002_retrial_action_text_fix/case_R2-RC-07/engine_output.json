@@ -1,0 +1,232 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "89a786df-a921-4653-98cf-60b8a4bc1368",
+    "engagementId": "b7838aae-fd58-5388-8164-18c4ee7110c5",
+    "timestamp": "2026-06-18T03:42:04.689Z",
+    "businessProblem": "A subscription business stemmed a churn spike; the owner wants the recovery sequence that worked rather than the one that failed.",
+    "rootCauseDiagnosis": {
+      "id": "10b34a21-d3fc-49af-a68a-78c0020fc4ed",
+      "type": "customer_retention_erosion",
+      "description": "No systematic customer retention mechanism",
+      "mechanismDescription": "Without follow-up, loyalty program, or service innovation, customers default to shopping for best price on each transaction.",
+      "evidenceIds": [
+        "0844b63c-fb38-5d81-82bc-cda14cd154c5",
+        "24c3e117-5338-50e7-9da5-e0ba5bef8fac",
+        "770926df-6057-5bfe-a572-d51adbf3b0c4"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "Competitors may offer better value",
+        "Service may not meet customer needs"
+      ],
+      "missingEvidenceFor": [
+        "Customer satisfaction score",
+        "Reasons customers don't return",
+        "Competitor analysis"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "522736d3-fbdc-49d5-bc87-35950363f7cf",
+          "title": "Run a cohort churn-driver and retention-driver analysis",
+          "class": "STABILIZATION",
+          "objective": "Identify the dominant churn driver from cohort and exit-reason data",
+          "rationale": "Acting before the driver is identified wastes effort and risks backfire",
+          "whyThisNow": "A reversible cohort analysis precedes any retention action",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Run a cohort churn-driver and retention-driver analysis",
+              "description": "Identify the dominant churn driver from cohort and exit-reason data. Acting before the driver is identified wastes effort and risks backfire.",
+              "ownerRole": "consultant",
+              "estimatedDays": 10,
+              "successCriteria": "The dominant churn driver is identified from cohort and exit-reason data"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "The dominant churn driver is identified from cohort and exit-reason data"
+          ],
+          "failureRisks": [
+            "The first action is necessary but not sufficient; follow-on interventions required"
+          ],
+          "fallbackPlan": "Escalate to a full intervention plan once the root cause is verified",
+          "evidenceBasis": [
+            "0844b63c-fb38-5d81-82bc-cda14cd154c5",
+            "24c3e117-5338-50e7-9da5-e0ba5bef8fac",
+            "770926df-6057-5bfe-a572-d51adbf3b0c4"
+          ],
+          "estimatedTotalDays": 10,
+          "priorityScore": 100
+        },
+        "priorityScore": 100,
+        "factors": [
+          {
+            "factor": "survival/safety/reversibility prioritization",
+            "score": 10,
+            "rationale": "Acting before the driver is identified wastes effort and risks backfire"
+          }
+        ],
+        "sequencingReason": "BASE_R4 / VERIFY_DIAGNOSIS: A reversible cohort analysis precedes any retention action"
+      },
+      {
+        "intervention": {
+          "id": "fe653757-2ca5-44f3-8ace-efb19b5897e2",
+          "title": "Design and launch customer loyalty program",
+          "class": "RESILIENCE_PROTECTION",
+          "objective": "Create incentive for repeat business and data capture for customer relationship management",
+          "rationale": "Systematic retention mechanism replaces transactional, one-time customer model",
+          "whyThisNow": "Revenue is declining due to low repeat rate; immediate action to rebuild recurring revenue",
+          "ownerRole": "owner",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Design loyalty program structure",
+              "description": "Points-based or tiered program; benchmark against industry, competitor research",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "successCriteria": "Program design reviewed, discount budget allocated"
+            },
+            {
+              "sequence": 2,
+              "title": "Implement simple tracking system",
+              "description": "Use email or phone-based customer identification to track repeat visits",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "System tested, staff trained, can enroll customer in <30 seconds"
+            },
+            {
+              "sequence": 3,
+              "title": "Launch to current customer base",
+              "description": "Send email or in-person invitation to 50+ previous customers; track enrollment rate",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "Email sent to prior customers, enrollment rate >20%, feedback gathered"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "SIGNIFICANT",
+          "successMetrics": [
+            "Loyalty program enrollment >50% of customer base",
+            "Repeat customer rate increases to >35%",
+            "Customer lifetime value increases by 40%"
+          ],
+          "failureRisks": [
+            "Program too complex, low enrollment",
+            "Discount cost erodes margins",
+            "Customers engage for discount only, churn when offer expires"
+          ],
+          "fallbackPlan": "Pivot to referral program (existing customers get discount for bringing new customers)",
+          "evidenceBasis": [
+            "0844b63c-fb38-5d81-82bc-cda14cd154c5",
+            "24c3e117-5338-50e7-9da5-e0ba5bef8fac",
+            "770926df-6057-5bfe-a572-d51adbf3b0c4"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 81,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 9.6,
+            "rationale": "Expected revenue impact: SIGNIFICANT. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 7.5,
+            "rationale": "Failure risks: 3. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 5,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 4.375,
+            "rationale": "Cost band: LOW vs Expected impact: SIGNIFICANT"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "64cab1e2-ca1b-406b-bf28-9c65ea7473d7",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "522736d3-fbdc-49d5-bc87-35950363f7cf",
+          "fe653757-2ca5-44f3-8ace-efb19b5897e2"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "4fcd6b11-72a8-4014-b9f8-ca2233220c32",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "522736d3-fbdc-49d5-bc87-35950363f7cf",
+          "fe653757-2ca5-44f3-8ace-efb19b5897e2"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "522736d3-fbdc-49d5-bc87-35950363f7cf",
+      "totalEstimatedDays": 10,
+      "criticalPathInterventions": [
+        "522736d3-fbdc-49d5-bc87-35950363f7cf"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

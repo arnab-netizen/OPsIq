@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-081",
+  "source_url": "https://www.wk.com/work/old-spice-smell-like-a-man-man/",
+  "source_title": "Old Spice: Smell Like A Man, Man (Wieden+Kennedy campaign case)",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Wieden+Kennedy (agency of record, first-party campaign case write-up); corroborated by multiple published case studies and Effie Awards documentation",
+  "publication_or_filing_date": "2010 (campaign launched February 2010; results reported mid-2010)",
+  "accessed_date": "2026-06-17",
+  "company_context": "Old Spice, a Procter & Gamble men's grooming brand, was perceived as dated and losing relevance in the men's body-wash category. In February 2010, P&G and agency Wieden+Kennedy launched 'The Man Your Man Could Smell Like' (featuring Isaiah Mustafa), a marketing-led repositioning aimed in part at female purchasers, who research showed bought a majority of men's body wash.",
+  "business_type": "Consumer packaged goods (men's grooming / personal care brand)",
+  "company_size_stage": "large-cap public (brand within Procter & Gamble)",
+  "geography": "United States (primary market for reported results)",
+  "time_period": "Calendar 2010 (campaign launch February 2010; sales results May-July 2010)",
+  "macro_context": "Mature, commoditized personal-care category; rise of social/viral video marketing (YouTube, Twitter); insight that women purchase a majority of men's body wash reshaping the targeting strategy.",
+  "outcome_category": "11 - good action then improvement",
+  "candidate_diagnosis_bucket": "demand_generation_failure",
+  "evidence_summary": "A marketing-led repositioning reversed weak demand for a tired brand. Against an original goal of increasing body-wash sales by roughly 15%, Old Spice Red Zone body wash unit sales rose about 60% year over year by May 2010 and had more than doubled (up about 125% year over year) by July 2010, an all-time high for the brand, which became the number-one men's body wash in the U.S. The campaign also generated outsized engagement (the top commercial channel on YouTube, hundreds of millions to over a billion impressions, and large social-following growth), demonstrating that the demand turnaround was marketing-driven.",
+  "source_backed_metrics": {
+    "original_sales_growth_goal": "approximately 15%",
+    "body_wash_sales_growth_may_2010_yoy": "approximately 60%",
+    "body_wash_sales_growth_july_2010_yoy": "approximately 125% (sales more than doubled; all-time high)",
+    "market_position_outcome": "number-one men's body wash in the U.S.",
+    "campaign_launch": "February 2010 ('The Man Your Man Could Smell Like', Isaiah Mustafa)"
+  },
+  "owner_decision_context": "P&G and Wieden+Kennedy chose a bold creative repositioning that explicitly targeted the female buyer of men's body wash, betting that humor-led viral content plus a clear purchase-driver insight could revive a stagnant brand without competing purely on price.",
+  "action_taken": "Launched and amplified 'The Man Your Man Could Smell Like' across TV, YouTube, and social media (including the follow-up real-time response videos), repositioning the brand and driving trial and repeat purchase.",
+  "outcome_evidence": "Sales rose ~60% by May 2010 and ~125% (more than doubled) by July 2010 versus a ~15% goal, with Old Spice becoming the #1 U.S. men's body wash, confirming the marketing action drove a demand turnaround.",
+  "source_limitations": "Primary corporate (P&G) shipment data is not publicly broken out at this granularity; the percentage figures derive from agency (Wieden+Kennedy) and widely republished case-study/Effie Awards sources reporting Nielsen-attributed data, not from an audited filing. Figures are directionally consistent across multiple independent published accounts but are not SEC-verified. A longer-run sustained-share figure circulated in secondary blogs (e.g., a ~27% figure) was ambiguous across sources and is therefore omitted.",
+  "directly_stated": [
+    "The original goal was to increase body-wash sales by approximately 15%",
+    "By May 2010 Old Spice Red Zone body wash sales were up approximately 60% year over year",
+    "By July 2010 sales had more than doubled (up approximately 125% year over year), an all-time high",
+    "Old Spice became the number-one men's body wash in the U.S.",
+    "The campaign launched in February 2010 featuring Isaiah Mustafa (Wieden+Kennedy)"
+  ],
+  "inferred": [
+    "The gap between the ~15% goal and the ~125% actual indicates a marketing intervention that materially exceeded expectations in reversing weak demand",
+    "A demand turnaround achieved through repositioning rather than discounting is best classified as good-action-then-improvement addressing a demand-generation problem"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "A marketing-led, non-price demand turnaround for a mature CPG brand, useful for testing whether the engine can attribute improvement to a go-to-market/creative intervention addressing a demand-generation failure rather than to operations or pricing. The buyer-insight (women buying men's products) is a clean strategic-correction signal.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

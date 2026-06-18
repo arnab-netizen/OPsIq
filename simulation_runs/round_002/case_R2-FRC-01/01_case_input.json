@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-FRC-01",
+  "caseType": "single",
+  "industry": "industrial",
+  "businessModel": "mid_market_manufacturer",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "industrial",
+    "size": "medium",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 4,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "An owner is convinced the cash squeeze is an operating problem and wants to cut operations, but cash is leaving for another reason.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Cash runway has dropped to about four months and the owner assumes an operating cash problem",
+      "confidence": "HIGH",
+      "source": "treasury",
+      "isCritical": true,
+      "supportingData": {
+        "cashRunwayMonths": 4
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "The real drain is debt service: leverage is six point one times EBITDA with covenant headroom nearly gone",
+      "confidence": "HIGH",
+      "source": "lender pack",
+      "isCritical": true,
+      "supportingData": {
+        "leverageRatio": 6.1,
+        "covenantHeadroom": 0.03
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operations are profitable at the operating line; the cash leaves via interest and amortization",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 9
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Trading is stable; this is a balance-sheet problem dressed up as an operating one",
+      "confidence": "MEDIUM",
+      "source": "management",
+      "isCritical": false
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "caseId": "R2-D09-S01",
+  "businessProblem": "A custom-framing shop has growing demand but slow turnaround; customers complain about wait times and some stop returning.",
+  "caseType": "single",
+  "industry": "retail",
+  "businessModel": "custom_framing_shop",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "micro",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Average order turnaround time is 14 days against a 5-day target; capacity is constrained at the cutting station",
+      "confidence": "HIGH",
+      "source": "job tracker",
+      "isCritical": true,
+      "supportingData": {
+        "turnaroundDays": 14
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Cutting-station utilization runs at 95% during peak with a growing backlog queue",
+      "confidence": "HIGH",
+      "source": "ops dashboard",
+      "isCritical": true,
+      "supportingData": {
+        "utilizationPct": 95
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Low repeat rate among customers who experienced the longest waits",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 41
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Demand and revenue are growing; margins are stable and positive",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "marginPct": 4
+      }
+    }
+  ]
+}

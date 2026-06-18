@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-RC-02",
+  "caseType": "single",
+  "industry": "restaurant",
+  "businessModel": "qsr_franchise",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "restaurant",
+    "size": "large",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 9,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A QSR brand has falling sales and poor product perception; the owner wants the recovery sequence that actually worked for peers.",
+  "evidence": [
+    {
+      "dimension": "quality_delivery",
+      "finding": "Customer complaints about product quality are high and brand perception has fallen sharply",
+      "confidence": "HIGH",
+      "source": "support log",
+      "isCritical": true,
+      "supportingData": {
+        "complaintRate": 12,
+        "defectRate": 5
+      }
+    },
+    {
+      "dimension": "quality_delivery",
+      "finding": "Returns and negative reviews tied to product quality rose materially",
+      "confidence": "HIGH",
+      "source": "QA log",
+      "isCritical": true,
+      "supportingData": {
+        "returnRate": 8
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Repeat visits fell as guests cited the product, not price",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 45
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Kitchen throughput is fine; the problem is the product recipe and quality, not speed",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "defectiveUnits": 90
+      }
+    }
+  ]
+}

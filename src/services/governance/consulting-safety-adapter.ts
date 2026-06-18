@@ -15,6 +15,7 @@ import {
   assessConstraintAlignment,
   type OwnerConstraintProfileLike,
 } from "./constraint-alignment";
+import { detectOwnerActionDanger } from "./owner-action-danger";
 import type { AbstentionDecision } from "@/domain/governance/abstention-contracts";
 
 /**
@@ -98,6 +99,11 @@ export interface ConsultingSafetyResult {
   constraint_alignment: {
     committed: boolean;
     conflict: boolean;
+    reasons: string[];
+  };
+  owner_action_danger: {
+    danger: boolean;
+    type: string | null;
     reasons: string[];
   };
 }
@@ -188,6 +194,13 @@ export function assessConsultingOutput(
     opts.ownerConstraintProfile
   );
 
+  // R6: owner-proposed-action danger detector (inert unless evidence supplied).
+  // Runs only on a committed output so it cannot convert an abstain into a proceed.
+  const ownerDangerRaw = detectOwnerActionDanger(opts.evidence ?? []);
+  const ownerDanger = committed
+    ? ownerDangerRaw
+    : { danger: false, type: null, reasons: [] };
+
   const assessment = assessSafety(
     inputs.confidence_score,
     inputs.has_evidence,
@@ -208,6 +221,11 @@ export function assessConsultingOutput(
       committed: constraint.committed,
       conflict: constraint.conflict,
       reasons: constraint.reasons,
+    },
+    {
+      danger: ownerDanger.danger,
+      type: ownerDanger.type,
+      reasons: ownerDanger.reasons,
     }
   );
 
@@ -244,6 +262,11 @@ export function assessConsultingOutput(
       committed: constraint.committed,
       conflict: constraint.conflict,
       reasons: constraint.reasons,
+    },
+    owner_action_danger: {
+      danger: ownerDanger.danger,
+      type: ownerDanger.type,
+      reasons: ownerDanger.reasons,
     },
   };
 }

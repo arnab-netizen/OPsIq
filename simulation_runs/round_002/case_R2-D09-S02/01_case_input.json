@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-D09-S02",
+  "caseType": "single",
+  "industry": "consumer_services",
+  "businessModel": "multi_site_services",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "consumer_services",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A fast-growing services business has rising demand but slipping turnaround; some customers stop returning after long waits.",
+  "evidence": [
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Average service turnaround slipped to nine days against a three-day target; the prep station is the capacity constraint",
+      "confidence": "HIGH",
+      "source": "job tracker",
+      "isCritical": true,
+      "supportingData": {
+        "turnaroundDays": 9,
+        "utilizationPct": 94
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Backlog grows weekly and staff cannot clear the queue at current capacity",
+      "confidence": "HIGH",
+      "source": "ops dashboard",
+      "isCritical": true,
+      "supportingData": {
+        "capacityPct": 97
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "There is a low repeat rate among customers who waited the longest for delivery",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 44
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue is growing and margins are stable and positive despite the strain",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 12
+      }
+    }
+  ]
+}

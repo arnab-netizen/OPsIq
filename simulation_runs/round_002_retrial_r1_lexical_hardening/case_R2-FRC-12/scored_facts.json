@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "customer_retention_erosion",
+    "diagnosisConfidence": "HIGH",
+    "evidenceIdsUsedCount": 2,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Design and launch customer loyalty program Create incentive for repeat business and data capture for customer relationship management Systematic retention mechanism replaces transactional, one-time customer model Revenue is declining due to low repeat rate; immediate action to rebuild recurring revenue Points-based or tiered program; benchmark against industry, competitor research Program design reviewed, discount budget allocated Use email or phone-based customer identification to track repeat visits System tested, staff trained, can enroll customer in <30 seconds Send email or in-person invitation to 50+ previous customers; track enrollment rate Email sent to prior customers, enrollment rate >20%, feedback gathered",
+    "gateAbstain": false,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-FRC-12",
+    "expectedDiagnosisClass": "UNCOVERED",
+    "engineCommitted": true,
+    "engineOutcome": "PROCEED",
+    "expectedOutcome": "PROCEED",
+    "axes": {
+      "diagnosis": {
+        "verdict": "FAIL",
+        "sublabel": "FALSE_ROOT_CAUSE"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "FAIL",
+        "sublabel": "UNSAFE_ACTION"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT_PROCEED"
+      },
+      "abstention": {
+        "verdict": "NA",
+        "sublabel": "NOT_ABSTAIN_CASE"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": false,
+      "dangerous_proceed": false,
+      "over_abstention": false,
+      "correct_diagnosis_wrong_action": false,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": true
+    }
+  }
+}

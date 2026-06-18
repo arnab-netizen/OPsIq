@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-066",
+  "source_url": "https://www.thebrandingjournal.com/2015/05/what-to-learn-from-tropicanas-packaging-redesign-failure/",
+  "source_title": "What to learn from Tropicana's packaging redesign failure?",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "The Branding Journal; corroborated by Packaging Digest and Fortune",
+  "publication_or_filing_date": "event Jan-Feb 2009 (analysis 2015)",
+  "accessed_date": "2026-06-17",
+  "company_context": "Tropicana Pure Premium, PepsiCo's flagship not-from-concentrate orange juice, launched a complete packaging redesign in North America in January 2009. The agency Arnell replaced the iconic 'orange-with-a-straw' imagery with a generic glass of juice, supported by a roughly $35 million ad campaign.",
+  "business_type": "Consumer packaged goods - branded chilled orange juice (beverages)",
+  "company_size_stage": "large-cap public (PepsiCo subsidiary brand)",
+  "geography": "United States (North America)",
+  "time_period": "January-February 2009",
+  "macro_context": "Recession-era CPG environment; private-label and competitive pressure in chilled juice; brand recognition critical to in-store selection.",
+  "outcome_category": "10 - wrong action worsened",
+  "candidate_diagnosis_bucket": "gtm_channel_mismatch",
+  "evidence_summary": "Tropicana replaced its long-standing, instantly recognizable packaging (orange pierced by a straw) with a redesigned carton in January 2009. Within about two months sales of Tropicana Pure Premium fell roughly 20%, an estimated ~$30 million loss, as shoppers failed to recognize the brand on shelf and disliked the new look. PepsiCo reverted to the original packaging within weeks, abandoning the redesign.",
+  "source_backed_metrics": {
+    "redesign_launch": "January 2009",
+    "sales_decline_pct": "approximately 20%",
+    "sales_decline_period": "approximately 2 months",
+    "estimated_sales_loss_usd": "approximately 30 million",
+    "ad_campaign_spend_usd": "approximately 35 million",
+    "agency": "Arnell"
+  },
+  "owner_decision_context": "Brand management approved a full redesign of an iconic, high-recognition package to modernize the look, underweighting the shelf-recognition equity that drove repeat purchase.",
+  "action_taken": "Replaced iconic Tropicana Pure Premium packaging with a redesigned carton backed by a ~$35M campaign; reversed within weeks by reinstating the original packaging after sales collapsed.",
+  "outcome_evidence": "~20% sales drop (≈$30M) within ~2 months and rapid reversion to the old packaging confirm the redesign action directly caused the decline before correction.",
+  "source_limitations": "WebFetch unavailable (sec.gov/CFPB 403 pattern; these secondary URLs not full-text fetched); figures are widely reported but are secondary-source estimates (The Branding Journal, Packaging Digest, Fortune), not PepsiCo-audited disclosures. The ~20% / ~$30M figures are consistent across multiple named outlets but originate from trade reporting.",
+  "directly_stated": [
+    "Tropicana launched new packaging in January 2009",
+    "Sales fell about 20% within roughly two months, an estimated ~$30 million loss",
+    "About $35 million was spent on the supporting ad campaign",
+    "PepsiCo reverted to the original packaging soon after"
+  ],
+  "inferred": [
+    "Loss of shelf recognition (a go-to-market / shopper-identification failure) was the mechanism of decline",
+    "The action was the proximate cause given immediate decline and rapid reversal"
+  ],
+  "reliability_rating": "C",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Outcome-10-then-correction case in CPG: a self-inflicted packaging/GTM decision that collapsed sales and was reversed. Tests whether the engine treats brand-recognition/shelf-identity loss as a go-to-market failure and credits rapid reversal.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

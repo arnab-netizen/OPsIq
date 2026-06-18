@@ -1,0 +1,44 @@
+{
+  "source_id": "SRC-003",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001657853/000110465921081986/tm2119738d1_ex99-2.htm",
+  "source_title": "Hertz Global Holdings, Inc. Form 8-K Exhibit 99.2 (Chapter 11 plan emergence press release), FY2021",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Hertz Global Holdings, Inc. (SEC EDGAR CIK 0001657853)",
+  "publication_or_filing_date": "2021-06-30",
+  "accessed_date": "2026-06-17",
+  "company_context": "Hertz Global Holdings, the asset-heavy car-rental operator, filed for Chapter 11 in May 2020 after the COVID-19 collapse in travel demand caused a sudden revenue shock against a debt-and-fleet-financing-heavy balance sheet. A joint plan of reorganization was confirmed June 10, 2021 and became effective June 30, 2021, allowing the company to emerge from bankruptcy.",
+  "business_type": "Asset-heavy car rental; large vehicle fleet financed through asset-backed (ABS) facilities and corporate debt",
+  "outcome_category": "13 - temporary shock with recovery",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "Hertz filed Chapter 11 in May 2020 when travel demand collapsed: at the start of proceedings roughly $6.0 billion of indebtedness was automatically accelerated and approximately $13.5 billion of additional third-party indebtedness was triggered by defaults and termination events (~$19.5 billion of debt obligations affected). The business itself remained viable once demand recovered. The confirmed plan (effective June 30, 2021) eliminated over $5 billion of debt (including all of Hertz Europe's corporate debt), provided payment in cash in full to creditors, and left existing shareholders with more than $1 billion of value. Hertz emerged with a new $2.8 billion exit credit facility (at least $1.3 billion of term loans plus a revolver) and an approximately $7 billion asset-backed vehicle financing facility, funded by a roughly $6 billion plan-sponsor investment from Knighthead, Certares, and Apollo.",
+  "source_backed_metrics": {
+    "indebtedness_accelerated_at_filing_usd": "approximately $6.0 billion",
+    "third_party_indebtedness_triggered_usd": "approximately $13.5 billion",
+    "debt_eliminated_by_plan_usd": "over $5 billion",
+    "exit_credit_facility_usd": "$2.8 billion (at least $1.3 billion term loans plus revolver)",
+    "abs_vehicle_financing_facility_usd": "approximately $7 billion",
+    "value_to_existing_shareholders_usd": "more than $1 billion",
+    "plan_sponsor_investment_usd": "approximately $6 billion",
+    "confirmation_date": "2021-06-10",
+    "plan_effective_date": "2021-06-30"
+  },
+  "outcome_evidence": "Plan of reorganization confirmed June 10, 2021 and effective June 30, 2021; eliminated over $5 billion of debt, paid creditors in cash in full, and delivered more than $1 billion of value to existing shareholders, completing emergence from Chapter 11.",
+  "source_limitations": "SEC EDGAR htm pages returned access-blocked when fetched directly via the research tool; the figures above were captured verbatim from SEC EDGAR result snippets for this filing and corroborated across multiple Hertz 8-K snippets. Exact figures should be reconfirmed against the filing text before publication.",
+  "directly_stated": [
+    "Filed Chapter 11 in May 2020",
+    "~$6.0 billion of indebtedness accelerated and ~$13.5 billion of third-party indebtedness triggered at filing",
+    "Plan confirmed June 10, 2021, effective June 30, 2021",
+    "Plan eliminated over $5 billion of debt",
+    "Emerged with a $2.8 billion exit credit facility and ~$7 billion ABS vehicle financing facility",
+    "Existing shareholders received more than $1 billion of value"
+  ],
+  "inferred": [
+    "The underlying rental business was viable; the crisis was a demand shock amplified by a debt-and-fleet-financing-heavy structure",
+    "Recovery in travel demand made the reorganized capital structure serviceable"
+  ],
+  "reliability_rating": "A",
+  "why_useful_for_opsiq": "A clean example of a temporary exogenous shock (travel collapse) interacting with a leveraged, asset-heavy fleet structure to force bankruptcy, followed by a genuine recovery and emergence. Useful for testing OpsIQ's ability to distinguish a survivable shock (outcome 13) from terminal decline, and to model adaptive re-evaluation when a shock event hits a debt_solvency_pressure / strategic_capex_risk profile.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

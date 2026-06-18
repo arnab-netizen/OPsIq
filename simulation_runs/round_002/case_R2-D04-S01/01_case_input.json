@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-D04-S01",
+  "caseType": "single",
+  "industry": "b2b_services",
+  "businessModel": "managed_services",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "b2b_services",
+    "size": "medium",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "businessProblem": "A managed-services firm wins almost every bid but suspects it is leaving money on the table; the owner wants to know whether pricing is the issue.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "Realized prices sit twenty-two percent below comparable competitors with no win-rate advantage",
+      "confidence": "HIGH",
+      "source": "win/loss analysis",
+      "isCritical": true,
+      "supportingData": {
+        "realizedPrice": 78,
+        "listPrice": 100
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Average discount granted at deal close is nineteen percent with no approval discipline",
+      "confidence": "HIGH",
+      "source": "CRM",
+      "isCritical": true,
+      "supportingData": {
+        "discountPct": 19
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Profitability is positive but well below sector benchmark, consistent with under-pricing",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 12
+      }
+    },
+    {
+      "dimension": "process_maturity",
+      "finding": "No structured pricing model or discount-approval policy currently exists",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": false
+    }
+  ]
+}

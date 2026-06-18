@@ -1,0 +1,46 @@
+{
+  "source_id": "SRC-049",
+  "source_url": "https://www.buzzfeednews.com/article/williamalden/zenefits-ceo-parker-conrad-steps-down-after-compliance-failu",
+  "source_title": "Zenefits Founder Parker Conrad Resigns After Compliance Failures",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "BuzzFeed News",
+  "publication_or_filing_date": "2016-02-08",
+  "accessed_date": "2026-06-17",
+  "company_context": "Zenefits, a fast-growing HR/benefits-software startup that sold health insurance brokerage alongside free HR software. Co-founder/CEO Parker Conrad resigned in February 2016 after revelations that the company used unlicensed staff to sell insurance and built a software 'macro' to bypass licensing-course requirements. COO David Sacks became CEO. The company survived but was heavily restructured.",
+  "business_type": "HR SaaS plus insurance brokerage (venture-backed startup)",
+  "company_size_stage": "Hyper-growth late-stage startup (had raised at a ~$4.5B valuation in 2015) entering regulatory crisis",
+  "geography": "United States (HQ San Francisco; multi-state insurance operations)",
+  "time_period": "2015-2018",
+  "macro_context": "Late-stage VC boom with 'growth at all costs' culture colliding with state insurance-licensing regulation.",
+  "outcome_category": "16 - founder/key-person/team failure (compliance-driven CEO exit), resolving toward 3 - severe distress but survival",
+  "candidate_diagnosis_bucket": "key_person_risk",
+  "evidence_summary": "Co-founder Parker Conrad, CEO since 2012, resigned in February 2016 after disclosures that Zenefits used unlicensed employees to sell health insurance and that a software macro let staff circumvent pre-licensing study requirements. In Washington state, more than 80% of policies sold through August 2015 were sold by staffers without state brokers' licenses. COO David Sacks took over as CEO and named a former federal prosecutor as chief compliance officer. The company later agreed to a $7 million California fine (half suspended absent future violations), and in 2018 Conrad personally surrendered his California insurance license. The company survived in restructured form.",
+  "source_backed_metrics": {
+    "ceo_resignation_date": "February 2016",
+    "wa_unlicensed_share": "more than 80% of policies sold in Washington through August 2015 were sold by unlicensed staffers",
+    "california_fine": "$7 million (half suspended if no future violations)",
+    "successor_ceo": "David Sacks (then COO)",
+    "conrad_license": "surrendered California insurance license in 2018"
+  },
+  "owner_decision_context": "The board/founder faced a compliance crisis in which the company's go-to-market growth engine itself was unlawful; leadership had to decide between defending the founder and restoring regulatory legitimacy.",
+  "action_taken": "Founder-CEO resigned; COO installed as CEO with a new chief compliance officer; company settled with regulators, repriced its valuation, and restructured operations to operate lawfully.",
+  "outcome_evidence": "Company survived but was severely distressed: leadership replaced, valuation marked down, $7M California settlement, and the founder's personal insurance license surrendered in 2018.",
+  "source_limitations": "Secondary journalism; the $7M fine and license surrender are corroborated by California Department of Insurance press materials (insurance.ca.gov) which could not be fetched (403) but appear in primary-domain search results. Valuation figure is from market reporting.",
+  "directly_stated": [
+    "Parker Conrad resigned as CEO in February 2016 after compliance failures",
+    "company used unlicensed brokers and a macro to bypass licensing study",
+    "more than 80% of WA policies through August 2015 sold by unlicensed staff",
+    "David Sacks became CEO",
+    "company agreed to a $7 million fine (half suspended)"
+  ],
+  "inferred": [
+    "The founder's choices created the compliance liability, making his removal central to survival",
+    "Growth-at-all-costs founder dependency was the underlying key-person/governance risk"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Key-person-risk + legal/governance case in a SaaS startup where founder-driven compliance failure forced a leadership change that enabled survival. Illustrates adaptive re-evaluation triggered by owner non-compliance on a critical (legal) action and a governance/legal shock, with a centralized compliance/policy remedy.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

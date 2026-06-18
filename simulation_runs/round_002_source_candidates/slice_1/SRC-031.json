@@ -1,0 +1,44 @@
+{
+  "source_id": "SRC-031",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0000764478/000076447815000009/exhibit9913315.htm",
+  "source_title": "Best Buy Co., Inc. Form 8-K exhibit - fiscal fourth-quarter and full-year fiscal 2015 results (Renew Blue turnaround)",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Best Buy Co., Inc. (SEC EDGAR)",
+  "publication_or_filing_date": "2015-03-03",
+  "accessed_date": "2026-06-17",
+  "company_context": "Best Buy is a large US electronics retailer that entered fiscal 2013 in distress: margin erosion, declining comparable sales, and a reported GAAP net loss from continuing operations of $13 million in the quarter ended November 3, 2012, versus $173 million net earnings a year earlier, with showrooming and price pressure from online competitors. CEO Hubert Joly launched the multi-year 'Renew Blue' program (price-matching, vendor partnerships, store-within-store, online growth, cost reduction). By fiscal 2014-2015 the program delivered measurable cost reductions, returning comparable-sales growth, and earnings improvement.",
+  "business_type": "Brick-and-mortar and omnichannel electronics retail, large store footprint, thin-margin and price-competitive",
+  "outcome_category": "4 - successful turnaround",
+  "candidate_diagnosis_bucket": "margin_erosion",
+  "evidence_summary": "Best Buy entered the turnaround in margin erosion: a GAAP net loss from continuing operations of $13 million ($0.04/share) for the quarter ended November 3, 2012 versus $173 million ($0.47/diluted share) a year earlier, with a 4.0% Domestic comparable-store-sales decline and pre-tax restructuring charges of about $203 million in Q4 FY13. Under the Renew Blue program the company cut about $350 million of costs in fiscal 2014 and reached cumulative cost reductions of about $965 million by Q3 fiscal 2015 (quarter ended November 1, 2014). Performance recovered: Q3 FY15 revenue of about $9.4 billion with non-GAAP diluted EPS of $0.32 versus $0.18 a year earlier and a 2.4% Domestic comparable-sales increase; Q4 FY15 revenue up 1.3% to about $14.2 billion with non-GAAP diluted EPS up 23% to $1.48 versus $1.20. The arc is a documented margin-erosion-to-turnaround case driven by cost discipline, price-matching, and omnichannel investment.",
+  "source_backed_metrics": {
+    "q3_fy13_gaap_net_loss_continuing_ops_usd": "$13 million ($0.04 per share), vs $173 million ($0.47 per diluted share) prior-year quarter",
+    "q3_fy13_domestic_comparable_sales_change_pct": "-4.0%",
+    "q4_fy13_pretax_restructuring_charges_usd": "approximately $203 million",
+    "fy2014_cost_reductions_usd": "approximately $350 million",
+    "cumulative_cost_reductions_by_q3_fy2015_usd": "approximately $965 million",
+    "q3_fy15_revenue_usd": "approximately $9.4 billion",
+    "q3_fy15_non_gaap_diluted_eps_usd": "$0.32 vs $0.18 prior year",
+    "q3_fy15_domestic_comparable_sales_change_pct": "+2.4%",
+    "q4_fy15_revenue_usd": "approximately $14.2 billion (up 1.3%)",
+    "q4_fy15_non_gaap_diluted_eps_usd": "$1.48 (up 23% vs $1.20 prior year)"
+  },
+  "outcome_evidence": "Transition from a Q3 FY13 net loss and negative comparable sales to positive Domestic comparable-sales growth (+2.4% Q3 FY15), large cumulative cost reductions (~$965 million by Q3 FY15), and double-digit non-GAAP EPS growth in Q4 FY15, evidencing a successful multi-year turnaround.",
+  "source_limitations": "Figures are drawn from Best Buy 8-K earnings exhibits on the primary SEC EDGAR domain (sec.gov) as surfaced in verbatim search-result snippets; direct WebFetch of sec.gov returned HTTP 403 in this environment. Several recovery metrics are management non-GAAP figures (e.g., non-GAAP diluted EPS, cumulative cost reductions). Revenue figures rounded as reported.",
+  "directly_stated": [
+    "Q3 FY13 GAAP net loss from continuing operations of $13 million vs $173 million earnings prior year",
+    "Q3 FY13 Domestic comparable sales down 4.0%",
+    "~$203 million pre-tax restructuring charges in Q4 FY13",
+    "~$350 million cost reductions in FY2014; ~$965 million cumulative by Q3 FY2015",
+    "Q3 FY15 non-GAAP diluted EPS $0.32 vs $0.18 and +2.4% Domestic comps; Q4 FY15 EPS $1.48 up 23%"
+  ],
+  "inferred": [
+    "The recovery was driven primarily by cost discipline plus price-matching and omnichannel investment rather than market tailwinds",
+    "The diagnosis transitions from margin_erosion at onset to a managed turnaround"
+  ],
+  "reliability_rating": "A",
+  "why_useful_for_opsiq": "A clean margin_erosion-to-successful-turnaround arc with quantified before/after. Tests whether OpsIQ correctly stages a consulting lifecycle from distress diagnosis through intervention execution to recovery, and whether it recognizes a good-action-then-improvement pattern (Renew Blue) versus prematurely labeling the early state as terminal decline.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

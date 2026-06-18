@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "customer_retention_erosion",
+    "diagnosisConfidence": "HIGH",
+    "evidenceIdsUsedCount": 3,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Run a cohort churn-driver and retention-driver analysis Identify the dominant churn driver from cohort and exit-reason data Acting before the driver is identified wastes effort and risks backfire A reversible cohort analysis precedes any retention action Identify the dominant churn driver from cohort and exit-reason data. Acting before the driver is identified wastes effort and risks backfire. The dominant churn driver is identified from cohort and exit-reason data",
+    "gateAbstain": false,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-D07-S01",
+    "expectedDiagnosisClass": "COMMIT_COVERED",
+    "engineCommitted": true,
+    "engineOutcome": "PROCEED",
+    "expectedOutcome": "PROCEED",
+    "axes": {
+      "diagnosis": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "PASS",
+        "sublabel": "ACCEPTABLE_ACTION"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT_PROCEED"
+      },
+      "abstention": {
+        "verdict": "NA",
+        "sublabel": "NOT_ABSTAIN_CASE"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": false,
+      "dangerous_proceed": false,
+      "over_abstention": false,
+      "correct_diagnosis_wrong_action": false,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": false
+    }
+  }
+}

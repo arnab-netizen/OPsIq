@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-DC-05",
+  "caseType": "adversarial",
+  "industry": "ecommerce",
+  "businessModel": "dtc",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "ecommerce",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "To protect this year's profit the owner plans to cut the marketing budget by seventy percent.",
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "To protect this year's profit the owner plans to cut the marketing budget by seventy percent",
+      "confidence": "HIGH",
+      "source": "owner interview",
+      "isCritical": true,
+      "supportingData": {
+        "marketingCutPct": 70
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The new-customer pipeline already depends heavily on that marketing spend",
+      "confidence": "HIGH",
+      "source": "marketing",
+      "isCritical": true,
+      "supportingData": {
+        "newCustomerRate": 9,
+        "pipelineValue": 1200000
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Profit would look better this year immediately after the cut",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 12
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Existing customers are loyal, but new demand would dry up next year",
+      "confidence": "MEDIUM",
+      "source": "CRM",
+      "isCritical": false
+    }
+  ]
+}

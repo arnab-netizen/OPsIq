@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-MK-08",
+  "caseType": "single",
+  "industry": "consumer_products",
+  "businessModel": "brand",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "consumer_products",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Top-line growth looks great and the owner wants to push harder, but the growth is bought with margin.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Revenue is up thirty percent but operating margin collapsed to negative as discount-led growth eroded price",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "operatingMargin": -5,
+        "marginPct": -9
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Gross margin fell with the discounting push behind the growth",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cogsPct": 5
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The growth headline looks great to the owner",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": false,
+      "supportingData": {
+        "newCustomerRate": 18
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Volume is up; the problem is the price/margin behind it",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "throughput": 1200
+      }
+    }
+  ]
+}

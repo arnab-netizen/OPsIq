@@ -1,0 +1,246 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+    "1 constraint(s) identified that may block execution"
+  ],
+  "decisionMemo": {
+    "id": "0e4d8914-3e87-41e5-9cb5-3dc122b15b1a",
+    "engagementId": "bc17d375-efad-51c6-8434-2352d5723278",
+    "timestamp": "2026-06-18T02:42:15.425Z",
+    "businessProblem": "Both cash and churn are problems; the owner wants to fix retention first, but runway is short.",
+    "rootCauseDiagnosis": {
+      "id": "5a23dd07-d710-41a2-b44f-9b5613711401",
+      "type": "customer_retention_erosion",
+      "description": "No systematic customer retention mechanism",
+      "mechanismDescription": "Without follow-up, loyalty program, or service innovation, customers default to shopping for best price on each transaction.",
+      "evidenceIds": [
+        "5cc95475-3188-5f3f-b983-be7d03ef6fd8",
+        "e5663e3d-b694-5d22-8791-a76d12e3bff5"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "Competitors may offer better value",
+        "Service may not meet customer needs"
+      ],
+      "missingEvidenceFor": [
+        "Customer satisfaction score",
+        "Reasons customers don't return",
+        "Competitor analysis"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [
+      {
+        "id": "d298c1e7-f52a-4abd-872d-f0e3e32742c5",
+        "type": "ORGANIZATIONAL",
+        "description": "No customer relationship management system or loyalty program infrastructure",
+        "severity": "MEDIUM",
+        "blocksActions": [
+          "retention_focus",
+          "relationship_marketing"
+        ],
+        "releasableVia": [
+          "crm_implementation",
+          "loyalty_program_design"
+        ]
+      }
+    ],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "e4707f07-cc50-4047-ad4a-28d580e718f9",
+          "title": "Stabilize cash first: build a 13-week cash-flow forecast and secure committed liquidity before any optimization",
+          "class": "STABILIZATION",
+          "objective": "Secure survival before any retention, growth, or optimization spend",
+          "rationale": "With a short runway, liquidity is the gating priority over optimization",
+          "whyThisNow": "Optimization spend before cash is secured risks insolvency",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Stabilize cash first: build a 13-week cash-flow forecast and secure committed liquidity before any optimization",
+              "description": "Secure survival before any retention, growth, or optimization spend. With a short runway, liquidity is the gating priority over optimization.",
+              "ownerRole": "consultant",
+              "estimatedDays": 7,
+              "successCriteria": "A 13-week forecast exists and committed liquidity is secured before optimization"
+            }
+          ],
+          "estimatedCostBand": "MINIMAL",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "A 13-week forecast exists and committed liquidity is secured before optimization"
+          ],
+          "failureRisks": [
+            "The first action is necessary but not sufficient; follow-on interventions required"
+          ],
+          "fallbackPlan": "Escalate to a full intervention plan once the root cause is verified",
+          "evidenceBasis": [
+            "5cc95475-3188-5f3f-b983-be7d03ef6fd8",
+            "e5663e3d-b694-5d22-8791-a76d12e3bff5"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 100
+        },
+        "priorityScore": 100,
+        "factors": [
+          {
+            "factor": "survival/safety/reversibility prioritization",
+            "score": 10,
+            "rationale": "With a short runway, liquidity is the gating priority over optimization"
+          }
+        ],
+        "sequencingReason": "SURVIVAL_CASH / STABILIZE_CASH: Optimization spend before cash is secured risks insolvency"
+      },
+      {
+        "intervention": {
+          "id": "7d9296be-0d7c-41bf-9a1e-33e243fd1fe2",
+          "title": "Design and launch customer loyalty program",
+          "class": "RESILIENCE_PROTECTION",
+          "objective": "Create incentive for repeat business and data capture for customer relationship management",
+          "rationale": "Systematic retention mechanism replaces transactional, one-time customer model",
+          "whyThisNow": "Revenue is declining due to low repeat rate; immediate action to rebuild recurring revenue",
+          "ownerRole": "owner",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Design loyalty program structure",
+              "description": "Points-based or tiered program; benchmark against industry, competitor research",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "successCriteria": "Program design reviewed, discount budget allocated"
+            },
+            {
+              "sequence": 2,
+              "title": "Implement simple tracking system",
+              "description": "Use email or phone-based customer identification to track repeat visits",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "System tested, staff trained, can enroll customer in <30 seconds"
+            },
+            {
+              "sequence": 3,
+              "title": "Launch to current customer base",
+              "description": "Send email or in-person invitation to 50+ previous customers; track enrollment rate",
+              "ownerRole": "operations_lead",
+              "estimatedDays": 2,
+              "successCriteria": "Email sent to prior customers, enrollment rate >20%, feedback gathered"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "SIGNIFICANT",
+          "successMetrics": [
+            "Loyalty program enrollment >50% of customer base",
+            "Repeat customer rate increases to >35%",
+            "Customer lifetime value increases by 40%"
+          ],
+          "failureRisks": [
+            "Program too complex, low enrollment",
+            "Discount cost erodes margins",
+            "Customers engage for discount only, churn when offer expires"
+          ],
+          "fallbackPlan": "Pivot to referral program (existing customers get discount for bringing new customers)",
+          "evidenceBasis": [
+            "5cc95475-3188-5f3f-b983-be7d03ef6fd8",
+            "e5663e3d-b694-5d22-8791-a76d12e3bff5"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 82,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 10,
+            "rationale": "Expected revenue impact: SIGNIFICANT. Urgency: CRITICAL"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 7.5,
+            "rationale": "Failure risks: 3. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 5,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 4.375,
+            "rationale": "Cost band: LOW vs Expected impact: SIGNIFICANT"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "8e62982a-21a0-4345-a81c-d6470c0e641d",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "e4707f07-cc50-4047-ad4a-28d580e718f9",
+          "7d9296be-0d7c-41bf-9a1e-33e243fd1fe2"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "13a35eec-ee7f-42ff-8a29-0bb3e0a79f50",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "e4707f07-cc50-4047-ad4a-28d580e718f9",
+          "7d9296be-0d7c-41bf-9a1e-33e243fd1fe2"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "e4707f07-cc50-4047-ad4a-28d580e718f9",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "e4707f07-cc50-4047-ad4a-28d580e718f9"
+      ],
+      "contingencyRequired": true
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "1 constraint(s) must be released before full execution: No customer relationship management system or loyalty program infrastructure",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

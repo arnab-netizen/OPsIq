@@ -1,0 +1,243 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "95daa446-da4d-443d-b74e-01de1fa68ff7",
+    "engagementId": "cfeb21a4-45f8-5fda-a7ae-410f91d6b7c0",
+    "timestamp": "2026-06-18T06:42:49.986Z",
+    "businessProblem": "A large irreversible build is proposed to win a contract, with a 30-day decision window and unproven demand.",
+    "rootCauseDiagnosis": {
+      "id": "8e4a9152-dc51-4a7b-8671-5c05d80b48f2",
+      "type": "strategic_capex_risk",
+      "description": "Strategic capex misallocation: large irreversible capital weighed against non-durable demand",
+      "mechanismDescription": "A large, largely irreversible capital investment is being weighed against demand whose durability is unproven; committing before durability is validated risks a value-destroying, irreversible loss.",
+      "evidenceIds": [
+        "496e5ab7-ba8c-5828-9d99-065834c19530",
+        "68ac8667-13f3-5b30-b5c8-bebd7956c462",
+        "5461d298-da5e-57f6-8431-58f609286f30"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "Demand that proves durable, making the investment sound",
+        "A reversible / leasable alternative that removes the irreversibility"
+      ],
+      "missingEvidenceFor": [
+        "Independent validation of demand durability beyond the near-term driver",
+        "Downside / reversibility modelling of the committed capital"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "228528c8-36fe-4a3b-97e4-02701d886d9c",
+          "title": "Defer the proposed action; model its contribution and downside before any irreversible commitment",
+          "class": "CONTAINMENT",
+          "objective": "Prevent an irreversible value-destroying move until durability is proven",
+          "rationale": "The contemplated action is irreversible or value-destroying on current evidence",
+          "whyThisNow": "A reversible model must precede any irreversible commitment",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Defer the proposed action; model its contribution and downside before any irreversible commitment",
+              "description": "Prevent an irreversible value-destroying move until durability is proven. The contemplated action is irreversible or value-destroying on current evidence.",
+              "ownerRole": "consultant",
+              "estimatedDays": 7,
+              "successCriteria": "The downside and contribution are modelled before any irreversible commitment"
+            }
+          ],
+          "estimatedCostBand": "MINIMAL",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "The downside and contribution are modelled before any irreversible commitment"
+          ],
+          "failureRisks": [
+            "The first action is necessary but not sufficient; follow-on interventions required"
+          ],
+          "fallbackPlan": "Escalate to a full intervention plan once the root cause is verified",
+          "evidenceBasis": [
+            "496e5ab7-ba8c-5828-9d99-065834c19530",
+            "68ac8667-13f3-5b30-b5c8-bebd7956c462",
+            "5461d298-da5e-57f6-8431-58f609286f30"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 100
+        },
+        "priorityScore": 100,
+        "factors": [
+          {
+            "factor": "survival/safety/reversibility prioritization",
+            "score": 10,
+            "rationale": "The contemplated action is irreversible or value-destroying on current evidence"
+          }
+        ],
+        "sequencingReason": "DEFER_IRREVERSIBLE / VERIFY_DIAGNOSIS: A reversible model must precede any irreversible commitment"
+      },
+      {
+        "intervention": {
+          "id": "8d9e2375-97ea-48c8-9259-7c851df4b409",
+          "title": "Validate demand durability and model the downside before any irreversible capital outlay",
+          "class": "STABILIZATION",
+          "objective": "Size demand durability and the downside before any irreversible capital outlay",
+          "rationale": "Demand-durability validation and downside / reversibility scenario modelling are low-cost and reversible, sizing how durable the demand is and the downside before any irreversible capital is locked in.",
+          "whyThisNow": "The capital outlay is largely irreversible; demand durability and the downside must be modelled first",
+          "ownerRole": "owner",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Validate demand durability",
+              "description": "Validate how durable the demand is and whether it persists beyond the near-term driver.",
+              "ownerRole": "consultant",
+              "estimatedDays": 4,
+              "successCriteria": "Demand-durability validation completed with a persistence estimate"
+            },
+            {
+              "sequence": 2,
+              "title": "Model the downside and reversibility",
+              "description": "Model the downside and reversibility scenarios for the capital under consideration before any outlay.",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Downside and reversibility scenario modelling completed"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Demand-durability validation complete",
+            "Downside / reversibility scenario modelling complete"
+          ],
+          "failureRisks": [
+            "Demand-durability data may be thin for a new market"
+          ],
+          "fallbackPlan": "Test a reversible or leasable alternative before any irreversible outlay",
+          "evidenceBasis": [
+            "496e5ab7-ba8c-5828-9d99-065834c19530",
+            "68ac8667-13f3-5b30-b5c8-bebd7956c462",
+            "5461d298-da5e-57f6-8431-58f609286f30"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: MEDIUM"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "a140e0c0-327a-4044-bf4d-a36249da386d",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "228528c8-36fe-4a3b-97e4-02701d886d9c",
+          "8d9e2375-97ea-48c8-9259-7c851df4b409"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "cf75d4a3-b959-4bbb-bf94-493d86633b57",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "228528c8-36fe-4a3b-97e4-02701d886d9c",
+          "8d9e2375-97ea-48c8-9259-7c851df4b409"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      },
+      {
+        "id": "91d02a5f-77c8-4b9d-91d2-ab5cef6f958a",
+        "name": "Defensive Hold (Minimal Risk)",
+        "description": "Execute containment interventions only to stabilize immediate crisis",
+        "assumptions": [
+          "Longer-term structural fixes deferred 6+ months",
+          "Focus on preserving cash and customer base",
+          "External investment or M&A may be needed for growth"
+        ],
+        "interventionSubset": [
+          "228528c8-36fe-4a3b-97e4-02701d886d9c"
+        ],
+        "expectedOutcome": "Stabilize revenue decline, buy time for external support",
+        "risks": [
+          "Does not address root causes; temporary relief only",
+          "Competitors gain market share during hold period",
+          "Team morale declines with no visible improvement"
+        ],
+        "likelihood": "MODERATE"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "228528c8-36fe-4a3b-97e4-02701d886d9c",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "228528c8-36fe-4a3b-97e4-02701d886d9c"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

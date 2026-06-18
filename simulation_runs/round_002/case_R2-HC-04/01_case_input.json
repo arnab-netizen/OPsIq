@@ -1,0 +1,65 @@
+{
+  "caseId": "R2-HC-04",
+  "caseType": "single",
+  "industry": "software_saas",
+  "businessModel": "smb_subscription",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "software_saas",
+    "size": "micro",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "LOW",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Churn is rising and the obvious fix is a customer-success team, but the firm cannot staff one in the window.",
+  "evidence": [
+    {
+      "dimension": "customer_retention",
+      "finding": "Churn rose to eight percent with thin onboarding; the obvious fix is a customer-success team",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "churnPct": 8
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Net retention fell from one hundred one to eighty-nine over three quarters",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "retentionPct": 89
+      }
+    },
+    {
+      "dimension": "team_capability",
+      "finding": "But the firm cannot hire or staff a success team within the needed window",
+      "confidence": "HIGH",
+      "source": "HR",
+      "isCritical": true,
+      "supportingData": {
+        "hireableHeadcount": 0
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Margins are healthy on retained accounts",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 68
+      }
+    }
+  ]
+}

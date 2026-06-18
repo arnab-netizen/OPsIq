@@ -1,0 +1,64 @@
+{
+  "caseId": "R2-GD-01",
+  "caseType": "abstention",
+  "industry": "retail",
+  "businessModel": "membership_warehouse",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "low"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "large",
+    "revenueImpactUrgency": "LOW"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 24,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A healthy membership retailer is performing well but a nervous owner wants to know whether a large transformation program is needed.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Margins and cash generation are stable and healthy with ample reserves on hand",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "operatingMargin": 13,
+        "cashMonths": 24
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Membership renewal and repeat purchase remain high and steady year over year",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "renewalRatePct": 91,
+        "repeatRatePct": 88
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operations run within capacity with no backlog or quality issues this period",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "utilizationPct": 80
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Market position is steady and no acute competitive threat is identified this period",
+      "confidence": "MEDIUM",
+      "source": "strategy",
+      "isCritical": false
+    }
+  ]
+}

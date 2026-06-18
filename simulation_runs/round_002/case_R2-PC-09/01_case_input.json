@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-PC-09",
+  "caseType": "multi",
+  "industry": "software_saas",
+  "businessModel": "subscription",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "high"
+  },
+  "clientContext": {
+    "industry": "software_saas",
+    "size": "small",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 9,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "Per-unit economics are negative and the owner wants to scale acquisition to grow out of it.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Per-customer contribution is negative once support and onboarding are loaded",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "contribution": -6
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "The owner wants to scale acquisition spend hard to grow out of the loss",
+      "confidence": "HIGH",
+      "source": "owner interview",
+      "isCritical": true,
+      "supportingData": {
+        "newCustomerRate": 12
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Acquisition cost exceeds lifetime value on the core tier",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "cac": 200,
+        "ltv": 150
+      }
+    },
+    {
+      "dimension": "customer_retention",
+      "finding": "Retention is too thin to recover acquisition cost",
+      "confidence": "MEDIUM",
+      "source": "analytics",
+      "isCritical": false,
+      "supportingData": {
+        "repeatRatePct": 30
+      }
+    }
+  ]
+}

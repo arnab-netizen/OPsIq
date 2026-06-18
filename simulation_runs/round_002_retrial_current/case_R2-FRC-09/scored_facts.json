@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "unit_economics_failure",
+    "diagnosisConfidence": "HIGH",
+    "evidenceIdsUsedCount": 2,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Rebuild cohort-level contribution margin before scaling spend Establish true per-unit/per-customer economics so no growth spend is committed on negative margin Reconstructing contribution margin and CAC payback from existing data is low-cost and reversible, and prevents loss-amplifying scaling. Unit economics appear negative; scaling before confirming would deepen losses Compute per-unit revenue, variable cost, contribution margin, and CAC payback from existing records. Contribution margin and CAC payback quantified per cohort Hold incremental acquisition/discount spend until economics are confirmed (reversible). No new growth spend committed pending review",
+    "gateAbstain": false,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-FRC-09",
+    "expectedDiagnosisClass": "UNCOVERED",
+    "engineCommitted": true,
+    "engineOutcome": "PROCEED",
+    "expectedOutcome": "PROCEED",
+    "axes": {
+      "diagnosis": {
+        "verdict": "FAIL",
+        "sublabel": "FALSE_ROOT_CAUSE"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "PASS",
+        "sublabel": "ACCEPTABLE_ACTION"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT_PROCEED"
+      },
+      "abstention": {
+        "verdict": "NA",
+        "sublabel": "NOT_ABSTAIN_CASE"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": false,
+      "dangerous_proceed": false,
+      "over_abstention": false,
+      "correct_diagnosis_wrong_action": false,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": true
+    }
+  }
+}

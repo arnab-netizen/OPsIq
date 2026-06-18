@@ -1,0 +1,62 @@
+{
+  "caseId": "R2-RC-06",
+  "caseType": "single",
+  "industry": "retail",
+  "businessModel": "apparel_retail",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "large",
+    "revenueImpactUrgency": "CRITICAL"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 3,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "An apparel retailer faced a near-term liquidity crisis; the owner wants the action sequence that actually pulled a peer through.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Cash runway fell to about three months amid a sharp sales downturn and fixed lease obligations",
+      "confidence": "HIGH",
+      "source": "treasury",
+      "isCritical": true,
+      "supportingData": {
+        "cashRunwayMonths": 3
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Monthly cash burn is high against a thin balance with leases due",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "monthlyBurn": 6000000
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "The core business is viable once the cost base is right-sized to demand",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "utilizationPct": 62
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "A focused, smaller store estate remains profitable and defensible",
+      "confidence": "MEDIUM",
+      "source": "strategy",
+      "isCritical": false
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "caseId": "R2-RC-05",
+  "caseType": "single",
+  "industry": "retail",
+  "businessModel": "omnichannel_retail",
+  "businessStage": "mature",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "retail",
+    "size": "large",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 10,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A retailer's core demand collapsed as the category moved online; the owner wants the proven pivot, not denial.",
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "New-customer demand collapsed as the category shifted online and footfall fell forty percent year over year",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "newCustomerRate": 6
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Online channel and lead volume are weak relative to the shift in the category",
+      "confidence": "HIGH",
+      "source": "marketing",
+      "isCritical": true,
+      "supportingData": {
+        "leadVolume": 95,
+        "funnelConversionPct": 1.5
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Margins are stable; the problem is the demand model, not unit cost",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 9
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Stores and fulfilment can be repurposed to support a channel pivot",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "utilizationPct": 65
+      }
+    }
+  ]
+}

@@ -1,0 +1,241 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "a7f79b5b-37c9-4079-9aec-1ceb5970f4df",
+    "engagementId": "8b96a9a1-7233-5d22-b6c8-88a4453e0e63",
+    "timestamp": "2026-06-18T06:19:41.193Z",
+    "businessProblem": "Margins are thin and the owner wants a deep across-the-board discount to hit the quarter's revenue target.",
+    "rootCauseDiagnosis": {
+      "id": "892e7b8a-24be-4dc0-993a-57b8dc32ebd8",
+      "type": "unit_economics_failure",
+      "description": "Per-unit / per-customer economics are unprofitable",
+      "mechanismDescription": "Contribution margin is negative or acquisition cost exceeds customer value, so growth deepens losses rather than building value.",
+      "evidenceIds": [
+        "174f3383-0ad6-5117-abd4-bf246124863d",
+        "747d9a17-82c9-57fd-ab65-5f3c19173f2d"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "Blended margin masks a profitable core cohort",
+        "Temporary launch-phase costs not representative of steady state"
+      ],
+      "missingEvidenceFor": [
+        "Cohort-level contribution margin",
+        "CAC payback period",
+        "Variable vs fixed cost split"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "ad7f8ed1-407a-4870-9fb8-7b79718251f3",
+          "title": "Defer the proposed action; model its contribution and downside before any irreversible commitment",
+          "class": "CONTAINMENT",
+          "objective": "Prevent an irreversible value-destroying move until durability is proven",
+          "rationale": "The contemplated action is irreversible or value-destroying on current evidence",
+          "whyThisNow": "A reversible model must precede any irreversible commitment",
+          "ownerRole": "consultant",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Defer the proposed action; model its contribution and downside before any irreversible commitment",
+              "description": "Prevent an irreversible value-destroying move until durability is proven. The contemplated action is irreversible or value-destroying on current evidence.",
+              "ownerRole": "consultant",
+              "estimatedDays": 7,
+              "successCriteria": "The downside and contribution are modelled before any irreversible commitment"
+            }
+          ],
+          "estimatedCostBand": "MINIMAL",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "The downside and contribution are modelled before any irreversible commitment"
+          ],
+          "failureRisks": [
+            "The first action is necessary but not sufficient; follow-on interventions required"
+          ],
+          "fallbackPlan": "Escalate to a full intervention plan once the root cause is verified",
+          "evidenceBasis": [
+            "174f3383-0ad6-5117-abd4-bf246124863d",
+            "747d9a17-82c9-57fd-ab65-5f3c19173f2d"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 100
+        },
+        "priorityScore": 100,
+        "factors": [
+          {
+            "factor": "survival/safety/reversibility prioritization",
+            "score": 10,
+            "rationale": "The contemplated action is irreversible or value-destroying on current evidence"
+          }
+        ],
+        "sequencingReason": "DEFER_IRREVERSIBLE / VERIFY_DIAGNOSIS: A reversible model must precede any irreversible commitment"
+      },
+      {
+        "intervention": {
+          "id": "7f9463a2-c349-466d-ac48-1ad271cf39be",
+          "title": "Rebuild cohort-level contribution margin before scaling spend",
+          "class": "STABILIZATION",
+          "objective": "Establish true per-unit/per-customer economics so no growth spend is committed on negative margin",
+          "rationale": "Reconstructing contribution margin and CAC payback from existing data is low-cost and reversible, and prevents loss-amplifying scaling.",
+          "whyThisNow": "Unit economics appear negative; scaling before confirming would deepen losses",
+          "ownerRole": "finance_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Reconstruct unit economics",
+              "description": "Compute per-unit revenue, variable cost, contribution margin, and CAC payback from existing records.",
+              "ownerRole": "finance_lead",
+              "estimatedDays": 4,
+              "successCriteria": "Contribution margin and CAC payback quantified per cohort"
+            },
+            {
+              "sequence": 2,
+              "title": "Freeze incremental growth spend",
+              "description": "Hold incremental acquisition/discount spend until economics are confirmed (reversible).",
+              "ownerRole": "owner",
+              "estimatedDays": 1,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "No new growth spend committed pending review"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "NONE",
+          "successMetrics": [
+            "Cohort contribution margin computed",
+            "CAC payback quantified"
+          ],
+          "failureRisks": [
+            "Cost allocation data incomplete"
+          ],
+          "fallbackPlan": "Run a small reversible pricing/cost test on one cohort before any broad change",
+          "evidenceBasis": [
+            "174f3383-0ad6-5117-abd4-bf246124863d",
+            "747d9a17-82c9-57fd-ab65-5f3c19173f2d"
+          ],
+          "estimatedTotalDays": 5,
+          "priorityScore": 0
+        },
+        "priorityScore": 63,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 2.4,
+            "rationale": "Expected revenue impact: NONE. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 5 days. Team capacity: MEDIUM. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 0.625,
+            "rationale": "Cost band: LOW vs Expected impact: NONE"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "4abefff6-ec4a-41de-82ae-782629ce1e52",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "ad7f8ed1-407a-4870-9fb8-7b79718251f3",
+          "7f9463a2-c349-466d-ac48-1ad271cf39be"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "7dde4abb-8600-4f0b-a7ea-8af02c1bb54e",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "ad7f8ed1-407a-4870-9fb8-7b79718251f3",
+          "7f9463a2-c349-466d-ac48-1ad271cf39be"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      },
+      {
+        "id": "81ef65eb-c464-41bf-88d2-d9e7e7862a27",
+        "name": "Defensive Hold (Minimal Risk)",
+        "description": "Execute containment interventions only to stabilize immediate crisis",
+        "assumptions": [
+          "Longer-term structural fixes deferred 6+ months",
+          "Focus on preserving cash and customer base",
+          "External investment or M&A may be needed for growth"
+        ],
+        "interventionSubset": [
+          "ad7f8ed1-407a-4870-9fb8-7b79718251f3"
+        ],
+        "expectedOutcome": "Stabilize revenue decline, buy time for external support",
+        "risks": [
+          "Does not address root causes; temporary relief only",
+          "Competitors gain market share during hold period",
+          "Team morale declines with no visible improvement"
+        ],
+        "likelihood": "MODERATE"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "ad7f8ed1-407a-4870-9fb8-7b79718251f3",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "ad7f8ed1-407a-4870-9fb8-7b79718251f3"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Weak evidence on Customer Retention - diagnosis confidence limited; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

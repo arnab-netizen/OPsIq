@@ -1,0 +1,66 @@
+{
+  "inputs": {
+    "confidence_score": 0.55,
+    "has_evidence": true,
+    "evidence_contradictions": 0,
+    "scope_valid": true,
+    "preconditions_met": true,
+    "irreversibility_score": 0,
+    "operator_capacity_available": true,
+    "active_conflicts": 0,
+    "evidence_support": {
+      "committed": true,
+      "supportRatio": 0.5,
+      "hasMissingEvidence": true
+    }
+  },
+  "assessment": {
+    "is_safe": false,
+    "unsafe_conditions": [
+      {
+        "condition_type": "CONTRADICTORY_EVIDENCE",
+        "severity": "HIGH",
+        "description": "Causal challenge failed: strong adverse evidence sits in a dimension the chosen diagnosis ignored (contradictory off-archetype signal)",
+        "blocking": true
+      }
+    ],
+    "confidence_adjustment": -30,
+    "abstain": true,
+    "abstention_state": "CONFLICTING_SIGNALS",
+    "fallback_action": "escalate_to_operator"
+  },
+  "escalation_required": false,
+  "causal_challenge": {
+    "committed": true,
+    "challenged": true,
+    "outOfModelCauseInProblem": false,
+    "adverseOffArchetypeEvidence": true,
+    "reasons": [
+      "strong adverse evidence sits in a dimension the chosen diagnosis ignored (contradictory off-archetype signal)"
+    ]
+  },
+  "constraint_alignment": {
+    "committed": true,
+    "conflict": false,
+    "reasons": []
+  },
+  "decision": {
+    "recommendation_id": "6fc6995d-b62f-5935-9d46-2c0bdd8f4312",
+    "abstention_state": "CONFLICTING_SIGNALS",
+    "metadata": {
+      "reason": "Recommendation abstained: CONFLICTING_SIGNALS",
+      "blocking_factors": [
+        "CONTRADICTORY_EVIDENCE"
+      ],
+      "missing_evidence": [],
+      "violated_constraints": [],
+      "confidence_score": 0.55,
+      "escalation_required": false,
+      "safe_fallback_action": "revalidate_later",
+      "review_date": "2026-06-18T02:42:15.382Z"
+    },
+    "timestamp": "2026-06-18T02:42:15.382Z",
+    "actor": "round2-retrial",
+    "immutable": true
+  }
+}

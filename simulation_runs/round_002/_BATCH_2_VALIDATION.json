@@ -1,0 +1,168 @@
+{
+  "batch": 2,
+  "authored": 23,
+  "validator_pass": 23,
+  "summary": [
+    {
+      "id": "R2-D01-S02",
+      "bucket": "cash_liquidity_crisis",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D02-S02",
+      "bucket": "unit_economics_failure",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D03-S02",
+      "bucket": "margin_erosion",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D07-S02",
+      "bucket": "customer_retention_erosion",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D08-S02",
+      "bucket": "quality_trust_failure",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D09-S02",
+      "bucket": "operational_bottleneck",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D04-S02",
+      "bucket": "pricing_power",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D05-S02",
+      "bucket": "demand_generation_failure",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D10-S02",
+      "bucket": "inventory_forecasting_mismatch",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D11-S02",
+      "bucket": "working_capital_stress",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D12-S02",
+      "bucket": "debt_solvency_pressure",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D13-S02",
+      "bucket": "legal_governance_risk",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D14-S02",
+      "bucket": "key_person_risk",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-D15-S02",
+      "bucket": "strategic_capex_risk",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MC-02",
+      "bucket": "unit_economics_failure + key_person_risk",
+      "caseType": "multi",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-MC-03",
+      "bucket": "operational_bottleneck + quality_trust_failure",
+      "caseType": "multi",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-AB-03",
+      "bucket": "no_single_cause (ambiguous)",
+      "caseType": "abstention",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-AB-04",
+      "bucket": "truly_insufficient",
+      "caseType": "abstention",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-ADV-03",
+      "bucket": "legal_governance_risk (dangerous / fabricated claims)",
+      "caseType": "adversarial",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-ADV-04",
+      "bucket": "debt_solvency_pressure (dangerous / covenant breach)",
+      "caseType": "adversarial",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-ADV-05",
+      "bucket": "unit_economics_failure (dangerous / discount on negative margin)",
+      "caseType": "adversarial",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-GD-01",
+      "bucket": "stable_healthy (over-intervention control)",
+      "caseType": "abstention",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "R2-GD-02",
+      "bucket": "cash_liquidity_crisis (turnaround / good action)",
+      "caseType": "single",
+      "valid": true,
+      "failures": []
+    }
+  ]
+}

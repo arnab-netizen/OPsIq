@@ -1,0 +1,49 @@
+{
+  "source_id": "SRC-043",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001171014/000156761916003053/s001442x1_ex99-1.htm",
+  "source_title": "Cosi, Inc. - Form 8-K Exhibit 99.1 (Chapter 11 announcement, 2016)",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Cosi, Inc. (filed with U.S. SEC, EDGAR CIK 0001171014)",
+  "publication_or_filing_date": "2016-09",
+  "accessed_date": "2026-06-17",
+  "company_context": "Cosi was a fast-casual restaurant chain (flatbread sandwiches, salads) that had never reported an annual profit since its 1998 founding. Persistent margin/demand weakness drove severe cash-flow problems, mass store closures, and a September 2016 Chapter 11 filing followed by an asset sale.",
+  "business_type": "Fast-casual restaurant chain (company-operated and franchised units)",
+  "company_size_stage": "mid-market",
+  "geography": "United States (Northeast-centric)",
+  "time_period": "2015-2016",
+  "macro_context": "Highly competitive fast-casual segment with rising labor and occupancy costs; chronic unprofitability and thin liquidity at the company.",
+  "outcome_category": "2 - bankruptcy",
+  "candidate_diagnosis_bucket": "cash_liquidity_crisis",
+  "evidence_summary": "Cosi reported approximately $90 million of revenue for fiscal 2015 but had not posted an annual profit since 1998. In 2016, sales declines led to severe cash-flow problems. Immediately before filing, the company closed 29 underperforming company-operated locations; as of October 1, 2016 it operated or franchised 76 restaurants (45 company-operated, 31 franchised). Cosi and subsidiaries filed voluntary Chapter 11 petitions on September 28, 2016 in the District of Massachusetts and ran a Section 363 asset sale, with LIMAB LLC named winning bidder on November 29, 2016.",
+  "source_backed_metrics": {
+    "fy2015_revenue_usd": "approximately 90 million",
+    "stores_closed_pre_filing": "29 company-operated",
+    "total_restaurants_as_of_oct_1_2016": "76 (45 company-operated, 31 franchised)",
+    "chapter_11_filing_date": "2016-09-28",
+    "chapter_11_venue": "U.S. Bankruptcy Court, District of Massachusetts",
+    "section_363_winning_bidder": "LIMAB LLC (announced 2016-11-29)",
+    "last_annual_profit_year": "none since founding in 1998"
+  },
+  "owner_decision_context": "Leadership faced chronic unprofitability and a deteriorating cash position. They had to choose between continued operation on thinning liquidity versus restructuring; they closed underperforming units and ultimately filed Chapter 11 to pursue a going-concern asset sale.",
+  "action_taken": "Closed 29 underperforming company-operated locations, filed Chapter 11 on 2016-09-28, and pursued a Section 363 sale of substantially all assets, won by LIMAB LLC.",
+  "outcome_evidence": "Chapter 11 filing on 2016-09-28 with severe cash-flow problems, store count cut to 76, and a 363 asset sale confirm a liquidity-driven bankruptcy rooted in long-run unprofitability.",
+  "source_limitations": "WebFetch of sec.gov returned HTTP 403; figures confirmed via WebSearch snippets attributed to the Cosi 8-K exhibit and corroborated by named trade press (QSR, Food Business News, Restaurant Dive). Precise net-loss figures and same-store-sales percentages were not cleanly confirmable from primary snippets and are omitted. Cosi later filed bankruptcy again (2020); this record concerns the 2016 filing only.",
+  "directly_stated": [
+    "Cosi filed voluntary Chapter 11 on September 28, 2016 in the District of Massachusetts",
+    "Fiscal 2015 revenue was approximately $90 million",
+    "The company had not reported an annual profit since its 1998 founding",
+    "29 underperforming company-operated locations were closed immediately before filing",
+    "As of October 1, 2016 it operated or franchised 76 restaurants (45 company, 31 franchised)",
+    "LIMAB LLC was the Section 363 winning bidder, announced November 29, 2016"
+  ],
+  "inferred": [
+    "Chronic margin/demand weakness (never profitable) was the underlying condition; the acute trigger was a cash/liquidity crisis",
+    "Store closures were a reactive cash-preservation move rather than a growth strategy"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Mid-market restaurant chain with chronic unprofitability tipping into an acute cash/liquidity crisis and bankruptcy, with both company-operated and franchised units. Tests whether the engine distinguishes the chronic business condition (structural margin/demand failure since inception) from the acute liquidity trigger, and whether it escalates review cadence as liquidity deteriorates.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

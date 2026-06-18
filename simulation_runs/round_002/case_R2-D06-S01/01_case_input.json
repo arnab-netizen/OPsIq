@@ -1,0 +1,63 @@
+{
+  "caseId": "R2-D06-S01",
+  "caseType": "single",
+  "industry": "ecommerce",
+  "businessModel": "dtc_retail",
+  "businessStage": "growth",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "ecommerce",
+    "size": "small",
+    "revenueImpactUrgency": "MEDIUM"
+  },
+  "businessProblem": "A DTC retailer is spending heavily on paid channels that convert poorly while organic quietly outperforms; the owner wants to fix allocation.",
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 12,
+    "legalComplianceSensitive": false
+  },
+  "evidence": [
+    {
+      "dimension": "market_position",
+      "finding": "Paid-search absorbs seventy percent of spend but converts at a fraction of organic traffic",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "channelMix": 70,
+        "channelConversionPct": 0.9
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "Acquisition cost on paid social runs roughly triple the blended target",
+      "confidence": "HIGH",
+      "source": "analytics",
+      "isCritical": true,
+      "supportingData": {
+        "channelCac": 240
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Overall profitability remains positive; the issue is channel allocation, not pricing",
+      "confidence": "MEDIUM",
+      "source": "finance",
+      "isCritical": false,
+      "supportingData": {
+        "operatingMargin": 15
+      }
+    },
+    {
+      "dimension": "process_maturity",
+      "finding": "No channel-level attribution or budget-reallocation process is in place",
+      "confidence": "MEDIUM",
+      "source": "owner interview",
+      "isCritical": false
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "source_id": "SRC-004",
+  "source_url": "https://home.treasury.gov/data/troubled-assets-relief-program/automotive-programs/overview",
+  "source_title": "Auto Industry Program Overview",
+  "source_type": "GOVERNMENT_REPORT",
+  "publisher_issuer": "U.S. Department of the Treasury, Office of Financial Stability (TARP)",
+  "publication_or_filing_date": "2013-12",
+  "accessed_date": "2026-06-17",
+  "company_context": "General Motors entered Chapter 11 bankruptcy in 2009 amid the financial crisis. The US Treasury, through TARP's Automotive Industry Financing Program (AIFP, launched December 2008), funded the restructuring to prevent an uncontrolled liquidation of GM and the broader US auto industry. GM completed a managed bankruptcy, returned to profitability and a 2010 IPO, and Treasury fully exited in December 2013.",
+  "business_type": "Capital-intensive automotive manufacturing (asset-heavy, large fixed cost base, unionized workforce)",
+  "outcome_category": "4 - successful turnaround",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "Treasury's AIFP rescued GM through bankruptcy. Treasury invested approximately $51.0 billion in GM and ultimately recovered approximately $39.7 billion, leaving a net direct loss to taxpayers of roughly $11 billion. GM completed a November 2010 IPO yielding about $13.5 billion in net proceeds for Treasury; in December 2012 GM repurchased 200 million shares at $27.50 per share, repaying $2.1 billion; and in December 2013 Treasury sold its last remaining shares, exiting the investment. The intervention is documented as preventing an uncontrolled liquidation while accepting a quantified taxpayer loss in exchange for a preserved, restructured, profitable enterprise.",
+  "source_backed_metrics": {
+    "total_treasury_investment_in_gm_usd": "approximately $51.0 billion",
+    "total_recovered_from_gm_usd": "approximately $39.7 billion",
+    "net_taxpayer_loss_on_gm_usd": "approximately $11 billion",
+    "gm_ipo_net_proceeds_to_treasury_2010_usd": "approximately $13.5 billion",
+    "share_repurchase_2012": "200 million shares at $27.50 per share; $2.1 billion repaid",
+    "treasury_exit_date": "December 2013",
+    "aifp_launch_date": "December 2008"
+  },
+  "outcome_evidence": "GM completed a managed Chapter 11 restructuring, returned to profitability, completed a 2010 IPO, and Treasury fully exited in December 2013 recovering ~$39.7 billion of its ~$51.0 billion investment (a ~$11 billion net loss) while the company survived as a going concern.",
+  "source_limitations": "Treasury pages returned access-blocked when fetched directly; figures captured verbatim from Treasury (home.treasury.gov) and corroborated by GAO and Treasury press-release snippets. The ~$11 billion net-loss figure is the widely reported Treasury direct cost; precise reconciliation depends on accounting scope (GM vs. GMAC/Ally).",
+  "directly_stated": [
+    "AIFP launched December 2008 to prevent uncontrolled liquidation of GM and Chrysler",
+    "Treasury invested approximately $51.0 billion in GM",
+    "Treasury recovered approximately $39.7 billion from GM",
+    "GM 2010 IPO yielded ~$13.5 billion net to Treasury",
+    "December 2012 repurchase of 200 million shares at $27.50; $2.1 billion repaid",
+    "Treasury exited GM in December 2013"
+  ],
+  "inferred": [
+    "A quantified taxpayer loss was accepted in exchange for preserving a restructured, viable manufacturer",
+    "The managed bankruptcy plus capital injection functioned as a successful turnaround rather than liquidation"
+  ],
+  "reliability_rating": "A",
+  "why_useful_for_opsiq": "A debt_solvency_pressure case where external intervention plus governed restructuring produced a successful turnaround (outcome 4), not liquidation. Useful for testing whether OpsIQ can recognize that a solvency crisis in a viable but over-leveraged, capital-intensive business can be resolved by recapitalization, and for modeling intervention-mode/phase transitions and review cadence during a government-backed restructuring.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

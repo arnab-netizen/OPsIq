@@ -1,0 +1,48 @@
+{
+  "source_id": "SRC-083",
+  "source_url": "https://www.oecd.org/content/dam/oecd/en/publications/support-materials/2024/03/financing-smes-and-entrepreneurs-2024_015c0c26/Policy-Highlights-2024-Financing-SMEs-Scoreboard.pdf",
+  "source_title": "Financing SMEs and Entrepreneurs 2024: An OECD Scoreboard - Policy Highlights",
+  "source_type": "GOVERNMENT_REPORT",
+  "publisher_issuer": "Organisation for Economic Co-operation and Development (OECD)",
+  "publication_or_filing_date": "2024-03",
+  "accessed_date": "2026-06-17",
+  "company_context": "Population-level cross-country dataset, not a single company. The OECD Scoreboard monitors SME and entrepreneurship financing trends, conditions, and policy developments across close to 50 countries, tracking SME lending stocks and flows, interest rates, the SME-to-large-firm interest-rate spread, payment delays, and bankruptcies.",
+  "business_type": "Small and medium enterprises across OECD and partner economies (cross-sectoral)",
+  "company_size_stage": "Small and medium enterprises (population aggregate)",
+  "geography": "Close to 50 countries across OECD and partner economies (non-US-centric; European, Asian, Latin American coverage)",
+  "time_period": "Reference year 2022, with multi-year trend series",
+  "macro_context": "2022 rapid rise in central-bank policy rates and post-pandemic inflation; the steepest increase in SME financing costs in the history of the exercise.",
+  "outcome_category": "20 - ambiguous/insufficient evidence (population financing-stress base rate, no firm-level outcome)",
+  "candidate_diagnosis_bucket": "working_capital_stress",
+  "evidence_summary": "In 2022 the cost of SME financing rose at a pace unprecedented in the Scoreboard's history: SME interest rates were about 30 percent higher than in 2021, rising by roughly 1.1 percentage points. New SME lending fell about 1.8 percent, and the stock of SME loans declined, driven by a surge in repayment rates (SMEs avoiding higher borrowing costs) and an increase in SME bankruptcies, though bankruptcy rates generally had not yet exceeded pre-COVID levels. The Scoreboard tracks B2B payment delays as a measure of cash-flow difficulty (difficulty paying and being paid), which had not yet been significantly worsened by inflation in this edition. These are cross-country aggregates establishing a working-capital/financing-stress base rate, appropriate for abstention rather than a single-firm diagnosis.",
+  "source_backed_metrics": {
+    "countries_covered": "close to 50",
+    "sme_interest_rate_change_2022": "about 30 percent higher than 2021 (approximately +1.1 percentage points)",
+    "new_sme_lending_change_2022": "declined about 1.8 percent",
+    "sme_loan_stock_2022": "declined, driven by elevated repayment rates and rising SME bankruptcies",
+    "sme_bankruptcies_2022": "increased across the board, but generally not yet above pre-COVID levels",
+    "payment_delays_metric": "B2B payment delays tracked as a measure of cash-flow difficulty; not yet significantly worsened by inflation in this edition"
+  },
+  "owner_decision_context": "Not applicable at firm level; the report describes the financing environment SME owners faced as rates rose sharply in 2022.",
+  "action_taken": "Aggregate behavioral response noted: many SMEs accelerated loan repayments to avoid higher borrowing costs rather than taking on new credit.",
+  "outcome_evidence": "Population-level: falling SME loan stocks, declining new lending, and rising (but sub-pre-COVID) bankruptcies in 2022.",
+  "source_limitations": "Cross-country aggregate with no firm-level outcome; cannot support a confident single-company diagnosis. Methodologies and SME definitions vary across the ~50 countries. PDF returned HTTP 403 on direct fetch; figures confirmed verbatim in oecd.org primary-domain search snippets. Interest-rate change expressed both as ~30 percent relative and ~1.1 percentage points absolute.",
+  "directly_stated": [
+    "Covers close to 50 countries",
+    "SME interest rates about 30 percent higher in 2022 than 2021 (~+1.1 percentage points)",
+    "New SME lending declined about 1.8 percent in 2022",
+    "SME loan stock declined, driven by repayment surge and rising bankruptcies",
+    "SME bankruptcies rose but generally not yet above pre-COVID levels",
+    "B2B payment delays tracked as a cash-flow-difficulty measure"
+  ],
+  "inferred": [
+    "Sharply higher financing costs raised working-capital stress for the SME population in 2022",
+    "Aggregate base rates here cannot identify which individual firms entered distress"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "A credible non-US, multi-country base rate for SME financing and working-capital stress under a rate shock. Useful for calibrating working_capital_stress priors and for teaching OpsIQ to abstain (outcome 20) when only aggregate financing-condition data is available without firm-specific evidence.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "LOW"
+}

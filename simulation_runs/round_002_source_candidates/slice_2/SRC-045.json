@@ -1,0 +1,52 @@
+{
+  "source_id": "SRC-045",
+  "source_url": "https://www.gao.gov/products/gao-13-759",
+  "source_title": "Small Business Administration: Review of 7(a) Guaranteed Loans to Select Franchisees (GAO-13-759)",
+  "source_type": "GOVERNMENT_REPORT",
+  "publisher_issuer": "U.S. Government Accountability Office (GAO)",
+  "publication_or_filing_date": "2013-09-10",
+  "accessed_date": "2026-06-17",
+  "company_context": "A GAO review of U.S. Small Business Administration 7(a) guaranteed loans made to franchisees, providing base-rate data on how franchise small-business loans perform and how SBA's franchise loan data quality affects oversight. Useful as a sector base-rate rather than a single company case.",
+  "business_type": "Government oversight report on SBA-guaranteed franchise small-business lending",
+  "company_size_stage": "small business",
+  "geography": "United States",
+  "time_period": "FY2003-FY2012 (program-wide); 2000-2011 (select-franchisee cohort)",
+  "macro_context": "Post-financial-crisis scrutiny of SBA loan performance and concern over franchise loan default risk and data integrity in federal small-business lending.",
+  "outcome_category": "20 - ambiguous/incomplete",
+  "candidate_diagnosis_bucket": "debt_solvency_pressure",
+  "evidence_summary": "GAO found that from fiscal years 2003 to 2012, SBA guaranteed franchise loans under its 7(a) program totaling around $10.6 billion and made guarantee payments (i.e., on defaults/purchases) on approximately 28 percent of these franchise loans, representing about $1.5 billion. For one select franchise organization (loans approved 2000-2011), SBA approved about $38.4 million for 170 loans across 54 lenders (guaranteed portion ~$28.8 million); of the 170 loans, 74 defaulted, and 55 of those defaults (74 percent) came from just four high-volume lenders. GAO also flagged data-integrity problems in SBA's franchise loan fields (default status, loan counts, agent info) and noted SBA was moving to publicly available franchise identifiers.",
+  "source_backed_metrics": {
+    "program_franchise_7a_loans_fy2003_2012_usd": "approximately 10.6 billion",
+    "share_of_franchise_loans_with_guarantee_payments": "approximately 28%",
+    "guarantee_payments_amount_usd": "approximately 1.5 billion",
+    "select_franchisee_loans_count": "170",
+    "select_franchisee_loans_amount_usd": "approximately 38.4 million",
+    "select_franchisee_guaranteed_portion_usd": "approximately 28.8 million",
+    "select_franchisee_defaults": "74 of 170",
+    "defaults_concentrated_in_four_lenders": "55 of the defaults (74%)",
+    "publication_date": "2013-09-10",
+    "public_release_date": "2013-11-13"
+  },
+  "owner_decision_context": "Not a single-owner case; this is base-rate evidence. It frames the lender/regulator decision context: SBA oversight relied on franchise loan data that GAO found unreliable, impairing risk-based monitoring of which franchise concepts and lenders generate disproportionate defaults.",
+  "action_taken": "GAO recommended SBA improve franchise loan data integrity and oversight; SBA reported working with a third-party vendor to replace internal franchise codes with publicly available industry identifiers.",
+  "outcome_evidence": "The ~28% guarantee-payment rate across ~$10.6B of franchise 7(a) loans (FY2003-2012) and the 74-of-170 default concentration in four lenders document a meaningful franchise-loan default base rate and lender-concentration of risk.",
+  "source_limitations": "WebFetch of gao.gov returned HTTP 403; figures confirmed via WebSearch snippets attributed to GAO-13-759 (a primary government source). The ~28% 'guarantee payments' figure reflects loans on which SBA made purchase/guarantee payments and is a proxy for default/loss incidence, not a strict cohort default rate; the 170-loan cohort is one select franchise organization, not all franchises. Some widely cited franchise-vs-non-franchise comparisons in the broader search are from secondary studies and are not used here.",
+  "directly_stated": [
+    "FY2003-FY2012 SBA guaranteed ~$10.6 billion in 7(a) franchise loans",
+    "SBA made guarantee payments on approximately 28% of those franchise loans, about $1.5 billion",
+    "For the select franchise organization (2000-2011), SBA approved ~$38.4 million for 170 loans via 54 lenders; guaranteed portion ~$28.8 million",
+    "74 of the 170 loans defaulted; 55 of those (74%) came from four high-volume lenders",
+    "GAO identified data-integrity issues in SBA franchise loan fields and SBA was adopting public franchise identifiers",
+    "Report published 2013-09-10, publicly released 2013-11-13"
+  ],
+  "inferred": [
+    "Franchise small-business loans carry a material default/loss base rate (~28% guarantee-payment incidence over the period)",
+    "Default risk is concentrated by lender and franchise concept rather than uniformly distributed"
+  ],
+  "reliability_rating": "A",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Provides a sector base-rate anchor for franchise/small-business risk rather than a single named outcome - useful for calibrating prior probabilities of franchise distress and for an ambiguous/base-rate benchmark item. Tests whether the engine can reason from population statistics (debt/solvency base rates, lender concentration) rather than only from individual narratives, and supports adversarial/ambiguous framing where no single 'answer company' exists.",
+  "suitable_for_hidden_key": false,
+  "suitable_for_adversarial_case": true,
+  "source_leakage_risk": "LOW"
+}

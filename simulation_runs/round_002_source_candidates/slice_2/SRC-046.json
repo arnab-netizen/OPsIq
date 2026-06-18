@@ -1,0 +1,48 @@
+{
+  "source_id": "SRC-046",
+  "source_url": "https://www.cbsnews.com/boston/news/market-basket-protests-anniversary-2014/",
+  "source_title": "Market Basket marks 10 years since unprecedented summer of employee protests, customer boycotts",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CBS News Boston",
+  "publication_or_filing_date": "2024-06",
+  "accessed_date": "2026-06-17",
+  "company_context": "Market Basket (DeMoulas Super Markets, Inc.), a New England regional supermarket chain run by the Demoulas family. In June 2014 the board, controlled by the rival branch of the family (Arthur S. Demoulas), fired beloved CEO Arthur T. Demoulas. Workers and customers revolted; sales collapsed; he was eventually reinstated via a $1.5-1.6 billion buyout of the company.",
+  "business_type": "Regional grocery / supermarket chain (family-controlled, privately held)",
+  "company_size_stage": "Mid-to-large established regional chain (~71 stores, ~25,000 employees in 2014)",
+  "geography": "United States (Massachusetts, New Hampshire, Maine)",
+  "time_period": "June-August 2014",
+  "macro_context": "Stable US consumer economy; low-margin grocery sector where labor goodwill and customer loyalty were the firm's competitive moat.",
+  "outcome_category": "16 - founder/key-person/team failure (initial removal of key leader triggering crisis), resolving toward 3 - severe distress but survival",
+  "candidate_diagnosis_bucket": "key_person_risk",
+  "evidence_summary": "The board fired CEO Arthur T. Demoulas ('Artie T') on June 23, 2014. The firing triggered mass employee walkouts, warehouse and delivery shutdowns, and a customer boycott. Empty shelves and abandoned deliveries caused sales to crater roughly 70% within weeks. Eight protest organizers were fired July 20, 2014, intensifying the movement. The standoff ended August 27, 2014 when Arthur T. and his sisters agreed to buy the company from the rival family branch for ~$1.5-1.6 billion, reinstating him and demonstrating the firm's near-total dependence on one key person's leadership and the workforce loyalty tied to him.",
+  "source_backed_metrics": {
+    "ceo_firing_date": "June 23, 2014",
+    "initial_employee_rally": "~300 employees rallied at Chelsea, MA flagship on June 24, 2014",
+    "protest_organizers_fired": "8 employees fired July 20, 2014",
+    "sales_decline_during_protests": "sales fell about 70%",
+    "buyout_price": "approximately $1.5-1.6 billion",
+    "resolution_date": "August 27, 2014",
+    "approx_workforce_2014": "about 25,000 employees"
+  },
+  "owner_decision_context": "The rival ownership/board faction prioritized shareholder distributions over the incumbent CEO's reinvestment-and-loyalty model and removed him. Arthur T.'s side then had to decide whether to buy out the company to restore stability.",
+  "action_taken": "After weeks of revenue collapse and supply paralysis, the warring family branches negotiated a sale of the chain to Arthur T. Demoulas, reinstating the fired CEO and ending the protests.",
+  "outcome_evidence": "The company survived; Arthur T. was reinstated under the ~$1.5-1.6B buyout on August 27, 2014, after sales had dropped ~70%. Coverage a decade later (2024) frames the episode as unprecedented and the chain as having recovered.",
+  "source_limitations": "Secondary journalism; exact dollar loss figure during the protest period is not precisely stated (sales-decline percentage and buyout price are). Privately held company, so audited financials are not public.",
+  "directly_stated": [
+    "CEO Arthur T. Demoulas was fired June 23, 2014",
+    "~300 employees rallied June 24, 2014",
+    "8 protest organizers fired July 20, 2014",
+    "sales fell about 70% during the protests",
+    "Arthur T. bought the company for ~$1.5-1.6 billion, deal reached August 27, 2014"
+  ],
+  "inferred": [
+    "The near-total sales collapse demonstrates extreme key-person dependency tied to workforce and customer loyalty",
+    "The company would have faced existential distress had the standoff continued"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Textbook key-person-risk case where removing a single leader nearly destroyed an otherwise healthy, profitable business through a workforce/customer revolt, then was reversed. Demonstrates that human-execution loyalty can be the binding constraint and that a leadership-driven shock requires governed re-evaluation of business condition, intervention mode, and key-person dependency.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": false,
+  "source_leakage_risk": "HIGH"
+}

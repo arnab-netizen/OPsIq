@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "key_person_risk",
+    "diagnosisConfidence": "HIGH",
+    "evidenceIdsUsedCount": 1,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Map key-person dependencies and begin knowledge capture and cross-training Reduce the key-person point of failure by capturing knowledge before new work Key-person dependency mapping with knowledge capture and cross-training is low-cost and reversible, reducing the key-person concentration before new engagements. Critical knowledge and relationships concentrate in one person; capture and cross-training must precede new work Map the dependencies and the concentration of knowledge, relationships, and revenue on that person. Key-person dependencies and revenue concentration mapped Document the undocumented knowledge and cross-train a second qualified resource to remove the point of failure. Knowledge-capture and cross-training plan underway with a second qualified resource",
+    "gateAbstain": true,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-FRC-12",
+    "expectedDiagnosisClass": "COMMIT_COVERED",
+    "engineCommitted": true,
+    "engineOutcome": "ABSTAIN",
+    "expectedOutcome": "PROCEED",
+    "axes": {
+      "diagnosis": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "FAIL",
+        "sublabel": "NO_ACTION_DELIVERED"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "FAIL",
+        "sublabel": "SPURIOUS_ABSTAIN"
+      },
+      "abstention": {
+        "verdict": "NA",
+        "sublabel": "NOT_ABSTAIN_CASE"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": false,
+      "dangerous_proceed": false,
+      "over_abstention": true,
+      "correct_diagnosis_wrong_action": true,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": false
+    }
+  }
+}

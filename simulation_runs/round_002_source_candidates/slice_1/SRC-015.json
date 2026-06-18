@@ -1,0 +1,41 @@
+{
+  "source_id": "SRC-015",
+  "source_url": "https://www.sec.gov/Archives/edgar/data/0001598674/000104746920000166/a2240404zs-1.htm",
+  "source_title": "Casper Sleep Inc. Form S-1 Registration Statement",
+  "source_type": "SEC_FILING",
+  "publisher_issuer": "Casper Sleep Inc., filed with U.S. SEC (EDGAR CIK 0001598674)",
+  "publication_or_filing_date": "2020-01-10",
+  "accessed_date": "2026-06-17",
+  "company_context": "Casper Sleep is a direct-to-consumer mattress and sleep-products company that filed its S-1 in January 2020 ahead of its February 2020 IPO. The filing showed strong revenue growth alongside persistent net losses, the classic DTC margin/unit-economics tension.",
+  "business_type": "DTC consumer products startup (online mattress / sleep brand)",
+  "outcome_category": "6 - growth with hidden profitability problem",
+  "candidate_diagnosis_bucket": "unit_economics_failure",
+  "evidence_summary": "Casper grew net revenue from $169.1 million (2016) to $250.9 million (2017) to $357.9 million (2018), a 45.5% CAGR, but lost $73.4 million in 2017 and $92.1 million in 2018. Gross margin expanded from 42.8% (2016) to 44.1% (2018) and to 50.7% for the three months ended September 30, 2019, yet high marketing and operating costs kept the company unprofitable - the hallmark thin-margin DTC unit-economics problem where heavy customer-acquisition spend outpaces contribution.",
+  "source_backed_metrics": {
+    "net_revenue_2016_usd": 169100000,
+    "net_revenue_2017_usd": 250900000,
+    "net_revenue_2018_usd": 357900000,
+    "revenue_cagr_pct": 45.5,
+    "net_loss_2017_usd": 73400000,
+    "net_loss_2018_usd": 92100000,
+    "gross_margin_2016_pct": 42.8,
+    "gross_margin_2018_pct": 44.1,
+    "gross_margin_q3_2019_pct": 50.7
+  },
+  "outcome_evidence": "S-1 disclosed widening absolute net losses ($73.4M in 2017 to $92.1M in 2018) despite ~45.5% revenue CAGR and improving gross margin. Casper IPO'd in February 2020 at a sharply reduced valuation; the filing is the primary evidence of growth-with-hidden-profitability-problem.",
+  "source_limitations": "The SEC EDGAR S-1 document returned 403 to direct WebFetch here, but the cited URL is the verified primary EDGAR filing location surfaced by search; figures were confirmed verbatim via WebSearch snippets quoting the S-1. The 2020 full-year net loss figure ($89.6M) referenced elsewhere is post-S-1 and not part of this filing.",
+  "directly_stated": [
+    "Net revenue $169.1M (2016), $250.9M (2017), $357.9M (2018); 45.5% CAGR",
+    "Net loss $73.4M (2017) and $92.1M (2018)",
+    "Gross margin 42.8% (2016), 44.1% (2018), 50.7% (Q3 2019)"
+  ],
+  "inferred": [
+    "Customer-acquisition and operating spend, not gross margin alone, drove losses",
+    "Revenue growth alone did not establish a path to profitability"
+  ],
+  "reliability_rating": "A",
+  "why_useful_for_opsiq": "Clean DTC unit_economics_failure / thin-margin case from a primary SEC filing. Tests whether a system separates improving gross margin from overall unprofitability and recognizes that growth plus margin expansion can still mask a non-viable cost structure.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

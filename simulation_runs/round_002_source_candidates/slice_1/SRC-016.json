@@ -1,0 +1,45 @@
+{
+  "source_id": "SRC-016",
+  "source_url": "https://money.cnn.com/2012/11/09/technology/groupon-stock/",
+  "source_title": "Groupon shares plummet. Can the company survive?",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CNN Money",
+  "publication_or_filing_date": "2012-11-09",
+  "accessed_date": "2026-06-17",
+  "company_context": "Groupon is a daily-deals marketplace connecting merchants with discount-seeking consumers. It IPO'd in November 2011 at $20/share, raising about $700 million (then the second-biggest U.S. tech IPO after Google). Within a year the stock had collapsed ~89% as billings growth decelerated and the durability of merchant and customer relationships came into question.",
+  "business_type": "two-sided deals marketplace (merchant-consumer daily deals)",
+  "outcome_category": "6 - growth with hidden profitability problem",
+  "candidate_diagnosis_bucket": "customer_retention_erosion",
+  "evidence_summary": "After a hyped IPO, Groupon's growth decelerated and the market repriced it severely: shares fell 23.5% to about $3 after Q3 2012 earnings, down roughly 89% from the IPO. Q3 2012 revenue of $568.6 million grew 32% YoY but missed the ~$591 million consensus. By Q4 2013 gross billings grew only 5% globally to $1.6 billion (vs $1.5 billion in Q4 2012), with international billings down 12% YoY - evidence that merchant and customer engagement were not durable enough to sustain the early growth narrative.",
+  "source_backed_metrics": {
+    "ipo_date": "2011-11-04",
+    "ipo_price_per_share_usd": 20,
+    "ipo_proceeds_usd_approx": 700000000,
+    "stock_decline_from_ipo_one_year_pct": 89,
+    "single_day_drop_nov_2012_pct": 23.5,
+    "price_after_q3_2012_drop_usd": 3,
+    "q3_2012_revenue_usd": 568600000,
+    "q3_2012_revenue_growth_yoy_pct": 32,
+    "q4_2013_gross_billings_usd": 1600000000,
+    "q4_2012_gross_billings_usd": 1500000000,
+    "q4_2013_international_billings_change_pct": -12
+  },
+  "outcome_evidence": "Stock fell ~89% from its $20 IPO within a year, dropping 23.5% to ~$3 after Q3 2012 results. Gross-billings growth slowed to 5% by Q4 2013 with international billings down 12% YoY, evidencing decelerating engagement post-IPO.",
+  "source_limitations": "The CNN Money primary article returned 403 to direct WebFetch here; figures were confirmed verbatim across credible WebSearch snippets (CNN Money, SEC Q4 2013 exhibit 99.1, Morningstar). Some figures span two reporting periods (2012 stock action vs 2013 billings) drawn from the same coverage thread. Merchant-churn dynamics are documented qualitatively; the specific cited numbers are billings/revenue/stock figures.",
+  "directly_stated": [
+    "IPO November 4, 2011 at $20/share, ~$700 million raised",
+    "Stock down ~89% from IPO within a year; fell 23.5% to ~$3 after Q3 2012",
+    "Q3 2012 revenue $568.6M, +32% YoY, missed ~$591M consensus",
+    "Q4 2013 gross billings $1.6B (+5%) vs $1.5B in Q4 2012",
+    "International billings down 12% YoY"
+  ],
+  "inferred": [
+    "Decelerating billings growth reflects weak merchant and customer retention in the daily-deals model",
+    "Early growth was partly a pull-forward that did not establish recurring engagement"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "Public-market case of growth-with-hidden-problem driven by retention/churn in a marketplace. Tests whether a system reads decelerating billings and post-IPO repricing as a retention/engagement signal rather than a temporary miss, and whether it separates headline revenue growth from underlying cohort durability.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}

@@ -1,0 +1,65 @@
+{
+  "caseId": "R2-RC-08",
+  "caseType": "single",
+  "industry": "manufacturing",
+  "businessModel": "make_to_order",
+  "businessStage": "established",
+  "ownerIntake": {
+    "riskAppetite": "medium"
+  },
+  "clientContext": {
+    "industry": "manufacturing",
+    "size": "medium",
+    "revenueImpactUrgency": "HIGH"
+  },
+  "ownerConstraintProfile": {
+    "budgetBand": "MEDIUM",
+    "timeHorizonDays": 90,
+    "staffCapacity": "MEDIUM",
+    "cashRunwayMonths": 9,
+    "legalComplianceSensitive": false
+  },
+  "businessProblem": "A manufacturer recovered eroding margins; the owner wants the sequence that worked, not the blanket price hike that backfired.",
+  "evidence": [
+    {
+      "dimension": "financial_health",
+      "finding": "Gross margin fell as input costs rose faster than price over several quarters",
+      "confidence": "HIGH",
+      "source": "finance",
+      "isCritical": true,
+      "supportingData": {
+        "marginPct": -8
+      }
+    },
+    {
+      "dimension": "financial_health",
+      "finding": "Cost per unit rose materially while price lagged across the range",
+      "confidence": "HIGH",
+      "source": "purchasing",
+      "isCritical": true,
+      "supportingData": {
+        "cogsPct": 16
+      }
+    },
+    {
+      "dimension": "market_position",
+      "finding": "An initial blanket price hike caused volume loss in price-sensitive lines",
+      "confidence": "MEDIUM",
+      "source": "sales",
+      "isCritical": false,
+      "supportingData": {
+        "realizedPrice": 95
+      }
+    },
+    {
+      "dimension": "operational_efficiency",
+      "finding": "Operations are capable; the lever is cost decomposition plus selective pricing",
+      "confidence": "MEDIUM",
+      "source": "ops",
+      "isCritical": false,
+      "supportingData": {
+        "throughput": 800
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "source_id": "SRC-094",
+  "source_url": "https://www.accountingweb.co.uk/business/financial-reporting/sfo-charges-four-with-patisserie-valerie-fraud",
+  "source_title": "Patisserie Valerie collapse and accounting fraud (named journalism: AccountingWEB / Irish Times / Wikipedia summary), with FRC and SFO actions",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "Named journalism (AccountingWEB, Irish Times) reporting on KPMG administrators, FRC investigation and SFO charges",
+  "publication_or_filing_date": "2019-01 (collapse); SFO charges 2023-09",
+  "accessed_date": "2026-06-17",
+  "company_context": "Patisserie Holdings plc (trading as Patisserie Valerie) was an AIM-listed UK cafe and patisserie chain of nearly 200 stores. In October 2018 it disclosed potentially fraudulent accounting irregularities; trading in its shares was suspended and it collapsed into administration in January 2019.",
+  "business_type": "Cafe / patisserie chain (food-service retail)",
+  "company_size_stage": "mid-market public (AIM-listed)",
+  "geography": "United Kingdom",
+  "time_period": "2018-2019",
+  "macro_context": "Competitive UK casual-dining/cafe sector; the failure was driven by internal accounting fraud rather than market conditions, with a reported cash position that proved fictional.",
+  "outcome_category": "15 - fraud / accounting misstatement driven failure",
+  "candidate_diagnosis_bucket": "legal_governance_risk",
+  "evidence_summary": "On 10 October 2018 trading in Patisserie Holdings shares was suspended after the discovery of potentially fraudulent accounting irregularities, including two unauthorised and unreported overdrafts worth almost £10 million. A £40m black hole was initially identified; a subsequent forensic probe by KPMG concluded the group's accounts had been overstated by approximately £94 million, comprising a £54m overstatement of the cash position, a £17m understatement of debts, and a £23m discrepancy in asset valuation. The company entered administration on 22 January 2019 as a 'direct result of the significant fraud,' closing about 70 of nearly 200 sites and costing around 900 jobs. The FRC investigated and fined auditor Grant Thornton £2.3m for missing red flags; the SFO later (13 September 2023) charged four individuals including former CFO Christopher Marsh.",
+  "source_backed_metrics": {
+    "initial_black_hole_gbp": "40 million",
+    "total_accounts_overstatement_gbp": "approximately 94 million",
+    "cash_position_overstatement_gbp": "54 million",
+    "debts_understatement_gbp": "17 million",
+    "asset_valuation_discrepancy_gbp": "23 million",
+    "unauthorised_overdrafts_gbp": "almost 10 million",
+    "administration_date": "22 January 2019",
+    "sites_closed": "approximately 70 of nearly 200",
+    "jobs_lost": "approximately 900",
+    "grant_thornton_frc_fine_gbp": "2.3 million"
+  },
+  "owner_decision_context": "Senior finance leadership allegedly concealed the true financial position (overstated cash, hidden overdrafts and debts) for an extended period, so the board and chairman believed the company was healthy until the fraud surfaced, leaving them with no runway to restructure once the real cash position was exposed.",
+  "action_taken": "On discovery, the board suspended share trading, secured an emergency capital raise/loan in late 2018, and launched investigations; when banks declined further support given the scale of the fraud, the company filed for administration (KPMG) on 22 January 2019. A portion of stores was sold to a new owner as a going concern.",
+  "outcome_evidence": "Administration on 22 January 2019 with ~70 site closures and ~900 jobs lost; KPMG forensic finding of ~£94m overstatement; FRC fine of Grant Thornton and SFO criminal charges confirm a fraud-driven collapse rather than ordinary trading failure.",
+  "source_limitations": "WebFetch typically 403s here; figures confirmed verbatim in WebSearch snippets attributed to named journalism (AccountingWEB, Irish Times) and a Wikipedia summary that cites KPMG administrator reports and FRC/SFO statements. The exact split (£54m/£17m/£23m) is from KPMG administrator progress reports as reported in journalism, not read in full text. SFO charges are allegations not convictions as of the cited reporting.",
+  "directly_stated": [
+    "Share trading suspended 10 October 2018 after discovery of accounting irregularities",
+    "Two unauthorised, unreported overdrafts of almost £10m",
+    "Initial £40m black hole later assessed at ~£94m overstatement (cash +£54m, debts -£17m, assets £23m)",
+    "Administration on 22 January 2019; ~70 sites closed; ~900 jobs lost",
+    "Grant Thornton fined £2.3m by the FRC; SFO charged four individuals on 13 September 2023"
+  ],
+  "inferred": [
+    "A materially fictitious reported cash balance meant standard liquidity ratios would have shown false health, masking insolvency",
+    "Audit and board-governance failures allowed the fraud to persist undetected for years"
+  ],
+  "reliability_rating": "B",
+  "verification_status": "SEARCH_SNIPPET_ONLY",
+  "why_useful_for_opsiq": "Prime fraud/governance hidden-key case: headline financials (especially cash) were fabricated, so any diagnosis built on reported numbers is wrong. Tests whether the engine flags governance/audit risk and the unreliability of self-reported cash, and routes a discovered fraud into immediate re-evaluation of solvency and a fraud-driven failure classification.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial_case": true,
+  "source_leakage_risk": "HIGH"
+}

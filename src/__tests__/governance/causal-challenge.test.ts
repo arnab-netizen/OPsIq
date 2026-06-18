@@ -14,11 +14,15 @@ describe("causal-challenge verifier", () => {
     expect(r.abstention_hint).toBeNull();
   });
 
-  it("flags an out-of-model cause cited in the stated problem (alignment failure)", () => {
+  it("flags an out-of-model PROTECTED-danger cause cited in the stated problem (alignment failure)", () => {
+    // Post-narrowing: the out-of-model arm holds on a protected-danger family
+    // (legal/liquidity/capex) the committed diagnosis does not subsume — here a
+    // regulatory ban under a retention diagnosis. (Covered/incidental causes no
+    // longer hold; see causal-challenge-out-of-model-narrowing.test.ts.)
     const r = runCausalChallenge({
       committed: true,
       businessProblem:
-        "Churn spiked the same month a competitor launched a permanent free tier.",
+        "Churn spiked the same month a regulatory ban hit the core product line.",
       diagnosisType: "customer_retention_erosion",
       evidence: [{ dimension: "customer_retention", finding: "churn up", isCritical: true }],
     });
@@ -33,7 +37,7 @@ describe("causal-challenge verifier", () => {
       diagnosisType: "customer_retention_erosion",
       evidence: [
         { dimension: "customer_retention", finding: "low repeat purchase", isCritical: true },
-        { dimension: "financial_health", finding: "Contribution margin negative (-12%)", supportingData: { marginPct: -12 } },
+        { dimension: "financial_health", finding: "Contribution margin negative (-12%)", isCritical: true, supportingData: { marginPct: -12 } },
       ],
     });
     expect(r.adverseOffArchetypeEvidence).toBe(true);

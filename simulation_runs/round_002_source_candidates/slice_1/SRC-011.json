@@ -1,0 +1,45 @@
+{
+  "source_id": "SRC-011",
+  "source_url": "https://money.cnn.com/2001/07/09/technology/webvan/",
+  "source_title": "Webvan announces shutdown, Chapter 11 filing",
+  "source_type": "JOURNALISM",
+  "publisher_issuer": "CNN Money (CNNfn)",
+  "publication_or_filing_date": "2001-07-09",
+  "accessed_date": "2026-06-17",
+  "company_context": "Webvan was an online grocery delivery company founded in 1996 by Borders co-founder Louis Borders. It raised over $1.2 billion (including a large 1999 IPO), built automated warehouses, and expanded aggressively into multiple metro markets before filing Chapter 11 in July 2001, roughly 18 months after its IPO.",
+  "business_type": "online grocery delivery startup (asset-heavy, owned fulfillment infrastructure)",
+  "outcome_category": "17 - capex/irreversible mistake",
+  "candidate_diagnosis_bucket": "strategic_capex_risk",
+  "evidence_summary": "Webvan committed to large fixed-cost, capital-intensive automated warehouses (including a roughly $1 billion Bechtel build-out contract) and expanded to many cities before validating profitability in its first market. With an average order around $80 and a reported ~$20 loss per order, the heavy fixed-cost base and weak per-order economics combined to exhaust over $800 million and force bankruptcy.",
+  "source_backed_metrics": {
+    "founded_year": 1996,
+    "total_capital_raised_usd_min": 1200000000,
+    "total_losses_usd_min": 800000000,
+    "bechtel_warehouse_contract_usd": 1000000000,
+    "average_order_size_usd": 80,
+    "loss_per_order_usd": 20,
+    "employees_laid_off": 2000,
+    "bankruptcy_filing_month": "July 2001",
+    "operations_ceased_month": "June 2001"
+  },
+  "outcome_evidence": "Webvan announced shutdown and Chapter 11 filing in July 2001 (operations wound down June-July 2001), laid off about 2,000 employees, and lost more than $800 million. It is repeatedly cited as one of the largest dot-com bankruptcies.",
+  "source_limitations": "The named CNN Money primary article URL returned 403 in this environment and could not be fetched directly. The figures (founding year, $1.2B raised, $800M lost, $1B Bechtel contract, $80 average order, $20 loss/order, 2,000 layoffs, July 2001 Chapter 11) were each confirmed verbatim across credible WebSearch snippets. The per-order loss is a frequently cited post-mortem estimate.",
+  "directly_stated": [
+    "Founded 1996 by Louis Borders",
+    "Raised over $1.2 billion",
+    "Lost over $800 million",
+    "Chapter 11 / shutdown announced July 2001",
+    "About 2,000 employees laid off",
+    "~$1 billion Bechtel contract for automated fulfillment centers",
+    "Average order ~$80; lost ~$20 per order"
+  ],
+  "inferred": [
+    "Fixed-cost infrastructure scaled faster than validated demand, locking in losses",
+    "Premature multi-city expansion amplified an unproven unit economic model"
+  ],
+  "reliability_rating": "B",
+  "why_useful_for_opsiq": "Textbook strategic_capex_risk / irreversible-overexpansion case. Tests whether a system flags the danger of large, hard-to-reverse fixed-cost commitments made before unit economics are proven, and whether it recommends staged validation over blitz expansion.",
+  "suitable_for_hidden_key": true,
+  "suitable_for_adversarial": false,
+  "keep_source_text_out_of_input": true
+}
