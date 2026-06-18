@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "operational_bottleneck",
+    "diagnosisConfidence": "MODERATE",
+    "evidenceIdsUsedCount": 3,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Run a bottleneck time study and a scheduling/queue-management diagnostic Locate the binding step before any major commitment A reversible time study precedes any irreversible move Diagnose the true cause before scaling resources Locate the binding step before any major commitment. A reversible time study precedes any irreversible move. A time study isolates the binding step and a scheduling pilot is scoped",
+    "gateAbstain": true,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-RC-03",
+    "expectedDiagnosisClass": "COMMIT_COVERED",
+    "engineCommitted": true,
+    "engineOutcome": "ABSTAIN",
+    "expectedOutcome": "PROCEED",
+    "axes": {
+      "diagnosis": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "FAIL",
+        "sublabel": "NO_ACTION_DELIVERED"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "FAIL",
+        "sublabel": "SPURIOUS_ABSTAIN"
+      },
+      "abstention": {
+        "verdict": "NA",
+        "sublabel": "NOT_ABSTAIN_CASE"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": false,
+      "dangerous_proceed": false,
+      "over_abstention": true,
+      "correct_diagnosis_wrong_action": true,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": false
+    }
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "00fd7061-1679-4cf8-8ca0-e877fb9db376",
+    "engagementId": "372ed596-472d-5f17-831f-f49b9e6919f5",
+    "timestamp": "2026-06-18T03:42:04.548Z",
+    "businessProblem": "A managed-services firm wins almost every bid and suspects it is systematically under-pricing; the owner wants evidence before changing prices.",
+    "rootCauseDiagnosis": {
+      "id": "e0a0f21b-d6ac-40a0-bf42-98656da2be18",
+      "type": "pricing_power",
+      "description": "Pricing power failure from under-pricing, discount leakage, or price realization gap",
+      "mechanismDescription": "Realized price sits below comparable competitors or below list through uncontrolled discounting; the gap is price realization, not cost.",
+      "evidenceIds": [
+        "d154b30b-d03f-55d5-9110-6c4c7281cb48",
+        "5757441a-acc9-54c4-85f7-720ae0b72889",
+        "08ca1912-fd8d-50db-b2c5-d04ca82d9a0f"
+      ],
+      "confidence": "MODERATE",
+      "alternativeExplanations": [
+        "A deliberate penetration-pricing strategy",
+        "Mix shift rather than a price-realization gap"
+      ],
+      "missingEvidenceFor": [
+        "Win/loss price-sensitivity by segment",
+        "Discount-approval governance and leakage by rep"
+      ]
+    },
+    "diagnosisConfidence": "MODERATE",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "b67879e1-5106-41a9-9284-5805372b914a",
+          "title": "Run a price-realization and discount-leakage analysis and a win/loss price-sensitivity review",
+          "class": "STABILIZATION",
+          "objective": "Quantify the price-realization gap and discount leakage before any price change",
+          "rationale": "A price-realization and discount-leakage analysis is analysis-only and reversible, sizing the realized-vs-list gap and discount leakage by deal before any pricing move.",
+          "whyThisNow": "The gap is price realization, not cost; the leakage must be measured before any pricing move",
+          "ownerRole": "finance_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Analyze price realization and discount leakage",
+              "description": "Measure realized vs list price and discount leakage by deal/rep against comparable competitors.",
+              "ownerRole": "finance_lead",
+              "estimatedDays": 4,
+              "successCriteria": "Price-realization gap and discount leakage quantified by segment"
+            },
+            {
+              "sequence": 2,
+              "title": "Run a win/loss price-sensitivity review",
+              "description": "Review win/loss and willingness-to-pay to size reversible price/governance levers — no blanket hike.",
+              "ownerRole": "owner",
+              "estimatedDays": 3,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Reversible pricing-governance levers shortlisted with elasticity evidence"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Price-realization / leakage analysis complete",
+            "Win/loss price-sensitivity reviewed"
+          ],
+          "failureRisks": [
+            "Elasticity data may be thin in some segments"
+          ],
+          "fallbackPlan": "Pilot a governed discount-approval policy before any list-price change",
+          "evidenceBasis": [
+            "d154b30b-d03f-55d5-9110-6c4c7281cb48",
+            "5757441a-acc9-54c4-85f7-720ae0b72889",
+            "08ca1912-fd8d-50db-b2c5-d04ca82d9a0f"
+          ],
+          "estimatedTotalDays": 7,
+          "priorityScore": 0
+        },
+        "priorityScore": 69,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4,
+            "rationale": "Expected revenue impact: MINOR. Urgency: MEDIUM"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 7 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "d1bfec98-fb0d-4752-8b04-8805dc2a271b",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "b67879e1-5106-41a9-9284-5805372b914a"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "b5060fe0-65ee-4c4e-8275-caa2459a2d17",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "b67879e1-5106-41a9-9284-5805372b914a"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "b67879e1-5106-41a9-9284-5805372b914a",
+      "totalEstimatedDays": 7,
+      "criticalPathInterventions": [
+        "b67879e1-5106-41a9-9284-5805372b914a"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Critical gap: No evidence on Operational Efficiency; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

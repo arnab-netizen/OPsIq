@@ -1,0 +1,173 @@
+{
+  "status": "SUCCESS",
+  "warnings": [
+    "Evidence gaps: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery"
+  ],
+  "decisionMemo": {
+    "id": "bf3fcaf5-f064-4a3a-8114-916c9998be3a",
+    "engagementId": "fbc62f40-c00e-515f-a80a-35800860ad32",
+    "timestamp": "2026-06-18T03:42:04.571Z",
+    "businessProblem": "A retailer carrying heavy post-LBO debt faces a large maturity and tightening covenants; the owner wants to understand the solvency risk.",
+    "rootCauseDiagnosis": {
+      "id": "5c8d409b-0a24-4f65-8c56-b01614178ad6",
+      "type": "debt_solvency_pressure",
+      "description": "Debt / solvency pressure from leverage, covenant, or maturity structure",
+      "mechanismDescription": "The cash drain is balance-sheet structural — leverage, covenant headroom, interest burden, or a maturity wall — rather than an operating cash problem.",
+      "evidenceIds": [
+        "0c262bda-610a-52ff-b307-626351821dc0",
+        "fead8923-f2e4-5e0e-809d-9addbf8d60aa"
+      ],
+      "confidence": "HIGH",
+      "alternativeExplanations": [
+        "A timing issue on operating cash rather than debt structure",
+        "Refinancing already secured that relieves the maturity"
+      ],
+      "missingEvidenceFor": [
+        "Full debt schedule and covenant test dates",
+        "Lender appetite for refinancing/waiver"
+      ]
+    },
+    "diagnosisConfidence": "HIGH",
+    "criticalConstraints": [],
+    "recommendedInterventions": [
+      {
+        "intervention": {
+          "id": "7cb4108b-d6d7-4ca9-9f5a-f3858dfa8a24",
+          "title": "Build a covenant and debt-service model and a proactive lender engagement plan",
+          "class": "STABILIZATION",
+          "objective": "Map covenant headroom, debt-service coverage, and the refinancing window before any financing decision",
+          "rationale": "A covenant/debt-service model and lender engagement are analysis-only and reversible, confirming the covenant exposure and refinancing window before any financing decision.",
+          "whyThisNow": "The pressure is structural; the debt-service position must be modelled before any financing decision",
+          "ownerRole": "finance_lead",
+          "steps": [
+            {
+              "sequence": 1,
+              "title": "Model covenants, debt service, and refinancing window",
+              "description": "Build a covenant and debt-service model against the next covenant test dates and the refinancing window.",
+              "ownerRole": "finance_lead",
+              "estimatedDays": 5,
+              "successCriteria": "Covenant headroom and debt-service coverage modelled to the next test date"
+            },
+            {
+              "sequence": 2,
+              "title": "Prepare a proactive lender engagement plan",
+              "description": "Draft a lender engagement and waiver-or-refinancing plan ahead of the next covenant test date.",
+              "ownerRole": "owner",
+              "estimatedDays": 4,
+              "dependsOn": [
+                1
+              ],
+              "successCriteria": "Lender engagement plan ready ahead of the test date"
+            }
+          ],
+          "estimatedCostBand": "LOW",
+          "expectedImpactOnRevenue": "MINOR",
+          "successMetrics": [
+            "Covenant/debt-service model complete",
+            "Lender engagement plan ready"
+          ],
+          "failureRisks": [
+            "Lender appetite for a waiver is uncertain"
+          ],
+          "fallbackPlan": "Engage a restructuring advisor if lenders decline a waiver",
+          "evidenceBasis": [
+            "0c262bda-610a-52ff-b307-626351821dc0",
+            "fead8923-f2e4-5e0e-809d-9addbf8d60aa"
+          ],
+          "estimatedTotalDays": 9,
+          "priorityScore": 0
+        },
+        "priorityScore": 72,
+        "factors": [
+          {
+            "factor": "Revenue Impact",
+            "score": 4.8,
+            "rationale": "Expected revenue impact: MINOR. Urgency: HIGH"
+          },
+          {
+            "factor": "Feasibility",
+            "score": 10,
+            "rationale": "Duration: 9 days. Team capacity: HIGH. Cost: LOW"
+          },
+          {
+            "factor": "Risk Management",
+            "score": 10,
+            "rationale": "Failure risks: 1. Fallback plan available: Yes"
+          },
+          {
+            "factor": "Sequencing",
+            "score": 7,
+            "rationale": "Enables few downstream interventions"
+          },
+          {
+            "factor": "Cost Efficiency",
+            "score": 1.875,
+            "rationale": "Cost band: LOW vs Expected impact: MINOR"
+          }
+        ],
+        "sequencingReason": "Quick implementation builds momentum and shows progress"
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "e88fd504-18a3-4aae-9ee4-d795bde7dd86",
+        "name": "Aggressive Recovery (Best Case)",
+        "description": "Execute all interventions in optimal sequence with full team commitment",
+        "assumptions": [
+          "Team capacity fully available (no other initiatives)",
+          "Client budget approved for all recommended interventions",
+          "No external market shocks during implementation",
+          "Suppliers/partners responsive to needs"
+        ],
+        "interventionSubset": [
+          "7cb4108b-d6d7-4ca9-9f5a-f3858dfa8a24"
+        ],
+        "expectedOutcome": "Revenue recovery within 90 days, competitive positioning restored",
+        "risks": [
+          "Team burnout from simultaneous initiatives",
+          "Cascading failures if one intervention stumbles",
+          "Over-confidence leading to quality issues"
+        ],
+        "likelihood": "LOW"
+      },
+      {
+        "id": "cd93b0b0-4aba-402a-9646-c76b5774e741",
+        "name": "Staged Implementation (Recommended)",
+        "description": "Execute top 3 prioritized interventions sequentially, measure, then decide on next wave",
+        "assumptions": [
+          "Top 3 interventions address critical path to revenue recovery",
+          "Team capacity for 1-2 major initiatives at a time",
+          "Monthly review gates to assess progress and adjust"
+        ],
+        "interventionSubset": [
+          "7cb4108b-d6d7-4ca9-9f5a-f3858dfa8a24"
+        ],
+        "expectedOutcome": "Measurable improvement in 60 days, foundation for growth set",
+        "risks": [
+          "Slower overall recovery than aggressive path",
+          "Competitors may advance while we execute gradually"
+        ],
+        "likelihood": "HIGH"
+      }
+    ],
+    "implementation": {
+      "firstInterventionId": "7cb4108b-d6d7-4ca9-9f5a-f3858dfa8a24",
+      "totalEstimatedDays": 9,
+      "criticalPathInterventions": [
+        "7cb4108b-d6d7-4ca9-9f5a-f3858dfa8a24"
+      ],
+      "contingencyRequired": false
+    },
+    "limitations": [
+      "Evidence gaps limit precision: Critical gap: No evidence on Customer Retention; Weak evidence on Operational Efficiency - diagnosis confidence limited; Critical gap: No evidence on Quality Delivery",
+      "Evidence coverage is insufficient across business dimensions. Deeper investigation recommended before diagnosis finalization."
+    ],
+    "nextReviewTriggers": [
+      "After first intervention completion: validate assumptions, collect outcome data",
+      "Monthly: Track KPIs (repeat customer rate, turnaround time, complaint count)",
+      "If revenue does not improve by 20% within 60 days: pivot to alternative diagnosis",
+      "If team capacity exhausted: pause non-critical interventions",
+      "If external market changes significantly: reassess competitive positioning"
+    ]
+  }
+}

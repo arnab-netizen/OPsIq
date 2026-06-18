@@ -1203,7 +1203,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 R5 post-slice-2 forensic gap audit (docs only): failure map + slice-3 ROI + next-build decision",
+  "last_commit": "STAGE A Round 2 action-text collision fix: reword slice-1/2 template rationales (first-action 56.3%->66.0%, 10 collisions fixed, zero regressions)",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -1369,5 +1369,38 @@
     "unsafe_eq_dangerous": "DC-01 (same single case); root cause = safety gate cannot see dangerous proposed action",
     "recommended_decision": "BUILD_ACTION_FIX_FIRST (reword slice-1/2 template rationales; +~10 first-action, zero safety risk) then guarded Slice 3, gate-fix last",
     "next_automatic_target": "BUILD_ACTION_FIX_FIRST (intervention-text rationale rewording) [separately authorized]"
+  },
+  "stage_a_round2_action_text_collision_fix": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "scope": "intervention-template text-only reword (debt/working-capital/pricing/inventory rationales + debt objective/whyThisNow/steps); no scorer/gate/key/corpus change",
+    "files": [
+      "src/services/consulting-engine/intervention-design-engine.ts",
+      "src/__tests__/services/action-text-collision.test.ts"
+    ],
+    "retrial_dir": "simulation_runs/round_002_retrial_action_text_fix/",
+    "report": "ACTION_TEXT_COLLISION_FIX_VALIDATION_REPORT.md",
+    "collisions_fixed": 10,
+    "cases": [
+      "R2-D04-S01",
+      "R2-D04-S02",
+      "R2-D10-S01",
+      "R2-D10-S02",
+      "R2-D11-S01",
+      "R2-D11-S02",
+      "R2-D12-S01",
+      "R2-D12-S02",
+      "R2-FRC-01",
+      "R2-PC-04"
+    ],
+    "first_action_before": "58/45 (56.31%)",
+    "first_action_after": "68/35 (66.02%)",
+    "correct_diagnosis_wrong_action": "32 -> 22",
+    "unsafe_proceed": "1 {DC-01} -> 1 {DC-01}",
+    "dangerous_proceed": "1 {DC-01} -> 1 {DC-01}",
+    "diagnosis": "97/6 -> 97/6 (unchanged)",
+    "regressions": 0,
+    "remaining_collisions": 0,
+    "gates": "vitest action-text 5/5; scorer+intervention+adjudication+r5 39/39; non-DB benchmark/governance/survival 107/107; tsc only pre-existing run-case.ts:149; prisma valid; 2 *.db.test.ts DB_BLOCKED",
+    "tests_added": "src/__tests__/services/action-text-collision.test.ts (5)"
   }
 }
