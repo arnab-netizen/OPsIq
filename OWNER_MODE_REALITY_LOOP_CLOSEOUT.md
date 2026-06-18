@@ -838,4 +838,13 @@ The Neon test database is 22 migrations behind the local codebase:
 
 Phases 0–28 remain **COMPLETE_VERIFIED** — verified via LANE_B (GitHub Actions postgres:16, run 27793720853, 174/174 tests passed). LANE_A Neon verification is supplementary and does not downgrade LANE_B-verified status.
 
-- **next_required_slice**: Resolve ghost migration + run prisma migrate deploy against Neon direct URL → re-trigger LANE_A to achieve LANE_A_NEON_VERIFIED status. Then implement Controlled Learning System (Phases 29–35).
+### Investigation Findings (from NEON_MIGRATION_DRIFT_INVESTIGATION.md)
+
+- Ghost `1778679447_add_aggregate_locks` was created by an out-of-band CLI session on 2026-05-13 (Unix epoch). Never in git.
+- `20260511_add_aggregate_locks` IS in both local repo and Neon — it is the last common migration.
+- Ghost uses `IF NOT EXISTS` guards — no SQL conflict with local migration of same suffix.
+- `prisma migrate deploy` ignores ghost entries — deploy is expected to succeed against current Neon DB.
+- Root cause: B (Neon used by external CLI session) + A (folder never committed).
+- Recommended remediation: CREATE_FRESH_NEON_TEST_DB (cleanest); fallback: deploy to current Neon DB.
+
+- **next_required_slice**: Owner action required — choose Path A (fresh Neon branch) or Path B (deploy to current Neon DB) per NEON_MIGRATION_DRIFT_INVESTIGATION.md § Step-by-Step Fix, then re-trigger LANE_A. After LANE_A passes, implement Controlled Learning System (Phases 29–35).

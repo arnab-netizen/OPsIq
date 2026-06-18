@@ -2059,7 +2059,11 @@
     "db_tests": "skipped (migrate status exit code 1)",
     "conclusion": "LANE_A_DB_FAILED",
     "classification": "NEON_DB_PENDING_MIGRATIONS",
-    "fix_required": "resolve ghost migration; run prisma migrate deploy against Neon direct URL; re-trigger LANE_A"
+    "ghost_root_cause": "B+A — Neon used by external CLI session on 2026-05-13 (Unix epoch 1778679447); folder never committed to git",
+    "ghost_sql_conflict_risk": "none — local migration uses IF NOT EXISTS guards; migrate deploy ignores ghost entries",
+    "recommended_remediation": "CREATE_FRESH_NEON_TEST_DB (preferred) or migrate deploy against current Neon DB (fallback)",
+    "investigation_doc": "NEON_MIGRATION_DRIFT_INVESTIGATION.md",
+    "fix_required": "Owner action: choose Path A (fresh Neon branch) or Path B (deploy to current Neon DB) per investigation doc, then re-trigger LANE_A"
   },
   "local_build_verification": {
     "date": "2026-06-18",
