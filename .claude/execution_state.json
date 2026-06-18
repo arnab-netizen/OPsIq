@@ -1203,7 +1203,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE A Round 2 R3: survival prioritization (action-layer ladder; zero regressions, no new unsafe proceeds)",
+  "last_commit": "STAGE A Round 2 R5 slice 1: debt/working-capital/pricing archetypes (over_abstention 53->39, zero regressions, no new unsafe proceeds)",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -1303,5 +1303,29 @@
     "gates_run": "R3 10/10, full sweep 222 (17 files), tsc (only pre-existing run-case.ts:149), prisma valid",
     "r5_still_required": "YES (R5 converts 53 over-abstentions to proceeds and is the path to clear PC-01 wrong_priority via diagnosis-ranking; DC-01 dangerous_proceed needs a future gate-input enhancement)",
     "next_automatic_target": "R5 archetype expansion E2+ [separately authorized; R2 prerequisite satisfied]"
+  },
+  "stage_a_round2_r5_slice1_financial_archetypes": {
+    "slice": "R5 slice 1 \u2014 debt/working-capital/pricing archetypes (E2 financial-structural)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ENGINE_ARCHETYPE_EXPANSION",
+    "files": [
+      "src/domain/consulting-engine/types.ts (+3 DiagnosisType)",
+      "src/services/consulting-engine/diagnosis-engine.ts (+3 patterns + strict triggers)",
+      "src/services/consulting-engine/causal-adjudication.ts (debt/wc/pricing drivers -> covered re-rank)",
+      "src/services/consulting-engine/intervention-design-engine.ts (+3 verify-first templates)",
+      "src/services/governance/causal-challenge.ts (ARCHETYPE_DIMENSIONS metadata +3; not gate logic/threshold)",
+      "src/services/benchmark/round2-scorer.ts (COVERED_DIAGNOSES +3; measurement accuracy, not axis/threshold)",
+      "src/__tests__/services/r5-financial-archetypes.test.ts (14)",
+      "simulation_runs/round_002_retrial_r5_slice1_financial_archetypes/ (frozen retrial)",
+      "R5_SLICE1_FINANCIAL_ARCHETYPES_VALIDATION_REPORT.md"
+    ],
+    "scope_guard": "Exactly 3 archetypes; no legal/key-person/capex/demand/gtm/inventory. No answer-key change. Gate ARCHETYPE_DIMENSIONS + scorer COVERED are metadata-only registrations (E1 precedent), not logic/threshold/axis changes. Strict triggers; runtime evidence only.",
+    "r3_vs_r5": "over_abstention 53->39; diagnosis 99/99 (18 honest-abstains -> correct diagnoses); first-action 48->54 (46.6%->52.4%); safety 49->63 (47.6%->61.2%); committed 44->62; correct_dx_wrong_action 15->26 (newly-proceeding); unsafe_proceed 1->1; dangerous_proceed 1->1; false_root_cause 0",
+    "new_archetype_diagnoses": "debt 7, working_capital 6, pricing 5 = 18 (all 18 correct)",
+    "new_proceeds": "15 (D04x2,D11x2,D12x2,FRC-01/05/13,MK-03/04/06/09,PC-04); ADV-04 correctly stays gate-abstained; FRC-10/PC-07 diagnose correctly but gate out-of-model holds",
+    "regressions": "0 (no PASS->FAIL any axis; no diagnosis flips; no new unsafe proceeds)",
+    "two_tests_updated": "round2-scorer.test [3] (debt->key_person_risk uncovered example) + causal-adjudication end-to-end (debt now re-ranks to debt, was abstain) -- fixtures reflect new correct behavior; scorer/adjudicator logic unchanged",
+    "gates_run": "R5 14/14, full sweep 242 (19 files), intake validator 103/103, tsc (only pre-existing run-case.ts:149), prisma valid",
+    "next_automatic_target": "R5 slice 2 (demand/gtm/inventory) OR R5 slice 3 (legal/key-person/capex) [separately authorized]"
   }
 }

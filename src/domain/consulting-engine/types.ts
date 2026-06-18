@@ -10,6 +10,10 @@ export enum DiagnosisType {
   CASH_LIQUIDITY_CRISIS = "cash_liquidity_crisis",
   UNIT_ECONOMICS_FAILURE = "unit_economics_failure",
   MARGIN_EROSION = "margin_erosion",
+  // E2 slice 1 — financial-structural archetypes (R5 slice 1)
+  DEBT_SOLVENCY_PRESSURE = "debt_solvency_pressure",
+  WORKING_CAPITAL_STRESS = "working_capital_stress",
+  PRICING_POWER_FAILURE = "pricing_power",
   UNKNOWN = "unknown",
 }
 

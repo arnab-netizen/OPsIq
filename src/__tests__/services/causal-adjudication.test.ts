@@ -190,7 +190,7 @@ function ev(
 }
 
 describe("diagnoseRootCause end-to-end with R2 adjudication", () => {
-  it("debt-driven cash symptom abstains (UNKNOWN), not a false cash diagnosis", () => {
+  it("debt-driven cash symptom re-attributes to debt (covered after R5 slice 1), never a false cash diagnosis", () => {
     const r = diagnoseRootCause(
       [
         ev("financial_health", "Cash runway dropped to four months", true, { cashRunwayMonths: 4 }),
@@ -201,8 +201,10 @@ describe("diagnoseRootCause end-to-end with R2 adjudication", () => {
       ],
       "owner thinks it is an operating cash problem"
     );
-    expect(r.primaryRootCause.type).toBe(DiagnosisType.UNKNOWN);
-    expect(r.warningFlags.some((f) => f.startsWith("Causal adjudication"))).toBe(true);
+    // R5 slice 1 made debt a covered archetype, so the causal adjudicator now
+    // re-ranks the cash symptom to debt instead of abstaining — and NEVER a false cash.
+    expect(r.primaryRootCause.type).toBe(DiagnosisType.DEBT_SOLVENCY_PRESSURE);
+    expect(r.primaryRootCause.type).not.toBe(DiagnosisType.CASH_LIQUIDITY_CRISIS);
   });
 
   it("quality-driven churn re-ranks to quality_control_failure", () => {

@@ -275,6 +275,100 @@ const rootCausePatterns: RootCausePattern[] = [
       ],
     }),
   },
+  // ─── E2 slice 1: financial-structural archetypes (debt / WC / pricing) ──────
+  // Each triggers ONLY on strong, specific, adverse structural evidence so generic
+  // cash/revenue/margin pressure does NOT become one of these diagnoses.
+  {
+    name: "Debt / Solvency Pressure",
+    pattern: (evidence) => evidence.some((e) => fin_isDebtSolvency(e)),
+    confidence: (evidence) => {
+      const sev = evidence.some(
+        (e) =>
+          fin_isDebtSolvency(e) &&
+          ((fin_num(e, "covenantHeadroom") !== undefined && (fin_num(e, "covenantHeadroom") as number) <= 0.06) ||
+            (fin_num(e, "interestCoverage") !== undefined && (fin_num(e, "interestCoverage") as number) <= 1.3) ||
+            (fin_num(e, "leverageRatio") !== undefined && (fin_num(e, "leverageRatio") as number) >= 4))
+      );
+      return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.DEBT_SOLVENCY_PRESSURE,
+      description: "Debt / solvency pressure from leverage, covenant, or maturity structure",
+      mechanismDescription:
+        "The cash drain is balance-sheet structural — leverage, covenant headroom, interest burden, or a maturity wall — rather than an operating cash problem.",
+      evidenceIds: evidence.filter((e) => e.dimension === "financial_health").map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "A timing issue on operating cash rather than debt structure",
+        "Refinancing already secured that relieves the maturity",
+      ],
+      missingEvidenceFor: [
+        "Full debt schedule and covenant test dates",
+        "Lender appetite for refinancing/waiver",
+      ],
+    }),
+  },
+  {
+    name: "Working Capital Stress",
+    pattern: (evidence) => evidence.some((e) => fin_isWorkingCapital(e)),
+    confidence: (evidence) => {
+      const sev = evidence.some(
+        (e) =>
+          fin_isWorkingCapital(e) &&
+          (fin_num(e, "cashConversionDays") !== undefined || (fin_num(e, "dso") !== undefined && (fin_num(e, "dso") as number) >= 70))
+      );
+      return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.WORKING_CAPITAL_STRESS,
+      description: "Working-capital stress from receivables / payables / cash-conversion cycle",
+      mechanismDescription:
+        "Cash is trapped in the working-capital cycle — stretched receivables (DSO), payables timing, or a lengthening cash-conversion cycle — not an operating loss.",
+      evidenceIds: evidence.filter((e) => e.dimension === "financial_health").map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "A one-off large receivable rather than a structural cycle problem",
+        "Seasonal build that unwinds without intervention",
+      ],
+      missingEvidenceFor: [
+        "Receivables aging by customer segment",
+        "Payables terms and supplier flexibility",
+      ],
+    }),
+  },
+  {
+    name: "Pricing Power Failure",
+    pattern: (evidence) => evidence.some((e) => fin_isPricingPower(e)),
+    confidence: (evidence) => {
+      const sev = evidence.some(
+        (e) =>
+          fin_isPricingPower(e) &&
+          (fin_num(e, "discountPct") !== undefined && (fin_num(e, "discountPct") as number) >= 15)
+      );
+      return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
+    },
+    diagnosis: (evidence) => ({
+      id: uuidv4(),
+      type: DiagnosisType.PRICING_POWER_FAILURE,
+      description: "Pricing power failure from under-pricing, discount leakage, or price realization gap",
+      mechanismDescription:
+        "Realized price sits below comparable competitors or below list through uncontrolled discounting; the gap is price realization, not cost.",
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "market_position" || e.dimension === "financial_health")
+        .map((e) => e.id),
+      confidence: DiagnosisConfidence.MODERATE,
+      alternativeExplanations: [
+        "A deliberate penetration-pricing strategy",
+        "Mix shift rather than a price-realization gap",
+      ],
+      missingEvidenceFor: [
+        "Win/loss price-sensitivity by segment",
+        "Discount-approval governance and leakage by rep",
+      ],
+    }),
+  },
 ];
 
 // ─── R1 lexical-trigger hardening: semantic guards ────────────────────────────
@@ -398,6 +492,47 @@ function ret_isRetentionErosion(e: EvidenceItem): boolean {
   const t = fin_text(e);
   if (!RETENTION_TOPIC.test(t)) return false;
   return !POSITIVE_FRAMING.test(t);
+}
+
+// ─── E2 slice 1 financial-structural triggers (strict; specific evidence only) ─
+const DEBT_TEXT = /covenant|leverage|interest cover|refinanc|maturity|debt service|debt-service|gearing|solvency|debt load|payables.*due|short-term (debt|facility)/;
+function fin_isDebtSolvency(e: EvidenceItem): boolean {
+  if (e.dimension !== "financial_health") return false;
+  const t = fin_text(e);
+  const numeric =
+    fin_num(e, "leverageRatio") !== undefined ||
+    fin_num(e, "covenantHeadroom") !== undefined ||
+    fin_num(e, "interestCoverage") !== undefined;
+  // Require debt-structural vocabulary; a corroborating structural numeric or an
+  // explicit covenant/maturity phrase. Generic cash pressure has neither.
+  return DEBT_TEXT.test(t) && (numeric || /covenant|maturity|debt service|debt-service|refinanc/.test(t));
+}
+
+const WC_TEXT = /receivabl|days sales outstanding|\bdso\b|cash conversion|days payable|\bdpo\b|working capital|cash[- ]conversion cycle|collections (timing|cycle)/;
+function fin_isWorkingCapital(e: EvidenceItem): boolean {
+  if (e.dimension !== "financial_health") return false;
+  const t = fin_text(e);
+  const numeric =
+    fin_num(e, "dso") !== undefined ||
+    fin_num(e, "cashConversionDays") !== undefined ||
+    (fin_num(e, "receivablesAging") !== undefined && fin_num(e, "dpo") !== undefined);
+  // Require AR/AP/CCC vocabulary AND a working-capital numeric (DSO / cash-conversion
+  // / receivables+payables). Generic "collections slowed" (no DSO/CCC) does NOT fire.
+  return WC_TEXT.test(t) && numeric;
+}
+
+const PRICING_TEXT = /priced (well )?below|below (comparable|competitor)|under-?pric|self-inflicted discount|discount (granted|reached|leakage)|realized price.*below|discount.*freely|no pricing governance|no discount-approval|price realization/;
+function fin_isPricingPower(e: EvidenceItem): boolean {
+  if (e.dimension !== "market_position" && e.dimension !== "process_maturity") return false;
+  const t = fin_text(e);
+  if (!PRICING_TEXT.test(t)) return false;
+  // Corroborate with a discount/price-realization numeric where present; the strict
+  // adverse vocabulary above already excludes "pricing headroom" opportunity framing.
+  const numeric =
+    fin_num(e, "discountPct") !== undefined ||
+    (fin_num(e, "realizedPrice") !== undefined && fin_num(e, "listPrice") !== undefined &&
+      (fin_num(e, "realizedPrice") as number) < (fin_num(e, "listPrice") as number));
+  return numeric || /priced (well )?below|below (comparable|competitor)|self-inflicted discount|no pricing governance|no discount-approval/.test(t);
 }
 
 export interface DiagnosisResult {

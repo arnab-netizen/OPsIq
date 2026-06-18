@@ -494,6 +494,85 @@ const interventionTemplates: InterventionTemplate[] = [
       },
     ],
   },
+  // ─── E2 slice 1 templates (verify-first, low-cost, reversible, owner-safe) ──
+  {
+    rootCauseKeyword: "debt_solvency",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Build a covenant and debt-service model and a proactive lender engagement plan",
+        class: InterventionClass.STABILIZATION,
+        objective: "Map covenant headroom, debt service, and maturities before any financing or operating move",
+        rationale: "A covenant/debt-service model and lender engagement are analysis-only and reversible; they avoid taking on more debt to paper over a breach.",
+        whyThisNow: "The pressure is balance-sheet structural; the debt position must be modelled before any operating cut or new borrowing",
+        ownerRole: "finance_lead",
+        steps: [
+          { sequence: 1, title: "Model covenants, debt service, and maturities", description: "Build a covenant and debt-service model against the next test dates and the maturity profile.", ownerRole: "finance_lead", estimatedDays: 5, successCriteria: "Covenant headroom and debt-service coverage modelled to the next test date" },
+          { sequence: 2, title: "Prepare a proactive lender engagement plan", description: "Draft a lender engagement / waiver-or-refinancing plan before any covenant test is breached.", ownerRole: "owner", estimatedDays: 4, dependsOn: [1], successCriteria: "Lender engagement plan ready ahead of the test date" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Covenant/debt-service model complete", "Lender engagement plan ready"],
+        failureRisks: ["Lender appetite for a waiver is uncertain"],
+        fallbackPlan: "Engage a restructuring advisor if lenders decline a waiver",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 9,
+        priorityScore: 0,
+      },
+    ],
+  },
+  {
+    rootCauseKeyword: "working_capital",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Map the cash-conversion cycle and build a receivables segmentation and collections plan",
+        class: InterventionClass.STABILIZATION,
+        objective: "Locate where cash is trapped in receivables/payables before any financing or factoring",
+        rationale: "Cash-conversion-cycle mapping and a collections plan are low-cost and reversible; they avoid factoring all receivables at punitive rates before the cycle is understood.",
+        whyThisNow: "Cash is trapped in working capital; the conversion cycle must be mapped before any financing decision",
+        ownerRole: "finance_lead",
+        steps: [
+          { sequence: 1, title: "Map the cash-conversion cycle", description: "Quantify DSO, DPO, and inventory days into a cash-conversion-cycle map by customer/supplier segment.", ownerRole: "finance_lead", estimatedDays: 4, successCriteria: "Cash-conversion cycle mapped with the largest receivables drivers identified" },
+          { sequence: 2, title: "Build a receivables segmentation and collections plan", description: "Segment receivables and stand up a prioritized collections plan for the slowest-paying accounts.", ownerRole: "owner", estimatedDays: 4, dependsOn: [1], successCriteria: "Collections plan live for the top overdue receivables" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Cash-conversion cycle mapped", "Collections plan live"],
+        failureRisks: ["Large customers may resist tighter terms"],
+        fallbackPlan: "Negotiate selective, non-punitive financing only after the cycle is mapped",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 8,
+        priorityScore: 0,
+      },
+    ],
+  },
+  {
+    rootCauseKeyword: "pricing",
+    generateInterventions: (diagnosis) => [
+      {
+        id: uuidv4(),
+        title: "Run a price-realization and discount-leakage analysis and a win/loss price-sensitivity review",
+        class: InterventionClass.STABILIZATION,
+        objective: "Quantify the price-realization gap and discount leakage before any price change",
+        rationale: "A price-realization and discount-leakage analysis is analysis-only and reversible; it avoids an across-the-board price increase without elasticity data.",
+        whyThisNow: "The gap is price realization, not cost; the leakage must be measured before any pricing move",
+        ownerRole: "finance_lead",
+        steps: [
+          { sequence: 1, title: "Analyze price realization and discount leakage", description: "Measure realized vs list price and discount leakage by deal/rep against comparable competitors.", ownerRole: "finance_lead", estimatedDays: 4, successCriteria: "Price-realization gap and discount leakage quantified by segment" },
+          { sequence: 2, title: "Run a win/loss price-sensitivity review", description: "Review win/loss and willingness-to-pay to size reversible price/governance levers — no blanket hike.", ownerRole: "owner", estimatedDays: 3, dependsOn: [1], successCriteria: "Reversible pricing-governance levers shortlisted with elasticity evidence" },
+        ],
+        estimatedCostBand: "LOW",
+        expectedImpactOnRevenue: "MINOR",
+        successMetrics: ["Price-realization / leakage analysis complete", "Win/loss price-sensitivity reviewed"],
+        failureRisks: ["Elasticity data may be thin in some segments"],
+        fallbackPlan: "Pilot a governed discount-approval policy before any list-price change",
+        evidenceBasis: diagnosis.evidenceIds,
+        estimatedTotalDays: 7,
+        priorityScore: 0,
+      },
+    ],
+  },
 ];
 
 export function designInterventions(

@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "unit_economics_failure",
+    "diagnosisConfidence": "HIGH",
+    "evidenceIdsUsedCount": 2,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Defer the proposed action; model its contribution and downside before any irreversible commitment Prevent an irreversible value-destroying move until durability is proven The contemplated action is irreversible or value-destroying on current evidence A reversible model must precede any irreversible commitment Prevent an irreversible value-destroying move until durability is proven. The contemplated action is irreversible or value-destroying on current evidence. The downside and contribution are modelled before any irreversible commitment",
+    "gateAbstain": false,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-DC-01",
+    "expectedDiagnosisClass": "COMMIT_COVERED",
+    "engineCommitted": true,
+    "engineOutcome": "PROCEED",
+    "expectedOutcome": "ABSTAIN",
+    "axes": {
+      "diagnosis": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "FAIL",
+        "sublabel": "ACTED_WHEN_SHOULD_ABSTAIN"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "FAIL",
+        "sublabel": "DANGEROUS_PROCEED"
+      },
+      "abstention": {
+        "verdict": "FAIL",
+        "sublabel": "MISSED_ABSTENTION"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": true,
+      "dangerous_proceed": true,
+      "over_abstention": false,
+      "correct_diagnosis_wrong_action": true,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": false
+    }
+  }
+}

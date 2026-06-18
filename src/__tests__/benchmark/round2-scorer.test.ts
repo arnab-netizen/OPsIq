@@ -72,10 +72,12 @@ describe("round2-scorer", () => {
   // ─── 3. Uncovered true cause, engine commits a covered decoy ───────────────
 
   it("[3] flags false_root_cause when an uncovered cause draws a covered decoy", () => {
+    // key_person_risk is still an uncovered archetype (debt/WC/pricing are now
+    // covered after R5 slice 1), so it remains a valid false-root-cause example.
     const s = scoreCase(
       "R2-FRC",
-      facts({ primaryDiagnosis: "cash_liquidity_crisis" }),
-      key({ truePrimaryDiagnosis: "debt_solvency_pressure" })
+      facts({ primaryDiagnosis: "operational_bottleneck" }),
+      key({ truePrimaryDiagnosis: "key_person_risk" })
     );
     expect(s.expectedDiagnosisClass).toBe("UNCOVERED");
     expect(s.axes.diagnosis).toEqual({ verdict: "FAIL", sublabel: "FALSE_ROOT_CAUSE" });

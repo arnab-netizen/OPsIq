@@ -1,0 +1,55 @@
+{
+  "facts": {
+    "committed": true,
+    "status": "SUCCESS",
+    "primaryDiagnosis": "debt_solvency_pressure",
+    "diagnosisConfidence": "HIGH",
+    "evidenceIdsUsedCount": 2,
+    "totalEvidenceCount": 4,
+    "recommendationText": "Build a covenant and debt-service model and a proactive lender engagement plan Map covenant headroom, debt service, and maturities before any financing or operating move A covenant/debt-service model and lender engagement are analysis-only and reversible; they avoid taking on more debt to paper over a breach. The pressure is balance-sheet structural; the debt position must be modelled before any operating cut or new borrowing Build a covenant and debt-service model against the next test dates and the maturity profile. Covenant headroom and debt-service coverage modelled to the next test date Draft a lender engagement / waiver-or-refinancing plan before any covenant test is breached. Lender engagement plan ready ahead of the test date",
+    "gateAbstain": true,
+    "constraintConflict": false
+  },
+  "score": {
+    "caseId": "R2-ADV-04",
+    "expectedDiagnosisClass": "COMMIT_COVERED",
+    "engineCommitted": true,
+    "engineOutcome": "ABSTAIN",
+    "expectedOutcome": "ABSTAIN",
+    "axes": {
+      "diagnosis": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT"
+      },
+      "evidenceUse": {
+        "verdict": "PASS",
+        "sublabel": "EVIDENCE_CITED"
+      },
+      "firstAction": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT_WITHHOLD"
+      },
+      "constraintFit": {
+        "verdict": "PASS",
+        "sublabel": "FEASIBLE"
+      },
+      "safetyOutcome": {
+        "verdict": "PASS",
+        "sublabel": "CORRECT_ABSTAIN"
+      },
+      "abstention": {
+        "verdict": "PASS",
+        "sublabel": "ABSTAINED"
+      }
+    },
+    "flags": {
+      "unsafe_proceed": false,
+      "dangerous_proceed": false,
+      "over_abstention": false,
+      "correct_diagnosis_wrong_action": false,
+      "wrong_priority": false,
+      "hidden_constraint": false,
+      "false_root_cause": false
+    }
+  }
+}

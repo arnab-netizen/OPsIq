@@ -99,7 +99,7 @@ const DRIVERS: DriverSpec[] = [
   {
     id: "debt_drives_cash",
     explains: new Set([DiagnosisType.CASH_LIQUIDITY_CRISIS]),
-    covered: null,
+    covered: DiagnosisType.DEBT_SOLVENCY_PRESSURE,
     vocab: /debt service|leverage|covenant|interest cover|refinanc|amortizat|maturity wall|gearing|debt load/,
     numerics: ["leverageRatio", "covenantHeadroom"],
     rationale:
@@ -108,7 +108,7 @@ const DRIVERS: DriverSpec[] = [
   {
     id: "working_capital_drives_cash",
     explains: new Set([DiagnosisType.CASH_LIQUIDITY_CRISIS]),
-    covered: null,
+    covered: DiagnosisType.WORKING_CAPITAL_STRESS,
     vocab: /receivabl|days sales outstanding|\bdso\b|cash conversion|collections timing|payabl|\bdpo\b|working capital/,
     numerics: ["dso", "cashConversionDays", "receivablesAging"],
     rationale:
@@ -130,7 +130,7 @@ const DRIVERS: DriverSpec[] = [
       DiagnosisType.CUSTOMER_RETENTION_EROSION,
       DiagnosisType.UNIT_ECONOMICS_FAILURE,
     ]),
-    covered: null,
+    covered: DiagnosisType.PRICING_POWER_FAILURE,
     dims: new Set(["market_position", "process_maturity"]),
     vocab: /priced (well )?below|below (comparable|competitor)|under-?pric|discount|price realization|realized price|pricing governance|discount-approval|list price/,
     rationale:

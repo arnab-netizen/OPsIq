@@ -61,6 +61,12 @@ const ARCHETYPE_DIMENSIONS: Record<string, Set<string>> = {
   cash_liquidity_crisis: new Set(["financial_health"]),
   unit_economics_failure: new Set(["financial_health"]),
   margin_erosion: new Set(["financial_health"]),
+  // E2 slice 1 archetype metadata (home dimensions) — NOT a gate threshold or rule
+  // change; the off-archetype check needs each new archetype's home dimension to
+  // evaluate it, exactly as E1 registered the three financial archetypes above.
+  debt_solvency_pressure: new Set(["financial_health"]),
+  working_capital_stress: new Set(["financial_health"]),
+  pricing_power: new Set(["market_position", "financial_health"]),
 };
 
 /**

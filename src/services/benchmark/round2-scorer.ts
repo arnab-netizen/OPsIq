@@ -30,7 +30,13 @@ const DIAGNOSIS_SYNONYMS: Record<string, string> = {
   quality_trust_failure: "quality_control_failure",
 };
 
-/** Canonical engine archetypes the diagnosis engine can actually emit. */
+/**
+ * Canonical engine archetypes the diagnosis engine can actually emit. The E2
+ * slice-1 additions (debt/working-capital/pricing) are a measurement-accuracy
+ * registration of newly-emittable archetypes — NOT a scoring-axis or threshold
+ * change. Without it the scorer would mis-score a now-correct diagnosis as a
+ * false root cause.
+ */
 export const COVERED_DIAGNOSES: ReadonlySet<string> = new Set([
   "cash_liquidity_crisis",
   "unit_economics_failure",
@@ -38,6 +44,9 @@ export const COVERED_DIAGNOSES: ReadonlySet<string> = new Set([
   "customer_retention_erosion",
   "quality_control_failure",
   "operational_bottleneck",
+  "debt_solvency_pressure",
+  "working_capital_stress",
+  "pricing_power",
 ]);
 
 /** True-cause labels for which the correct engine behavior is to abstain. */
