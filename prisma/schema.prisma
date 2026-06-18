@@ -219,6 +219,7 @@ model ClientAccount {
   workspaceCausalAttributions    OwnerCausalAttribution[] @relation("WorkspaceCausalAttributions")
   workspaceReassessmentEvents         OwnerReassessmentEvent[] @relation("WorkspaceReassessmentEvents")
   workspaceLearningEligibilityReviews OwnerLearningEligibilityReview[] @relation("WorkspaceLearningEligibilityReviews")
+  workspaceDecisionMemories           OwnerDecisionMemory[] @relation("WorkspaceDecisionMemories")
 
   @@index([status])
   @@map("client_accounts")
@@ -3881,4 +3882,31 @@ model OwnerLearningEligibilityReview {
   @@index([status])
   @@index([allowsLearning])
   @@map("owner_learning_eligibility_reviews")
+}
+
+model OwnerDecisionMemory {
+  id                        String   @id @default(cuid())
+  workspaceId               String
+  businessId                String
+  category                  String   // owner_goal | owner_constraint | accepted_recommendation | rejected_recommendation | successful_action | failed_action | invalid_test | corrected_diagnosis | repeated_execution_issue | do_not_repeat | owner_preference | business_specific_rule
+  recommendationId          String?
+  actionId                  String?
+  outcomeId                 String?
+  summary                   String   @db.Text
+  contextSnapshot           String   @db.Text
+  carriesLearningSignal     Boolean
+  blocksRepetition          Boolean
+  isRepeatAttempt           Boolean
+  priorMemoryId             String?
+  changedContextExplanation String?  @db.Text
+  doNotRepeatReason         String?  @db.Text
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  workspace                 ClientAccount @relation("WorkspaceDecisionMemories", fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([category])
+  @@index([blocksRepetition])
+  @@map("owner_decision_memories")
 }
