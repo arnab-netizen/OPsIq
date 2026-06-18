@@ -58,6 +58,16 @@ export interface ConstraintAlignmentGateSignal {
 }
 
 /**
+ * Owner-proposed-action danger signal. Produced by the owner-action-danger detector;
+ * consumed by the optional rule below. Abstain-only.
+ */
+export interface OwnerActionDangerGateSignal {
+  danger: boolean;
+  type: string | null;
+  reasons: string[];
+}
+
+/**
  * Evidence-support sufficiency threshold (Option B, RC-3 fix).
  * A committed diagnosis is expected to rest on at least a majority of the
  * available evidence; below this, with unresolved gaps, the gate abstains.
@@ -80,7 +90,8 @@ export function assessSafety(
   active_conflicts: number,
   evidence_support?: EvidenceSupportSignal,
   causal_challenge?: CausalChallengeGateSignal,
-  constraint_alignment?: ConstraintAlignmentGateSignal
+  constraint_alignment?: ConstraintAlignmentGateSignal,
+  owner_action_danger?: OwnerActionDangerGateSignal
 ): SafetyAssessment {
   const unsafe_conditions: UnsafeCondition[] = [];
   let abstain = false;
@@ -252,6 +263,23 @@ export function assessSafety(
     abstain = true;
     abstention_state = "OUTSIDE_VALID_SCOPE";
     confidence_adjustment -= 20;
+  }
+
+  // Owner-proposed-action danger (R6): when runtime evidence shows the OWNER intends
+  // a value-destroying, effectively-irreversible action (a deep/broad across-the-board
+  // discount while contribution is negative), the gate must abstain even though the
+  // engine's own recommended action is safe. Abstain-only; never converts an abstain
+  // into a proceed. Narrow by construction (see owner-action-danger.ts).
+  if (owner_action_danger?.danger) {
+    unsafe_conditions.push({
+      condition_type: "HIGH_IRREVERSIBILITY",
+      severity: "CRITICAL",
+      description: `Dangerous owner-proposed action (${owner_action_danger.type}): ${owner_action_danger.reasons.join("; ")}`,
+      blocking: true,
+    });
+    abstain = true;
+    abstention_state = "HIGH_RISK_UNCERTAIN";
+    confidence_adjustment -= 40;
   }
 
   return {

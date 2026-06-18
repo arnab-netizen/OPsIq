@@ -221,6 +221,7 @@ async function main(): Promise<void> {
       escalation_required: safety.escalation_required,
       causal_challenge: safety.causal_challenge,
       constraint_alignment: safety.constraint_alignment,
+      owner_action_danger: safety.owner_action_danger,
       decision: safety.decision,
     });
     writeJson(path.join(caseOut, "scored_facts.json"), { facts, score });
