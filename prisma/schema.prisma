@@ -231,6 +231,8 @@ model ClientAccount {
   workspaceControlledLearningConsentRecords ControlledLearningConsentRecord[] @relation("WorkspaceControlledLearningConsentRecords")
   workspaceControlledLearningRetentionPolicies ControlledLearningRetentionPolicy[] @relation("WorkspaceControlledLearningRetentionPolicies")
   workspaceControlledLearningRegressionResults ControlledLearningRegressionResult[] @relation("WorkspaceControlledLearningRegressionResults")
+  workspaceControlledLearningRolloutFlags ControlledLearningRolloutFlag[] @relation("WorkspaceControlledLearningRolloutFlags")
+  workspaceControlledLearningRollbackEvents ControlledLearningRollbackEvent[] @relation("WorkspaceControlledLearningRollbackEvents")
 
   @@index([status])
   @@map("client_accounts")
@@ -3987,6 +3989,8 @@ model ControlledLearningCandidate {
   privacyControls             ControlledLearningPrivacyControl[]
   consentRecords              ControlledLearningConsentRecord[]
   regressionResults           ControlledLearningRegressionResult[]
+  rolloutFlags                ControlledLearningRolloutFlag[]
+  rollbackEvents              ControlledLearningRollbackEvent[]
 
   @@unique([workspaceId, auditFingerprint])
   @@index([workspaceId])
@@ -4139,4 +4143,42 @@ model ControlledLearningRegressionResult {
   @@index([candidateId])
   @@index([testVerdict])
   @@map("controlled_learning_regression_results")
+}
+
+model ControlledLearningRolloutFlag {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  candidateId   String
+  rolloutStage  String   // "SHADOW" | "CANARY" | "PARTIAL" | "FULL" | "PAUSED"
+  rolloutPct    Float    // 0.0 - 100.0
+  enabledBy     String
+  enabledAt     DateTime
+  flagNotes     String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  workspace     ClientAccount @relation("WorkspaceControlledLearningRolloutFlags", fields: [workspaceId], references: [id])
+  candidate     ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@unique([workspaceId, candidateId])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([rolloutStage])
+  @@map("controlled_learning_rollout_flags")
+}
+
+model ControlledLearningRollbackEvent {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  candidateId     String
+  rolledBackBy    String
+  rolledBackAt    DateTime
+  rollbackReason  String   @db.Text
+  rollbackCode    String   // "REGRESSION_DETECTED" | "HARM_DETECTED" | "MANUAL_OVERRIDE" | "POLICY_VIOLATION"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningRollbackEvents", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([rollbackCode])
+  @@map("controlled_learning_rollback_events")
 }
