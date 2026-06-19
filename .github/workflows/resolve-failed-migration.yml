@@ -1,27 +1,34 @@
 name: Resolve Failed Migration (P3009 metadata fix)
 
-# Resolves P3009 caused by 20260511_add_aggregate_locks having failed_at set.
+# Resolves P3009 caused by 20260511_add_aggregate_locks having finished_at=NULL.
 #
 # Background:
 #   Ghost migration 1778679447_add_aggregate_locks (2026-05-13, out-of-band CLI)
 #   applied aggregate_locks table, index, AND unique_event_number_per_aggregate
 #   constraint before the tracked migration ran. When 20260511_add_aggregate_locks
-#   ran on 2026-05-21, the non-idempotent ADD CONSTRAINT failed. Prisma set
-#   failed_at in _prisma_migrations. All schema objects are correct and present.
-#   Only the metadata row is wrong.
+#   ran on 2026-05-21, the non-idempotent ADD CONSTRAINT failed. Prisma left
+#   finished_at=NULL in _prisma_migrations (started_at set, finished_at NULL).
+#   All schema objects are correct and present. Only the metadata row is wrong.
+#
+# Prisma P3009 condition:
+#   Row exists in _prisma_migrations WHERE migration_name = '...' AND
+#   finished_at IS NULL AND rolled_back_at IS NULL.
+#   (There is NO failed_at column in _prisma_migrations.)
 #
 # This workflow:
 #   1. Verifies all schema objects exist (read-only)
-#   2. Confirms _prisma_migrations.failed_at is set for this migration
-#   3. Runs prisma migrate resolve --applied (metadata only — no schema changes)
-#   4. Runs prisma migrate status (post-resolve read-only confirm)
-#   5. Runs prisma migrate deploy (applies 22 pending migrations)
-#   6. Runs vitest (non-DB unit tests) to confirm no regressions
+#   2. Confirms _prisma_migrations row has finished_at IS NULL (P3009 condition)
+#   3. Runs prisma migrate resolve --applied (sets finished_at, no schema changes)
+#   4. Confirms finished_at is now set (post-resolve read-only check)
+#   5. Runs prisma migrate status (post-resolve read-only)
+#   6. Runs prisma migrate deploy (applies 22 pending migrations)
+#   7. Runs vitest (non-DB unit tests) to confirm no regressions
 #
 # HARD STOPS:
-#   - Any expected schema object missing → workflow fails before resolve
-#   - failed_at not set → no resolve needed, workflow fails safe
-#   - migrate deploy fails → workflow fails, surfaces error
+#   - Any expected schema object missing -> workflow fails before resolve
+#   - finished_at already set (migration cleanly applied) -> no resolve needed
+#   - rolled_back_at set -> different condition, do not resolve here
+#   - migrate deploy fails -> workflow fails, surfaces error
 #
 # NEVER touches production.
 # NEVER runs prisma migrate reset.
@@ -75,48 +82,47 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ── Safety Gate 1: URL must be a real PostgreSQL URL ──────────────────────
+      # -- Safety Gate 1: URL must be a real PostgreSQL URL --------------------
       - name: Assert MIGRATION_DATABASE_URL is set and is a real URL
         id: url-check
         run: |
           URL="${{ secrets.MIGRATION_DATABASE_URL }}"
           if [ -z "$URL" ]; then
-            echo "❌ MIGRATION_DATABASE_URL secret is not set. Cannot proceed."
+            echo "MIGRATION_DATABASE_URL secret is not set. Cannot proceed."
             exit 1
           fi
           if ! echo "$URL" | grep -qE '^postgres(ql)?://';
           then
-            echo "❌ MIGRATION_DATABASE_URL does not look like a valid PostgreSQL URL."
-            echo "   Expected: postgresql://user:pass@host/db"
+            echo "MIGRATION_DATABASE_URL does not look like a valid PostgreSQL URL."
             exit 1
           fi
           LEN=${#URL}
-          echo "✅ MIGRATION_DATABASE_URL is set and looks like a valid URL (length=$LEN)"
+          echo "MIGRATION_DATABASE_URL is set and looks like a valid URL (length=$LEN)"
 
-      # ── Safety Gate 2: must be direct (non-pooler) ───────────────────────────
+      # -- Safety Gate 2: must be direct (non-pooler) -------------------------
       - name: Assert MIGRATION_DATABASE_URL is direct (not pooler)
         id: pooler-check
         run: |
           URL="${{ secrets.MIGRATION_DATABASE_URL }}"
           if echo "$URL" | grep -qi '\-pooler'; then
-            echo "❌ MIGRATION_DATABASE_URL appears to be a pooler URL."
-            echo "   prisma migrate requires a direct (non-pooler) Neon endpoint."
+            echo "MIGRATION_DATABASE_URL appears to be a pooler URL."
+            echo "prisma migrate requires a direct (non-pooler) Neon endpoint."
             exit 1
           fi
-          echo "✅ MIGRATION_DATABASE_URL is direct (no '-pooler' detected)"
+          echo "MIGRATION_DATABASE_URL is direct (no '-pooler' detected)"
 
-      # ── Safety Gate 3: no placeholders ───────────────────────────────────────
+      # -- Safety Gate 3: no placeholders ------------------------------------
       - name: Assert MIGRATION_DATABASE_URL is not a placeholder
         id: placeholder-check
         run: |
           URL="${{ secrets.MIGRATION_DATABASE_URL }}"
           if echo "$URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com|TEST_DATABASE_URL|DATABASE_URL'; then
-            echo "❌ MIGRATION_DATABASE_URL contains a placeholder or unresolved reference."
+            echo "MIGRATION_DATABASE_URL contains a placeholder or unresolved reference."
             exit 1
           fi
-          echo "✅ MIGRATION_DATABASE_URL does not contain placeholder values"
+          echo "MIGRATION_DATABASE_URL does not contain placeholder values"
 
-      # ── Safety Gate 4: schema must be valid before touching DB ───────────────
+      # -- Safety Gate 4: schema must be valid before touching DB -------------
       - name: Prisma validate
         id: validate
         run: npx prisma validate
@@ -124,12 +130,14 @@ jobs:
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 
-      # ── Install psql for read-only verification ───────────────────────────────
+      # -- Install psql for read-only verification ----------------------------
       - name: Install postgresql-client
         run: sudo apt-get install -y postgresql-client
 
-      # ── Pre-resolution read-only verification ─────────────────────────────────
-      # Hard stop if any expected object is missing or failed_at is not set.
+      # -- Pre-resolution read-only verification ------------------------------
+      # Hard stop if any expected object is missing or P3009 condition not present.
+      # NOTE: _prisma_migrations has NO failed_at column. P3009 condition is:
+      #   started_at IS NOT NULL AND finished_at IS NULL AND rolled_back_at IS NULL
       - name: Pre-resolution schema verification (read-only)
         id: pre-verify
         run: |
@@ -146,10 +154,10 @@ jobs:
           ")
           echo "aggregate_locks table exists: $TABLE_EXISTS"
           if [ "$TABLE_EXISTS" != "t" ]; then
-            echo "❌ HARD STOP: aggregate_locks table is missing. Cannot safely resolve. Aborting."
+            echo "HARD STOP: aggregate_locks table is missing. Cannot safely resolve."
             exit 1
           fi
-          echo "✅ aggregate_locks table: EXISTS"
+          echo "aggregate_locks table: EXISTS"
 
           # 2. idx_aggregate_locks_workspace index
           INDEX_EXISTS=$(psql "$URL" -tAc "
@@ -162,10 +170,10 @@ jobs:
           ")
           echo "idx_aggregate_locks_workspace index exists: $INDEX_EXISTS"
           if [ "$INDEX_EXISTS" != "t" ]; then
-            echo "❌ HARD STOP: idx_aggregate_locks_workspace index is missing. Cannot safely resolve. Aborting."
+            echo "HARD STOP: idx_aggregate_locks_workspace index is missing. Cannot safely resolve."
             exit 1
           fi
-          echo "✅ idx_aggregate_locks_workspace index: EXISTS"
+          echo "idx_aggregate_locks_workspace index: EXISTS"
 
           # 3. unique_event_number_per_aggregate constraint on canonical_events
           CONSTRAINT_EXISTS=$(psql "$URL" -tAc "
@@ -179,91 +187,95 @@ jobs:
           ")
           echo "unique_event_number_per_aggregate constraint exists: $CONSTRAINT_EXISTS"
           if [ "$CONSTRAINT_EXISTS" != "t" ]; then
-            echo "❌ HARD STOP: unique_event_number_per_aggregate constraint is missing. Cannot safely resolve. Aborting."
+            echo "HARD STOP: unique_event_number_per_aggregate constraint is missing. Cannot safely resolve."
             exit 1
           fi
-          echo "✅ unique_event_number_per_aggregate constraint: EXISTS"
+          echo "unique_event_number_per_aggregate constraint: EXISTS"
 
-          # 4. _prisma_migrations row for 20260511_add_aggregate_locks has failed_at set
-          FAILED_AT=$(psql "$URL" -tAc "
-            SELECT failed_at FROM _prisma_migrations
+          # 4. _prisma_migrations row exists and has finished_at IS NULL (P3009 condition)
+          #    _prisma_migrations schema: id, checksum, finished_at, migration_name,
+          #    logs, rolled_back_at, started_at, applied_steps_count
+          #    There is NO failed_at column.
+          ROW_EXISTS=$(psql "$URL" -tAc "
+            SELECT EXISTS (
+              SELECT 1 FROM _prisma_migrations
+              WHERE migration_name = '20260511_add_aggregate_locks'
+            );
+          " | xargs)
+          echo "_prisma_migrations row exists: $ROW_EXISTS"
+          if [ "$ROW_EXISTS" != "t" ]; then
+            echo "HARD STOP: No _prisma_migrations row found for 20260511_add_aggregate_locks."
+            exit 1
+          fi
+
+          FINISHED_AT=$(psql "$URL" -tAc "
+            SELECT COALESCE(finished_at::text, 'NULL') FROM _prisma_migrations
             WHERE migration_name = '20260511_add_aggregate_locks'
             LIMIT 1;
           " | xargs)
-          echo "_prisma_migrations failed_at: '$FAILED_AT'"
-          if [ -z "$FAILED_AT" ] || [ "$FAILED_AT" = "" ]; then
-            # Check if row exists at all
-            ROW_EXISTS=$(psql "$URL" -tAc "
-              SELECT EXISTS (
-                SELECT 1 FROM _prisma_migrations
-                WHERE migration_name = '20260511_add_aggregate_locks'
-              );
-            " | xargs)
-            if [ "$ROW_EXISTS" = "t" ]; then
-              echo "❌ HARD STOP: Migration row exists but failed_at is NULL — migration is already cleanly applied. No resolve needed."
-            else
-              echo "❌ HARD STOP: No _prisma_migrations row found for 20260511_add_aggregate_locks."
-            fi
+          echo "_prisma_migrations finished_at: '$FINISHED_AT'"
+          if [ "$FINISHED_AT" != "NULL" ]; then
+            echo "HARD STOP: finished_at is already set ('$FINISHED_AT'). Migration is already cleanly applied. No resolve needed."
             exit 1
           fi
-          echo "✅ _prisma_migrations.failed_at: SET ($FAILED_AT) — P3009 condition confirmed"
+
+          ROLLED_BACK_AT=$(psql "$URL" -tAc "
+            SELECT COALESCE(rolled_back_at::text, 'NULL') FROM _prisma_migrations
+            WHERE migration_name = '20260511_add_aggregate_locks'
+            LIMIT 1;
+          " | xargs)
+          echo "_prisma_migrations rolled_back_at: '$ROLLED_BACK_AT'"
+          if [ "$ROLLED_BACK_AT" != "NULL" ]; then
+            echo "HARD STOP: rolled_back_at is set ('$ROLLED_BACK_AT'). Migration was explicitly rolled back. Use --rolled-back path, not --applied."
+            exit 1
+          fi
 
           echo ""
-          echo "=== PRE-RESOLUTION VERIFICATION PASSED — ALL OBJECTS PRESENT, P3009 CONFIRMED ==="
-          echo "Proceeding to prisma migrate resolve --applied"
+          echo "_prisma_migrations.finished_at: NULL (P3009 condition confirmed)"
+          echo "_prisma_migrations.rolled_back_at: NULL (not explicitly rolled back)"
+          echo ""
+          echo "=== PRE-RESOLUTION VERIFICATION PASSED ==========================================================="
+          echo "All schema objects present. P3009 condition confirmed (finished_at IS NULL)."
+          echo "Proceeding to: npx prisma migrate resolve --applied 20260511_add_aggregate_locks"
         env:
-          PGPASSWORD: ''
           PGSSLMODE: require
 
-      # ── Metadata-only resolve ─────────────────────────────────────────────────
-      # Updates only _prisma_migrations row. No SQL executed against schema.
+      # -- Metadata-only resolve ----------------------------------------------
+      # Sets finished_at in _prisma_migrations. No SQL executed against schema.
       - name: prisma migrate resolve --applied 20260511_add_aggregate_locks
         id: migrate-resolve
         run: |
           echo "Running: npx prisma migrate resolve --applied 20260511_add_aggregate_locks"
           npx prisma migrate resolve --applied 20260511_add_aggregate_locks
-          echo "✅ prisma migrate resolve completed"
+          echo "prisma migrate resolve completed"
         env:
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 
-      # ── Post-resolve read-only status check ───────────────────────────────────
+      # -- Post-resolve metadata check ----------------------------------------
       - name: Post-resolve metadata verification (read-only)
         id: post-verify
         run: |
           URL="${{ secrets.MIGRATION_DATABASE_URL }}"
           echo "=== POST-RESOLVE METADATA VERIFICATION ==="
 
-          FAILED_AT=$(psql "$URL" -tAc "
-            SELECT failed_at FROM _prisma_migrations
-            WHERE migration_name = '20260511_add_aggregate_locks'
-            LIMIT 1;
-          " | xargs)
           FINISHED_AT=$(psql "$URL" -tAc "
-            SELECT finished_at FROM _prisma_migrations
+            SELECT COALESCE(finished_at::text, 'NULL') FROM _prisma_migrations
             WHERE migration_name = '20260511_add_aggregate_locks'
             LIMIT 1;
           " | xargs)
-
-          echo "failed_at after resolve: '$FAILED_AT'"
           echo "finished_at after resolve: '$FINISHED_AT'"
 
-          if [ -n "$FAILED_AT" ] && [ "$FAILED_AT" != "" ]; then
-            echo "❌ failed_at is still set after resolve. Something went wrong."
+          if [ "$FINISHED_AT" = "NULL" ] || [ -z "$FINISHED_AT" ]; then
+            echo "finished_at is still NULL after resolve. Something went wrong."
             exit 1
           fi
-          if [ -z "$FINISHED_AT" ] || [ "$FINISHED_AT" = "" ]; then
-            echo "❌ finished_at is not set after resolve. Something went wrong."
-            exit 1
-          fi
-          echo "✅ failed_at: CLEARED"
-          echo "✅ finished_at: SET ($FINISHED_AT)"
-          echo "=== POST-RESOLVE METADATA VERIFIED — P3009 CONDITION CLEARED ==="
+          echo "finished_at: SET ($FINISHED_AT)"
+          echo "=== POST-RESOLVE METADATA VERIFIED - P3009 CONDITION CLEARED ==="
         env:
-          PGPASSWORD: ''
           PGSSLMODE: require
 
-      # ── Post-resolve migrate status ───────────────────────────────────────────
+      # -- Post-resolve migrate status ----------------------------------------
       - name: prisma migrate status (post-resolve, read-only)
         id: post-status
         run: |
@@ -274,18 +286,18 @@ jobs:
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 
-      # ── Apply 22 pending migrations ───────────────────────────────────────────
+      # -- Apply pending migrations -------------------------------------------
       - name: prisma migrate deploy (apply pending migrations)
         id: migrate-deploy
         run: |
           echo "=== DEPLOYING PENDING MIGRATIONS ==="
           npx prisma migrate deploy
-          echo "✅ prisma migrate deploy completed"
+          echo "prisma migrate deploy completed"
         env:
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 
-      # ── Post-deploy status ────────────────────────────────────────────────────
+      # -- Post-deploy status -------------------------------------------------
       - name: prisma migrate status (post-deploy, read-only)
         id: post-deploy-status
         run: |
@@ -296,7 +308,7 @@ jobs:
           DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
 
-      # ── Non-DB unit test gate ─────────────────────────────────────────────────
+      # -- Non-DB unit test gate ----------------------------------------------
       - name: Run vitest (non-DB unit tests)
         id: unit-tests
         run: npx vitest run --reporter=verbose 2>&1 | tee vitest-results.txt || true
@@ -305,7 +317,7 @@ jobs:
           MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
           NODE_ENV: test
 
-      # ── Upload artifacts ──────────────────────────────────────────────────────
+      # -- Upload artifacts ---------------------------------------------------
       - name: Upload resolution artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -316,8 +328,9 @@ jobs:
             post-deploy-status.txt
             vitest-results.txt
           retention-days: 30
+          if-no-files-found: warn
 
-      # ── Summary ───────────────────────────────────────────────────────────────
+      # -- Summary ------------------------------------------------------------
       - name: Write GITHUB_STEP_SUMMARY
         if: always()
         run: |
@@ -332,19 +345,19 @@ jobs:
           DEPLOY="${{ steps.migrate-deploy.outcome }}"
           POST_DEPLOY="${{ steps.post-deploy-status.outcome }}"
           TESTS="${{ steps.unit-tests.outcome }}"
-          ok() { [ "$1" = "success" ] && echo "✅" || echo "❌"; }
+          ok() { [ "$1" = "success" ] && echo "PASS" || echo "FAIL"; }
           if [ "$DEPLOY" = "success" ]; then
-            OVERALL="✅ P3009_RESOLVED — MIGRATIONS_DEPLOYED"
+            OVERALL="P3009_RESOLVED - MIGRATIONS_DEPLOYED"
             CLASS="LANE_A_VERIFICATION_REQUIRED"
           elif [ "$RESOLVE" = "success" ]; then
-            OVERALL="⚠️ RESOLVED_BUT_DEPLOY_FAILED"
+            OVERALL="RESOLVED_BUT_DEPLOY_FAILED"
             CLASS="INVESTIGATE_DEPLOY_FAILURE"
           else
-            OVERALL="❌ RESOLUTION_FAILED"
-            CLASS="HARD_STOP_HIT — check pre-verify step logs"
+            OVERALL="RESOLUTION_FAILED"
+            CLASS="HARD_STOP_HIT - check pre-verify step logs"
           fi
           {
-            echo "## Resolve Failed Migration — P3009 Fix"
+            echo "## Resolve Failed Migration - P3009 Fix"
             echo ""
             echo "**Result:** $OVERALL"
             echo "**Classification:** $CLASS"
@@ -359,15 +372,15 @@ jobs:
             echo "| prisma migrate resolve --applied | $(ok $RESOLVE) |"
             echo "| Post-resolve metadata verification (read-only) | $(ok $POST_VERIFY) |"
             echo "| prisma migrate status (post-resolve) | $(ok $POST_STATUS) |"
-            echo "| prisma migrate deploy (22 pending) | $(ok $DEPLOY) |"
+            echo "| prisma migrate deploy (pending migrations) | $(ok $DEPLOY) |"
             echo "| prisma migrate status (post-deploy) | $(ok $POST_DEPLOY) |"
             echo "| vitest (non-DB unit tests) | $(ok $TESTS) |"
             echo ""
             echo "**Target:** Neon TEST database (MIGRATION_DATABASE_URL secret)"
-            echo "**Migration resolved:** \`20260511_add_aggregate_locks\`"
+            echo "**Migration resolved:** 20260511_add_aggregate_locks"
             echo "**Triggered by:** @${{ github.actor }}"
-            echo "**Commit:** \`${{ github.sha }}\`"
+            echo "**Commit:** ${{ github.sha }}"
             echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             echo ""
-            echo "**Next step:** Trigger 'DB Verification' workflow with use_neon_secrets=true to confirm LANE_A passes (174+ tests)."
+            echo "**Next step:** Trigger DB Verification workflow with use_neon_secrets=true to confirm LANE_A passes."
           } >> $GITHUB_STEP_SUMMARY
