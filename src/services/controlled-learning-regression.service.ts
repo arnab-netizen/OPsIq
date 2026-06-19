@@ -76,6 +76,21 @@ export async function recordRegressionResult(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId: input.workspaceId,
+        candidateId: input.candidateId,
+        action: `REGRESSION_${input.testVerdict}`,
+        actorId: input.testedBy,
+        detail: `Regression result recorded: verdict=${input.testVerdict} score=${input.regressionScore} testRunId=${input.testRunId}`,
+        timestamp: input.testedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write regression audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+  }
+
   return { recorded: true, violations: [], result };
 }
 

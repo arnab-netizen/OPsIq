@@ -65,6 +65,21 @@ export async function recordConsent(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId: input.workspaceId,
+        candidateId: input.candidateId,
+        action: input.consentGiven ? "CONSENT_GIVEN" : "CONSENT_WITHHELD",
+        actorId: input.consentBy,
+        detail: `Consent recorded: given=${input.consentGiven} scope=${input.consentScope} by=${input.consentBy}`,
+        timestamp: input.consentAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write consent audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+  }
+
   return { recorded: true, violations: [], record };
 }
 

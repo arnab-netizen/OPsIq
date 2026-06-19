@@ -14,7 +14,7 @@ import {
 const makeCandidate = (overrides: object = {}) => ({
   id: "cand-1",
   workspaceId: "ws-1",
-  eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
+  eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
   ...overrides,
 });
 
@@ -26,7 +26,7 @@ const makeAdmission = (overrides: object = {}) => ({
   admittedAt: new Date("2026-06-19T00:00:00Z"),
   sourceLabel: "outcome-review",
   evidenceOrigin: "KPI-drop",
-  eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
+  eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
   admissionNotes: "Solid evidence",
   ...overrides,
 });
@@ -57,6 +57,15 @@ const makeMockPrisma = () =>
     controlledLearningCandidate: {
       findFirst: vi.fn(),
     },
+    controlledLearningReview: {
+      findFirst: vi.fn(),
+    },
+    controlledLearningHarmEvent: {
+      findFirst: vi.fn(),
+    },
+    controlledLearningCandidateAuditEntry: {
+      create: vi.fn().mockResolvedValue({}),
+    },
   }) as unknown as PrismaClient;
 
 // ── ADMISSION TESTS ───────────────────────────────────────────────────────────
@@ -70,6 +79,8 @@ describe("admitCandidate", () => {
 
   it("succeeds when candidate is LEARNING_ELIGIBLE_ and not already admitted", async () => {
     (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
     (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
     const admissionRecord = makeAdmission();
     (mockPrisma as any).controlledLearningAdmission.create.mockResolvedValue(admissionRecord);
@@ -81,7 +92,7 @@ describe("admitCandidate", () => {
       admittedAt: new Date("2026-06-19T00:00:00Z"),
       sourceLabel: "outcome-review",
       evidenceOrigin: "KPI-drop",
-      eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
+      eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
       admissionNotes: "Solid evidence",
     });
 
@@ -92,11 +103,13 @@ describe("admitCandidate", () => {
 
   it("succeeds with LEARNING_ELIGIBLE_MEDIUM status", async () => {
     (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(
-      makeCandidate({ eligibilityStatus: "LEARNING_ELIGIBLE_MEDIUM" })
+      makeCandidate({ eligibilityStatus: "LEARNING_ELIGIBLE_HUMAN_REVIEWED" })
     );
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
     (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
     (mockPrisma as any).controlledLearningAdmission.create.mockResolvedValue(
-      makeAdmission({ eligibilityStatus: "LEARNING_ELIGIBLE_MEDIUM" })
+      makeAdmission({ eligibilityStatus: "LEARNING_ELIGIBLE_HUMAN_REVIEWED" })
     );
 
     const result = await admitCandidate(mockPrisma, {
@@ -106,7 +119,7 @@ describe("admitCandidate", () => {
       admittedAt: new Date(),
       sourceLabel: "outcome-review",
       evidenceOrigin: "KPI-drop",
-      eligibilityStatus: "LEARNING_ELIGIBLE_MEDIUM",
+      eligibilityStatus: "LEARNING_ELIGIBLE_HUMAN_REVIEWED",
       admissionNotes: "Moderate evidence",
     });
 
@@ -124,7 +137,7 @@ describe("admitCandidate", () => {
       admittedAt: new Date(),
       sourceLabel: "outcome-review",
       evidenceOrigin: "KPI-drop",
-      eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
+      eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
       admissionNotes: "Notes",
     });
 
@@ -174,6 +187,8 @@ describe("admitCandidate", () => {
 
   it("returns violation when candidate already admitted", async () => {
     (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
     (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(makeAdmission());
 
     const result = await admitCandidate(mockPrisma, {
@@ -183,7 +198,6 @@ describe("admitCandidate", () => {
       admittedAt: new Date(),
       sourceLabel: "label",
       evidenceOrigin: "origin",
-      eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
       admissionNotes: "Duplicate",
     });
 
@@ -201,7 +215,7 @@ describe("admitCandidate", () => {
       admittedAt: new Date(),
       sourceLabel: "label",
       evidenceOrigin: "origin",
-      eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
+      eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
       admissionNotes: "Notes",
     });
 
@@ -237,19 +251,21 @@ describe("admitCandidate", () => {
       admittedAt: new Date(),
       sourceLabel: "label",
       evidenceOrigin: "origin",
-      eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
+      eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
       admissionNotes: "Notes",
     });
 
     expect(result.admitted).toBe(false);
     expect(result.violations).toContain("Candidate not found or wrong workspace");
-    expect((mockPrisma as any).controlledLearningCandidate.findFirst).toHaveBeenCalledWith({
-      where: { id: "cand-1", workspaceId: "ws-attacker" },
-    });
+    expect((mockPrisma as any).controlledLearningCandidate.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "cand-1", workspaceId: "ws-attacker" } })
+    );
   });
 
   it("passes workspaceId to admission create", async () => {
     (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
     (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
     (mockPrisma as any).controlledLearningAdmission.create.mockResolvedValue(makeAdmission());
 
@@ -260,7 +276,7 @@ describe("admitCandidate", () => {
       admittedAt: new Date("2026-06-19T00:00:00Z"),
       sourceLabel: "outcome-review",
       evidenceOrigin: "KPI-drop",
-      eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
+      eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
       admissionNotes: "Solid evidence",
     });
 
@@ -281,7 +297,7 @@ describe("admitCandidate", () => {
       admittedAt: new Date(),
       sourceLabel: "label",
       evidenceOrigin: "origin",
-      eligibilityStatus: "LEARNING_ELIGIBLE_HIGH",
+      eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
       admissionNotes: "Notes",
     });
 
@@ -608,5 +624,237 @@ describe("listRejectionsForWorkspace", () => {
     expect((mockPrisma as any).controlledLearningRejection.findMany).toHaveBeenCalledWith({
       where: { workspaceId: "ws-specific" },
     });
+  });
+});
+
+// ── AUDIT EMISSION TESTS ──────────────────────────────────────────────────────
+
+describe("audit emission — admitCandidate", () => {
+  let mockPrisma: PrismaClient;
+
+  beforeEach(() => {
+    mockPrisma = makeMockPrisma();
+  });
+
+  it("emits ADMISSION_CREATED audit entry on success", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.create.mockResolvedValue(makeAdmission());
+
+    await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: new Date("2026-06-19T00:00:00Z"),
+      sourceLabel: "outcome-review",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Solid evidence",
+    });
+
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          workspaceId: "ws-1",
+          candidateId: "cand-1",
+          action: "ADMISSION_CREATED",
+        }),
+      })
+    );
+  });
+
+  it("emits ADMISSION_BLOCKED_INELIGIBLE audit on ineligible status", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(
+      makeCandidate({ eligibilityStatus: "LEARNING_INELIGIBLE_LOW_EVIDENCE" })
+    );
+
+    await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: new Date(),
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          workspaceId: "ws-1",
+          candidateId: "cand-1",
+          action: "ADMISSION_BLOCKED_INELIGIBLE",
+        }),
+      })
+    );
+  });
+
+  it("emits ADMISSION_BLOCKED_NO_APPROVED_REVIEW when review missing", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue(null);
+
+    await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: new Date(),
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "ADMISSION_BLOCKED_NO_APPROVED_REVIEW",
+          workspaceId: "ws-1",
+          candidateId: "cand-1",
+        }),
+      })
+    );
+  });
+
+  it("emits ADMISSION_BLOCKED_CRITICAL_HARM when unmitigated critical harm exists", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue({ id: "harm-1" });
+
+    await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: new Date(),
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "ADMISSION_BLOCKED_CRITICAL_HARM",
+          workspaceId: "ws-1",
+          candidateId: "cand-1",
+        }),
+      })
+    );
+  });
+
+  it("audit emission failure does not block admission success", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.create.mockResolvedValue(makeAdmission());
+    (mockPrisma as any).controlledLearningCandidateAuditEntry.create.mockRejectedValue(
+      new Error("DB down")
+    );
+
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: new Date(),
+      sourceLabel: "outcome-review",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Solid evidence",
+    });
+
+    expect(result.admitted).toBe(true);
+  });
+
+  it("audit entry includes workspaceId on success", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.create.mockResolvedValue(makeAdmission());
+
+    await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: new Date(),
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    const auditCall = (mockPrisma as any).controlledLearningCandidateAuditEntry.create.mock.calls.find(
+      (c: any[]) => c[0]?.data?.action === "ADMISSION_CREATED"
+    );
+    expect(auditCall).toBeDefined();
+    expect(auditCall[0].data.workspaceId).toBe("ws-1");
+  });
+
+  it("no audit for forbidden origin guard (candidateId not yet confirmed)", async () => {
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: new Date(),
+      sourceLabel: "label",
+      evidenceOrigin: "public_source_unverified",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(false);
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("audit emission — rejectCandidateFinal", () => {
+  let mockPrisma: PrismaClient;
+
+  beforeEach(() => {
+    mockPrisma = makeMockPrisma();
+  });
+
+  it("emits REJECTION_CREATED audit entry on success", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningRejection.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningRejection.create.mockResolvedValue(makeRejection());
+
+    await rejectCandidateFinal(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      rejectedBy: "user-1",
+      rejectedAt: new Date(),
+      rejectionReason: "Insufficient evidence",
+      rejectionCode: "EVIDENCE_WEAK",
+    });
+
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: "REJECTION_CREATED",
+          workspaceId: "ws-1",
+          candidateId: "cand-1",
+        }),
+      })
+    );
+  });
+
+  it("audit emission failure does not block rejection success", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningRejection.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningRejection.create.mockResolvedValue(makeRejection());
+    (mockPrisma as any).controlledLearningCandidateAuditEntry.create.mockRejectedValue(
+      new Error("DB down")
+    );
+
+    const result = await rejectCandidateFinal(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      rejectedBy: "user-1",
+      rejectedAt: new Date(),
+      rejectionReason: "reason",
+      rejectionCode: "CODE",
+    });
+
+    expect(result.rejected).toBe(true);
   });
 });

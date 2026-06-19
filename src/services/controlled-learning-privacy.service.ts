@@ -63,6 +63,21 @@ export async function applyPrivacyControl(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId: input.workspaceId,
+        candidateId: input.candidateId,
+        action: `PRIVACY_CONTROL_${input.controlType}`,
+        actorId: input.appliedBy,
+        detail: `Privacy control applied: type=${input.controlType} by=${input.appliedBy}`,
+        timestamp: input.appliedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write privacy control audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+  }
+
   return { applied: true, violations: [], control };
 }
 

@@ -62,6 +62,21 @@ export async function rejectCandidateFinal(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId,
+        candidateId,
+        action: "REJECTION_CREATED",
+        actorId: rejectedBy,
+        detail: `Final rejection recorded: code=${rejectionCode} reason=${rejectionReason}`,
+        timestamp: rejectedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write rejection audit entry", { candidateId, workspaceId, auditErr });
+  }
+
   return { rejected: true, violations: [], rejection };
 }
 

@@ -78,6 +78,20 @@ export async function admitCandidate(
   const dbEligibilityStatus = candidate.eligibilityStatus as ControlledLearningEligibilityStatus;
   const allowsPromotion = ELIGIBILITY_ALLOWS_PROMOTION[dbEligibilityStatus] ?? false;
   if (!allowsPromotion) {
+    try {
+      await (prisma as any).controlledLearningCandidateAuditEntry.create({
+        data: {
+          workspaceId,
+          candidateId,
+          action: "ADMISSION_BLOCKED_INELIGIBLE",
+          actorId: admittedBy,
+          detail: `Admission blocked: DB eligibilityStatus=${dbEligibilityStatus} does not allow admission`,
+          timestamp: admittedAt,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[audit] Failed to write admission-blocked-ineligible audit entry", { candidateId, workspaceId, auditErr });
+    }
     return {
       admitted: false,
       violations: [
@@ -92,6 +106,20 @@ export async function admitCandidate(
     select: { id: true },
   });
   if (!approvedReview) {
+    try {
+      await (prisma as any).controlledLearningCandidateAuditEntry.create({
+        data: {
+          workspaceId,
+          candidateId,
+          action: "ADMISSION_BLOCKED_NO_APPROVED_REVIEW",
+          actorId: admittedBy,
+          detail: "Admission blocked: no APPROVED review found for candidate",
+          timestamp: admittedAt,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[audit] Failed to write admission-blocked-no-review audit entry", { candidateId, workspaceId, auditErr });
+    }
     return {
       admitted: false,
       violations: [
@@ -106,6 +134,20 @@ export async function admitCandidate(
     select: { id: true },
   });
   if (criticalHarm) {
+    try {
+      await (prisma as any).controlledLearningCandidateAuditEntry.create({
+        data: {
+          workspaceId,
+          candidateId,
+          action: "ADMISSION_BLOCKED_CRITICAL_HARM",
+          actorId: admittedBy,
+          detail: "Admission blocked: unmitigated CRITICAL harm event exists",
+          timestamp: admittedAt,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[audit] Failed to write admission-blocked-harm audit entry", { candidateId, workspaceId, auditErr });
+    }
     return {
       admitted: false,
       violations: [
@@ -136,6 +178,21 @@ export async function admitCandidate(
       admissionNotes,
     },
   });
+
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId,
+        candidateId,
+        action: "ADMISSION_CREATED",
+        actorId: admittedBy,
+        detail: `Candidate admitted: eligibilityStatus=${dbEligibilityStatus} sourceLabel=${sourceLabel} evidenceOrigin=${evidenceOrigin}`,
+        timestamp: admittedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write admission audit entry", { candidateId, workspaceId, auditErr });
+  }
 
   return { admitted: true, violations: [], admission };
 }

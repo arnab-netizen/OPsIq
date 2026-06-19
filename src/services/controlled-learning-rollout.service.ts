@@ -71,6 +71,21 @@ export async function setRolloutFlag(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId: input.workspaceId,
+        candidateId: input.candidateId,
+        action: `ROLLOUT_FLAG_SET_${input.rolloutStage}`,
+        actorId: input.enabledBy,
+        detail: `Rollout flag set: stage=${input.rolloutStage} pct=${input.rolloutPct} by=${input.enabledBy}`,
+        timestamp: input.enabledAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write rollout audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+  }
+
   return { set: true, violations: [], flag };
 }
 

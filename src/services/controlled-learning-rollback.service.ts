@@ -63,6 +63,21 @@ export async function recordRollbackEvent(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId: input.workspaceId,
+        candidateId: input.candidateId,
+        action: `ROLLBACK_${input.rollbackCode}`,
+        actorId: input.rolledBackBy,
+        detail: `Rollback recorded: code=${input.rollbackCode} reason=${input.rollbackReason}`,
+        timestamp: input.rolledBackAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write rollback audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+  }
+
   return { recorded: true, violations: [], event };
 }
 

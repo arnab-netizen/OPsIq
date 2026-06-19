@@ -53,6 +53,21 @@ export async function recordAttributionReview(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId: input.workspaceId,
+        candidateId: input.candidateId,
+        action: `ATTRIBUTION_REVIEW_${input.verdict}`,
+        actorId: input.reviewedBy,
+        detail: `Attribution review recorded: verdict=${input.verdict} confidence=${input.confidenceScore} harmEventId=${input.harmEventId}`,
+        timestamp: input.reviewedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write attribution audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+  }
+
   return { recorded: true, violations: [], review };
 }
 

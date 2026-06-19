@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { randomUUID } from "crypto";
 import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 const MAX_RETENTION_DAYS = 3650; // 10 years
@@ -56,6 +57,25 @@ export async function setRetentionPolicy(
       policyNotes: input.policyNotes ?? "",
     },
   });
+
+  // Retention policy is workspace-level (no candidateId) — use generic AuditEvent.
+  // actorId is omitted (requires User FK; appliedBy is an email string, not a User UUID).
+  try {
+    await (prisma as any).auditEvent.create({
+      data: {
+        id: randomUUID(),
+        eventName: "controlled_learning.retention_policy_set",
+        workspaceId: input.workspaceId,
+        actorId: null,
+        entityType: "ControlledLearningRetentionPolicy",
+        entityId: null,
+        payload: { retentionDays: input.retentionDays, appliedBy: input.appliedBy },
+        occurredAt: input.appliedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write retention policy audit event", { workspaceId: input.workspaceId, auditErr });
+  }
 
   return { set: true, violations: [], policy };
 }

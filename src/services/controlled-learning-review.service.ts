@@ -80,6 +80,21 @@ export async function createReview(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId,
+        candidateId,
+        action: `REVIEW_${decision}`,
+        actorId: reviewerId,
+        detail: `Review recorded: decision=${decision} by reviewer=${reviewerId}`,
+        timestamp: reviewedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write review audit entry", { candidateId, workspaceId, auditErr });
+  }
+
   return review;
 }
 

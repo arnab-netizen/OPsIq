@@ -46,6 +46,21 @@ export async function recordHarmEvent(
     },
   });
 
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId: input.workspaceId,
+        candidateId: input.candidateId,
+        action: `HARM_EVENT_RECORDED_${input.severity}`,
+        actorId: input.detectedBy,
+        detail: `Harm event recorded: type=${input.harmType} severity=${input.severity}`,
+        timestamp: input.detectedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write harm event audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+  }
+
   return { recorded: true, violations: [], event };
 }
 
@@ -58,6 +73,7 @@ export async function markHarmMitigated(
   assertWorkspaceScopedQuery({ workspaceId });
   const existing = await (prisma as any).controlledLearningHarmEvent.findFirst({
     where: { id: harmEventId, workspaceId },
+    select: { id: true, candidateId: true },
   });
   if (!existing) {
     return { mitigated: false, violations: ["Harm event not found in workspace"] };
@@ -67,6 +83,21 @@ export async function markHarmMitigated(
     where: { id: harmEventId },
     data: { mitigated: true, mitigatedAt },
   });
+
+  try {
+    await (prisma as any).controlledLearningCandidateAuditEntry.create({
+      data: {
+        workspaceId,
+        candidateId: existing.candidateId,
+        action: "HARM_EVENT_MITIGATED",
+        actorId: null,
+        detail: `Harm event ${harmEventId} marked mitigated at ${mitigatedAt.toISOString()}`,
+        timestamp: mitigatedAt,
+      },
+    });
+  } catch (auditErr) {
+    console.error("[audit] Failed to write harm mitigation audit entry", { harmEventId, workspaceId, auditErr });
+  }
 
   return { mitigated: true, violations: [] };
 }
