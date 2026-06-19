@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 export type RegressionVerdict = "PASS" | "FAIL" | "INCONCLUSIVE";
 
@@ -33,6 +34,7 @@ export async function recordRegressionResult(
   prisma: PrismaClient,
   input: RecordRegressionResultInput
 ): Promise<{ recorded: boolean; violations: string[]; result?: RegressionResultRecord }> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const violations: string[] = [];
 
   if (!ALLOWED_VERDICTS.includes(input.testVerdict)) {
@@ -82,6 +84,7 @@ export async function listRegressionResultsForCandidate(
   workspaceId: string,
   candidateId: string
 ): Promise<RegressionResultRecord[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   // Verify candidate belongs to workspace
   const candidate = await (prisma as any).controlledLearningCandidate.findFirst({
     where: { id: candidateId, workspaceId },
@@ -101,6 +104,7 @@ export async function listRegressionResultsForWorkspace(
   prisma: PrismaClient,
   workspaceId: string
 ): Promise<RegressionResultRecord[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningRegressionResult.findMany({
     where: { workspaceId },
     orderBy: { testedAt: "desc" },
@@ -112,6 +116,7 @@ export async function hasRegression(
   workspaceId: string,
   candidateId: string
 ): Promise<boolean> {
+  assertWorkspaceScopedQuery({ workspaceId });
   const failResult = await (prisma as any).controlledLearningRegressionResult.findFirst({
     where: { workspaceId, candidateId, testVerdict: "FAIL" },
   });

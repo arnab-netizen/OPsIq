@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 const VALID_VERDICTS = ["ATTRIBUTED", "NOT_ATTRIBUTED", "PARTIAL", "INCONCLUSIVE"] as const;
 
@@ -15,6 +16,7 @@ export async function recordAttributionReview(
     reviewNotes: string;
   }
 ): Promise<{ recorded: boolean; violations: string[]; review?: object }> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const violations: string[] = [];
   if (!VALID_VERDICTS.includes(input.verdict as any)) {
     violations.push(`Invalid verdict: ${input.verdict}`);
@@ -59,6 +61,7 @@ export async function listAttributionReviewsForHarmEvent(
   workspaceId: string,
   harmEventId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningAttributionReview.findMany({
     where: { workspaceId, harmEventId },
     orderBy: { reviewedAt: "desc" },
@@ -70,6 +73,7 @@ export async function listAttributionReviewsForCandidate(
   workspaceId: string,
   candidateId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningAttributionReview.findMany({
     where: { workspaceId, candidateId },
     orderBy: { reviewedAt: "desc" },

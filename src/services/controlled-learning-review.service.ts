@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 export type ReviewDecision = "APPROVED" | "REJECTED" | "DEFERRED";
 
@@ -41,6 +42,7 @@ export async function createReview(
   prisma: PrismaClient,
   input: CreateReviewInput
 ): Promise<CreateReviewResult> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const { workspaceId, candidateId, reviewerId, decision, reviewNotes, reviewedAt } = input;
 
   if (!VALID_DECISIONS.includes(decision)) {
@@ -86,6 +88,7 @@ export async function listReviewsForCandidate(
   workspaceId: string,
   candidateId: string
 ): Promise<ReviewRecord[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   const candidate = await (prisma as any).controlledLearningCandidate.findFirst({
     where: { id: candidateId, workspaceId },
   });
@@ -104,6 +107,7 @@ export async function listReviewsForWorkspace(
   prisma: PrismaClient,
   workspaceId: string
 ): Promise<ReviewRecord[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningReview.findMany({
     where: { workspaceId },
     orderBy: { reviewedAt: "desc" },
@@ -115,6 +119,7 @@ export async function getReview(
   workspaceId: string,
   reviewId: string
 ): Promise<ReviewRecord | null> {
+  assertWorkspaceScopedQuery({ workspaceId });
   const review = await (prisma as any).controlledLearningReview.findFirst({
     where: { id: reviewId, workspaceId },
   });

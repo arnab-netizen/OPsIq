@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 const VALID_ROLLBACK_CODES = [
   "REGRESSION_DETECTED",
@@ -27,6 +28,7 @@ export async function recordRollbackEvent(
   prisma: PrismaClient,
   input: RecordRollbackEventInput
 ): Promise<RecordRollbackEventResult> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const violations: string[] = [];
 
   if (!VALID_ROLLBACK_CODES.includes(input.rollbackCode)) {
@@ -69,6 +71,7 @@ export async function listRollbackEventsForCandidate(
   workspaceId: string,
   candidateId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningRollbackEvent.findMany({
     where: { workspaceId, candidateId },
     orderBy: { createdAt: "desc" },
@@ -79,6 +82,7 @@ export async function listRollbackEventsForWorkspace(
   prisma: PrismaClient,
   workspaceId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningRollbackEvent.findMany({
     where: { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -90,6 +94,7 @@ export async function hasBeenRolledBack(
   workspaceId: string,
   candidateId: string
 ): Promise<boolean> {
+  assertWorkspaceScopedQuery({ workspaceId });
   const event = await (prisma as any).controlledLearningRollbackEvent.findFirst({
     where: { workspaceId, candidateId },
   });

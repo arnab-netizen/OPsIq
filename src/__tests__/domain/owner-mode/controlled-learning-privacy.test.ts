@@ -144,18 +144,17 @@ describe("applyPrivacyControl", () => {
     expect(mockCandidateFindFirst).not.toHaveBeenCalled();
   });
 
-  it("rejects missing workspaceId", async () => {
-    const result = await applyPrivacyControl(mockPrisma, {
-      workspaceId: "",
-      candidateId: CANDIDATE_ID,
-      controlType: "ANONYMIZE",
-      appliedBy: APPLIED_BY,
-      appliedAt: APPLIED_AT,
-      reason: "test",
-    });
-
-    expect(result.applied).toBe(false);
-    expect(result.violations).toContain("workspaceId is required");
+  it("rejects empty workspaceId with security throw", async () => {
+    await expect(
+      applyPrivacyControl(mockPrisma, {
+        workspaceId: "",
+        candidateId: CANDIDATE_ID,
+        controlType: "ANONYMIZE",
+        appliedBy: APPLIED_BY,
+        appliedAt: APPLIED_AT,
+        reason: "test",
+      })
+    ).rejects.toThrow(/SEC-007\/008/);
   });
 
   it("rejects missing reason", async () => {
@@ -346,19 +345,18 @@ describe("recordConsent", () => {
     expect(mockCandidateFindFirst).not.toHaveBeenCalled();
   });
 
-  it("rejects missing workspaceId", async () => {
-    const result = await recordConsent(mockPrisma, {
-      workspaceId: "",
-      candidateId: CANDIDATE_ID,
-      consentGiven: true,
-      consentBy: APPLIED_BY,
-      consentAt: APPLIED_AT,
-      consentScope: "WORKSPACE_ONLY",
-      consentNotes: "",
-    });
-
-    expect(result.recorded).toBe(false);
-    expect(result.violations).toContain("workspaceId is required");
+  it("rejects empty workspaceId with security throw", async () => {
+    await expect(
+      recordConsent(mockPrisma, {
+        workspaceId: "",
+        candidateId: CANDIDATE_ID,
+        consentGiven: true,
+        consentBy: APPLIED_BY,
+        consentAt: APPLIED_AT,
+        consentScope: "WORKSPACE_ONLY",
+        consentNotes: "",
+      })
+    ).rejects.toThrow(/SEC-007\/008/);
   });
 
   it("rejects missing consentBy", async () => {
@@ -577,17 +575,16 @@ describe("setRetentionPolicy", () => {
     expect(result.violations).toContain("retentionDays must not exceed 3650 (10 years)");
   });
 
-  it("rejects missing workspaceId", async () => {
-    const result = await setRetentionPolicy(mockPrisma, {
-      workspaceId: "",
-      retentionDays: 365,
-      appliedBy: APPLIED_BY,
-      appliedAt: APPLIED_AT,
-      policyNotes: "",
-    });
-
-    expect(result.set).toBe(false);
-    expect(result.violations).toContain("workspaceId is required");
+  it("rejects empty workspaceId with security throw", async () => {
+    await expect(
+      setRetentionPolicy(mockPrisma, {
+        workspaceId: "",
+        retentionDays: 365,
+        appliedBy: APPLIED_BY,
+        appliedAt: APPLIED_AT,
+        policyNotes: "",
+      })
+    ).rejects.toThrow(/SEC-007\/008/);
   });
 
   it("rejects missing appliedBy", async () => {
@@ -656,5 +653,52 @@ describe("getRetentionPolicy", () => {
     expect(mockRetentionPolicyFindFirst).toHaveBeenCalledWith({
       where: { workspaceId: "ws-scoped-check" },
     });
+  });
+});
+
+// ── Cross-tenant isolation: applyPrivacyControl ─────────────────────────────
+
+describe("applyPrivacyControl — cross-tenant isolation", () => {
+  it("denies control when candidateId belongs to a different workspace", async () => {
+    mockCandidateFindFirst.mockResolvedValue(null); // candidate not found in OTHER workspace
+    const result = await applyPrivacyControl(mockPrisma, {
+      workspaceId: "ws-other-tenant",
+      candidateId: CANDIDATE_ID,
+      controlType: "ANONYMIZE",
+      appliedBy: APPLIED_BY,
+      appliedAt: APPLIED_AT,
+      reason: "cross-tenant attempt",
+    });
+    expect(result.applied).toBe(false);
+    expect(result.violations).toContain("Candidate not found in workspace");
+  });
+
+  it("scopes candidate lookup to requesting workspaceId", async () => {
+    mockCandidateFindFirst.mockResolvedValue(null);
+    await applyPrivacyControl(mockPrisma, {
+      workspaceId: "ws-other-tenant",
+      candidateId: CANDIDATE_ID,
+      controlType: "ANONYMIZE",
+      appliedBy: APPLIED_BY,
+      appliedAt: APPLIED_AT,
+      reason: "cross-tenant attempt",
+    });
+    expect(mockCandidateFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: CANDIDATE_ID, workspaceId: "ws-other-tenant" } })
+    );
+  });
+
+  it("throws on whitespace workspaceId before reaching DB", async () => {
+    await expect(
+      applyPrivacyControl(mockPrisma, {
+        workspaceId: "   ",
+        candidateId: CANDIDATE_ID,
+        controlType: "ANONYMIZE",
+        appliedBy: APPLIED_BY,
+        appliedAt: APPLIED_AT,
+        reason: "test",
+      })
+    ).rejects.toThrow(/SEC-007\/008/);
+    expect(mockCandidateFindFirst).not.toHaveBeenCalled();
   });
 });

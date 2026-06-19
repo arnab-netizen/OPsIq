@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 const VALID_HARM_TYPES = ["FINANCIAL_LOSS", "DECISION_ERROR", "DATA_CORRUPTION", "COMPLIANCE_VIOLATION", "SAFETY_RISK"] as const;
 const VALID_SEVERITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
@@ -7,6 +8,7 @@ export async function recordHarmEvent(
   prisma: PrismaClient,
   input: {
     workspaceId: string;
+
     candidateId: string;
     harmType: string;
     severity: string;
@@ -15,6 +17,7 @@ export async function recordHarmEvent(
     harmDescription: string;
   }
 ): Promise<{ recorded: boolean; violations: string[]; event?: object }> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const violations: string[] = [];
   if (!VALID_HARM_TYPES.includes(input.harmType as any)) {
     violations.push(`Invalid harmType: ${input.harmType}`);
@@ -52,6 +55,7 @@ export async function markHarmMitigated(
   harmEventId: string,
   mitigatedAt: Date
 ): Promise<{ mitigated: boolean; violations: string[] }> {
+  assertWorkspaceScopedQuery({ workspaceId });
   const existing = await (prisma as any).controlledLearningHarmEvent.findFirst({
     where: { id: harmEventId, workspaceId },
   });
@@ -72,6 +76,7 @@ export async function listHarmEventsForCandidate(
   workspaceId: string,
   candidateId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningHarmEvent.findMany({
     where: { workspaceId, candidateId },
     orderBy: { detectedAt: "desc" },
@@ -82,6 +87,7 @@ export async function listHarmEventsForWorkspace(
   prisma: PrismaClient,
   workspaceId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningHarmEvent.findMany({
     where: { workspaceId },
     orderBy: { detectedAt: "desc" },
@@ -93,6 +99,7 @@ export async function hasCriticalHarm(
   workspaceId: string,
   candidateId: string
 ): Promise<boolean> {
+  assertWorkspaceScopedQuery({ workspaceId });
   const event = await (prisma as any).controlledLearningHarmEvent.findFirst({
     where: { workspaceId, candidateId, severity: "CRITICAL" },
   });

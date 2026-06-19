@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 const MAX_RETENTION_DAYS = 3650; // 10 years
 
@@ -20,6 +21,7 @@ export async function setRetentionPolicy(
   prisma: PrismaClient,
   input: SetRetentionPolicyInput
 ): Promise<RetentionPolicyResult> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const violations: string[] = [];
 
   if (!input.workspaceId) violations.push("workspaceId is required");
@@ -62,6 +64,7 @@ export async function getRetentionPolicy(
   prisma: PrismaClient,
   workspaceId: string
 ): Promise<object | null> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningRetentionPolicy.findFirst({
     where: { workspaceId },
   });

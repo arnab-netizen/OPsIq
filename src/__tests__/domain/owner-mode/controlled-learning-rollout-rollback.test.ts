@@ -110,10 +110,10 @@ describe("setRolloutFlag — validation", () => {
     expect(r.set).toBe(true);
   });
 
-  it("rejects missing workspaceId", async () => {
-    const r = await setRolloutFlag(mockPrisma, { workspaceId: "", candidateId: CAND, rolloutStage: "FULL", rolloutPct: 100, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
-    expect(r.set).toBe(false);
-    expect(r.violations.some(v => v.includes("workspaceId"))).toBe(true);
+  it("rejects empty workspaceId with security throw", async () => {
+    await expect(
+      setRolloutFlag(mockPrisma, { workspaceId: "", candidateId: CAND, rolloutStage: "FULL", rolloutPct: 100, enabledBy: "u1", enabledAt: NOW, flagNotes: "" })
+    ).rejects.toThrow(/SEC-007\/008/);
   });
 
   it("rejects candidate not found in workspace", async () => {
@@ -321,5 +321,56 @@ describe("hasBeenRolledBack", () => {
     (mockPrisma as any).controlledLearningRollbackEvent.findFirst.mockResolvedValue(null);
     const result = await hasBeenRolledBack(mockPrisma, OTHER_WS, CAND);
     expect(result).toBe(false);
+  });
+});
+
+// ── Cross-tenant isolation: setRolloutFlag ──────────────────────────────────
+
+describe("setRolloutFlag — cross-tenant isolation", () => {
+  it("denies flag when candidateId belongs to a different workspace", async () => {
+    // Candidate exists in WS but query is for OTHER_WS — findFirst returns null (correct scoping)
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(null);
+    const r = await setRolloutFlag(mockPrisma, {
+      workspaceId: OTHER_WS,
+      candidateId: CAND,
+      rolloutStage: "FULL",
+      rolloutPct: 100,
+      enabledBy: "u1",
+      enabledAt: NOW,
+      flagNotes: "",
+    });
+    expect(r.set).toBe(false);
+    expect(r.violations).toContain("Candidate not found in workspace");
+  });
+
+  it("scopes candidate lookup to requesting workspaceId", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(null);
+    await setRolloutFlag(mockPrisma, {
+      workspaceId: OTHER_WS,
+      candidateId: CAND,
+      rolloutStage: "CANARY",
+      rolloutPct: 5,
+      enabledBy: "u1",
+      enabledAt: NOW,
+      flagNotes: "",
+    });
+    expect((mockPrisma as any).controlledLearningCandidate.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: CAND, workspaceId: OTHER_WS } })
+    );
+  });
+
+  it("throws on empty workspaceId before reaching DB", async () => {
+    await expect(
+      setRolloutFlag(mockPrisma, {
+        workspaceId: "   ",
+        candidateId: CAND,
+        rolloutStage: "FULL",
+        rolloutPct: 100,
+        enabledBy: "u1",
+        enabledAt: NOW,
+        flagNotes: "",
+      })
+    ).rejects.toThrow(/SEC-007\/008/);
+    expect((mockPrisma as any).controlledLearningCandidate.findFirst).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 const VALID_CONSENT_SCOPES = ["WORKSPACE_ONLY", "ANONYMIZED_AGGREGATE", "NONE"] as const;
 type ConsentScope = (typeof VALID_CONSENT_SCOPES)[number];
@@ -23,6 +24,7 @@ export async function recordConsent(
   prisma: PrismaClient,
   input: RecordConsentInput
 ): Promise<ConsentRecordResult> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const violations: string[] = [];
 
   if (!input.workspaceId) violations.push("workspaceId is required");
@@ -71,6 +73,7 @@ export async function getLatestConsent(
   workspaceId: string,
   candidateId: string
 ): Promise<object | null> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningConsentRecord.findFirst({
     where: { workspaceId, candidateId },
     orderBy: { consentAt: "desc" },
@@ -82,6 +85,7 @@ export async function listConsentRecords(
   workspaceId: string,
   candidateId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningConsentRecord.findMany({
     where: { workspaceId, candidateId },
     orderBy: { consentAt: "desc" },

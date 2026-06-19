@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 const VALID_CONTROL_TYPES = ["ANONYMIZE", "REDACT", "EXCLUDE", "QUARANTINE"] as const;
 type ControlType = (typeof VALID_CONTROL_TYPES)[number];
@@ -22,6 +23,7 @@ export async function applyPrivacyControl(
   prisma: PrismaClient,
   input: ApplyPrivacyControlInput
 ): Promise<PrivacyControlResult> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const violations: string[] = [];
 
   if (!input.workspaceId) violations.push("workspaceId is required");
@@ -69,6 +71,7 @@ export async function listPrivacyControlsForCandidate(
   workspaceId: string,
   candidateId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningPrivacyControl.findMany({
     where: { workspaceId, candidateId },
     orderBy: { createdAt: "desc" },
@@ -79,6 +82,7 @@ export async function listPrivacyControlsForWorkspace(
   prisma: PrismaClient,
   workspaceId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningPrivacyControl.findMany({
     where: { workspaceId },
     orderBy: { createdAt: "desc" },

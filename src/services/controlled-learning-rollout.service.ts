@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 const VALID_ROLLOUT_STAGES = ["SHADOW", "CANARY", "PARTIAL", "FULL", "PAUSED"] as const;
 type RolloutStage = typeof VALID_ROLLOUT_STAGES[number];
@@ -23,6 +24,7 @@ export async function setRolloutFlag(
   prisma: PrismaClient,
   input: SetRolloutFlagInput
 ): Promise<SetRolloutFlagResult> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const violations: string[] = [];
 
   if (!VALID_ROLLOUT_STAGES.includes(input.rolloutStage)) {
@@ -77,6 +79,7 @@ export async function getRolloutFlag(
   workspaceId: string,
   candidateId: string
 ): Promise<object | null> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningRolloutFlag.findFirst({
     where: { workspaceId, candidateId },
   });
@@ -86,6 +89,7 @@ export async function listRolloutFlagsForWorkspace(
   prisma: PrismaClient,
   workspaceId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningRolloutFlag.findMany({
     where: { workspaceId },
     orderBy: { createdAt: "desc" },

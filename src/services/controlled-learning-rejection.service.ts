@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { assertWorkspaceScopedQuery } from "@/domain/owner-mode/security-rules";
 
 export interface RejectCandidateFinalInput {
   workspaceId: string;
@@ -19,6 +20,7 @@ export async function rejectCandidateFinal(
   prisma: PrismaClient,
   input: RejectCandidateFinalInput
 ): Promise<RejectCandidateFinalResult> {
+  assertWorkspaceScopedQuery({ workspaceId: input.workspaceId });
   const { workspaceId, candidateId, rejectedBy, rejectedAt, rejectionReason, rejectionCode } =
     input;
 
@@ -68,6 +70,7 @@ export async function getRejection(
   workspaceId: string,
   candidateId: string
 ): Promise<object | null> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningRejection.findFirst({
     where: { workspaceId, candidateId },
   });
@@ -77,6 +80,7 @@ export async function listRejectionsForWorkspace(
   prisma: PrismaClient,
   workspaceId: string
 ): Promise<object[]> {
+  assertWorkspaceScopedQuery({ workspaceId });
   return (prisma as any).controlledLearningRejection.findMany({
     where: { workspaceId },
   });
