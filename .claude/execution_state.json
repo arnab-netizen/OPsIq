@@ -1,6 +1,6 @@
 {
   "execution_date": "2026-06-19",
-  "current_phase": "PHASE_29_CONTROLLED_LEARNING_FOUNDATION",
+  "current_phase": "PHASE_33_CONTROLLED_LEARNING_REGRESSION",
   "current_branch": "claude/cool-ptolemy-dxrpm7",
   "phase_29": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -13,7 +13,7 @@
         "src/__tests__/domain/owner-mode/controlled-learning.test.ts"
       ],
       "test_coverage": "59 tests covering all 12 statuses, 15 rules, append-only invariant, promotion gate, audit builder",
-      "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 59/59 (✓)"
+      "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 59/59 (\u2713)"
     },
     "slice_2": {
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -24,23 +24,23 @@
         "src/services/controlled-learning-candidate.service.ts",
         "src/__tests__/domain/owner-mode/controlled-learning-candidate.db.test.ts"
       ],
-      "workspace_enforcement": "✓ assertWorkspaceScopedQuery enforced at all entry points",
-      "cross_tenant_blocked": "✓ classificationInput.workspaceId mismatch throws immediately",
-      "test_coverage": "68 tests — create/promote/reject/list/audit/immutability/forbidden-origins/edge-cases",
-      "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 68/68 (✓)",
+      "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery enforced at all entry points",
+      "cross_tenant_blocked": "\u2713 classificationInput.workspaceId mismatch throws immediately",
+      "test_coverage": "68 tests \u2014 create/promote/reject/list/audit/immutability/forbidden-origins/edge-cases",
+      "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 68/68 (\u2713)",
       "engine_mutation": "NONE",
       "safety_gate_changed": "NO",
       "learning_automatic": "NO",
       "cross_tenant_learning": "NO",
       "committed": "pending"
     },
-    "workspace_enforcement": "✓ assertWorkspaceScopedQuery enforced at all three entry points",
-    "auth_enforced": "✓ Deferred to API route slice (domain module; no route yet)",
-    "DTO_boundary": "✓ No DB-persisted records; output is plain classification result",
+    "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery enforced at all three entry points",
+    "auth_enforced": "\u2713 Deferred to API route slice (domain module; no route yet)",
+    "DTO_boundary": "\u2713 No DB-persisted records; output is plain classification result",
     "test_coverage": "59 slice-1 + 68 slice-2 = 127 total",
-    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 59/59 + 68/68 (✓)",
-    "compilation": "✓ TypeScript compiles without errors",
-    "db_status": "SCHEMA_ADDED — ControlledLearningCandidate + AuditEntry models appended; migration SQL created",
+    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 59/59 + 68/68 (\u2713)",
+    "compilation": "\u2713 TypeScript compiles without errors",
+    "db_status": "SCHEMA_ADDED \u2014 ControlledLearningCandidate + AuditEntry models appended; migration SQL created",
     "engine_mutation": "NONE",
     "committed": "pending"
   },
@@ -277,7 +277,7 @@
     "committed": "pending",
     "sections": "17 required sections: required inputs, input quality, 30-day cadence, minimum metrics, owner decision, action tracking, evidence submission, evidence verification, outcome reporting, harm reporting, failure reassessment, learning eligibility, dashboard review, weekly review, monthly review, pilot success criteria, pilot stop conditions",
     "business_types": "laundry/dry-cleaning, commercial housekeeping, boutique/clothing, food/beverage, local service business",
-    "db_verification": "N/A — markdown document only; no DB-backed code; non-DB gates sufficient"
+    "db_verification": "N/A \u2014 markdown document only; no DB-backed code; non-DB gates sufficient"
   },
   "phase_26": {
     "status": "COMPLETE_VERIFIED",
@@ -307,7 +307,7 @@
     "human_operator_required": "\u2713 tripCircuitBreaker + resolveCircuitBreaker require non-empty trippedByUserId/resolvedByUserId \u2014 AI cannot autonomously trip or resolve breakers",
     "incident_classes": "all 10 classes: harmful_recommendation, privacy_leak, cross_tenant_exposure, learning_gate_bypass, wrong_high_confidence_advice, dashboard_misreporting, evidence_verification_bypass, db_migration_data_loss, prompt_injection_success, security_gate_failure",
     "committed": "pending",
-    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_28": {
     "status": "COMPLETE_VERIFIED",
@@ -322,10 +322,10 @@
     "version_rules": "VERSION-RULE-1: high/critical requires regression; VERSION-RULE-2: rollback plan always required; VERSION-RULE-3: approvedBy always required (AI cannot self-approve); VERSION-RULE-4: featureFlag always required",
     "structures": "owner_model_change_log, owner_prompt_template_versions, owner_ruleset_versions, owner_evaluation_versions",
     "committed": "pending",
-    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
-  "next_automatic_target": "Phases 0-28 are COMPLETE_VERIFIED. Phase 29 is COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE. No IMPLEMENTED_DB_UNVERIFIED phases remain. Next: Phase 30+ per execution.md roadmap (requires explicit authorization).",
-  "lane_a_neon_status": "COMPLETE — DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
+  "next_automatic_target": "STAGE 34: Next phase per execution.md roadmap",
+  "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "PASS",
     "typecheck": "PASS",
@@ -1537,7 +1537,7 @@
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
     "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "Merge Stage A owner-mode baseline into main",
+  "last_commit": "STAGE 33 Slice 1: Controlled Learning Regression Results \u2014 schema, service, 32 tests",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -2114,8 +2114,8 @@
     "db_tests": "skipped (migrate status exit code 1)",
     "conclusion": "LANE_A_DB_FAILED",
     "classification": "NEON_DB_PENDING_MIGRATIONS",
-    "ghost_root_cause": "B+A — Neon used by external CLI session on 2026-05-13 (Unix epoch 1778679447); folder never committed to git",
-    "ghost_sql_conflict_risk": "none — local migration uses IF NOT EXISTS guards; migrate deploy ignores ghost entries",
+    "ghost_root_cause": "B+A \u2014 Neon used by external CLI session on 2026-05-13 (Unix epoch 1778679447); folder never committed to git",
+    "ghost_sql_conflict_risk": "none \u2014 local migration uses IF NOT EXISTS guards; migrate deploy ignores ghost entries",
     "recommended_remediation": "CREATE_FRESH_NEON_TEST_DB (preferred) or migrate deploy against current Neon DB (fallback)",
     "investigation_doc": "NEON_MIGRATION_DRIFT_INVESTIGATION.md",
     "fix_required": "Owner action: choose Path A (fresh Neon branch) or Path B (deploy to current Neon DB) per investigation doc, then re-trigger LANE_A"
@@ -2128,5 +2128,23 @@
     "domain_tests": "53 files / 2344 tests passed",
     "owner_mode_tests": "26 files / 1460 tests passed",
     "owner_mode_lint_errors": "2 pre-existing errors on main (not introduced on this branch)"
+  },
+  "phase_33": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "slice_1": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "files": [
+        "prisma/schema.prisma",
+        "prisma/migrations/20260619_phase33_controlled_learning_regression/migration.sql",
+        "src/services/controlled-learning-regression.service.ts",
+        "src/__tests__/domain/owner-mode/controlled-learning-regression.test.ts"
+      ],
+      "workspace_enforcement": "\u2713 All methods enforce workspaceId parameter",
+      "test_coverage": "32 tests covering PASS/FAIL/INCONCLUSIVE verdicts, invalid verdict, score validation (0-1), NaN, candidate not found, workspace isolation, hasRegression true/false, list scoping",
+      "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 32/32 (\u2713)",
+      "committed": "68bc0096",
+      "pushed": true
+    }
   }
 }
