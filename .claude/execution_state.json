@@ -5,19 +5,43 @@
   "phase_29": {
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "DOMAIN_CONTRACT_ONLY",
-    "files": [
-      "src/domain/owner-mode/controlled-learning.ts",
-      "src/__tests__/domain/owner-mode/controlled-learning.test.ts",
-      "PHASE_29_CONTROLLED_LEARNING_FOUNDATION_REPORT.md"
-    ],
+    "slice_1": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "DOMAIN_CONTRACT_ONLY",
+      "files": [
+        "src/domain/owner-mode/controlled-learning.ts",
+        "src/__tests__/domain/owner-mode/controlled-learning.test.ts"
+      ],
+      "test_coverage": "59 tests covering all 12 statuses, 15 rules, append-only invariant, promotion gate, audit builder",
+      "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 59/59 (✓)"
+    },
+    "slice_2": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "DB_RUNTIME_PERSISTENCE",
+      "files": [
+        "prisma/schema.prisma",
+        "prisma/migrations/20260619_phase29_controlled_learning_candidates/migration.sql",
+        "src/services/controlled-learning-candidate.service.ts",
+        "src/__tests__/domain/owner-mode/controlled-learning-candidate.db.test.ts"
+      ],
+      "workspace_enforcement": "✓ assertWorkspaceScopedQuery enforced at all entry points",
+      "cross_tenant_blocked": "✓ classificationInput.workspaceId mismatch throws immediately",
+      "test_coverage": "68 tests — create/promote/reject/list/audit/immutability/forbidden-origins/edge-cases",
+      "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 68/68 (✓)",
+      "engine_mutation": "NONE",
+      "safety_gate_changed": "NO",
+      "learning_automatic": "NO",
+      "cross_tenant_learning": "NO",
+      "committed": "pending"
+    },
     "workspace_enforcement": "✓ assertWorkspaceScopedQuery enforced at all three entry points",
     "auth_enforced": "✓ Deferred to API route slice (domain module; no route yet)",
     "DTO_boundary": "✓ No DB-persisted records; output is plain classification result",
-    "test_coverage": "59 tests covering all 12 statuses, 15 rules, append-only invariant, promotion gate, audit builder",
-    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 59/59 (✓)",
+    "test_coverage": "59 slice-1 + 68 slice-2 = 127 total",
+    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 59/59 + 68/68 (✓)",
     "compilation": "✓ TypeScript compiles without errors",
-    "db_status": "DB_BLOCKED — NEON_DB_PENDING_MIGRATIONS (22 pending + 1 ghost); schema deferred to LANE_A verification",
-    "engine_mutation": "NONE — classifyLearningCandidate() is pure classification; no engine calls",
+    "db_status": "SCHEMA_ADDED — ControlledLearningCandidate + AuditEntry models appended; migration SQL created",
+    "engine_mutation": "NONE",
     "committed": "pending"
   },
   "owner_mode_reality_loop": {
