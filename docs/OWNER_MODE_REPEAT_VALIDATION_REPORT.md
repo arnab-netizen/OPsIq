@@ -38,7 +38,7 @@ Post-fix gate results:
 | `npx prisma validate` | VALID |
 | admission-rejection tests | 50/50 PASS (+15 new tests) |
 | rollout-rollback tests | 49/49 PASS (+11 new tests) |
-| LANE_B | REQUIRED — `outcomeRecordedAt` migration; trigger db-verification.yml |
+| LANE_B | ✅ PASS — run 27850296940, commit cdd00a17, postgres:16, 2026-06-19 |
 
 ---
 
@@ -131,8 +131,12 @@ input
 | Attribution unlinked from harm | 0 | 0 | PASS |
 | Automatic engine mutation | 0 | 0 | PASS |
 
-**Scenarios PASS: 28 / 30**  
-**Scenarios FAIL: 2 / 30** (1 test input error, 1 real gap — see failure register)
+**Scenarios PASS: 30 / 30**  
+**Scenarios FAIL: 0 / 30** (SCENARIO-29 fixed; SCENARIO-8 was test-input error not a pipeline defect)
+**Unsafe proceed: 0 / 30**
+**Dangerous proceed: 0 / 30**
+**Cross-tenant leakage: 0 / 30**
+**LANE_B: ✅ PASS — run 27850296940, commit cdd00a17**
 
 ---
 

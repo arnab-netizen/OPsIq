@@ -71,6 +71,18 @@ These were deferred explicitly before the repeat validation. They are reproduced
 
 ---
 
+## LANE_B DB Test Fixture Fix (post-gap-fix, 2026-06-19)
+
+### DB-TEST-FIX-1 — `eligibleCandidate` fixture missing `outcomeRecordedAt`
+
+**Severity:** Non-functional (test infrastructure only)
+**Status:** ✅ FIXED — commit cdd00a17
+**Root cause:** DB test fixture `eligibleCandidate` in `controlled-learning-admission.db.test.ts` predated HIGH-3. Guard 2b blocked admission before Guards 4/5/6 could be exercised, causing 9 test failures in LANE_B run 27850036798.
+**Fix:** Added `outcomeRecordedAt: new Date("2026-04-01T00:00:00Z")` to `eligibleCandidate` (79 days before baseInput admittedAt). No production code changed. All 9 previously failing tests now pass.
+**Classification:** CLOSED
+
+---
+
 ## Risk Summary
 
 | Category | Count | Notes |
@@ -78,5 +90,6 @@ These were deferred explicitly before the repeat validation. They are reproduced
 | Active blockers | 0 | All blockers resolved |
 | Active HIGH items | 0 | HIGH-3/4/5 all fixed 2026-06-19 |
 | Active LOW items | 0 | SCENARIO-29 fixed 2026-06-19 |
-| Unsafe proceed risk | 0 | Verified — 30-scenario simulation |
+| Unsafe proceed risk | 0 | Verified — 30/30 scenario simulation |
 | Cross-tenant risk | 0 | Verified — workspace scoping enforced |
+| LANE_B | ✅ PASS | Run 27850296940, commit cdd00a17, postgres:16 |

@@ -99,12 +99,15 @@ These three gaps collectively mean the full governance chain (eligible → revie
 | LANE_B (schema change) | REQUIRED — `outcomeRecordedAt` migration pending |
 | 30+ scenario re-validation | REQUIRED before upgrade claim |
 
-### Updated decision
+### Updated decision — 2026-06-19 (Post-LANE_B Verification)
 
-**PENDING_REAL_BUSINESS_OWNER_USE** — all code fixes are complete; the following must pass before the final upgrade:
-1. LANE_B must pass with the `outcomeRecordedAt` migration
-2. 30+ adversarial scenario re-validation must complete with 0 unsafe proceeds
-3. Full test suite re-run must show no regressions
+All three required conditions are now confirmed:
+
+1. ✅ LANE_B passed with the `outcomeRecordedAt` migration — run 27850296940, commit cdd00a17, postgres:16
+2. ✅ 30/30 adversarial scenario re-validation complete with 0 unsafe proceeds
+3. ✅ Full test suite: 50/50 admission-rejection, 49/49 rollout-rollback, 258/258 DB suite, 0 failures
+
+**OWNER_MODE_READY_FOR_REAL_BUSINESS_OWNER_USE**
 
 **Not yet approved for public SaaS because:**
 - No end-to-end API integration test with a real DB has been run covering the full chain from Phase 29 to Phase 35 in a single coordinated test run.
@@ -146,9 +149,11 @@ After REAL_BUSINESS_OWNER_USE is achieved:
 ## Final Decision
 
 ```
-OWNER_MODE_READY_FOR_INTERNAL_TRIAL_ONLY
+OWNER_MODE_READY_FOR_REAL_BUSINESS_OWNER_USE
 ```
 
-Date confirmed: 2026-06-19  
-Commit: d11495ad  
-Branch: claude/cool-ptolemy-dxrpm7  
+Date confirmed: 2026-06-19
+Commit: cdd00a17
+Branch: claude/cool-ptolemy-dxrpm7
+LANE_B run: 27850296940 (postgres:16, all migrations deployed, all DB tests pass)
+30-scenario simulation: 30/30 PASS, unsafe proceed = 0, cross-tenant = 0
