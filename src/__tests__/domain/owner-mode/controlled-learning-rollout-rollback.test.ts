@@ -16,6 +16,9 @@ const mockPrisma = {
   controlledLearningRolloutFlag: { upsert: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
   controlledLearningRollbackEvent: { create: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
   controlledLearningCandidate: { findFirst: vi.fn() },
+  controlledLearningRegressionResult: { findFirst: vi.fn() },
+  controlledLearningHarmEvent: { findFirst: vi.fn() },
+  controlledLearningCandidateAuditEntry: { create: vi.fn().mockResolvedValue({}) },
 } as unknown as PrismaClient;
 
 const WS = "ws-001";
@@ -27,6 +30,10 @@ const mockCandidate = { id: CAND, workspaceId: WS };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: passing regression exists and no critical harm — allows rollout to proceed in happy-path tests.
+  // Individual blocking tests override these.
+  (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue({ id: "reg-1" });
+  (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
 });
 
 // ── Rollout Flag: valid stages ──────────────────────────────────────────────
@@ -372,5 +379,149 @@ describe("setRolloutFlag — cross-tenant isolation", () => {
       })
     ).rejects.toThrow(/SEC-007\/008/);
     expect((mockPrisma as any).controlledLearningCandidate.findFirst).not.toHaveBeenCalled();
+  });
+});
+
+// ── HIGH-5: PASS regression prerequisite ────────────────────────────────────
+
+describe("setRolloutFlag — HIGH-5: regression prerequisite", () => {
+  it("blocks rollout when no regression result exists", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue(null);
+
+    const r = await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "CANARY", rolloutPct: 5, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect(r.set).toBe(false);
+    expect(r.violations[0]).toMatch(/passing regression/i);
+    expect((mockPrisma as any).controlledLearningRolloutFlag.upsert).not.toHaveBeenCalled();
+  });
+
+  it("blocks rollout when only a FAIL regression result exists", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    // findFirst for PASS verdict returns null; simulate by returning null for the PASS query
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue(null);
+
+    const r = await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "PARTIAL", rolloutPct: 25, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect(r.set).toBe(false);
+    expect(r.violations[0]).toMatch(/passing regression/i);
+  });
+
+  it("writes ROLLOUT_BLOCKED_NO_PASSING_REGRESSION audit entry when blocked", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue(null);
+
+    await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "CANARY", rolloutPct: 5, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: "ROLLOUT_BLOCKED_NO_PASSING_REGRESSION" }),
+      })
+    );
+  });
+
+  it("allows rollout when a PASS regression result exists", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue({ id: "reg-pass" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningRolloutFlag.upsert.mockResolvedValue({ id: "flag-1", rolloutStage: "CANARY" });
+
+    const r = await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "CANARY", rolloutPct: 5, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect(r.set).toBe(true);
+    expect((mockPrisma as any).controlledLearningRolloutFlag.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("regression query is scoped to workspaceId and candidateId", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue(null);
+
+    await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "CANARY", rolloutPct: 5, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect((mockPrisma as any).controlledLearningRegressionResult.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ candidateId: CAND, workspaceId: WS, testVerdict: "PASS" }),
+      })
+    );
+  });
+});
+
+// ── HIGH-4: unmitigated CRITICAL harm blocks rollout ─────────────────────────
+
+describe("setRolloutFlag — HIGH-4: harm circuit breaker", () => {
+  it("blocks rollout when an unmitigated CRITICAL harm event exists", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue({ id: "reg-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue({ id: "harm-1" });
+
+    const r = await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "CANARY", rolloutPct: 5, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect(r.set).toBe(false);
+    expect(r.violations[0]).toMatch(/CRITICAL harm/i);
+    expect((mockPrisma as any).controlledLearningRolloutFlag.upsert).not.toHaveBeenCalled();
+  });
+
+  it("writes ROLLOUT_BLOCKED_CRITICAL_HARM audit entry when blocked", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue({ id: "reg-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue({ id: "harm-1" });
+
+    await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "CANARY", rolloutPct: 5, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: "ROLLOUT_BLOCKED_CRITICAL_HARM" }),
+      })
+    );
+  });
+
+  it("allows rollout when CRITICAL harm is mitigated (findFirst returns null)", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue({ id: "reg-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningRolloutFlag.upsert.mockResolvedValue({ id: "flag-1", rolloutStage: "CANARY" });
+
+    const r = await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "CANARY", rolloutPct: 5, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect(r.set).toBe(true);
+  });
+
+  it("allows rollout when only HIGH/MEDIUM harm events exist (not CRITICAL)", async () => {
+    // The harm query filters severity=CRITICAL — HIGH/MEDIUM events return null from that query
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue({ id: "reg-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningRolloutFlag.upsert.mockResolvedValue({ id: "flag-1", rolloutStage: "PARTIAL" });
+
+    const r = await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "PARTIAL", rolloutPct: 30, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect(r.set).toBe(true);
+  });
+
+  it("harm query is scoped to workspaceId, candidateId, severity=CRITICAL, mitigated=false", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue({ id: "reg-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningRolloutFlag.upsert.mockResolvedValue({ id: "flag-1" });
+
+    await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "SHADOW", rolloutPct: 1, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect((mockPrisma as any).controlledLearningHarmEvent.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ candidateId: CAND, workspaceId: WS, severity: "CRITICAL", mitigated: false }),
+      })
+    );
+  });
+
+  it("cross-workspace harm does not block unrelated workspace rollout", async () => {
+    // Other workspace has CRITICAL harm; this workspace's query returns null
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(mockCandidate);
+    (mockPrisma as any).controlledLearningRegressionResult.findFirst.mockResolvedValue({ id: "reg-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null); // scoped to WS, not OTHER_WS
+    (mockPrisma as any).controlledLearningRolloutFlag.upsert.mockResolvedValue({ id: "flag-1" });
+
+    const r = await setRolloutFlag(mockPrisma, { workspaceId: WS, candidateId: CAND, rolloutStage: "CANARY", rolloutPct: 5, enabledBy: "u1", enabledAt: NOW, flagNotes: "" });
+
+    expect(r.set).toBe(true);
   });
 });

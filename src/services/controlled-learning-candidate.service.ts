@@ -30,6 +30,10 @@ export interface CreateLearningCandidateInput {
   evidenceSummary: string;
   metadata?: Record<string, unknown>;
   classificationInput: ControlledLearningCandidateInput;
+  // HIGH-3: Caller-supplied timestamp of when the business outcome was recorded.
+  // Stored server-side so admission service can enforce the 30-day outcome window
+  // without trusting the caller-controlled outcomeWindowElapsed boolean.
+  outcomeRecordedAt?: Date;
 }
 
 export interface PromoteLearningCandidateInput {
@@ -83,6 +87,7 @@ export async function createLearningCandidate(
       sourceOwnerDecisionId: rec.ownerDecisionId,
       sourceActionId: rec.actionId,
       sourceOutcomeId: rec.outcomeId,
+      outcomeRecordedAt: input.outcomeRecordedAt ?? null,
       eligibilityStatus: classification.status,
       rejectionReasons: JSON.stringify(classification.rejectionReasons),
       evidenceSourceType: input.classificationInput.evidenceOrigin,

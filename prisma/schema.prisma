@@ -3971,6 +3971,7 @@ model ControlledLearningCandidate {
   sourceOwnerDecisionId       String
   sourceActionId              String
   sourceOutcomeId             String
+  outcomeRecordedAt           DateTime? // server-side outcome window anchor (HIGH-3); null = window unverifiable
   eligibilityStatus           String
   rejectionReasons            String   @db.Text
   evidenceSourceType          String

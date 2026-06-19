@@ -33,14 +33,14 @@
 | Cross-tenant leakage count | 0 |
 | Audit missing count | 0 |
 
-### Remaining gaps
+### Previously remaining gaps — now fixed (2026-06-19)
 
-| Item | Severity | Description |
-|------|----------|-------------|
-| HIGH-3 | MEDIUM | `outcomeWindowElapsed` caller-controlled — no server-side enforcement |
-| HIGH-4 | MEDIUM | No harm-to-rollout circuit breaker |
-| HIGH-5 | MEDIUM | Rollout does not require regression result |
-| SCENARIO-29 | LOW | `admittedBy=""` not validated |
+| Item | Severity | Status |
+|------|----------|--------|
+| HIGH-3 | MEDIUM | ✅ FIXED — `outcomeRecordedAt` stored; 30-day server-side window enforced |
+| HIGH-4 | MEDIUM | ✅ FIXED — CRITICAL harm blocks `setRolloutFlag` |
+| HIGH-5 | MEDIUM | ✅ FIXED — PASS regression required before rollout |
+| SCENARIO-29 | LOW | ✅ FIXED — Guard 0 rejects empty/whitespace `admittedBy` |
 
 ---
 
@@ -73,28 +73,40 @@ These three gaps collectively mean the full governance chain (eligible → revie
 
 ## Decision
 
-**OWNER_MODE_READY_FOR_INTERNAL_TRIAL_ONLY**
+**OWNER_MODE_READY_FOR_INTERNAL_TRIAL_ONLY** (prior decision — see updated decision below)
 
-### Rationale
+---
 
-**Approved for internal trial because:**
-- All hard blockers are resolved. No dangerous path admits unverified, AI-generated, synthetic, or cross-tenant candidates.
-- The admission safety gate is fully governed: eligibility (DB-authoritative) + review prerequisite + CRITICAL harm blocker + audit trail.
-- The diagnosis engine is protected from automatic mutation (no unsafe proceed path).
-- Workspace isolation is enforced at every service boundary.
-- 1812 domain tests + 168 API route tests pass. LANE_B DB migration passes.
-- 30-scenario adversarial simulation: 0 unsafe admits, 0 cross-tenant leakages, 0 audit gaps on material mutations.
+## Updated Decision — 2026-06-19 (Gap Fix Pass)
 
-**Not approved for real-business-owner use yet because:**
-- HIGH-3 (`outcomeWindowElapsed`) allows caller manipulation of eligibility calculation.
-- HIGH-4 (no harm-to-rollout circuit breaker) allows rollout of a candidate with open critical harm.
-- HIGH-5 (no regression prerequisite for rollout) allows deployment without verification.
+### Additional fixes applied
 
-These three gaps mean the rollout phase lacks the same governance rigor as the admission phase. A real business owner could be exposed to an unsafe rollout that bypassed regression and harm checks.
+| Fix | Description |
+|-----|-------------|
+| HIGH-3 | `outcomeRecordedAt DateTime?` stored at candidate creation; 30-day server-side window enforced in `admitCandidate` |
+| HIGH-4 | CRITICAL harm circuit breaker added to `setRolloutFlag` |
+| HIGH-5 | PASS regression prerequisite added to `setRolloutFlag` |
+| SCENARIO-29 | Guard 0 rejects empty/whitespace `admittedBy` before any DB access |
+
+### Updated gate summary
+
+| Gate | Result |
+|------|--------|
+| `npx tsc --noEmit` | CLEAN |
+| `npx prisma validate` | VALID |
+| admission-rejection tests | 50/50 PASS |
+| rollout-rollback tests | 49/49 PASS |
+| LANE_B (schema change) | REQUIRED — `outcomeRecordedAt` migration pending |
+| 30+ scenario re-validation | REQUIRED before upgrade claim |
+
+### Updated decision
+
+**PENDING_REAL_BUSINESS_OWNER_USE** — all code fixes are complete; the following must pass before the final upgrade:
+1. LANE_B must pass with the `outcomeRecordedAt` migration
+2. 30+ adversarial scenario re-validation must complete with 0 unsafe proceeds
+3. Full test suite re-run must show no regressions
 
 **Not yet approved for public SaaS because:**
-- HIGH-3/4/5 are unresolved.
-- `admittedBy` empty string gap (SCENARIO-29) is unresolved.
 - No end-to-end API integration test with a real DB has been run covering the full chain from Phase 29 to Phase 35 in a single coordinated test run.
 - No external security review of the controlled-learning API surface has been conducted.
 

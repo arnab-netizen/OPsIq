@@ -51,6 +51,58 @@ export async function setRolloutFlag(
     return { set: false, violations: ["Candidate not found in workspace"] };
   }
 
+  // Guard (HIGH-5): a PASS regression result must exist before rollout is allowed
+  const passedRegression = await (prisma as any).controlledLearningRegressionResult.findFirst({
+    where: { candidateId: input.candidateId, workspaceId: input.workspaceId, testVerdict: "PASS" },
+    select: { id: true },
+  });
+  if (!passedRegression) {
+    try {
+      await (prisma as any).controlledLearningCandidateAuditEntry.create({
+        data: {
+          workspaceId: input.workspaceId,
+          candidateId: input.candidateId,
+          action: "ROLLOUT_BLOCKED_NO_PASSING_REGRESSION",
+          actorId: input.enabledBy,
+          detail: "Rollout blocked: no PASS regression result found for candidate",
+          timestamp: input.enabledAt,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[audit] Failed to write rollout-blocked-no-regression audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+    }
+    return {
+      set: false,
+      violations: ["Rollout requires a passing regression result — none found for this candidate"],
+    };
+  }
+
+  // Guard (HIGH-4): unmitigated CRITICAL harm event blocks rollout
+  const criticalHarm = await (prisma as any).controlledLearningHarmEvent.findFirst({
+    where: { candidateId: input.candidateId, workspaceId: input.workspaceId, severity: "CRITICAL", mitigated: false },
+    select: { id: true },
+  });
+  if (criticalHarm) {
+    try {
+      await (prisma as any).controlledLearningCandidateAuditEntry.create({
+        data: {
+          workspaceId: input.workspaceId,
+          candidateId: input.candidateId,
+          action: "ROLLOUT_BLOCKED_CRITICAL_HARM",
+          actorId: input.enabledBy,
+          detail: "Rollout blocked: unmitigated CRITICAL harm event exists for candidate",
+          timestamp: input.enabledAt,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[audit] Failed to write rollout-blocked-harm audit entry", { candidateId: input.candidateId, workspaceId: input.workspaceId, auditErr });
+    }
+    return {
+      set: false,
+      violations: ["Rollout blocked: candidate has an unmitigated CRITICAL harm event — mitigate before rolling out"],
+    };
+  }
+
   const flag = await (prisma as any).controlledLearningRolloutFlag.upsert({
     where: { workspaceId_candidateId: { workspaceId: input.workspaceId, candidateId: input.candidateId } },
     create: {

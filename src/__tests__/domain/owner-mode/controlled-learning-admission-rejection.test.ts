@@ -11,10 +11,13 @@ import {
   listRejectionsForWorkspace,
 } from "@/services/controlled-learning-rejection.service";
 
+const OUTCOME_DATE = new Date("2026-04-01T00:00:00Z"); // >30 days before any test admittedAt
+
 const makeCandidate = (overrides: object = {}) => ({
   id: "cand-1",
   workspaceId: "ws-1",
   eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
+  outcomeRecordedAt: OUTCOME_DATE,
   ...overrides,
 });
 
@@ -302,6 +305,192 @@ describe("admitCandidate", () => {
     });
 
     expect(result.admission).toBeUndefined();
+  });
+});
+
+// ── SCENARIO-29: empty/whitespace admittedBy blocked ─────────────────────────
+
+describe("admitCandidate — SCENARIO-29: admittedBy validation", () => {
+  let mockPrisma: PrismaClient;
+
+  beforeEach(() => {
+    mockPrisma = makeMockPrisma();
+  });
+
+  it("rejects empty string admittedBy", async () => {
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "",
+      admittedAt: new Date("2026-06-19T00:00:00Z"),
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(false);
+    expect(result.violations[0]).toMatch(/admittedBy/i);
+    expect((mockPrisma as any).controlledLearningCandidate.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("rejects whitespace-only admittedBy", async () => {
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "   ",
+      admittedAt: new Date("2026-06-19T00:00:00Z"),
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(false);
+    expect(result.violations[0]).toMatch(/admittedBy/i);
+    expect((mockPrisma as any).controlledLearningCandidate.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("accepts valid non-empty admittedBy", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(makeCandidate());
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.create.mockResolvedValue(makeAdmission());
+
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "reviewer-abc",
+      admittedAt: new Date("2026-06-19T00:00:00Z"),
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(true);
+  });
+});
+
+// ── HIGH-3: server-side outcome window enforcement ────────────────────────────
+
+describe("admitCandidate — HIGH-3: outcome window", () => {
+  let mockPrisma: PrismaClient;
+  const ADMITTED_AT = new Date("2026-06-19T00:00:00Z");
+
+  beforeEach(() => {
+    mockPrisma = makeMockPrisma();
+  });
+
+  it("blocks admission when outcomeRecordedAt is null", async () => {
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(
+      makeCandidate({ outcomeRecordedAt: null })
+    );
+
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: ADMITTED_AT,
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(false);
+    expect(result.violations[0]).toMatch(/outcome timestamp/i);
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: "ADMISSION_BLOCKED_NO_OUTCOME_TIMESTAMP" }),
+      })
+    );
+  });
+
+  it("blocks admission when outcome window < 30 days", async () => {
+    const recentOutcome = new Date("2026-06-05T00:00:00Z"); // only 14 days before admittedAt
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(
+      makeCandidate({ outcomeRecordedAt: recentOutcome })
+    );
+
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: ADMITTED_AT,
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(false);
+    expect(result.violations[0]).toMatch(/outcome window/i);
+    expect((mockPrisma as any).controlledLearningCandidateAuditEntry.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: "ADMISSION_BLOCKED_OUTCOME_WINDOW_NOT_ELAPSED" }),
+      })
+    );
+  });
+
+  it("allows admission when outcome window >= 30 days", async () => {
+    const oldOutcome = new Date("2026-04-01T00:00:00Z"); // 79 days before admittedAt
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(
+      makeCandidate({ outcomeRecordedAt: oldOutcome })
+    );
+    (mockPrisma as any).controlledLearningReview.findFirst.mockResolvedValue({ id: "rev-1" });
+    (mockPrisma as any).controlledLearningHarmEvent.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.findFirst.mockResolvedValue(null);
+    (mockPrisma as any).controlledLearningAdmission.create.mockResolvedValue(makeAdmission());
+
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: ADMITTED_AT,
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(true);
+  });
+
+  it("enforces exactly 30-day boundary — 29 days is blocked", async () => {
+    const tooRecent = new Date(ADMITTED_AT.getTime() - 29 * 24 * 60 * 60 * 1000);
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(
+      makeCandidate({ outcomeRecordedAt: tooRecent })
+    );
+
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: ADMITTED_AT,
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(false);
+    expect(result.violations[0]).toMatch(/outcome window/i);
+  });
+
+  it("caller cannot bypass by omitting outcomeRecordedAt — null from DB blocks", async () => {
+    // Simulates HIGH-3: even if caller would have previously set outcomeWindowElapsed: true,
+    // the server-side check reads from DB and blocks if null
+    (mockPrisma as any).controlledLearningCandidate.findFirst.mockResolvedValue(
+      makeCandidate({ outcomeRecordedAt: null })
+    );
+
+    const result = await admitCandidate(mockPrisma, {
+      workspaceId: "ws-1",
+      candidateId: "cand-1",
+      admittedBy: "user-1",
+      admittedAt: ADMITTED_AT,
+      sourceLabel: "label",
+      evidenceOrigin: "KPI-drop",
+      admissionNotes: "Notes",
+    });
+
+    expect(result.admitted).toBe(false);
+    expect((mockPrisma as any).controlledLearningAdmission.create).not.toHaveBeenCalled();
   });
 });
 

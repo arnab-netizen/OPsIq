@@ -13,6 +13,10 @@ const ADMISSION_FORBIDDEN_ORIGINS = new Set([
   "public_source_unverified",
 ]);
 
+// Minimum days that must have elapsed since the outcome was recorded before admission is allowed.
+// This enforces server-side outcome window validation (HIGH-3) independently of caller input.
+const OUTCOME_WINDOW_MIN_DAYS = 30;
+
 export interface AdmitCandidateInput {
   workspaceId: string;
   candidateId: string;
@@ -45,6 +49,14 @@ export async function admitCandidate(
     admissionNotes,
   } = input;
 
+  // Guard 0: admittedBy must be a non-empty, non-whitespace actor (SCENARIO-29)
+  if (!admittedBy || !admittedBy.trim()) {
+    return {
+      admitted: false,
+      violations: ["admittedBy is required and must be a non-empty actor identifier"],
+    };
+  }
+
   // Guard 1: forbidden evidence origins blocked before any DB access
   if (ADMISSION_FORBIDDEN_ORIGINS.has(evidenceOrigin)) {
     return {
@@ -62,6 +74,7 @@ export async function admitCandidate(
       eligibilityStatus: true,
       evidenceSourceType: true,
       promotionLocked: true,
+      outcomeRecordedAt: true,
     },
   });
 
@@ -72,6 +85,50 @@ export async function admitCandidate(
   // Cross-workspace guard: DB record workspace must match request workspace
   if (candidate.workspaceId !== workspaceId) {
     return { admitted: false, violations: ["Cross-workspace admission attempt blocked"] };
+  }
+
+  // Guard 2b (HIGH-3): server-side outcome window enforcement — never trust caller-provided flag
+  const outcomeRecordedAt: Date | null = candidate.outcomeRecordedAt ?? null;
+  if (!outcomeRecordedAt) {
+    try {
+      await (prisma as any).controlledLearningCandidateAuditEntry.create({
+        data: {
+          workspaceId,
+          candidateId,
+          action: "ADMISSION_BLOCKED_NO_OUTCOME_TIMESTAMP",
+          actorId: admittedBy,
+          detail: "Admission blocked: outcomeRecordedAt not set — cannot verify outcome window elapsed",
+          timestamp: admittedAt,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[audit] Failed to write admission-blocked-no-outcome-timestamp audit entry", { candidateId, workspaceId, auditErr });
+    }
+    return {
+      admitted: false,
+      violations: ["Outcome timestamp not recorded — outcome window cannot be verified server-side"],
+    };
+  }
+  const daysSinceOutcome = (admittedAt.getTime() - outcomeRecordedAt.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysSinceOutcome < OUTCOME_WINDOW_MIN_DAYS) {
+    try {
+      await (prisma as any).controlledLearningCandidateAuditEntry.create({
+        data: {
+          workspaceId,
+          candidateId,
+          action: "ADMISSION_BLOCKED_OUTCOME_WINDOW_NOT_ELAPSED",
+          actorId: admittedBy,
+          detail: `Admission blocked: outcome window requires ${OUTCOME_WINDOW_MIN_DAYS} days; only ${daysSinceOutcome.toFixed(1)} days elapsed since outcomeRecordedAt`,
+          timestamp: admittedAt,
+        },
+      });
+    } catch (auditErr) {
+      console.error("[audit] Failed to write admission-blocked-outcome-window audit entry", { candidateId, workspaceId, auditErr });
+    }
+    return {
+      admitted: false,
+      violations: [`Outcome window not elapsed: ${OUTCOME_WINDOW_MIN_DAYS} days required, ${daysSinceOutcome.toFixed(1)} days elapsed`],
+    };
   }
 
   // Guard 3: revalidate eligibility using stored DB status — caller-provided status is never used

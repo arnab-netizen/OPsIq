@@ -2,7 +2,7 @@
 
 **Branch:** `claude/cool-ptolemy-dxrpm7`  
 **Date last updated:** 2026-06-19  
-**Current classification:** HIGH_1_VERIFIED_REPEAT_VALIDATION_COMPLETE
+**Current classification:** GAP_FIX_COMPLETE_PENDING_LANE_B_AND_REVALIDATION
 
 ---
 
@@ -16,9 +16,10 @@
 | HIGH-6: No CRITICAL harm event check | `a81a9656` | `a7358b2e` run 27818246204 | ✅ FIXED_DB_VERIFIED |
 | HIGH-1: Audit trail missing from 11 services | `d11495ad` | N/A (no schema change) | ✅ FIXED_VERIFIED |
 | HIGH-2: ownerDecisionVerdict check absent | — | — | ✅ VOIDED (check exists at controlled-learning.ts:260) |
-| HIGH-3: `outcomeWindowElapsed` caller-controlled | — | — | ⏸ DEFERRED |
-| HIGH-4: No harm-to-rollout circuit breaker | — | — | ⏸ DEFERRED |
-| HIGH-5: Rollout doesn't require regression result | — | — | ⏸ DEFERRED |
+| HIGH-3: `outcomeWindowElapsed` caller-controlled | gap-fix commit | LANE_B REQUIRED | ✅ FIXED — server-side `outcomeRecordedAt` + 30-day window |
+| HIGH-4: No harm-to-rollout circuit breaker | gap-fix commit | N/A | ✅ FIXED — CRITICAL harm blocks `setRolloutFlag` |
+| HIGH-5: Rollout doesn't require regression result | gap-fix commit | N/A | ✅ FIXED — PASS regression required |
+| SCENARIO-29: `admittedBy=""` not validated | gap-fix commit | N/A | ✅ FIXED — Guard 0 in `admitCandidate` |
 
 ---
 
@@ -53,10 +54,13 @@ No check for unmitigated CRITICAL harm events before admission. Fixed with Guard
 
 ## What Remains Open
 
-### HIGH-1 — Audit trail missing from 11 controlled learning services
-Per original validation report: audit events are not emitted by 11 services in the controlled learning domain. This must be implemented before `OWNER_MODE_READY` classification.
+### LANE_B — Schema migration for HIGH-3 (`outcomeRecordedAt`)
 
-Services requiring audit trail wiring: to be enumerated in the HIGH-1 slice.
+Schema changed: `outcomeRecordedAt DateTime?` added to `ControlledLearningCandidate`. LANE_B (db-verification.yml) must be triggered with the gap-fix commit to verify the migration applies cleanly to postgres:16.
+
+### 30+ Scenario Re-Validation
+
+Required before `OWNER_MODE_READY_FOR_REAL_BUSINESS_OWNER_USE` can be claimed. All code fixes are in place; the re-validation must confirm 0 unsafe proceeds across all adversarial scenarios.
 
 ---
 

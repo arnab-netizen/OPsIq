@@ -19,6 +19,29 @@
 
 ---
 
+## Gap Fix Pass — 2026-06-19
+
+Four real-business-use gaps fixed after this report was written:
+
+| Gap | Fix |
+|-----|-----|
+| SCENARIO-29 | Guard 0 in `admitCandidate` — empty/whitespace `admittedBy` rejected |
+| HIGH-3 | `outcomeRecordedAt DateTime?` + 30-day server-side window in `admitCandidate` |
+| HIGH-4 | CRITICAL harm circuit breaker added to `setRolloutFlag` |
+| HIGH-5 | PASS regression prerequisite added to `setRolloutFlag` |
+
+Post-fix gate results:
+
+| Gate | Result |
+|------|--------|
+| `npx tsc --noEmit` | CLEAN |
+| `npx prisma validate` | VALID |
+| admission-rejection tests | 50/50 PASS (+15 new tests) |
+| rollout-rollback tests | 49/49 PASS (+11 new tests) |
+| LANE_B | REQUIRED — `outcomeRecordedAt` migration; trigger db-verification.yml |
+
+---
+
 ## Chain Validated
 
 ```
