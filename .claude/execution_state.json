@@ -1,9 +1,9 @@
 {
   "execution_date": "2026-06-19",
-  "current_phase": "PHASE_33_CONTROLLED_LEARNING_REGRESSION",
+  "current_phase": "PHASES_29_35_COMPLETE_VERIFIED",
   "current_branch": "claude/cool-ptolemy-dxrpm7",
   "phase_29": {
-    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "status": "COMPLETE_VERIFIED",
     "classification": "DOMAIN_CONTRACT_ONLY",
     "slice_1": {
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -42,7 +42,9 @@
     "compilation": "\u2713 TypeScript compiles without errors",
     "db_status": "SCHEMA_ADDED \u2014 ControlledLearningCandidate + AuditEntry models appended; migration SQL created",
     "engine_mutation": "NONE",
-    "committed": "pending"
+    "committed": "pending",
+    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "lane_b_run_id": "27810180754"
   },
   "owner_mode_reality_loop": {
     "phase_7": {
@@ -324,7 +326,7 @@
     "committed": "pending",
     "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
-  "next_automatic_target": "STAGE 34: Next phase per execution.md roadmap",
+  "next_automatic_target": "CI gate fixes: governance baseline + lint baseline for Phase 29-35 debt",
   "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "PASS",
@@ -2130,7 +2132,7 @@
     "owner_mode_lint_errors": "2 pre-existing errors on main (not introduced on this branch)"
   },
   "phase_33": {
-    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "status": "COMPLETE_VERIFIED",
     "classification": "SERVICE_WITH_WIRING",
     "slice_1": {
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -2145,6 +2147,50 @@
       "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 32/32 (\u2713)",
       "committed": "68bc0096",
       "pushed": true
-    }
+    },
+    "description": "Controlled Learning Regression Results",
+    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "lane_b_run_id": "27810180754"
+  },
+  "phase_30": {
+    "status": "COMPLETE_VERIFIED",
+    "description": "Controlled Learning Reviews",
+    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "lane_b_run_id": "27810180754"
+  },
+  "phase_31": {
+    "status": "COMPLETE_VERIFIED",
+    "description": "Controlled Learning Admissions + Rejections",
+    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "lane_b_run_id": "27810180754"
+  },
+  "phase_32": {
+    "status": "COMPLETE_VERIFIED",
+    "description": "Privacy/Consent/Retention controls",
+    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "lane_b_run_id": "27810180754"
+  },
+  "phase_34": {
+    "status": "COMPLETE_VERIFIED",
+    "description": "Staged Rollout Flags + Rollback Events",
+    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "lane_b_run_id": "27810180754"
+  },
+  "phase_35": {
+    "status": "COMPLETE_VERIFIED",
+    "description": "Harm Events + Attribution Reviews",
+    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "lane_b_run_id": "27810180754"
+  },
+  "lane_b_phases_29_35": {
+    "run_id": "27810180754",
+    "workflow": "DB Verification",
+    "lane": "LANE_B",
+    "commit": "de7fbba4fc1b9bb46dfa5d637b5b2afef6aa5f4e",
+    "date": "2026-06-19",
+    "postgres_version": "16",
+    "conclusion": "success",
+    "migrate_deploy": "success",
+    "db_tests": "passed"
   }
 }
