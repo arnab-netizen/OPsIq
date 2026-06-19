@@ -224,6 +224,7 @@ model ClientAccount {
   workspaceMetricTimeline             OwnerBusinessMetricTimeline[] @relation("WorkspaceMetricTimeline")
   workspaceControlledLearningCandidates ControlledLearningCandidate[] @relation("WorkspaceControlledLearningCandidates")
   workspaceControlledLearningAuditEntries ControlledLearningCandidateAuditEntry[] @relation("WorkspaceControlledLearningAuditEntries")
+  workspaceControlledLearningReviews ControlledLearningReview[] @relation("WorkspaceControlledLearningReviews")
 
   @@index([status])
   @@map("client_accounts")
@@ -3974,6 +3975,7 @@ model ControlledLearningCandidate {
   updatedAt                   DateTime @updatedAt
   workspace                   ClientAccount @relation("WorkspaceControlledLearningCandidates", fields: [workspaceId], references: [id])
   auditEntries                ControlledLearningCandidateAuditEntry[]
+  reviews                     ControlledLearningReview[]
 
   @@unique([workspaceId, auditFingerprint])
   @@index([workspaceId])
@@ -3999,4 +4001,22 @@ model ControlledLearningCandidateAuditEntry {
   @@index([candidateId])
   @@index([action])
   @@map("controlled_learning_candidate_audit_entries")
+}
+
+model ControlledLearningReview {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  candidateId       String
+  reviewerId        String
+  decision          String   // "APPROVED" | "REJECTED" | "DEFERRED"
+  reviewNotes       String   @db.Text
+  reviewedAt        DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  workspace         ClientAccount @relation("WorkspaceControlledLearningReviews", fields: [workspaceId], references: [id])
+  candidate         ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([decision])
+  @@map("controlled_learning_reviews")
 }
