@@ -227,6 +227,9 @@ model ClientAccount {
   workspaceControlledLearningReviews ControlledLearningReview[] @relation("WorkspaceControlledLearningReviews")
   workspaceControlledLearningAdmissions ControlledLearningAdmission[] @relation("WorkspaceControlledLearningAdmissions")
   workspaceControlledLearningRejections ControlledLearningRejection[] @relation("WorkspaceControlledLearningRejections")
+  workspaceControlledLearningPrivacyControls ControlledLearningPrivacyControl[] @relation("WorkspaceControlledLearningPrivacyControls")
+  workspaceControlledLearningConsentRecords ControlledLearningConsentRecord[] @relation("WorkspaceControlledLearningConsentRecords")
+  workspaceControlledLearningRetentionPolicies ControlledLearningRetentionPolicy[] @relation("WorkspaceControlledLearningRetentionPolicies")
 
   @@index([status])
   @@map("client_accounts")
@@ -3980,6 +3983,8 @@ model ControlledLearningCandidate {
   reviews                     ControlledLearningReview[]
   admissions                  ControlledLearningAdmission[]
   rejections                  ControlledLearningRejection[]
+  privacyControls             ControlledLearningPrivacyControl[]
+  consentRecords              ControlledLearningConsentRecord[]
 
   @@unique([workspaceId, auditFingerprint])
   @@index([workspaceId])
@@ -4061,4 +4066,55 @@ model ControlledLearningRejection {
   @@index([workspaceId])
   @@index([candidateId])
   @@map("controlled_learning_rejections")
+}
+
+model ControlledLearningPrivacyControl {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  candidateId     String
+  controlType     String   // "ANONYMIZE" | "REDACT" | "EXCLUDE" | "QUARANTINE"
+  appliedBy       String
+  appliedAt       DateTime
+  reason          String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningPrivacyControls", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([controlType])
+  @@map("controlled_learning_privacy_controls")
+}
+
+model ControlledLearningConsentRecord {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  candidateId     String
+  consentGiven    Boolean
+  consentBy       String
+  consentAt       DateTime
+  consentScope    String   // "WORKSPACE_ONLY" | "ANONYMIZED_AGGREGATE" | "NONE"
+  consentNotes    String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningConsentRecords", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@map("controlled_learning_consent_records")
+}
+
+model ControlledLearningRetentionPolicy {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  retentionDays   Int
+  appliedBy       String
+  appliedAt       DateTime
+  policyNotes     String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningRetentionPolicies", fields: [workspaceId], references: [id])
+  @@unique([workspaceId])
+  @@index([workspaceId])
+  @@map("controlled_learning_retention_policies")
 }
