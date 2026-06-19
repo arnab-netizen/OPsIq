@@ -1,6 +1,6 @@
 {
   "execution_date": "2026-06-19",
-  "current_phase": "PHASES_29_35_COMPLETE_VERIFIED",
+  "current_phase": "BLOCKER_1_FIXED_CODE_VERIFIED",
   "current_branch": "claude/cool-ptolemy-dxrpm7",
   "phase_29": {
     "status": "COMPLETE_VERIFIED",
@@ -13,7 +13,7 @@
         "src/__tests__/domain/owner-mode/controlled-learning.test.ts"
       ],
       "test_coverage": "59 tests covering all 12 statuses, 15 rules, append-only invariant, promotion gate, audit builder",
-      "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 59/59 (\u2713)"
+      "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 59/59 (✓)"
     },
     "slice_2": {
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
@@ -24,26 +24,26 @@
         "src/services/controlled-learning-candidate.service.ts",
         "src/__tests__/domain/owner-mode/controlled-learning-candidate.db.test.ts"
       ],
-      "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery enforced at all entry points",
-      "cross_tenant_blocked": "\u2713 classificationInput.workspaceId mismatch throws immediately",
-      "test_coverage": "68 tests \u2014 create/promote/reject/list/audit/immutability/forbidden-origins/edge-cases",
-      "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 68/68 (\u2713)",
+      "workspace_enforcement": "✓ assertWorkspaceScopedQuery enforced at all entry points",
+      "cross_tenant_blocked": "✓ classificationInput.workspaceId mismatch throws immediately",
+      "test_coverage": "68 tests — create/promote/reject/list/audit/immutability/forbidden-origins/edge-cases",
+      "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 68/68 (✓)",
       "engine_mutation": "NONE",
       "safety_gate_changed": "NO",
       "learning_automatic": "NO",
       "cross_tenant_learning": "NO",
       "committed": "pending"
     },
-    "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery enforced at all three entry points",
-    "auth_enforced": "\u2713 Deferred to API route slice (domain module; no route yet)",
-    "DTO_boundary": "\u2713 No DB-persisted records; output is plain classification result",
+    "workspace_enforcement": "✓ assertWorkspaceScopedQuery enforced at all three entry points",
+    "auth_enforced": "✓ Deferred to API route slice (domain module; no route yet)",
+    "DTO_boundary": "✓ No DB-persisted records; output is plain classification result",
     "test_coverage": "59 slice-1 + 68 slice-2 = 127 total",
-    "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 59/59 + 68/68 (\u2713)",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_status": "SCHEMA_ADDED \u2014 ControlledLearningCandidate + AuditEntry models appended; migration SQL created",
+    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 59/59 + 68/68 (✓)",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_status": "SCHEMA_ADDED — ControlledLearningCandidate + AuditEntry models appended; migration SQL created",
     "engine_mutation": "NONE",
     "committed": "pending",
-    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
     "lane_b_run_id": "27810180754"
   },
   "owner_mode_reality_loop": {
@@ -55,10 +55,10 @@
         "prisma/schema.prisma"
       ],
       "tests": "60 (40+ required)",
-      "gates_run": "npm run build (pre-existing failure unrelated to Phase 7), npx tsc (no new errors), npx prisma validate (\u2713)",
-      "compilation": "\u2713 TypeScript compiles without errors in new files",
+      "gates_run": "npm run build (pre-existing failure unrelated to Phase 7), npx tsc (no new errors), npx prisma validate (✓)",
+      "compilation": "✓ TypeScript compiles without errors in new files",
       "committed": "594b2954",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_8": {
       "status": "COMPLETE_VERIFIED",
@@ -68,10 +68,10 @@
         "prisma/schema.prisma"
       ],
       "tests": "68 (45+ required)",
-      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 68/68 passing",
-      "compilation": "\u2713 TypeScript compiles without errors",
+      "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 68/68 passing",
+      "compilation": "✓ TypeScript compiles without errors",
       "committed": "8ba2c17c",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_9": {
       "status": "COMPLETE_VERIFIED",
@@ -81,10 +81,10 @@
         "prisma/schema.prisma"
       ],
       "tests": "56 (45+ required)",
-      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 56/56 passing",
-      "compilation": "\u2713 TypeScript compiles without errors",
+      "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 56/56 passing",
+      "compilation": "✓ TypeScript compiles without errors",
       "committed": "f9e8773b",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_10": {
       "status": "COMPLETE_VERIFIED",
@@ -94,9 +94,9 @@
         "prisma/schema.prisma"
       ],
       "tests": "53 (45+ required)",
-      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 53/53 passing",
-      "compilation": "\u2713 TypeScript compiles without errors",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 53/53 passing",
+      "compilation": "✓ TypeScript compiles without errors",
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_11": {
       "status": "COMPLETE_VERIFIED",
@@ -106,10 +106,10 @@
         "prisma/schema.prisma"
       ],
       "tests": "50 (45+ required)",
-      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 50/50 passing",
-      "compilation": "\u2713 TypeScript compiles without errors",
+      "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 50/50 passing",
+      "compilation": "✓ TypeScript compiles without errors",
       "committed": "d8827f1d",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_12": {
       "status": "COMPLETE_VERIFIED",
@@ -119,10 +119,10 @@
         "prisma/schema.prisma"
       ],
       "tests": "33 (30+ required)",
-      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 33/33 passing",
-      "compilation": "\u2713 TypeScript compiles without errors",
+      "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 33/33 passing",
+      "compilation": "✓ TypeScript compiles without errors",
       "committed": "38fd9807",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_13": {
       "status": "COMPLETE_VERIFIED",
@@ -132,9 +132,9 @@
         "prisma/schema.prisma"
       ],
       "tests": "51 (35+ required)",
-      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 51/51 passing",
-      "compilation": "\u2713 TypeScript compiles without errors",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 51/51 passing",
+      "compilation": "✓ TypeScript compiles without errors",
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_14": {
       "status": "COMPLETE_VERIFIED",
@@ -144,9 +144,9 @@
         "prisma/schema.prisma"
       ],
       "tests": "47 (35+ required)",
-      "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 47/47 passing",
-      "compilation": "\u2713 TypeScript compiles without errors",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 47/47 passing",
+      "compilation": "✓ TypeScript compiles without errors",
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_23": {
       "status": "COMPLETE_VERIFIED",
@@ -158,7 +158,7 @@
       "gates_run": "npx tsc (pass), npm run build (pass), npx prisma validate (pass), vitest 53/53",
       "compilation": "TypeScript compiles without errors",
       "committed": "pending",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     },
     "phase_24": {
       "status": "COMPLETE_VERIFIED",
@@ -169,7 +169,7 @@
       "gates_run": "npx tsc (pass), npm run build (pass), npx prisma validate (pass), vitest 73/73",
       "compilation": "TypeScript compiles without errors",
       "committed": "pending",
-      "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
+      "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27793720853 (postgres:16, 2026-06-18)"
     }
   },
   "phase_15": {
@@ -180,9 +180,9 @@
       "prisma/schema.prisma"
     ],
     "tests": "53 (35+ required)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 53/53 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 53/53 passing",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_16": {
     "status": "COMPLETE_VERIFIED",
@@ -192,9 +192,9 @@
       "prisma/schema.prisma"
     ],
     "tests": "54 (30+ required)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 54/54 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 54/54 passing",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_17": {
     "status": "COMPLETE_VERIFIED",
@@ -204,9 +204,9 @@
       "prisma/schema.prisma"
     ],
     "tests": "47 (35+ required)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 47/47 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 47/47 passing",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_18": {
     "status": "COMPLETE_VERIFIED",
@@ -216,9 +216,9 @@
       "prisma/schema.prisma"
     ],
     "tests": "65 (35+ required)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 65/65 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 65/65 passing",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_19": {
     "status": "COMPLETE_VERIFIED",
@@ -228,9 +228,9 @@
       "prisma/schema.prisma"
     ],
     "tests": "68 (35+ required)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 68/68 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 68/68 passing",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_20": {
     "status": "COMPLETE_VERIFIED",
@@ -240,9 +240,9 @@
       "prisma/schema.prisma"
     ],
     "tests": "55 (35+ required)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 55/55 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 55/55 passing",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_21": {
     "status": "COMPLETE_VERIFIED",
@@ -252,9 +252,9 @@
       "prisma/schema.prisma"
     ],
     "tests": "51 (35+ required)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 51/51 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 51/51 passing",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_22": {
     "status": "COMPLETE_VERIFIED",
@@ -264,22 +264,22 @@
       "prisma/schema.prisma"
     ],
     "tests": "39 (35+ required)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 39/39 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 39/39 passing",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_25": {
     "status": "COMPLETE_VERIFIED",
     "files": [
       "OWNER_MODE_REAL_BUSINESS_PILOT_CHECKLIST.md"
     ],
-    "tests": "N/A (markdown document \u2014 no runtime logic)",
-    "gates_run": "npm run build (\u2713), npx tsc (\u2713), npx prisma validate (\u2713)",
-    "compilation": "\u2713 No TypeScript changes; all gates pass",
+    "tests": "N/A (markdown document — no runtime logic)",
+    "gates_run": "npm run build (✓), npx tsc (✓), npx prisma validate (✓)",
+    "compilation": "✓ No TypeScript changes; all gates pass",
     "committed": "pending",
     "sections": "17 required sections: required inputs, input quality, 30-day cadence, minimum metrics, owner decision, action tracking, evidence submission, evidence verification, outcome reporting, harm reporting, failure reassessment, learning eligibility, dashboard review, weekly review, monthly review, pilot success criteria, pilot stop conditions",
     "business_types": "laundry/dry-cleaning, commercial housekeeping, boutique/clothing, food/beverage, local service business",
-    "db_verification": "N/A \u2014 markdown document only; no DB-backed code; non-DB gates sufficient"
+    "db_verification": "N/A — markdown document only; no DB-backed code; non-DB gates sufficient"
   },
   "phase_26": {
     "status": "COMPLETE_VERIFIED",
@@ -288,12 +288,12 @@
       "src/__tests__/domain/owner-mode/ai-observability-trace.test.ts"
     ],
     "tests": "87 (87/87 passing)",
-    "gates_run": "npm run build (\u2713), npx tsc (\u2713), npx prisma validate (\u2713), vitest 87/87",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery at every entry point; cross-tenant blocked",
-    "public_boundary": "\u2713 modelProvider, modelName, modelVersion, promptTemplateVersion, rulesetVersion, retrievalContextVersion excluded from PublicAiTraceEventView",
+    "gates_run": "npm run build (✓), npx tsc (✓), npx prisma validate (✓), vitest 87/87",
+    "compilation": "✓ TypeScript compiles without errors",
+    "workspace_enforcement": "✓ assertWorkspaceScopedQuery at every entry point; cross-tenant blocked",
+    "public_boundary": "✓ modelProvider, modelName, modelVersion, promptTemplateVersion, rulesetVersion, retrievalContextVersion excluded from PublicAiTraceEventView",
     "committed": "pending",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_27": {
     "status": "COMPLETE_VERIFIED",
@@ -303,13 +303,13 @@
       "src/__tests__/domain/owner-mode/incident-response.test.ts"
     ],
     "tests": "73 (73/73 passing)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 73/73",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery at all entry points; cross-tenant blocked on incident update and circuit breaker resolution",
-    "human_operator_required": "\u2713 tripCircuitBreaker + resolveCircuitBreaker require non-empty trippedByUserId/resolvedByUserId \u2014 AI cannot autonomously trip or resolve breakers",
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 73/73",
+    "compilation": "✓ TypeScript compiles without errors",
+    "workspace_enforcement": "✓ assertWorkspaceScopedQuery at all entry points; cross-tenant blocked on incident update and circuit breaker resolution",
+    "human_operator_required": "✓ tripCircuitBreaker + resolveCircuitBreaker require non-empty trippedByUserId/resolvedByUserId — AI cannot autonomously trip or resolve breakers",
     "incident_classes": "all 10 classes: harmful_recommendation, privacy_leak, cross_tenant_exposure, learning_gate_bypass, wrong_high_confidence_advice, dashboard_misreporting, evidence_verification_bypass, db_migration_data_loss, prompt_injection_success, security_gate_failure",
     "committed": "pending",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "phase_28": {
     "status": "COMPLETE_VERIFIED",
@@ -318,16 +318,16 @@
       "src/__tests__/domain/owner-mode/model-versioning.test.ts"
     ],
     "tests": "68 (68/68 passing)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 68/68",
-    "compilation": "\u2713 TypeScript compiles without errors",
-    "workspace_enforcement": "\u2713 assertWorkspaceScopedQuery at all entry points",
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 68/68",
+    "compilation": "✓ TypeScript compiles without errors",
+    "workspace_enforcement": "✓ assertWorkspaceScopedQuery at all entry points",
     "version_rules": "VERSION-RULE-1: high/critical requires regression; VERSION-RULE-2: rollback plan always required; VERSION-RULE-3: approvedBy always required (AI cannot self-approve); VERSION-RULE-4: featureFlag always required",
     "structures": "owner_model_change_log, owner_prompt_template_versions, owner_ruleset_versions, owner_evaluation_versions",
     "committed": "pending",
-    "db_verification": "CI_DB_VERIFIED \u2014 LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
+    "db_verification": "CI_DB_VERIFIED — LANE_B GitHub Actions run 27793720853 (postgres:16, 2026-06-18) + LANE_A Neon DB Verification #6 (72/72 tests, 2026-06-19)"
   },
   "next_automatic_target": "CI gate fixes: governance baseline + lint baseline for Phase 29-35 debt",
-  "lane_a_neon_status": "COMPLETE \u2014 DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
+  "lane_a_neon_status": "COMPLETE — DB Verification #6 (2026-06-19): 72/72 tests pass on Neon test DB. All 22 pending migrations applied (Migrate Neon Test Database #3). P3009 resolved via prisma migrate resolve --applied 20260511_add_aggregate_locks.",
   "gates_status": {
     "build": "PASS",
     "typecheck": "PASS",
@@ -360,14 +360,14 @@
     "serialization_performance": "RP10_PERFORMANCE_AUDIT_VERIFIED - 5/5 tests passing (append latency p99<500ms, lock contention, replay latency, throughput metrics)",
     "total_phase_4_tests": "27/27 PASSING (5 test files: RP6-RP10, comprehensive atomic serialization proof)",
     "database_primitives_verified": [
-      "\u2713 Per-aggregate locking via INSERT...ON CONFLICT prevents concurrent allocation race",
-      "\u2713 Unique constraint (aggregateId, aggregateType, workspaceId, eventNumber) prevents duplicates",
-      "\u2713 READ_COMMITTED isolation + per-aggregate locking allows multi-aggregate concurrency",
-      "\u2713 Idempotency key constraint + outer try-catch handles concurrent identical requests",
-      "\u2713 Monotonic ordering guaranteed: no gaps in eventNumber sequences (1..N continuous)",
-      "\u2713 Deterministic replay: same aggregate produces identical state every time",
-      "\u2713 Workspace isolation enforced at database layer",
-      "\u2713 Performance acceptable: append latency p99 < 500ms, replay latency < 500ms"
+      "✓ Per-aggregate locking via INSERT...ON CONFLICT prevents concurrent allocation race",
+      "✓ Unique constraint (aggregateId, aggregateType, workspaceId, eventNumber) prevents duplicates",
+      "✓ READ_COMMITTED isolation + per-aggregate locking allows multi-aggregate concurrency",
+      "✓ Idempotency key constraint + outer try-catch handles concurrent identical requests",
+      "✓ Monotonic ordering guaranteed: no gaps in eventNumber sequences (1..N continuous)",
+      "✓ Deterministic replay: same aggregate produces identical state every time",
+      "✓ Workspace isolation enforced at database layer",
+      "✓ Performance acceptable: append latency p99 < 500ms, replay latency < 500ms"
     ]
   },
   "phase_5_http_runtime_status": {
@@ -386,18 +386,18 @@
       "/api/liveness (GET) - Returns 200, no auth required, reports liveness"
     ],
     "webhook_tests": [
-      "\u2713 Signature verification required (fail-closed on error)",
-      "\u2713 Timestamp replay protection (5min tolerance)",
-      "\u2713 Event structure validation (id/type required)",
-      "\u2713 Idempotency via database constraints",
-      "\u2713 Max retry enforcement (5 attempts \u2192 dead-letter)"
+      "✓ Signature verification required (fail-closed on error)",
+      "✓ Timestamp replay protection (5min tolerance)",
+      "✓ Event structure validation (id/type required)",
+      "✓ Idempotency via database constraints",
+      "✓ Max retry enforcement (5 attempts → dead-letter)"
     ],
     "infrastructure_status": [
-      "\u2713 PostgreSQL running (PID 1724)",
-      "\u2713 Next.js dev server running (localhost:3000)",
-      "\u2713 Prisma migrations deployed (37/37)",
-      "\u2713 API routes registered (91 routes)",
-      "\u2713 Database pool operational"
+      "✓ PostgreSQL running (PID 1724)",
+      "✓ Next.js dev server running (localhost:3000)",
+      "✓ Prisma migrations deployed (37/37)",
+      "✓ API routes registered (91 routes)",
+      "✓ Database pool operational"
     ]
   },
   "security_hardening_status": {
@@ -424,18 +424,18 @@
   },
   "verification_status": {
     "code_level": {
-      "npm_run_build": "\u2713 PASS",
-      "npx_tsc_noEmit": "\u2713 PASS",
-      "npx_prisma_validate": "\u2713 PASS"
+      "npm_run_build": "✓ PASS",
+      "npx_tsc_noEmit": "✓ PASS",
+      "npx_prisma_validate": "✓ PASS"
     },
     "test_level": {
-      "route_scanner_tests": "\u2713 4/4 PASS (code-level validation)",
-      "hostile_tests": "\u2717 PENDING (created but not runtime-executed)"
+      "route_scanner_tests": "✓ 4/4 PASS (code-level validation)",
+      "hostile_tests": "✗ PENDING (created but not runtime-executed)"
     },
     "runtime_level": {
-      "live_http_hostile_tests": "\u2717 NOT_PROVEN (no CI automated tests yet)",
-      "phase_3_db_runtime": "\u2717 NOT_PROVEN (DB unavailable locally, CI has passed before)",
-      "end_to_end_execution": "\u2717 NOT_PROVEN (no staging deployment)"
+      "live_http_hostile_tests": "✗ NOT_PROVEN (no CI automated tests yet)",
+      "phase_3_db_runtime": "✗ NOT_PROVEN (DB unavailable locally, CI has passed before)",
+      "end_to_end_execution": "✗ NOT_PROVEN (no staging deployment)"
     }
   },
   "blocking_checklist_for_production": [
@@ -454,7 +454,7 @@
     {
       "blocker": "Workspace Isolation Runtime Proof",
       "requirement": "Live test: Workspace A requests B's data, verify blocked or empty result",
-      "status": "\u2713 VERIFIED - 8 comprehensive integration tests passing in rp3-workspace-isolation-runtime-proof.test.ts",
+      "status": "✓ VERIFIED - 8 comprehensive integration tests passing in rp3-workspace-isolation-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Event isolation, projection isolation, concurrent safety all verified"
     },
     {
@@ -466,13 +466,13 @@
     {
       "blocker": "Capability Enforcement Runtime Proof",
       "requirement": "User without capability must get 403 on protected route",
-      "status": "\u2713 VERIFIED - 8 comprehensive integration tests passing in rp4-capability-enforcement-runtime-proof.test.ts",
+      "status": "✓ VERIFIED - 8 comprehensive integration tests passing in rp4-capability-enforcement-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Capability constants verified, user attribution proven, audit trail verified"
     },
     {
       "blocker": "Quota Enforcement Runtime Proof",
       "requirement": "User exceeding quota must get 429, not grant access",
-      "status": "\u2713 VERIFIED - 9 comprehensive integration tests passing in rp5-quota-enforcement-runtime-proof.test.ts",
+      "status": "✓ VERIFIED - 9 comprehensive integration tests passing in rp5-quota-enforcement-runtime-proof.test.ts",
       "proof_needed": "COMPLETE - Resource tracking verified, timestamps recorded, service tier differentiation proven"
     },
     {
@@ -493,7 +493,7 @@
     "Removed: 'production ready' - Runtime verification not complete",
     "Removed: 'enterprise ready' - Staging/monitoring not proven",
     "Removed: 'fully verified' - Only code-level verification complete",
-    "Updated: 'deployment readiness 95%' \u2192 'CODE_VERIFIED_NOT_RUNTIME_PROVEN'"
+    "Updated: 'deployment readiness 95%' → 'CODE_VERIFIED_NOT_RUNTIME_PROVEN'"
   ],
   "current_session_achievements": [
     "PHASE 4: SERIALIZATION RUNTIME PROOF - COMPLETE (27/27 tests passing)",
@@ -505,7 +505,7 @@
     "COMPLETED STEP 5: Failure injection testing (RP8 - 7/7 tests, write interference, concurrent failures)",
     "COMPLETED STEP 6: Replay determinism verification (RP9 - 5/5 tests, 100x concurrent replays, identical state)",
     "COMPLETED STEP 7: Serialization performance audit (RP10 - 5/5 tests, latency/throughput metrics)",
-    "COMPLETED STEP 8: Run gates (npm build \u2713, npx tsc \u26a0\ufe0f pre-existing, npx prisma \u2713)",
+    "COMPLETED STEP 8: Run gates (npm build ✓, npx tsc ⚠️ pre-existing, npx prisma ✓)",
     "COMPLETED STEP 9: Final honest classification (SERIALIZATION_RUNTIME_VERIFIED, 27/27 tests passing)",
     "TOTAL NEW TESTS: 27 serialization runtime proof tests (RP6-RP10, all passing)",
     "EMPIRICAL PROOF: Atomic serialization under real concurrent pressure with independent DB connections",
@@ -521,14 +521,14 @@
     "NEXT BLOCKERS: Snapshot optimization engine bug, Workspace isolation runtime attack tests, Quota enforcement runtime tests, Full staging deployment"
   ],
   "what_still_needs_proof": [
-    "\u2713 DONE: Workspace isolation \u2192 cross-workspace queries blocked (8 integration tests)",
-    "\u2713 DONE: Capability enforcement \u2192 capability constants defined & user attribution proven (8 integration tests)",
-    "\u2713 DONE: Quota enforcement \u2192 resource tracking & timestamps recorded (9 integration tests)",
-    "PENDING: Live HTTP requests without auth token \u2192 actual 401 response (template ready, need running server)",
-    "PENDING: Live Stripe webhook with invalid signature \u2192 actual 401 response (code verified, need live account)",
-    "PENDING: Phase 3 event sourcing \u2192 CI database runtime proof (tests created, isolation adjusted)",
-    "PENDING: Staging deployment \u2192 full system working end-to-end",
-    "PENDING: Production readiness \u2192 monitoring, alerting, incident response proven"
+    "✓ DONE: Workspace isolation → cross-workspace queries blocked (8 integration tests)",
+    "✓ DONE: Capability enforcement → capability constants defined & user attribution proven (8 integration tests)",
+    "✓ DONE: Quota enforcement → resource tracking & timestamps recorded (9 integration tests)",
+    "PENDING: Live HTTP requests without auth token → actual 401 response (template ready, need running server)",
+    "PENDING: Live Stripe webhook with invalid signature → actual 401 response (code verified, need live account)",
+    "PENDING: Phase 3 event sourcing → CI database runtime proof (tests created, isolation adjusted)",
+    "PENDING: Staging deployment → full system working end-to-end",
+    "PENDING: Production readiness → monitoring, alerting, incident response proven"
   ],
   "final_honest_status": {
     "code_review_complete": true,
@@ -1153,13 +1153,13 @@
     "accepted_with_fixes": "R2-AB-01, R2-ADV-01",
     "rejected": "none",
     "critical_finding": "R2-AB-01 (truly_insufficient) produced cash_liquidity_crisis [MODERATE]/READY pre-fix because finding text contained 'runway'/'burn' tripping fin_isLiquidityCrisis lexical regex; reworded -> engine now INSUFFICIENT_EVIDENCE/BLOCKED",
-    "cross_cutting_fix": "added spec-\u00a74 metadata (caseType/industry/businessModel/businessStage/clientContext) to all 5 so cases are runnable through runConsultingEngine (requires clientContext)",
+    "cross_cutting_fix": "added spec-§4 metadata (caseType/industry/businessModel/businessStage/clientContext) to all 5 so cases are runnable through runConsultingEngine (requires clientContext)",
     "engine_trace_post_fix": "D03 margin_erosion[HIGH], D07 retention[HIGH], D09 bottleneck[MODERATE], ADV unit_economics[HIGH]+cash alt, AB-01 unknown[INSUFFICIENT_EVIDENCE]/BLOCKED",
     "validator_pass": "5/5 (with hidden keys loaded)",
     "leakage": "clean x5 after metadata additions",
     "gates_run": "tsx validate-round2-cases (5/5), tsx trace-round2-diagnosis, tsc (only pre-existing run-case.ts:149), prisma valid, vitest src/__tests__/benchmark 309 pass",
     "no_new_cases": true,
-    "recommendations_for_scaling": "scrub diagnosis trigger lexicon from abstention findings; carry \u00a74 clientContext on every case; pin trigger-metric semantics; fold \u00a74+abstention-lexicon checks into validator in the scaling slice",
+    "recommendations_for_scaling": "scrub diagnosis trigger lexicon from abstention findings; carry §4 clientContext on every case; pin trigger-metric semantics; fold §4+abstention-lexicon checks into validator in the scaling slice",
     "next_step": "author remaining 145 cases (validator + audit rules) -> 6-axis scorer -> re-trial; fold R2-ADV-01 into adversarial suite",
     "stage_a": "DO_NOT_PROMOTE / BLOCKED",
     "report": "ROUND_2_PILOT_CASE_HOSTILE_AUDIT.md"
@@ -1224,7 +1224,7 @@
     "classification": "GOVERNANCE_DOCS_ONLY (no engine/gate/scorer/answer-key change; no sourcing; no authoring)",
     "files": [
       "ROUND_2_OUTCOME_SPECTRUM_REQUIREMENTS.md",
-      "ROUND_2_REAL_CASE_SOURCING_PLAN.md (updated: added \u00a712 outcome integration + \u00a713 acceptance)"
+      "ROUND_2_REAL_CASE_SOURCING_PLAN.md (updated: added §12 outcome integration + §13 acceptance)"
     ],
     "outcome_categories_added": 20,
     "per_category_min": "8/8/7/8/7/6/6/6/6/6/8/8/6/7/6/6/6/6/6/20 (sum 147 of 150); all 20 non-empty; no category or business-type > 20%",
@@ -1512,7 +1512,7 @@
     ]
   },
   "stage_a_round2_r0_retrial": {
-    "slice": "R0 \u2014 6-axis deterministic scorer + full-pipeline Round 2 re-trial harness (MEASUREMENT UNLOCK)",
+    "slice": "R0 — 6-axis deterministic scorer + full-pipeline Round 2 re-trial harness (MEASUREMENT UNLOCK)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "BENCHMARK_MEASUREMENT_TOOLING",
     "files": [
@@ -1537,9 +1537,9 @@
     },
     "gates_run": "vitest scorer 13/13 PASS; intake validator 103/103 PASS; benchmark intake+schema 15/15 PASS; tsc (only pre-existing run-case.ts:149 error); prisma validate PASS",
     "tests": "src/__tests__/benchmark/round2-scorer.test.ts (13)",
-    "next_automatic_target": "R1 \u2014 lexical-trigger hardening (fixes F2) [separately authorized]"
+    "next_automatic_target": "R1 — lexical-trigger hardening (fixes F2) [separately authorized]"
   },
-  "last_commit": "STAGE 33 Slice 1: Controlled Learning Regression Results \u2014 schema, service, 32 tests",
+  "last_commit": "STAGE 33 Slice 1: Controlled Learning Regression Results — schema, service, 32 tests",
   "pushed": false,
   "stage_a_round2_root_cause_failure_map": {
     "slice": "Forensic root-cause failure map of the 103-case R0 retrial (analysis only)",
@@ -1552,7 +1552,7 @@
     ],
     "scope_guard": "No engine/scorer/gate/threshold/key/validator/corpus/source change. No improvement/promotion/consultant-grade claim.",
     "cases_reviewed": "70 failing of 103 (33 clean); counts taken directly from _CORPUS_SCORE.json/_FAILURE_FLAGS.json and reconciled per-case (MATCH).",
-    "largest_bucket": "A Missing archetype \u2014 38 cases (36.9%)",
+    "largest_bucket": "A Missing archetype — 38 cases (36.9%)",
     "deepest_root_cause": "No causal adjudication (L/B cluster, diagnosis-engine.ts:364-405); drives wrong primaries AND 14 of the over-abstention gate-holds",
     "highest_roi_fix": "R2 causal adjudication (keystone; up to 41 cases reachable)",
     "order": "R0(done) -> R1 || R2 -> R4 -> R3 -> R5 -> R6/R7/R8 -> R9",
@@ -1560,7 +1560,7 @@
     "next_automatic_target": "R1 lexical-trigger hardening and/or R2 causal adjudication [separately authorized]"
   },
   "stage_a_round2_r1_lexical_hardening": {
-    "slice": "R1 lexical-trigger hardening \u2014 polarity-aware semantic guards in diagnosis-engine.ts",
+    "slice": "R1 lexical-trigger hardening — polarity-aware semantic guards in diagnosis-engine.ts",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_DIAGNOSIS_TRIGGER_HARDENING",
     "files": [
@@ -1580,7 +1580,7 @@
     "next_automatic_target": "R2 causal adjudication layer [separately authorized]"
   },
   "stage_a_round2_r2_causal_adjudication": {
-    "slice": "R2 causal adjudication layer \u2014 re-attribute surface symptoms to upstream drivers (KEYSTONE)",
+    "slice": "R2 causal adjudication layer — re-attribute surface symptoms to upstream drivers (KEYSTONE)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_CAUSAL_ADJUDICATION",
     "files": [
@@ -1601,7 +1601,7 @@
     "next_automatic_target": "R4 action-sequencing engine [separately authorized]"
   },
   "stage_a_round2_r4_action_sequencing": {
-    "slice": "R4 action-sequencing layer \u2014 verify/stabilize/constraint-safe first action",
+    "slice": "R4 action-sequencing layer — verify/stabilize/constraint-safe first action",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_ACTION_SEQUENCING",
     "files": [
@@ -1621,7 +1621,7 @@
     "next_automatic_target": "R3 survival prioritization OR R5 archetype expansion [separately authorized]"
   },
   "stage_a_round2_r3_survival_prioritization": {
-    "slice": "R3 survival prioritization \u2014 7-tier first-action priority ladder",
+    "slice": "R3 survival prioritization — 7-tier first-action priority ladder",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_ACTION_PRIORITIZATION",
     "files": [
@@ -1641,7 +1641,7 @@
     "next_automatic_target": "R5 archetype expansion E2+ [separately authorized; R2 prerequisite satisfied]"
   },
   "stage_a_round2_r5_slice1_financial_archetypes": {
-    "slice": "R5 slice 1 \u2014 debt/working-capital/pricing archetypes (E2 financial-structural)",
+    "slice": "R5 slice 1 — debt/working-capital/pricing archetypes (E2 financial-structural)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_ARCHETYPE_EXPANSION",
     "files": [
@@ -1665,7 +1665,7 @@
     "next_automatic_target": "R5 slice 2 (demand/gtm/inventory) OR R5 slice 3 (legal/key-person/capex) [separately authorized]"
   },
   "stage_a_round2_r5_slice2_demand_gtm_inventory": {
-    "slice": "R5 slice 2 \u2014 demand/gtm/inventory archetypes (E2 market/ops)",
+    "slice": "R5 slice 2 — demand/gtm/inventory archetypes (E2 market/ops)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ENGINE_ARCHETYPE_EXPANSION",
     "files": [
@@ -2053,7 +2053,7 @@
       "prisma": "valid",
       "regression": "none"
     },
-    "final_status": "STAGE_A_MERGED_TO_MAIN \u2014 INTERNAL_OWNER_MODE_TRIAL_ONLY baseline tagged"
+    "final_status": "STAGE_A_MERGED_TO_MAIN — INTERNAL_OWNER_MODE_TRIAL_ONLY baseline tagged"
   },
   "fix_pre_existing_test_failures": {
     "status": "IMPLEMENTED_DB_UNVERIFIED",
@@ -2063,8 +2063,8 @@
       "src/domain/owner-mode/diagnosis-evidence.ts"
     ],
     "tests": "1460 passing (all owner-mode domain tests)",
-    "gates_run": "npx tsc (\u2713), npx prisma validate (\u2713), vitest 1460/1460 passing",
-    "compilation": "\u2713 TypeScript compiles without errors",
+    "gates_run": "npx tsc (✓), npx prisma validate (✓), vitest 1460/1460 passing",
+    "compilation": "✓ TypeScript compiles without errors",
     "committed": "pending"
   },
   "deployment_readiness_audit": {
@@ -2098,8 +2098,8 @@
     "tests_failed": 0,
     "date": "2026-06-18",
     "commit": "d74cd94fc22f3829a02ef79fb155da872c1b9d06",
-    "lane_a": "skipped (push event, use_neon_secrets != true) \u2014 expected",
-    "neon_verification": "NEON_DB_PENDING_MIGRATIONS \u2014 see lane_a_evidence below"
+    "lane_a": "skipped (push event, use_neon_secrets != true) — expected",
+    "neon_verification": "NEON_DB_PENDING_MIGRATIONS — see lane_a_evidence below"
   },
   "lane_a_evidence": {
     "run_id": "27795140566",
@@ -2110,14 +2110,14 @@
     "neon_host": "ep-tiny-breeze-an0qsoje.c-6.us-east-1.aws.neon.tech (direct, not pooler)",
     "pooler_gate": "pass",
     "prisma_validate": "pass",
-    "prisma_migrate_status": "fail \u2014 22 pending migrations + 1 ghost migration (1778679447_add_aggregate_locks)",
+    "prisma_migrate_status": "fail — 22 pending migrations + 1 ghost migration (1778679447_add_aggregate_locks)",
     "last_applied_in_neon": "20260511_add_aggregate_locks",
     "pending_count": 22,
     "db_tests": "skipped (migrate status exit code 1)",
     "conclusion": "LANE_A_DB_FAILED",
     "classification": "NEON_DB_PENDING_MIGRATIONS",
-    "ghost_root_cause": "B+A \u2014 Neon used by external CLI session on 2026-05-13 (Unix epoch 1778679447); folder never committed to git",
-    "ghost_sql_conflict_risk": "none \u2014 local migration uses IF NOT EXISTS guards; migrate deploy ignores ghost entries",
+    "ghost_root_cause": "B+A — Neon used by external CLI session on 2026-05-13 (Unix epoch 1778679447); folder never committed to git",
+    "ghost_sql_conflict_risk": "none — local migration uses IF NOT EXISTS guards; migrate deploy ignores ghost entries",
     "recommended_remediation": "CREATE_FRESH_NEON_TEST_DB (preferred) or migrate deploy against current Neon DB (fallback)",
     "investigation_doc": "NEON_MIGRATION_DRIFT_INVESTIGATION.md",
     "fix_required": "Owner action: choose Path A (fresh Neon branch) or Path B (deploy to current Neon DB) per investigation doc, then re-trigger LANE_A"
@@ -2142,44 +2142,44 @@
         "src/services/controlled-learning-regression.service.ts",
         "src/__tests__/domain/owner-mode/controlled-learning-regression.test.ts"
       ],
-      "workspace_enforcement": "\u2713 All methods enforce workspaceId parameter",
+      "workspace_enforcement": "✓ All methods enforce workspaceId parameter",
       "test_coverage": "32 tests covering PASS/FAIL/INCONCLUSIVE verdicts, invalid verdict, score validation (0-1), NaN, candidate not found, workspace isolation, hasRegression true/false, list scoping",
-      "gates_run": "npx tsc --noEmit (\u2713), npx prisma validate (\u2713), vitest 32/32 (\u2713)",
+      "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 32/32 (✓)",
       "committed": "68bc0096",
       "pushed": true
     },
     "description": "Controlled Learning Regression Results",
-    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
     "lane_b_run_id": "27810180754"
   },
   "phase_30": {
     "status": "COMPLETE_VERIFIED",
     "description": "Controlled Learning Reviews",
-    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
     "lane_b_run_id": "27810180754"
   },
   "phase_31": {
     "status": "COMPLETE_VERIFIED",
     "description": "Controlled Learning Admissions + Rejections",
-    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
     "lane_b_run_id": "27810180754"
   },
   "phase_32": {
     "status": "COMPLETE_VERIFIED",
     "description": "Privacy/Consent/Retention controls",
-    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
     "lane_b_run_id": "27810180754"
   },
   "phase_34": {
     "status": "COMPLETE_VERIFIED",
     "description": "Staged Rollout Flags + Rollback Events",
-    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
     "lane_b_run_id": "27810180754"
   },
   "phase_35": {
     "status": "COMPLETE_VERIFIED",
     "description": "Harm Events + Attribution Reviews",
-    "db_verification": "CI_DB_VERIFIED \u2014 GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
+    "db_verification": "CI_DB_VERIFIED — GitHub Actions LANE_B run 27810180754 (postgres:16, 2026-06-19)",
     "lane_b_run_id": "27810180754"
   },
   "lane_b_phases_29_35": {
@@ -2192,5 +2192,27 @@
     "conclusion": "success",
     "migrate_deploy": "success",
     "db_tests": "passed"
+  },
+  "blocker_1_contradiction_gate_fix": {
+    "status": "BLOCKER_1_FIXED_CODE_VERIFIED",
+    "date": "2026-06-19",
+    "file": "src/domain/business-facts/contradiction-resolver.ts",
+    "function": "hasBlockingContradiction()",
+    "bug": "Impossible AND condition: contradiction.status === unresolved AND [material_conflict,critical_conflict].includes(contradiction.status). Both conditions can never be true simultaneously — function always returned false.",
+    "fix": "Removed the impossible AND branch. Now returns true only when contradiction.status is material_conflict or critical_conflict.",
+    "tests_added": "5 new deterministic tests in src/__tests__/business-facts/contradiction-resolver.test.ts: material_conflict->true, critical_conflict->true, mixed-with-material->true, all-non-blocking->false, empty->false. Replaced existing weak typeof boolean assertion.",
+    "tests_result": "21/21 passing (vitest, exit code 0)",
+    "tsc": "PASS",
+    "prisma_validate": "PASS",
+    "db_touched": "NO",
+    "schema_changed": "NO",
+    "runtime_callers": "ZERO confirmed runtime callers outside tests — function is exported but not wired to any active service or route.",
+    "secondary_finding": "detectAndResolveContradictions() sets contradiction.status to resolution values (unresolved, resolved_by_source_priority) not severity values. For hasBlockingContradiction to return true in live detection flow, status encoding in detectAndResolveContradictions must also be reviewed. Deferred — out of scope for this fix.",
+    "remaining_blockers": [
+      "BLOCKER-2: admission service does not verify ControlledLearningReview APPROVED",
+      "BLOCKER-3: eligibilityStatus accepted from POST body not read from DB",
+      "HIGH-1: audit trail missing from 11 controlled learning services"
+    ],
+    "next_step": "OWNER_MODE_FIX_BLOCKER_2_3_ADMISSION_SERVICE"
   }
 }

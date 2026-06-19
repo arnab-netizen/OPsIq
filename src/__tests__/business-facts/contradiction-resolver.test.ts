@@ -563,13 +563,52 @@ describe("B06 contradiction resolver — acceptance gates", () => {
 });
 
 describe("B06 contradiction resolver — blocking and severity", () => {
-  it("identifies unresolved material conflicts that block high-confidence", () => {
+  // Helper: build a minimal contract with inline contradictions of given statuses
+  function contractWithContradictions(
+    statuses: Array<(typeof import("@/domain/business-facts/contract").CONTRADICTION_STATUSES)[number]>,
+  ): import("@/domain/business-facts/contract").BusinessFactsContract {
+    const base = asContract(examples.service_business);
+    return {
+      ...base,
+      contradictions: statuses.map((status, i) => ({
+        contradiction_id: `test_contradiction_${i}`,
+        description: `${status}: monthly_revenue (src_a vs src_b) = [100 vs 200]`,
+        fact_ids: ["fact_a", "fact_b"],
+        status,
+      })),
+    };
+  }
+
+  it("returns true when a contradiction has status material_conflict", () => {
+    const contract = contractWithContradictions(["material_conflict"]);
+    expect(hasBlockingContradiction(contract)).toBe(true);
+  });
+
+  it("returns true when a contradiction has status critical_conflict", () => {
+    const contract = contractWithContradictions(["critical_conflict"]);
+    expect(hasBlockingContradiction(contract)).toBe(true);
+  });
+
+  it("returns true when mixed contradictions include at least one blocking status", () => {
+    const contract = contractWithContradictions(["minor_conflict", "material_conflict", "resolved_by_owner"]);
+    expect(hasBlockingContradiction(contract)).toBe(true);
+  });
+
+  it("returns false when all contradictions are non-blocking statuses", () => {
+    const contract = contractWithContradictions(["minor_conflict", "unresolved", "resolved_by_owner", "resolved_by_source_priority"]);
+    expect(hasBlockingContradiction(contract)).toBe(false);
+  });
+
+  it("returns false when contradictions array is empty", () => {
+    const base = asContract(examples.service_business);
+    const contract = { ...base, contradictions: [] };
+    expect(hasBlockingContradiction(contract)).toBe(false);
+  });
+
+  it("identifies blocking contradictions from contradiction_case example", () => {
+    // Verifies the function returns a boolean without throwing on real example data
     const contract = asContract(examples.contradiction_case);
     const hasBlocking = hasBlockingContradiction(contract);
-
-    // contradiction_case has material conflicts
-    // (Note: current implementation may not flag if resolved by evidence)
-    // This test verifies the blocking check works
     expect(typeof hasBlocking).toBe("boolean");
   });
 
