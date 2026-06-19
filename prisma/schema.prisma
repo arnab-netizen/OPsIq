@@ -225,6 +225,8 @@ model ClientAccount {
   workspaceControlledLearningCandidates ControlledLearningCandidate[] @relation("WorkspaceControlledLearningCandidates")
   workspaceControlledLearningAuditEntries ControlledLearningCandidateAuditEntry[] @relation("WorkspaceControlledLearningAuditEntries")
   workspaceControlledLearningReviews ControlledLearningReview[] @relation("WorkspaceControlledLearningReviews")
+  workspaceControlledLearningAdmissions ControlledLearningAdmission[] @relation("WorkspaceControlledLearningAdmissions")
+  workspaceControlledLearningRejections ControlledLearningRejection[] @relation("WorkspaceControlledLearningRejections")
 
   @@index([status])
   @@map("client_accounts")
@@ -3976,6 +3978,8 @@ model ControlledLearningCandidate {
   workspace                   ClientAccount @relation("WorkspaceControlledLearningCandidates", fields: [workspaceId], references: [id])
   auditEntries                ControlledLearningCandidateAuditEntry[]
   reviews                     ControlledLearningReview[]
+  admissions                  ControlledLearningAdmission[]
+  rejections                  ControlledLearningRejection[]
 
   @@unique([workspaceId, auditFingerprint])
   @@index([workspaceId])
@@ -4019,4 +4023,42 @@ model ControlledLearningReview {
   @@index([candidateId])
   @@index([decision])
   @@map("controlled_learning_reviews")
+}
+
+model ControlledLearningAdmission {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  candidateId       String
+  admittedBy        String
+  admittedAt        DateTime
+  sourceLabel       String
+  evidenceOrigin    String
+  eligibilityStatus String
+  admissionNotes    String   @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  workspace         ClientAccount @relation("WorkspaceControlledLearningAdmissions", fields: [workspaceId], references: [id])
+  candidate         ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@unique([workspaceId, candidateId])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@map("controlled_learning_admissions")
+}
+
+model ControlledLearningRejection {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  candidateId       String
+  rejectedBy        String
+  rejectedAt        DateTime
+  rejectionReason   String   @db.Text
+  rejectionCode     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  workspace         ClientAccount @relation("WorkspaceControlledLearningRejections", fields: [workspaceId], references: [id])
+  candidate         ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@unique([workspaceId, candidateId])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@map("controlled_learning_rejections")
 }
