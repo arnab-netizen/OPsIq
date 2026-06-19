@@ -1,0 +1,178 @@
+name: Migrate Neon Test Database
+
+# Safe, gated prisma migrate deploy for the Neon TEST database.
+#
+# Purpose: resolves pending migration drift between the Neon test DB and
+#          the local prisma/migrations/ folder. Does NOT touch production
+#          or staging. Safe to run when Neon test DB has pending migrations.
+#
+# NEVER runs against production.
+# NEVER runs prisma migrate reset, prisma db push, or prisma db execute.
+# Only runs prisma migrate deploy — the production-safe, non-destructive deploy command.
+#
+# After this workflow succeeds, trigger DB Verification (use_neon_secrets=true)
+# to confirm LANE_A passes.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_test_db_only:
+        description: >
+          I confirm this is the Neon TEST database, not production or staging.
+          Set to "yes" to proceed.
+        required: true
+        default: 'no'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+
+concurrency:
+  group: migrate-neon-test
+  cancel-in-progress: false
+
+jobs:
+  migrate-neon-test:
+    name: 'Migrate Neon Test DB (prisma migrate deploy)'
+    if: github.event.inputs.confirm_test_db_only == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Safety gate 1: MIGRATION_DATABASE_URL must be set and must be a real URL.
+      - name: Assert MIGRATION_DATABASE_URL is set and is a real URL
+        id: url-check
+        run: |
+          URL="${{ secrets.MIGRATION_DATABASE_URL }}"
+          if [ -z "$URL" ]; then
+            echo "❌ MIGRATION_DATABASE_URL secret is not set. Cannot proceed."
+            exit 1
+          fi
+          # Must start with postgresql:// or postgres://
+          if ! echo "$URL" | grep -qE '^postgres(ql)?://'; then
+            echo "❌ MIGRATION_DATABASE_URL does not look like a valid PostgreSQL URL."
+            echo "   Expected: postgresql://user:pass@host/db"
+            echo "   Got a non-URL value. Fix the GitHub secret."
+            exit 1
+          fi
+          LEN=${#URL}
+          echo "✅ MIGRATION_DATABASE_URL is set and looks like a valid URL (length=$LEN)"
+
+      # Safety gate 2: must be direct (non-pooler) endpoint for migrations.
+      - name: Assert MIGRATION_DATABASE_URL is direct (not pooler)
+        id: pooler-check
+        run: |
+          URL="${{ secrets.MIGRATION_DATABASE_URL }}"
+          if echo "$URL" | grep -qi '\-pooler'; then
+            echo "❌ MIGRATION_DATABASE_URL appears to be a pooler URL (contains '-pooler')."
+            echo "   Prisma migrate deploy requires a direct (non-pooler) Neon endpoint."
+            echo "   Fix: supply the Neon direct URL (no '-pooler' in hostname) as MIGRATION_DATABASE_URL."
+            exit 1
+          fi
+          echo "✅ MIGRATION_DATABASE_URL is direct (no '-pooler' detected)"
+
+      # Safety gate 3: placeholder detection.
+      - name: Assert MIGRATION_DATABASE_URL is not a placeholder
+        id: placeholder-check
+        run: |
+          URL="${{ secrets.MIGRATION_DATABASE_URL }}"
+          if echo "$URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com|TEST_DATABASE_URL|DATABASE_URL'; then
+            echo "❌ MIGRATION_DATABASE_URL contains a placeholder or unresolved reference."
+            echo "   Fix: set the GitHub secret to the actual direct Neon URL."
+            exit 1
+          fi
+          echo "✅ MIGRATION_DATABASE_URL does not contain placeholder values"
+
+      # Safety gate 4: schema must be valid before touching DB.
+      - name: Prisma validate
+        id: validate
+        run: npx prisma validate
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
+      # Read-only status first — shows what will be deployed and confirms DB is reachable.
+      - name: Prisma migrate status (pre-deploy, read-only)
+        id: pre-status
+        run: |
+          echo "=== PRE-DEPLOY MIGRATION STATUS ==="
+          npx prisma migrate status 2>&1 | tee pre-deploy-status.txt || true
+          echo "==================================="
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
+      # Deploy pending migrations (non-destructive, production-safe command).
+      - name: Prisma migrate deploy
+        id: migrate-deploy
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
+      # Post-deploy status — confirms all migrations now applied.
+      - name: Prisma migrate status (post-deploy, read-only)
+        id: post-status
+        run: |
+          echo "=== POST-DEPLOY MIGRATION STATUS ==="
+          npx prisma migrate status 2>&1 | tee post-deploy-status.txt || true
+          echo "====================================="
+        env:
+          DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+
+      - name: Upload migration artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neon-test-migration-logs
+          path: |
+            pre-deploy-status.txt
+            post-deploy-status.txt
+          retention-days: 14
+
+      - name: Write GITHUB_STEP_SUMMARY
+        if: always()
+        run: |
+          URL_CHK="${{ steps.url-check.outcome }}"
+          POOL_CHK="${{ steps.pooler-check.outcome }}"
+          PH_CHK="${{ steps.placeholder-check.outcome }}"
+          VALIDATE="${{ steps.validate.outcome }}"
+          PRE="${{ steps.pre-status.outcome }}"
+          DEPLOY="${{ steps.migrate-deploy.outcome }}"
+          POST="${{ steps.post-status.outcome }}"
+          ok() { [ "$1" = "success" ] && echo "✅" || echo "❌"; }
+          OVERALL=$([ "$DEPLOY" = "success" ] && echo "✅ NEON_TEST_DB_MIGRATED" || echo "❌ NEON_TEST_MIGRATION_FAILED")
+          echo "$OVERALL"
+          {
+            echo "## Migrate Neon Test DB"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| MIGRATION_DATABASE_URL is real URL | $(ok $URL_CHK) |"
+            echo "| MIGRATION_DATABASE_URL is direct (not pooler) | $(ok $POOL_CHK) |"
+            echo "| No placeholder values | $(ok $PH_CHK) |"
+            echo "| Prisma schema valid | $(ok $VALIDATE) |"
+            echo "| Pre-deploy status (read-only) | $(ok $PRE) |"
+            echo "| prisma migrate deploy | $(ok $DEPLOY) |"
+            echo "| Post-deploy status (read-only) | $(ok $POST) |"
+            echo ""
+            echo "**Target:** Neon TEST database (MIGRATION_DATABASE_URL secret)"
+            echo "**Triggered by:** @${{ github.actor }}"
+            echo "**Commit:** \`${{ github.sha }}\`"
+            echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo ""
+            echo "**Next step:** Trigger 'DB Verification' workflow with use_neon_secrets=true to confirm LANE_A passes."
+          } >> $GITHUB_STEP_SUMMARY
