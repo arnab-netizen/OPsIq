@@ -1,7 +1,25 @@
 {
-  "execution_date": "2026-06-18",
-  "current_phase": "OWNER_MODE_COMPLETE_VERIFIED_PHASES_0_28",
-  "current_branch": "claude/sleepy-dirac-m4bdb9",
+  "execution_date": "2026-06-19",
+  "current_phase": "PHASE_29_CONTROLLED_LEARNING_FOUNDATION",
+  "current_branch": "claude/cool-ptolemy-dxrpm7",
+  "phase_29": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DOMAIN_CONTRACT_ONLY",
+    "files": [
+      "src/domain/owner-mode/controlled-learning.ts",
+      "src/__tests__/domain/owner-mode/controlled-learning.test.ts",
+      "PHASE_29_CONTROLLED_LEARNING_FOUNDATION_REPORT.md"
+    ],
+    "workspace_enforcement": "✓ assertWorkspaceScopedQuery enforced at all three entry points",
+    "auth_enforced": "✓ Deferred to API route slice (domain module; no route yet)",
+    "DTO_boundary": "✓ No DB-persisted records; output is plain classification result",
+    "test_coverage": "59 tests covering all 12 statuses, 15 rules, append-only invariant, promotion gate, audit builder",
+    "gates_run": "npx tsc --noEmit (✓), npx prisma validate (✓), vitest 59/59 (✓)",
+    "compilation": "✓ TypeScript compiles without errors",
+    "db_status": "DB_BLOCKED — NEON_DB_PENDING_MIGRATIONS (22 pending + 1 ghost); schema deferred to LANE_A verification",
+    "engine_mutation": "NONE — classifyLearningCandidate() is pure classification; no engine calls",
+    "committed": "pending"
+  },
   "owner_mode_reality_loop": {
     "phase_7": {
       "status": "COMPLETE_VERIFIED",
