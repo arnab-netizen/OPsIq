@@ -24,6 +24,7 @@ const eligibleCandidate = {
   eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
   evidenceSourceType: "REAL_SOURCE_BACKED_CANDIDATE",
   promotionLocked: false,
+  outcomeRecordedAt: new Date("2026-04-01T00:00:00Z"),
 };
 
 function makePrisma(overrides: Record<string, unknown> = {}) {
