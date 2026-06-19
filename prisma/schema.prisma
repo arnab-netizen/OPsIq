@@ -233,6 +233,8 @@ model ClientAccount {
   workspaceControlledLearningRegressionResults ControlledLearningRegressionResult[] @relation("WorkspaceControlledLearningRegressionResults")
   workspaceControlledLearningRolloutFlags ControlledLearningRolloutFlag[] @relation("WorkspaceControlledLearningRolloutFlags")
   workspaceControlledLearningRollbackEvents ControlledLearningRollbackEvent[] @relation("WorkspaceControlledLearningRollbackEvents")
+  workspaceControlledLearningHarmEvents ControlledLearningHarmEvent[] @relation("WorkspaceControlledLearningHarmEvents")
+  workspaceControlledLearningAttributionReviews ControlledLearningAttributionReview[] @relation("WorkspaceControlledLearningAttributionReviews")
 
   @@index([status])
   @@map("client_accounts")
@@ -3991,6 +3993,8 @@ model ControlledLearningCandidate {
   regressionResults           ControlledLearningRegressionResult[]
   rolloutFlags                ControlledLearningRolloutFlag[]
   rollbackEvents              ControlledLearningRollbackEvent[]
+  harmEvents                  ControlledLearningHarmEvent[]
+  attributionReviews          ControlledLearningAttributionReview[]
 
   @@unique([workspaceId, auditFingerprint])
   @@index([workspaceId])
@@ -4181,4 +4185,49 @@ model ControlledLearningRollbackEvent {
   @@index([candidateId])
   @@index([rollbackCode])
   @@map("controlled_learning_rollback_events")
+}
+
+model ControlledLearningHarmEvent {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  candidateId     String
+  harmType        String   // "FINANCIAL_LOSS" | "DECISION_ERROR" | "DATA_CORRUPTION" | "COMPLIANCE_VIOLATION" | "SAFETY_RISK"
+  severity        String   // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  detectedBy      String
+  detectedAt      DateTime
+  harmDescription String   @db.Text
+  mitigated       Boolean  @default(false)
+  mitigatedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningHarmEvents", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  attributionReviews ControlledLearningAttributionReview[]
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([harmType])
+  @@index([severity])
+  @@map("controlled_learning_harm_events")
+}
+
+model ControlledLearningAttributionReview {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  candidateId     String
+  harmEventId     String
+  reviewedBy      String
+  reviewedAt      DateTime
+  verdict         String   // "ATTRIBUTED" | "NOT_ATTRIBUTED" | "PARTIAL" | "INCONCLUSIVE"
+  confidenceScore Float
+  reviewNotes     String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningAttributionReviews", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  harmEvent       ControlledLearningHarmEvent @relation(fields: [harmEventId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([harmEventId])
+  @@index([verdict])
+  @@map("controlled_learning_attribution_reviews")
 }
