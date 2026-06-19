@@ -18,7 +18,7 @@ const admitSchema = z.object({
   admittedAt: z.string().min(1).transform((s) => new Date(s)),
   sourceLabel: z.string().min(1),
   evidenceOrigin: z.string().min(1),
-  eligibilityStatus: z.string().min(1),
+  // eligibilityStatus intentionally excluded — service reads it from DB, caller cannot supply it
   admissionNotes: z.string(),
 });
 
@@ -40,7 +40,7 @@ export const POST = withCanonicalEnforcement(
       admittedAt: body.admittedAt,
       sourceLabel: body.sourceLabel,
       evidenceOrigin: body.evidenceOrigin,
-      eligibilityStatus: body.eligibilityStatus,
+      // eligibilityStatus not passed — service reads from DB
       admissionNotes: body.admissionNotes,
     });
     if (!result.admitted) {
