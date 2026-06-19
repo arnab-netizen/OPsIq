@@ -3,7 +3,7 @@
 
 CREATE TABLE "controlled_learning_privacy_controls" (
     "id"            TEXT NOT NULL,
-    "workspaceId"   TEXT NOT NULL,
+    "workspaceId"   UUID NOT NULL,
     "candidateId"   TEXT NOT NULL,
     "controlType"   TEXT NOT NULL,
     "appliedBy"     TEXT NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE "controlled_learning_privacy_controls" (
 
 CREATE TABLE "controlled_learning_consent_records" (
     "id"            TEXT NOT NULL,
-    "workspaceId"   TEXT NOT NULL,
+    "workspaceId"   UUID NOT NULL,
     "candidateId"   TEXT NOT NULL,
     "consentGiven"  BOOLEAN NOT NULL,
     "consentBy"     TEXT NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE "controlled_learning_consent_records" (
 
 CREATE TABLE "controlled_learning_retention_policies" (
     "id"            TEXT NOT NULL,
-    "workspaceId"   TEXT NOT NULL,
+    "workspaceId"   UUID NOT NULL,
     "retentionDays" INTEGER NOT NULL,
     "appliedBy"     TEXT NOT NULL,
     "appliedAt"     TIMESTAMP(3) NOT NULL,

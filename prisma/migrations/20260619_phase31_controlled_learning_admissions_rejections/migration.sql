@@ -1,6 +1,6 @@
 CREATE TABLE "controlled_learning_admissions" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "candidateId" TEXT NOT NULL,
     "admittedBy" TEXT NOT NULL,
     "admittedAt" TIMESTAMP(3) NOT NULL,
@@ -22,7 +22,7 @@ ALTER TABLE "controlled_learning_admissions" ADD CONSTRAINT "controlled_learning
 
 CREATE TABLE "controlled_learning_rejections" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "candidateId" TEXT NOT NULL,
     "rejectedBy" TEXT NOT NULL,
     "rejectedAt" TIMESTAMP(3) NOT NULL,

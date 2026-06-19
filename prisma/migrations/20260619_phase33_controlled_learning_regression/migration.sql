@@ -2,7 +2,7 @@
 -- CreateTable
 CREATE TABLE "controlled_learning_regression_results" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "candidateId" TEXT NOT NULL,
     "testRunId" TEXT NOT NULL,
     "testVerdict" TEXT NOT NULL,

@@ -1,6 +1,6 @@
 CREATE TABLE "controlled_learning_reviews" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "candidateId" TEXT NOT NULL,
     "reviewerId" TEXT NOT NULL,
     "decision" TEXT NOT NULL,

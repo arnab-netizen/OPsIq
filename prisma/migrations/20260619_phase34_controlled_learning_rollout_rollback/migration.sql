@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "controlled_learning_rollout_flags" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "candidateId" TEXT NOT NULL,
     "rolloutStage" TEXT NOT NULL,
     "rolloutPct" DOUBLE PRECISION NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE "controlled_learning_rollout_flags" (
 -- CreateTable
 CREATE TABLE "controlled_learning_rollback_events" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "candidateId" TEXT NOT NULL,
     "rolledBackBy" TEXT NOT NULL,
     "rolledBackAt" TIMESTAMP(3) NOT NULL,

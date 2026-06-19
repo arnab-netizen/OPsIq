@@ -3965,7 +3965,7 @@ model OwnerBusinessMetricTimeline {
 
 model ControlledLearningCandidate {
   id                          String   @id @default(cuid())
-  workspaceId                 String
+  workspaceId                 String   @db.Uuid
   businessId                  String
   sourceRecommendationId      String?
   sourceOwnerDecisionId       String
@@ -4006,7 +4006,7 @@ model ControlledLearningCandidate {
 
 model ControlledLearningCandidateAuditEntry {
   id          String   @id @default(cuid())
-  workspaceId String
+  workspaceId String   @db.Uuid
   candidateId String
   action      String
   actorId     String?
@@ -4024,7 +4024,7 @@ model ControlledLearningCandidateAuditEntry {
 
 model ControlledLearningReview {
   id                String   @id @default(cuid())
-  workspaceId       String
+  workspaceId       String   @db.Uuid
   candidateId       String
   reviewerId        String
   decision          String   // "APPROVED" | "REJECTED" | "DEFERRED"
@@ -4042,7 +4042,7 @@ model ControlledLearningReview {
 
 model ControlledLearningAdmission {
   id                String   @id @default(cuid())
-  workspaceId       String
+  workspaceId       String   @db.Uuid
   candidateId       String
   admittedBy        String
   admittedAt        DateTime
@@ -4062,7 +4062,7 @@ model ControlledLearningAdmission {
 
 model ControlledLearningRejection {
   id                String   @id @default(cuid())
-  workspaceId       String
+  workspaceId       String   @db.Uuid
   candidateId       String
   rejectedBy        String
   rejectedAt        DateTime
@@ -4080,7 +4080,7 @@ model ControlledLearningRejection {
 
 model ControlledLearningPrivacyControl {
   id              String   @id @default(cuid())
-  workspaceId     String
+  workspaceId     String   @db.Uuid
   candidateId     String
   controlType     String   // "ANONYMIZE" | "REDACT" | "EXCLUDE" | "QUARANTINE"
   appliedBy       String
@@ -4098,7 +4098,7 @@ model ControlledLearningPrivacyControl {
 
 model ControlledLearningConsentRecord {
   id              String   @id @default(cuid())
-  workspaceId     String
+  workspaceId     String   @db.Uuid
   candidateId     String
   consentGiven    Boolean
   consentBy       String
@@ -4116,7 +4116,7 @@ model ControlledLearningConsentRecord {
 
 model ControlledLearningRetentionPolicy {
   id              String   @id @default(cuid())
-  workspaceId     String
+  workspaceId     String   @db.Uuid
   retentionDays   Int
   appliedBy       String
   appliedAt       DateTime
@@ -4131,7 +4131,7 @@ model ControlledLearningRetentionPolicy {
 
 model ControlledLearningRegressionResult {
   id                String   @id @default(cuid())
-  workspaceId       String
+  workspaceId       String   @db.Uuid
   candidateId       String
   testRunId         String
   testVerdict       String   // "PASS" | "FAIL" | "INCONCLUSIVE"
@@ -4151,7 +4151,7 @@ model ControlledLearningRegressionResult {
 
 model ControlledLearningRolloutFlag {
   id            String   @id @default(cuid())
-  workspaceId   String
+  workspaceId   String   @db.Uuid
   candidateId   String
   rolloutStage  String   // "SHADOW" | "CANARY" | "PARTIAL" | "FULL" | "PAUSED"
   rolloutPct    Float    // 0.0 - 100.0
@@ -4171,7 +4171,7 @@ model ControlledLearningRolloutFlag {
 
 model ControlledLearningRollbackEvent {
   id              String   @id @default(cuid())
-  workspaceId     String
+  workspaceId     String   @db.Uuid
   candidateId     String
   rolledBackBy    String
   rolledBackAt    DateTime
@@ -4189,7 +4189,7 @@ model ControlledLearningRollbackEvent {
 
 model ControlledLearningHarmEvent {
   id              String   @id @default(cuid())
-  workspaceId     String
+  workspaceId     String   @db.Uuid
   candidateId     String
   harmType        String   // "FINANCIAL_LOSS" | "DECISION_ERROR" | "DATA_CORRUPTION" | "COMPLIANCE_VIOLATION" | "SAFETY_RISK"
   severity        String   // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
@@ -4212,7 +4212,7 @@ model ControlledLearningHarmEvent {
 
 model ControlledLearningAttributionReview {
   id              String   @id @default(cuid())
-  workspaceId     String
+  workspaceId     String   @db.Uuid
   candidateId     String
   harmEventId     String
   reviewedBy      String

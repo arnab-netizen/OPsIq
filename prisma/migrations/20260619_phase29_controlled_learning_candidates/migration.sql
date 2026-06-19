@@ -1,6 +1,6 @@
 CREATE TABLE "controlled_learning_candidates" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "businessId" TEXT NOT NULL,
     "sourceRecommendationId" TEXT,
     "sourceOwnerDecisionId" TEXT NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE "controlled_learning_candidates" (
 
 CREATE TABLE "controlled_learning_candidate_audit_entries" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "candidateId" TEXT NOT NULL,
     "action" TEXT NOT NULL,
     "actorId" TEXT,

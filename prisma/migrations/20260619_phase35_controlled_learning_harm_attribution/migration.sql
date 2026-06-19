@@ -2,7 +2,7 @@
 
 CREATE TABLE "controlled_learning_harm_events" (
   "id"              TEXT NOT NULL,
-  "workspaceId"     TEXT NOT NULL,
+  "workspaceId"   UUID NOT NULL,
   "candidateId"     TEXT NOT NULL,
   "harmType"        TEXT NOT NULL,
   "severity"        TEXT NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE "controlled_learning_harm_events" (
 
 CREATE TABLE "controlled_learning_attribution_reviews" (
   "id"              TEXT NOT NULL,
-  "workspaceId"     TEXT NOT NULL,
+  "workspaceId"   UUID NOT NULL,
   "candidateId"     TEXT NOT NULL,
   "harmEventId"     TEXT NOT NULL,
   "reviewedBy"      TEXT NOT NULL,
