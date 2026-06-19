@@ -77,6 +77,11 @@ async function setup() {
 
 async function teardown() {
   console.log("\n📊 Cleaning up test environment...");
+  const testWithDb = process.env.TEST_WITH_DB === "true";
+  if (!testWithDb) {
+    console.log("  ℹ Skipping DB disconnect (TEST_WITH_DB not set)");
+    return;
+  }
   try {
     const { getDbInstance } = await import("./src/lib/db");
     const prisma = await getDbInstance();
