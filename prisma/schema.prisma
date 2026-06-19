@@ -230,6 +230,7 @@ model ClientAccount {
   workspaceControlledLearningPrivacyControls ControlledLearningPrivacyControl[] @relation("WorkspaceControlledLearningPrivacyControls")
   workspaceControlledLearningConsentRecords ControlledLearningConsentRecord[] @relation("WorkspaceControlledLearningConsentRecords")
   workspaceControlledLearningRetentionPolicies ControlledLearningRetentionPolicy[] @relation("WorkspaceControlledLearningRetentionPolicies")
+  workspaceControlledLearningRegressionResults ControlledLearningRegressionResult[] @relation("WorkspaceControlledLearningRegressionResults")
 
   @@index([status])
   @@map("client_accounts")
@@ -3985,6 +3986,7 @@ model ControlledLearningCandidate {
   rejections                  ControlledLearningRejection[]
   privacyControls             ControlledLearningPrivacyControl[]
   consentRecords              ControlledLearningConsentRecord[]
+  regressionResults           ControlledLearningRegressionResult[]
 
   @@unique([workspaceId, auditFingerprint])
   @@index([workspaceId])
@@ -4117,4 +4119,24 @@ model ControlledLearningRetentionPolicy {
   @@unique([workspaceId])
   @@index([workspaceId])
   @@map("controlled_learning_retention_policies")
+}
+
+model ControlledLearningRegressionResult {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  candidateId       String
+  testRunId         String
+  testVerdict       String   // "PASS" | "FAIL" | "INCONCLUSIVE"
+  regressionScore   Float
+  testedBy          String
+  testedAt          DateTime
+  testNotes         String   @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  workspace         ClientAccount @relation("WorkspaceControlledLearningRegressionResults", fields: [workspaceId], references: [id])
+  candidate         ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([testVerdict])
+  @@map("controlled_learning_regression_results")
 }
