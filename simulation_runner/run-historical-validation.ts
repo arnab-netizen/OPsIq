@@ -298,9 +298,13 @@ async function main(): Promise<void> {
     const engineInput = buildEngineInput(inp);
     const output = await runConsultingEngine(engineInput);
     const ocp = inp.ownerConstraintProfile;
+    // P3-A fix: pass dimension-mapped evidence to the causal challenge, not the raw
+    // inp.evidence packet (which uses case-file dimension strings like "finance" instead
+    // of the canonical "financial_health"). Passing raw dimensions caused every evidence
+    // item to appear off-archetype, triggering false adverseOffArchetypeEvidence holds.
     const safety = assessConsultingOutput(output, uuidv5(`${inp.caseId}#rec`, NS), "historical-validation", {
       totalEvidenceCount: engineInput.evidence.length,
-      evidence: (inp.evidence as CausalEvidence[]) ?? [],
+      evidence: engineInput.evidence as unknown as CausalEvidence[],
       ownerConstraintProfile: ocp,
     });
     const memo = output.decisionMemo;

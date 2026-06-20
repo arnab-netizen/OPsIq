@@ -333,7 +333,11 @@ const DIAGNOSIS_SUBSUMES_DOMAIN: Record<string, Set<string>> = {
   working_capital_stress: new Set(["liquidity"]),
   debt_solvency_pressure: new Set(["liquidity", "legal"]),
   strategic_capex_risk: new Set(["capex"]),
-  legal_governance_risk: new Set(["legal", "integrity"]),
+  // legal_governance_risk subsumes liquidity in addition to legal and integrity:
+  // insolvency proceedings and liquidity collapse are frequent downstream consequences
+  // of governance/fraud failures (Byju's-style), not independent causal domains that
+  // contradict a committed governance diagnosis.
+  legal_governance_risk: new Set(["legal", "integrity", "liquidity"]),
 };
 
 // A dangerous owner-proposed deep/broad discount stated alongside negative unit

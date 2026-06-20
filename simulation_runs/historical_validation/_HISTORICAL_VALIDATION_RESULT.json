@@ -3,7 +3,7 @@
   "rejectedUngrounded": 0,
   "blindReplaysCompleted": 42,
   "scores": {
-    "historical_alignment": 59.5,
+    "historical_alignment": 57.1,
     "diagnosis_agreement": 0,
     "action_agreement": 2.4,
     "safety": 100,
@@ -12,7 +12,6 @@
   "opsiq_better": [
     "RW_CANADA_BLACKBERRY_2012_SMARTPHONE_DISRUPTION",
     "RW_FINLAND_NOKIA_2010_SMARTPHONE_DISRUPTION",
-    "RW_INDIA_BYJUS_2024_INSOLVENCY",
     "RW_INDIA_ILFS_2018_LIQUIDITY_DEFAULT",
     "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
     "RW_INDIA_KINGFISHER_2012_COLLAPSE",
@@ -29,6 +28,7 @@
     "RW_CHINA_LUCKIN_2020_ACCOUNTING_FRAUD",
     "RW_GLOBAL_FTX_2022_CRYPTO_EXCHANGE_COLLAPSE",
     "RW_INDIA_AMTEK_AUTO_2015_DEBT_DEFAULT",
+    "RW_INDIA_BYJUS_2024_INSOLVENCY",
     "RW_INDIA_CCD_2019_DEBT_TURNAROUND",
     "RW_INDIA_COX_KINGS_2019_DEBT_DEFAULT",
     "RW_INDIA_DECCAN_CHRONICLE_2012_DEBT_DEFAULT",
@@ -127,12 +127,12 @@
       "caseId": "RW_INDIA_BYJUS_2024_INSOLVENCY",
       "engineDiagnosis": "legal_governance_risk",
       "committed": true,
-      "gateAbstain": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
-      "classification": "OPSIQ_BETTER"
+      "aligned": false,
+      "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_INDIA_CCD_2019_DEBT_TURNAROUND",
@@ -314,7 +314,7 @@
       "caseId": "RW_INDIA_SUZLON_2012_CDR",
       "engineDiagnosis": "margin_erosion",
       "committed": true,
-      "gateAbstain": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
