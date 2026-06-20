@@ -1,0 +1,48 @@
+{
+  "case_id": "RW_INDIA_BYJUS_2024_INSOLVENCY",
+  "company": "Think & Learn Pvt. Ltd. / BYJU'S",
+  "decision_date": "2024-01-23",
+  "industry": "Edtech",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "BYJU'S reported delayed FY2021-22 financial results in January 2024",
+    "Consolidated FY2021-22 loss was ₹8,245 crore, up from ₹4,564 crore in FY2020-21",
+    "Operating revenue rose to approximately ₹5,014.6 crore in FY2021-22 from ₹2,280.3 crore in FY2020-21 — revenue growth with simultaneously worsening losses",
+    "FY2021 and FY2022 audit delays indicated audit-readiness and governance concerns",
+    "In June 2023, BYJU'S missed a $40 million interest payment on its term loan B and filed suit challenging loan acceleration",
+    "Company raised structured debt against Aakash Educational Services cash flows, increasing group financing complexity",
+    "Problem combined: high and worsening losses despite revenue growth, delayed audited financial reporting, debt pressure, governance credibility damage, investor and lender conflict, liquidity stress, and trust erosion"
+  ],
+  "financial_signals_at_decision_date": {
+    "fy22_consolidated_loss_crore": 8245,
+    "fy21_consolidated_loss_crore": 4564,
+    "fy22_operating_revenue_crore": 5014.6,
+    "fy21_operating_revenue_crore": 2280.3,
+    "audit_delay": "FY21 and FY22 results delayed — audit-readiness concerns",
+    "term_loan_b_missed_payment_usd_million": 40,
+    "term_loan_b_missed_date": "June 2023",
+    "structured_debt_complexity": "Debt raised against Aakash Educational Services cash flows"
+  },
+  "operating_signals_at_decision_date": {
+    "revenue_trajectory": "Growing — but loss growth outpaced revenue growth",
+    "burn_rate": "High and worsening — losses doubled from FY21 to FY22",
+    "governance_reporting": "Delayed by more than a year for FY22 results",
+    "acquisition_structure": "Complex group with Aakash and other acquisitions creating financing complexity"
+  },
+  "governance_signals_at_decision_date": {
+    "audit_status": "FY22 results reported January 2024 — approximately 18 months delayed",
+    "investor_confidence": "Severely impaired — lender disputes and audit delays",
+    "lender_conflict": "Active — BYJU'S challenged loan acceleration in court June 2023",
+    "governance_credibility": "Severely damaged by reporting delays and lender disputes"
+  },
+  "risk_flags_at_decision_date": [
+    "Losses worsening faster than revenue growing — unsustainable unit economics",
+    "18-month audit delay signals deep governance and reporting failures",
+    "Active lender dispute over term loan B acceleration",
+    "Structured debt complexity from Aakash acquisition financing",
+    "Investor and lender trust severely eroded",
+    "Edtech sector under broader investor scrutiny post-COVID growth correction",
+    "Private company — limited public financial discipline mechanisms"
+  ],
+  "question": "Given ₹8,245 crore FY22 losses (worsening from ₹4,564 crore), 18-month audit delay, active lender dispute over term loan B, and severe governance credibility damage, diagnose root causes and recommend the highest-priority action plan before formal insolvency proceedings."
+}

@@ -1,0 +1,44 @@
+{
+  "case_id": "RW_FINLAND_NOKIA_2010_SMARTPHONE_DISRUPTION",
+  "company": "Nokia Corporation",
+  "decision_date": "2010-12-31",
+  "industry": "Mobile devices",
+  "geography": "Finland",
+  "known_facts_at_decision_date": [
+    "Nokia remained a large global mobile-device player with significant market share in 2010",
+    "Smartphone adoption was accelerating globally with strong growth trends",
+    "Competitive pressure from Apple iPhone and Android-based devices was intensifying throughout 2010",
+    "Nokia's competitive position in mobile devices was adversely affected in 2010",
+    "Nokia's platform strategy was uncertain and complex — Symbian remained significant but faced usability, ecosystem, and developer challenges",
+    "Symbian OS faced known weaknesses in developer ecosystem, app store, and user experience compared to iOS and Android",
+    "Nokia had multiple platform initiatives creating internal complexity and resource fragmentation",
+    "No definitive platform decision or partnership had been publicly committed as of end of 2010"
+  ],
+  "financial_signals_at_decision_date": {
+    "market_position": "Large global player — but competitive position adversely affected in 2010",
+    "smartphone_competitive_gap": "Widening against iPhone and Android",
+    "platform_investment": "Divided across multiple initiatives — Symbian, MeeGo, and others",
+    "scale_advantage": "Large scale in feature phones — but scale not translating to smartphone leadership"
+  },
+  "operating_signals_at_decision_date": {
+    "symbian_status": "Still significant platform but facing known usability and ecosystem limitations",
+    "developer_ecosystem": "Weaker than iOS App Store or Android Market",
+    "product_cycle_speed": "Slower than Apple and Android OEMs in smartphone iteration",
+    "platform_fragmentation": "Multiple platform tracks reducing development focus"
+  },
+  "governance_signals_at_decision_date": {
+    "strategy_clarity": "Uncertain — no committed single platform direction publicly announced",
+    "leadership_decision": "Platform decision pending — management evaluating options",
+    "organizational_speed": "Perceived as slower than market disruption pace",
+    "board_oversight": "Strategy review underway per public signals"
+  },
+  "risk_flags_at_decision_date": [
+    "Accelerating smartphone adoption means competitive gap compounds every quarter of delay",
+    "Symbian ecosystem weakness risks developer abandonment",
+    "Platform indecision spreads resources thin across multiple tracks",
+    "Treating existing scale as competitive protection risks strategic blind spot",
+    "No committed platform or partnership decision — strategic uncertainty visible to market and partners",
+    "iPhone and Android market share gains in smartphones accelerating"
+  ],
+  "question": "Given accelerating smartphone disruption, Symbian ecosystem weakness, platform indecision, and competitive pressure from iOS and Android, diagnose root causes and recommend the highest-priority strategic action plan for Nokia's leadership."
+}

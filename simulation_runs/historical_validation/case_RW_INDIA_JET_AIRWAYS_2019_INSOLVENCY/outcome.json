@@ -1,0 +1,29 @@
+{
+  "case_id": "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Jet Airways collapsed from a combination of unsustainable debt, high fixed operating costs incompatible with a low-cost-dominated market, failed emergency funding rescue, and the irreversible value destruction from operational suspension. The lender committee's refusal to provide emergency funds removed the last lifeline. Root causes: cash liquidity crisis, debt solvency pressure, failed emergency funding and rescue, high operating-cost structure, competitive pressure from LCCs, loss of operating continuity from suspension, creditor coordination complexity, and cross-border insolvency complexity.",
+  "expert_first_action": "Immediate lender standstill and IBC-protected restructuring to halt value destruction; preserve aircraft slots, routes, and key assets; develop a funded revival plan anchored on a viable reduced network; stabilize employee, customer, and creditor obligations; coordinate Indian and cross-border (Dutch) stakeholders simultaneously.",
+  "actual_decision": "No emergency rescue funding was secured. Operations remained suspended. NCLT insolvency petition was admitted 20 June 2019.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Failure to secure emergency rescue funding before operational suspension",
+    "Delay in seeking formal insolvency protection while value (slots, routes, assets) eroded",
+    "Failure to resolve cross-border coordination before operational collapse"
+  ],
+  "beneficial_actions": [
+    "Lender committee's eventual decision to pursue formal IBC process preserved some structured value-recovery pathway"
+  ],
+  "citation": "NCLT Mumbai admitted petition 20 June 2019, appointed Interim Resolution Professional. Supreme Court of India directed liquidation November 2024 after multi-year revival effort. Dutch bankruptcy proceedings from May 2019. Jet Airways official insolvency page and IBBI order confirm CIRP commencement.",
+  "actual_outcome": "NCLT Mumbai admitted insolvency petition 20 June 2019 and appointed Interim Resolution Professional. Dutch bankruptcy proceedings ran from May 2019. Multi-year revival effort under Jalan-Kalrock consortium ultimately failed. Supreme Court directed liquidation in November 2024.",
+  "documented_root_causes": [
+    "Cash liquidity crisis — insufficient to continue operations",
+    "Debt solvency pressure — heavily debt-laden balance sheet",
+    "Failed emergency funding rescue — lenders declined April 2019",
+    "High operating-cost structure — uncompetitive with LCCs",
+    "Competitive pressure from low-cost carriers",
+    "Loss of operating continuity from suspension — slots and routes at risk",
+    "Creditor coordination complexity across multiple creditor classes",
+    "Cross-border insolvency complexity — Dutch jurisdiction"
+  ],
+  "final_business_state": "CIRP commenced June 2019. Multi-year revival attempt failed. Supreme Court directed liquidation November 2024."
+}

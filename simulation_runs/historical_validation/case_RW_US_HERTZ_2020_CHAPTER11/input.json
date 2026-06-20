@@ -1,0 +1,43 @@
+{
+  "case_id": "RW_US_HERTZ_2020_CHAPTER11",
+  "company": "Hertz Global Holdings",
+  "decision_date": "2020-05-15",
+  "industry": "Vehicle rental",
+  "geography": "United States",
+  "known_facts_at_decision_date": [
+    "Travel demand collapsed sharply due to COVID-19 pandemic beginning in early 2020",
+    "Hertz operated a large vehicle fleet with substantial associated fleet-financing obligations",
+    "Revenue was severely impaired by the near-total collapse of travel activity from the pandemic",
+    "Hertz carried large fixed-cost obligations including fleet depreciation, lease payments, and operating infrastructure",
+    "Liquidity pressure was severe — limited ability to service debt and fleet-financing from collapsed revenue",
+    "Management was evaluating options including creditor negotiation, cash preservation, fleet asset disposal, and formal restructuring",
+    "Deeper structural issues included high leverage, fleet-financing dependency, and a fixed-cost model mismatched to a demand shock"
+  ],
+  "financial_signals_at_decision_date": {
+    "revenue_status": "Severely impaired by COVID-19 travel demand collapse",
+    "fleet_financing_status": "Large obligations — fleet is core asset but also primary liability",
+    "liquidity_status": "Severe pressure — insufficient to service obligations at current revenue levels",
+    "debt_status": "Highly leveraged — significant debt burden pre-existing COVID shock",
+    "fixed_cost_rigidity": "High — fleet and infrastructure costs not easily reduced short-term"
+  },
+  "operating_signals_at_decision_date": {
+    "travel_demand": "Near-zero from COVID-19 travel restrictions",
+    "fleet_utilization": "Severely impaired",
+    "cost_reduction_optionality": "Limited short-term — fleet-financing commitments are contractual",
+    "fleet_disposal_optionality": "Some — but depressed used-vehicle market limits recoveries"
+  },
+  "governance_signals_at_decision_date": {
+    "management_response": "Evaluating restructuring options including potential Chapter 11",
+    "creditor_engagement": "Active but no standstill or restructuring agreement in place as of decision date",
+    "board_deliberation": "Ongoing — formal restructuring decision not yet announced"
+  },
+  "risk_flags_at_decision_date": [
+    "Demand collapse may be prolonged — recovery timeline uncertain",
+    "Fleet-financing obligations contractually rigid — cannot be stopped without default",
+    "High leverage makes thin revenue coverage untenable",
+    "Used-vehicle market prices declining — fleet disposal yields compressed",
+    "Without formal restructuring, uncontrolled default risk",
+    "No certainty of when travel demand will recover"
+  ],
+  "question": "Given severe travel-demand collapse from COVID-19, large fleet-financing obligations, high leverage, and liquidity pressure, diagnose root causes and recommend the highest-priority action plan before formal restructuring proceedings."
+}

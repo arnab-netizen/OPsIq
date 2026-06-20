@@ -1,0 +1,27 @@
+{
+  "case_id": "RW_US_HERTZ_2020_CHAPTER11",
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json mention Chapter 11 filing 22 May 2020, reorganization confirmation, debt eliminated, or equity recovery?",
+      "finding": "input.json contains none of these outcome references. It correctly notes that management was 'evaluating' options and formal restructuring decision was not yet announced.",
+      "verdict": "PASS"
+    },
+    "hindsight_leakage": {
+      "question": "Does input.json contain hindsight conclusions about restructuring outcome or recovery?",
+      "finding": "input.json frames the situation as an open crisis with uncertain outcome. No restructuring conclusion embedded.",
+      "verdict": "PASS"
+    },
+    "future_date_leakage": {
+      "question": "Does input.json reference events or data from after 15 May 2020?",
+      "finding": "No post-15-May-2020 facts appear in input.json.",
+      "verdict": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "question": "Does input.json assume Chapter 11 outcome or balance sheet recovery?",
+      "finding": "input.json frames the decision as open — management evaluating options. No outcome conclusion embedded.",
+      "verdict": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "All leakage checks pass. input.json is clean of outcome, hindsight, future-date, and expert-conclusion leakage."
+}

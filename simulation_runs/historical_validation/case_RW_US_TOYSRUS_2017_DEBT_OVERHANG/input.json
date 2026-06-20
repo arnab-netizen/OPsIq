@@ -1,0 +1,46 @@
+{
+  "case_id": "RW_US_TOYSRUS_2017_DEBT_OVERHANG",
+  "company": "Toys \"R\" Us",
+  "decision_date": "2017-09-01",
+  "industry": "Specialty retail",
+  "geography": "United States",
+  "known_facts_at_decision_date": [
+    "Toys R Us was a major toy retailer with strong brand recognition in specialty toys",
+    "Facing significant competitive pressure from online retailers and mass-market retailers",
+    "Carrying a heavy debt burden resulting from a leveraged buyout",
+    "Reuters reported the company was seeking relief from approximately $5.2 billion in debt before any bankruptcy filing",
+    "Approximately $400 million in annual interest burden linked to the LBO debt structure",
+    "The brand retained value but the debt burden constrained all investment and strategic flexibility",
+    "The deeper constraint was capital structure and liquidity, not solely retail disruption",
+    "Operating environment combined e-commerce disruption, seasonal revenue concentration, and debt-service pressure"
+  ],
+  "financial_signals_at_decision_date": {
+    "total_debt_billion_usd": 5.2,
+    "annual_interest_burden_million_usd": 400,
+    "debt_source": "Leveraged buyout",
+    "capital_structure": "Severely overleveraged — LBO debt constraining investment",
+    "liquidity_status": "Under pressure — interest burden consuming operating cash flow"
+  },
+  "operating_signals_at_decision_date": {
+    "brand_value": "Strong — Toys R Us recognized specialty toy brand",
+    "competitive_environment": "Intensifying — online (Amazon) and mass-market (Walmart, Target) pressure",
+    "investment_constraint": "Severe — debt burden prevented adequate capital investment",
+    "omnichannel_capability": "Underdeveloped relative to digital competition",
+    "revenue_concentration": "Holiday-season dependent — liquidity pressure acute at non-peak periods"
+  },
+  "governance_signals_at_decision_date": {
+    "ownership": "Private equity — LBO structure from 2005",
+    "strategic_flexibility": "Severely constrained by debt service requirements",
+    "creditor_engagement": "Active — company seeking debt relief per Reuters reporting",
+    "management_focus": "Evaluating debt restructuring options before bankruptcy"
+  },
+  "risk_flags_at_decision_date": [
+    "$5.2 billion debt with $400 million annual interest — operationally unserviceable under retail pressure",
+    "Online and mass-retail competition eroding market share and margins",
+    "Holiday-season revenue concentration creates acute liquidity risk at non-peak periods",
+    "Debt burden prevented investment needed to compete omnichannel",
+    "No credible deleveraging path through operations alone",
+    "Formal restructuring increasingly likely if debt relief not achieved"
+  ],
+  "question": "Given approximately $5.2 billion in LBO debt with $400 million annual interest, retail competitive pressure from e-commerce and mass retailers, and constrained investment capacity, diagnose root causes and recommend the highest-priority action plan before formal bankruptcy proceedings."
+}

@@ -1,0 +1,46 @@
+{
+  "case_id": "RW_US_SEARS_2018_RETAIL_DECLINE",
+  "company": "Sears Holdings",
+  "decision_date": "2018-06-01",
+  "industry": "Department-store retail",
+  "geography": "United States",
+  "known_facts_at_decision_date": [
+    "Sears and Kmart comparable store sales were falling sharply",
+    "SEC-filed Q1 2018 earnings: total comparable store sales down 11.9% year-over-year",
+    "Sears Domestic comparable store sales down 13.4% in Q1 2018",
+    "Store closures were contributing to overall revenue decline",
+    "Company was using asset sales and financial transactions as part of its survival strategy",
+    "Underlying problems included debt, liquidity pressure, underinvestment, eroding brand relevance, and retail disruption",
+    "Risk existed that asset monetization was delaying rather than solving the structural operating decline"
+  ],
+  "financial_signals_at_decision_date": {
+    "q1_2018_comparable_sales_total": "-11.9%",
+    "q1_2018_sears_domestic_comparable_sales": "-13.4%",
+    "revenue_trend": "Declining — store closures and comp sales both negative",
+    "liquidity_approach": "Asset sales and financial transactions used to fund ongoing operations",
+    "debt_status": "Under pressure — debt and liquidity constraints limiting investment",
+    "asset_monetization_risk": "Asset sales may delay rather than resolve structural decline"
+  },
+  "operating_signals_at_decision_date": {
+    "store_count_trend": "Declining from closures",
+    "brand_relevance": "Deteriorating — customer traffic and comparable sales falling sharply",
+    "omnichannel_capability": "Weak relative to competitors",
+    "customer_value_proposition": "Eroding — unable to articulate competitive differentiation",
+    "underinvestment": "Sustained underinvestment in stores and customer experience"
+  },
+  "governance_signals_at_decision_date": {
+    "strategy": "Asset monetization combined with store closures — not a clear operating turnaround plan",
+    "management_credibility": "Under pressure — sustained comp sales declines",
+    "board_oversight": "Ongoing but turnaround plan credibility weak",
+    "financial_engineering_risk": "Asset monetization substituting for operating improvement"
+  },
+  "risk_flags_at_decision_date": [
+    "Double-digit comparable sales declines signal structural not cyclical decline",
+    "Asset monetization without operating improvement creates terminal value destruction path",
+    "Sustained underinvestment in stores reinforces customer irrelevance",
+    "No clear omnichannel strategy to arrest digital competition losses",
+    "Store closure-driven revenue decline accelerates as remaining stores carry higher fixed costs",
+    "Bankruptcy increasingly probable if operating trend not reversed"
+  ],
+  "question": "Given double-digit comparable sales declines, ongoing store closures, underinvestment, and reliance on asset monetization rather than operational turnaround, diagnose root causes and recommend the highest-priority action plan before formal bankruptcy proceedings."
+}

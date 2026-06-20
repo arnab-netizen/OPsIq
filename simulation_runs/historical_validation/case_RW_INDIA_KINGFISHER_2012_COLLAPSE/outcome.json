@@ -1,0 +1,29 @@
+{
+  "case_id": "RW_INDIA_KINGFISHER_2012_COLLAPSE",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Kingfisher Airlines collapsed under the combined weight of persistent negative unit economics, unserviceable debt, chronic cash losses, salary arrears, and complete operational breakdown. The airline had never achieved profitability, making any turnaround dependent on a structural unit-economics fix that was not achieved. Root causes: cash liquidity crisis, debt solvency pressure, persistent negative unit economics, payroll arrears and employee unrest, regulatory risk from DGCA, weak turnaround credibility, and declining revenue.",
+  "expert_first_action": "Immediate engagement with DGCA to present a credible financial revival plan; emergency liquidity for salary arrears to prevent employee exodus; controlled fleet restart on only viable routes after labour and safety stabilization; parallel debt standstill with lenders; shrink to minimum viable network.",
+  "actual_decision": "Management failed to present a viable financial revival plan to DGCA. Fleet remained grounded. Salary arrears were not resolved. No emergency liquidity was secured.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Failure to present viable financial revival plan to regulator",
+    "Failure to resolve salary arrears before regulatory deadline",
+    "Continued absence of profitable unit economics throughout airline history",
+    "No credible investor or debt-restructuring plan executed"
+  ],
+  "beneficial_actions": [
+    "None identified that changed outcome"
+  ],
+  "citation": "Reuters, 20 October 2012: India suspends Kingfisher Airlines licence; DGCA suspension after failing to address regulator concerns and stopped taking bookings; NDTV: suspended for failing to present viable financial revival plan, not operated since 1 October 2012; Times of India: suspended for failing to resolve salary-payment issues; Lok Sabha official answer confirming suspension",
+  "actual_outcome": "DGCA suspended Kingfisher Airlines operating licence on 20 October 2012. Airline had not operated since 1 October 2012. Failed to address regulator concerns on financial viability and salary payments. Airline was subsequently wound down.",
+  "documented_root_causes": [
+    "Cash liquidity crisis — unable to pay staff for seven months",
+    "Debt solvency pressure — accumulated losses exceeding 50% of net worth",
+    "Persistent negative unit economics — never profitable since launch",
+    "Payroll arrears and employee unrest — seven months owed",
+    "Regulatory risk — DGCA actively reviewing licence",
+    "Weak turnaround credibility — no viable plan presented",
+    "Revenue decline — domestic revenue fell year-over-year"
+  ],
+  "final_business_state": "Licence suspended 20 October 2012. Fleet grounded. Operations ceased. Airline subsequently wound down."
+}

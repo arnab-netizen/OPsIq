@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_US_TOYSRUS_2017_DEBT_OVERHANG",
+  "businessProblem": "Toys R Us carries approximately $5.2 billion in LBO debt with $400 million annual interest burden as of September 2017. Facing competitive pressure from online and mass retailers. Debt constrains investment. Company seeking relief from debt pile. Diagnose root causes and recommend highest-priority action plan before bankruptcy.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Toys R Us carrying approximately $5.2 billion in debt from leveraged buyout, seeking relief per Reuters September 2017",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters September 2017"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Approximately $400 million annual interest burden from LBO debt — consuming operating cash flow",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters September 2017"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Debt burden prevented adequate capital investment needed to compete in omnichannel retail environment",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, industry analysis"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Brand retains strong recognition as specialty toy retailer — brand value exists if capital structure can be addressed",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "Industry analysis"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Omnichannel capability underdeveloped relative to digital competition due to debt-constrained investment",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Industry analysis, Reuters"
+    },
+    {
+      "dimension": "market",
+      "finding": "Significant competitive pressure from online retailers (Amazon) and mass-market retailers (Walmart, Target) intensifying",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, industry reporting"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Holiday-season revenue concentration creates acute liquidity risk at non-peak periods under debt-service pressure",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "Industry analysis, retail reporting"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Private equity LBO ownership structure from 2005 created the debt burden constraining all operational choices",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, public reporting"
+    }
+  ],
+  "clientContext": {
+    "companyName": "Toys \"R\" Us",
+    "country": "United States",
+    "industry": "Specialty retail",
+    "stage": "Debt restructuring / pre-bankruptcy",
+    "decisionDate": "2017-09-01",
+    "primaryStakeholder": "Board, private equity owners, lenders"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "HIGH",
+    "resistanceToChange": "HIGH — PE ownership prioritized debt management over operational investment",
+    "managementCapability": "MEDIUM — retail operations capable but capital-constrained",
+    "keyPersonDependency": "LOW",
+    "accountabilityWeakness": "HIGH — debt burden created structural accountability gap between PE owners and retail operators"
+  }
+}

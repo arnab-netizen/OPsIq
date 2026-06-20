@@ -1,0 +1,23 @@
+{
+  "case_id": "RW_US_SEARS_2018_RETAIL_DECLINE",
+  "source_urls": [
+    "https://www.sec.gov/Archives/edgar/data/1310067/000131006718000013/exhibit991-q12018shcearnin.htm",
+    "https://www.sec.gov/Archives/edgar/data/1310067/000131006718000014/shldq12018.htm",
+    "https://www.investopedia.com/news/downfall-of-sears/"
+  ],
+  "source_type": "SEC earnings release, SEC 10-Q filing, financial analysis",
+  "source_quality": {
+    "tier_A": ["Sears Holdings SEC Q1 2018 earnings release — comparable sales primary data", "Sears Holdings SEC 10-Q Q1 2018 — regulatory filing", "Bankruptcy court filings October 2018 — legal ground truth for outcome"],
+    "tier_B": ["Investopedia downfall analysis — secondary synthesis", "Credible financial journalism on Sears decline"]
+  },
+  "reliability_tier": "A-B",
+  "supports_ground_truth": true,
+  "contamination_risk": "High",
+  "contamination_notes": "Later bankruptcy commentary and asset-stripping claims must stay out of input. Asset-stripping claims are disputed — treat as hypothesis in analysis. ESL bid and post-bankruptcy outcome are outcome only. Hindsight attribution of cause (Eddie Lampert asset stripping) is disputed and should not be stated as fact.",
+  "source_limitations": [
+    "Later bankruptcy commentary must stay out of input.json",
+    "Asset-stripping claims are disputed — treat as hypothesis not established fact",
+    "ESL sale and post-bankruptcy outcome are outcome only",
+    "Investopedia is secondary synthesis — use SEC filings as primary"
+  ]
+}

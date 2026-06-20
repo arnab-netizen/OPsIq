@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_FINLAND_NOKIA_2010_SMARTPHONE_DISRUPTION",
+  "businessProblem": "Nokia faces accelerating smartphone disruption from iPhone and Android as of end-2010. Its Symbian platform faces ecosystem and UX weaknesses. Platform strategy is fragmented and uncommitted. Competitive position adversely affected in 2010. Diagnose root causes and recommend highest-priority strategic action plan.",
+  "evidence": [
+    {
+      "dimension": "market",
+      "finding": "Smartphone adoption accelerating globally in 2010 — competitive pressure from iPhone and Android intensifying",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Nokia 2010 annual report / Form 20-F, Nokia strategic communications"
+    },
+    {
+      "dimension": "market",
+      "finding": "Nokia's competitive position in mobile devices adversely affected in 2010",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Nokia 2010 annual report / Form 20-F"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Symbian remained significant but faced known weaknesses in usability, developer ecosystem, and app store relative to iOS and Android",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Wired technology journalism 2010, Nokia strategic communications"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Nokia had multiple platform initiatives (Symbian, MeeGo and others) creating internal complexity and resource fragmentation",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Nokia 2010 annual report, technology reporting"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Developer ecosystem weaker than iOS App Store or Android Market — risk of developer abandonment",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Wired 2010, industry analysis"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Product cycle speed slower than Apple and Android OEMs in smartphone iteration",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "Technology reporting 2010"
+    },
+    {
+      "dimension": "governance",
+      "finding": "No definitive platform decision or partnership publicly committed as of end of 2010 — strategic uncertainty visible",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Nokia 2010 annual report, public statements"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Scale advantage in feature phones not translating to smartphone leadership — scale protection assumption is a risk",
+      "confidence": "MEDIUM",
+      "isCritical": false,
+      "source": "Nokia 2010 annual report, industry analysis"
+    }
+  ],
+  "clientContext": {
+    "companyName": "Nokia Corporation",
+    "country": "Finland",
+    "industry": "Mobile devices",
+    "stage": "Strategic disruption response",
+    "decisionDate": "2010-12-31",
+    "primaryStakeholder": "Nokia Board and CEO"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "HIGH — organizational inertia in large incumbent",
+    "resistanceToChange": "HIGH — platform and organizational inertia documented",
+    "managementCapability": "MEDIUM — capable but slower than disruption pace",
+    "keyPersonDependency": "MEDIUM",
+    "accountabilityWeakness": "HIGH — platform indecision visible to market and partners"
+  }
+}

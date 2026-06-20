@@ -1,0 +1,25 @@
+{
+  "case_id": "RW_INDIA_KINGFISHER_2012_COLLAPSE",
+  "source_urls": [
+    "https://www.reuters.com/article/world/kingfisher-airlines-faces-licence-cancellation-idUSDEE89405L/",
+    "https://www.reuters.com/article/business/india-suspends-kingfisher-airlines-licence-idUSBRE89J05A/",
+    "https://www.ndtv.com/india-news/kingfisher-airlines-licence-suspended-by-aviation-regulator-502304",
+    "https://timesofindia.indiatimes.com/india/dgca-suspends-kingfishers-flying-license/articleshow/16889973.cms",
+    "https://sansad.in/getFile/loksabhaquestions/annex/185/AU803_GV3J3L.pdf?source=pqals"
+  ],
+  "source_type": "Wire reporting, official regulatory record, parliamentary answer, company annual report",
+  "source_quality": {
+    "tier_A": ["Reuters 5 October 2012 — decision-date contemporaneous", "DGCA-related regulatory reporting", "Kingfisher Annual Report FY2011-12"],
+    "tier_B": ["NDTV 20 October 2012 — outcome source", "Times of India 20 October 2012 — outcome source", "Lok Sabha parliamentary answer — official confirmation for outcome"]
+  },
+  "reliability_tier": "A-B",
+  "supports_ground_truth": true,
+  "contamination_risk": "Medium",
+  "contamination_notes": "Reuters 5 October 2012 is the clean decision-date source. Reuters, NDTV, and Times of India from 20 October 2012 are outcome sources and must appear only in outcome.json. Lok Sabha answer is post-event official confirmation for outcome only.",
+  "source_limitations": [
+    "Reuters 5 October 2012 is the primary decision-date source",
+    "Reuters, NDTV, ToI 20 October 2012 are outcome sources — not for input.json",
+    "Lok Sabha answer is later official confirmation for outcome only",
+    "Input.json must not include suspension event"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "case_id": "RW_INDIA_GO_FIRST_2023_INSOLVENCY",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Go First experienced a cascading insolvency triggered by a supplier-caused operational capacity collapse. The Pratt & Whitney engine grounding removed 50% of revenue-generating capacity in a high-fixed-cost business, destroying cash flow and exhausting all financial resources. The company's inability to secure engine replacements or compensation in time, combined with its debt obligations, made voluntary insolvency the only remaining option. Root causes: cash liquidity crisis, debt solvency pressure, operational capacity collapse from grounded aircraft, supplier dependency and engine reliability risk, revenue disruption from unavailable fleet, legal-contractual dispute with supplier, high fixed-cost airline model under capacity shock.",
+  "expert_first_action": "Seek immediate NCLT insolvency protection and creditor standstill; simultaneously negotiate engine availability, replacement, or compensation from Pratt & Whitney; preserve licences, slots, aircraft, and staff; develop a funded restart plan based on serviceable aircraft only; coordinate with lessors and creditors to prevent conflicting asset claims.",
+  "actual_decision": "Go First filed voluntary insolvency before NCLT on 2 May 2023 and suspended flights.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Over-dependence on single engine supplier without adequate contingency for fleet grounding",
+    "Failure to secure engine replacements or compensation before cash exhaustion",
+    "No bridge financing secured to bridge the capacity shock period"
+  ],
+  "beneficial_actions": [
+    "Voluntary insolvency filing provided formal insolvency protection and creditor standstill mechanism",
+    "Early public disclosure of engine dispute on record for creditor and lessor negotiations"
+  ],
+  "citation": "NCLT admitted Go First voluntary insolvency 10 May 2023 (Jus Mundi); IBBI-hosted NCLT order recorded financial distress from defective Pratt & Whitney engines; Reuters 2–3 May 2023 contemporaneous reporting; AirInsight fleet grounding analysis",
+  "actual_outcome": "NCLT admitted Go First voluntary insolvency on 10 May 2023. CIRP commenced. Complex aviation insolvency involving fleet grounding, creditor claims, and lessor disputes. Revival and liquidation prospects under review through 2023-2024.",
+  "documented_root_causes": [
+    "Cash liquidity crisis — company exhausted all financial resources",
+    "Debt solvency pressure — ₹65.21 billion in financial creditor dues",
+    "Operational capacity collapse — 50% fleet grounded by engine failures",
+    "Supplier dependency and engine reliability risk — Pratt & Whitney single-source",
+    "Revenue disruption from unavailable fleet — 50% capacity reduction",
+    "Legal-contractual dispute with supplier — unresolved at filing date",
+    "High fixed-cost airline model under capacity shock"
+  ],
+  "final_business_state": "NCLT admitted insolvency 10 May 2023. CIRP commenced. Outcome unresolved as of mid-2023."
+}

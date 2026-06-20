@@ -1,0 +1,29 @@
+{
+  "case_id": "RW_US_HERTZ_2020_CHAPTER11",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Hertz's crisis was caused by an external demand shock (COVID-19) meeting a structurally vulnerable balance sheet — high leverage, large fleet-financing obligations, and a fixed-cost model with no revenue buffer. The company had insufficient liquidity to absorb a prolonged demand collapse without formal restructuring. Root causes: cash liquidity crisis, travel demand collapse from COVID-19, pre-existing debt and fleet-financing pressure, high fixed-cost structure, and external shock incompatible with existing capital structure.",
+  "expert_first_action": "Immediate cash preservation and creditor engagement; pursue formal Chapter 11 restructuring to obtain automatic stay and restructure fleet-financing; optimize fleet disposition at best available prices; plan for multiple demand-recovery scenarios; preserve core operating capabilities, brand, and workforce.",
+  "actual_decision": "Hertz filed voluntary Chapter 11 on 22 May 2020.",
+  "outcome_polarity": "POSITIVE",
+  "harmful_actions": [
+    "Pre-crisis high leverage left no buffer for external shock",
+    "Fleet-financing structure created rigid obligations incompatible with sudden revenue collapse"
+  ],
+  "beneficial_actions": [
+    "Chapter 11 filing obtained automatic stay and restructuring framework",
+    "Plan of reorganization eliminated over $5 billion in debt",
+    "Post-reorganization global liquidity of over $2.2 billion secured",
+    "Company emerged from Chapter 11 with a stronger balance sheet"
+  ],
+  "citation": "Hertz SEC-filed Chapter 11 press release, exhibit 99-1; Hertz official reorganization confirmation press release: plan confirmed, creditors paid in full; Kroll bankruptcy administration records",
+  "actual_outcome": "Hertz filed voluntary Chapter 11 on 22 May 2020. Plan of reorganization confirmed by bankruptcy court. Eliminated over $5 billion in debt. Provided over $2.2 billion global liquidity. Hertz emerged from Chapter 11 with a stronger balance sheet and creditors paid in full.",
+  "documented_root_causes": [
+    "Cash liquidity crisis — collapsed revenue insufficient to service obligations",
+    "Travel demand collapse — COVID-19 near-total revenue destruction",
+    "Debt and fleet-financing pressure — large contractual obligations persisting through demand collapse",
+    "High fixed-cost structure — costs did not flex with revenue",
+    "External shock from COVID-19 travel collapse — exogenous cause meeting structural vulnerability",
+    "Need for formal restructuring — only mechanism to restructure contractual obligations"
+  ],
+  "final_business_state": "Emerged from Chapter 11 as restructured entity. Over $5 billion debt eliminated. Over $2.2 billion global liquidity. Creditors paid in full."
+}

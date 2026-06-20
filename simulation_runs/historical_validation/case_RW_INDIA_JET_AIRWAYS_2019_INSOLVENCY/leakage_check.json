@@ -1,0 +1,27 @@
+{
+  "case_id": "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json mention NCLT admission 20 June 2019, CIRP outcome, Jalan-Kalrock disputes, Supreme Court liquidation, or Dutch liquidation?",
+      "finding": "input.json contains none of these outcome references. It correctly states insolvency proceedings were a 'foreseeable next step' without asserting admission occurred.",
+      "verdict": "PASS"
+    },
+    "hindsight_leakage": {
+      "question": "Does input.json contain hindsight conclusions such as 'revival failed' or 'company was liquidated'?",
+      "finding": "input.json frames the situation prospectively at the decision date. No outcome conclusions embedded.",
+      "verdict": "PASS"
+    },
+    "future_date_leakage": {
+      "question": "Does input.json reference events or data from after 17 April 2019?",
+      "finding": "No post-17-April-2019 facts appear in input.json.",
+      "verdict": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "question": "Does input.json assume the outcome (insolvency admitted, liquidation directed)?",
+      "finding": "input.json frames the situation as requiring diagnosis and action recommendation without embedding outcome conclusions.",
+      "verdict": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "All leakage checks pass. input.json is clean of outcome, hindsight, future-date, and expert-conclusion leakage."
+}

@@ -1,0 +1,46 @@
+{
+  "case_id": "RW_INDIA_FUTURE_RETAIL_2022_INSOLVENCY",
+  "company": "Future Retail Ltd.",
+  "decision_date": "2022-04-14",
+  "industry": "Retail",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "Future Retail was financially distressed with substantial debt obligations as of April 2022",
+    "Future Group had agreed to sell retail assets to Reliance Industries but the transaction became entangled in Amazon-related legal disputes",
+    "Future Retail had warned in 2020 that if the Reliance deal failed, liquidation risk existed",
+    "Bank of India filed insolvency proceedings against Future Retail for non-payment of dues",
+    "Future Retail owed banks ₹5,322.32 crore as of 31 March 2022 per Bank of India NCLT petition",
+    "Bank of India filed a petition under IBC before NCLT",
+    "Proposed Reliance transaction could not be implemented after secured creditors voted against the scheme",
+    "Business situation combined debt pressure, legal and regulatory uncertainty, creditor resistance, liquidity stress, and failed strategic rescue"
+  ],
+  "financial_signals_at_decision_date": {
+    "total_bank_dues_crore": 5322.32,
+    "dues_currency": "INR",
+    "dues_date": "2022-03-31",
+    "petition_filed_by": "Bank of India",
+    "petition_type": "IBC Section 7",
+    "forum": "NCLT Mumbai",
+    "reliance_deal_status": "Blocked by legal dispute and creditor vote",
+    "secured_creditor_vote": "Against scheme"
+  },
+  "operating_signals_at_decision_date": {
+    "strategic_rescue_status": "Failed — Reliance transaction blocked",
+    "liquidity_status": "Stressed",
+    "creditor_alignment": "Misaligned — secured creditors voted against"
+  },
+  "governance_signals_at_decision_date": {
+    "legal_dispute": "Amazon arbitration dispute entangling asset sale",
+    "insolvency_petition_status": "Filed, pending admission",
+    "board_response": "Unable to implement Reliance transaction"
+  },
+  "risk_flags_at_decision_date": [
+    "IBC petition filed by major creditor — formal insolvency imminent if not resolved",
+    "No viable alternative strategic buyer identified",
+    "Secured creditors already voted against rescue scheme",
+    "Amazon dispute blocking only strategic exit",
+    "Liquidity insufficient to service debt obligations",
+    "No evidence of alternative restructuring plan"
+  ],
+  "question": "Given debt pressure, failed and blocked Reliance transaction, creditor resistance, Amazon legal dispute, and active insolvency petition, diagnose root causes and recommend the highest-priority action plan to maximize recovery and preserve business value."
+}

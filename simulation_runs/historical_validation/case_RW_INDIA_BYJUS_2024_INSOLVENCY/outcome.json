@@ -1,0 +1,30 @@
+{
+  "case_id": "RW_INDIA_BYJUS_2024_INSOLVENCY",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "BYJU'S suffered from a fundamental disconnection between revenue growth and profitability discipline, compounded by governance failure, audit delays, and overextended acquisition financing. The company grew aggressively using debt and investor capital without establishing sustainable unit economics. Governance and reporting failures destroyed creditor and investor confidence. Root causes: cash liquidity crisis, debt solvency pressure, governance and reporting credibility failure, revenue growth with worsening losses, investor and lender trust breakdown, overextended acquisition and group-financing structure, delayed audited financial discipline, and legal and creditor-process risk.",
+  "expert_first_action": "Immediate independent governance reset and audited-financial cleanup; creditor standstill and structured debt negotiation; reduce cash burn immediately; separate viable core edtech from distressed acquisitions; stop growth-at-any-cost spending; resolve term-loan and sponsorship creditor disputes before formal insolvency triggers.",
+  "actual_decision": "No meaningful restructuring was implemented. Lender disputes continued. BCCI pursued insolvency petition for sponsorship dues.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Continued growth-at-any-cost spending without achieving profitability",
+    "Delayed audited financial reporting for 18 months — destroyed governance credibility",
+    "Failed to resolve term loan B dispute before additional creditor claims accumulated",
+    "Complex acquisition financing created structural vulnerabilities"
+  ],
+  "beneficial_actions": [
+    "None identified that changed the outcome trajectory at the decision date"
+  ],
+  "citation": "Reuters 16 July 2024: India's companies tribunal admitted BYJU'S into insolvency over failure to pay approximately $19 million to BCCI. Business Standard: BCCI claim of ₹158 crore from sponsorship contract. ThePrint: NCLT admitted BCCI's plea over approximately ₹158 crore. Reuters: Supreme Court set aside settlement attempt, sent case to insolvency process.",
+  "actual_outcome": "NCLT admitted BYJU'S (Think & Learn Pvt. Ltd.) into insolvency on 16 July 2024 over failure to pay approximately ₹158 crore ($19 million) to BCCI from sponsorship contract. CIRP commenced. Supreme Court set aside settlement attempt and directed insolvency process to continue.",
+  "documented_root_causes": [
+    "Cash liquidity crisis — unable to meet obligations including sponsorship and loan payments",
+    "Debt solvency pressure — term loan B default and escalating creditor claims",
+    "Governance and reporting credibility failure — 18-month audit delay",
+    "Revenue growth with worsening losses — unsustainable unit economics",
+    "Investor and lender trust breakdown — lender disputes and governance failures",
+    "Overextended acquisition and group-financing structure — Aakash and others",
+    "Delayed audited financial discipline — no reliable financial picture for stakeholders",
+    "Legal and creditor-process risk — multiple creditor disputes converging"
+  ],
+  "final_business_state": "NCLT admitted insolvency July 2024. CIRP commenced. Supreme Court directed insolvency process to continue after setting aside settlement."
+}

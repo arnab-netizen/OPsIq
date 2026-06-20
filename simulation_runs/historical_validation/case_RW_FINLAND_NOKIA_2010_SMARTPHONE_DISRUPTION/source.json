@@ -1,0 +1,24 @@
+{
+  "case_id": "RW_FINLAND_NOKIA_2010_SMARTPHONE_DISRUPTION",
+  "source_urls": [
+    "https://www.nokia.com/system/files/files/request-nokia-in-2010-pdf.pdf",
+    "https://www.sec.gov/Archives/edgar/data/924613/000119312512102386/d290219d20f.htm",
+    "https://www.wired.com/2010/10/symbian-fixed",
+    "https://www.wired.com/2011/02/microsoft-and-nokia-team-up-to-build-windows-phones"
+  ],
+  "source_type": "Nokia annual report, SEC Form 20-F, technology journalism",
+  "source_quality": {
+    "tier_A": ["Nokia 2010 Annual Report — primary strategic and financial document", "Nokia SEC Form 20-F — formal regulatory filing", "Nokia official strategic communications"],
+    "tier_B": ["Wired October 2010 — Symbian ecosystem contemporaneous analysis", "Wired February 2011 — Microsoft partnership announcement (outcome source)", "Academic analysis of Nokia disruption"]
+  },
+  "reliability_tier": "A-B",
+  "supports_ground_truth": true,
+  "contamination_risk": "High",
+  "contamination_notes": "Many later accounts are hindsight-heavy retrospective analyses. Input must use 2010 decision-date facts only. Microsoft partnership (February 2011) must stay in outcome only. Handset sale to Microsoft (2013-2014) is final outcome only. Burning platform memo (February 2011) must stay in outcome only.",
+  "source_limitations": [
+    "Many later accounts are hindsight-heavy — use only contemporaneous 2010 sources for input",
+    "Microsoft partnership February 2011 is outcome — not for input.json",
+    "Handset sale to Microsoft 2013-2014 is final outcome — outcome.json only",
+    "Burning platform memo is February 2011 outcome context — outcome.json only"
+  ]
+}

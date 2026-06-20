@@ -1,0 +1,27 @@
+{
+  "case_id": "RW_INDIA_BYJUS_2024_INSOLVENCY",
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json mention NCLT admission 16 July 2024, BCCI outcome, settlement attempt, or Supreme Court ruling?",
+      "finding": "input.json contains none of these outcome references. All facts are anchored to January 2024 decision date or earlier.",
+      "verdict": "PASS"
+    },
+    "hindsight_leakage": {
+      "question": "Does input.json contain hindsight conclusions about insolvency outcome or BCCI petition?",
+      "finding": "input.json frames the situation prospectively at the decision date. BCCI dispute is not yet triggered at decision date — correctly excluded.",
+      "verdict": "PASS"
+    },
+    "future_date_leakage": {
+      "question": "Does input.json reference events or data from after 23 January 2024?",
+      "finding": "No post-23-January-2024 facts appear in input.json. The term loan B dispute is from June 2023 — correctly included as prior known fact.",
+      "verdict": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "question": "Does input.json assume NCLT admission or insolvency outcome?",
+      "finding": "input.json frames the situation as requiring diagnosis. No NCLT admission or outcome conclusion embedded.",
+      "verdict": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "All leakage checks pass. input.json is clean of outcome, hindsight, future-date, and expert-conclusion leakage."
+}
