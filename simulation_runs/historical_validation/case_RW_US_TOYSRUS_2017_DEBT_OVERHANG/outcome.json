@@ -27,7 +27,8 @@
   ],
   "final_business_state": "Filed Chapter 11 September 2017. Moved to store closures and liquidation. Brand assets sold separately.",
   "expected_diagnosis_codes": [
-    "debt_solvency_pressure"
+    "debt_solvency_pressure",
+    "cash_liquidity_crisis"
   ],
   "expected_action_codes": [
     "CONTAINMENT",

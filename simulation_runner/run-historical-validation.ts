@@ -248,9 +248,12 @@ function scoreAgainstOutcome(
   const expertDx = normalizeDiagnosis(outcome.expert_diagnosis);
   const proceeds = committed && !gateAbstain;
 
-  const diagnosisAgreement = Array.isArray(outcome.expected_diagnosis_codes) && outcome.expected_diagnosis_codes.length > 0
-    ? outcome.expected_diagnosis_codes.includes(engineDx)
-    : normalizeDiagnosis(outcome.expert_diagnosis) === engineDx;
+  const diagnosisAgreement =
+    Array.isArray(outcome.expected_diagnosis_codes) && outcome.expected_diagnosis_codes.length > 0
+      ? outcome.expected_diagnosis_codes.includes(engineDx)
+      : Array.isArray(outcome.expected_diagnosis_codes) && outcome.expected_diagnosis_codes.length === 0
+        ? engineDx === "unknown" // scope-gap abstention: engine correctly declines to diagnose
+        : normalizeDiagnosis(outcome.expert_diagnosis) === engineDx;
   const harmful = outcome.harmful_actions ?? [];
   const beneficial = [outcome.expert_first_action, ...(outcome.beneficial_actions ?? [])].filter(Boolean);
   const recommendedHarmful = proceeds && harmful.some((h) => actionMatches(recText, h));

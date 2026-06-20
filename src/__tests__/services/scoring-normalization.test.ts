@@ -34,7 +34,9 @@ function scoreTest(
   const diagnosisAgreement =
     Array.isArray(outcome.expected_diagnosis_codes) && outcome.expected_diagnosis_codes.length > 0
       ? outcome.expected_diagnosis_codes.includes(engineDx)
-      : normalizeDiagnosis(outcome.expert_diagnosis) === engineDx;
+      : Array.isArray(outcome.expected_diagnosis_codes) && outcome.expected_diagnosis_codes.length === 0
+        ? engineDx === "unknown"
+        : normalizeDiagnosis(outcome.expert_diagnosis) === engineDx;
 
   const harmful = outcome.harmful_actions ?? [];
   const beneficial = [outcome.expert_first_action, ...(outcome.beneficial_actions ?? [])].filter(Boolean);
@@ -160,15 +162,49 @@ describe("scoring-normalization: action agreement", () => {
   });
 });
 
-describe("scoring-normalization: fallback to text comparison when expected_diagnosis_codes absent", () => {
-  it("falls back to expert_diagnosis text match when expected_diagnosis_codes is empty array", () => {
+describe("scoring-normalization: S1 scope-gap abstention scoring", () => {
+  it("empty expected_dx + engine abstains (unknown) = diagnosisAgreement true", () => {
     const outcome: OutcomeForTest = {
-      expert_diagnosis: "legal_governance_risk",
-      expert_first_action: "fix governance",
+      expert_diagnosis: "Platform ecosystem disruption — no matching archetype",
+      expert_first_action: "restructure platform strategy",
       expected_diagnosis_codes: [],
     };
     const { diagnosisAgreement } = scoreTest(
-      "legal_governance_risk",
+      "unknown",
+      false, // committed=false for abstentions
+      true,  // gateAbstain=true
+      "",
+      null,
+      outcome
+    );
+    expect(diagnosisAgreement).toBe(true);
+  });
+
+  it("empty expected_dx + engine proceeds with a diagnosis = diagnosisAgreement false", () => {
+    const outcome: OutcomeForTest = {
+      expert_diagnosis: "Platform ecosystem disruption — no matching archetype",
+      expert_first_action: "restructure platform strategy",
+      expected_diagnosis_codes: [],
+    };
+    const { diagnosisAgreement } = scoreTest(
+      "margin_erosion",
+      true,
+      false,
+      "",
+      null,
+      outcome
+    );
+    expect(diagnosisAgreement).toBe(false);
+  });
+
+  it("non-empty expected_dx still scores normally (not affected by S1)", () => {
+    const outcome: OutcomeForTest = {
+      expert_diagnosis: "irrelevant paragraph",
+      expert_first_action: "do something",
+      expected_diagnosis_codes: ["debt_solvency_pressure"],
+    };
+    const { diagnosisAgreement } = scoreTest(
+      "debt_solvency_pressure",
       true,
       false,
       "",
@@ -177,7 +213,9 @@ describe("scoring-normalization: fallback to text comparison when expected_diagn
     );
     expect(diagnosisAgreement).toBe(true);
   });
+});
 
+describe("scoring-normalization: fallback to text comparison when expected_diagnosis_codes absent", () => {
   it("falls back to expert_diagnosis text match when expected_diagnosis_codes is absent", () => {
     const outcome: OutcomeForTest = {
       expert_diagnosis: "cash_liquidity_crisis",

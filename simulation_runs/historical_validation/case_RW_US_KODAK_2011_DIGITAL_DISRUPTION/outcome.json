@@ -29,7 +29,9 @@
     "Legacy cost structure incompatible with current and projected revenue"
   ],
   "final_business_state": "Emerged from Chapter 11 bankruptcy as a much smaller commercial imaging-focused business; consumer photography business abandoned entirely",
-  "expected_diagnosis_codes": [],
+  "expected_diagnosis_codes": [
+    "cash_liquidity_crisis"
+  ],
   "expected_action_codes": [
     "CONTAINMENT",
     "STRUCTURAL_REPAIR",

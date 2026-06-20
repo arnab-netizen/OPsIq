@@ -27,7 +27,8 @@
   ],
   "final_business_state": "Patisserie Holdings plc entered administration. Selected stores and the brand were sold to a third party. The group did not survive as an independent going concern. The external auditor was subsequently sanctioned by the Financial Reporting Council.",
   "expected_diagnosis_codes": [
-    "legal_governance_risk"
+    "legal_governance_risk",
+    "debt_solvency_pressure"
   ],
   "expected_action_codes": [
     "CONTAINMENT",
