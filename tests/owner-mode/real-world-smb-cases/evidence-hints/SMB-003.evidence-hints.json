@@ -42,7 +42,7 @@
     },
     {
       "source_path": "scenario.facts_known_to_owner",
-      "finding": "Estimated CAC $95; estimated 12-month LTV $82; contribution margin after CAC is negative $13 per customer; paid channel accounts for 78% of revenue; gross margin 44%; blended ROAS 1.4; repeat purchase rate 18%",
+      "finding": "Estimated CAC $95; estimated 12-month LTV $82; per-customer economics negative by $13 after acquisition cost; paid channel accounts for 78% of revenue; gross margin 44%; blended ROAS 1.4; repeat purchase rate 18%",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
@@ -125,5 +125,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SMB-003 is a negative per-unit economics case. Must_identify terms avoided: 'contribution margin', 'customer acquisition cost', 'LTV to CAC ratio', 'unit economics', 'negative contribution after CAC', 'paid channel is loss-making at scale'. The contribution metric is directly available as contribution_margin_after_cac_usd which is negative (-13). price/variableCost proxy mapping explained in transform_notes. Finding in symptoms[2] paraphrased to avoid 'contribution margin' and 'unit economics' verbatim. repeat_purchase_rate_12month_pct is not mapped: no canonical key for retention rate exists in the registry and channelConversionPct requires market_position dimension which does not match this signal's customer_retention classification."
+  "validation_notes": "SMB-003 is a negative per-unit economics case. Must_identify terms avoided: 'contribution margin', 'customer acquisition cost', 'LTV to CAC ratio', 'unit economics', 'negative contribution after CAC', 'paid channel is loss-making at scale'. evidence_items[4] previously leaked 'contribution margin' (exact) and 'negative contribution after CAC' (100% token match) — fixed to 'per-customer economics negative by $13 after acquisition cost'. The contribution metric is directly available as contribution_margin_after_cac_usd which is negative (-13). price/variableCost proxy mapping explained in transform_notes. Finding in symptoms[2] paraphrased to avoid 'contribution margin' and 'unit economics' verbatim. repeat_purchase_rate_12month_pct is not mapped: no canonical key for retention rate exists in the registry and channelConversionPct requires market_position dimension which does not match this signal's customer_retention classification."
 }

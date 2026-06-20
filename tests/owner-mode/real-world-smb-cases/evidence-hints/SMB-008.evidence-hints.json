@@ -42,7 +42,7 @@
     },
     {
       "source_path": "scenario.facts_known_to_owner",
-      "finding": "MRR billed $95K; MRR collected $68K; days sales outstanding 67; 3 clients over 90 days outstanding; total AR outstanding $214K; personal credit drawn $41K; 12 clients total; churn rate 8%",
+      "finding": "MRR billed $95K; MRR collected $68K; average invoice-to-payment lag 67 days; 3 clients over 90 days outstanding; total AR outstanding $214K; personal credit drawn $41K; 12 clients total; churn rate 8%",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
@@ -106,5 +106,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SMB-008 is an AR collection gap case. DSO is directly available in facts (days_sales_outstanding=67). This is the strongest canonical metric available for working_capital_stress. Must_identify terms avoided: 'accounts receivable', 'days sales outstanding', 'DSO', 'cash flow gap', 'billed vs collected', 'collection process failure'. The finding in evidence_items[4] describes the gap in monetary and day terms without using those exact phrases."
+  "validation_notes": "SMB-008 is an AR collection gap case. DSO is directly available in facts (days_sales_outstanding=67). This is the strongest canonical metric available for working_capital_stress. Must_identify terms avoided: 'accounts receivable', 'days sales outstanding', 'DSO', 'cash flow gap', 'billed vs collected', 'collection process failure'. evidence_items[4] previously leaked 'days sales outstanding' (exact 3-token match) — fixed to 'average invoice-to-payment lag 67 days'. The finding describes the gap in monetary and day terms without using those exact phrases."
 }

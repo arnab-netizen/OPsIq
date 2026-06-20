@@ -49,7 +49,7 @@
     },
     {
       "source_path": "scenario.facts_known_to_owner",
-      "finding": "22 field staff; annual turnover rate 140%; training cost $1,800 per hire; 3 ongoing open positions; owner spends 15 hours/week recruiting; 11 service complaints last quarter; 3 commercial contracts lost; $87K revenue lost from contracts",
+      "finding": "22 field staff; annual turnover rate 140%; onboarding cost $1,800 per new employee; 3 ongoing open positions; owner spends 15 hours/week recruiting; 11 service complaints last quarter; 3 commercial contracts lost; $87K revenue lost from contracts",
       "dimension": "team_capability",
       "is_critical": true,
       "confidence": "HIGH",
@@ -107,5 +107,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SMB-009 is an archetype-gap case. Engine has no STAFF_TURNOVER_COST_SPIRAL archetype. team_capability items may trigger key_person_risk pattern but without keyPersonCount/successionReady numerics the pattern will not fire with HIGH confidence. quality_delivery items may trigger quality_control_failure if complaint vocabulary matches. Engine will most likely return INSUFFICIENT_EVIDENCE or an adjacent archetype. This is expected \u2014 case is abstention_eligible. Must_identify terms avoided: 'staff turnover', '140% annual turnover', 'turnover cost', 'retention failure', 'training cost per hire', 'recruiting consuming owner capacity'."
+  "validation_notes": "SMB-009 is an archetype-gap case. Engine has no STAFF_TURNOVER_COST_SPIRAL archetype. team_capability items may trigger key_person_risk pattern but without keyPersonCount/successionReady numerics the pattern will not fire with HIGH confidence. quality_delivery items may trigger quality_control_failure if complaint vocabulary matches. Engine will most likely return INSUFFICIENT_EVIDENCE or an adjacent archetype. This is expected \u2014 case is abstention_eligible. Must_identify terms avoided: 'staff turnover', '140% annual turnover', 'turnover cost', 'retention failure', 'training cost per hire', 'recruiting consuming owner capacity'. evidence_items[4] previously leaked 'training cost per hire' (100% token match) \u2014 fixed to 'onboarding cost $1,800 per new employee'."
 }

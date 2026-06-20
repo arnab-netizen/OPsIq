@@ -15,7 +15,7 @@
     },
     {
       "source_path": "scenario.symptoms[1]",
-      "finding": "original profitable location is subsidizing two expansion sites",
+      "finding": "location 1 is net-positive and offsetting losses at locations 2 and 3",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
@@ -113,5 +113,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SMB-012 is a premature expansion unit-economics case. The contribution metric (location_2_monthly_contribution_margin_usd = -8000) directly triggers fin_isUnitEconomicsFailure (contribution < 0). operatingMargin=-5000 also triggers fin_isMarginErosion. Must_identify terms avoided: 'unit economics', 'per-location contribution margin', 'loss-making expansion locations', 'profitable original location subsidizing expansion', 'premature expansion before unit economics proven'. Multiple engine archetypes (unit_economics_failure, margin_erosion) may fire \u2014 that is correct."
+  "validation_notes": "SMB-012 is a premature expansion unit-economics case. The contribution metric (location_2_monthly_contribution_margin_usd = -8000) directly triggers fin_isUnitEconomicsFailure (contribution < 0). operatingMargin=-5000 also triggers fin_isMarginErosion. Must_identify terms avoided: 'unit economics', 'per-location contribution margin', 'loss-making expansion locations', 'profitable original location subsidizing expansion', 'premature expansion before unit economics proven'. evidence_items[1] previously leaked 'profitable original location subsidizing expansion' (100% token match) \u2014 fixed to 'location 1 is net-positive and offsetting losses at locations 2 and 3'. Multiple engine archetypes (unit_economics_failure, margin_erosion) may fire \u2014 that is correct."
 }

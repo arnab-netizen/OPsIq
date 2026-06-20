@@ -15,7 +15,7 @@
     },
     {
       "source_path": "scenario.symptoms[1]",
-      "finding": "backorders on top-selling items while warehouse holds excess slow-moving stock",
+      "finding": "simultaneous stockouts on high-demand items while the warehouse holds excess of others",
       "dimension": "operational_efficiency",
       "is_critical": true,
       "confidence": "HIGH",
@@ -42,7 +42,7 @@
     },
     {
       "source_path": "scenario.facts_known_to_owner",
-      "finding": "Inventory on hand $180K; inventory turnover ratio 3.2; average selling days per SKU 114; reorder lead time 21 days; active backorder count 47 SKUs; overstock SKU count 89; bank balance $22K; gross margin 42%",
+      "finding": "Inventory on hand $180K; stock cycling rate 3.2x per year; average selling days per SKU 114; reorder lead time 21 days; active backorder count 47 SKUs; overstock SKU count 89; bank balance $22K; gross margin 42%",
       "dimension": "operational_efficiency",
       "is_critical": true,
       "confidence": "HIGH",
@@ -113,5 +113,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SMB-002 is an inventory misallocation case. Must_identify terms avoided in findings: 'inventory cash trap', 'working capital locked in inventory', 'inventory turnover', 'slow-moving stock', 'cash tied up in unsold inventory'. Findings describe the observable operational picture. forecastErrorPct approximated; transform_note explains. Simultaneous backorder+overstock in symptoms[1] maps directly to fin_isInventoryMismatch overstockStockout pattern."
+  "validation_notes": "SMB-002 is an inventory misallocation case. Must_identify terms avoided in findings: 'inventory cash trap', 'working capital locked in inventory', 'inventory turnover', 'slow-moving stock', 'cash tied up in unsold inventory'. evidence_items[1] previously leaked 'slow-moving stock' — fixed to 'excess of others'. evidence_items[4] previously leaked 'inventory turnover ratio' — fixed to 'stock cycling rate'. Findings describe the observable operational picture. forecastErrorPct approximated; transform_note explains. Simultaneous backorder+overstock in symptoms[1] maps directly to fin_isInventoryMismatch overstockStockout pattern."
 }

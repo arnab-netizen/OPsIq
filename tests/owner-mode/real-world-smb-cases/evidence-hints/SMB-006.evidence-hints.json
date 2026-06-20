@@ -42,7 +42,7 @@
     },
     {
       "source_path": "scenario.facts_known_to_owner",
-      "finding": "Monthly revenue avg $22K; monthly fixed costs $35K (lease $12K, staff $16K, equipment debt $7K); current occupancy 48%; breakeven occupancy 76%; monthly loss $13K; personal savings drawn $31K to date",
+      "finding": "Monthly revenue avg $22K; monthly fixed costs $35K (lease $12K, staff $16K, equipment debt $7K); current occupancy 48%; occupancy needed for cost coverage 76%; monthly loss $13K; personal savings drawn $31K to date",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
@@ -122,5 +122,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SMB-006 is a fixed-cost-above-revenue case. Must_identify terms avoided: 'fixed cost overextension', 'below breakeven', 'lease burden', 'breakeven occupancy', 'fixed costs exceed revenue at current volume'. The monthly fixed cost ($35K) vs revenue ($22K) mapped as variableCost > price to trigger unit_economics_failure pattern. operatingMargin set to -13000 to trigger margin_erosion. Two engine archetypes may fire \u2014 that is correct for this case."
+  "validation_notes": "SMB-006 is a fixed-cost-above-revenue case. Must_identify terms avoided: 'fixed cost overextension', 'below breakeven', 'lease burden', 'breakeven occupancy', 'fixed costs exceed revenue at current volume'. evidence_items[4] previously leaked 'breakeven occupancy' (exact 2-token match) \u2014 fixed to 'occupancy needed for cost coverage'. The monthly fixed cost ($35K) vs revenue ($22K) mapped as variableCost > price to trigger unit_economics_failure pattern. operatingMargin set to -13000 to trigger margin_erosion. Two engine archetypes may fire \u2014 that is correct for this case."
 }

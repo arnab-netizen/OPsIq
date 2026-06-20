@@ -51,7 +51,7 @@
     },
     {
       "source_path": "scenario.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): weekend occupancy is 92% \u2014 appears demand is not the problem",
+      "finding": "Surface signal (not root cause): weekend occupancy is 92% \u2014 demand appears adequate and is not causing the revenue shortfall",
       "dimension": "operational_efficiency",
       "is_critical": false,
       "confidence": "LOW",
@@ -115,5 +115,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SMB-004 is a cost-ratio margin case. Must_identify terms avoided: 'prime cost', 'food cost percentage', 'labor cost percentage', 'prime cost above industry target', 'occupancy is not the problem'. The finding in evidence_items[4] describes the cost figures without using 'prime cost' \u2014 uses 'combined food and labor cost' instead. operatingMargin set to 0 (breakeven) and marginPct proxy set to -9 (gap vs industry target) to support engine adverse-margin detection."
+  "validation_notes": "SMB-004 is a cost-ratio margin case. Must_identify terms avoided: 'prime cost', 'food cost percentage', 'labor cost percentage', 'prime cost above industry target', 'occupancy is not the problem'. evidence_items[5] previously leaked 'occupancy is not the problem' via 100% token match \u2014 fixed to 'demand appears adequate and is not causing the revenue shortfall'. The finding in evidence_items[4] describes the cost figures without using 'prime cost' \u2014 uses 'combined food and labor cost' instead. operatingMargin set to 0 (breakeven) and marginPct proxy set to -9 (gap vs industry target) to support engine adverse-margin detection."
 }
