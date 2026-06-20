@@ -189,6 +189,28 @@ const FINANCIAL_DISTRESS_DIAGNOSES = new Set<string>([
 ]);
 
 /**
+ * Legal-governance diagnoses for which governance/regulatory/fraud evidence in
+ * off-home dimensions (e.g. raw "governance", "finance", "operations") is the
+ * SAME signal that triggered the diagnosis, not a contradiction of it. When the
+ * committed diagnosis is legal_governance_risk and the off-home finding matches
+ * PROTECTED_OFF_ARCHETYPE only via the governance/legal/fraud vocabulary below
+ * (LEGAL_GOVERNANCE_HOME_SIGNAL), it is consistent co-reporting, not an adverse
+ * contradiction. Structural-commitment terms (capex/irreversible/expansion) and
+ * insolvency/cash terms always hold regardless.
+ */
+const LEGAL_GOVERNANCE_DIAGNOSES = new Set<string>(["legal_governance_risk"]);
+
+/**
+ * The governance/regulatory/fraud/compliance vocabulary that is the home signal
+ * of legal_governance_risk. Finding this in off-home dimensions does not contradict
+ * a committed legal_governance_risk — it is the very signal that produced the diagnosis.
+ * Structural commitment (capex/irreversible) and insolvency/cash terms are deliberately
+ * excluded so they still hold.
+ */
+const LEGAL_GOVERNANCE_HOME_SIGNAL =
+  /regulat|complian|\bfraud\b|misconduct|governance|lawsuit|sanction|consent order/;
+
+/**
  * Financial-AGGRAVATION language: the off-home critical evidence shows the owner's
  * plan deepening/worsening an already-critical core problem (a high-severity
  * contradiction, not a stable secondary symptom) — must always hold.
@@ -257,8 +279,18 @@ function isHoldWorthyOffArchetype(ev: CausalEvidence, diagnosisType: string): bo
       !!ev.supportingData && Object.keys(ev.supportingData).length > 0;
     const isStructuralCommitment = PROTECTED_STRUCTURAL_COMMITMENT.test(t);
     if (isFinancialDistress && !hasNumericCorroboration && !isStructuralCommitment) {
-      // governance/regulatory/fraud/insolvency co-occurrence without numeric
+      // P1 bypass: governance/regulatory/fraud/insolvency co-occurrence without numeric
       // corroboration for a committed financial-distress diagnosis — do not hold
+    } else if (
+      LEGAL_GOVERNANCE_DIAGNOSES.has(diagnosisType) &&
+      !hasNumericCorroboration &&
+      !isStructuralCommitment &&
+      LEGAL_GOVERNANCE_HOME_SIGNAL.test(t)
+    ) {
+      // P2 bypass: the off-home finding contains the same governance/regulatory/fraud
+      // vocabulary that triggered the committed legal_governance_risk diagnosis. Governance
+      // and fraud language in raw "operations"/"finance"/"governance" dimensions is
+      // consistent with the diagnosis, not a contradiction of it.
     } else {
       return true;
     }

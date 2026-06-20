@@ -470,7 +470,8 @@ const rootCausePatterns: RootCausePattern[] = [
     // owns it. Legal fires only when the governance/regulatory breach is the issue and
     // no critical safety/recall/defect quality signal is competing.
     pattern: (evidence) =>
-      evidence.some((e) => fin_isLegalGovernance(e)) && !fin_hasCriticalSafetyQuality(evidence),
+      (evidence.some((e) => fin_isLegalGovernance(e)) || fin_isLegalGovernanceByText(evidence)) &&
+      !fin_hasCriticalSafetyQuality(evidence),
     confidence: (evidence) => {
       const sev = evidence.some(
         (e) =>
@@ -768,6 +769,17 @@ function fin_isInventoryMismatch(e: EvidenceItem): boolean {
 // performance / management / capacity / growth / cash framings do NOT fire.
 const LEGAL_TEXT =
   /regulat\w*|complian\w*|non-?complian\w*|governance|misconduct|\bfraud\b|\baudit\b|enforcement|licens\w*|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction|penalt\w*|\bbreach\b/;
+
+// Specific legal/governance terms that are unambiguous without numeric corroboration.
+// Excludes "enforcement" (overloaded: creditor enforcement ≠ regulatory enforcement)
+// and generic regulatory/governance vocabulary that appears in non-legal cases.
+const STRONG_LEGAL_TEXT =
+  /misconduct|\bfraud\b|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction\w*|penalt\w*|non-?complian\w*|moratorium|misappropriat\w*|embezzl\w*|\baudit\b/;
+
+// Global version for counting distinct LEGAL_TEXT hits within a single finding
+const LEGAL_TEXT_G =
+  /regulat\w*|complian\w*|non-?complian\w*|governance|misconduct|\bfraud\b|\baudit\b|enforcement|licens\w*|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction|penalt\w*|\bbreach\b/g;
+
 function fin_isLegalGovernance(e: EvidenceItem): boolean {
   if (e.dimension !== "process_maturity" && e.dimension !== "market_position") return false;
   const t = fin_text(e);
@@ -779,6 +791,29 @@ function fin_isLegalGovernance(e: EvidenceItem): boolean {
     fin_num(e, "regulatoryDeadlineDays") !== undefined ||
     fin_num(e, "exposureAmount") !== undefined
   );
+}
+
+// Textual-only path: fires when historical evidence contains strong governance/legal/fraud
+// signals that are unambiguous without numeric corroboration. An item is "substantive" if
+// it matches STRONG_LEGAL_TEXT (specific fraud/regulatory terms) OR contains 2+ distinct
+// LEGAL_TEXT hits (indicating the finding is centrally about legal/governance, not a passing
+// mention). Requires 2+ matching items with at least one substantive, or 1 substantive item.
+// Guards against weak incidental mentions ("regulated industries", "technology licensing").
+function fin_isLegalGovernanceByText(evidence: EvidenceItem[]): boolean {
+  const relevant = evidence.filter(
+    (e) =>
+      (e.dimension === "process_maturity" || e.dimension === "market_position") &&
+      (LEGAL_TEXT.test(fin_text(e)) || STRONG_LEGAL_TEXT.test(fin_text(e)))
+  );
+  if (relevant.length === 0) return false;
+  const isSubstantive = (e: EvidenceItem): boolean => {
+    const t = fin_text(e);
+    return STRONG_LEGAL_TEXT.test(t) || (t.match(LEGAL_TEXT_G) ?? []).length >= 2;
+  };
+  const hasSubstantive = relevant.some(isSubstantive);
+  if (relevant.length >= 2 && hasSubstantive) return true;
+  if (relevant.length === 1 && isSubstantive(relevant[0])) return true;
+  return false;
 }
 function fin_hasCriticalSafetyQuality(evidence: EvidenceItem[]): boolean {
   return evidence.some(
