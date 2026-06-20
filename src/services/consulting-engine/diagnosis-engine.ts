@@ -287,7 +287,10 @@ const rootCausePatterns: RootCausePattern[] = [
           fin_isDebtSolvency(e) &&
           ((fin_num(e, "covenantHeadroom") !== undefined && (fin_num(e, "covenantHeadroom") as number) <= 0.06) ||
             (fin_num(e, "interestCoverage") !== undefined && (fin_num(e, "interestCoverage") as number) <= 1.3) ||
-            (fin_num(e, "leverageRatio") !== undefined && (fin_num(e, "leverageRatio") as number) >= 4))
+            (fin_num(e, "leverageRatio") !== undefined && (fin_num(e, "leverageRatio") as number) >= 4) ||
+            // P4-A: FCCB failure / CDR referral are HIGH-severity structural events even
+            // without a covenant or leverage numeric — they represent formal debt distress.
+            DEBT_HIGH_SEVERITY.test(fin_text(e)))
       );
       return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
     },
@@ -712,7 +715,23 @@ function ret_isRetentionErosion(e: EvidenceItem): boolean {
 }
 
 // ─── E2 slice 1 financial-structural triggers (strict; specific evidence only) ─
-const DEBT_TEXT = /covenant|leverage|interest cover|refinanc|maturity|debt service|debt-service|gearing|solvency|debt load|payables.*due|short-term (debt|facility)|debt[- ]laden|obligation.*unpaid/;
+// P4-A additions: \bfccb\b (foreign currency convertible bond), foreign currency convertible,
+// corporate debt restructuring, \bcdr\b (CDR abbreviation in financial context), liability
+// management — all unambiguous formal debt-restructuring vocabulary that cannot arise from
+// ordinary operations discussions; each requires financial_health dimension context via the
+// dimension guard in fin_isDebtSolvency.
+const DEBT_TEXT = /covenant|leverage|interest cover|refinanc|maturity|debt service|debt-service|gearing|solvency|debt load|payables.*due|short-term (debt|facility)|debt[- ]laden|obligation.*unpaid|\bfccb\b|foreign currency convertible|corporate debt restructuring|\bcdr\b|liability management/;
+// Self-corroborating debt-distress phrases: inherently indicate structural debt distress
+// with no additional numeric or phrase needed. Includes P4-A additions for CDR/FCCB events.
+// P4-A: added \bfccb\b, foreign currency convertible, corporate debt restructuring, \bcdr\b,
+// high leverage, debt restructur (covers "debt restructuring"), liability management —
+// all self-sufficient evidence of formal debt distress in the financial_health dimension.
+const DEBT_SELF_CORROBORATING = /covenant|maturity|debt service|debt-service|refinanc|acute solvency|solvency.*acute|cannot service|debt[- ]laden|obligation.*unpaid|\bfccb\b|foreign currency convertible|corporate debt restructuring|\bcdr\b|high leverage|debt restructur|liability management/;
+// HIGH-severity signals within debt-solvency evidence: formal restructuring events that
+// are unambiguously severe (FCCB failure/negotiation, CDR referral, FCCB outstanding).
+// Used to elevate confidence to HIGH when no leverageRatio/covenantHeadroom/interestCoverage
+// numeric is present.
+const DEBT_HIGH_SEVERITY = /\bfccb\b|foreign currency convertible|corporate debt restructuring|\bcdr\b/;
 function fin_isDebtSolvency(e: EvidenceItem): boolean {
   if (e.dimension !== "financial_health") return false;
   const t = fin_text(e);
@@ -725,7 +744,8 @@ function fin_isDebtSolvency(e: EvidenceItem): boolean {
   // P3-C additions: "acute solvency", "solvency.*acute", "cannot service" are unambiguous
   // debt-distress corroborators when paired with an existing DEBT_TEXT match (e.g. solvency);
   // "debt-laden" and "obligation.*unpaid" are self-corroborating debt-structural terms.
-  return DEBT_TEXT.test(t) && (numeric || /covenant|maturity|debt service|debt-service|refinanc|acute solvency|solvency.*acute|cannot service|debt[- ]laden|obligation.*unpaid/.test(t));
+  // P4-A: added FCCB, CDR, high-leverage as self-corroborating terms in DEBT_SELF_CORROBORATING.
+  return DEBT_TEXT.test(t) && (numeric || DEBT_SELF_CORROBORATING.test(t));
 }
 
 const WC_TEXT = /receivabl|days sales outstanding|\bdso\b|cash conversion|days payable|\bdpo\b|working capital|cash[- ]conversion cycle|collections (timing|cycle)/;

@@ -4,7 +4,7 @@
   "blindReplaysCompleted": 42,
   "scores": {
     "historical_alignment": 92.9,
-    "diagnosis_agreement": 95.2,
+    "diagnosis_agreement": 97.6,
     "action_agreement": 81,
     "safety": 100,
     "counterfactual_review": 100
@@ -312,10 +312,10 @@
     },
     {
       "caseId": "RW_INDIA_SUZLON_2012_CDR",
-      "engineDiagnosis": "margin_erosion",
+      "engineDiagnosis": "debt_solvency_pressure",
       "committed": true,
       "gateAbstain": false,
-      "diagnosisAgreement": false,
+      "diagnosisAgreement": true,
       "actionAgreement": true,
       "safe": true,
       "aligned": true,
