@@ -1,49 +1,98 @@
 {
-  "case_id": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
+  "caseId": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
+  "decisionDate": "2022-08-31",
   "company": "Bed Bath & Beyond Inc.",
-  "decision_date": "2022-08-31",
-  "industry": "Retail — home goods",
-  "geography": "United States",
+  "country": "United States",
+  "industry": "Retail / home goods",
   "known_facts_at_decision_date": [
-    "Bed Bath & Beyond was facing declining sales and significant operational distress by August 2022",
-    "Supplier and vendor confidence had deteriorated, threatening inventory availability",
-    "The company had pursued large share repurchase programs in prior years that had consumed significant cash",
-    "Liquidity position was severely stressed and turnaround financing was a major concern",
-    "Merchandising strategy had been disrupted by an own-brand push that alienated existing customers and suppliers",
-    "Inventory availability and assortment quality had suffered as a result of supplier confidence decline",
-    "Company had brought in a new CEO in mid-2022 to lead a turnaround",
-    "The business needed to stabilise vendor relationships, liquidity, inventory, and customer relevance simultaneously",
-    "Prior management had prioritised share repurchases and financial engineering over operational investment",
-    "Retail industry faced broader headwinds but Bed Bath & Beyond's problems were substantially company-specific"
+    "Bed Bath & Beyond Inc. was a large-format specialty retailer of home goods, operating a significant store network across the United States.",
+    "The company had experienced declining comparable-store sales over multiple periods prior to the decision date.",
+    "Supplier and vendor confidence had deteriorated materially, resulting in reduced shipment volumes and inventory availability challenges.",
+    "The company had spent substantial capital on share repurchases in prior years, depleting cash reserves that could otherwise have supported operational reinvestment or liquidity.",
+    "Liquidity and access to turnaround financing were major active concerns as of the decision date.",
+    "The operational distress was not simply attributable to e-commerce competition; it included merchandising execution failure, assortment disruption from a prior owned-brand strategy, weakened vendor relationships, and cash pressure from prior capital allocation decisions.",
+    "Management had recently changed, with a new leadership team in place attempting a turnaround.",
+    "The company had announced plans to close stores, raise capital, and stabilize operations, but execution was at an early stage as of the decision date.",
+    "Inventory levels and assortment quality were insufficient to support normal customer demand due to vendor confidence issues."
   ],
-  "financial_signals_at_decision_date": {
-    "liquidity_position": "Severely stressed; turnaround financing urgently needed",
-    "share_repurchase_legacy": "Large prior share repurchases consumed cash that could have supported operations and inventory",
-    "sales_trajectory": "Declining sales across store base",
-    "financing_need": "Immediate need for restructuring or turnaround financing to stabilise operations",
-    "capital_allocation_history": "History of prioritising buybacks over operational and inventory investment"
-  },
-  "operating_signals_at_decision_date": {
-    "vendor_confidence": "Significantly deteriorated; suppliers reducing shipments and credit terms",
-    "inventory_availability": "Under pressure due to supplier pullback and prior merchandising disruption",
-    "store_network": "Large store network with significant fixed-cost burden including unprofitable locations",
-    "merchandising": "Own-brand push had disrupted assortment and alienated customers familiar with national brands",
-    "customer_relevance": "Customer traffic and loyalty declining due to assortment and experience issues"
-  },
-  "governance_signals_at_decision_date": {
-    "management_change": "New CEO appointed mid-2022 to lead turnaround; prior leadership had presided over decline",
-    "capital_allocation_decisions": "Prior management capital allocation heavily weighted to shareholder returns over business investment",
-    "board_oversight": "Board had approved large buyback programs despite operational deterioration",
-    "turnaround_credibility": "New management credibility not yet established; turnaround plan still being formulated"
-  },
-  "risk_flags_at_decision_date": [
-    "Supplier confidence collapse can become self-reinforcing if not addressed immediately",
-    "Liquidity crisis will accelerate if turnaround financing not secured",
-    "Inventory gaps will damage customer traffic and further reduce revenue",
-    "Prior buybacks have depleted cash that would now be needed for operational stabilisation",
-    "Store network includes unprofitable locations draining cash that should support vendor relationships",
-    "Customer relevance is declining — not purely a vendor or finance problem",
-    "Bankruptcy risk increases materially if vendor confidence and liquidity not stabilised concurrently"
+  "financial_signals": [
+    {
+      "signal": "Liquidity pressure",
+      "severity": "Critical",
+      "detail": "Available cash and credit were under significant stress; turnaround financing was a critical active need as of the decision date."
+    },
+    {
+      "signal": "Prior large-scale share repurchases",
+      "severity": "High",
+      "detail": "The company had spent substantial capital on buybacks in prior years, reducing financial flexibility available for operational reinvestment."
+    },
+    {
+      "signal": "Turnaround financing sought",
+      "severity": "Critical",
+      "detail": "The company was actively pursuing financing arrangements to support operations during the turnaround period."
+    },
+    {
+      "signal": "Declining comparable-store sales",
+      "severity": "High",
+      "detail": "Same-store sales had been declining over multiple periods, indicating persistent demand and execution weakness."
+    },
+    {
+      "signal": "Inventory inadequacy",
+      "severity": "High",
+      "detail": "Vendor confidence deterioration had resulted in insufficient inventory levels to support normal retail operations."
+    }
   ],
-  "question": "Diagnose root causes and recommend highest-priority action plan before bankruptcy for Bed Bath & Beyond Inc."
+  "operating_signals": [
+    {
+      "signal": "Vendor and supplier confidence collapse",
+      "severity": "Critical",
+      "detail": "Key suppliers had reduced or curtailed shipments due to concerns about payment reliability and company viability, creating inventory gaps."
+    },
+    {
+      "signal": "Merchandising failure from owned-brand strategy",
+      "severity": "High",
+      "detail": "A prior strategic initiative to replace national brands with owned brands had disrupted assortment and eroded customer loyalty."
+    },
+    {
+      "signal": "Store network under review",
+      "severity": "High",
+      "detail": "The company had announced plans to close underperforming stores but execution was ongoing."
+    },
+    {
+      "signal": "Management transition",
+      "severity": "Medium",
+      "detail": "New leadership was in place attempting a turnaround; organizational capability and credibility with vendors were being rebuilt."
+    },
+    {
+      "signal": "Customer relevance decline",
+      "severity": "High",
+      "detail": "The combination of assortment gaps, reduced store quality, and competitive market had reduced customer traffic and spending."
+    }
+  ],
+  "governance_signals": [
+    {
+      "signal": "Capital allocation failure — buybacks over reinvestment",
+      "severity": "High",
+      "detail": "Prior management's prioritization of share repurchases over operational reinvestment and liquidity preservation had weakened the company's ability to withstand distress."
+    },
+    {
+      "signal": "Strategic execution failure",
+      "severity": "High",
+      "detail": "The owned-brand pivot had not been executed with sufficient regard for vendor relationships or customer response."
+    },
+    {
+      "signal": "Turnaround plan credibility uncertain",
+      "severity": "High",
+      "detail": "New management's turnaround plan was announced but had not yet demonstrated execution results as of the decision date."
+    }
+  ],
+  "risk_flags": [
+    "Vendor confidence may not be restorable if liquidity is not confirmed — supply chain collapse risk",
+    "Meme-stock equity market interest is not a substitute for sustainable operational financing",
+    "Bankruptcy risk if vendor confidence and liquidity cannot be stabilized within near-term window",
+    "Inventory shortfalls are a compounding customer-loss risk — empty shelves accelerate traffic decline",
+    "Store closure plan must be executed at pace that matches cash position, not just announcement",
+    "Brand alone cannot recover customer relevance without assortment restoration"
+  ],
+  "question": "Given Bed Bath & Beyond Inc.'s declining sales, vendor confidence collapse, inventory inadequacy, prior capital allocation to share repurchases, active liquidity pressure, and early-stage turnaround plan as of 2022-08-31, what is the correct immediate intervention to stabilize the business and maximize the probability of operational recovery?"
 }

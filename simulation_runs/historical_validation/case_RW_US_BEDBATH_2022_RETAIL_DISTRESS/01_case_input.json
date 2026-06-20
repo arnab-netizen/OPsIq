@@ -1,94 +1,68 @@
 {
   "caseId": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
-  "businessProblem": "Bed Bath & Beyond Inc. is in severe operational and financial distress as of August 2022. Supplier and vendor confidence has deteriorated significantly, threatening inventory availability. Years of large share repurchases have consumed cash that could have supported operations. A new CEO has been appointed but the turnaround plan is not yet stabilised. Liquidity is critically stressed and restructuring financing is urgently needed. The business must stabilise vendors, inventory, cash, and customer relevance concurrently or face bankruptcy.",
+  "businessProblem": "Bed Bath & Beyond Inc. faces a multi-dimensional retail distress crisis as of August 2022. Vendor and supplier confidence has collapsed, resulting in inventory gaps that directly harm customer traffic and sales. Prior management spent heavily on share repurchases, depleting liquidity that could have supported operational stability. A new leadership team is attempting a turnaround but execution is at an early stage. The company must simultaneously stabilize vendor relationships, secure turnaround financing, restore inventory basics, close unprofitable stores, and recover customer relevance — or face bankruptcy.",
   "evidence": [
     {
-      "dimension": "finance",
-      "finding": "Liquidity position is severely stressed; company urgently requires turnaround or restructuring financing to sustain operations",
-      "confidence": "HIGH",
+      "dimension": "Vendor and supplier confidence",
+      "finding": "Key suppliers have reduced or suspended shipments due to concerns over Bed Bath & Beyond's payment reliability and viability, causing material inventory gaps across the store network.",
+      "confidence": 0.96,
       "isCritical": true,
-      "source": "decision-date observable facts"
+      "source": "Company SEC filings and press statements, August 2022"
     },
     {
-      "dimension": "finance",
-      "finding": "Large share repurchase programs in prior years consumed significant cash that is now unavailable for operational stabilisation and vendor payments",
-      "confidence": "HIGH",
+      "dimension": "Liquidity",
+      "finding": "The company's cash position and credit availability are critically stressed; turnaround financing is being actively sought as of the decision date.",
+      "confidence": 0.95,
       "isCritical": true,
-      "source": "decision-date observable facts"
+      "source": "SEC filings (10-Q/8-K), August 2022"
     },
     {
-      "dimension": "finance",
-      "finding": "Sales are declining across the store base; revenue trajectory does not support current cost structure without financing",
-      "confidence": "HIGH",
+      "dimension": "Capital allocation history",
+      "finding": "Substantial capital was spent on share repurchases in prior years under previous management, depleting reserves that could otherwise have supported operational investment or liquidity buffers.",
+      "confidence": 0.94,
       "isCritical": true,
-      "source": "decision-date observable facts"
+      "source": "Company financial statements and SEC filings, 2019–2022"
     },
     {
-      "dimension": "operations",
-      "finding": "Vendor and supplier confidence has deteriorated significantly; suppliers are reducing shipments and tightening credit terms",
-      "confidence": "HIGH",
+      "dimension": "Merchandising and assortment",
+      "finding": "A prior strategy to replace national brands with owned brands disrupted the product assortment and eroded customer trust and loyalty.",
+      "confidence": 0.91,
       "isCritical": true,
-      "source": "decision-date observable facts"
+      "source": "Company strategic disclosures and analyst commentary, 2020–2022"
     },
     {
-      "dimension": "operations",
-      "finding": "Inventory availability is under pressure due to supplier pullback; product gaps are damaging customer experience and traffic",
-      "confidence": "HIGH",
+      "dimension": "Sales trajectory",
+      "finding": "Comparable-store sales have been declining over multiple periods, reflecting both structural demand weakness and execution failure.",
+      "confidence": 0.93,
       "isCritical": true,
-      "source": "decision-date observable facts"
+      "source": "Company quarterly earnings reports, 2021–2022"
     },
     {
-      "dimension": "operations",
-      "finding": "An own-brand push by prior management disrupted the assortment mix, alienating customers accustomed to national brands and undermining supplier relationships",
-      "confidence": "HIGH",
-      "isCritical": true,
-      "source": "decision-date observable facts"
-    },
-    {
-      "dimension": "operations",
-      "finding": "Store network includes unprofitable locations generating fixed-cost drain on cash that is critically needed elsewhere",
-      "confidence": "MEDIUM",
+      "dimension": "Turnaround plan",
+      "finding": "New management has announced a turnaround plan including store closures, capital raising, and operational changes, but results have not yet been demonstrated as of the decision date.",
+      "confidence": 0.88,
       "isCritical": false,
-      "source": "decision-date observable facts"
+      "source": "Company press releases and investor communications, summer 2022"
     },
     {
-      "dimension": "market",
-      "finding": "Customer traffic and loyalty declining due to assortment disruption and deteriorating in-store experience",
-      "confidence": "HIGH",
+      "dimension": "Customer relevance",
+      "finding": "Inventory inadequacy and assortment disruption have reduced customer traffic; the combination of empty shelves and competitive alternatives has weakened the brand's position.",
+      "confidence": 0.89,
       "isCritical": true,
-      "source": "decision-date observable facts"
-    },
-    {
-      "dimension": "market",
-      "finding": "Problems are substantially company-specific in origin, not solely attributable to broader e-commerce or retail industry headwinds",
-      "confidence": "MEDIUM",
-      "isCritical": false,
-      "source": "decision-date observable facts"
-    },
-    {
-      "dimension": "governance",
-      "finding": "New CEO appointed mid-2022 to lead turnaround; prior management presided over capital allocation decisions that prioritised buybacks over operational investment",
-      "confidence": "HIGH",
-      "isCritical": false,
-      "source": "decision-date observable facts"
-    },
-    {
-      "dimension": "governance",
-      "finding": "Board approved large buyback programs despite operational deterioration; board oversight of capital allocation was inadequate",
-      "confidence": "HIGH",
-      "isCritical": false,
-      "source": "decision-date observable facts"
+      "source": "Company disclosures and retail industry commentary, 2022"
     }
   ],
   "clientContext": {
-    "industry": "Retail — home goods and housewares",
-    "size": "Large — US publicly listed retailer with substantial store network",
-    "revenueImpactUrgency": "CRITICAL — vendor confidence collapse and liquidity crisis are concurrent and mutually reinforcing; bankruptcy risk is near-term without immediate action"
+    "company": "Bed Bath & Beyond Inc.",
+    "country": "United States",
+    "industry": "Retail / home goods",
+    "decisionDate": "2022-08-31",
+    "consultingStage": "Crisis stabilization — vendor, liquidity, and inventory recovery required before strategic positioning"
   },
   "ownerConstraintProfile": {
-    "bottleneckRisk": "MEDIUM — listed company with board structure; new CEO transition creates decision-making transition period",
-    "followThroughRisk": "HIGH — prior management demonstrated multi-year failure to address operational deterioration while continuing buybacks",
-    "resistanceToChange": "MEDIUM — new CEO signals openness to change but organisational inertia from prior strategy remains",
-    "managementCapability": "LOW-MEDIUM — new CEO not yet established; turnaround credibility with vendors, lenders, and investors not yet demonstrated"
+    "followThroughRisk": "High — prior management's capital allocation decisions created the crisis; new management credibility with vendors and lenders is unproven",
+    "resistanceToChange": "Medium — new leadership is directionally open to change but organizational capability and vendor trust must be rebuilt",
+    "communicationStyle": "Formal corporate and investor-relations; constrained by SEC disclosure obligations and lender sensitivities",
+    "keyPersonDependency": "Medium-high — new CEO is critical to turnaround credibility; loss of key turnaround leadership would significantly worsen vendor and lender confidence"
   }
 }

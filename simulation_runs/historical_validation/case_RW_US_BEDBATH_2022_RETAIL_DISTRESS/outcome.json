@@ -1,29 +1,30 @@
 {
+  "caseId": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
   "grounding_class": "REAL_SOURCE_BACKED",
-  "expert_diagnosis": "Bed Bath & Beyond's distress was driven by a self-reinforcing combination of liquidity crisis, vendor-confidence collapse, merchandising failure from a misguided own-brand push, and a capital allocation history that prioritised share repurchases over operational investment. The crisis was substantially company-specific and operationally rooted, not simply an e-commerce competition problem. Without immediate vendor stabilisation, cash preservation, and a credible inventory recovery plan, the business had no viable path to recovery.",
-  "expert_first_action": "Immediately stabilise vendor and supplier confidence through direct engagement, payment commitments on outstanding balances, and cessation of all buybacks and non-essential cash outflows — before any brand or format experiments.",
-  "actual_decision": "Company attempted to secure financing and stabilise operations but did not successfully restore vendor confidence or achieve a viable operational turnaround before filing for bankruptcy.",
-  "outcome_polarity": "NEGATIVE",
+  "expert_diagnosis": "Bed Bath & Beyond's distress was driven by a self-reinforcing combination of liquidity crisis, vendor-confidence collapse, merchandising failure from a misguided owned-brand strategy, and a capital allocation history that prioritized share repurchases over operational reinvestment. The crisis was substantially company-specific and operationally rooted, not simply an e-commerce competition problem. Without immediate vendor stabilization, cash preservation, and a credible inventory recovery plan, the business had no viable path to recovery. Meme-stock equity attention provided no durable financing solution.",
+  "expert_first_action": "Immediately engage top vendors with confirmed payment terms and liquidity evidence to restore shipment confidence; permanently cease all share repurchases and dividends; secure restructuring financing with conditions that prioritize operational stabilization; close unprofitable stores at a pace matched to cash position; restore national-brand assortment before any brand-differentiation experiments; prepare a Chapter 11 contingency if vendor confidence cannot be restored within the near-term financing window.",
+  "actual_decision": "Bed Bath & Beyond pursued a combination of asset sales, store closures, and capital markets transactions including equity offerings. The company attempted to leverage retail investor interest to raise capital. Vendor relationships were not stabilized sufficiently. Turnaround financing was secured temporarily but did not resolve the underlying operating deterioration.",
+  "outcome_polarity": "Negative",
   "harmful_actions": [
-    "Large share repurchase programs in prior years depleted cash needed for operational investment",
-    "Own-brand push alienated established vendor relationships and disrupted customer assortment expectations",
-    "Failure to prioritise vendor confidence stabilisation ahead of other turnaround initiatives",
-    "Continued store network drain on cash without accelerated unprofitable-store closure",
-    "Turnaround plan not executed at sufficient speed to restore vendor and inventory position before bankruptcy"
+    "Reliance on meme-stock retail investor capital markets activity as a meaningful financing strategy rather than durable restructuring financing.",
+    "Failure to restore vendor confidence quickly enough to prevent compounding inventory and customer loss.",
+    "Insufficient pace of store closures relative to the cash position and operational deterioration.",
+    "Continued capital markets activity that deferred rather than resolved the underlying operational and vendor-relationship crisis."
   ],
   "beneficial_actions": [
-    "New CEO appointment in mid-2022 signalled willingness to change direction",
-    "Company publicly acknowledged need for turnaround financing and operational reset"
+    "New management acknowledged the owned-brand strategy failure and announced intent to restore national brands, which was directionally correct.",
+    "Store closure plans were announced, addressing the excess footprint problem.",
+    "Turnaround financing was pursued, which was the correct instinct even if the execution was insufficient."
   ],
-  "citation": "SEC filing for Bed Bath & Beyond Inc. (BBBY 10-Q for period ending 2022-08-27, filed 2022); SEC filing — Bed Bath & Beyond bankruptcy press release exhibit (April 2023); Reuters reporting on Chapter 11 filing.",
-  "actual_outcome": "Bed Bath & Beyond filed for Chapter 11 bankruptcy protection in April 2023. The company moved through store closures and a sale of brand assets. Retail operations did not recover as an independent going concern. The Bed Bath & Beyond brand was subsequently acquired by Overstock.com for online retail use.",
+  "citation": "SEC filing: Bed Bath & Beyond 10-Q for period ending 2022-08-31 (https://www.sec.gov/Archives/edgar/data/886158/000088615822000117/bbby-20220831.htm); SEC Exhibit 99.1 related to bankruptcy (https://www.sec.gov/Archives/edgar/data/886158/000119312523112034/d479924dex991.htm); Reuters: 'Bed Bath & Beyond files for bankruptcy protection' (2023-04-23)",
+  "actual_outcome": "Bed Bath & Beyond Inc. filed for Chapter 11 bankruptcy protection in April 2023. The company moved through store closure and liquidation processes. Its retail operations did not recover as an independent going concern. The Bed Bath & Beyond brand and associated intellectual property were subsequently acquired by Overstock.com for online retail use. The physical retail business ceased operations entirely.",
   "documented_root_causes": [
-    "Liquidity crisis from years of cash consumption via share repurchases relative to operational cash generation",
-    "Vendor and supplier confidence collapse causing inventory availability failure",
-    "Merchandising failure from own-brand push that disrupted assortment and alienated customers",
-    "Capital allocation weakness — buybacks prioritised over operational and inventory investment",
-    "Retail relevance decline compounded by assortment and experience deterioration",
-    "Turnaround execution failure — insufficient speed and credibility to restore vendor and customer confidence"
+    "Liquidity crisis — prior capital allocated to buybacks was unavailable to support operations during distress.",
+    "Vendor and supplier confidence collapse — payment uncertainty caused supply-chain breakdown that compounded customer loss.",
+    "Merchandising and inventory failure — the owned-brand strategy disrupted assortment and drove customer attrition.",
+    "Capital allocation weakness — large share repurchases under prior management depleted cash at the expense of operational resilience.",
+    "Retail relevance decline — the combination of assortment gaps and competitive market weakened the brand beyond recovery in the available timeframe.",
+    "Turnaround execution failure — new management's plan was directionally correct in some areas but insufficient in pace and depth to restore vendor confidence and operational stability before cash was exhausted."
   ],
-  "final_business_state": "Bed Bath & Beyond filed Chapter 11 April 2023; store network closed through liquidation; brand assets acquired by Overstock.com for online use; business did not survive as independent going-concern retailer."
+  "final_business_state": "Bed Bath & Beyond Inc. filed for Chapter 11 bankruptcy in April 2023. Physical retail operations were closed and liquidated. The brand was acquired by Overstock.com and repositioned as an online retail brand. The company did not survive as an independent going concern."
 }
