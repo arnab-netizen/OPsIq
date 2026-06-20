@@ -1,0 +1,47 @@
+{
+  "case_id": "RW_INDIA_ZEE_SONY_2024_MERGER_FAILURE",
+  "company": "Zee Entertainment Enterprises Ltd.",
+  "decision_date": "2024-01-21",
+  "industry": "Media / Entertainment",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "Zee Entertainment and Sony Pictures Networks India had a proposed merger agreement under negotiation",
+    "Deal deadline and extension discussions had become critical and time-sensitive",
+    "Certain closing conditions specified in the merger agreement remained unresolved as of the decision date",
+    "Leadership and governance disagreements between the parties had been reported",
+    "The merger was strategically critical for Zee's competitive position in Indian media against well-funded streaming and broadcast competitors",
+    "No confirmed extension of the deal deadline had been agreed between the parties at the decision date",
+    "Without the merger, Zee faced the risk of competing on a standalone basis with constrained resources against larger competitors",
+    "The deal-execution risk was significant given the unresolved closing conditions and reported bilateral tensions",
+    "Transaction had been under negotiation for an extended period, increasing execution fatigue risk",
+    "Zee's standalone business faced competitive pressure from streaming platforms and other broadcast groups"
+  ],
+  "financial_signals_at_decision_date": {
+    "standalone_position": "Zee would face competitive disadvantage without the scale and content synergies of the Sony combination",
+    "deal_value_risk": "Failure to close would eliminate anticipated merger benefits and expose Zee to standalone downside",
+    "strategic_capital": "Merged entity was intended to provide scale and investment capacity; standalone Zee lacks equivalent firepower",
+    "balance_sheet": "Zee's standalone financial position had not been meaningfully strengthened pending the merger"
+  },
+  "operating_signals_at_decision_date": {
+    "content_and_distribution": "Merged entity would have provided combined content library, distribution, and streaming capability",
+    "competitive_pressure": "Standalone Zee competing against Reliance-backed and other well-funded media players",
+    "management_bandwidth": "Senior leadership attention consumed by prolonged merger negotiations",
+    "standalone_strategy": "No publicly confirmed fallback standalone strategy in the event of deal failure"
+  },
+  "governance_signals_at_decision_date": {
+    "leadership_disagreements": "Reported disagreements between Zee and Sony over leadership terms and governance of the merged entity",
+    "closing_conditions": "Certain deal closing conditions unresolved; no confirmed resolution mechanism announced",
+    "board_pressure": "Zee board under pressure to close the deal or articulate a credible standalone plan",
+    "negotiation_leverage": "Time pressure on Zee was greater given strategic importance of the deal to Zee versus Sony"
+  },
+  "risk_flags_at_decision_date": [
+    "Strategic transaction execution failure risk from unresolved closing conditions and leadership disputes",
+    "Deal-deadline risk with no confirmed extension in place",
+    "Governance and leadership disagreement creating bilateral negotiation breakdown risk",
+    "Absence of credible standalone fallback strategy if merger fails",
+    "Dependency on merger closing for strategic competitive repositioning",
+    "Legal and arbitration risk if the deal terminates without mutual agreement",
+    "Investor confidence risk if the deal fails after extended negotiations"
+  ],
+  "question": "Diagnose the root causes of risk to the Zee-Sony merger as of 21 January 2024 and recommend the highest-priority action plan before any termination decision."
+}

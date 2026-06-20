@@ -1,0 +1,31 @@
+{
+  "source_urls": [
+    "https://find-and-update.company-information.service.gov.uk/company/00316651/insolvency",
+    "https://www.hudsonweir.co.uk/news/cox-kings-enter-into-bankruptcy/",
+    "https://insolvency-practitioners.org.uk/ipa-exclusive-industry-update-from-insolvency-insider-newsoct22/"
+  ],
+  "source_type": "Insolvency registry records, insolvency practitioner reporting, industry insolvency publications",
+  "source_quality": {
+    "tier_a": [
+      "Companies House insolvency record for Cox & Kings (UK) Limited (company number 00316651)",
+      "NCLT / IBC records for Indian group entities where accessible",
+      "Official administrator reports and company announcements"
+    ],
+    "tier_b": [
+      "Hudson Weir insolvency practitioner reporting on Cox & Kings bankruptcy",
+      "IPA insolvency-insider industry update publications",
+      "Credible financial and legal journalism covering the default and insolvency"
+    ]
+  },
+  "reliability_tier": "MEDIUM-HIGH",
+  "supports_ground_truth": true,
+  "contamination_risk": "LOW-MEDIUM",
+  "contamination_notes": "UK insolvency records confirm administration and liquidation dates which must remain in outcome only. Indian listed entity insolvency proceedings are separate and require distinct filings. Pre-insolvency debt default facts used in input are observable at decision date. Post-insolvency fraud or investigation conclusions must not appear in input.",
+  "source_limitations": [
+    "UK Companies House insolvency records cover UK entity only; Indian listed entity requires separate IBC/NCLT filings",
+    "Administration and liquidation dates are post-decision outcomes and must be excluded from input.json",
+    "Later director or personal-guarantee proceedings must remain in outcome context only",
+    "Some creditor-level detail may not be publicly documented",
+    "Exact pre-default debt quantum and inter-company flow details may not be fully public"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "case_id": "RW_UAE_NMC_HEALTH_2020_ACCOUNTING_DEBT_CRISIS",
+  "company": "NMC Health plc",
+  "decision_date": "2020-02-28",
+  "industry": "Healthcare",
+  "geography": "United Arab Emirates / United Kingdom (London-listed)",
+  "known_facts_at_decision_date": [
+    "NMC Health was a significant private healthcare operator primarily in the UAE, listed on the London Stock Exchange",
+    "A short-seller report had raised serious questions about NMC Health's financial reporting and debt levels",
+    "Serious questions had emerged around the accuracy of debt disclosure in financial statements",
+    "Governance weaknesses and related-party transaction exposure had been raised publicly",
+    "Market confidence and investor trust were severely impaired",
+    "Lender confidence was under pressure due to uncertainty over true debt quantum",
+    "Financial transparency and the reliability of reported figures were fundamentally in question",
+    "The company's healthcare operations in the UAE represented potentially viable underlying assets",
+    "Company had not publicly confirmed the true extent of its debt position by this date",
+    "Regulators and financial institutions were seeking clarity on the true financial position"
+  ],
+  "financial_signals_at_decision_date": {
+    "debt_disclosure_reliability": "Serious doubts raised about accuracy and completeness of reported debt",
+    "investor_confidence": "Severely impaired following short-seller allegations and reporting uncertainties",
+    "lender_confidence": "Under significant pressure due to unverified debt quantum",
+    "reported_financial_position": "Reliability of reported balance sheet and cash position in question",
+    "related_party_exposure": "Undisclosed or inadequately disclosed related-party transactions suspected"
+  },
+  "operating_signals_at_decision_date": {
+    "healthcare_operations": "UAE hospital and clinic operations continuing; underlying operational activity potentially viable",
+    "staff_and_patients": "Day-to-day clinical operations not immediately disrupted at decision date",
+    "operational_footprint": "Significant hospital and clinic network across UAE",
+    "management_credibility": "Senior management credibility severely damaged by financial-reporting questions"
+  },
+  "governance_signals_at_decision_date": {
+    "board_governance": "Governance failures suspected at board and oversight level",
+    "financial_controls": "Financial control and reporting integrity fundamentally in question",
+    "related_party_oversight": "Related-party transaction oversight inadequate based on public allegations",
+    "regulatory_attention": "London Stock Exchange and UK regulatory bodies had been made aware of concerns"
+  },
+  "risk_flags_at_decision_date": [
+    "Financial statement reliability cannot be assumed — reported numbers may not reflect true position",
+    "True debt quantum unknown and potentially materially higher than disclosed",
+    "Governance failure at board level not yet fully investigated",
+    "Lender and investor confidence collapse risk if true position emerges without managed disclosure",
+    "Related-party transaction exposure creates additional undisclosed liability risk",
+    "Operational continuity of hospital network depends on financial stabilisation",
+    "Regulatory intervention risk from both UK FCA and UAE regulators"
+  ],
+  "question": "Diagnose root causes and recommend highest-priority action plan before administration for NMC Health plc."
+}

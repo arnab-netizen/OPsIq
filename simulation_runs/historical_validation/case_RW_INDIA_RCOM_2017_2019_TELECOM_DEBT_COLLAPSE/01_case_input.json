@@ -1,0 +1,80 @@
+{
+  "caseId": "RW_INDIA_RCOM_2017_2019_TELECOM_DEBT_COLLAPSE",
+  "businessProblem": "Reliance Communications Ltd. faces a critical solvency and operational crisis at end-2017. Very high accumulated debt is not serviceable from operations, the wireless business is under severe pressure from industry-wide price competition, and creditors including Ericsson are actively pursuing enforcement. Asset-sale plans announced to resolve debt have not been executed. The company must determine the highest-priority actions to avoid insolvency.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Total debt is very high and significantly exceeds cash generation capacity from operations, creating acute solvency risk",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Company is dependent on asset monetization to address debt obligations; no major asset sales have been completed",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Revenue is declining due to sustained telecom price war reducing average revenue per user across the sector",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Wireless operations are under severe pressure from price compression and subscriber churn driven by new low-price entrant",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Strategic transition away from the legacy wireless model was announced but has not been executed; the legacy model remains dominant",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "Telecom industry competition intensified sharply after aggressive low-price market disruption; competitive position materially weakened",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Creditor relations are deteriorating; Ericsson and other creditors are actively pursuing outstanding payment claims",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Restructuring and asset-sale plan announced by leadership but concrete execution and completed transactions remain absent",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "legal",
+      "finding": "Creditor enforcement risk is rising as payment deadlines approach; Ericsson pursuing claims actively",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    }
+  ],
+  "clientContext": {
+    "industry": "Telecom",
+    "size": "Large listed telecom operator with national network",
+    "revenueImpactUrgency": "Critical — revenue declining under price war while debt obligations remain fixed; solvency timeline short"
+  },
+  "ownerConstraintProfile": {
+    "bottleneckRisk": "High — promoter-controlled structure with concentration of decision-making authority",
+    "followThroughRisk": "High — asset-sale and restructuring plans announced but not executed",
+    "resistanceToChange": "Medium — strategic transition was acknowledged but not acted upon with sufficient speed",
+    "managementCapability": "Under severe stress — management is dealing with simultaneous creditor pressure, operational decline, and incomplete strategic execution"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "source_urls": [
+    "https://www.bseindia.com/stock-share-price/fortis-healthcare-ltd/fortis/532843/corp-announcements/",
+    "https://www.reuters.com/markets/deals/ihh-fortis-shares-jump-after-indias-regulator-clears-long-delayed-takeover-2025-10-06/",
+    "https://www.vccircle.com/sc-puts-fortis-sale-to-ihh-on-hold-over-plea-against-singh-brothers"
+  ],
+  "source_type": "Stock exchange filings, credible financial journalism, Supreme Court/regulatory reporting",
+  "source_quality": {
+    "tier_a": [
+      "Fortis Healthcare BSE/NSE exchange corporate announcements — contemporaneous regulatory disclosures",
+      "SEBI, Supreme Court, and regulatory filings on IHH transaction and open-offer litigation",
+      "Ministry of Corporate Affairs and court records on promoter-related disputes"
+    ],
+    "tier_b": [
+      "Reuters, October 2025: IHH and Fortis shares jump after India's regulator clears long-delayed takeover",
+      "VCCircle: Supreme Court puts Fortis sale to IHH on hold over plea against Singh brothers",
+      "Credible Indian business journalism on governance allegations and strategic investor process in 2018"
+    ]
+  },
+  "reliability_tier": "HIGH",
+  "supports_ground_truth": true,
+  "contamination_risk": "MEDIUM",
+  "contamination_notes": "Reuters 2025 article documents the final regulatory clearance of the IHH open offer after a seven-year delay. This and all post-2018 transaction and litigation outcomes must remain in outcome.json only. Input uses only early-2018 governance, capital, and trust facts. Governance allegations are described as allegations, not adjudicated findings.",
+  "source_limitations": [
+    "Reuters 2025 article documents outcome-stage regulatory clearance; used for outcome only",
+    "IHH deal terms and 31.1% stake outcome are post-decision and excluded from input",
+    "Open-offer completion timeline and regulatory/Supreme Court proceedings are post-decision and excluded from input",
+    "Later SEBI and Supreme Court developments are post-decision and excluded from input",
+    "Promoter allegations in input are described as allegations only — not as adjudicated facts"
+  ]
+}

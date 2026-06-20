@@ -1,0 +1,66 @@
+{
+  "caseId": "RW_US_STARBUCKS_2008_TURNAROUND",
+  "businessProblem": "Starbucks faces deteriorating comparable-store sales and brand erosion as of January 7, 2008 following a period of rapid store expansion. The premium coffeehouse experience that underpins Starbucks' brand and customer loyalty is at risk of dilution. Rapid store growth has created cannibalization between nearby locations and operational inconsistency across the network. Founder Howard Schultz has returned as CEO. The company must diagnose the root causes of deterioration and set a recovery direction before financial and brand erosion compound further.",
+  "evidence": [
+    {
+      "dimension": "market",
+      "finding": "Comparable-store sales are under pressure and declining; rapid store growth has not translated into proportional revenue growth, suggesting cannibalization and experience degradation are eroding per-store performance.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Rapid store expansion has created cannibalization risk between nearby Starbucks locations, reducing per-store traffic and diluting the sense of a premium coffeehouse destination.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Operational inconsistency across a very large and rapidly grown store network has emerged; the quality and consistency of the in-store coffeehouse experience that defines the brand premium is degrading.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "The premium brand positioning that justified Starbucks' price premium and customer loyalty is at risk of erosion from experience dilution. Customers experiencing inconsistent quality have less reason to pay premium prices.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Partner (employee) engagement is inconsistent across the network; partner engagement is a direct driver of customer experience quality and the coffeehouse atmosphere.",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "The macroeconomic environment is deteriorating in early 2008, adding pressure to premium discretionary consumer spending and increasing risk to Starbucks' price-sensitive customer segments.",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Howard Schultz has returned as CEO on January 7, 2008; leadership transition provides an opportunity to reset strategic direction and impose new priorities.",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "decision-date observable facts"
+    }
+  ],
+  "clientContext": {
+    "industry": "Coffee retail",
+    "size": "Large public company with thousands of locations globally; strong brand but under operational stress",
+    "revenueImpactUrgency": "High — comparable-store sales decline combined with macroeconomic headwinds creates urgency; brand erosion compounds the risk"
+  },
+  "ownerConstraintProfile": {
+    "bottleneckRisk": "Medium — returning founder CEO has strong conviction and brand authority; execution bottleneck risk is moderate given leadership strength",
+    "followThroughRisk": "Medium — large franchise-like store network requires sustained operational discipline; risk that store-level management does not consistently execute on experience standards",
+    "resistanceToChange": "Medium — rapid expansion culture may resist slowdown; store managers incentivized on growth metrics may resist quality-first reorientation",
+    "managementCapability": "Mixed — founding CEO is highly capable at brand and experience leadership; operational management infrastructure built for growth may need reorientation toward quality discipline"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "RCom's distress was caused by a combination of unsustainable debt accumulated over years, a failed strategic transition away from an uncompetitive legacy wireless model, and the severe revenue shock of a telecom industry price war. The company became dependent on asset sales to address solvency, but execution was delayed. Creditors including Ericsson escalated enforcement actions as the gap between debt obligations and operating cash flow widened with no credible resolution in sight.",
+  "expert_first_action": "Immediate creditor restructuring engagement to halt enforcement actions while a realistic, time-bound asset-sale and liability-reduction plan is formalized with independent validation of asset valuations.",
+  "actual_decision": "RCom continued to pursue asset sales and restructuring negotiations but did not complete decisive restructuring in 2017-2018. Creditor pressure, including from Ericsson, escalated. The company did not successfully monetize assets fast enough to resolve solvency pressure.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Relying on delayed and unexecuted asset sales as the primary solvency solution",
+    "Failing to exit unviable wireless operations quickly enough to arrest cash burn",
+    "Not completing creditor restructuring before enforcement actions escalated",
+    "Continuing to carry legacy debt obligations without a binding resolution plan"
+  ],
+  "beneficial_actions": [
+    "Announcing asset-sale intent and restructuring plans (though execution was insufficient)",
+    "Recognizing the need for strategic transition away from legacy wireless"
+  ],
+  "citation": "IBBI CIRP public announcement for RCom (CIN: U45309MH2004PLC147531), filed by Ericsson India as operational creditor, public announcement date 07-05-2019. NSE archive disclosure confirming insolvency proceedings. Reuters reporting on SBI fraud classification (2025 context, not in input).",
+  "actual_outcome": "RCom entered Corporate Insolvency Resolution Process (CIRP) under the Insolvency and Bankruptcy Code, with IBBI public announcement on 07 May 2019 following Ericsson India's application as operational creditor. Insolvency process continued with subsequent creditor and regulatory issues deepening group distress.",
+  "documented_root_causes": [
+    "Debt solvency pressure from accumulated high leverage",
+    "Strategic disruption from telecom price war eroding revenue base",
+    "Failed operating model transition away from uncompetitive legacy wireless",
+    "Creditor enforcement risk materializing through Ericsson and others",
+    "Asset monetization dependence with delayed and incomplete execution",
+    "Liquidity crisis driven by mismatch between debt obligations and operating cash flow"
+  ],
+  "final_business_state": "Corporate insolvency resolution process initiated May 2019; continued insolvency proceedings with unresolved creditor claims and deepening group-level distress."
+}

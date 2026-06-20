@@ -1,0 +1,68 @@
+{
+  "caseId": "RW_INDIA_GITANJALI_2018_PNB_FRAUD",
+  "businessProblem": "Gitanjali Gems requires immediate diagnosis of root causes and a highest-priority action plan given fraud allegations linked to unauthorized Letters of Undertaking at PNB, governance credibility collapse, unverifiable receivables and collateral, and lender-confidence crisis as of 14 February 2018.",
+  "evidence": [
+    {
+      "dimension": "governance",
+      "finding": "Punjab National Bank reported fraud involving unauthorized Letters of Undertaking; Gitanjali Group entities named in public reporting and early investigation developments",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "PNB public fraud disclosure and CBI investigation reporting"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Promoter integrity under serious public question; promoter-controlled group with concentrated control risk and inadequate independent oversight",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Fraud allegations and corporate governance analysis"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Financial statements and receivables cannot be relied upon without independent forensic verification given LoU irregularity allegations",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "PNB fraud disclosure and banking credit analysis"
+    },
+    {
+      "dimension": "finance",
+      "finding": "High dependency on bank credit and letters of undertaking for trade financing; lender and creditor confidence collapsed",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Business model analysis and lender-confidence signals"
+    },
+    {
+      "dimension": "legal",
+      "finding": "CBI investigations and searches against Gitanjali Group entities reported to have commenced February 2018",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "CBI investigation reporting"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Business continuity immediately at risk given credit freeze and investigation; employees, suppliers, and trade creditors exposed",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Operational risk assessment"
+    },
+    {
+      "dimension": "market",
+      "finding": "Gems and jewellery export operations dependent on trade financing now under scrutiny; no alternative financing visible",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Export operations and trade finance analysis"
+    }
+  ],
+  "clientContext": {
+    "industry": "Jewellery/gems/exports",
+    "size": "Large jewellery manufacturer and exporter with significant bank credit exposure",
+    "revenueImpactUrgency": "Critical - fraud allegations, credit freeze, and business continuity collapse risk"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "VERY HIGH",
+    "resistanceToChange": "HIGH",
+    "communicationBreakdown": "HIGH",
+    "managementCapability": "LOW",
+    "accountabilityWeakness": "VERY HIGH",
+    "bottleneckRisk": "VERY HIGH"
+  }
+}

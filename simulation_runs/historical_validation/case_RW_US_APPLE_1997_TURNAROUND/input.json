@@ -1,0 +1,51 @@
+{
+  "case_id": "RW_US_APPLE_1997_TURNAROUND",
+  "company": "Apple Computer Inc.",
+  "decision_date": "1997-07-01",
+  "industry": "Consumer technology",
+  "geography": "US",
+  "known_facts_at_decision_date": [
+    "Apple had suffered major financial losses in the period leading up to mid-1997",
+    "Product lines were highly fragmented and complex, creating strategic confusion",
+    "Mac ecosystem was under sustained pressure from the dominant Windows PC platform",
+    "Developer confidence in the Mac platform had weakened significantly",
+    "Customer confidence and retail mindshare had declined",
+    "Company lacked a clear survival strategy; incremental improvement was insufficient",
+    "Apple still possessed a strong brand with a loyal installed user base",
+    "Design and engineering capability remained valuable internal assets",
+    "Proprietary technology assets including operating system and hardware design remained",
+    "Strategic drift had resulted in too many product variants with unclear differentiation",
+    "Cost structure was misaligned with declining revenue trajectory",
+    "Platform weakness relative to Windows threatened long-term ecosystem viability",
+    "Non-core initiatives were consuming resources without strategic return"
+  ],
+  "financial_signals_at_decision_date": {
+    "financial_condition": "Severe distress with major accumulated losses",
+    "revenue_trend": "Declining",
+    "cash_position": "Under pressure; preservation critical",
+    "cost_structure": "Misaligned with revenue; requires rationalization",
+    "profitability": "Deeply negative"
+  },
+  "operating_signals_at_decision_date": {
+    "product_line_complexity": "Very high; too many SKUs and variants without clear differentiation",
+    "platform_competitiveness": "Weakening relative to Windows PC ecosystem",
+    "developer_ecosystem_health": "Deteriorating; developer confidence weakened",
+    "customer_experience_consistency": "Inconsistent across fragmented product lines",
+    "operational_focus": "Diffuse; spread across too many simultaneous initiatives"
+  },
+  "governance_signals_at_decision_date": {
+    "strategic_clarity": "Low; no coherent survival-level focus",
+    "leadership_context": "In transition; new leadership direction being established",
+    "decision_making_urgency": "Requires immediate prioritization and structural intervention",
+    "board_pressure": "High; survival-level concerns present"
+  },
+  "risk_flags_at_decision_date": [
+    "Platform ecosystem collapse risk if developer exodus continues",
+    "Brand erosion risk from sustained market-share losses",
+    "Cash depletion risk without immediate cost and focus discipline",
+    "Strategic drift risk from attempting too many product directions simultaneously",
+    "Customer confidence collapse risk if no credible strategy is communicated",
+    "Competitive disadvantage risk versus well-funded Windows PC ecosystem"
+  ],
+  "question": "Diagnose the root causes of Apple Computer's distress as of July 1997 and recommend the highest-priority action plan to stabilize and recover the business, given only facts observable at that decision date."
+}

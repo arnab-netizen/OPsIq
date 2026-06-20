@@ -1,0 +1,48 @@
+{
+  "case_id": "RW_CANADA_BLACKBERRY_2012_SMARTPHONE_DISRUPTION",
+  "company": "Research In Motion / BlackBerry",
+  "decision_date": "2012-06-30",
+  "industry": "Mobile devices",
+  "geography": "Canada",
+  "known_facts_at_decision_date": [
+    "BlackBerry (Research In Motion) was losing competitive position rapidly to iPhone and Android-based smartphones",
+    "BlackBerry still had established enterprise and government customer segments with strong security and manageability credentials",
+    "BlackBerry retained a meaningful installed base of enterprise users",
+    "Product and platform transition to a new BlackBerry operating system had been subject to significant delays",
+    "The BlackBerry developer ecosystem was weakening; consumer app competitiveness was far behind iOS and Android",
+    "Consumer smartphone users were defecting to iPhone and Android at an accelerating rate",
+    "The company faced a fundamental strategic decision: continue competing in mass-market consumer devices, pivot to enterprise software and services, license technology, or pursue a formal restructuring",
+    "BlackBerry's competitive problem was structural — ecosystem weakness and platform transition delays — not primarily a marketing or branding problem",
+    "Enterprise security and management capabilities remained genuine differentiators in certain regulated and government segments",
+    "Revenue and market share were declining under competitive pressure from better-resourced competitors"
+  ],
+  "financial_signals_at_decision_date": {
+    "revenue_trend": "Declining under competitive pressure; subscriber base and device shipments falling",
+    "profitability": "Under pressure; margins compressing as competitive position weakens",
+    "financial_condition": "Stressed but not in acute insolvency at decision date",
+    "cash_position": "Positive but declining; runway sufficient for near-term decisions",
+    "cost_structure": "Built for higher-volume device business than current trajectory supports"
+  },
+  "operating_signals_at_decision_date": {
+    "platform_transition": "New BlackBerry OS delayed; competitive window narrowing",
+    "developer_ecosystem": "Weakening; app quantity and quality behind iOS and Android",
+    "enterprise_security_positioning": "Genuine and defensible differentiator in regulated and government segments",
+    "consumer_competitiveness": "Declining rapidly against iPhone and Android user experience",
+    "hardware_manufacturing": "Fixed-cost intensive; difficult to scale down without structural action"
+  },
+  "governance_signals_at_decision_date": {
+    "strategic_clarity": "Low; fundamental direction undecided",
+    "leadership_pressure": "High; co-CEO structure had recently changed",
+    "board_and_investor_pressure": "High; shareholder confidence declining with market share",
+    "decision_urgency": "High; competitive window for platform transition is closing"
+  },
+  "risk_flags_at_decision_date": [
+    "Platform transition delay risk; new OS may arrive too late to arrest consumer defection",
+    "Developer ecosystem collapse risk; app gap widens with each passing quarter",
+    "Enterprise installed base attrition risk if consumer platform fails entirely",
+    "Mass-market hardware commoditization risk in a two-platform world dominated by iOS and Android",
+    "Cash burn risk if consumer device strategy continues without market-share recovery",
+    "Risk of strategic drift from indecision between device, software, and licensing options"
+  ],
+  "question": "Diagnose the root causes of BlackBerry's competitive deterioration as of June 30, 2012 and recommend the highest-priority strategic action plan, given only facts observable at that decision date."
+}

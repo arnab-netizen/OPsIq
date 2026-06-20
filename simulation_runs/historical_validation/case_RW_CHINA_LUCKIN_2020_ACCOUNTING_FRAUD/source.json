@@ -1,0 +1,24 @@
+{
+  "case_id": "RW_CHINA_LUCKIN_2020_ACCOUNTING_FRAUD",
+  "source_urls": [
+    "https://www.sec.gov/enforcement-litigation/litigation-releases/lr-24987",
+    "https://ai-analytics.wharton.upenn.edu/wp-content/uploads/2022/02/Luckin_Case_Study.pdf",
+    "https://pdfs.semanticscholar.org/96aa/81f51d0d71c05aa1c24d05d81d34bccf8221.pdf"
+  ],
+  "source_type": "SEC litigation release, Wharton business school case study, academic fraud analysis",
+  "source_quality": {
+    "tier_A": "SEC Litigation Release LR-24987 on Luckin Coffee accounting fraud settlement; SEC complaint documents",
+    "tier_B": "Wharton Analytics case study on Luckin Coffee; Semantic Scholar academic analysis of fraud mechanics"
+  },
+  "reliability_tier": "A/B",
+  "supports_ground_truth": true,
+  "contamination_risk": "High",
+  "contamination_notes": "SEC litigation release describes the settlement and enforcement outcome. Wharton case study and academic analysis describe post-disclosure findings. All of these are outcome-stage relative to the 1 April 2020 decision date. Input.json must reflect only pre-disclosure growth model risks: revenue quality concerns, discount dependency, weak internal controls, unverified unit economics. No confirmed fraud, no $300 million figure, no SEC settlement in input.json.",
+  "source_limitations": [
+    "SEC enforcement action is post-disclosure and describes confirmed fraud amounts and settlement",
+    "Wharton case study uses post-event information throughout",
+    "Academic analysis uses outcome data to reconstruct fraud mechanics",
+    "Internal Luckin transaction data and audit records from pre-disclosure period not publicly accessible",
+    "Decision-date investor and analyst reports not included in provided sources"
+  ]
+}

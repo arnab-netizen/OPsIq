@@ -1,0 +1,29 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Bed Bath & Beyond's distress was driven by a self-reinforcing combination of liquidity crisis, vendor-confidence collapse, merchandising failure from a misguided own-brand push, and a capital allocation history that prioritised share repurchases over operational investment. The crisis was substantially company-specific and operationally rooted, not simply an e-commerce competition problem. Without immediate vendor stabilisation, cash preservation, and a credible inventory recovery plan, the business had no viable path to recovery.",
+  "expert_first_action": "Immediately stabilise vendor and supplier confidence through direct engagement, payment commitments on outstanding balances, and cessation of all buybacks and non-essential cash outflows — before any brand or format experiments.",
+  "actual_decision": "Company attempted to secure financing and stabilise operations but did not successfully restore vendor confidence or achieve a viable operational turnaround before filing for bankruptcy.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Large share repurchase programs in prior years depleted cash needed for operational investment",
+    "Own-brand push alienated established vendor relationships and disrupted customer assortment expectations",
+    "Failure to prioritise vendor confidence stabilisation ahead of other turnaround initiatives",
+    "Continued store network drain on cash without accelerated unprofitable-store closure",
+    "Turnaround plan not executed at sufficient speed to restore vendor and inventory position before bankruptcy"
+  ],
+  "beneficial_actions": [
+    "New CEO appointment in mid-2022 signalled willingness to change direction",
+    "Company publicly acknowledged need for turnaround financing and operational reset"
+  ],
+  "citation": "SEC filing for Bed Bath & Beyond Inc. (BBBY 10-Q for period ending 2022-08-27, filed 2022); SEC filing — Bed Bath & Beyond bankruptcy press release exhibit (April 2023); Reuters reporting on Chapter 11 filing.",
+  "actual_outcome": "Bed Bath & Beyond filed for Chapter 11 bankruptcy protection in April 2023. The company moved through store closures and a sale of brand assets. Retail operations did not recover as an independent going concern. The Bed Bath & Beyond brand was subsequently acquired by Overstock.com for online retail use.",
+  "documented_root_causes": [
+    "Liquidity crisis from years of cash consumption via share repurchases relative to operational cash generation",
+    "Vendor and supplier confidence collapse causing inventory availability failure",
+    "Merchandising failure from own-brand push that disrupted assortment and alienated customers",
+    "Capital allocation weakness — buybacks prioritised over operational and inventory investment",
+    "Retail relevance decline compounded by assortment and experience deterioration",
+    "Turnaround execution failure — insufficient speed and credibility to restore vendor and customer confidence"
+  ],
+  "final_business_state": "Bed Bath & Beyond filed Chapter 11 April 2023; store network closed through liquidation; brand assets acquired by Overstock.com for online use; business did not survive as independent going-concern retailer."
+}

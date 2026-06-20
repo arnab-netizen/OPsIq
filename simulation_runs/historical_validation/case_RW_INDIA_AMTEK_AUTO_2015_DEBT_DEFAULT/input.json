@@ -1,0 +1,50 @@
+{
+  "case_id": "RW_INDIA_AMTEK_AUTO_2015_DEBT_DEFAULT",
+  "company": "Amtek Auto Ltd.",
+  "decision_date": "2015-09-30",
+  "industry": "Auto components / manufacturing",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "Amtek Auto has expanded aggressively through acquisitions and has accumulated substantial debt",
+    "Reports indicate Amtek defaulted on bond repayments of close to Rs. 800 crore in September 2015",
+    "Group debt is reported at approximately Rs. 14,000 crore as of 2015",
+    "The group has been exploring asset sales and debt-reduction plans to address leverage",
+    "Weak cash conversion and working-capital pressure are visible alongside the debt burden",
+    "Manufacturing operations face pressure from automotive sector slowdown",
+    "The business problem is overexpansion-driven leverage combined with weak operating cash generation, not a new product or market failure",
+    "Bond default is visible but the deeper issue is whether the acquisition-funded growth model is sustainable under current cash generation and debt-service obligations",
+    "Asset disposals being explored but realistic valuation and timeline uncertainty remain",
+    "Acquisition complexity has created a multi-entity structure that makes cash-flow consolidation and management difficult"
+  ],
+  "financial_signals_at_decision_date": {
+    "bond_default": "Reported default on bond repayments of approximately Rs. 800 crore in September 2015",
+    "group_debt": "Approximately Rs. 14,000 crore as reported in 2015",
+    "cash_generation": "Weak; operating cash flows insufficient to service debt at current levels",
+    "leverage_ratio": "Very high relative to operating earnings and cash generation capacity",
+    "asset_disposal_plans": "Being explored; realistic valuation and execution timeline uncertain",
+    "working_capital": "Under pressure; typical of manufacturing businesses in an auto-sector slowdown"
+  },
+  "operating_signals_at_decision_date": {
+    "core_business": "Auto components manufacturing; multiple plants acquired through aggressive expansion",
+    "auto_sector_conditions": "Automotive sector experiencing slowdown, reducing volume and pricing support for component manufacturers",
+    "acquisition_complexity": "Multi-entity group structure resulting from acquisitions creates operational and cash-management complexity",
+    "manufacturing_capacity": "Significant physical asset base from acquisitions; but revenue and cash generation insufficient to service acquisition debt"
+  },
+  "governance_signals_at_decision_date": {
+    "debt_reduction_planning": "Management has acknowledged need for asset sales and debt reduction; execution has not yet delivered results",
+    "lender_engagement": "Lenders are aware of stress; formal restructuring or standstill not yet publicly confirmed",
+    "transparency": "Debt quantum and structure publicly visible through bond markets and reports; no indication of governance concealment",
+    "management_response": "Asset-sale exploration acknowledged but without credible timelines or confirmed transactions"
+  },
+  "risk_flags_at_decision_date": [
+    "Active bond default on approximately Rs. 800 crore as of September 2015",
+    "Total group debt of approximately Rs. 14,000 crore with weak cash generation",
+    "Acquisition-led leverage model under severe strain in auto-sector slowdown",
+    "Asset sales required but valuation and execution uncertainty present",
+    "Working-capital pressure compounding debt-service stress",
+    "Risk of cascading lender action if bond default is not contained through restructuring",
+    "No confirmed standstill or lender coordination in place",
+    "Formal insolvency is a realistic contingency if restructuring fails"
+  ],
+  "question": "Diagnose root causes and recommend highest-priority action plan before later CIRP outcomes."
+}

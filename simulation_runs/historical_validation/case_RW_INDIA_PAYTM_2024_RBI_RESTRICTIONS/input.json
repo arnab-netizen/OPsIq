@@ -1,0 +1,47 @@
+{
+  "case_id": "RW_INDIA_PAYTM_2024_RBI_RESTRICTIONS",
+  "company": "Paytm Payments Bank Ltd. / One97 Communications Ltd.",
+  "decision_date": "2024-01-31",
+  "industry": "Fintech / Payments",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "RBI issued directions restricting Paytm Payments Bank from accepting fresh deposits or credit transactions after a specified upcoming deadline",
+    "RBI had earlier in 2022 directed Paytm Payments Bank to stop onboarding new customers due to compliance concerns",
+    "RBI cited persistent non-compliances and continuing material supervisory concerns as the basis for the January 2024 restrictions",
+    "Existing customer balances could still be used subject to RBI's specific directions",
+    "Paytm's broader fintech and payments ecosystem was significantly dependent on Paytm Payments Bank for payment processing and wallet operations",
+    "The listed parent company One97 Communications operated the Paytm consumer and merchant payments brand",
+    "Repeated regulatory concerns over two-plus years signalled systemic compliance and governance control weakness",
+    "The restrictions created operational continuity risk for merchants and consumers using Paytm payment products",
+    "Business-model dependency on the restricted banking affiliate created existential operational risk for the wider ecosystem",
+    "RBI action signalled that the compliance failure was not a one-off but a persistent institutional control deficiency"
+  ],
+  "financial_signals_at_decision_date": {
+    "revenue_at_risk": "Significant portion of payment processing revenue dependent on Paytm Payments Bank operations",
+    "business_model_dependency": "Core consumer and merchant payment flows routed through restricted banking entity",
+    "listed_parent_exposure": "One97 Communications' earnings and growth outlook materially linked to restricted bank operations",
+    "compliance_cost": "Substantial remediation investment required; timeline and cost uncertain"
+  },
+  "operating_signals_at_decision_date": {
+    "payment_operations": "At risk for fresh transactions; existing balance operations permitted subject to RBI conditions",
+    "merchant_network": "Merchant payment processing flows at risk of disruption if bank operations are curtailed",
+    "customer_impact": "Existing customers can use balances but fresh deposits and credit transactions restricted",
+    "alternative_banking_arrangements": "Paytm required to identify and onboard compliant partner banks to route payment flows"
+  },
+  "governance_signals_at_decision_date": {
+    "compliance_history": "RBI had already directed customer onboarding halt in 2022; 2024 action reflects persistent failure to remediate",
+    "control_environment": "Systemic compliance and operational risk control deficiency indicated by multi-year regulatory concern",
+    "board_and_management": "Under acute pressure to demonstrate credible remediation plan to RBI and other regulators",
+    "regulatory_relationship": "Severely strained; RBI's escalation from onboarding halt to fresh-deposit restriction indicates confidence failure"
+  },
+  "risk_flags_at_decision_date": [
+    "Regulatory compliance failure with persistent multi-year pattern indicating systemic control weakness",
+    "Business-model dependency on a restricted regulated entity creating operational continuity risk",
+    "Trust and reputation risk with merchants, consumers, and investor community",
+    "Operational continuity risk if payment flows cannot be migrated quickly to compliant partner banks",
+    "Regulatory escalation risk if remediation plan is not credible and executed promptly",
+    "Listed parent (One97) revenue and market confidence risk from affiliate regulatory restriction",
+    "Potential loss of merchant and consumer base to competitors if payment continuity is disrupted"
+  ],
+  "question": "Diagnose the root causes of Paytm Payments Bank's regulatory crisis as of 31 January 2024 and recommend the highest-priority action plan."
+}

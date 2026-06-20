@@ -1,0 +1,15 @@
+{
+  "caseId": "RW_INDIA_AMTEK_AUTO_2015_DEBT_DEFAULT",
+  "source_urls": [
+    "https://ibbi.gov.in/uploads/order/",
+    "https://www.livemint.com/Companies/amtek-auto",
+    "https://www.business-standard.com/company/amtek-auto"
+  ],
+  "source_type": "REGULATORY_FILINGS_AND_JOURNALISM",
+  "source_quality": "A-level: IBBI/NCLT filings, bond market default reports; B-level: credible financial journalism",
+  "reliability_tier": "B",
+  "supports_ground_truth": true,
+  "contamination_risk": "LOW",
+  "contamination_notes": "Bond default was public; CIRP outcome belongs in outcome only. Input restricted to pre-CIRP facts.",
+  "source_limitations": "Primary IBBI/NCLT documents are post-decision. Input facts drawn from contemporaneous bond-market default reports and group debt disclosures as of September 2015."
+}

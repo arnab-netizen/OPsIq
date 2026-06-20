@@ -1,0 +1,68 @@
+{
+  "caseId": "RW_UAE_ABRAAJ_2018_PRIVATE_EQUITY_COLLAPSE",
+  "businessProblem": "The Abraaj Group requires immediate diagnosis of root causes and a highest-priority action plan given institutional investor concerns about healthcare fund cash usage, fiduciary control weaknesses, uncertain group liquidity, and governance credibility damage as of 28 February 2018, before any formal liquidation or legal proceedings.",
+  "evidence": [
+    {
+      "dimension": "governance",
+      "finding": "Major institutional investors raised concerns about use and handling of cash within Abraaj's healthcare fund; fiduciary control standards insufficient to prevent investor concerns",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Institutional investor dispute reporting"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Client asset segregation not verifiably maintained to institutional investor satisfaction; risk of fund and group cash commingling",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Fiduciary and fund control analysis"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Group-level liquidity uncertain given scale of investor concerns and potential fund freeze",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Group liquidity and fund freeze risk analysis"
+    },
+    {
+      "dimension": "market",
+      "finding": "Major institutional investor confidence in group fiduciary standards severely damaged; new fundraising credibility impaired",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Investor confidence and fundraising risk analysis"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Board and governance structures insufficient to identify and prevent fund misuse risk; no concluded independent investigation or third-party fund verification announced",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Governance review"
+    },
+    {
+      "dimension": "legal",
+      "finding": "Regulatory scrutiny risk elevated given scale of institutional investor complaints about fund cash handling",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Regulatory risk analysis"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Emerging-market portfolio companies at risk from parent-level instability; management contract credibility impaired",
+      "confidence": "MEDIUM",
+      "isCritical": false,
+      "source": "Portfolio operations risk analysis"
+    }
+  ],
+  "clientContext": {
+    "industry": "Private equity",
+    "size": "Large emerging-markets private equity group with multi-billion dollar fund management operations",
+    "revenueImpactUrgency": "Critical - fiduciary failure risk, investor confidence collapse, group liquidity uncertainty"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "HIGH",
+    "resistanceToChange": "HIGH",
+    "communicationBreakdown": "HIGH",
+    "managementCapability": "LOW",
+    "accountabilityWeakness": "VERY HIGH",
+    "bottleneckRisk": "HIGH"
+  }
+}

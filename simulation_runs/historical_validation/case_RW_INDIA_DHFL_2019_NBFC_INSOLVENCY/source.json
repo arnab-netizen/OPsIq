@@ -1,0 +1,28 @@
+{
+  "source_urls": [
+    "https://ibbi.gov.in/uploads/order/4dc4028ccc12768a83b5726399fc8698.pdf",
+    "https://api.sci.gov.in/supremecourt/2022/5046/5046_2022_9_1501_60698_Judgement_01-Apr-2025.pdf"
+  ],
+  "source_type": "NCLT insolvency order, Supreme Court of India judgment",
+  "source_quality": {
+    "tier_a": [
+      "IBBI/NCLT order document relating to DHFL financial-service-provider insolvency proceedings",
+      "Supreme Court of India judgment in Civil Appeal 5046/2022 (01-Apr-2025) addressing DHFL insolvency process, RBI supersession, and resolution plan"
+    ],
+    "tier_b": [
+      "Credible legal analysis and investigative journalism regarding DHFL governance allegations (used as allegation context in input only)",
+      "RBI press releases and communications regarding board supersession (outcome material)"
+    ]
+  },
+  "reliability_tier": "A",
+  "supports_ground_truth": true,
+  "contamination_risk": "Medium-high",
+  "contamination_notes": "RBI board supersession (November 2019), NCLT formal admission, Piramal resolution plan, later Supreme Court conclusions on fraud/mismanagement, and final resolution outcome must not appear in input.json. Governance allegations at decision date must be labelled as allegations, not proven conclusions.",
+  "source_limitations": [
+    "Governance allegations in input must be clearly labelled as unproven allegations at the decision date",
+    "Adjudicated fraud/mismanagement conclusions from post-resolution proceedings stay in outcome only",
+    "RBI supersession is outcome evidence and must not appear in input",
+    "Piramal resolution and final Supreme Court conclusions are post-decision-date and must remain in outcome",
+    "Asset quality at decision date was uncertain and cannot be stated as definitively impaired without evidence available at that date"
+  ]
+}

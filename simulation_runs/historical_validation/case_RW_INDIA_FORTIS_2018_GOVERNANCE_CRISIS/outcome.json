@@ -1,0 +1,28 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Fortis Healthcare's crisis was fundamentally a governance credibility failure caused by alleged promoter-linked fund diversion through inter-corporate deposits, compounding pre-existing capital pressure and ownership uncertainty. The core problem was not clinical or operating performance but the complete erosion of investor, lender, and regulatory trust in the promoter and board. In a healthcare business, where patient confidence, clinical talent, and regulatory relationships are commercially critical, governance failure carries an operational dimension that non-healthcare businesses do not face to the same degree. The path to value preservation required governance reset first — only a credible, independent board and clean governance structure could create conditions for a legitimate strategic investor process. Without this sequence, any capital or strategic transaction would face execution risk from unresolved governance liabilities.",
+  "expert_first_action": "Commission an independent forensic review of all inter-corporate deposits and related-party transactions to establish facts, simultaneously reset the board with independent directors empowered to act, and ring-fence hospital operations from the promoter dispute — these three actions must precede any strategic investor process.",
+  "actual_decision": "Fortis conducted a competitive strategic investor process that resulted in IHH Healthcare being selected as strategic investor. The process did not fully resolve underlying governance and legal disputes before the transaction, resulting in prolonged litigation and regulatory complications that delayed completion of the open offer.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Did not complete independent forensic resolution of promoter-linked ICD allegations before initiating strategic investor process",
+    "Governance reset was incomplete relative to scale of allegations at the time of transaction",
+    "Legal and regulatory disputes were not resolved before transaction terms were set, creating prolonged post-transaction litigation"
+  ],
+  "beneficial_actions": [
+    "Competitive strategic investor process initiated with multiple bidders, preserving some market tension and value discovery",
+    "Hospital operations maintained through the governance crisis without major clinical service failure",
+    "IHH ultimately selected as strategic investor, bringing capital and healthcare sector expertise"
+  ],
+  "citation": "Fortis Healthcare BSE exchange filings (NSE/BSE: FORTIS); Reuters, IHH and Fortis shares jump after India's regulator clears long-delayed takeover, October 6, 2025; VCCircle, SC puts Fortis sale to IHH on hold over plea against Singh brothers.",
+  "actual_outcome": "Fortis selected IHH Healthcare as strategic investor. IHH acquired approximately 31.1% stake for approximately Rs. 4,000 crore in 2018. However, the open offer completion was delayed for approximately seven years by legal disputes. As of October 2025, India's securities regulator cleared the long-delayed open offer, enabling IHH to proceed. The Supreme Court had previously put the sale on hold over litigation involving the Singh brothers (former promoters). The case became one of India's most prolonged post-transaction legal disputes in the healthcare sector.",
+  "documented_root_causes": [
+    "Governance credibility failure: alleged promoter-linked fund diversion through ICDs destroyed investor and lender trust",
+    "Board independence failure: board oversight did not prevent or detect alleged promoter misuse of company funds",
+    "Capital pressure compounded by governance uncertainty, limiting fundraising options",
+    "Ownership and promoter-exit complexity created transaction risk that was not resolved before strategic process",
+    "Reputation risk in healthcare: governance failure in a patient-facing regulated business carries amplified commercial consequences",
+    "Related-party exposure not independently resolved before strategic transaction, enabling prolonged litigation"
+  ],
+  "final_business_state": "Fortis Healthcare survived as a going concern. IHH Healthcare became strategic investor with approximately 31.1% stake acquired in 2018. Open offer delayed until 2025 regulatory clearance due to litigation involving former promoters. Business remains operational as a significant Indian hospital network under IHH strategic influence, but the governance crisis and its legal aftermath extended for approximately seven years post-transaction."
+}

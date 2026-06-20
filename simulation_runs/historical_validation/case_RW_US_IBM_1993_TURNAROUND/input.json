@@ -1,0 +1,50 @@
+{
+  "case_id": "RW_US_IBM_1993_TURNAROUND",
+  "company": "IBM",
+  "decision_date": "1993-04-01",
+  "industry": "Enterprise technology",
+  "geography": "US",
+  "known_facts_at_decision_date": [
+    "IBM posted approximately $8 billion in losses in 1993",
+    "The hardware and mainframe-centric business model was under severe pressure from distributed computing trends",
+    "Internal and external pressure existed to break IBM into smaller independent businesses",
+    "IBM still had deep and long-standing enterprise customer relationships across global markets",
+    "IBM retained significant global scale, technical capability, and service potential",
+    "The company faced a fundamental strategic choice: split into parts or preserve integration and reposition",
+    "Cost structure was misaligned with declining hardware revenues",
+    "Organizational complexity was high; decision-making was slow",
+    "IBM had a gap between its traditional hardware/product focus and what enterprise customers actually needed in the distributed computing era",
+    "New CEO Lou Gerstner had just been appointed from outside the technology industry",
+    "Market and analyst consensus leaned toward breakup as the solution",
+    "IBM's brand and enterprise trust relationships remained intact despite financial distress"
+  ],
+  "financial_signals_at_decision_date": {
+    "reported_loss": "Approximately $8 billion loss",
+    "revenue_trend": "Declining; hardware revenue under structural pressure",
+    "cost_structure": "Severely misaligned with revenue; requires major restructuring",
+    "cash_position": "Under pressure; urgent cost discipline required",
+    "profitability": "Deeply negative"
+  },
+  "operating_signals_at_decision_date": {
+    "product_model": "Hardware and mainframe centric; structurally disadvantaged by distributed computing shift",
+    "services_capability": "Underdeveloped relative to enterprise customer integration needs",
+    "organizational_complexity": "High; slow decision-making and misaligned incentives",
+    "enterprise_relationships": "Strong and deep; a differentiating asset not yet fully leveraged",
+    "global_scale": "Substantial; a potential competitive advantage if repositioned"
+  },
+  "governance_signals_at_decision_date": {
+    "strategic_clarity": "Low; fundamental direction undecided between breakup and integration",
+    "leadership": "New external CEO recently appointed; direction not yet set",
+    "analyst_and_market_pressure": "High; breakup seen as likely outcome by many observers",
+    "decision_urgency": "Acute; losses unsustainable without rapid strategic direction"
+  },
+  "risk_flags_at_decision_date": [
+    "Risk of destroying long-term enterprise integration value through premature breakup",
+    "Risk of continued losses without rapid cost restructuring",
+    "Risk of losing enterprise customer relationships if strategic uncertainty persists",
+    "Risk of failing to adapt business model from hardware to services/solutions",
+    "Risk of organizational paralysis from unresolved strategic direction",
+    "Risk of competitive displacement if IBM fails to reorient around distributed computing era needs"
+  ],
+  "question": "Diagnose the root causes of IBM's distress as of April 1993 and recommend the highest-priority turnaround strategy, given only facts observable at that decision date."
+}

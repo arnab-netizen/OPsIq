@@ -1,0 +1,24 @@
+{
+  "case_id": "RW_INDIA_GITANJALI_2018_PNB_FRAUD",
+  "source_urls": [
+    "https://www.stockopedia.com/share-prices/gitanjali-gems-NSI%3AGITANJALI/news/timeline-developments-in-the-2-billion-punjab-national-bank-fraud-case-019e6b36-2df7-7bfe-8a26-d1a83839d908/",
+    "https://nclt.gov.in/gen_pdf.php?filepath=%2FEfile_Document%2Fncltdoc%2Fcasedoc%2F2709138001452018%2F04%2FOrder-Challenge%2F04_order-Challange_004_1738736591133479583267a303cff185c.pdf",
+    "https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID3274568_code1903182.pdf?abstractid=3274568&mirid=1"
+  ],
+  "source_type": "Financial news timeline, NCLT court documents, academic fraud analysis",
+  "source_quality": {
+    "tier_A": "NCLT case documents, CBI-related court records, regulatory and company filings where accessible",
+    "tier_B": "Stockopedia PNB fraud timeline, Reuters contemporaneous reporting, SSRN academic banking fraud analysis"
+  },
+  "reliability_tier": "A/B",
+  "supports_ground_truth": true,
+  "contamination_risk": "High",
+  "contamination_notes": "Fraud timeline and NCLT records contain later enforcement, conviction, and insolvency outcomes that are post-decision-date. Input.json must restrict to allegations and investigation commencement as of 14 February 2018. Later confirmed findings, fugitive status, and insolvency outcomes are outcome-stage only.",
+  "source_limitations": [
+    "NCLT document is a later-stage order and must be used for outcome verification only",
+    "Stockopedia timeline includes events after 14 February 2018 that cannot appear in input.json",
+    "SSRN analysis uses post-event information and must be confined to outcome and diagnostic grounding",
+    "Allegations at decision date must remain as allegations; final guilt findings are outcome-stage",
+    "Internal Gitanjali financial records and LoU documentation are not publicly accessible"
+  ]
+}

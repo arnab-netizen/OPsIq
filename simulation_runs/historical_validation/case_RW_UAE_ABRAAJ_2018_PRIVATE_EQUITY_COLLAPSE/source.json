@@ -1,0 +1,25 @@
+{
+  "case_id": "RW_UAE_ABRAAJ_2018_PRIVATE_EQUITY_COLLAPSE",
+  "source_urls": [
+    "https://brownrudnick.com/wp-content/uploads/2019/09/GRR-Corporate-Restructuring-Summit-Dubai_How-a-cross-border-restructurin.._.pdf",
+    "https://www.ft.com/content/31ab6f82-a79a-11e8-926a-7342fe5e173f",
+    "https://en.wikipedia.org/wiki/The_Abraaj_Group"
+  ],
+  "source_type": "Brown Rudnick/GRR restructuring analysis, Financial Times reporting, Wikipedia summary",
+  "source_quality": {
+    "tier_A": "Court and provisional liquidation documents; administrator and liquidator reports from Cayman proceedings",
+    "tier_B": "Financial Times reporting on Abraaj collapse and healthcare fund concerns; Brown Rudnick/GRR cross-border restructuring analysis; Wikipedia summary of Abraaj Group"
+  },
+  "reliability_tier": "A/B",
+  "supports_ground_truth": true,
+  "contamination_risk": "Medium",
+  "contamination_notes": "Financial Times August 2018 article is post-liquidation and contains post-event reporting on misappropriation and collapse. Brown Rudnick/GRR 2019 summary is substantially post-event. Wikipedia contains full outcome narrative. All must be used only for outcome verification. Input.json uses only pre-liquidation February 2018 facts: institutional investor concerns about healthcare fund cash, governance and liquidity questions.",
+  "source_limitations": [
+    "Financial Times article (August 2018) is six months after decision date and describes outcome-stage events",
+    "Brown Rudnick/GRR analysis (2019) describes cross-border restructuring aftermath",
+    "Wikipedia contains full outcome narrative and post-collapse developments",
+    "Internal Abraaj fund accounts and investor communications from February 2018 not publicly accessible",
+    "Cayman provisional liquidation court documents are post-liquidation and outcome-stage",
+    "Later books and journalistic deep-dives must be excluded from input.json"
+  ]
+}

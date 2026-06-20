@@ -1,0 +1,50 @@
+{
+  "case_id": "RW_INDIA_LVB_2020_MORATORIUM",
+  "company": "Lakshmi Vilas Bank Ltd.",
+  "decision_date": "2020-11-16",
+  "industry": "Banking",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "Lakshmi Vilas Bank was under severe financial and regulatory stress as of November 2020",
+    "Bank faced persistent capital adequacy concerns with capital ratios declining below regulatory minimums",
+    "Asset quality had deteriorated significantly with elevated non-performing assets",
+    "Governance weaknesses had been flagged by regulators including RBI over prior periods",
+    "Depositor confidence was fragile with ongoing concern over the bank's solvency",
+    "Bank had been on the RBI Prompt Corrective Action framework due to financial weakness",
+    "Multiple attempts to raise capital and secure a credible merger partner had not concluded successfully",
+    "Management was under pressure to find a rescue capital infusion or merger/acquisition arrangement",
+    "Regulatory intervention risk was high given persistent breach of capital and asset-quality norms",
+    "Bank had seen leadership instability and governance disputes at the board level",
+    "The bank required credible capital infusion or a regulatory-facilitated rescue arrangement to restore confidence"
+  ],
+  "financial_signals_at_decision_date": {
+    "capital_adequacy": "Capital ratios below regulatory minimums; bank under Prompt Corrective Action",
+    "asset_quality": "Elevated non-performing loans; significant provisioning burden",
+    "profitability": "Losses over multiple consecutive quarters",
+    "liquidity": "Depositor confidence fragility creating liquidity risk",
+    "capital_raise_status": "Prior capital-raise and merger attempts had not concluded in a successful transaction"
+  },
+  "operating_signals_at_decision_date": {
+    "branch_network": "Bank had active branch and customer operations across India",
+    "depositor_base": "Retail and institutional depositors; depositor confidence at risk",
+    "governance_stability": "Board-level disputes and leadership instability observed",
+    "regulatory_engagement": "Active regulatory scrutiny and Prompt Corrective Action framework applied"
+  },
+  "governance_signals_at_decision_date": {
+    "board_stability": "Governance disputes and leadership challenges had been public",
+    "regulatory_compliance": "Non-compliance with capital adequacy and other PCA norms",
+    "rescue_process_status": "No concluded merger or capital arrangement as of decision date",
+    "management_credibility": "Reduced due to capital erosion and failure to execute capital raise"
+  },
+  "risk_flags_at_decision_date": [
+    "Capital adequacy below regulatory minimum",
+    "Elevated non-performing assets and provisioning shortfall risk",
+    "Depositor confidence fragility and bank-run risk",
+    "No concluded rescue capital or merger arrangement",
+    "Governance and board instability",
+    "Sustained losses and deteriorating financial position",
+    "Regulatory intervention (PCA framework) already activated",
+    "Risk of regulatory-imposed resolution if no capital solution found"
+  ],
+  "question": "Diagnose root causes and recommend highest-priority action plan for Lakshmi Vilas Bank as of 16 November 2020, given severe financial stress, capital inadequacy, governance weakness, and depositor-confidence concerns, before any regulatory resolution action."
+}

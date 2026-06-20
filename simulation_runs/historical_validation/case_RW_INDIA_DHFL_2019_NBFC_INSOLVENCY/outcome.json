@@ -1,0 +1,28 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "DHFL's crisis was driven by the intersection of a structurally fragile wholesale-funding-dependent business model and the catastrophic loss of market confidence following public governance allegations. The IL&FS contagion dried up refinancing capacity across NBFCs, and DHFL's specific governance credibility problem — allegations of shell-company transactions and fund diversion — made its position uniquely vulnerable. Without trusted governance, lenders were unwilling to roll over funding, triggering a liquidity collapse that the business model could not survive.",
+  "expert_first_action": "Commission and publicly announce an independent forensic review to address governance allegations with full transparency, while simultaneously engaging lenders and RBI for an emergency liquidity support framework to preserve near-term payment capacity.",
+  "actual_decision": "DHFL did not undertake a decisive independent governance reset or secure emergency liquidity support in early 2019. The company continued to face mounting funding stress and creditor pressure. RBI superseded the DHFL board in November 2019 and the company was admitted to insolvency proceedings under the financial-service-provider framework.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Failure to commission an independent forensic review to address governance allegations promptly",
+    "No decisive governance reset to restore lender and market confidence",
+    "Continued reliance on wholesale funding model without securing emergency liquidity backstop",
+    "Absence of transparent asset-quality disclosure to counter governance uncertainty",
+    "No creditor engagement framework established before confidence collapse deepened"
+  ],
+  "beneficial_actions": [
+    "Some engagement with lenders and regulators occurred but was insufficient and too slow"
+  ],
+  "citation": "IBBI order document relating to DHFL financial-service-provider insolvency proceedings. Supreme Court of India judgment in Civil Appeal 5046/2022 (decided 01-Apr-2025) discussing DHFL insolvency process, RBI board supersession, and resolution framework. RBI action: board superseded November 2019.",
+  "actual_outcome": "RBI superseded the DHFL board in November 2019 citing governance failures and mismanagement. DHFL was admitted to insolvency proceedings under the financial-service-provider insolvency framework — a landmark case in India. A resolution plan was ultimately accepted through the NCLT-led process with Piramal Capital as the successful resolution applicant. The case involved extensive Supreme Court proceedings on the insolvency framework.",
+  "documented_root_causes": [
+    "Wholesale-funding dependence creating acute vulnerability to market confidence shocks",
+    "Governance credibility failure from public allegations of shell-company transactions and fund diversion",
+    "Funding liquidity crisis triggered by NBFC sector contagion post-IL&FS",
+    "Asset quality uncertainty compounded by governance allegations",
+    "Regulatory intervention risk that materialized into board supersession",
+    "Market trust collapse driven by sector stress and company-specific governance concerns"
+  ],
+  "final_business_state": "Board superseded by RBI November 2019; admitted to financial-service-provider insolvency under NCLT; resolution plan accepted with Piramal Capital as successful applicant following landmark Supreme Court proceedings."
+}

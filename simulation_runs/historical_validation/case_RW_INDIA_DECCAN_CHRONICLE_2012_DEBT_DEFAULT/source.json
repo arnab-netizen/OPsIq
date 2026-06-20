@@ -1,0 +1,24 @@
+{
+  "case_id": "RW_INDIA_DECCAN_CHRONICLE_2012_DEBT_DEFAULT",
+  "source_urls": [
+    "https://indiankanoon.org/doc/25398726/",
+    "https://www.casemine.com/judgement/in/5e1019f746571b20d7cb1cdb",
+    "https://ibbi.gov.in/webadmin/pdf/order/2019/May/9th%20May%202019%20in%20the%20matter%20of%20Deccan%20Chronicle%20Holdings%20Ltd.%20IA%20No.%2023%2C24%2C66%2C120%2C121%2C122-2019%20%26%20155%2C320%2C.367%20%26%20417-2018%20In%20CP%20%28IB%29%20No.%2041-7-HDB-2017_2019-05-10%2017%3A25%3A18.pdf"
+  ],
+  "source_type": "Court records, legal database records, IBBI insolvency order",
+  "source_quality": {
+    "tier_A": "IBBI insolvency order May 2019; Indian Kanoon court records; Casemine legal records",
+    "tier_B": "Legal database summaries; credible insolvency and media industry analysis"
+  },
+  "reliability_tier": "A/B",
+  "supports_ground_truth": true,
+  "contamination_risk": "Low-medium",
+  "contamination_notes": "IBBI order is from May 2019 and describes insolvency proceedings well after the decision date of July 2012. Indian Kanoon and Casemine records describe later legal proceedings. These must be used only for outcome verification. Input.json uses only the debenture default stress facts available at 26 July 2012.",
+  "source_limitations": [
+    "IBBI order (May 2019) is substantially later than decision date and is outcome-stage",
+    "Indian Kanoon records describe later legal proceedings beyond decision date",
+    "Casemine records cover later legal judgment stages",
+    "Internal company financial records and debenture trust documents from 2012 not fully publicly accessible",
+    "Media reporting from 2012 at decision date not comprehensively indexed in provided sources"
+  ]
+}

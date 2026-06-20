@@ -1,0 +1,32 @@
+{
+  "source_urls": [
+    "https://www.sec.gov/Archives/edgar/data/886158/000088615822000117/bbby-20220831.htm",
+    "https://www.sec.gov/Archives/edgar/data/886158/000119312523112034/d479924dex991.htm",
+    "https://www.reuters.com/business/retail-consumer/bed-bath-beyond-files-bankruptcy-protection-2023-04-23/"
+  ],
+  "source_type": "SEC filings, company bankruptcy announcements, newswire reporting",
+  "source_quality": {
+    "tier_a": [
+      "SEC 10-Q filing for Bed Bath & Beyond Inc. for period ending August 2022",
+      "SEC-filed bankruptcy press release exhibit (April 2023) — outcome document",
+      "Chapter 11 bankruptcy court filings and schedules",
+      "Company 8-K filings and regulatory announcements during turnaround period"
+    ],
+    "tier_b": [
+      "Reuters reporting on Chapter 11 filing",
+      "CNBC, Wall Street Journal, and credible retail journalism covering the distress and bankruptcy",
+      "Retail industry analysis and vendor-confidence reporting from the turnaround period"
+    ]
+  },
+  "reliability_tier": "HIGH",
+  "supports_ground_truth": true,
+  "contamination_risk": "MEDIUM-HIGH",
+  "contamination_notes": "SEC 10-Q for August 2022 is a decision-date source and appropriate for input.json. The April 2023 bankruptcy filing and Reuters bankruptcy report are post-decision outcome documents and must remain in outcome.json only. Overstock brand acquisition, final store closures, and liquidation details are post-outcome and must not appear in input.json. Meme-stock financing episode is a post-decision event (late 2022 / early 2023) that must not appear in input.json.",
+  "source_limitations": [
+    "Chapter 11 filing date (April 2023) and bankruptcy details are post-decision and excluded from input.json",
+    "Final store closure and liquidation details are post-outcome and excluded from input.json",
+    "Overstock brand acquisition is a post-outcome event excluded from input.json",
+    "Meme-stock financing episode occurs after the August 2022 decision date and must not appear in input.json",
+    "Some vendor relationship details and internal turnaround documents are not publicly filed"
+  ]
+}

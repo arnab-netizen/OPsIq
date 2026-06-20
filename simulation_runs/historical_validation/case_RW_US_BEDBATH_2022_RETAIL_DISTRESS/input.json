@@ -1,0 +1,49 @@
+{
+  "case_id": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
+  "company": "Bed Bath & Beyond Inc.",
+  "decision_date": "2022-08-31",
+  "industry": "Retail — home goods",
+  "geography": "United States",
+  "known_facts_at_decision_date": [
+    "Bed Bath & Beyond was facing declining sales and significant operational distress by August 2022",
+    "Supplier and vendor confidence had deteriorated, threatening inventory availability",
+    "The company had pursued large share repurchase programs in prior years that had consumed significant cash",
+    "Liquidity position was severely stressed and turnaround financing was a major concern",
+    "Merchandising strategy had been disrupted by an own-brand push that alienated existing customers and suppliers",
+    "Inventory availability and assortment quality had suffered as a result of supplier confidence decline",
+    "Company had brought in a new CEO in mid-2022 to lead a turnaround",
+    "The business needed to stabilise vendor relationships, liquidity, inventory, and customer relevance simultaneously",
+    "Prior management had prioritised share repurchases and financial engineering over operational investment",
+    "Retail industry faced broader headwinds but Bed Bath & Beyond's problems were substantially company-specific"
+  ],
+  "financial_signals_at_decision_date": {
+    "liquidity_position": "Severely stressed; turnaround financing urgently needed",
+    "share_repurchase_legacy": "Large prior share repurchases consumed cash that could have supported operations and inventory",
+    "sales_trajectory": "Declining sales across store base",
+    "financing_need": "Immediate need for restructuring or turnaround financing to stabilise operations",
+    "capital_allocation_history": "History of prioritising buybacks over operational and inventory investment"
+  },
+  "operating_signals_at_decision_date": {
+    "vendor_confidence": "Significantly deteriorated; suppliers reducing shipments and credit terms",
+    "inventory_availability": "Under pressure due to supplier pullback and prior merchandising disruption",
+    "store_network": "Large store network with significant fixed-cost burden including unprofitable locations",
+    "merchandising": "Own-brand push had disrupted assortment and alienated customers familiar with national brands",
+    "customer_relevance": "Customer traffic and loyalty declining due to assortment and experience issues"
+  },
+  "governance_signals_at_decision_date": {
+    "management_change": "New CEO appointed mid-2022 to lead turnaround; prior leadership had presided over decline",
+    "capital_allocation_decisions": "Prior management capital allocation heavily weighted to shareholder returns over business investment",
+    "board_oversight": "Board had approved large buyback programs despite operational deterioration",
+    "turnaround_credibility": "New management credibility not yet established; turnaround plan still being formulated"
+  },
+  "risk_flags_at_decision_date": [
+    "Supplier confidence collapse can become self-reinforcing if not addressed immediately",
+    "Liquidity crisis will accelerate if turnaround financing not secured",
+    "Inventory gaps will damage customer traffic and further reduce revenue",
+    "Prior buybacks have depleted cash that would now be needed for operational stabilisation",
+    "Store network includes unprofitable locations draining cash that should support vendor relationships",
+    "Customer relevance is declining — not purely a vendor or finance problem",
+    "Bankruptcy risk increases materially if vendor confidence and liquidity not stabilised concurrently"
+  ],
+  "question": "Diagnose root causes and recommend highest-priority action plan before bankruptcy for Bed Bath & Beyond Inc."
+}

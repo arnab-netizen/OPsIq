@@ -1,0 +1,31 @@
+{
+  "caseId": "RW_UK_THOMAS_COOK_2019_COLLAPSE",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Thomas Cook faced a convergent structural and financial crisis that was not recoverable through incremental financing alone. The business model had been disrupted structurally by online travel, the debt burden from acquisitions was unsustainable against operating performance, fixed costs were too rigid for rapid self-correction, and the rescue financing window was narrow. Brand heritage provided no financial cushion. A controlled exit with consumer protection was the most stakeholder-protective path if rescue financing failed; if financing succeeded, it needed to be conditioned on deep structural reform including fixed-cost reduction and accelerated digital transition.",
+  "expert_first_action": "Immediately separate viable airline and tour assets from distressed group obligations in rescue discussions; pursue accelerated creditor negotiation with structural conditions; prepare a consumer-protection contingency plan compliant with ATOL obligations; do not assume brand heritage or partial refinancing alone resolves the structural model problem; engage the UK Civil Aviation Authority on contingency planning in parallel.",
+  "actual_decision": "Thomas Cook continued rescue financing negotiations with creditors and a potential strategic investor through August and into September 2019. Discussions continued without a successful conclusion. The group did not execute a pre-planned controlled exit or consumer-protection contingency in advance of failure.",
+  "outcome_polarity": "Negative",
+  "harmful_actions": [
+    "Continued dependence on a single rescue financing outcome without a parallel controlled-exit contingency plan.",
+    "Failure to accelerate structural cost reduction and business-model transition independent of financing resolution.",
+    "Assumption that heritage brand and scale would compel rescue financing without sufficiently addressing structural viability questions.",
+    "Insufficient advance preparation of consumer-protection mechanisms, requiring government-coordinated emergency repatriation after collapse."
+  ],
+  "beneficial_actions": [
+    "Active engagement with creditors and potential investors was the directionally correct approach.",
+    "Some asset separation discussions were undertaken in the refinancing process.",
+    "Regulatory frameworks (ATOL) provided a consumer-protection backstop once collapse occurred."
+  ],
+  "citation": "UK Parliament Business, Energy and Industrial Strategy Committee: Thomas Cook inquiry report (2019); Civil Aviation Authority Thomas Cook ATOL failure page (https://www.caa.co.uk/commercial-industry/airlines/licensing/atol/atol-failures/thomas-cook/); House of Commons BEIS Committee report (HC 85, 2019–20 session)",
+  "actual_outcome": "Thomas Cook Group plc entered compulsory liquidation on 23 September 2019. The UK Civil Aviation Authority coordinated the largest peacetime repatriation in UK history, returning approximately 150,000 stranded customers to the United Kingdom. Approximately 9,000 UK jobs were lost. The UK Parliament Business, Energy and Industrial Strategy Committee subsequently examined the collapse and its causes, including executive pay, strategic decisions, and governance. The group did not survive as a going concern.",
+  "documented_root_causes": [
+    "Debt and liquidity crisis — unsustainable debt burden accumulated through acquisitions exceeded operating cash-generation capacity.",
+    "Business-model disruption — structural shift to online and self-directed travel booking eroded the packaged-tour model over an extended period.",
+    "Weak profitability — sustained pressure on margins from structural and cyclical factors left insufficient buffer.",
+    "Fixed-cost rigidity — aircraft leases, retail estate, and staff commitments created a cost base that could not be reduced rapidly enough.",
+    "Rescue financing dependency — the group's survival was contingent on external parties agreeing to rescue terms that were not secured.",
+    "Poor strategic adaptation — management and board had not executed a credible structural response to digital disruption over the available adjustment period.",
+    "Absence of pre-planned controlled exit — failure to prepare a consumer-protection contingency in advance of failure increased harm to customers and required emergency government coordination."
+  ],
+  "final_business_state": "Thomas Cook Group plc entered compulsory liquidation on 23 September 2019. The group ceased operations entirely. Emergency government-coordinated repatriation was required for stranded customers. The brand and some assets were later acquired by Fosun Tourism Group for online and licensing purposes. The group did not survive as an operating travel and airline business."
+}

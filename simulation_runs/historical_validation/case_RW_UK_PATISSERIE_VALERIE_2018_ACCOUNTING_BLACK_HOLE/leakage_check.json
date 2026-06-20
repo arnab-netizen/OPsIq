@@ -1,0 +1,23 @@
+{
+  "caseId": "RW_UK_PATISSERIE_VALERIE_2018_ACCOUNTING_BLACK_HOLE",
+  "checks": {
+    "outcome_leakage": {
+      "description": "Verify that input.json and 01_case_input.json contain no reference to administration, store sale, later brand acquisition, administration appointment, or any confirmed final outcome.",
+      "result": "PASS"
+    },
+    "hindsight_leakage": {
+      "description": "Verify that input.json and 01_case_input.json contain no retrospective characterization of the accounting gap as confirmed, no reference to the final scale of misstatement, no confirmed fraud conclusion, and no reference to FRC sanctions or auditor findings that postdate the decision date.",
+      "result": "PASS"
+    },
+    "future_date_leakage": {
+      "description": "Verify that no date after 2018-10-09 appears in input.json or 01_case_input.json, and no event occurring after the decision date is referenced.",
+      "result": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "description": "Verify that input.json and 01_case_input.json contain no pre-stated expert diagnosis, no recommended intervention conclusion, and no framing that encodes the correct answer in the question prompt.",
+      "result": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "PASS"
+}

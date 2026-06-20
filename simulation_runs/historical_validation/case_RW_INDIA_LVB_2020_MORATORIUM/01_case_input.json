@@ -1,0 +1,68 @@
+{
+  "caseId": "RW_INDIA_LVB_2020_MORATORIUM",
+  "businessProblem": "Lakshmi Vilas Bank requires immediate diagnosis of root causes and a highest-priority action plan given capital inadequacy, severe asset-quality deterioration, governance instability, and depositor-confidence fragility, with no concluded rescue capital or merger arrangement as of 16 November 2020.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Capital ratios below regulatory minimums; bank under RBI Prompt Corrective Action framework",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "RBI regulatory disclosures and PCA framework application"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Elevated non-performing loans with significant provisioning burden; losses over multiple consecutive quarters",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Bank financial disclosures and regulatory reporting"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Prior capital-raise and merger attempts had not concluded in a successful transaction",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting on LVB capital-raise history"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Depositor confidence fragile creating liquidity risk across retail and institutional depositor base",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Market and depositor confidence signals"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Board-level governance disputes and leadership instability observed over prior period",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public regulatory and governance reporting"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Non-compliance with capital adequacy and other PCA norms; no concluded rescue or merger arrangement",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "RBI PCA framework disclosures"
+    },
+    {
+      "dimension": "market",
+      "finding": "Bank required credible capital infusion or regulatory-facilitated rescue arrangement to restore confidence",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Sector analysis and regulatory context"
+    }
+  ],
+  "clientContext": {
+    "industry": "Banking",
+    "size": "Mid-size private sector bank with nationwide branch network",
+    "revenueImpactUrgency": "Critical - solvency and depositor-protection risk; immediate regulatory resolution risk"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "HIGH",
+    "resistanceToChange": "MEDIUM",
+    "communicationBreakdown": "HIGH",
+    "managementCapability": "LOW",
+    "accountabilityWeakness": "HIGH",
+    "bottleneckRisk": "HIGH"
+  }
+}

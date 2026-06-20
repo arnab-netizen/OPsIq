@@ -1,0 +1,29 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Enron's collapse was driven by systemic governance failure combined with deliberate financial-statement manipulation through off-balance-sheet special-purpose entities, related-party transactions that disguised true liabilities, and mark-to-market accounting used to inflate reported earnings. The abrupt CEO resignation in August 2001 signalled internal awareness of material undisclosed problems. Liquidity depended entirely on sustained market confidence in financial statements that did not reflect economic reality. Board oversight was compromised by conflicts of interest in approving related-party transactions. Auditor independence was structurally impaired. The core failure was not a business model problem but an accounting and governance integrity failure that made reported financial health entirely unreliable.",
+  "expert_first_action": "Commission an immediate, fully independent forensic accounting review of all off-balance-sheet entities, related-party transactions, and mark-to-market valuations to establish the true cash and debt position before any other decisions are made.",
+  "actual_decision": "Enron management did not commission an independent forensic review or disclose off-balance-sheet obligations proactively. Company continued to assert financial health while liquidity deteriorated. No governance reset was initiated before external pressure forced disclosure.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Continued reliance on and promotion of reported earnings without disclosing cash-flow and debt divergence",
+    "Failed to disclose off-balance-sheet obligations and related-party liabilities proactively",
+    "Did not replace conflicted governance and audit structures after CEO resignation",
+    "Did not engage regulators or creditors with transparent disclosure of financial risk",
+    "Continued growth and expansion narrative obscured fundamental accounting and governance failure"
+  ],
+  "beneficial_actions": [
+    "None documented before external collapse; no proactive corrective action was taken"
+  ],
+  "citation": "SEC v. Enron Corp., SEC Litigation Release No. 17197 (2002); U.S. Senate Permanent Subcommittee on Investigations, The Role of the Board of Directors in Enron's Collapse, S. Prt. 107-70 (2002); SEC Press Release 2001-158.",
+  "actual_outcome": "Enron filed for bankruptcy in December 2001. Investigations revealed that off-balance-sheet special-purpose entities had been used to conceal hundreds of millions in debt and inflate reported earnings. The board of directors was found to have failed in its oversight responsibilities. Arthur Andersen, Enron's auditor, collapsed following obstruction-of-justice charges. Multiple executives were convicted of fraud and related offences. The collapse was one of the largest corporate bankruptcies in US history at the time and led directly to the Sarbanes-Oxley Act of 2002.",
+  "documented_root_causes": [
+    "Financial-statement reliability failure through mark-to-market and SPE accounting",
+    "Governance failure: board approved conflicted related-party transactions without adequate oversight",
+    "Off-balance-sheet entities used to conceal true debt and loss positions",
+    "Auditor independence impaired; external audit failed to identify or disclose material misstatements",
+    "Liquidity and trust crisis triggered by deteriorating confidence in financial disclosures",
+    "Management credibility collapse following abrupt CEO resignation",
+    "Fraud risk: evidence of deliberate structuring to mislead investors and creditors"
+  ],
+  "final_business_state": "Total corporate collapse. Enron filed Chapter 11 bankruptcy in December 2001. Shareholders lost substantially all value. Criminal convictions of senior executives followed. Arthur Andersen ceased to exist as a going concern. US regulatory framework was materially reformed as a result."
+}

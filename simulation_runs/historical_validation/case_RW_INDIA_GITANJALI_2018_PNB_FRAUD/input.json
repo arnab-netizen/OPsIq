@@ -1,0 +1,50 @@
+{
+  "case_id": "RW_INDIA_GITANJALI_2018_PNB_FRAUD",
+  "company": "Gitanjali Gems Ltd.",
+  "decision_date": "2018-02-14",
+  "industry": "Jewellery/gems/exports",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "Gitanjali Gems operated in the jewellery, gems, and export sector with significant banking credit exposure",
+    "Punjab National Bank publicly reported a large fraud involving unauthorized Letters of Undertaking (LoUs)",
+    "Gitanjali Group entities and related parties were named in public reporting and early investigation developments as of 14 February 2018",
+    "Banks and investors faced acute uncertainty over the reliability of receivables, financing arrangements, and promoter integrity",
+    "The visible issue was not an ordinary revenue decline but allegations of fraud exposure linked to bank-credit dependency",
+    "Governance credibility of the promoter group was under serious question",
+    "Receivables, bank guarantees, and collateral values were of uncertain reliability given LoU irregularities",
+    "Business continuity was immediately dependent on creditor confidence and unfolding legal and regulatory developments",
+    "CBI investigations and searches against Gitanjali Group entities were reported to have begun in February 2018",
+    "Financial statements and reported receivables could not be relied upon without independent forensic verification",
+    "Lender exposure across multiple banks was a systemic concern given the scale of alleged LoU fraud"
+  ],
+  "financial_signals_at_decision_date": {
+    "revenue_quality": "Revenue and receivables of uncertain reliability given fraud allegations",
+    "bank_credit_dependency": "High dependency on bank credit and letters of undertaking for trade financing",
+    "collateral_reliability": "Collateral and bank guarantee values uncertain given alleged irregular LoUs",
+    "liquidity": "Creditor and lender confidence collapsed following PNB fraud disclosure",
+    "financial_statement_reliability": "Financial statements could not be taken at face value pending forensic review"
+  },
+  "operating_signals_at_decision_date": {
+    "business_continuity": "Immediate risk to business operations given credit freeze and investigation",
+    "promoter_control": "Promoter-controlled group with concentrated control risk",
+    "export_operations": "Gems and jewellery export operations dependent on trade financing now under scrutiny",
+    "employee_and_supplier_exposure": "Employees, suppliers, and trade creditors exposed to business continuity risk"
+  },
+  "governance_signals_at_decision_date": {
+    "promoter_integrity": "Promoter integrity under serious public question due to fraud allegations",
+    "board_oversight": "Board oversight effectiveness questionable given scale of alleged irregularities",
+    "internal_controls": "Internal controls alleged to have failed to prevent LoU irregularities",
+    "regulatory_engagement": "CBI and regulatory investigation processes commenced"
+  },
+  "risk_flags_at_decision_date": [
+    "Fraud allegations involving unauthorized Letters of Undertaking at Punjab National Bank",
+    "Gitanjali Group entities named in investigation at decision date",
+    "Financial statements and receivables of unverified reliability",
+    "Creditor and lender confidence collapse",
+    "Promoter governance and integrity risk",
+    "CBI investigation and regulatory enforcement risk",
+    "Business continuity dependent on credit that is now frozen or at risk",
+    "Systemic bank-credit dependency with no alternative financing visible"
+  ],
+  "question": "Diagnose root causes and recommend highest-priority action plan for Gitanjali Gems Ltd. as of 14 February 2018, given fraud allegations, PNB LoU irregularities, governance credibility collapse, and lender-confidence crisis, before any final enforcement or legal outcomes."
+}

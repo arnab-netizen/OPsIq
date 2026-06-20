@@ -1,0 +1,30 @@
+{
+  "source_urls": [
+    "https://www.sec.gov/news/press/2001-158.txt",
+    "https://www.sec.gov/litigation/litreleases/lr17197.htm",
+    "https://www.govinfo.gov/content/pkg/GPO-CPRT-107SPRT80393/pdf/GPO-CPRT-107SPRT80393.pdf"
+  ],
+  "source_type": "Regulatory filings, official government investigation reports, SEC litigation releases",
+  "source_quality": {
+    "tier_a": [
+      "SEC Litigation Release No. 17197 — enforcement action against Enron",
+      "SEC Press Release 2001-158 — contemporaneous regulatory action",
+      "U.S. Senate Permanent Subcommittee on Investigations report on Enron board failure (GPO-CPRT-107SPRT80393)"
+    ],
+    "tier_b": [
+      "Credible academic case studies on Enron governance and accounting failure",
+      "Established financial journalism covering the collapse and its regulatory aftermath"
+    ]
+  },
+  "reliability_tier": "HIGH",
+  "supports_ground_truth": true,
+  "contamination_risk": "VERY HIGH",
+  "contamination_notes": "Almost all primary sources are retrospective and post-collapse. Fraud conclusions, bankruptcy filing facts, Arthur Andersen collapse, and criminal conviction outcomes must not appear in input.json. Input must be restricted to observable pre-collapse warning signals as of August 14, 2001.",
+  "source_limitations": [
+    "Primary sources are retrospective; none were produced at the August 2001 decision date",
+    "Fraud conclusion is established only in outcome materials, not in input",
+    "Arthur Andersen collapse is post-decision and must remain in outcome only",
+    "Criminal conviction details are post-decision and must remain in outcome only",
+    "Final restatement figures are post-decision and excluded from input"
+  ]
+}

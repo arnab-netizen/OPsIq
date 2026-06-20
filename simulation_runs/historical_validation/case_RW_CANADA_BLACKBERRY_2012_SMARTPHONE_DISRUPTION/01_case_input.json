@@ -1,0 +1,66 @@
+{
+  "caseId": "RW_CANADA_BLACKBERRY_2012_SMARTPHONE_DISRUPTION",
+  "businessProblem": "BlackBerry (Research In Motion) faces accelerating competitive deterioration as of June 30, 2012. iPhone and Android have established a dominant two-platform smartphone ecosystem that BlackBerry cannot match on consumer app availability or user experience. A platform transition to a new BlackBerry operating system has been significantly delayed. The developer ecosystem is weakening. Enterprise and government security credentials remain a genuine strength. The company must make a clear strategic choice between continuing to fight in mass-market devices, pivoting to enterprise software and services, licensing technology, or pursuing restructuring — but has not yet made that choice decisively.",
+  "evidence": [
+    {
+      "dimension": "market",
+      "finding": "BlackBerry is losing consumer smartphone market share rapidly to iPhone and Android. The consumer user experience and app ecosystem gap is structural and widening with each quarter of delay.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "The transition to the new BlackBerry operating system has been subject to significant delays, narrowing the competitive window for the platform to be launched with sufficient momentum to arrest consumer defection.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "The BlackBerry developer ecosystem is weakening; consumer app availability and quality are far behind iOS and Android, making consumer retention increasingly difficult regardless of hardware quality.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "Enterprise and government security and manageability credentials remain genuine and defensible differentiators for BlackBerry in regulated industries and government segments. This is a real but narrower market than mass consumer.",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "The fundamental strategic question — mass-market device competition, enterprise software pivot, technology licensing, or restructuring — has not been decided clearly. Strategic indecision itself is a risk that is consuming time and resources.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Revenue and device shipments are declining under competitive pressure. The cost structure is built for a higher-volume device business than current trajectory supports. Cash position is positive but declining.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "The BlackBerry enterprise installed base remains meaningful in corporate and government environments. This provides a short-term revenue floor but is insufficient to sustain a mass-market hardware strategy long-term if consumer defection continues.",
+      "confidence": "MEDIUM",
+      "isCritical": false,
+      "source": "decision-date observable facts"
+    }
+  ],
+  "clientContext": {
+    "industry": "Mobile devices",
+    "size": "Large public company; significant installed enterprise base but rapidly losing mass-market position",
+    "revenueImpactUrgency": "High — market share and revenue declining at accelerating rate; competitive window for platform revival is closing"
+  },
+  "ownerConstraintProfile": {
+    "bottleneckRisk": "High — fundamental strategic choice (devices vs. software vs. licensing) has not been made; decision authority must be exercised quickly or competitive position deteriorates further by default",
+    "followThroughRisk": "High — hardware-focused organization would face significant execution challenges in a pivot to software and services; follow-through on a new strategic direction is uncertain",
+    "resistanceToChange": "High — organizational identity and leadership historically rooted in device hardware; resistance to exiting the device business is likely",
+    "managementCapability": "Mixed — strong engineering capability in security and enterprise management; consumer platform and software business pivot capability unproven"
+  }
+}

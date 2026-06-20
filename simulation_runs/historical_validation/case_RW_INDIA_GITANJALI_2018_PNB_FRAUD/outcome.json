@@ -1,0 +1,29 @@
+{
+  "case_id": "RW_INDIA_GITANJALI_2018_PNB_FRAUD",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Gitanjali Gems suffered a catastrophic governance and fraud-exposure crisis linked to alleged unauthorized Letters of Undertaking at Punjab National Bank. The group's business model was excessively dependent on bank credit through LoU instruments whose legitimacy was now questioned. Promoter integrity was under serious challenge. Financial statements and receivables could not be relied upon without independent forensic verification. Business continuity collapsed as credit froze and investigations commenced.",
+  "expert_first_action": "Immediate independent forensic audit of all receivables, bank guarantees, LoUs, and collateral, combined with transparent engagement with lenders and regulators to establish what viable assets existed.",
+  "actual_decision": "CBI filed cases and conducted searches against Gitanjali Group entities in February 2018 following PNB fraud disclosure. Business and credit operations collapsed under regulatory and legal pressure.",
+  "outcome_polarity": "TERMINAL",
+  "harmful_actions": [
+    "Excessive reliance on LoU-based banking credit without transparent disclosure of instrument structure",
+    "Promoter-controlled governance without adequate independent oversight of banking transactions",
+    "Failure to maintain independently verifiable receivables and collateral records",
+    "No proactive transparency with lenders before crisis escalated"
+  ],
+  "beneficial_actions": [
+    "CBI and regulatory investigation provided accountability mechanism",
+    "Forensic scrutiny forced eventual reckoning with true financial position"
+  ],
+  "citation": "Stockopedia timeline of PNB fraud developments. NCLT case documents. SSRN academic fraud analysis of PNB LoU fraud case.",
+  "actual_outcome": "CBI investigations, searches, and case filings against Gitanjali Group entities proceeded from February 2018. Business and credit operations collapsed. Subsequent NCLT/insolvency proceedings followed. Group became a major Indian banking and corporate fraud governance failure. Creditor recovery remained severely impaired.",
+  "documented_root_causes": [
+    "Governance and fraud risk through alleged unauthorized LoU usage",
+    "Excessive bank-credit dependency for trade financing",
+    "Financial-statement and receivables reliability failure",
+    "Promoter-control concentration without adequate oversight",
+    "Liquidity and creditor-confidence collapse following fraud disclosure",
+    "Regulatory and enforcement risk from CBI and banking regulator response"
+  ],
+  "final_business_state": "Group operations collapsed. Investigations and insolvency proceedings followed. Creditor recovery severely impaired. Became major Indian corporate fraud and banking governance case study."
+}
