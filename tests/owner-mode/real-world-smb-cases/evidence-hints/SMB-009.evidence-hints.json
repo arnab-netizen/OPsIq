@@ -1,0 +1,111 @@
+{
+  "case_id": "SMB-009",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": null,
+  "unsupported_expected_archetypes": [
+    {
+      "smb_label": "staff_turnover_cost_spiral",
+      "gap_reason": "NO_ENGINE_ARCHETYPE",
+      "closest_engine_archetype": "none",
+      "recommended_extension": "Add STAFF_TURNOVER_COST_SPIRAL DiagnosisType covering high-frequency field-staff churn with measurable training and recruiting cost drain and service quality deterioration."
+    }
+  ],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "3 open field staff positions ongoing at any given time, consuming significant owner time",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Persistent unfilled positions is a team_capability critical signal. is_critical=true; HIGH confidence."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "service quality complaints increasing as undertrained staff fill operational gaps",
+      "dimension": "quality_delivery",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Quality complaints from undertrained staff is a critical quality_delivery signal. is_critical=true."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "lost 3 commercial contracts citing inconsistent service quality",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Contract losses from quality issues are a critical customer_retention adverse signal. is_critical=true."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "owner unable to focus on business growth due to constant recruiting and training demands",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner time consumed by recruiting is an operational bottleneck. operational_efficiency; is_critical=true."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "22 field staff; annual turnover rate 140%; training cost $1,800 per hire; 3 ongoing open positions; owner spends 15 hours/week recruiting; 11 service complaints last quarter; 3 commercial contracts lost; $87K revenue lost from contracts",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "140% annual turnover on 22 staff means effectively replacing the entire workforce 1.4 times per year at $1,800/hire. is_critical=true; HIGH confidence. Avoids must_identify terms ('staff turnover', '140% annual turnover', 'turnover cost', 'retention failure', 'training cost per hire', 'recruiting consuming owner capacity')."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue appears roughly flat, not visibly declining",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Flat revenue is a misleading signal. The cost spiral from turnover is the real problem, not yet visible in top-line revenue."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): demand for services remains high in the local market",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Market demand is a misleading signal \u2014 good demand does not compensate for the operational and retention problems."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): owner interprets high turnover as normal for the industry",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Industry-normal framing is a misleading signal that normalizes an abnormal and costly pattern."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-009 is an archetype-gap case. Engine has no STAFF_TURNOVER_COST_SPIRAL archetype. team_capability items may trigger key_person_risk pattern but without keyPersonCount/successionReady numerics the pattern will not fire with HIGH confidence. quality_delivery items may trigger quality_control_failure if complaint vocabulary matches. Engine will most likely return INSUFFICIENT_EVIDENCE or an adjacent archetype. This is expected \u2014 case is abstention_eligible. Must_identify terms avoided: 'staff turnover', '140% annual turnover', 'turnover cost', 'retention failure', 'training cost per hire', 'recruiting consuming owner capacity'."
+}

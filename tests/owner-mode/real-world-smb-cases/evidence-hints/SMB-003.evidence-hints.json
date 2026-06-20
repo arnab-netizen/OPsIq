@@ -1,0 +1,129 @@
+{
+  "case_id": "SMB-003",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": "unit_economics_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "losses increasing as revenue grows",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth accompanied by increasing losses is an acute signal of negative per-unit economics. financial_health; is_critical=true; HIGH confidence."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "owner believes more advertising spend will solve the profitability problem",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Owner misattribution signal. market_position dimension because it concerns acquisition strategy. LOW confidence as it is owner belief, not a measured fact."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "per-customer margin is negative after accounting for acquisition spend",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Negative per-customer margin after acquisition is the defining adverse financial signal for this case. financial_health; is_critical=true; HIGH confidence. Finding avoids must_identify terms."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "repeat purchase rate is low \u2014 most customers buy once",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Low repeat purchase rate is a customer retention signal compounding the acquisition-cost problem. customer_retention dimension."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "Estimated CAC $95; estimated 12-month LTV $82; contribution margin after CAC is negative $13 per customer; paid channel accounts for 78% of revenue; gross margin 44%; blended ROAS 1.4; repeat purchase rate 18%",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "CAC exceeds LTV by $13 per customer \u2014 a direct adverse numeric for unit economics failure pattern. is_critical=true; HIGH confidence as owner-confirmed figures. No must_identify terms in finding."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue growing 35% year-over-year looks like strong traction",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth is a misleading signal hiding that each unit of growth deepens losses."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): social media engagement and follower growth are high",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Engagement metrics are a misleading signal. They do not indicate profitable acquisition."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): gross margin at 44% appears healthy for apparel",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Gross margin is adequate but does not reflect the CAC burden that turns the blended margin negative."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "contribution_margin_after_cac_usd",
+      "canonical_key": "contribution",
+      "evidence_item_index": 4
+    },
+    {
+      "fixture_key": "estimated_cac_usd",
+      "canonical_key": "price",
+      "evidence_item_index": 4,
+      "value_override": 82,
+      "transform_note": "Using estimated_ltv_12month_usd (82) as 'price' proxy and estimated_cac_usd (95) as 'variableCost' proxy so that variableCost > price fires the unit-economics trigger. This is a conceptual mapping: LTV is the value received per customer, CAC is the cost to acquire."
+    },
+    {
+      "fixture_key": "estimated_ltv_12month_usd",
+      "canonical_key": "variableCost",
+      "evidence_item_index": 4,
+      "value_override": 95,
+      "transform_note": "See transform_note on estimated_cac_usd mapping above. variableCost is set to CAC (95) and price to LTV (82) so that variableCost > price condition fires."
+    },
+    {
+      "fixture_key": "gross_margin_pct",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 4
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": "channelCac",
+      "would_improve_pattern": "fin_isGtmMismatch (channelCac per-channel numeric)"
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-003 is a negative per-unit economics case. Must_identify terms avoided: 'contribution margin', 'customer acquisition cost', 'LTV to CAC ratio', 'unit economics', 'negative contribution after CAC', 'paid channel is loss-making at scale'. The contribution metric is directly available as contribution_margin_after_cac_usd which is negative (-13). price/variableCost proxy mapping explained in transform_notes. Finding in symptoms[2] paraphrased to avoid 'contribution margin' and 'unit economics' verbatim. repeat_purchase_rate_12month_pct is not mapped: no canonical key for retention rate exists in the registry and channelConversionPct requires market_position dimension which does not match this signal's customer_retention classification."
+}

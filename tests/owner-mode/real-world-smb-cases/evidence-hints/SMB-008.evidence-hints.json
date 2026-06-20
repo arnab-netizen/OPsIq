@@ -1,0 +1,110 @@
+{
+  "case_id": "SMB-008",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "$27K monthly gap between billed and collected revenue",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "A confirmed $27K monthly collection shortfall is an acute financial health adverse signal. is_critical=true; HIGH confidence from fixture."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "three clients have unpaid invoices outstanding beyond 90 days",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Invoices >90 days outstanding represent a receivables-aging distress signal. is_critical=true."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "owner personally financing operations with personal credit",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Personal credit used to fund operations is an acute liquidity signal. is_critical=true."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "invoices sent but collection follow-up process is informal and inconsistent",
+      "dimension": "process_maturity",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Absent collection process is a process_maturity gap that explains the AR problem."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "MRR billed $95K; MRR collected $68K; days sales outstanding 67; 3 clients over 90 days outstanding; total AR outstanding $214K; personal credit drawn $41K; 12 clients total; churn rate 8%",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "DSO of 67 days directly triggers working_capital_stress HIGH confidence path (dso >= 70 threshold nearby). is_critical=true; HIGH confidence from confirmed figures. Avoids must_identify terms ('accounts receivable', 'days sales outstanding', 'DSO', 'cash flow gap', 'billed vs collected', 'collection process failure')."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): contracted MRR of $95K appears strong and growing",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Contracted billing figures are misleading \u2014 the issue is collection not billings."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): client relationships seem good with no explicit unhappiness",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Perceived relationship quality is a misleading signal that masks payment delays."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): low churn rate of 8% suggests clients value the service",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Low churn is a misleading signal \u2014 clients staying does not mean they are paying on time."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "days_sales_outstanding",
+      "canonical_key": "dso",
+      "evidence_item_index": 4
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "receivablesAging",
+      "would_improve_pattern": "fin_isWorkingCapital (receivablesAging + dpo both needed for HIGH confidence path)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-008 is an AR collection gap case. DSO is directly available in facts (days_sales_outstanding=67). This is the strongest canonical metric available for working_capital_stress. Must_identify terms avoided: 'accounts receivable', 'days sales outstanding', 'DSO', 'cash flow gap', 'billed vs collected', 'collection process failure'. The finding in evidence_items[4] describes the gap in monetary and day terms without using those exact phrases."
+}

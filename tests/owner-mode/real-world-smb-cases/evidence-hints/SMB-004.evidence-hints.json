@@ -1,0 +1,119 @@
+{
+  "case_id": "SMB-004",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "restaurant is full on weekends but no profit is accumulating",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "High occupancy with no profit accumulation is an acute margin signal \u2014 costs are consuming revenue. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "owner taking no salary for past 6 months",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner salary suppression signals margin too thin to cover owner compensation. Adverse financial signal; is_critical=true."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "food waste observed but not tracked systematically",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Untracked food waste is an operational contributor to cost overrun. operational_efficiency. LOW confidence as it is observed, not measured."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "kitchen staff scheduling is reactive not planned",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Reactive scheduling drives excess labor cost. operational_efficiency dimension."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "Combined food and labor cost is 74% of revenue; food cost 38%, labor cost 36%; industry target maximum is 65%; net income $0 on $1.2M annual revenue; menu price last increased 3 years ago",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Combined cost exceeding the industry target by 9 percentage points drives the zero net income. is_critical=true; HIGH confidence as these are measured figures. Finding avoids must_identify terms ('prime cost', 'prime cost above industry target', 'food cost percentage', 'labor cost percentage')."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): weekend occupancy is 92% \u2014 appears demand is not the problem",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "High occupancy is a misleading signal that could divert attention from cost structure to demand."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): revenue is stable at $1.2M with no major decline",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue stability is misleading \u2014 the problem is not revenue but cost ratio."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): customer reviews are positive and return visits are common",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Good reviews and repeat visits do not indicate margin health. Misleading signal."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "net_income_usd",
+      "canonical_key": "operatingMargin",
+      "evidence_item_index": 4,
+      "value_override": 0,
+      "transform_note": "net_income_usd is 0 on $1.2M revenue; operatingMargin expressed as 0 percent (breakeven with no profit) triggering the margin_erosion zero-profit condition."
+    },
+    {
+      "fixture_key": "prime_cost_pct",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 4,
+      "value_override": -9,
+      "transform_note": "prime_cost_pct (74%) minus industry_prime_cost_target_pct_max (65%) = 9 percentage points over target; expressed as -9 (negative margin vs target) to trigger adverse margin condition."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-004 is a cost-ratio margin case. Must_identify terms avoided: 'prime cost', 'food cost percentage', 'labor cost percentage', 'prime cost above industry target', 'occupancy is not the problem'. The finding in evidence_items[4] describes the cost figures without using 'prime cost' \u2014 uses 'combined food and labor cost' instead. operatingMargin set to 0 (breakeven) and marginPct proxy set to -9 (gap vs industry target) to support engine adverse-margin detection."
+}

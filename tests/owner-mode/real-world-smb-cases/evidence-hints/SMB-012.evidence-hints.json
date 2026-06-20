@@ -1,0 +1,117 @@
+{
+  "case_id": "SMB-012",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": "unit_economics_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "locations 2 and 3 are loss-making at 18 months and 6 months of operation respectively",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Loss-making expansion sites are an acute financial health signal. financial_health; is_critical=true; HIGH confidence. Avoids 'unit economics', 'loss-making expansion locations', 'premature expansion'."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "original profitable location is subsidizing two expansion sites",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Cross-subsidization from the original to expansion sites is a critical financial health signal indicating negative per-location contribution. is_critical=true. Avoids 'profitable original location subsidizing expansion'."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "owner is planning a 4th location without resolving negative contribution at locations 2 and 3",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Expansion planning without proving per-unit profitability is a critical operational risk signal. Avoids 'unit economics', 'premature expansion before unit economics proven'."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "combined monthly loss despite strong original location performance",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Combined losses despite one profitable site confirms the expansion sites are net-negative. is_critical=true."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "Location 1 (3 years): contribution margin $18K/month; location 2 (18 months): contribution margin -$8K/month; location 3 (6 months): contribution margin -$5K/month; combined monthly loss $-5K; owner plans 4th location; total enrolled 287 (location 1: 180, location 2: 72, location 3: 35)",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Per-location contribution margins directly show negative unit economics at locations 2 (-$8K) and 3 (-$5K). is_critical=true; HIGH confidence. Avoids must_identify terms ('unit economics', 'per-location contribution margin', 'loss-making expansion locations', 'profitable original location subsidizing expansion', 'premature expansion before unit economics proven')."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): total enrollment across all locations is growing and looks like a growth story",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Enrollment growth across all sites is a misleading signal masking the negative per-location economics."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): strong brand and positive parent reviews in the local market",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Brand strength is a misleading signal. Reputation does not compensate for negative per-site contribution."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): owner network effect theory sounds plausible without per-location financial scrutiny",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "The network effect theory is a misleading signal. Without per-location P&L analysis it obscures negative economics."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "location_2_monthly_contribution_margin_usd",
+      "canonical_key": "contribution",
+      "evidence_item_index": 4
+    },
+    {
+      "fixture_key": "combined_monthly_loss_usd",
+      "canonical_key": "operatingMargin",
+      "evidence_item_index": 4,
+      "value_override": -5000,
+      "transform_note": "combined_monthly_loss_usd expressed as negative operatingMargin (-5000) to trigger adverse margin condition. The combined loss is $5K/month after location 1 profit offsets expansion losses."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-012 is a premature expansion unit-economics case. The contribution metric (location_2_monthly_contribution_margin_usd = -8000) directly triggers fin_isUnitEconomicsFailure (contribution < 0). operatingMargin=-5000 also triggers fin_isMarginErosion. Must_identify terms avoided: 'unit economics', 'per-location contribution margin', 'loss-making expansion locations', 'profitable original location subsidizing expansion', 'premature expansion before unit economics proven'. Multiple engine archetypes (unit_economics_failure, margin_erosion) may fire \u2014 that is correct."
+}

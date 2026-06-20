@@ -1,0 +1,117 @@
+{
+  "case_id": "SMB-011",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": null,
+  "unsupported_expected_archetypes": [
+    {
+      "smb_label": "product_market_fit_gap_audience_engagement_without_paid_validation",
+      "gap_reason": "ARCHETYPE_REQUIRES_UNPROVIDABLE_NUMERIC",
+      "closest_engine_archetype": "demand_generation_failure",
+      "recommended_extension": "Extend demand_generation_failure or add PRODUCT_MARKET_FIT_GAP archetype that triggers on low funnelConversionPct alongside engagement metrics without requiring newCustomerRate or leadVolume volume data."
+    }
+  ],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "MRR of $47 after 8 months despite 12,000 engaged audience members",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "$47 MRR from 12K audience is a critical financial signal of near-zero monetization. financial_health; is_critical=true; HIGH confidence. Avoids 'product market fit', 'willingness to pay'."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "2.1% of engaged audience converts to paid \u2014 most free users never convert",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Very low free-to-paid conversion is a critical market_position signal. 'paid conversion rate' is a must_identify term \u2014 finding uses the ratio description instead."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "founder believes that growing the audience further will solve the conversion problem",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Founder misattribution signal \u2014 audience growth as cure for conversion failure. LOW confidence as it is a belief not a measured outcome."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "no systematic investigation of why free users do not convert to paid",
+      "dimension": "process_maturity",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of conversion research is a process_maturity gap. No outcome terms used."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "12,000 newsletter subscribers; 4,200 free tool users; 88 paid subscribers; MRR $47 from 88 paid; 2.1% conversion; email open rate 38%; 47K social followers; 8 months since launch; marketing spend $0; founder spending 30 hours/week",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "88 paid from 4,200 free users = 2.1% conversion; $47 MRR from 88 paid implies ~$0.53 ARPU \u2014 near-zero monetization despite strong engagement. market_position dimension. is_critical=true. Avoids must_identify terms ('paid conversion rate', 'product market fit', 'willingness to pay', 'free to paid conversion gap', 'audience engagement is not the same as willingness to pay')."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): 38% email open rate signals genuine audience engagement",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "High email open rate is a misleading signal \u2014 engagement does not equal monetization readiness."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): 4,200 free tool users shows the product gets adoption",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Free tool adoption is a misleading signal. Free users do not validate willingness to pay."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): strong social following reinforces founder confidence in audience quality",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Social following is a misleading signal. Follower count does not indicate commercial demand."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "paid_conversion_rate_pct",
+      "canonical_key": "funnelConversionPct",
+      "evidence_item_index": 4
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-011 is an archetype-gap case. Engine demand_generation_failure requires newCustomerRate or leadVolume; this fixture does not have those canonical numerics. funnelConversionPct (2.1%) is mapped and may be available if demand_generation_failure extends to funnelConversionPct \u2014 currently that predicate checks funnelConversionPct. However without ADVERSE demand vocabulary in the finding (collapse/stall/fell/weak) the pattern may not fire. Engine will likely return INSUFFICIENT_EVIDENCE. abstention_eligible. Must_identify terms avoided: 'paid conversion rate', 'product market fit', 'willingness to pay', 'free to paid conversion gap', 'audience engagement is not the same as willingness to pay'."
+}
