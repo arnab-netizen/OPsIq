@@ -210,6 +210,10 @@ const LEGAL_GOVERNANCE_DIAGNOSES = new Set<string>(["legal_governance_risk"]);
 const LEGAL_GOVERNANCE_HOME_SIGNAL =
   /regulat|complian|\bfraud\b|misconduct|governance|lawsuit|sanction|consent order/;
 
+/** Key-person-context terms in off-home evidence that are the HOME signal of key_person_risk. */
+const KEY_PERSON_HOME_SIGNAL =
+  /founder|key.?person|successor|succession|no.*successor|leadership vacuum|governance vacuum|sole owner|owner.?operator|central figure/;
+
 /**
  * Financial-AGGRAVATION language: the off-home critical evidence shows the owner's
  * plan deepening/worsening an already-critical core problem (a high-severity
@@ -291,6 +295,16 @@ function isHoldWorthyOffArchetype(ev: CausalEvidence, diagnosisType: string): bo
       // vocabulary that triggered the committed legal_governance_risk diagnosis. Governance
       // and fraud language in raw "operations"/"finance"/"governance" dimensions is
       // consistent with the diagnosis, not a contradiction of it.
+    } else if (
+      diagnosisType === "key_person_risk" &&
+      !hasNumericCorroboration &&
+      !isStructuralCommitment &&
+      KEY_PERSON_HOME_SIGNAL.test(t)
+    ) {
+      // P3-D bypass: governance/succession vocabulary in process_maturity evidence that
+      // describes the context of a founder-death key-person crisis (e.g. "governance
+      // vacuum", "no successor", "founder was central figure") is the HOME signal of
+      // key_person_risk, not a contradiction of it. Release without holding.
     } else {
       return true;
     }

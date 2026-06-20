@@ -503,8 +503,10 @@ const rootCausePatterns: RootCausePattern[] = [
   },
   {
     name: "Key-Person Dependency",
-    pattern: (evidence) => evidence.some((e) => fin_isKeyPerson(e)),
+    pattern: (evidence) => evidence.some((e) => fin_isKeyPerson(e)) || evidence.some((e) => fin_isFounderDeath(e)),
     confidence: (evidence) => {
+      // Founder death is irreversible and unambiguous — always HIGH
+      if (evidence.some((e) => fin_isFounderDeath(e))) return DiagnosisConfidence.HIGH;
       const sev = evidence.some(
         (e) =>
           fin_isKeyPerson(e) &&
@@ -519,7 +521,9 @@ const rootCausePatterns: RootCausePattern[] = [
       description: "Key-person dependency: critical knowledge / relationships concentrated in one person",
       mechanismDescription:
         "Critical system knowledge, client relationships, or revenue are concentrated in a single undocumented person with no succession — a single point of failure that survives any program-level fix.",
-      evidenceIds: evidence.filter((e) => e.dimension === "team_capability").map((e) => e.id),
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "team_capability" || e.dimension === "process_maturity")
+        .map((e) => e.id),
       confidence: DiagnosisConfidence.MODERATE,
       alternativeExplanations: [
         "A general staffing constraint rather than a single-person dependency",
@@ -840,6 +844,18 @@ function fin_isKeyPerson(e: EvidenceItem): boolean {
     fin_num(e, "successionReady") !== undefined ||
     fin_num(e, "revenueConcentrationPct") !== undefined
   );
+}
+
+// P3-D fix: founder-death path. Fires on process_maturity dimension when explicit
+// founder/key-person death vocabulary is present. "Founder died" is self-sufficient —
+// no numeric required (death is irreversible and unambiguous). Ordinary leadership
+// changes ("CEO resigned", "new CEO appointed") do not match.
+const FOUNDER_DEATH_TEXT =
+  /founder.*died|founder.*death|founder.*deceased|death.*founder|sudden.*death|key.?person.*died|key.?person.*death|complete.*key.?person.*loss/;
+function fin_isFounderDeath(e: EvidenceItem): boolean {
+  if (e.dimension !== "process_maturity") return false;
+  if (!e.isCritical) return false;
+  return FOUNDER_DEATH_TEXT.test(fin_text(e));
 }
 
 // Capex is multi-signal: a capital INVESTMENT amount + an irreversibility signal +

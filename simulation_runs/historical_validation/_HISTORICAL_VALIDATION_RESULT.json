@@ -136,9 +136,9 @@
     },
     {
       "caseId": "RW_INDIA_CCD_2019_DEBT_TURNAROUND",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "key_person_risk",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
