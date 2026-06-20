@@ -3,55 +3,56 @@
   "rejectedUngrounded": 0,
   "blindReplaysCompleted": 42,
   "scores": {
-    "historical_alignment": 100,
+    "historical_alignment": 76.2,
     "diagnosis_agreement": 0,
     "action_agreement": 0,
     "safety": 100,
     "counterfactual_review": 100
   },
-  "opsiq_better": [],
-  "opsiq_worse": [],
-  "opsiq_matched": [
+  "opsiq_better": [
     "RW_CANADA_BLACKBERRY_2012_SMARTPHONE_DISRUPTION",
-    "RW_CHINA_EVERGRANDE_2021_DEBT_CRISIS",
-    "RW_CHINA_LUCKIN_2020_ACCOUNTING_FRAUD",
     "RW_FINLAND_NOKIA_2010_SMARTPHONE_DISRUPTION",
-    "RW_GLOBAL_FTX_2022_CRYPTO_EXCHANGE_COLLAPSE",
-    "RW_INDIA_AMTEK_AUTO_2015_DEBT_DEFAULT",
     "RW_INDIA_BYJUS_2024_INSOLVENCY",
-    "RW_INDIA_CCD_2019_DEBT_TURNAROUND",
     "RW_INDIA_COX_KINGS_2019_DEBT_DEFAULT",
-    "RW_INDIA_DECCAN_CHRONICLE_2012_DEBT_DEFAULT",
     "RW_INDIA_DHFL_2019_NBFC_INSOLVENCY",
     "RW_INDIA_FORTIS_2018_GOVERNANCE_CRISIS",
-    "RW_INDIA_FUTURE_RETAIL_2022_INSOLVENCY",
-    "RW_INDIA_GITANJALI_2018_PNB_FRAUD",
     "RW_INDIA_GO_FIRST_2023_INSOLVENCY",
     "RW_INDIA_ILFS_2018_LIQUIDITY_DEFAULT",
     "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
     "RW_INDIA_KINGFISHER_2012_COLLAPSE",
-    "RW_INDIA_LVB_2020_MORATORIUM",
     "RW_INDIA_PAYTM_2024_RBI_RESTRICTIONS",
     "RW_INDIA_RCOM_2017_2019_TELECOM_DEBT_COLLAPSE",
     "RW_INDIA_SATYAM_2009_ACCOUNTING_FRAUD",
+    "RW_INDIA_VODAFONE_IDEA_2020_AGR_STRESS",
+    "RW_INDIA_ZEE_SONY_2024_MERGER_FAILURE",
+    "RW_UAE_NMC_HEALTH_2020_ACCOUNTING_DEBT_CRISIS",
+    "RW_US_ENRON_2001_GOVERNANCE_FRAUD",
+    "RW_US_JCPENNEY_2012_PRICING_FAILURE",
+    "RW_US_SEARS_2018_RETAIL_DECLINE"
+  ],
+  "opsiq_worse": [],
+  "opsiq_matched": [
+    "RW_CHINA_EVERGRANDE_2021_DEBT_CRISIS",
+    "RW_CHINA_LUCKIN_2020_ACCOUNTING_FRAUD",
+    "RW_GLOBAL_FTX_2022_CRYPTO_EXCHANGE_COLLAPSE",
+    "RW_INDIA_AMTEK_AUTO_2015_DEBT_DEFAULT",
+    "RW_INDIA_CCD_2019_DEBT_TURNAROUND",
+    "RW_INDIA_DECCAN_CHRONICLE_2012_DEBT_DEFAULT",
+    "RW_INDIA_FUTURE_RETAIL_2022_INSOLVENCY",
+    "RW_INDIA_GITANJALI_2018_PNB_FRAUD",
+    "RW_INDIA_LVB_2020_MORATORIUM",
     "RW_INDIA_SUPERTECH_2022_HOMEBUYER_INSOLVENCY",
     "RW_INDIA_SUZLON_2012_CDR",
-    "RW_INDIA_VODAFONE_IDEA_2020_AGR_STRESS",
     "RW_INDIA_YES_BANK_2020_MORATORIUM",
-    "RW_INDIA_ZEE_SONY_2024_MERGER_FAILURE",
     "RW_UAE_ABRAAJ_2018_PRIVATE_EQUITY_COLLAPSE",
-    "RW_UAE_NMC_HEALTH_2020_ACCOUNTING_DEBT_CRISIS",
     "RW_UK_PATISSERIE_VALERIE_2018_ACCOUNTING_BLACK_HOLE",
     "RW_UK_THOMAS_COOK_2019_COLLAPSE",
     "RW_US_APPLE_1997_TURNAROUND",
     "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
-    "RW_US_ENRON_2001_GOVERNANCE_FRAUD",
     "RW_US_HERTZ_2020_CHAPTER11",
     "RW_US_IBM_1993_TURNAROUND",
-    "RW_US_JCPENNEY_2012_PRICING_FAILURE",
     "RW_US_KODAK_2011_DIGITAL_DISRUPTION",
     "RW_US_LEHMAN_2008_LIQUIDITY_COLLAPSE",
-    "RW_US_SEARS_2018_RETAIL_DECLINE",
     "RW_US_STARBUCKS_2008_TURNAROUND",
     "RW_US_TOYSRUS_2017_DEBT_OVERHANG"
   ],
@@ -65,12 +66,12 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_CHINA_EVERGRANDE_2021_DEBT_CRISIS",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
@@ -98,7 +99,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_GLOBAL_FTX_2022_CRYPTO_EXCHANGE_COLLAPSE",
@@ -113,13 +114,13 @@
     },
     {
       "caseId": "RW_INDIA_AMTEK_AUTO_2015_DEBT_DEFAULT",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "debt_solvency_pressure",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
@@ -131,7 +132,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_CCD_2019_DEBT_TURNAROUND",
@@ -141,25 +142,25 @@
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_INDIA_COX_KINGS_2019_DEBT_DEFAULT",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "debt_solvency_pressure",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_DECCAN_CHRONICLE_2012_DEBT_DEFAULT",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "debt_solvency_pressure",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
@@ -168,14 +169,14 @@
     },
     {
       "caseId": "RW_INDIA_DHFL_2019_NBFC_INSOLVENCY",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "debt_solvency_pressure",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_FORTIS_2018_GOVERNANCE_CRISIS",
@@ -186,17 +187,17 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_FUTURE_RETAIL_2022_INSOLVENCY",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
@@ -212,14 +213,14 @@
     },
     {
       "caseId": "RW_INDIA_GO_FIRST_2023_INSOLVENCY",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_ILFS_2018_LIQUIDITY_DEFAULT",
@@ -230,7 +231,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
@@ -241,7 +242,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_KINGFISHER_2012_COLLAPSE",
@@ -252,7 +253,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_LVB_2020_MORATORIUM",
@@ -274,7 +275,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_RCOM_2017_2019_TELECOM_DEBT_COLLAPSE",
@@ -285,7 +286,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_SATYAM_2009_ACCOUNTING_FRAUD",
@@ -296,12 +297,12 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_SUPERTECH_2022_HOMEBUYER_INSOLVENCY",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
@@ -311,8 +312,8 @@
     },
     {
       "caseId": "RW_INDIA_SUZLON_2012_CDR",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "margin_erosion",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
@@ -329,7 +330,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_INDIA_YES_BANK_2020_MORATORIUM",
@@ -351,7 +352,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_UAE_ABRAAJ_2018_PRIVATE_EQUITY_COLLAPSE",
@@ -373,12 +374,12 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_UK_PATISSERIE_VALERIE_2018_ACCOUNTING_BLACK_HOLE",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "debt_solvency_pressure",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
@@ -388,8 +389,8 @@
     },
     {
       "caseId": "RW_UK_THOMAS_COOK_2019_COLLAPSE",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
@@ -405,14 +406,14 @@
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
@@ -428,17 +429,17 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_US_HERTZ_2020_CHAPTER11",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
@@ -449,7 +450,7 @@
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
@@ -461,28 +462,28 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_US_KODAK_2011_DIGITAL_DISRUPTION",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_US_LEHMAN_2008_LIQUIDITY_COLLAPSE",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
@@ -494,7 +495,7 @@
       "actionAgreement": false,
       "safe": true,
       "aligned": true,
-      "classification": "OPSIQ_MATCHED"
+      "classification": "OPSIQ_BETTER"
     },
     {
       "caseId": "RW_US_STARBUCKS_2008_TURNAROUND",
@@ -504,18 +505,18 @@
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_US_TOYSRUS_2017_DEBT_OVERHANG",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
+      "aligned": false,
       "classification": "OPSIQ_MATCHED"
     }
   ]
