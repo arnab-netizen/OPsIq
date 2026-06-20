@@ -1,10 +1,30 @@
 {
-  "casesPresent": 0,
+  "casesPresent": 1,
   "rejectedUngrounded": 0,
-  "blindReplaysCompleted": 0,
-  "scores": null,
+  "blindReplaysCompleted": 1,
+  "scores": {
+    "historical_alignment": 100,
+    "diagnosis_agreement": 0,
+    "action_agreement": 0,
+    "safety": 100,
+    "counterfactual_review": 100
+  },
   "opsiq_better": [],
   "opsiq_worse": [],
-  "opsiq_matched": [],
-  "cases": []
+  "opsiq_matched": [
+    "RW_INDIA_SUZLON_2012_CDR"
+  ],
+  "cases": [
+    {
+      "caseId": "RW_INDIA_SUZLON_2012_CDR",
+      "engineDiagnosis": "unknown",
+      "committed": false,
+      "gateAbstain": true,
+      "diagnosisAgreement": false,
+      "actionAgreement": false,
+      "safe": true,
+      "aligned": true,
+      "classification": "OPSIQ_MATCHED"
+    }
+  ]
 }
