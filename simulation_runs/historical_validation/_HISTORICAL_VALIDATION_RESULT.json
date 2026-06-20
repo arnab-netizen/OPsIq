@@ -3,7 +3,7 @@
   "rejectedUngrounded": 0,
   "blindReplaysCompleted": 42,
   "scores": {
-    "historical_alignment": 45.2,
+    "historical_alignment": 42.9,
     "diagnosis_agreement": 0,
     "action_agreement": 2.4,
     "safety": 100,
@@ -14,7 +14,6 @@
     "RW_FINLAND_NOKIA_2010_SMARTPHONE_DISRUPTION",
     "RW_INDIA_VODAFONE_IDEA_2020_AGR_STRESS",
     "RW_INDIA_ZEE_SONY_2024_MERGER_FAILURE",
-    "RW_US_ENRON_2001_GOVERNANCE_FRAUD",
     "RW_US_JCPENNEY_2012_PRICING_FAILURE"
   ],
   "opsiq_worse": [],
@@ -48,6 +47,7 @@
     "RW_UK_THOMAS_COOK_2019_COLLAPSE",
     "RW_US_APPLE_1997_TURNAROUND",
     "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
+    "RW_US_ENRON_2001_GOVERNANCE_FRAUD",
     "RW_US_HERTZ_2020_CHAPTER11",
     "RW_US_IBM_1993_TURNAROUND",
     "RW_US_KODAK_2011_DIGITAL_DISRUPTION",
@@ -422,14 +422,14 @@
     },
     {
       "caseId": "RW_US_ENRON_2001_GOVERNANCE_FRAUD",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "legal_governance_risk",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
-      "classification": "OPSIQ_BETTER"
+      "aligned": false,
+      "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_US_HERTZ_2020_CHAPTER11",
