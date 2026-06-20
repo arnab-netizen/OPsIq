@@ -608,7 +608,7 @@ function softDistress(t: string, topic: RegExp): boolean {
 }
 
 const LIQUIDITY_HARD =
-  /out of cash|cannot make payroll|missed payroll|cannot meet payroll|cash crunch|cash shortfall|liquidity crisis|burning (?:through )?cash|insolven/;
+  /out of cash|cannot make payroll|missed payroll|cannot meet payroll|cash crunch|cash shortfall|liquidity crisis|burning (?:through )?cash|insolven|active default|asset.?liability mismatch|salary arrears|wage arrears|payroll arrears/;
 // Soft topic deliberately NARROW — only terms whose distress polarity is decided
 // by the adverse gate. Bare "cash"/"reserve" are EXCLUDED: they appear in benign
 // ("healthy cash reserve") and non-liquidity ("operating cash flow", "cannot
@@ -689,7 +689,7 @@ function ret_isRetentionErosion(e: EvidenceItem): boolean {
 }
 
 // ─── E2 slice 1 financial-structural triggers (strict; specific evidence only) ─
-const DEBT_TEXT = /covenant|leverage|interest cover|refinanc|maturity|debt service|debt-service|gearing|solvency|debt load|payables.*due|short-term (debt|facility)/;
+const DEBT_TEXT = /covenant|leverage|interest cover|refinanc|maturity|debt service|debt-service|gearing|solvency|debt load|payables.*due|short-term (debt|facility)|debt[- ]laden|obligation.*unpaid/;
 function fin_isDebtSolvency(e: EvidenceItem): boolean {
   if (e.dimension !== "financial_health") return false;
   const t = fin_text(e);
@@ -698,8 +698,11 @@ function fin_isDebtSolvency(e: EvidenceItem): boolean {
     fin_num(e, "covenantHeadroom") !== undefined ||
     fin_num(e, "interestCoverage") !== undefined;
   // Require debt-structural vocabulary; a corroborating structural numeric or an
-  // explicit covenant/maturity phrase. Generic cash pressure has neither.
-  return DEBT_TEXT.test(t) && (numeric || /covenant|maturity|debt service|debt-service|refinanc/.test(t));
+  // explicit covenant/maturity/debt-distress phrase. Generic cash pressure has neither.
+  // P3-C additions: "acute solvency", "solvency.*acute", "cannot service" are unambiguous
+  // debt-distress corroborators when paired with an existing DEBT_TEXT match (e.g. solvency);
+  // "debt-laden" and "obligation.*unpaid" are self-corroborating debt-structural terms.
+  return DEBT_TEXT.test(t) && (numeric || /covenant|maturity|debt service|debt-service|refinanc|acute solvency|solvency.*acute|cannot service|debt[- ]laden|obligation.*unpaid/.test(t));
 }
 
 const WC_TEXT = /receivabl|days sales outstanding|\bdso\b|cash conversion|days payable|\bdpo\b|working capital|cash[- ]conversion cycle|collections (timing|cycle)/;
