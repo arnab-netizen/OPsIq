@@ -165,6 +165,30 @@ const PROTECTED_OFF_ARCHETYPE =
   /regulat|complian|\bfraud\b|misconduct|governance|lawsuit|sanction|consent order|\bcapex\b|irreversible|automation line|facility expansion|expansion commitment|scale[\w ]*(?:spend|acquisition)[\w ]*(?:loss|losing)|grow out of the loss|insolven|out of cash|cannot make payroll|missed payroll/;
 
 /**
+ * Structural-commitment terms within PROTECTED_OFF_ARCHETYPE that represent
+ * genuinely dangerous commitments regardless of diagnosis type. These always hold
+ * even for financial-distress diagnoses.
+ */
+const PROTECTED_STRUCTURAL_COMMITMENT =
+  /\bcapex\b|irreversible|automation line|facility expansion|expansion commitment|scale[\w ]*(?:spend|acquisition)[\w ]*(?:loss|losing)|grow out of the loss/;
+
+/**
+ * Financial-distress diagnoses for which governance/regulatory/insolvency evidence in
+ * off-home dimensions is an EXPECTED co-occurrence rather than a contradiction. In
+ * real-world multi-dimensional corporate crises, governance scrutiny, regulatory
+ * proceedings, fraud allegations, and insolvency filings routinely accompany cash and
+ * debt crises without contradicting the financial diagnosis. The bypass applies only
+ * when the off-archetype finding has no numeric corroboration (empty/absent
+ * supportingData) — a quantified governance finding (e.g. complianceGapCount set)
+ * retains the full PROTECTED_OFF_ARCHETYPE hold.
+ */
+const FINANCIAL_DISTRESS_DIAGNOSES = new Set<string>([
+  "cash_liquidity_crisis",
+  "debt_solvency_pressure",
+  "working_capital_stress",
+]);
+
+/**
  * Financial-AGGRAVATION language: the off-home critical evidence shows the owner's
  * plan deepening/worsening an already-critical core problem (a high-severity
  * contradiction, not a stable secondary symptom) — must always hold.
@@ -219,7 +243,26 @@ function isHoldWorthyOffArchetype(ev: CausalEvidence, diagnosisType: string): bo
   const t = offArchetypeText(ev);
   // Protected-danger, financial-aggravation, and explicit negative-margin/severe-runway
   // signals are inherently high-severity and hold regardless of base adverse polarity.
-  if (PROTECTED_OFF_ARCHETYPE.test(t)) return true;
+  //
+  // P1 co-occurrence bypass: for committed financial-distress diagnoses
+  // (cash_liquidity_crisis, debt_solvency_pressure, working_capital_stress), governance/
+  // regulatory/fraud/insolvency terms in PROTECTED_OFF_ARCHETYPE describe EXPECTED
+  // secondary context of a financial crisis, not contradictions of the committed
+  // diagnosis. The bypass is conditional on the finding having no numeric corroboration
+  // (empty/absent supportingData) — a quantified governance finding retains the full
+  // hold. Structural-commitment terms (capex/irreversible/expansion) always hold.
+  if (PROTECTED_OFF_ARCHETYPE.test(t)) {
+    const isFinancialDistress = FINANCIAL_DISTRESS_DIAGNOSES.has(diagnosisType);
+    const hasNumericCorroboration =
+      !!ev.supportingData && Object.keys(ev.supportingData).length > 0;
+    const isStructuralCommitment = PROTECTED_STRUCTURAL_COMMITMENT.test(t);
+    if (isFinancialDistress && !hasNumericCorroboration && !isStructuralCommitment) {
+      // governance/regulatory/fraud/insolvency co-occurrence without numeric
+      // corroboration for a committed financial-distress diagnosis — do not hold
+    } else {
+      return true;
+    }
+  }
   if (AGGRAVATION_OFF_ARCHETYPE.test(t)) return true;
   if (SEVERE_FINANCIAL_TEXT.test(t)) return true;
   if (offArchetypeNumericSevere(ev)) return true;
@@ -251,9 +294,12 @@ const PROTECTED_STEM_DOMAINS: { domain: string; stems: string[] }[] = [
 
 /** Which protected-danger domains a committed covered diagnosis SUBSUMES (so they no longer hold). */
 const DIAGNOSIS_SUBSUMES_DOMAIN: Record<string, Set<string>> = {
-  cash_liquidity_crisis: new Set(["liquidity"]),
+  // cash and debt crises subsume liquidity AND legal/regulatory proceedings —
+  // regulatory scrutiny and insolvency proceedings are expected co-occurrences of
+  // financial distress, not out-of-model primary causes that contradict the diagnosis.
+  cash_liquidity_crisis: new Set(["liquidity", "legal"]),
   working_capital_stress: new Set(["liquidity"]),
-  debt_solvency_pressure: new Set(["liquidity"]),
+  debt_solvency_pressure: new Set(["liquidity", "legal"]),
   strategic_capex_risk: new Set(["capex"]),
   legal_governance_risk: new Set(["legal", "integrity"]),
 };
