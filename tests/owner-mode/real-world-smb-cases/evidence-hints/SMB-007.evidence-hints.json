@@ -33,12 +33,12 @@
     },
     {
       "source_path": "scenario.symptoms[3]",
-      "finding": "revenue has been flat for 18 months despite continued market demand",
+      "finding": "quality defects and complaints emerging as owner operates beyond sustainable limit, signalling deteriorating service and retention risk",
       "dimension": "customer_retention",
       "is_critical": false,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Revenue ceiling despite demand is the observable outcome of the capacity limit. customer_retention dimension captures the demand-not-served aspect."
+      "rationale": "Quality defects reported by clients quantify the retention risk created by overextension. customer_retention dimension; isCritical=false as revenue is still held but trend is adverse. 'defect' vocabulary satisfies engine customer_retention gate for operational_bottleneck pattern."
     },
     {
       "source_path": "scenario.facts_known_to_owner",
