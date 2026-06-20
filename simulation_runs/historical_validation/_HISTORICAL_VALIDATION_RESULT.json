@@ -3,7 +3,7 @@
   "rejectedUngrounded": 0,
   "blindReplaysCompleted": 42,
   "scores": {
-    "historical_alignment": 57.1,
+    "historical_alignment": 47.6,
     "diagnosis_agreement": 0,
     "action_agreement": 2.4,
     "safety": 100,
@@ -12,10 +12,6 @@
   "opsiq_better": [
     "RW_CANADA_BLACKBERRY_2012_SMARTPHONE_DISRUPTION",
     "RW_FINLAND_NOKIA_2010_SMARTPHONE_DISRUPTION",
-    "RW_INDIA_ILFS_2018_LIQUIDITY_DEFAULT",
-    "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
-    "RW_INDIA_KINGFISHER_2012_COLLAPSE",
-    "RW_INDIA_RCOM_2017_2019_TELECOM_DEBT_COLLAPSE",
     "RW_INDIA_VODAFONE_IDEA_2020_AGR_STRESS",
     "RW_INDIA_ZEE_SONY_2024_MERGER_FAILURE",
     "RW_US_ENRON_2001_GOVERNANCE_FRAUD",
@@ -37,8 +33,12 @@
     "RW_INDIA_FUTURE_RETAIL_2022_INSOLVENCY",
     "RW_INDIA_GITANJALI_2018_PNB_FRAUD",
     "RW_INDIA_GO_FIRST_2023_INSOLVENCY",
+    "RW_INDIA_ILFS_2018_LIQUIDITY_DEFAULT",
+    "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
+    "RW_INDIA_KINGFISHER_2012_COLLAPSE",
     "RW_INDIA_LVB_2020_MORATORIUM",
     "RW_INDIA_PAYTM_2024_RBI_RESTRICTIONS",
+    "RW_INDIA_RCOM_2017_2019_TELECOM_DEBT_COLLAPSE",
     "RW_INDIA_SATYAM_2009_ACCOUNTING_FRAUD",
     "RW_INDIA_SUPERTECH_2022_HOMEBUYER_INSOLVENCY",
     "RW_INDIA_SUZLON_2012_CDR",
@@ -224,36 +224,36 @@
     },
     {
       "caseId": "RW_INDIA_ILFS_2018_LIQUIDITY_DEFAULT",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
-      "classification": "OPSIQ_BETTER"
+      "aligned": false,
+      "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "debt_solvency_pressure",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
-      "classification": "OPSIQ_BETTER"
+      "aligned": false,
+      "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_INDIA_KINGFISHER_2012_COLLAPSE",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "cash_liquidity_crisis",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
-      "classification": "OPSIQ_BETTER"
+      "aligned": false,
+      "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_INDIA_LVB_2020_MORATORIUM",
@@ -279,14 +279,14 @@
     },
     {
       "caseId": "RW_INDIA_RCOM_2017_2019_TELECOM_DEBT_COLLAPSE",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
+      "engineDiagnosis": "debt_solvency_pressure",
+      "committed": true,
+      "gateAbstain": false,
       "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
-      "aligned": true,
-      "classification": "OPSIQ_BETTER"
+      "aligned": false,
+      "classification": "OPSIQ_MATCHED"
     },
     {
       "caseId": "RW_INDIA_SATYAM_2009_ACCOUNTING_FRAUD",
@@ -323,8 +323,8 @@
     },
     {
       "caseId": "RW_INDIA_VODAFONE_IDEA_2020_AGR_STRESS",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "debt_solvency_pressure",
+      "committed": true,
       "gateAbstain": true,
       "diagnosisAgreement": false,
       "actionAgreement": false,
