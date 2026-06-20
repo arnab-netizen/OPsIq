@@ -1,0 +1,23 @@
+{
+  "case_id": "RW_US_JCPENNEY_2012_PRICING_FAILURE",
+  "source_urls": [
+    "https://www.library.hbs.edu/working-knowledge/what-went-wrong-at-j-c-penney",
+    "https://www.forbes.com/sites/stevedenning/2013/04/09/j-c-penney-was-ron-johnsons-strategy-wrong/",
+    "https://www.paddle.com/blog/j-c-penny-s-pricing-strategy"
+  ],
+  "source_type": "Academic case analysis, business journalism, pricing strategy analysis",
+  "source_quality": {
+    "tier_A": ["SEC filings and annual reports — primary financial data", "Company earnings materials — primary"],
+    "tier_B": ["HBS Working Knowledge — retrospective case analysis", "Forbes — strategy retrospective analysis (2013 — post-CEO-removal)", "Paddle pricing analysis — strategy synthesis"]
+  },
+  "reliability_tier": "A-B",
+  "supports_ground_truth": true,
+  "contamination_risk": "High",
+  "contamination_notes": "Many later accounts are retrospective and include outcome data (sales collapse, CEO removal). These must appear only in outcome.json. The decision-date input must represent the situation as it appeared when the strategy was being announced and implemented in early 2012.",
+  "source_limitations": [
+    "Many later accounts are retrospective — actual decline and CEO removal in outcome only",
+    "Forbes 2013 article is post-CEO-removal — outcome source only",
+    "Evidence of failure came after implementation — not available at decision date",
+    "SEC filings and earnings are primary for financial data"
+  ]
+}

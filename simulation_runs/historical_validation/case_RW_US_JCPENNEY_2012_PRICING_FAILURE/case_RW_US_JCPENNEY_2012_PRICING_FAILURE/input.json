@@ -1,0 +1,45 @@
+{
+  "case_id": "RW_US_JCPENNEY_2012_PRICING_FAILURE",
+  "company": "J.C. Penney",
+  "decision_date": "2012-02-01",
+  "industry": "Department-store retail",
+  "geography": "United States",
+  "known_facts_at_decision_date": [
+    "J.C. Penney undertook a major strategic repositioning under new leadership beginning early 2012",
+    "The company moved away from a coupon and promotional pricing model toward a simplified everyday low pricing strategy",
+    "Existing customers were accustomed to promotional pricing, discounts, and coupon-based shopping behavior",
+    "The strategy attempted to change customer behavior and brand perception simultaneously across the full chain",
+    "The change carried traffic risk, conversion risk, customer-segmentation risk, price-perception risk, and brand-fit risk",
+    "The repositioning was implemented without public evidence of prior customer-behavior validation or pilot testing",
+    "The risk of abrupt change was identifiable: if core customers did not respond to everyday pricing, traffic and conversion would decline before new customers arrived"
+  ],
+  "financial_signals_at_decision_date": {
+    "pricing_model_change": "From promotional/coupon to everyday low price — full chain rollout",
+    "revenue_risk": "High — traffic and conversion dependent on customer behavior change",
+    "investment_required": "Yes — brand repositioning and marketing to support new model",
+    "pilot_testing": "Not publicly disclosed as of decision date",
+    "customer_base_dependency": "High reliance on existing promo-sensitive customers"
+  },
+  "operating_signals_at_decision_date": {
+    "store_format": "Full-chain implementation of new pricing model",
+    "customer_segmentation": "Existing customers highly promo-sensitive by historical behavior",
+    "brand_change_scope": "Broad — name shortened to JCP, store redesign, pricing model change",
+    "change_management": "Abrupt full-chain rollout without disclosed phased approach",
+    "new_leadership": "CEO Ron Johnson from Apple — imported Apple retail strategy concepts"
+  },
+  "governance_signals_at_decision_date": {
+    "leadership_mandate": "New CEO implementing aggressive strategic repositioning",
+    "board_support": "Supportive of strategy at decision date",
+    "customer_feedback_loop": "No disclosed real-time traffic/conversion monitoring framework",
+    "rollback_plan": "Not publicly identified"
+  },
+  "risk_flags_at_decision_date": [
+    "Core customers are promo-sensitive — removing promotions without validation risks immediate traffic loss",
+    "Full-chain rollout removes ability to use control stores to measure impact",
+    "Brand repositioning + pricing change + name change simultaneously increases execution risk",
+    "Executive transplant from Apple: toy retail strategy may not transfer to department store",
+    "No disclosed pilot: if customer behavior does not shift, damage is chain-wide immediately",
+    "Recovery from failed pricing strategy is slow and costly"
+  ],
+  "question": "Given the abrupt full-chain shift from promotional pricing to everyday low pricing, without disclosed pilot testing, targeting a customer base with strong promo-sensitivity, diagnose the main risks and recommend the highest-priority action plan to protect the core customer base while pursuing the repositioning."
+}

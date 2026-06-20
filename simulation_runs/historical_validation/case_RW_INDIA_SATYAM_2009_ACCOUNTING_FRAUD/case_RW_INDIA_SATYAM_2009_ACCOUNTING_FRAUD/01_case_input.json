@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_INDIA_SATYAM_2009_ACCOUNTING_FRAUD",
+  "businessProblem": "Satyam Computer Services' board proposed on 16 December 2008 to acquire Maytas Properties and Maytas Infra — promoter-family entities — and withdrew within hours under investor pressure. The event raises governance, related-party transaction, financial-statement reliability, and fraud risk concerns. Diagnose root causes and recommend highest-priority action plan.",
+  "evidence": [
+    {
+      "dimension": "governance",
+      "finding": "Satyam's board proposed acquiring Maytas Properties and Maytas Infra — entities linked to the promoter family — on 16 December 2008",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting December 2008, Wikipedia Satyam scandal, academic case studies"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Investors objected strongly to the proposed related-party acquisition, forcing withdrawal within hours",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting December 2008"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Board approved the related-party acquisition proposal without adequate independent scrutiny — board oversight failure",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Academic fraud case studies, public reporting"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Promoter motivation to acquire personal real-estate assets using company funds is a red flag for financial-statement reliability — reported cash position should be independently verified",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Fraud risk framework, academic case studies"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Satyam's reported financials show the company as profitable with cash — these figures have not been independently verified",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "Public financial filings — reliability unverified"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Promoter control risk — promoter-proposed acquisition for personal benefit signals potential misalignment between promoter and shareholder interests",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Academic fraud analysis, public reporting"
+    },
+    {
+      "dimension": "legal",
+      "finding": "Related-party transaction attempt without adequate independent approval is a governance and legal compliance red flag under Indian corporate law",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Indian corporate governance framework"
+    },
+    {
+      "dimension": "market",
+      "finding": "Investor confidence severely damaged — Satyam stock fell sharply on announcement of proposed acquisition",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "Public reporting December 2008"
+    }
+  ],
+  "clientContext": {
+    "companyName": "Satyam Computer Services Ltd.",
+    "country": "India",
+    "industry": "IT services",
+    "stage": "Governance crisis / fraud risk investigation",
+    "decisionDate": "2008-12-16",
+    "primaryStakeholder": "Independent directors, SEBI, auditors, institutional investors"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "CRITICAL — promoter motivation to divert assets signals extreme risk",
+    "resistanceToChange": "HIGH — promoter-controlled governance resistant to independent oversight",
+    "managementCapability": "CRITICALLY COMPROMISED — governance credibility destroyed",
+    "keyPersonDependency": "CRITICAL — promoter-founder with excessive control",
+    "accountabilityWeakness": "CRITICAL — board approved related-party acquisition without scrutiny"
+  }
+}
