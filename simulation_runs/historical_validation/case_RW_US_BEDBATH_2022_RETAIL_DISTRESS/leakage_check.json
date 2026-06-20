@@ -1,26 +1,23 @@
 {
+  "caseId": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
   "checks": {
     "outcome_leakage": {
-      "question": "Does input.json contain the actual outcome?",
-      "finding": "No outcome information present in input",
-      "verdict": "PASS"
+      "description": "Verify that input.json and 01_case_input.json contain no reference to Chapter 11 filing, final store closures or liquidation, the Overstock brand acquisition, bankruptcy outcome, or confirmed turnaround failure.",
+      "result": "PASS"
     },
     "hindsight_leakage": {
-      "question": "Does input.json contain hindsight information?",
-      "finding": "All facts are from decision-date perspective only",
-      "verdict": "PASS"
+      "description": "Verify that input.json and 01_case_input.json do not contain retrospective framing that the buybacks definitively caused the bankruptcy, that meme-stock activity worsened the outcome, or any other post-outcome causal conclusion encoded as a known input fact.",
+      "result": "PASS"
     },
     "future_date_leakage": {
-      "question": "Does input.json reference future dates or events?",
-      "finding": "No future dates or post-decision events referenced",
-      "verdict": "PASS"
+      "description": "Verify that no date after 2022-08-31 appears in input.json or 01_case_input.json, and no event occurring after the decision date is described.",
+      "result": "PASS"
     },
     "expert_conclusion_leakage": {
-      "question": "Does input.json contain expert conclusions from after the decision date?",
-      "finding": "No post-decision expert conclusions present",
-      "verdict": "PASS"
+      "description": "Verify that input.json and 01_case_input.json contain no pre-stated expert diagnosis, no embedded recommended intervention conclusion, and no framing that encodes the correct answer in the question or evidence fields.",
+      "result": "PASS"
     }
   },
   "pass": true,
-  "overall_verdict": "PASS - input.json contains only decision-date facts with no outcome, hindsight, or future leakage"
+  "overall_verdict": "PASS"
 }
