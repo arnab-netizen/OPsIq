@@ -24,5 +24,13 @@
     "Governance and internal control failures",
     "Creditor enforcement risk not addressed in time"
   ],
-  "final_business_state": "Group entities entered insolvency and liquidation processes; Cox & Kings did not survive as an independent going-concern travel business."
+  "final_business_state": "Group entities entered insolvency and liquidation processes; Cox & Kings did not survive as an independent going-concern travel business.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

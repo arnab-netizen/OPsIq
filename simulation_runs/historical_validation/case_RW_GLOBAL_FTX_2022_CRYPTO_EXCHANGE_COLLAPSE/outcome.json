@@ -29,5 +29,13 @@
     "Absence of customer asset segregation",
     "Rescue-deal dependency (Binance) that was abandoned leaving no alternative"
   ],
-  "final_business_state": "Chapter 11 filed 11-14 November 2022. John J. Ray III appointed CEO. Criminal proceedings initiated against founders. Customer asset recovery process through bankruptcy estate. Exchange operations ceased."
+  "final_business_state": "Chapter 11 filed 11-14 November 2022. John J. Ray III appointed CEO. Criminal proceedings initiated against founders. Customer asset recovery process through bankruptcy estate. Exchange operations ceased.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

@@ -29,5 +29,10 @@
     "Failure to build services and solutions capability at scale before crisis",
     "Risk of destroying integrated enterprise value through premature breakup"
   ],
-  "final_business_state": "Successful transformation to services-led enterprise technology company with recovered profitability and sustained global scale"
+  "final_business_state": "Successful transformation to services-led enterprise technology company with recovered profitability and sustained global scale",
+  "expected_diagnosis_codes": [],
+  "expected_action_codes": [
+    "STRUCTURAL_REPAIR",
+    "GROWTH_ENABLEMENT"
+  ]
 }

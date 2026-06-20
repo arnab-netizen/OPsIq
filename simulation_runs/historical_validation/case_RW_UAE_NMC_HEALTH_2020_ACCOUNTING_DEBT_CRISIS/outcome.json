@@ -1,6 +1,6 @@
 {
   "grounding_class": "REAL_SOURCE_BACKED",
-  "expert_diagnosis": "NMC Health's crisis was driven by a fundamental financial-statement reliability failure rooted in undisclosed debt, governance breakdown at board level, and inadequate related-party transaction oversight — compounded by a collapse in lender and investor confidence once questions became public. The healthcare operations had potential underlying value but the financial-control credibility of the holding entity was irreparably impaired without immediate independent verification.",
+  "expert_diagnosis": "NMC Health's crisis was driven by a fundamental financial-statement reliability failure rooted in undisclosed debt, governance breakdown at board level, and inadequate related-party transaction oversight \u2014 compounded by a collapse in lender and investor confidence once questions became public. The healthcare operations had potential underlying value but the financial-control credibility of the holding entity was irreparably impaired without immediate independent verification.",
   "expert_first_action": "Commission an immediate independent forensic accounting and debt verification review to establish the true balance sheet position, and simultaneously seek a lender standstill to prevent enforcement while the verification is underway.",
   "actual_decision": "Company did not complete an independent verification or achieve a lender standstill before administration was imposed.",
   "outcome_polarity": "NEGATIVE",
@@ -17,12 +17,20 @@
   "citation": "FCA statement on NMC Health plc; Reuters reporting on discovered undisclosed debt bringing total to approximately $5 billion; Financial Times investigative coverage of governance and accounting failures.",
   "actual_outcome": "NMC Health plc entered administration in 2020. Independent review later identified undisclosed debt that brought total liabilities to approximately $5 billion, far exceeding previously reported figures. The case became one of the largest accounting and governance failures involving a London-listed company. UAE operations were restructured under administration.",
   "documented_root_causes": [
-    "Financial-statement reliability failure — reported debt materially understated",
+    "Financial-statement reliability failure \u2014 reported debt materially understated",
     "Undisclosed debt of significant scale relative to disclosed position",
     "Governance failure at board and audit committee level",
     "Related-party transaction exposure inadequately disclosed and controlled",
     "Collapse of lender and investor confidence once questions became public",
     "Absence of independent oversight mechanisms to catch or disclose the true position"
   ],
-  "final_business_state": "NMC Health plc entered administration in 2020; undisclosed liabilities of approximately $5 billion identified post-administration; became a major governance and accounting crisis for a London-listed UAE healthcare group; UAE hospital operations restructured."
+  "final_business_state": "NMC Health plc entered administration in 2020; undisclosed liabilities of approximately $5 billion identified post-administration; became a major governance and accounting crisis for a London-listed UAE healthcare group; UAE hospital operations restructured.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk",
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

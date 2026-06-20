@@ -17,13 +17,20 @@
   "citation": "Reuters September 2017: how $5 billion of debt caught up with Toys R Us; Time magazine Chapter 11 reporting; Washington Post: Toys R Us files for bankruptcy amid struggle to pay down billions in debt",
   "actual_outcome": "Toys R Us filed for Chapter 11 bankruptcy in September 2017. Case moved toward store closures and liquidation. Debt burden and interest cost were central alongside retail competition. The company could not resolve the combined debt and operating challenge.",
   "documented_root_causes": [
-    "Debt overhang — $5.2 billion from leveraged buyout",
-    "Liquidity pressure — $400 million annual interest burden",
-    "Capital-structure constraint — LBO debt prevented competitive investment",
-    "Underinvestment — omnichannel capabilities not funded due to debt service priority",
-    "Retail and e-commerce disruption — Amazon and mass retailers eroding market share",
-    "Weak strategic flexibility — all decisions constrained by debt obligations",
-    "Inability to deleverage through operations — no credible path without restructuring"
+    "Debt overhang \u2014 $5.2 billion from leveraged buyout",
+    "Liquidity pressure \u2014 $400 million annual interest burden",
+    "Capital-structure constraint \u2014 LBO debt prevented competitive investment",
+    "Underinvestment \u2014 omnichannel capabilities not funded due to debt service priority",
+    "Retail and e-commerce disruption \u2014 Amazon and mass retailers eroding market share",
+    "Weak strategic flexibility \u2014 all decisions constrained by debt obligations",
+    "Inability to deleverage through operations \u2014 no credible path without restructuring"
   ],
-  "final_business_state": "Filed Chapter 11 September 2017. Moved to store closures and liquidation. Brand assets sold separately."
+  "final_business_state": "Filed Chapter 11 September 2017. Moved to store closures and liquidation. Brand assets sold separately.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

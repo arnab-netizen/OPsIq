@@ -26,5 +26,13 @@
     "Governance failure in project-level fund ring-fencing",
     "Real-estate working-capital stress from sector slowdown"
   ],
-  "final_business_state": "Under CIRP per NCLT order of 25 March 2022. Homebuyer delivery significantly impaired. Ongoing legal proceedings across NCLT, NCLAT, and Supreme Court for project completion and creditor resolution."
+  "final_business_state": "Under CIRP per NCLT order of 25 March 2022. Homebuyer delivery significantly impaired. Ongoing legal proceedings across NCLT, NCLAT, and Supreme Court for project completion and creditor resolution.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

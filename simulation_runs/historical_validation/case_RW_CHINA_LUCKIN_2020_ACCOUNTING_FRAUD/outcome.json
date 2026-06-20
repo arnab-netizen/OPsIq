@@ -28,5 +28,13 @@
     "Governance and audit failure to independently verify financial statements",
     "Investor-confidence built on materially false reported growth"
   ],
-  "final_business_state": "Disclosed RMB 2.2 billion in fabricated transactions. Delisted from Nasdaq. Paid $180 million SEC settlement. Restructured under new management. Eventually relisted on OTC markets with reformed governance."
+  "final_business_state": "Disclosed RMB 2.2 billion in fabricated transactions. Delisted from Nasdaq. Paid $180 million SEC settlement. Restructured under new management. Eventually relisted on OTC markets with reformed governance.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk",
+    "unit_economics_failure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

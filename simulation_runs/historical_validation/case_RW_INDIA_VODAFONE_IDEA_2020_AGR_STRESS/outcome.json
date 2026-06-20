@@ -1,7 +1,7 @@
 {
   "grounding_class": "REAL_SOURCE_BACKED",
   "expert_diagnosis": "Vodafone Idea's crisis at March 2020 was driven by the convergence of a regulatory liability shock (AGR dues), structural capital inadequacy, and a weak competitive position in a price-compressed market. The AGR ruling created a confirmed liability that dwarfed the company's ability to pay from operations. Without a capital raise and government relief, the combined burden of debt, AGR dues, and required network investment would exceed the company's financial capacity, risking progressive competitive decline and eventual insolvency.",
-  "expert_first_action": "Immediate and aggressive capital raise combined with formal government and creditor relief negotiations — both must succeed in parallel as neither alone is sufficient to resolve the combined solvency and competitive challenge.",
+  "expert_first_action": "Immediate and aggressive capital raise combined with formal government and creditor relief negotiations \u2014 both must succeed in parallel as neither alone is sufficient to resolve the combined solvency and competitive challenge.",
   "actual_decision": "Vodafone Idea pursued negotiations with the government for AGR relief and sought capital from promoters and external investors. The company did not raise sufficient capital immediately and continued to face competitive erosion. Government relief measures and later restructuring became central to the survival path but were not secured at the decision date.",
   "outcome_polarity": "NEGATIVE",
   "harmful_actions": [
@@ -25,5 +25,14 @@
     "Pricing pressure continuing to compress revenue per subscriber",
     "Dependence on external relief from government and creditors that was not yet confirmed"
   ],
-  "final_business_state": "Continued operations under acute financial stress; survival dependent on government relief, equity conversion measures, and creditor restructuring implemented in subsequent periods; competitive position materially weakened with ongoing subscriber loss to better-capitalized peers."
+  "final_business_state": "Continued operations under acute financial stress; survival dependent on government relief, equity conversion measures, and creditor restructuring implemented in subsequent periods; competitive position materially weakened with ongoing subscriber loss to better-capitalized peers.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure",
+    "legal_governance_risk"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION",
+    "STRUCTURAL_REPAIR"
+  ]
 }

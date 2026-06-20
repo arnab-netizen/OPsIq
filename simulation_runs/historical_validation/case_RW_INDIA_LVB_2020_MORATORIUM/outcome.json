@@ -26,5 +26,13 @@
     "Failure to conclude capital raise or merger before crisis point",
     "Prompt Corrective Action framework insufficient without external capital solution"
   ],
-  "final_business_state": "Bank amalgamated into DBS Bank India Ltd. Operations stabilized under DBS governance and capital base. Depositors and employees protected. LVB as independent entity ceased to exist."
+  "final_business_state": "Bank amalgamated into DBS Bank India Ltd. Operations stabilized under DBS governance and capital base. Depositors and employees protected. LVB as independent entity ceased to exist.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

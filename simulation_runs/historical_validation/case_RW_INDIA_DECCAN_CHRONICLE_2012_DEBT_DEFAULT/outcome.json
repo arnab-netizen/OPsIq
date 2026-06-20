@@ -24,5 +24,12 @@
     "Overextension into non-core activities draining available cash",
     "Failure to restructure debt before formal legal escalation"
   ],
-  "final_business_state": "Formal insolvency proceedings under IBC/IBBI. Media operations severely disrupted. Creditor resolution through formal CIRP process. Company unable to service debt independently."
+  "final_business_state": "Formal insolvency proceedings under IBC/IBBI. Media operations severely disrupted. Creditor resolution through formal CIRP process. Company unable to service debt independently.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

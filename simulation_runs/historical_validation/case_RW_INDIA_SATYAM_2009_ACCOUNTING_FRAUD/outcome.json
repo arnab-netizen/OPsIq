@@ -12,19 +12,26 @@
     "Auditors (PricewaterhouseCoopers) failed to detect falsified accounts"
   ],
   "beneficial_actions": [
-    "Investors rejected the acquisition immediately — preventing asset diversion on that occasion",
+    "Investors rejected the acquisition immediately \u2014 preventing asset diversion on that occasion",
     "Rapid withdrawal of proposal prevented immediate asset transfer"
   ],
-  "citation": "Ramalinga Raju confessed 7 January 2009 — accounts had been falsified; inflated cash and bank balances, falsified profits; Wikipedia Satyam scandal; SCIRP academic fraud analysis; Dialnet academic case study; Government intervention, SEBI action, and board replacement followed",
+  "citation": "Ramalinga Raju confessed 7 January 2009 \u2014 accounts had been falsified; inflated cash and bank balances, falsified profits; Wikipedia Satyam scandal; SCIRP academic fraud analysis; Dialnet academic case study; Government intervention, SEBI action, and board replacement followed",
   "actual_outcome": "Ramalinga Raju confessed on 7 January 2009 that Satyam's accounts had been falsified: cash and bank balances were inflated, profits were falsified over years. Government intervened, board was replaced. SEBI and CBI investigated. Tech Mahindra later acquired controlling stake. The case became known as 'India's Enron.'",
   "documented_root_causes": [
-    "Governance failure — board approved promoter self-dealing without scrutiny",
-    "Related-party transaction risk — attempted asset diversion to promoter entities",
-    "Financial-statement reliability risk — reported cash was not independently verified",
-    "Board oversight failure — independent directors did not exercise independence",
-    "Fraud risk — systematic falsification of accounts over years",
-    "Capital allocation red flag — promoter sought to use company cash for personal assets",
-    "Promoter-control risk — excessive promoter influence over board and management"
+    "Governance failure \u2014 board approved promoter self-dealing without scrutiny",
+    "Related-party transaction risk \u2014 attempted asset diversion to promoter entities",
+    "Financial-statement reliability risk \u2014 reported cash was not independently verified",
+    "Board oversight failure \u2014 independent directors did not exercise independence",
+    "Fraud risk \u2014 systematic falsification of accounts over years",
+    "Capital allocation red flag \u2014 promoter sought to use company cash for personal assets",
+    "Promoter-control risk \u2014 excessive promoter influence over board and management"
   ],
-  "final_business_state": "Fraud confessed January 2009. Government intervention. Board replaced. SEBI and CBI investigation. Tech Mahindra acquired controlling stake. Company restructured and survived under new ownership."
+  "final_business_state": "Fraud confessed January 2009. Government intervention. Board replaced. SEBI and CBI investigation. Tech Mahindra acquired controlling stake. Company restructured and survived under new ownership.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

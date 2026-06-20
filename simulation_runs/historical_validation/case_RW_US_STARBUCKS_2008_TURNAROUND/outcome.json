@@ -28,5 +28,10 @@
     "Growth strategy prioritizing store count over per-store quality and returns",
     "Partner engagement decline contributing to service quality degradation"
   ],
-  "final_business_state": "Successful recovery through disciplined store rationalization, experience reinvestment, and refocused growth strategy"
+  "final_business_state": "Successful recovery through disciplined store rationalization, experience reinvestment, and refocused growth strategy",
+  "expected_diagnosis_codes": [],
+  "expected_action_codes": [
+    "STRUCTURAL_REPAIR",
+    "STABILIZATION"
+  ]
 }

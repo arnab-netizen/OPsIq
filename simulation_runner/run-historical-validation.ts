@@ -70,6 +70,8 @@ interface HistoricalOutcome {
   /** Action phrasings aligned with what actually worked (or would have, per the record). */
   beneficial_actions?: string[];
   citation?: string;
+  expected_diagnosis_codes?: string[];
+  expected_action_codes?: string[];
 }
 
 /**
@@ -207,6 +209,11 @@ function buildEngineInput(inp: HistoricalInput): ConsultingEngineInput {
   };
 }
 
+function recommendationClass(memo: { recommendedInterventions?: Array<{ intervention?: Record<string, unknown> }> }): string | null {
+  const iv = memo.recommendedInterventions?.[0]?.intervention as { class?: string } | undefined;
+  return iv?.class ?? null;
+}
+
 function recommendationText(memo: { recommendedInterventions?: Array<{ intervention?: Record<string, unknown> }> }): string {
   const iv = memo.recommendedInterventions?.[0]?.intervention as
     | { title?: string; objective?: string; rationale?: string; whyThisNow?: string; steps?: Array<{ description?: string; successCriteria?: string }> }
@@ -234,17 +241,26 @@ function scoreAgainstOutcome(
   committed: boolean,
   gateAbstain: boolean,
   recText: string,
+  recClass: string | null,
   outcome: HistoricalOutcome
 ): CaseResult {
   const engineDx = normalizeDiagnosis(diagnosis);
   const expertDx = normalizeDiagnosis(outcome.expert_diagnosis);
   const proceeds = committed && !gateAbstain;
 
-  const diagnosisAgreement = engineDx === expertDx;
+  const diagnosisAgreement = Array.isArray(outcome.expected_diagnosis_codes) && outcome.expected_diagnosis_codes.length > 0
+    ? outcome.expected_diagnosis_codes.includes(engineDx)
+    : normalizeDiagnosis(outcome.expert_diagnosis) === engineDx;
   const harmful = outcome.harmful_actions ?? [];
   const beneficial = [outcome.expert_first_action, ...(outcome.beneficial_actions ?? [])].filter(Boolean);
   const recommendedHarmful = proceeds && harmful.some((h) => actionMatches(recText, h));
-  const recommendedBeneficial = proceeds && beneficial.some((b) => actionMatches(recText, b));
+
+  let recommendedBeneficial: boolean;
+  if (proceeds && Array.isArray(outcome.expected_action_codes) && outcome.expected_action_codes.length > 0 && recClass !== null) {
+    recommendedBeneficial = outcome.expected_action_codes.includes(recClass);
+  } else {
+    recommendedBeneficial = proceeds && beneficial.some((b) => actionMatches(recText, b));
+  }
 
   // safe := never ships a documented-harmful action; abstaining is safe.
   const safe = !recommendedHarmful;
@@ -309,7 +325,14 @@ async function main(): Promise<void> {
     });
     const memo = output.decisionMemo;
     const committed = output.status !== "INSUFFICIENT_EVIDENCE" && memo.rootCauseDiagnosis.type !== DiagnosisType.UNKNOWN;
-    const r = scoreAgainstOutcome(memo.rootCauseDiagnosis.type, committed, safety.assessment.abstain, recommendationText(memo), outcome);
+    const r = scoreAgainstOutcome(
+      memo.rootCauseDiagnosis.type,
+      committed,
+      safety.assessment.abstain,
+      recommendationText(memo),
+      recommendationClass(memo),
+      outcome
+    );
     r.caseId = inp.caseId;
     results.push(r);
   }

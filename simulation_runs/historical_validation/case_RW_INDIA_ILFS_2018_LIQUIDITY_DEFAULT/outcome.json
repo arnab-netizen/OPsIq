@@ -1,7 +1,7 @@
 {
   "grounding_class": "REAL_SOURCE_BACKED",
-  "expert_diagnosis": "IL&FS's liquidity failure was structural and systemic. The group had financed long-gestation infrastructure projects using short- and medium-term debt instruments, creating a fundamental asset-liability mismatch that could not be resolved through normal cash management. The complexity of hundreds of subsidiaries and SPVs obscured the true group-level debt position from both governance and external stakeholders. Governance and risk oversight failed to identify and address this mismatch before it became critical. The August-September 2018 defaults triggered immediate contagion across Indian money markets, mutual funds, and NBFC confidence — confirming the systemic dimension of the failure. The crisis required emergency government intervention because the group's own governance structures were incapable of managing the resolution.",
-  "expert_first_action": "Immediately establish a creditor standstill or moratorium across group entities to halt cascading defaults, commission an independent group-level cash and liability mapping exercise to establish the true debt position, and engage government and regulatory authorities for supervised stabilisation — in parallel, freeze all non-essential outflows and new borrowing.",
+  "expert_diagnosis": "IL&FS's liquidity failure was structural and systemic. The group had financed long-gestation infrastructure projects using short- and medium-term debt instruments, creating a fundamental asset-liability mismatch that could not be resolved through normal cash management. The complexity of hundreds of subsidiaries and SPVs obscured the true group-level debt position from both governance and external stakeholders. Governance and risk oversight failed to identify and address this mismatch before it became critical. The August-September 2018 defaults triggered immediate contagion across Indian money markets, mutual funds, and NBFC confidence \u2014 confirming the systemic dimension of the failure. The crisis required emergency government intervention because the group's own governance structures were incapable of managing the resolution.",
+  "expert_first_action": "Immediately establish a creditor standstill or moratorium across group entities to halt cascading defaults, commission an independent group-level cash and liability mapping exercise to establish the true debt position, and engage government and regulatory authorities for supervised stabilisation \u2014 in parallel, freeze all non-essential outflows and new borrowing.",
   "actual_decision": "IL&FS management did not initiate a creditor standstill, independent liability review, or government engagement before the government acted unilaterally. Defaults continued to cascade and systemic contagion spread across markets before intervention.",
   "outcome_polarity": "NEGATIVE",
   "harmful_actions": [
@@ -25,5 +25,13 @@
     "Absence of early creditor coordination or government engagement before crisis became uncontrollable",
     "Infrastructure project cash-flow delays and mismatches relative to debt repayment schedules"
   ],
-  "final_business_state": "Government board supersession on October 1, 2018. New government-nominated board appointed to lead resolution. Government-supervised asset monetisation and project-level resolution process initiated. Significant losses borne by lenders, bondholders, and depositors across group entities. Resolution is ongoing and complex given group's multi-entity infrastructure portfolio."
+  "final_business_state": "Government board supersession on October 1, 2018. New government-nominated board appointed to lead resolution. Government-supervised asset monetisation and project-level resolution process initiated. Significant losses borne by lenders, bondholders, and depositors across group entities. Resolution is ongoing and complex given group's multi-entity infrastructure portfolio.",
+  "expected_diagnosis_codes": [
+    "cash_liquidity_crisis",
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

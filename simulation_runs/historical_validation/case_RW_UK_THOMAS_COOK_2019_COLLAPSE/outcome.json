@@ -16,16 +16,25 @@
     "Some asset separation discussions were undertaken in the refinancing process.",
     "Regulatory frameworks (ATOL) provided a consumer-protection backstop once collapse occurred."
   ],
-  "citation": "UK Parliament Business, Energy and Industrial Strategy Committee: Thomas Cook inquiry report (2019); Civil Aviation Authority Thomas Cook ATOL failure page (https://www.caa.co.uk/commercial-industry/airlines/licensing/atol/atol-failures/thomas-cook/); House of Commons BEIS Committee report (HC 85, 2019–20 session)",
+  "citation": "UK Parliament Business, Energy and Industrial Strategy Committee: Thomas Cook inquiry report (2019); Civil Aviation Authority Thomas Cook ATOL failure page (https://www.caa.co.uk/commercial-industry/airlines/licensing/atol/atol-failures/thomas-cook/); House of Commons BEIS Committee report (HC 85, 2019\u201320 session)",
   "actual_outcome": "Thomas Cook Group plc entered compulsory liquidation on 23 September 2019. The UK Civil Aviation Authority coordinated the largest peacetime repatriation in UK history, returning approximately 150,000 stranded customers to the United Kingdom. Approximately 9,000 UK jobs were lost. The UK Parliament Business, Energy and Industrial Strategy Committee subsequently examined the collapse and its causes, including executive pay, strategic decisions, and governance. The group did not survive as a going concern.",
   "documented_root_causes": [
-    "Debt and liquidity crisis — unsustainable debt burden accumulated through acquisitions exceeded operating cash-generation capacity.",
-    "Business-model disruption — structural shift to online and self-directed travel booking eroded the packaged-tour model over an extended period.",
-    "Weak profitability — sustained pressure on margins from structural and cyclical factors left insufficient buffer.",
-    "Fixed-cost rigidity — aircraft leases, retail estate, and staff commitments created a cost base that could not be reduced rapidly enough.",
-    "Rescue financing dependency — the group's survival was contingent on external parties agreeing to rescue terms that were not secured.",
-    "Poor strategic adaptation — management and board had not executed a credible structural response to digital disruption over the available adjustment period.",
-    "Absence of pre-planned controlled exit — failure to prepare a consumer-protection contingency in advance of failure increased harm to customers and required emergency government coordination."
+    "Debt and liquidity crisis \u2014 unsustainable debt burden accumulated through acquisitions exceeded operating cash-generation capacity.",
+    "Business-model disruption \u2014 structural shift to online and self-directed travel booking eroded the packaged-tour model over an extended period.",
+    "Weak profitability \u2014 sustained pressure on margins from structural and cyclical factors left insufficient buffer.",
+    "Fixed-cost rigidity \u2014 aircraft leases, retail estate, and staff commitments created a cost base that could not be reduced rapidly enough.",
+    "Rescue financing dependency \u2014 the group's survival was contingent on external parties agreeing to rescue terms that were not secured.",
+    "Poor strategic adaptation \u2014 management and board had not executed a credible structural response to digital disruption over the available adjustment period.",
+    "Absence of pre-planned controlled exit \u2014 failure to prepare a consumer-protection contingency in advance of failure increased harm to customers and required emergency government coordination."
   ],
-  "final_business_state": "Thomas Cook Group plc entered compulsory liquidation on 23 September 2019. The group ceased operations entirely. Emergency government-coordinated repatriation was required for stranded customers. The brand and some assets were later acquired by Fosun Tourism Group for online and licensing purposes. The group did not survive as an operating travel and airline business."
+  "final_business_state": "Thomas Cook Group plc entered compulsory liquidation on 23 September 2019. The group ceased operations entirely. Emergency government-coordinated repatriation was required for stranded customers. The brand and some assets were later acquired by Fosun Tourism Group for online and licensing purposes. The group did not survive as an operating travel and airline business.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION",
+    "STRUCTURAL_REPAIR"
+  ]
 }

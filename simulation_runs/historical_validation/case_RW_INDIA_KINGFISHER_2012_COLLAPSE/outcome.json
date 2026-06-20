@@ -17,13 +17,21 @@
   "citation": "Reuters, 20 October 2012: India suspends Kingfisher Airlines licence; DGCA suspension after failing to address regulator concerns and stopped taking bookings; NDTV: suspended for failing to present viable financial revival plan, not operated since 1 October 2012; Times of India: suspended for failing to resolve salary-payment issues; Lok Sabha official answer confirming suspension",
   "actual_outcome": "DGCA suspended Kingfisher Airlines operating licence on 20 October 2012. Airline had not operated since 1 October 2012. Failed to address regulator concerns on financial viability and salary payments. Airline was subsequently wound down.",
   "documented_root_causes": [
-    "Cash liquidity crisis — unable to pay staff for seven months",
-    "Debt solvency pressure — accumulated losses exceeding 50% of net worth",
-    "Persistent negative unit economics — never profitable since launch",
-    "Payroll arrears and employee unrest — seven months owed",
-    "Regulatory risk — DGCA actively reviewing licence",
-    "Weak turnaround credibility — no viable plan presented",
-    "Revenue decline — domestic revenue fell year-over-year"
+    "Cash liquidity crisis \u2014 unable to pay staff for seven months",
+    "Debt solvency pressure \u2014 accumulated losses exceeding 50% of net worth",
+    "Persistent negative unit economics \u2014 never profitable since launch",
+    "Payroll arrears and employee unrest \u2014 seven months owed",
+    "Regulatory risk \u2014 DGCA actively reviewing licence",
+    "Weak turnaround credibility \u2014 no viable plan presented",
+    "Revenue decline \u2014 domestic revenue fell year-over-year"
   ],
-  "final_business_state": "Licence suspended 20 October 2012. Fleet grounded. Operations ceased. Airline subsequently wound down."
+  "final_business_state": "Licence suspended 20 October 2012. Fleet grounded. Operations ceased. Airline subsequently wound down.",
+  "expected_diagnosis_codes": [
+    "cash_liquidity_crisis",
+    "unit_economics_failure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

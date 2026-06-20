@@ -27,5 +27,13 @@
     "Overexpansion into non-property sectors draining capital",
     "Insufficient cash ring-fencing for project completion obligations"
   ],
-  "final_business_state": "Defaulted on bond obligations 2021. Prolonged restructuring failed. Liquidation proceedings initiated for group entities. Systemic property-sector crisis impact. Homebuyer delivery partially addressed through government-coordinated mechanisms."
+  "final_business_state": "Defaulted on bond obligations 2021. Prolonged restructuring failed. Liquidation proceedings initiated for group entities. Systemic property-sector crisis impact. Homebuyer delivery partially addressed through government-coordinated mechanisms.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

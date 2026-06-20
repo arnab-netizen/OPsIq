@@ -22,5 +22,12 @@
     "Asset-liability mismatch from long-dated acquisition assets vs. near-term debt obligations",
     "No credible lender coordination before default crystallized"
   ],
-  "final_business_state": "INSOLVENCY_RESOLUTION"
+  "final_business_state": "INSOLVENCY_RESOLUTION",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "STABILIZATION",
+    "STRUCTURAL_REPAIR"
+  ]
 }

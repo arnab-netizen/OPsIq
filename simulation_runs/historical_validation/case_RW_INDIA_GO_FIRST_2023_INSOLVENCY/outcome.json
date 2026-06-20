@@ -14,16 +14,23 @@
     "Voluntary insolvency filing provided formal insolvency protection and creditor standstill mechanism",
     "Early public disclosure of engine dispute on record for creditor and lessor negotiations"
   ],
-  "citation": "NCLT admitted Go First voluntary insolvency 10 May 2023 (Jus Mundi); IBBI-hosted NCLT order recorded financial distress from defective Pratt & Whitney engines; Reuters 2–3 May 2023 contemporaneous reporting; AirInsight fleet grounding analysis",
+  "citation": "NCLT admitted Go First voluntary insolvency 10 May 2023 (Jus Mundi); IBBI-hosted NCLT order recorded financial distress from defective Pratt & Whitney engines; Reuters 2\u20133 May 2023 contemporaneous reporting; AirInsight fleet grounding analysis",
   "actual_outcome": "NCLT admitted Go First voluntary insolvency on 10 May 2023. CIRP commenced. Complex aviation insolvency involving fleet grounding, creditor claims, and lessor disputes. Revival and liquidation prospects under review through 2023-2024.",
   "documented_root_causes": [
-    "Cash liquidity crisis — company exhausted all financial resources",
-    "Debt solvency pressure — ₹65.21 billion in financial creditor dues",
-    "Operational capacity collapse — 50% fleet grounded by engine failures",
-    "Supplier dependency and engine reliability risk — Pratt & Whitney single-source",
-    "Revenue disruption from unavailable fleet — 50% capacity reduction",
-    "Legal-contractual dispute with supplier — unresolved at filing date",
+    "Cash liquidity crisis \u2014 company exhausted all financial resources",
+    "Debt solvency pressure \u2014 \u20b965.21 billion in financial creditor dues",
+    "Operational capacity collapse \u2014 50% fleet grounded by engine failures",
+    "Supplier dependency and engine reliability risk \u2014 Pratt & Whitney single-source",
+    "Revenue disruption from unavailable fleet \u2014 50% capacity reduction",
+    "Legal-contractual dispute with supplier \u2014 unresolved at filing date",
     "High fixed-cost airline model under capacity shock"
   ],
-  "final_business_state": "NCLT admitted insolvency 10 May 2023. CIRP commenced. Outcome unresolved as of mid-2023."
+  "final_business_state": "NCLT admitted insolvency 10 May 2023. CIRP commenced. Outcome unresolved as of mid-2023.",
+  "expected_diagnosis_codes": [
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

@@ -15,16 +15,24 @@
     "Early warning in 2020 that liquidation risk existed if Reliance deal failed",
     "Creditors exercised IBC rights to protect dues"
   ],
-  "citation": "NCLT Mumbai, Company Petition (IB)-527(MB)/2022 under Section 7 IBC; IBBI case records L51909MH2007PLC268269; Bank of India petition — default recorded ₹856.10 crore as of 31 December 2021, broader dues ₹5,322.32 crore as of 31 March 2022",
+  "citation": "NCLT Mumbai, Company Petition (IB)-527(MB)/2022 under Section 7 IBC; IBBI case records L51909MH2007PLC268269; Bank of India petition \u2014 default recorded \u20b9856.10 crore as of 31 December 2021, broader dues \u20b95,322.32 crore as of 31 March 2022",
   "actual_outcome": "NCLT Mumbai admitted insolvency on 20 July 2022, Company Petition (IB)-527(MB)/2022 under Section 7 IBC. Reliance transaction did not proceed. CIRP commenced. Later reports indicate liquidation ordered after no resolution plan was approved.",
   "documented_root_causes": [
-    "Debt solvency pressure — ₹5,322.32 crore in bank dues unpayable",
-    "Liquidity crisis — unable to service obligations",
-    "Failed strategic rescue transaction — Reliance deal blocked",
-    "Legal and governance constraint — Amazon dispute entangled asset sale",
-    "Creditor misalignment — secured creditors voted against scheme",
-    "COVID and retail disruption shock — demand and revenue impaired",
-    "Overleveraged retail structure — insufficient buffer for external shock"
+    "Debt solvency pressure \u2014 \u20b95,322.32 crore in bank dues unpayable",
+    "Liquidity crisis \u2014 unable to service obligations",
+    "Failed strategic rescue transaction \u2014 Reliance deal blocked",
+    "Legal and governance constraint \u2014 Amazon dispute entangled asset sale",
+    "Creditor misalignment \u2014 secured creditors voted against scheme",
+    "COVID and retail disruption shock \u2014 demand and revenue impaired",
+    "Overleveraged retail structure \u2014 insufficient buffer for external shock"
   ],
-  "final_business_state": "Admitted to CIRP under IBC July 2022. No resolution plan approved. Liquidation ordered."
+  "final_business_state": "Admitted to CIRP under IBC July 2022. No resolution plan approved. Liquidation ordered.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

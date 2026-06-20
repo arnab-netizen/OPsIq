@@ -1,6 +1,6 @@
 {
   "grounding_class": "REAL_SOURCE_BACKED",
-  "expert_diagnosis": "BlackBerry's competitive deterioration was structural, not tactical. The company faced a two-front ecosystem failure: consumer users were leaving for the superior app ecosystem and user experience of iOS and Android, while the platform transition delays meant the company could not credibly compete on the new operating system dimension. The enterprise security niche was real but insufficient to sustain a mass-market hardware business. The fundamental strategic question — device fight, software/services pivot, licensing, or restructuring — needed to be decided quickly, because delay itself was destroying value through continued cash consumption and ecosystem deterioration.",
+  "expert_diagnosis": "BlackBerry's competitive deterioration was structural, not tactical. The company faced a two-front ecosystem failure: consumer users were leaving for the superior app ecosystem and user experience of iOS and Android, while the platform transition delays meant the company could not credibly compete on the new operating system dimension. The enterprise security niche was real but insufficient to sustain a mass-market hardware business. The fundamental strategic question \u2014 device fight, software/services pivot, licensing, or restructuring \u2014 needed to be decided quickly, because delay itself was destroying value through continued cash consumption and ecosystem deterioration.",
   "expert_first_action": "Make a clear and rapid strategic decision between mass-market device competition and a focus on enterprise software, security, and services; stop the indecision that is simultaneously burning cash and allowing the competitive window to close. If the device strategy is continued, accelerate the platform transition urgently. If not, preserve cash by reducing hardware exposure and focus on defensible enterprise and security segments.",
   "actual_decision": "BlackBerry attempted to revive its device business with the BlackBerry 10 platform launch but failed to recapture significant market share. The company subsequently shifted away from mass-market handsets toward software, security, and enterprise services. The consumer smartphone hardware business was ultimately abandoned.",
   "outcome_polarity": "NEGATIVE",
@@ -27,5 +27,10 @@
     "Overreliance on enterprise legacy strength as a substitute for consumer competitiveness",
     "Strategic indecision between mass-market device competition and software/services pivot"
   ],
-  "final_business_state": "Survived as a software and enterprise security services company; consumer smartphone hardware business failed and was abandoned"
+  "final_business_state": "Survived as a software and enterprise security services company; consumer smartphone hardware business failed and was abandoned",
+  "expected_diagnosis_codes": [],
+  "expected_action_codes": [
+    "STRUCTURAL_REPAIR",
+    "STABILIZATION"
+  ]
 }

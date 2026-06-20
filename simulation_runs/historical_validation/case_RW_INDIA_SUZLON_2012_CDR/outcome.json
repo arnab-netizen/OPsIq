@@ -22,7 +22,7 @@
   ],
   "citation": "Suzlon Energy Ltd. press release dated 24 January 2013 (CDR approval announcement); Reuters report on approximately $1.8 billion CDR approval (January 2013); ResearchGate / Emerald case analysis on Suzlon CDR restructuring",
   "actual_outcome": "CDR package was approved by the CDR Empowered Group on 31 December 2012. Approval communicated by letter dated 23 January 2013. Suzlon publicly announced formal CDR approval on 24 January 2013. Reuters reported lenders approved a debt restructuring plan of approximately $1.8 billion. The approved package included: extended domestic debt maturity, moratorium on principal and interest on term debt, conversion of interest costs into equity, lowered interest rates, and a back-ended maturity profile.",
-  "outcome_direction": "MIXED — CDR approval obtained and implemented, providing immediate liquidity relief and preventing near-term default (positive). Underlying business continued to face structural challenges including margin pressure and legacy debt overhang; the CDR provided breathing room but did not resolve fundamental over-leverage from international expansion.",
+  "outcome_direction": "MIXED \u2014 CDR approval obtained and implemented, providing immediate liquidity relief and preventing near-term default (positive). Underlying business continued to face structural challenges including margin pressure and legacy debt overhang; the CDR provided breathing room but did not resolve fundamental over-leverage from international expansion.",
   "actions_taken": [
     "CDR referral filed 29 October 2012",
     "CDR Empowered Group approval obtained 31 December 2012",
@@ -35,11 +35,18 @@
   ],
   "documented_root_causes": [
     "Debt overhang from aggressive international expansion and acquisition integration (ResearchGate)",
-    "Deteriorating operating profitability — negative EBIT margin (Suzlon filing)",
+    "Deteriorating operating profitability \u2014 negative EBIT margin (Suzlon filing)",
     "Rupee depreciation materially increasing the effective burden of foreign-currency debt (ResearchGate)",
     "Unhedged foreign-currency FCCB coupon obligations (Suzlon filing)",
     "Working capital constraint limiting ability to service operating requirements (Suzlon filing)",
     "Need to restructure capital structure to reach sustainable leverage levels (ResearchGate)"
   ],
-  "final_business_state": "CDR implemented; company obtained liquidity relief and avoided immediate default. Continued to operate with restructured domestic debt. Underlying profitability and leverage challenges persisted in subsequent periods. Outcome classified MIXED: immediate crisis averted, structural issues unresolved at CDR date."
+  "final_business_state": "CDR implemented; company obtained liquidity relief and avoided immediate default. Continued to operate with restructured domestic debt. Underlying profitability and leverage challenges persisted in subsequent periods. Outcome classified MIXED: immediate crisis averted, structural issues unresolved at CDR date.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "STABILIZATION",
+    "STRUCTURAL_REPAIR"
+  ]
 }

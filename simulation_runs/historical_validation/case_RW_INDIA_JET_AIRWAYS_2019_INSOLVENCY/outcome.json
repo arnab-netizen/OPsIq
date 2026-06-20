@@ -16,14 +16,22 @@
   "citation": "NCLT Mumbai admitted petition 20 June 2019, appointed Interim Resolution Professional. Supreme Court of India directed liquidation November 2024 after multi-year revival effort. Dutch bankruptcy proceedings from May 2019. Jet Airways official insolvency page and IBBI order confirm CIRP commencement.",
   "actual_outcome": "NCLT Mumbai admitted insolvency petition 20 June 2019 and appointed Interim Resolution Professional. Dutch bankruptcy proceedings ran from May 2019. Multi-year revival effort under Jalan-Kalrock consortium ultimately failed. Supreme Court directed liquidation in November 2024.",
   "documented_root_causes": [
-    "Cash liquidity crisis — insufficient to continue operations",
-    "Debt solvency pressure — heavily debt-laden balance sheet",
-    "Failed emergency funding rescue — lenders declined April 2019",
-    "High operating-cost structure — uncompetitive with LCCs",
+    "Cash liquidity crisis \u2014 insufficient to continue operations",
+    "Debt solvency pressure \u2014 heavily debt-laden balance sheet",
+    "Failed emergency funding rescue \u2014 lenders declined April 2019",
+    "High operating-cost structure \u2014 uncompetitive with LCCs",
     "Competitive pressure from low-cost carriers",
-    "Loss of operating continuity from suspension — slots and routes at risk",
+    "Loss of operating continuity from suspension \u2014 slots and routes at risk",
     "Creditor coordination complexity across multiple creditor classes",
-    "Cross-border insolvency complexity — Dutch jurisdiction"
+    "Cross-border insolvency complexity \u2014 Dutch jurisdiction"
   ],
-  "final_business_state": "CIRP commenced June 2019. Multi-year revival attempt failed. Supreme Court directed liquidation November 2024."
+  "final_business_state": "CIRP commenced June 2019. Multi-year revival attempt failed. Supreme Court directed liquidation November 2024.",
+  "expected_diagnosis_codes": [
+    "cash_liquidity_crisis",
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

@@ -17,12 +17,19 @@
   "citation": "HBS Working Knowledge: what went wrong at J.C. Penney; Forbes: was Ron Johnson's strategy wrong; Paddle pricing analysis; later sales decline and CEO removal documented by SEC filings and financial journalism",
   "actual_outcome": "Sales and customer traffic declined sharply after the pricing strategy rollout. Core customer base was alienated by removal of promotional pricing. Ron Johnson was removed as CEO in 2013. Analyses identified abrupt pricing change, customer-behavior misunderstanding, and brand mismatch as the primary failure factors.",
   "documented_root_causes": [
-    "Pricing strategy and customer psychology mismatch — core customers were promo-conditioned",
-    "Poor change management — abrupt full-chain rollout without validation",
-    "Customer segmentation failure — existing segment not compatible with everyday pricing model",
-    "Brand repositioning risk — simultaneous name and pricing change compounded confusion",
-    "Traffic and conversion risk — chain-wide loss from day one",
-    "Overconfidence in executive transplant strategy — Apple retail concept did not transfer"
+    "Pricing strategy and customer psychology mismatch \u2014 core customers were promo-conditioned",
+    "Poor change management \u2014 abrupt full-chain rollout without validation",
+    "Customer segmentation failure \u2014 existing segment not compatible with everyday pricing model",
+    "Brand repositioning risk \u2014 simultaneous name and pricing change compounded confusion",
+    "Traffic and conversion risk \u2014 chain-wide loss from day one",
+    "Overconfidence in executive transplant strategy \u2014 Apple retail concept did not transfer"
   ],
-  "final_business_state": "Sales and traffic declined sharply. CEO Ron Johnson removed 2013. Strategy reversed. Company continued but significantly weakened."
+  "final_business_state": "Sales and traffic declined sharply. CEO Ron Johnson removed 2013. Strategy reversed. Company continued but significantly weakened.",
+  "expected_diagnosis_codes": [
+    "pricing_power"
+  ],
+  "expected_action_codes": [
+    "STRUCTURAL_REPAIR",
+    "STABILIZATION"
+  ]
 }

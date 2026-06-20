@@ -25,5 +25,12 @@
     "Liquidity and creditor-confidence collapse following fraud disclosure",
     "Regulatory and enforcement risk from CBI and banking regulator response"
   ],
-  "final_business_state": "Group operations collapsed. Investigations and insolvency proceedings followed. Creditor recovery severely impaired. Became major Indian corporate fraud and banking governance case study."
+  "final_business_state": "Group operations collapsed. Investigations and insolvency proceedings followed. Creditor recovery severely impaired. Became major Indian corporate fraud and banking governance case study.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

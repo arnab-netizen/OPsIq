@@ -27,5 +27,12 @@
     "Investor-trust collapse following institutional investor complaints",
     "Reputation and regulatory risk from scale of fiduciary failure"
   ],
-  "final_business_state": "Provisional liquidation Cayman Islands June 2018. Group collapsed. Asset management operations sold or transferred to protect portfolio companies. Major PE governance failure case. Criminal and civil proceedings followed."
+  "final_business_state": "Provisional liquidation Cayman Islands June 2018. Group collapsed. Asset management operations sold or transferred to protect portfolio companies. Major PE governance failure case. Criminal and civil proceedings followed.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

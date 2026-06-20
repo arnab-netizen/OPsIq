@@ -1,7 +1,7 @@
 {
   "grounding_class": "REAL_SOURCE_BACKED",
-  "expert_diagnosis": "Fortis Healthcare's crisis was fundamentally a governance credibility failure caused by alleged promoter-linked fund diversion through inter-corporate deposits, compounding pre-existing capital pressure and ownership uncertainty. The core problem was not clinical or operating performance but the complete erosion of investor, lender, and regulatory trust in the promoter and board. In a healthcare business, where patient confidence, clinical talent, and regulatory relationships are commercially critical, governance failure carries an operational dimension that non-healthcare businesses do not face to the same degree. The path to value preservation required governance reset first — only a credible, independent board and clean governance structure could create conditions for a legitimate strategic investor process. Without this sequence, any capital or strategic transaction would face execution risk from unresolved governance liabilities.",
-  "expert_first_action": "Commission an independent forensic review of all inter-corporate deposits and related-party transactions to establish facts, simultaneously reset the board with independent directors empowered to act, and ring-fence hospital operations from the promoter dispute — these three actions must precede any strategic investor process.",
+  "expert_diagnosis": "Fortis Healthcare's crisis was fundamentally a governance credibility failure caused by alleged promoter-linked fund diversion through inter-corporate deposits, compounding pre-existing capital pressure and ownership uncertainty. The core problem was not clinical or operating performance but the complete erosion of investor, lender, and regulatory trust in the promoter and board. In a healthcare business, where patient confidence, clinical talent, and regulatory relationships are commercially critical, governance failure carries an operational dimension that non-healthcare businesses do not face to the same degree. The path to value preservation required governance reset first \u2014 only a credible, independent board and clean governance structure could create conditions for a legitimate strategic investor process. Without this sequence, any capital or strategic transaction would face execution risk from unresolved governance liabilities.",
+  "expert_first_action": "Commission an independent forensic review of all inter-corporate deposits and related-party transactions to establish facts, simultaneously reset the board with independent directors empowered to act, and ring-fence hospital operations from the promoter dispute \u2014 these three actions must precede any strategic investor process.",
   "actual_decision": "Fortis conducted a competitive strategic investor process that resulted in IHH Healthcare being selected as strategic investor. The process did not fully resolve underlying governance and legal disputes before the transaction, resulting in prolonged litigation and regulatory complications that delayed completion of the open offer.",
   "outcome_polarity": "NEGATIVE",
   "harmful_actions": [
@@ -24,5 +24,12 @@
     "Reputation risk in healthcare: governance failure in a patient-facing regulated business carries amplified commercial consequences",
     "Related-party exposure not independently resolved before strategic transaction, enabling prolonged litigation"
   ],
-  "final_business_state": "Fortis Healthcare survived as a going concern. IHH Healthcare became strategic investor with approximately 31.1% stake acquired in 2018. Open offer delayed until 2025 regulatory clearance due to litigation involving former promoters. Business remains operational as a significant Indian hospital network under IHH strategic influence, but the governance crisis and its legal aftermath extended for approximately seven years post-transaction."
+  "final_business_state": "Fortis Healthcare survived as a going concern. IHH Healthcare became strategic investor with approximately 31.1% stake acquired in 2018. Open offer delayed until 2025 regulatory clearance due to litigation involving former promoters. Business remains operational as a significant Indian hospital network under IHH strategic influence, but the governance crisis and its legal aftermath extended for approximately seven years post-transaction.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

@@ -24,5 +24,12 @@
     "Asset monetization dependence with delayed and incomplete execution",
     "Liquidity crisis driven by mismatch between debt obligations and operating cash flow"
   ],
-  "final_business_state": "Corporate insolvency resolution process initiated May 2019; continued insolvency proceedings with unresolved creditor claims and deepening group-level distress."
+  "final_business_state": "Corporate insolvency resolution process initiated May 2019; continued insolvency proceedings with unresolved creditor claims and deepening group-level distress.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

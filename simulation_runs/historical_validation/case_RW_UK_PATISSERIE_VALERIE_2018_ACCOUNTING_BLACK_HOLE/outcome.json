@@ -15,15 +15,22 @@
     "External investigation was initiated, which was directionally correct even if insufficient to prevent administration.",
     "Lender and regulatory engagement was initiated."
   ],
-  "citation": "BBC News (2019-01-22): 'Patisserie Valerie owner enters administration'; The Guardian (2019-01-22): 'Patisserie Valerie: café chain goes into administration'; FRC (2021-06): 'FRC sanctions Grant Thornton UK LLP and audit engagement partner in relation to Patisserie Holdings plc audit'",
+  "citation": "BBC News (2019-01-22): 'Patisserie Valerie owner enters administration'; The Guardian (2019-01-22): 'Patisserie Valerie: caf\u00e9 chain goes into administration'; FRC (2021-06): 'FRC sanctions Grant Thornton UK LLP and audit engagement partner in relation to Patisserie Holdings plc audit'",
   "actual_outcome": "Patisserie Holdings plc entered administration in January 2019. Parts of the business including stores and the brand were subsequently sold. The FRC later sanctioned the external auditor Grant Thornton for audit failures related to the Patisserie Holdings engagement. A large accounting hole was confirmed by administrators.",
   "documented_root_causes": [
-    "Accounting-control failure — internal controls were insufficient to prevent or detect material misstatement over an extended period.",
-    "Financial-statement reliability failure — previously published accounts did not reflect true financial position.",
-    "Cash and debt misrepresentation — actual cash balances and debt levels materially differed from reported figures.",
-    "Governance and audit oversight failure — board audit processes and external audit did not detect the irregularities.",
-    "Fraud risk materialized — later investigation confirmed intentional financial misrepresentation.",
-    "Failure to preserve operating value — inability to verify financial truth in time to secure sustainable rescue financing led to administration."
+    "Accounting-control failure \u2014 internal controls were insufficient to prevent or detect material misstatement over an extended period.",
+    "Financial-statement reliability failure \u2014 previously published accounts did not reflect true financial position.",
+    "Cash and debt misrepresentation \u2014 actual cash balances and debt levels materially differed from reported figures.",
+    "Governance and audit oversight failure \u2014 board audit processes and external audit did not detect the irregularities.",
+    "Fraud risk materialized \u2014 later investigation confirmed intentional financial misrepresentation.",
+    "Failure to preserve operating value \u2014 inability to verify financial truth in time to secure sustainable rescue financing led to administration."
   ],
-  "final_business_state": "Patisserie Holdings plc entered administration. Selected stores and the brand were sold to a third party. The group did not survive as an independent going concern. The external auditor was subsequently sanctioned by the Financial Reporting Council."
+  "final_business_state": "Patisserie Holdings plc entered administration. Selected stores and the brand were sold to a third party. The group did not survive as an independent going concern. The external auditor was subsequently sanctioned by the Financial Reporting Council.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

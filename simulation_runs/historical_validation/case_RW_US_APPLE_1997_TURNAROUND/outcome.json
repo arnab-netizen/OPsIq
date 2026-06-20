@@ -28,5 +28,10 @@
     "Cost structure incompatible with declining revenue trajectory",
     "Failure to maintain focus on differentiated core strengths"
   ],
-  "final_business_state": "Full recovery and long-term market leadership following sustained focus, product simplification, and platform rebuilding"
+  "final_business_state": "Full recovery and long-term market leadership following sustained focus, product simplification, and platform rebuilding",
+  "expected_diagnosis_codes": [],
+  "expected_action_codes": [
+    "STRUCTURAL_REPAIR",
+    "GROWTH_ENABLEMENT"
+  ]
 }

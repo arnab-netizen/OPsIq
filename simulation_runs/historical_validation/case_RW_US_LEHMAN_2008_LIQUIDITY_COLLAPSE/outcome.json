@@ -1,7 +1,7 @@
 {
   "grounding_class": "REAL_SOURCE_BACKED",
-  "expert_diagnosis": "Lehman Brothers faced a fatal combination of excessive leverage, illiquid and overvalued real-estate and mortgage assets, and total dependence on short-term wholesale funding. The Bear Stearns rescue in March 2008 demonstrated that confidence-driven liquidity collapses could happen rapidly. Lehman's capital raise in June 2008 was insufficient to address the scale of the balance-sheet problem and delayed decisive restructuring. Management's public assertions of adequate liquidity were not supported by the underlying asset quality or funding structure. The core failure was the refusal to take decisive, credible action early enough to restore confidence — specifically, raising substantially more capital, recognising losses transparently, selling risky assets at realistic prices, or securing a strategic transaction before market confidence fully collapsed.",
-  "expert_first_action": "Immediately pursue the largest feasible capital raise or asset disposal, accept realistic loss recognition on distressed holdings, and initiate a formal strategic process for a buyer or government-facilitated solution — before funding confidence collapses rather than after.",
+  "expert_diagnosis": "Lehman Brothers faced a fatal combination of excessive leverage, illiquid and overvalued real-estate and mortgage assets, and total dependence on short-term wholesale funding. The Bear Stearns rescue in March 2008 demonstrated that confidence-driven liquidity collapses could happen rapidly. Lehman's capital raise in June 2008 was insufficient to address the scale of the balance-sheet problem and delayed decisive restructuring. Management's public assertions of adequate liquidity were not supported by the underlying asset quality or funding structure. The core failure was the refusal to take decisive, credible action early enough to restore confidence \u2014 specifically, raising substantially more capital, recognising losses transparently, selling risky assets at realistic prices, or securing a strategic transaction before market confidence fully collapsed.",
+  "expert_first_action": "Immediately pursue the largest feasible capital raise or asset disposal, accept realistic loss recognition on distressed holdings, and initiate a formal strategic process for a buyer or government-facilitated solution \u2014 before funding confidence collapses rather than after.",
   "actual_decision": "Lehman management continued to assert adequate liquidity and capital adequacy through summer 2008. Capital raise in June 2008 was insufficient in scale. Asset sales and leverage reduction were insufficient and delayed. No strategic buyer was secured and no government backstop was arranged before the filing.",
   "outcome_polarity": "NEGATIVE",
   "harmful_actions": [
@@ -25,5 +25,13 @@
     "No strategic buyer or government backstop secured in time",
     "Confidence-driven liquidity collapse once counterparty trust failed"
   ],
-  "final_business_state": "Total collapse. Lehman Brothers Holdings Inc. filed Chapter 11 bankruptcy on September 15, 2008. The filing triggered global financial market dislocation. Core business units were sold to Barclays and Nomura in post-bankruptcy transactions. The event became the defining moment of the 2008 global financial crisis."
+  "final_business_state": "Total collapse. Lehman Brothers Holdings Inc. filed Chapter 11 bankruptcy on September 15, 2008. The filing triggered global financial market dislocation. Core business units were sold to Barclays and Nomura in post-bankruptcy transactions. The event became the defining moment of the 2008 global financial crisis.",
+  "expected_diagnosis_codes": [
+    "cash_liquidity_crisis",
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
 }

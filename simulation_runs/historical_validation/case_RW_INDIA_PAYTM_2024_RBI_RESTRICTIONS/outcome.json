@@ -1,6 +1,6 @@
 {
   "grounding_class": "REAL_SOURCE_BACKED",
-  "expert_diagnosis": "Paytm Payments Bank's crisis was the result of persistent and systemic compliance and governance control failure over multiple years, not a single compliance event. RBI's escalation from a customer-onboarding halt (2022) to a full fresh-deposit and credit-transaction restriction (January 2024) demonstrated that the bank had not remediated the underlying control environment despite regulatory warnings. The business-model structure — where the listed parent's payment ecosystem was heavily dependent on the restricted banking entity — amplified the operational risk from any regulatory action into an existential threat to the wider Paytm business.",
+  "expert_diagnosis": "Paytm Payments Bank's crisis was the result of persistent and systemic compliance and governance control failure over multiple years, not a single compliance event. RBI's escalation from a customer-onboarding halt (2022) to a full fresh-deposit and credit-transaction restriction (January 2024) demonstrated that the bank had not remediated the underlying control environment despite regulatory warnings. The business-model structure \u2014 where the listed parent's payment ecosystem was heavily dependent on the restricted banking entity \u2014 amplified the operational risk from any regulatory action into an existential threat to the wider Paytm business.",
   "expert_first_action": "Immediate and unconditional submission to a comprehensive independent compliance audit with results shared with RBI, combined with an urgent operational plan to migrate all merchant and consumer payment flows to licensed and compliant partner banks before the restriction deadline.",
   "actual_decision": "Paytm moved to migrate payment operations to partner banks (Axis Bank, Yes Bank, and others) and initiated discussions with RBI on remediation. However, the restrictions materially disrupted operations and the wider Paytm ecosystem experienced significant merchant and consumer confidence impact.",
   "outcome_polarity": "NEGATIVE",
@@ -25,5 +25,12 @@
     "Failure to build compliant alternative banking infrastructure before restrictions materialized",
     "Regulated financial-services risk that was not adequately managed given persistent RBI supervisory concerns"
   ],
-  "final_business_state": "Paytm Payments Bank operations materially restricted by RBI; payment flows migrated to partner banks with significant operational disruption; Paytm brand and listed parent One97 Communications experienced material merchant and consumer confidence erosion; continuing regulatory and compliance scrutiny persisted in subsequent periods."
+  "final_business_state": "Paytm Payments Bank operations materially restricted by RBI; payment flows migrated to partner banks with significant operational disruption; Paytm brand and listed parent One97 Communications experienced material merchant and consumer confidence erosion; continuing regulatory and compliance scrutiny persisted in subsequent periods.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }

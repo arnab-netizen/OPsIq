@@ -25,5 +25,12 @@
     "Management credibility collapse following abrupt CEO resignation",
     "Fraud risk: evidence of deliberate structuring to mislead investors and creditors"
   ],
-  "final_business_state": "Total corporate collapse. Enron filed Chapter 11 bankruptcy in December 2001. Shareholders lost substantially all value. Criminal convictions of senior executives followed. Arthur Andersen ceased to exist as a going concern. US regulatory framework was materially reformed as a result."
+  "final_business_state": "Total corporate collapse. Enron filed Chapter 11 bankruptcy in December 2001. Shareholders lost substantially all value. Criminal convictions of senior executives followed. Arthur Andersen ceased to exist as a going concern. US regulatory framework was materially reformed as a result.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
 }
