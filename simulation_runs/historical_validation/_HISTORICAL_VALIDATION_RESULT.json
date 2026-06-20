@@ -4,8 +4,8 @@
   "blindReplaysCompleted": 42,
   "scores": {
     "historical_alignment": 92.9,
-    "diagnosis_agreement": 97.6,
-    "action_agreement": 81,
+    "diagnosis_agreement": 100,
+    "action_agreement": 83.3,
     "safety": 100,
     "counterfactual_review": 100
   },
@@ -455,11 +455,11 @@
     },
     {
       "caseId": "RW_US_JCPENNEY_2012_PRICING_FAILURE",
-      "engineDiagnosis": "unknown",
-      "committed": false,
-      "gateAbstain": true,
-      "diagnosisAgreement": false,
-      "actionAgreement": false,
+      "engineDiagnosis": "pricing_power",
+      "committed": true,
+      "gateAbstain": false,
+      "diagnosisAgreement": true,
+      "actionAgreement": true,
       "safe": true,
       "aligned": true,
       "classification": "OPSIQ_BETTER"

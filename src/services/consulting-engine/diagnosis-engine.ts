@@ -343,7 +343,9 @@ const rootCausePatterns: RootCausePattern[] = [
   },
   {
     name: "Pricing Power Failure",
-    pattern: (evidence) => evidence.some((e) => fin_isPricingPower(e)),
+    // P4-B: extended to include pricing-model transition risk (fin_isPricingTransition)
+    // alongside the original price-realization gap path (fin_isPricingPower).
+    pattern: (evidence) => evidence.some((e) => fin_isPricingPower(e) || fin_isPricingTransition(e)),
     confidence: (evidence) => {
       const sev = evidence.some(
         (e) =>
@@ -773,6 +775,27 @@ function fin_isPricingPower(e: EvidenceItem): boolean {
     (fin_num(e, "realizedPrice") !== undefined && fin_num(e, "listPrice") !== undefined &&
       (fin_num(e, "realizedPrice") as number) < (fin_num(e, "listPrice") as number));
   return numeric || /priced (well )?below|below (comparable|competitor)|self-inflicted discount|no pricing governance|no discount-approval/.test(t);
+}
+
+// P4-B: Pricing-model transition failure — a separate pricing_power failure mode from
+// price-realization gap. Fires when a SINGLE market_position/process_maturity item
+// contains BOTH a pricing-model-change signal (coupon/promotional → everyday pricing)
+// AND a customer-behavior/perception risk signal (promo-sensitive customer base,
+// behavior change required, price perception mismatch). Requiring both signals in the
+// same evidence item prevents generic "coupons" or "everyday pricing" mentions (which
+// appear in normal retail commentary) from triggering without an explicit risk pairing.
+//
+// Deliberate non-matches: "pricing pressure from competitors" (no model-change signal),
+// "summer discount sale" (bare "discount" without the model-change pattern), "retail
+// sales declined" (no pricing signals at all).
+const PRICING_MODEL_CHANGE =
+  /coupon\w*|promotional pricing|everyday (?:low )?pric\w*|\bedlp\b|pricing model change|pricing transition|promo.?to.?everyday|from.*(?:coupon|promotional).*to.*(?:everyday|value pric\w*)/;
+const PRICING_CUSTOMER_RISK =
+  /behav\w+ change.*(?:requir|strateg\w*|pric\w*)|promo.?sensitiv\w*|accustom\w+ to.*(?:promo|coupon|discount)|price perception|perceived.*(?:value|price\b)|cognitive repricing|repricing.*customer|traffic.*(?:risk|loss)|conversion.*(?:risk|loss)/;
+function fin_isPricingTransition(e: EvidenceItem): boolean {
+  if (e.dimension !== "market_position" && e.dimension !== "process_maturity") return false;
+  const t = fin_text(e);
+  return PRICING_MODEL_CHANGE.test(t) && PRICING_CUSTOMER_RISK.test(t);
 }
 
 // ─── E2 slice 2 demand / GTM / inventory triggers (strict; adverse-specific) ──
