@@ -180,7 +180,7 @@ const rootCausePatterns: RootCausePattern[] = [
   // reversible (see intervention-design-engine).
   {
     name: "Cash / Liquidity Crisis",
-    pattern: (evidence) => evidence.some((e) => fin_isLiquidityCrisis(e)),
+    pattern: (evidence) => evidence.some((e) => fin_isLiquidityCrisis(e)) || fin_isLiquidityPressurePaired(evidence),
     confidence: (evidence) => {
       const sev = evidence.filter((e) => fin_isLiquidityCrisis(e));
       const hard = sev.some(
@@ -627,6 +627,25 @@ function fin_isLiquidityCrisis(e: EvidenceItem): boolean {
   if (r !== undefined && r <= 6) return true; // adverse numeric (existing threshold)
   if (LIQUIDITY_HARD.test(t)) return true; // inherently adverse phrasing
   return softDistress(t, LIQUIDITY_TOPIC); // topic + adverse direction, not positive
+}
+
+// P3-F: "liquidity pressure" paired with a corroborating financial-decline signal.
+// "Liquidity pressure" alone is insufficiently specific (could appear in forward-looking
+// or management commentary without genuine crisis). It fires only when a second critical
+// financial_health item confirms operational/debt decline (asset monetisation to fund
+// operations, comparable-store-sales decline, debt-limiting investment, revenue decline).
+// "business pressure" / "financial pressure" alone do NOT match LIQUIDITY_PRESSURE_PHRASE.
+const LIQUIDITY_PRESSURE_PHRASE =
+  /liquidity pressure|liquidity.*constrain\w*|constrain\w*.*liquidity|limited.*(?:capital|financial) flexib\w*|(?:capital|financial) flexib\w*.*limited|constrain\w*.*(?:capital|financial) flexib\w*/;
+const LIQUIDITY_CORROBORATOR =
+  /asset (sale|monetiz)|fund(?:ing)? operations|comparable.*(?:store )?sales.*down|comp\w* sales.*down|revenue.*declin|operating.*declin|debt.*limit|leverage.*constrain/;
+function fin_isLiquidityPressurePaired(evidence: EvidenceItem[]): boolean {
+  const fh = evidence.filter((e) => e.dimension === "financial_health" && e.isCritical);
+  const pressureItems = fh.filter((e) => LIQUIDITY_PRESSURE_PHRASE.test(fin_text(e)));
+  if (pressureItems.length === 0) return false;
+  // Corroborator must be a DISTINCT item — the pressure finding alone is not enough
+  const otherItems = fh.filter((e) => !pressureItems.includes(e));
+  return otherItems.some((e) => LIQUIDITY_CORROBORATOR.test(fin_text(e)));
 }
 
 const UNITECON_HARD =
