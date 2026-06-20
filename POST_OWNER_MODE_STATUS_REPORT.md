@@ -1,8 +1,8 @@
 # POST OWNER MODE STATUS REPORT
 
-**Report Date:** 2026-06-15  
-**Branch:** `claude/execution-audit-phase-a-ulmljq`  
-**Current Commit:** `e548283` (B23-S1 Sales Pitch Generator, PURE_FUNCTION_VERIFIED)
+**Report Date:** 2026-06-20  
+**Branch:** `claude/cool-ptolemy-dxrpm7`  
+**Current Commit:** `8164c3a2` (B15-S1 Real-World Case-Study Benchmark Library, PURE_FUNCTION_VERIFIED)
 
 ## Phase A — DB Verification Status
 
@@ -185,8 +185,10 @@ evidence_commands:
 | B10 | PURE_FUNCTION_VERIFIED | 32 tests (harm guardrails) ✅ |
 | B11 | PURE_FUNCTION_VERIFIED | 25 tests (KPI profiles) ✅ |
 | **B12** | **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅ | **84 tests (29 contract + 55 domain)** |
-| **B13** | **PURE_FUNCTION_VERIFIED (S1)** | **26 tests (OAuth security)** |
-| **B14–B26** | **NOT_STARTED** | **Next: Google Sheets OAuth Provider** |
+| **B13** | **DB_VERIFIED_GITHUB_POSTGRES_SERVICE (S1+S2+S3)** | **60 tests** |
+| **B14** | **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** | **33 tests (browser-assisted import)** |
+| **B15** | **PURE_FUNCTION_VERIFIED (S1)** | **36 tests (case-study library)** |
+| **B16–B26** | **NOT_STARTED** | **Next: B16 Public Dataset Test Harness** |
 
 **Phase B Test Summary:**
 - **Verified tests: 164** (B01-B05, B07 fully passing; B06 core working)
@@ -507,6 +509,51 @@ DB_SLICE_STATUS (B12-S3):
 ```
 
 **Status:** B12 — External Systems Connector (Export Imports) **DB_VERIFIED_GITHUB_POSTGRES_SERVICE** ✅
+
+---
+
+### B15-S1 Closeout (Real-World Case-Study Benchmark Library)
+
+- **Files added:**
+  - `src/domain/case-studies/contract.ts` (Zod schema: CaseStudySchema, CaseStudySourceSchema, BlindTestCaseStudy type)
+  - `src/domain/case-studies/library.ts` (5 seeded public-domain case studies: retail, restaurant, professional-services, manufacturing, e-commerce)
+  - `src/domain/case-studies/index.ts` (filterCaseStudies, getCaseStudyById, toBlindTestCaseStudy, listIndustries, listTags helpers)
+  - `src/__tests__/case-studies/contract.test.ts` (36 pure-function tests)
+
+- **Core features implemented:**
+  - Schema-validated case study contract with required `license_or_allowed_use` on all sources
+  - 5 seeded case studies from public-domain / government / platform sources only (NIST MEP, SCORE, NRA, AICPA, Shopify)
+  - Blind-test mode: `toBlindTestCaseStudy()` strips `hidden_root_causes` and `actual_outcome`
+  - Filter helpers by industry, business_size, confidence, tags (AND semantics)
+
+- **Acceptance gates (all proven):**
+  - ✅ source and allowed-use fields required on every case study (schema enforced)
+  - ✅ case summaries avoid copyrighted full text (paraphrased summaries only)
+  - ✅ blind-test mode hides outcome/root cause
+  - ✅ all 5 seed entries pass schema validation
+  - ✅ unique case_ids enforced (tested)
+  - ✅ no DB required (pure data + pure function)
+
+- **Local gates:**
+  - `npx tsc --noEmit` ✓ (exit 0)
+  - B15 vitest 36/36 ✓
+
+```text
+SLICE_DB_CLASSIFICATION (B15-S1):
+  slice_id: B15-S1
+  module: B15 — Real-World Case-Study Benchmark Library
+  db_required: false
+  db_lane_required: LANE_A_STATIC
+  persistence_touched: false
+  schema_touched: false
+  workspace_isolation_touched: false
+  transaction_touched: false
+  hosted_db_claim_required: false
+  blocked_parts: none
+```
+
+**Test Coverage:** 36/36 pure-function tests passing (LANE_A)
+**Status:** B15-S1 — Case-Study Benchmark Library **PURE_FUNCTION_VERIFIED** ✅
 
 ---
 
