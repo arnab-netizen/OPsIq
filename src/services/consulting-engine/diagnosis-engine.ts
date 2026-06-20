@@ -803,7 +803,7 @@ const LEGAL_TEXT =
 // accounting opacity — circumspect accounting / SPV / governance-risk vocabulary that
 // signals Enron-style financial-engineering risk without using the word "fraud".
 const STRONG_LEGAL_TEXT =
-  /misconduct|\bfraud\b|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction\w*|penalt\w*|non-?complian\w*|moratorium|misappropriat\w*|embezzl\w*|\baudit\b|off-?balance-?sheet|related.?party|conflicts? of interest|structural opacity|accounting opacity/;
+  /misconduct|\bfraud\b|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction\w*|penalt\w*|non-?complian\w*|moratorium|misappropriat\w*|embezzl\w*|\baudit\b|off-?balance-?sheet|related.?party|conflicts? of interest|structural opacity|accounting opacity|regulatory intervention|capital inadequac\w*|capital.?adequacy.*insufficient|insufficient.*capital.?adequacy|rbi.*intervention|central bank.*intervention|intervention.*(?:rbi|central bank|regulator)|regulator.*(?:seize|take over|supersede|appoint|place|put).*bank|banking.*licen[sc]e.*(?:revoke|cancel|suspend)|licen[sc]e.*(?:revoke|cancel|suspend).*bank/;
 
 // Global version for counting distinct LEGAL_TEXT hits within a single finding
 const LEGAL_TEXT_G =
