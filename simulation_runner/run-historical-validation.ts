@@ -33,7 +33,7 @@ import type { CausalEvidence } from "@/services/governance/causal-challenge";
 import type { OwnerConstraintProfileLike } from "@/services/governance/constraint-alignment";
 import { normalizeDiagnosis, actionMatches } from "@/services/benchmark/round2-scorer";
 
-const NS = "6f1b2c4e-0000-4000-8000-historical00";
+const NS = "6f1b2c4e-0000-4000-8000-000000000001"; // stable namespace for historical validation suite
 const repoRoot = path.resolve(__dirname, "..");
 const casesDir = path.join(repoRoot, "simulation_runs", "historical_validation");
 const outFile = path.join(casesDir, "_HISTORICAL_VALIDATION_RESULT.json");

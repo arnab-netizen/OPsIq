@@ -1,0 +1,44 @@
+{
+  "source_urls": [
+    "Suzlon Energy Ltd. investor presentation / company filing — specific URL not provided in case packet; cited as primary company disclosure (Suzlon)",
+    "Suzlon Energy Ltd. press release dated 24 January 2013 — CDR approval announcement; specific URL not provided in case packet (Suzlon)",
+    "Reuters — report on approximately $1.8 billion CDR approval, January 2013; specific URL not provided in case packet",
+    "ResearchGate / Emerald case analysis on Suzlon CDR — specific URL not provided in case packet; used for corroboration only"
+  ],
+  "source_type": "company_filing_press_release_and_wire_service",
+  "source_quality": {
+    "primary": "A-level — Suzlon Energy Ltd. company filings, investor presentations, and press releases (direct company disclosures filed with exchanges or issued publicly)",
+    "secondary_wire": "B-level — Reuters wire report corroborating CDR approval amount ($1.8 billion) and outcome",
+    "secondary_academic": "B-level — ResearchGate / Emerald case analysis corroborating rupee depreciation impact and structural root causes; used for corroboration only, not as sole basis for any material claim"
+  },
+  "decision_date_proof": {
+    "cdr_referral_date": "29 October 2012 — stated in Suzlon company filing",
+    "h1_fy13_financials": "Revenue INR 10,449 crore, EBIT margin -7% — from Suzlon investor presentation (H1 FY13 = April–September 2012, pre-decision date)",
+    "net_debt_to_equity": "2.9x as of 30 June 2012 — from Suzlon company filing (pre-decision date)",
+    "fccb_extension_failure": "FCCB holder extension request status at decision date — from Suzlon company filing",
+    "working_capital_constraint": "Constrained working capital at decision date — from Suzlon company filing"
+  },
+  "outcome_proof": {
+    "cdr_approval_date": "31 December 2012 — CDR Empowered Group approval; from Suzlon press release dated 24 January 2013",
+    "approval_letter_date": "23 January 2013 — CDR approval letter communicated; from Suzlon press release",
+    "public_announcement_date": "24 January 2013 — Suzlon press release",
+    "restructuring_amount": "Approximately $1.8 billion — from Reuters report",
+    "package_terms": "Extended maturity, moratorium, interest-to-equity conversion, lower rates, back-ended profile — from Suzlon press release"
+  },
+  "access_date": "2026-06-20",
+  "copyright_handling": "Financial figures and decision-date facts extracted and paraphrased from public company disclosures and press releases. Reuters figure cited with attribution. ResearchGate analysis used for corroboration of structural factors only. No wholesale copying of proprietary text. All material claims attributed to source in case packet.",
+  "full_text_available": false,
+  "source_limitations": [
+    "Specific URLs for Suzlon investor presentation and press releases not provided in case packet — cited as 'Suzlon' without resolvable URL; a fetch-capable environment should locate and record the exact BSE/NSE filing URLs",
+    "Reuters article URL not provided in case packet; cited as 'Reuters' with content description",
+    "ResearchGate article URL not provided in case packet; cited as 'ResearchGate'",
+    "Full text of CDR package terms not in case packet; only key terms described in press release summary",
+    "Specific FCCB outstanding amount (in INR or USD) not provided in case packet",
+    "Individual domestic lender names and exposure amounts not provided in case packet",
+    "Specific REpower acquisition cost and integration status at decision date not provided in case packet"
+  ],
+  "reliability_tier": "A-B",
+  "supports_ground_truth": "YES",
+  "contamination_risk": "LOW",
+  "contamination_notes": "Suzlon Energy CDR is primarily covered in Indian financial and business press. Not a globally famous case study. LLM training data saturation risk is low compared to Blockbuster, WeWork, or GM. Specific financial figures (net D/E 2.9x, H1 FY13 revenue INR 10,449 crore, EBIT -7%) are precise enough to be source-derived rather than model-recalled approximations."
+}

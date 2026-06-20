@@ -1,0 +1,45 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "DEBT_CRISIS",
+  "expert_first_action": "Refer debt to Corporate Debt Restructuring cell for consortium lender restructuring",
+  "actual_decision": "CDR referral made 29 October 2012; CDR package sought including moratorium on principal and interest on term debt, extended repayment profile, lower interest rates, and interest-to-equity conversion",
+  "outcome_polarity": "MIXED",
+  "outcome_date": "2013-01-24",
+  "harmful_actions": [
+    "Continue servicing unhedged foreign currency debt without restructuring while margins are negative",
+    "Attempt standalone bilateral refinancing without CDR lender consortium coordination",
+    "Pursue aggressive capital expenditure or new project acquisition during acute debt crisis",
+    "Allow FCCB default without negotiated resolution"
+  ],
+  "beneficial_actions": [
+    "Refer debt to CDR cell for lender consortium restructuring",
+    "Seek moratorium on principal and interest on term debt",
+    "Negotiate extended repayment profile with domestic lenders",
+    "Seek interest concessions and reduced rates through CDR",
+    "Resolve FCCB obligations through negotiated extension or restructuring",
+    "Convert part of interest obligations into equity to reduce cash debt service burden",
+    "Pursue non-core asset sales to deleverage"
+  ],
+  "citation": "Suzlon Energy Ltd. press release dated 24 January 2013 (CDR approval announcement); Reuters report on approximately $1.8 billion CDR approval (January 2013); ResearchGate / Emerald case analysis on Suzlon CDR restructuring",
+  "actual_outcome": "CDR package was approved by the CDR Empowered Group on 31 December 2012. Approval communicated by letter dated 23 January 2013. Suzlon publicly announced formal CDR approval on 24 January 2013. Reuters reported lenders approved a debt restructuring plan of approximately $1.8 billion. The approved package included: extended domestic debt maturity, moratorium on principal and interest on term debt, conversion of interest costs into equity, lowered interest rates, and a back-ended maturity profile.",
+  "outcome_direction": "MIXED — CDR approval obtained and implemented, providing immediate liquidity relief and preventing near-term default (positive). Underlying business continued to face structural challenges including margin pressure and legacy debt overhang; the CDR provided breathing room but did not resolve fundamental over-leverage from international expansion.",
+  "actions_taken": [
+    "CDR referral filed 29 October 2012",
+    "CDR Empowered Group approval obtained 31 December 2012",
+    "Formal CDR public announcement 24 January 2013",
+    "Domestic debt maturity extended",
+    "Moratorium on principal and interest on term debt granted",
+    "Interest costs partially converted into equity",
+    "Interest rates lowered under CDR package",
+    "Back-ended maturity profile created"
+  ],
+  "documented_root_causes": [
+    "Debt overhang from aggressive international expansion and acquisition integration (ResearchGate)",
+    "Deteriorating operating profitability — negative EBIT margin (Suzlon filing)",
+    "Rupee depreciation materially increasing the effective burden of foreign-currency debt (ResearchGate)",
+    "Unhedged foreign-currency FCCB coupon obligations (Suzlon filing)",
+    "Working capital constraint limiting ability to service operating requirements (Suzlon filing)",
+    "Need to restructure capital structure to reach sustainable leverage levels (ResearchGate)"
+  ],
+  "final_business_state": "CDR implemented; company obtained liquidity relief and avoided immediate default. Continued to operate with restructured domestic debt. Underlying profitability and leverage challenges persisted in subsequent periods. Outcome classified MIXED: immediate crisis averted, structural issues unresolved at CDR date."
+}
