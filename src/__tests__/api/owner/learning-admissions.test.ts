@@ -142,6 +142,7 @@ function makePrisma(overrides: Record<string, unknown> = {}) {
     eligibilityStatus: "LEARNING_ELIGIBLE_VERIFIED_OUTCOME",
     evidenceSourceType: "REAL_SOURCE_BACKED_CANDIDATE",
     promotionLocked: false,
+    outcomeRecordedAt: new Date("2026-04-01T00:00:00Z"),
   };
   const approvedReview = { id: "rev-001" };
 
@@ -229,6 +230,7 @@ describe("admitCandidate service — eligibility from DB only (BLOCKER-3)", () =
           eligibilityStatus: "LEARNING_INELIGIBLE_UNVERIFIED",
           evidenceSourceType: "REAL_SOURCE_BACKED_CANDIDATE",
           promotionLocked: false,
+          outcomeRecordedAt: new Date("2026-04-01T00:00:00Z"),
         }),
       },
     });
@@ -247,6 +249,7 @@ describe("admitCandidate service — eligibility from DB only (BLOCKER-3)", () =
           eligibilityStatus: "LEARNING_INELIGIBLE_AI_GENERATED",
           evidenceSourceType: "SYNTHETIC_ONLY_CANDIDATE",
           promotionLocked: false,
+          outcomeRecordedAt: new Date("2026-04-01T00:00:00Z"),
         }),
       },
     });
@@ -264,6 +267,7 @@ describe("admitCandidate service — eligibility from DB only (BLOCKER-3)", () =
           eligibilityStatus: "LEARNING_INELIGIBLE_PUBLIC_SOURCE_UNVERIFIED",
           evidenceSourceType: "REAL_SOURCE_BACKED_CANDIDATE",
           promotionLocked: false,
+          outcomeRecordedAt: new Date("2026-04-01T00:00:00Z"),
         }),
       },
     });
