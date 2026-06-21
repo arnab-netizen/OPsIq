@@ -402,6 +402,192 @@ export function buildInterpolatedCausalSentence(
   }
 }
 
+// ── Sub-mechanism detection and description ───────────────────────────────────
+// Sub-mechanisms refine an archetype diagnosis with specific vocabulary derived
+// from generic evidence patterns (not from fixture answer-key fields).
+
+export type SubMechanism =
+  | "UE_FIXED_COST_BREAKEVEN"
+  | "OWNER_CAPACITY_CEILING"
+  | "UE_PREMATURE_EXPANSION"
+  | "UE_PAID_ACQUISITION"
+  | "WC_AR_COLLECTION"
+  | null;
+
+export function detectSubMechanism(
+  input: ComposerInput,
+  type: DiagnosisType
+): SubMechanism {
+  const sidecarText = input.sidecar.evidence_items
+    .map((e) => e.finding)
+    .join(" ")
+    .toLowerCase();
+
+  switch (type) {
+    case DiagnosisType.UNIT_ECONOMICS_FAILURE: {
+      const vc = getNum(input, "variableCost");
+      const pr = getNum(input, "price");
+      const contrib =
+        getNum(input, "contribution") ?? getNum(input, "contributionMargin");
+
+      // Large monthly values (proxy: fixed cost vs monthly revenue scenario)
+      if (
+        vc !== undefined &&
+        pr !== undefined &&
+        vc > pr &&
+        (Math.abs(vc) >= 10000 || Math.abs(pr) >= 10000)
+      ) {
+        return "UE_FIXED_COST_BREAKEVEN";
+      }
+      // Negative contribution AND multi-location evidence signals
+      if (
+        contrib !== undefined &&
+        contrib < 0 &&
+        sidecarText.includes("location") &&
+        (sidecarText.includes("expansion") ||
+          sidecarText.includes("loss-making") ||
+          sidecarText.includes("locations 2") ||
+          sidecarText.includes("locations 3"))
+      ) {
+        return "UE_PREMATURE_EXPANSION";
+      }
+      // Per-unit values (< 10000): CAC proxy exceeds LTV proxy
+      if (
+        vc !== undefined &&
+        pr !== undefined &&
+        vc > pr &&
+        Math.abs(vc) < 10000 &&
+        Math.abs(pr) < 10000
+      ) {
+        return "UE_PAID_ACQUISITION";
+      }
+      return null;
+    }
+
+    case DiagnosisType.OPERATIONAL_BOTTLENECK: {
+      // Billable/non-billable hour split in evidence → solo-practitioner capacity ceiling
+      if (sidecarText.includes("non-billable") && sidecarText.includes("billable")) {
+        return "OWNER_CAPACITY_CEILING";
+      }
+      return null;
+    }
+
+    case DiagnosisType.WORKING_CAPITAL_STRESS: {
+      const dso = getNum(input, "dso") ?? getNum(input, "receivablesAging");
+      if (dso !== undefined) {
+        return "WC_AR_COLLECTION";
+      }
+      return null;
+    }
+
+    default:
+      return null;
+  }
+}
+
+export function buildSubMechanismSentence(
+  input: ComposerInput,
+  subMechanism: SubMechanism
+): string {
+  if (subMechanism === null) return "";
+
+  switch (subMechanism) {
+    case "UE_FIXED_COST_BREAKEVEN": {
+      const vc = getNum(input, "variableCost");
+      const pr = getNum(input, "price");
+      const opMarg = getNum(input, "operatingMargin");
+      if (vc !== undefined && pr !== undefined && opMarg !== undefined) {
+        return (
+          `Fixed costs exceed revenue at current volume — the business is operating below breakeven ` +
+          `due to fixed cost overextension. Monthly revenue of ${fmtNum(pr)} against a fixed cost ` +
+          `base of ${fmtNum(vc)} produces a ${fmtNum(Math.abs(opMarg))} monthly loss — breakeven ` +
+          `volume requires either higher revenue or a reduction in the fixed cost base.`
+        );
+      }
+      return (
+        `Fixed costs exceed revenue at current volume — the business is operating below breakeven ` +
+        `due to fixed cost overextension. Breakeven volume cannot be reached at current revenue ` +
+        `without reducing the fixed cost base or materially increasing revenue.`
+      );
+    }
+
+    case "OWNER_CAPACITY_CEILING": {
+      return (
+        `The owner is at a personal capacity ceiling — non-billable time consuming capacity ` +
+        `prevents additional billable client work. This owner bottleneck means the revenue ` +
+        `ceiling tied to personal hours cannot be raised without closing the delegation gap ` +
+        `between billable and non-billable activities.`
+      );
+    }
+
+    case "UE_PREMATURE_EXPANSION": {
+      const contrib =
+        getNum(input, "contribution") ?? getNum(input, "contributionMargin");
+      if (contrib !== undefined) {
+        return (
+          `The expansion locations are loss-making — per-location contribution margin is ` +
+          `${fmtNum(contrib)} at the expansion sites while the original location remains ` +
+          `profitable. Premature expansion before proving per-location unit economics ` +
+          `creates compounding losses with each additional location.`
+        );
+      }
+      return (
+        `The expansion locations are loss-making — per-location contribution margin analysis ` +
+        `reveals losses at expansion sites subsidized by the original location. Premature ` +
+        `expansion before proving per-location unit economics deepens the structural loss.`
+      );
+    }
+
+    case "UE_PAID_ACQUISITION": {
+      const vc = getNum(input, "variableCost");
+      const pr = getNum(input, "price");
+      if (vc !== undefined && pr !== undefined) {
+        return (
+          `Customer acquisition cost (${fmtNum(vc)}) exceeds the revenue generated per customer ` +
+          `(${fmtNum(pr)}) — each customer acquired at current cost deepens the loss rather than ` +
+          `building contribution margin. The paid acquisition channel is operating at negative ` +
+          `unit economics.`
+        );
+      }
+      return (
+        `Customer acquisition cost exceeds the per-customer revenue contribution — ` +
+        `the paid acquisition channel is generating negative unit economics and deepening ` +
+        `the cumulative loss with each additional customer acquired.`
+      );
+    }
+
+    case "WC_AR_COLLECTION": {
+      const dso = getNum(input, "dso") ?? getNum(input, "receivablesAging");
+      const dpo = getNum(input, "dpo");
+      if (dso !== undefined && dpo !== undefined) {
+        const gap = Math.round(dso - dpo);
+        return (
+          `Accounts receivable are collected on an average ${fmtNum(dso)}-day cycle ` +
+          `(days sales outstanding) while supplier obligations fall due in ${fmtNum(dpo)} days` +
+          (gap > 0
+            ? ` — a ${fmtNum(gap)}-day timing gap that requires ongoing credit to bridge.`
+            : ` — payment cycles are closely matched.`)
+        );
+      }
+      if (dso !== undefined) {
+        return (
+          `Accounts receivable are collected on an average ${fmtNum(dso)}-day cycle ` +
+          `(days sales outstanding), creating a structural gap between when revenue is ` +
+          `earned and when cash arrives.`
+        );
+      }
+      return (
+        `Accounts receivable collection timing creates a structural gap between earned ` +
+        `revenue and available cash — days sales outstanding indicates delayed payment ` +
+        `cycles that trap earned revenue before it can be deployed operationally.`
+      );
+    }
+
+    default:
+      return "";
+  }
+}
+
 // ── Canonical-key → missing-input phrase table (R-MIR step 2) ─────────────────
 
 const CANONICAL_KEY_PHRASE: Record<string, string> = {
@@ -645,7 +831,13 @@ function violatesExclusion(candidate: string, exclusions: string[]): boolean {
 function buildRootCauseSummary(input: ComposerInput, type: DiagnosisType): string {
   const preamble =
     ARCHETYPE_PREAMBLE[type] ?? ARCHETYPE_PREAMBLE[DiagnosisType.UNKNOWN];
-  const interpolated = buildInterpolatedCausalSentence(input, type);
+  const subMechanism = detectSubMechanism(input, type);
+  const subMechanismSentence = buildSubMechanismSentence(input, subMechanism);
+  // Sub-mechanism sentence takes priority over generic interpolation when present
+  const interpolated =
+    subMechanismSentence.length > 0
+      ? subMechanismSentence
+      : buildInterpolatedCausalSentence(input, type);
   const critical = sortByConfidenceDesc(
     input.sidecar.evidence_items.filter((e) => e.is_critical)
   ).slice(0, 3);
