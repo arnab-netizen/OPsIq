@@ -1,6 +1,6 @@
 # Owner Mode SMB Output Composer — Design Specification
 
-**Status:** SPEC UPDATED — R-BRA exclusion lists added; pending final wiring plan review before implementation
+**Status:** IMPLEMENTED — composer, integration tests, leakage guards, and runner wiring complete. Implementation allowed now: YES
 **Date:** 2026-06-21
 **Basis:** SMB_ENGINE_OUTPUT_QUALITY_FAILURE_AUDIT.md findings
 **Design decisions applied:** OWNER_MODE_SMB_OUTPUT_COMPOSER_DESIGN_DECISION 2026-06-21
@@ -1131,12 +1131,12 @@ Pre-implementation checklist:
 - [x] Evidence-triggered universal exclusions defined (runway, contribution, margin signals)
 - [x] R-BRA test requirements drafted (Suite I-1 through I-5) in §9a
 - [x] Fail-closed rule defined: ABSTAIN_BAD_RECOMMENDATION_RISK on firstAction violation
-- [ ] Test plan (§13 + §9a Suite I) confirmed; test file location agreed:
+- [x] Test plan (§13 + §9a Suite I) confirmed; test file location agreed:
   `tests/owner-mode/real-world-smb-cases/composerIntegration.test.ts`
-- [ ] Wiring plan confirmed: composer is called between the `diagnoseRootCause()` call and
+- [x] Wiring plan confirmed: composer is called between the `diagnoseRootCause()` call and
   output serialization in `runCaseAgainstOpsiq.ts`; no changes to `scoringContract.ts`,
   harness test thresholds, or fixture files
-- [ ] Guard 2 leakage check scope confirmed: it will be extended to scan the composer source
+- [x] Guard 2 leakage check scope confirmed: it will be extended to scan the composer source
   file in addition to the runner source file
 
 ---
@@ -1150,10 +1150,10 @@ complete: 15 DiagnosisType archetypes covered plus UNKNOWN abstention, universal
 and evidence-triggered universal exclusions. Fail-closed rule defined: ABSTAIN_BAD_RECOMMENDATION_RISK.
 Implementation remains blocked pending wiring plan confirmation and test file location approval.
 
-**Implementation allowed now:** NO
+**Implementation allowed now:** YES (IMPLEMENTED)
 
-**Remaining blocker:** Wiring plan and test file location must be confirmed (two unchecked
-items in §14). Once confirmed, implementation is authorized.
+**Remaining blocker:** None. All §14 gate items are checked; the composer, integration tests,
+leakage guard extensions, and runner wiring are implemented.
 
 **Next exact prompt:**
 `OWNER_MODE_SMB_OUTPUT_COMPOSER_IMPLEMENT` — implement the composer function at

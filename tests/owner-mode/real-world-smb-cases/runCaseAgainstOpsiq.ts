@@ -8,10 +8,38 @@
  * No answer-key vocabulary — output is the engine's own text fields only.
  */
 
+import { readFileSync } from "fs";
+import { join } from "path";
 import type { SmbFixture } from "./fixtureSchema";
 import { normalizeFixtureToEvidence } from "./normalizeFixtureToEvidence";
 import { diagnoseRootCause } from "@/services/consulting-engine/diagnosis-engine";
 import type { DiagnosisResult } from "@/services/consulting-engine/diagnosis-engine";
+import {
+  composeOwnerOutput,
+  serializeComposerOutput,
+  type ComposerSidecar,
+} from "./smbOutputComposer";
+
+const SIDECAR_DIR = join(__dirname, "evidence-hints");
+
+function loadComposerSidecar(caseId: string): ComposerSidecar {
+  const path = join(SIDECAR_DIR, `${caseId}.evidence-hints.json`);
+  const raw = JSON.parse(readFileSync(path, "utf-8")) as Record<string, unknown>;
+  return {
+    case_id: raw.case_id as string,
+    engine_archetype_synonym: (raw.engine_archetype_synonym as string | null) ?? null,
+    unsupported_expected_archetypes:
+      (raw.unsupported_expected_archetypes as ComposerSidecar["unsupported_expected_archetypes"]) ??
+      [],
+    evidence_items:
+      (raw.evidence_items as ComposerSidecar["evidence_items"]) ?? [],
+    clarification_requests:
+      (raw.clarification_requests as ComposerSidecar["clarification_requests"]) ??
+      [],
+    metric_key_mappings:
+      (raw.metric_key_mappings as ComposerSidecar["metric_key_mappings"]) ?? [],
+  };
+}
 
 export const TODO_INTEGRATION_SKIPPED = false;
 
@@ -70,37 +98,27 @@ export async function runCaseAgainstOpsiq(
     fixture.scenario.business
   );
 
-  const primary = diagnosisResult.primaryRootCause;
-
-  const missingLines = ["Missing information requested:"];
-  for (const m of primary.missingEvidenceFor ?? []) {
-    missingLines.push(`  - ${m}`);
-  }
-
-  const outputParts = [
-    `OpsIQ Diagnosis: ${fixture.case_id}`,
-    "",
-    `PRIMARY ROOT CAUSE: ${primary.type}`,
-    `Description: ${primary.description}`,
-    `Confidence: ${diagnosisResult.confidence}`,
-    "",
-    `Mechanism: ${primary.mechanismDescription}`,
-    "",
-    missingLines.join("\n"),
-  ];
-
-  if (diagnosisResult.warningFlags.length > 0) {
-    outputParts.push("");
-    outputParts.push(
-      `Warnings:\n${diagnosisResult.warningFlags.map((w) => `  - ${w}`).join("\n")}`
-    );
-  }
+  // Compose owner-facing output between diagnosis and serialization. The composer
+  // sees only the engine result, evidence, sidecar, and scenario fields — never
+  // the fixture answer key.
+  const sidecar = loadComposerSidecar(fixture.case_id);
+  const composerOutput = composeOwnerOutput({
+    diagnosisResult,
+    evidenceItems: normResult.evidenceItems,
+    sidecar,
+    scenario: {
+      business: fixture.scenario.business,
+      missing_inputs_opsiq_should_request:
+        fixture.scenario.missing_inputs_opsiq_should_request,
+    },
+  });
+  const output = serializeComposerOutput(composerOutput);
 
   return {
     caseId: fixture.case_id,
     skipped: false,
     unsupportedArchetype: false,
-    output: outputParts.join("\n"),
+    output,
     diagnosisResult,
   };
 }

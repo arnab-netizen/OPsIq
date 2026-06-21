@@ -9,6 +9,8 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { loadRealWorldSmbFixtures } from "./loadFixtures";
 import { runCaseAgainstOpsiq } from "./runCaseAgainstOpsiq";
+import { normalizeFixtureToEvidence } from "./normalizeFixtureToEvidence";
+import { diagnoseRootCause } from "@/services/consulting-engine/diagnosis-engine";
 
 // Strict leakage-detection scoring — 80% threshold for >3-token phrases (vs 70% in scoring contract)
 function normalizeText(text: string): string {
@@ -30,7 +32,81 @@ const RUNNER_SOURCE = readFileSync(
   "utf-8"
 );
 
+const COMPOSER_SOURCE = readFileSync(
+  join(__dirname, "smbOutputComposer.ts"),
+  "utf-8"
+);
+
 const SIDECAR_DIR = join(__dirname, "evidence-hints");
+
+// ── Guard 7: Composer source does not reference fixture answer-key fields ──
+describe("SMB leakage guard: composer source isolation", () => {
+  it("composer source does not reference expected_opsiq_diagnosis", () => {
+    expect(COMPOSER_SOURCE).not.toContain("expected_opsiq_diagnosis");
+  });
+  it("composer source does not reference scoring_criteria", () => {
+    expect(COMPOSER_SOURCE).not.toContain("scoring_criteria");
+  });
+  it("composer source does not reference must_identify", () => {
+    expect(COMPOSER_SOURCE).not.toContain("must_identify");
+  });
+  it("composer source does not reference bad_recommendations_to_flag", () => {
+    expect(COMPOSER_SOURCE).not.toContain("bad_recommendations_to_flag");
+  });
+  it("composer source does not reference expected_first_action", () => {
+    expect(COMPOSER_SOURCE).not.toContain("expected_first_action");
+  });
+});
+
+// ── Guard 8: Composer source contains no hardcoded must_identify phrases ──
+describe("SMB leakage guard: composer source vs must_identify", () => {
+  it("composer source contains no hardcoded must_identify phrase string literals", () => {
+    const fixtures = loadRealWorldSmbFixtures();
+    const violations: string[] = [];
+    for (const fixture of fixtures) {
+      for (const term of fixture.expected_opsiq_diagnosis.scoring_criteria
+        .must_identify) {
+        if (
+          COMPOSER_SOURCE.includes(`"${term}"`) ||
+          COMPOSER_SOURCE.includes(`'${term}'`)
+        ) {
+          violations.push(
+            `${fixture.case_id}: must_identify term "${term}" appears as string literal in composer source`
+          );
+        }
+      }
+    }
+    expect(
+      violations,
+      `Composer source contains hardcoded must_identify phrases:\n${violations.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
+// ── Guard 9: Composer source contains no bad_recommendations_to_flag literals ──
+describe("SMB leakage guard: composer source vs bad recommendations", () => {
+  it("composer source contains no hardcoded bad_recommendations_to_flag phrase literals", () => {
+    const fixtures = loadRealWorldSmbFixtures();
+    const violations: string[] = [];
+    for (const fixture of fixtures) {
+      for (const bad of fixture.expected_opsiq_diagnosis
+        .bad_recommendations_to_flag) {
+        if (
+          COMPOSER_SOURCE.includes(`"${bad}"`) ||
+          COMPOSER_SOURCE.includes(`'${bad}'`)
+        ) {
+          violations.push(
+            `${fixture.case_id}: bad_rec "${bad}" appears as string literal in composer source`
+          );
+        }
+      }
+    }
+    expect(
+      violations,
+      `Composer source contains hardcoded bad_recommendations_to_flag phrases:\n${violations.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
 
 // ── Guard 1: Runner source does not reference fixture scoring/diagnosis fields ──
 describe("SMB leakage guard: runner source isolation", () => {
@@ -132,18 +208,36 @@ describe("SMB leakage guard: sidecar findings vs must_identify", () => {
 });
 
 // ── Guard 5: Engine-only output covers <60% of must_identify terms ──
+// Anti-hand-mapping guard: the ENGINE'S OWN text fields (description + mechanism +
+// missingEvidenceFor) must not, by themselves, cover ≥60% of must_identify terms —
+// that would indicate the engine archetype strings were hand-tuned to the answer key.
+// The runner now serializes COMPOSER output (which legitimately raises must_identify
+// coverage — that is the composer's purpose), so this guard reconstructs the
+// engine-only serialization directly to preserve its original intent rather than
+// reading the composer-enriched runner output.
 describe("SMB leakage guard: must_identify coverage from engine output alone", () => {
-  it("engine output covers less than 60% of must_identify terms for each supported case", async () => {
+  it("engine output covers less than 60% of must_identify terms for each supported case", () => {
     const fixtures = loadRealWorldSmbFixtures();
     const violations: string[] = [];
 
     for (const fixture of fixtures) {
-      const result = await runCaseAgainstOpsiq(fixture);
-      if (result.unsupportedArchetype) continue;
+      const norm = normalizeFixtureToEvidence(fixture);
+      if (norm.unsupportedArchetype) continue;
+      const diagnosis = diagnoseRootCause(norm.evidenceItems, fixture.scenario.business);
+      const primary = diagnosis.primaryRootCause;
+      // Engine-only serialization (the pre-composer runner format).
+      const engineOutput = [
+        `PRIMARY ROOT CAUSE: ${primary.type}`,
+        `Description: ${primary.description}`,
+        `Confidence: ${diagnosis.confidence}`,
+        `Mechanism: ${primary.mechanismDescription}`,
+        ...(primary.missingEvidenceFor ?? []).map((m) => `  - ${m}`),
+        ...diagnosis.warningFlags.map((w) => `  - ${w}`),
+      ].join("\n");
 
       const mustIdentify = fixture.expected_opsiq_diagnosis.scoring_criteria.must_identify;
       const matchCount = mustIdentify.filter((term) => {
-        const h = normalizeText(result.output);
+        const h = normalizeText(engineOutput);
         const p = normalizeText(term);
         const tokens = p.split(" ").filter((t) => t.length > 2);
         if (tokens.length === 0) return h.includes(p);
