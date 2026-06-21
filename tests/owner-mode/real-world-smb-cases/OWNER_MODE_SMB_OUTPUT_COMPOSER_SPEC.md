@@ -1,6 +1,6 @@
 # Owner Mode SMB Output Composer — Design Specification
 
-**Status:** SPEC UPDATED — awaiting review of revised design before implementation
+**Status:** SPEC UPDATED — R-BRA exclusion lists added; pending final wiring plan review before implementation
 **Date:** 2026-06-21
 **Basis:** SMB_ENGINE_OUTPUT_QUALITY_FAILURE_AUDIT.md findings
 **Design decisions applied:** OWNER_MODE_SMB_OUTPUT_COMPOSER_DESIGN_DECISION 2026-06-21
@@ -400,15 +400,19 @@ The composer does NOT read `bad_recommendations_to_flag`.
 
 **Algorithm:**
 
-1. Define a static per-archetype exclusion list in the composer source. This list contains
-   generic advice known to be incorrect for each archetype. The list is defined by the
-   implementer from domain knowledge, NOT derived from any fixture field.
+1. Define a static per-archetype exclusion list in the composer source (specified in §9a below).
+   The list contains generic advice known to be incorrect for each archetype. It is defined
+   from domain knowledge, NOT derived from any fixture field.
 
-2. After serializing the full output string, run a normalized substring check for each phrase
-   in the archetype's exclusion list.
+2. Before emitting `firstAction`, check it against the archetype's exclusion list using
+   normalized substring matching. If any excluded phrase is present, do not silently correct —
+   instead return `ABSTAIN_BAD_RECOMMENDATION_RISK` (see §9a fail-closed rule).
 
-3. If a match is found, replace the sentence containing it with a neutral alternative or
-   remove it entirely. Never throw — silently correct and continue.
+3. After serializing the full output string, run a secondary normalized substring check for each
+   phrase in the archetype's exclusion list across the entire output. If a match is found in
+   any field other than `firstAction` (e.g., in `rootCauseSummary`), replace the offending
+   phrase with a neutral alternative before returning. Never expose excluded phrases to the
+   caller.
 
 4. The self-audit exclusion list is archetype-level. It does NOT contain the specific phrase
    text from any fixture's `bad_recommendations_to_flag`. If a fixture-specific bad
@@ -418,6 +422,574 @@ The composer does NOT read `bad_recommendations_to_flag`.
 **Fail-closed guarantee:** When `confidence` is INSUFFICIENT_EVIDENCE or the diagnosis type is
 UNKNOWN, the composer emits only the abstention output — no `rootCauseSummary`, no `firstAction`,
 no archetype-specific content. No guessing when the engine has abstained.
+
+---
+
+## 9a. R-BRA — Bad Recommendation Avoidance Exclusion Lists
+
+This section defines the complete per-archetype exclusion lists required before the composer
+may be implemented.
+
+### Leakage constraint (non-negotiable)
+
+These lists are defined from **general consulting domain knowledge** about each archetype.
+They are NOT derived from any fixture's `bad_recommendations_to_flag` field. The fixture
+field is not read by the composer. Overlap between an archetype exclusion phrase and a
+fixture's bad_recommendations_to_flag entry is coincidental and acceptable. The composer
+implementation must not import or reference `bad_recommendations_to_flag` in any form.
+
+### Fail-closed rule
+
+If the composer's candidate `firstAction` contains a phrase from the active archetype's
+exclusion list (normalized substring match), the composer MUST return:
+
+```typescript
+{
+  firstAction: "ABSTAIN_BAD_RECOMMENDATION_RISK",
+  rootCauseSummary: "",          // cleared
+  supportingEvidence: [],        // cleared
+  missingInputsToRequest: [],    // cleared
+  confidence: DiagnosisConfidence.INSUFFICIENT_EVIDENCE,
+  warningFlags: ["Composer abstained: proposed first action matched bad-recommendation exclusion list for archetype {type}"]
+}
+```
+
+This is a hard failure. The runner must treat `ABSTAIN_BAD_RECOMMENDATION_RISK` as an
+unsupported result and report it as a scope gap, not as a diagnosis.
+
+### Universal exclusions (all archetypes, all confidence levels)
+
+These phrases are excluded regardless of archetype:
+
+| Excluded phrase pattern | Reason |
+|------------------------|--------|
+| "raise a funding round" / "raise funding" | Growth financing before root cause is resolved accelerates cash burn |
+| "go viral" / "viral marketing" | Not an operational action; not within owner control |
+| "pivot the business" | Scope change; not within a diagnosis-stage first action |
+| "sell the business" | Exit advice; outside the intervention scope |
+| "do nothing" / "wait and see" | Contradicts intervention obligation |
+
+### Evidence-triggered universal exclusions
+
+These apply when specific evidence signals are present, regardless of archetype:
+
+| Evidence signal | Excluded phrase patterns |
+|----------------|-------------------------|
+| `fin_runwayMonths ≤ 3` OR `SURVIVAL_HARD` text in any evidence item | "expand", "open new", "hire now", "invest in growth", "increase marketing", "take on more clients", "launch new" |
+| `contribution < 0` OR `variableCost > price` in any evidence item | "scale", "grow faster", "increase volume", "add more customers", "double down on acquisition" |
+| `marginPct < 0` OR `operatingMargin < 0` in any evidence item | "run a promotion", "offer discounts", "reduce prices to compete", "drive more volume" |
+
+---
+
+### WORKING_CAPITAL_STRESS
+
+**Root cause:** Cash trapped in the AR/AP/CCC timing cycle. The business has positive operating
+margin but cash leaves before it is collected.
+
+**Core insight for exclusion design:** More revenue creates more receivables, which deepens the
+trap. More staff or expansion adds outflow obligations before the inflow cycle closes. The only
+correct first response is to understand and restructure the timing gap.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Revenue growth as first response | "grow revenue", "acquire more clients", "increase sales", "take on larger accounts", "win more business" |
+| Staff additions before timing is fixed | "hire a sales representative", "hire staff", "add headcount" |
+| Expansion before cash cycle is resolved | "open a second location", "expand", "add a new offering" |
+| Debt as a primary fix | "take a business loan to fund operations", "draw more credit" (as a strategic recommendation, not an interim measure) |
+| Product/range expansion | "expand product line", "add more SKUs", "diversify offerings" |
+
+#### Evidence-triggered exclusions
+
+| Trigger | Additional exclusions |
+|---------|-----------------------|
+| `dso ≥ 60` AND `cashConversionDays` undefined | "the cash problem will resolve when revenue increases" |
+| Bank balance < monthly payroll | "investment", "expansion", "marketing spend increase" |
+
+#### Allowed first actions
+
+- "Build a rolling cash flow forecast mapping AR inflow timing and AP due dates"
+- "Produce an AR aging report and identify the largest overdue balances"
+- "Request extended payment terms from suppliers while accelerating client collection"
+- "Calculate the cash conversion cycle to quantify the structural gap"
+
+---
+
+### INVENTORY_FORECASTING_MISMATCH
+
+**Root cause:** Demand forecasting failure misallocates stock — simultaneous overstock and
+stockout. Cash is locked in slow-moving inventory while fast lines are empty.
+
+**Core insight:** Buying more inventory (of any kind) deepens the cash trap. Marketing to
+move more units accelerates sell-through on some lines but does not fix the forecasting
+process that will re-create the problem. The only correct first response is to understand
+which specific SKUs are misallocated before making any purchasing or marketing decision.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| More inventory before forecasting is fixed | "buy more inventory", "restock", "place new orders" (before velocity analysis) |
+| Broadening assortment | "expand product range", "add more varieties", "diversify suppliers", "add more SKUs" |
+| Marketing before stock alignment | "increase marketing to move units", "run a promotion to clear stock", "advertise more" |
+| Staffing before process change | "hire more staff to manage the warehouse", "add inventory staff" |
+| Revenue growth as solution | "grow sales to reduce inventory days", "acquire more customers to turn stock faster" |
+| Debt for inventory | "take a loan to buy more inventory", "increase the credit line to fund purchasing" |
+
+#### Evidence-triggered exclusions
+
+| Trigger | Additional exclusions |
+|---------|-----------------------|
+| `forecastErrorPct ≥ 50` | "the buying process is sound and needs more data" |
+| Simultaneous overstock AND stockout evidence | "the problem is insufficient demand" |
+
+#### Allowed first actions
+
+- "Run an inventory age and velocity analysis by SKU to identify which lines are cash traps"
+- "Produce a sell-through rate by SKU over the past 6 months before placing any new orders"
+- "Identify the top 20 slow-moving SKUs and calculate the cash value locked in each"
+- "Pause all non-committed reorders until the velocity analysis is complete"
+
+---
+
+### UNIT_ECONOMICS_FAILURE
+
+**Root cause:** Contribution margin per unit or per customer is negative. Growth at negative
+contribution margin deepens losses in direct proportion to volume.
+
+**Core insight:** Any action that increases the number of units sold or customers acquired while
+contribution margin is negative makes the financial position worse, not better. The only correct
+first response is to measure and understand the contribution margin breakdown before any growth
+or acquisition action.
+
+Note: this archetype covers multiple sub-types in the SMB fixture set — paid-acquisition
+negative unit economics, fixed-cost overextension below breakeven, and premature multi-location
+expansion. All share the same fundamental exclusion logic: do not scale before the per-unit
+economics are positive.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Scaling before margin is fixed | "scale up", "grow faster", "double down", "increase volume", "expand customer base" |
+| Acquisition spend before margin | "increase ad spend", "spend more on marketing", "launch more campaigns", "hire a marketing agency" |
+| Sales headcount before margin | "hire salespeople", "hire a business development manager", "add a sales team" |
+| Opening new units before per-unit economics proven | "open a new location", "expand to new markets", "open another site" |
+| Fundraising to fuel negative-margin growth | "raise funding to scale", "bring in investors to accelerate growth" |
+| Discounting to drive volume | "offer discounts to drive volume", "reduce prices to acquire customers" |
+| Adding product/service scope at negative margin | "launch new products", "add premium tiers", "diversify the offering" |
+
+#### Evidence-triggered exclusions
+
+| Trigger | Additional exclusions |
+|---------|-----------------------|
+| `contribution < 0` AND paid channel evidence present | "improve ROAS", "optimize ad targeting", "test more creatives" (these optimize a loss-generating channel, not fix the unit economics) |
+| `variableCost > price` | "the problem is insufficient revenue" (price is below variable cost; volume cannot fix this) |
+| Multi-location evidence with negative per-location contribution | "the network effect will improve with more locations" |
+
+#### Allowed first actions
+
+- "Calculate contribution margin per unit per channel before making any further acquisition or growth decisions"
+- "Identify which channel or customer segment, if any, has positive contribution margin"
+- "Freeze all growth spend on channels with negative contribution until the margin structure is fixed"
+- "Produce a per-location P&L to determine which locations are contributing positively"
+
+---
+
+### MARGIN_EROSION
+
+**Root cause:** Costs rising faster than price, or operating profitability declining over time,
+compressing margin. The business is not unprofitable per unit but the margin gap is closing.
+
+**Core insight:** Volume increases at a compressed margin produce proportionally less cash per
+unit. Promotions and discounts further reduce revenue per unit while costs stay fixed. The
+correct first response is to understand the cost driver and evaluate pricing headroom before
+any volume or promotion action.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Volume increase before repricing | "serve more customers to spread fixed cost", "increase volume", "grow revenue to offset cost" |
+| Promotional response to margin compression | "run a promotion", "offer a discount to drive traffic", "introduce a price promotion" |
+| Adding capacity before margin is stable | "add seating", "extend hours", "open longer", "add more shifts" |
+| Staff additions before cost structure is controlled | "hire more staff to handle more volume", "add more delivery capacity" |
+| Marketing as primary fix | "advertise more to bring in more customers", "increase marketing spend" |
+| New offerings before core margin is fixed | "add premium services to increase revenue per customer", "launch new menu items" |
+
+#### Evidence-triggered exclusions
+
+| Trigger | Additional exclusions |
+|---------|-----------------------|
+| `marginPct < 0` | "cut staff as the primary cost action" (addresses symptom without diagnosing cost driver) |
+| Input cost evidence (`marginPct` declining + operational finding referencing cost inflation) | "reduce prices to compete" (further compresses margin under cost inflation) |
+| `profitChangePercent < -20` | "the problem is insufficient revenue" |
+
+#### Allowed first actions
+
+- "Implement weekly cost tracking to measure the specific cost driver compressing margin"
+- "Run a cost-driver decomposition to identify whether COGS, labor, or overhead is the primary compression source"
+- "Test a targeted price increase on key items to measure actual customer price sensitivity"
+- "Produce a contribution by product/service line to identify which lines are most affected"
+
+---
+
+### OPERATIONAL_BOTTLENECK
+
+**Root cause:** A capacity constraint limits throughput. The constraint may be owner time,
+equipment, process, or team. Revenue is capped by the bottleneck, not by demand.
+
+**Core insight:** Adding more work to a bottlenecked system worsens the constraint. Hiring
+without understanding the bottleneck structure may add cost without removing the constraint.
+The correct first response is to map where the capacity is consumed before any capacity
+expansion decision.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Adding workload before bottleneck is resolved | "take on more clients", "accept more work", "add more orders", "serve more customers now" |
+| Unsustainable personal effort as a strategy | "work harder", "extend working hours", "work more hours to meet demand", "sacrifice more time" |
+| Premature hiring without process understanding | "hire immediately to add capacity" (without first identifying where the bottleneck is) |
+| Pricing reduction to fill capacity | "reduce prices to fill the pipeline", "discount to keep the operation busy" |
+| Adding product/service complexity | "launch new service lines to use spare capacity" (if there is no spare capacity) |
+
+#### Evidence-triggered exclusions
+
+| Trigger | Additional exclusions |
+|---------|-----------------------|
+| `finding` contains "owner" AND `dimension=operational_efficiency` AND `is_critical=true` | "hire a junior employee immediately and bill them out at full rate" (hiring rate assumption before process is analyzed) |
+| Total hours worked evidence near or above personal limit | "immediately raise rates to reduce demand" (as the first action without capacity mapping) |
+
+#### Allowed first actions
+
+- "Map where time is consumed by activity type to identify which non-value activities can be eliminated or delegated"
+- "Identify the specific bottleneck step in the service delivery process before any capacity change"
+- "Quantify how much owner time is consumed by non-revenue-generating activity each week"
+- "Determine whether the constraint is process, delegation gap, or true capacity ceiling"
+
+---
+
+### CASH_LIQUIDITY_CRISIS
+
+**Root cause:** Cash outflows are outpacing inflows; runway is short; the business faces
+immediate obligation risk. This is an acute condition requiring cash preservation first.
+
+**Core insight:** Any action that increases cash burn — growth, hiring, expansion, inventory —
+worsens the crisis. The only correct first response is to understand the exact cash position
+and manage outflows before any other decision.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Growth spend during liquidity crisis | "invest in growth", "increase marketing", "launch a campaign", "grow the customer base" |
+| Staff additions | "hire now", "add headcount", "bring on staff" |
+| Inventory or capex | "buy inventory", "invest in equipment", "make capital improvements" |
+| Expansion | "open a new location", "expand the operation", "take on new space" |
+| Debt as primary fix without addressing burn | "take a loan to cover operations" (as the sole recommendation without burn-rate analysis) |
+
+#### Evidence-triggered exclusions
+
+| Trigger | Additional exclusions |
+|---------|-----------------------|
+| `fin_runwayMonths ≤ 3` | All growth-category phrases (see universal evidence-triggered exclusions) |
+| `SURVIVAL_HARD` text | "the business just needs more time" |
+
+#### Allowed first actions
+
+- "Produce a 13-week cash flow forecast showing exact inflow and outflow obligations before any other decision"
+- "Identify and defer all discretionary outflows immediately"
+- "Contact lenders or creditors to assess available runway extensions"
+- "Map committed vs discretionary obligations to identify the minimum cash needed to operate"
+
+---
+
+### DEBT_SOLVENCY_PRESSURE
+
+**Root cause:** Balance-sheet structural stress — leverage, covenant headroom, maturity wall,
+or interest burden — constraining the business's financial flexibility.
+
+**Core insight:** Actions that increase debt, consume remaining liquidity, or add operational
+complexity before the debt structure is understood worsen the position. The correct first
+response is to understand the exact debt structure and obligations.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Additional debt before structure is understood | "take on more debt", "draw additional credit", "secure new financing" |
+| Growth that increases operating cash demand | "invest in new capacity", "expand operations", "hire aggressively" |
+| Marketing or revenue-growth actions before debt stabilization | "grow revenue to service the debt" (as a first action before understanding covenant position) |
+| Capex | "invest in equipment", "upgrade facilities" |
+
+#### Allowed first actions
+
+- "Obtain the full debt schedule, covenant test dates, and current headroom before any other decision"
+- "Assess lender appetite for covenant waiver or refinancing before taking operational action"
+- "Prepare a cash flow bridge to the next covenant test date"
+
+---
+
+### PRICING_POWER_FAILURE
+
+**Root cause:** Realized price is below comparable market rate, list price, or profitable
+level — through under-pricing, uncontrolled discounting, or pricing model transition risk.
+
+**Core insight:** Brand or marketing investment that does not address price realization does
+not fix the underlying problem. Adding volume at a price-realization gap widens the total
+revenue shortfall. The correct first response is to understand the specific gap mechanism.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Rebranding as primary fix | "rebrand to justify higher prices", "invest in brand identity to command a premium" |
+| Marketing volume at underpriced margin | "increase marketing spend to acquire more customers", "grow customer volume" |
+| Feature additions before price fix | "add more features to justify the price" |
+| Discounting to retain at-risk customers | "offer discounts to prevent churn", "run promotions to keep customers" |
+
+#### Evidence-triggered exclusions
+
+| Trigger | Additional exclusions |
+|---------|-----------------------|
+| Pricing model transition evidence (PRICING_MODEL_CHANGE + PRICING_CUSTOMER_RISK) | "maintain the current pricing model and add more value" |
+| `discountPct ≥ 15` | "give sales team more discount authority" |
+
+#### Allowed first actions
+
+- "Map realized price per transaction against list price to quantify the discount leakage"
+- "Identify which customer segment or rep is driving the largest discount gap"
+- "Test a price increase on a single product or service line to measure actual price sensitivity"
+
+---
+
+### KEY_PERSON_RISK
+
+**Root cause:** Critical knowledge, relationships, or revenue are concentrated in one
+undocumented person with no succession.
+
+**Core insight:** Growth that increases the key person's load deepens the dependency. Hiring
+junior staff without documentation does not reduce the single point of failure. The correct
+first response is to understand and document what the key person holds.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Adding client load before dependency is reduced | "take on more clients", "grow the client base", "expand to new accounts" |
+| Staff additions without documentation | "hire junior staff to support the key person" (without knowledge transfer plan) |
+| Growth before dependency is documented | "expand to new markets", "add new service lines" |
+
+#### Allowed first actions
+
+- "Document the critical knowledge, relationships, and processes held only by the key person"
+- "Identify the minimum viable cross-training needed to reduce single-point-of-failure risk"
+- "Map which client relationships are portable to a second person and begin the transition"
+
+---
+
+### LEGAL_GOVERNANCE_RISK
+
+**Root cause:** Regulatory, compliance, governance, or conduct exposure requiring containment
+and qualified counsel.
+
+**Core insight:** Growth, fundraising, or expansion before the legal exposure is assessed and
+contained creates additional liability. The correct first response is to obtain qualified
+counsel and understand scope of exposure.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Growth before legal remediation | "expand to new markets", "launch new products or services", "open new locations" |
+| Fundraising before disclosure | "raise funding", "bring in investors", "pursue a strategic partnership" |
+| Hiring before exposure is assessed | "grow headcount", "add staff to scale operations" |
+| Ignoring the exposure | "monitor the situation", "wait for the regulator to act" |
+
+#### Allowed first actions
+
+- "Engage qualified counsel to assess the scope of regulatory exposure and remediation timeline"
+- "Pause any action that increases regulatory surface area until counsel has assessed the position"
+- "Document the known breach, its timeline, and all parties with knowledge of it"
+
+---
+
+### QUALITY_CONTROL_FAILURE
+
+**Root cause:** Absence of quality assurance checkpoints or process standards causing defects
+to reach customers.
+
+**Core insight:** Adding volume while a quality failure is active scales the reputational
+damage. Pricing reductions to compensate for quality issues devalue the service without fixing
+the process. The correct first response is to define the quality standard and add a checkpoint.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Volume growth before QC is fixed | "take on more clients", "accept more orders", "grow customer volume" |
+| Price reduction as compensation | "reduce prices to retain unhappy customers", "offer refunds as standard practice" |
+| Marketing to replace churned customers | "increase marketing to replace customers lost to quality issues" |
+
+#### Allowed first actions
+
+- "Define the quality standard explicitly and add a checkpoint before delivery to the customer"
+- "Identify the specific step in the process where defects are introduced"
+- "Implement a defect tracking log to measure quality failure rate before any other intervention"
+
+---
+
+### CUSTOMER_RETENTION_EROSION
+
+**Root cause:** Absence of a systematic retention mechanism causes one-time purchasing
+behavior — customers are not being kept.
+
+**Core insight:** Acquisition investment when retention is broken wastes money filling a leaky
+bucket. Referral programs built on retained customers fail when customers do not return.
+The correct first response is to understand why customers do not return.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Acquisition before retention | "increase customer acquisition spend", "run paid campaigns to add new customers" |
+| Referral programs before retention | "launch a referral program", "build a loyalty program" (before understanding why customers leave) |
+| Feature additions before churn cause is known | "add more features to increase stickiness", "add more product variety" |
+
+#### Allowed first actions
+
+- "Identify the primary reason customers do not return through direct outreach to lapsed customers"
+- "Calculate the repeat purchase rate and compare it against the break-even rate for the business model"
+- "Map the post-purchase customer journey to identify where the relationship ends"
+
+---
+
+### DEMAND_GENERATION_FAILURE
+
+**Root cause:** Top-of-funnel demand or new-customer acquisition has collapsed or stalled.
+
+**Core insight:** Spending more on channels that have already collapsed is not a first action.
+The correct first response is to diagnose which channel failed and why.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| More spend on collapsing channels | "increase spend on the channel", "add more budget to the underperforming channel" |
+| Hiring before demand cause is known | "hire a sales team", "add business development staff" |
+
+#### Allowed first actions
+
+- "Audit lead source attribution by channel to identify where demand has collapsed"
+- "Separate paid vs organic demand to identify which stream is declining"
+
+---
+
+### GTM_CHANNEL_MISMATCH
+
+**Root cause:** Acquisition concentrated in an underperforming channel with poor CAC or
+conversion.
+
+**Core insight:** Moving more budget to a mismatched channel deepens the problem. The correct
+first response is to separate channel-level economics before any reallocation.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| More spend before channel audit | "increase spend across all channels", "add more budget to current channels" |
+| Channel broadening before per-channel diagnosis | "launch on additional platforms", "add more distribution channels" |
+
+#### Allowed first actions
+
+- "Separate CAC, conversion rate, and LTV by channel before reallocating any budget"
+- "Identify the highest-CAC channel and pause spend on it while the data is analyzed"
+
+---
+
+### STRATEGIC_CAPEX_RISK
+
+**Root cause:** Large irreversible capital commitment weighed against demand whose durability
+is unproven.
+
+**Core insight:** Committing capital before demand durability is validated risks a value-
+destroying, irreversible loss. The correct first response is to model the downside before any
+commitment is made.
+
+#### Generic exclusions
+
+| Category | Excluded phrase patterns |
+|----------|-------------------------|
+| Immediate commitment | "proceed with the investment now", "commit the capital before the window closes", "accelerate the timeline" |
+| Optimism as risk mitigation | "the demand is clearly durable", "the market is clearly growing" |
+
+#### Allowed first actions
+
+- "Model the downside scenario in which demand does not persist and quantify the irreversible loss"
+- "Identify whether a reversible or staged alternative exists before committing the full capital"
+
+---
+
+### UNKNOWN / INSUFFICIENT_EVIDENCE
+
+**No first action is produced.** The composer emits only:
+
+```
+Insufficient evidence to produce a diagnosis. OpsIQ will not recommend an action
+without a confident root cause identification.
+```
+
+All archetype-specific exclusions and allowed first actions are irrelevant for this case.
+The fail-closed guarantee applies: no `firstAction` field in the output; no
+`rootCauseSummary`; no `supportingEvidence`.
+
+---
+
+### R-BRA Test Requirements
+
+These tests must be implemented in `composerIntegration.test.ts` as Suite I.
+
+#### Suite I-1: Composer rejects excluded first action
+
+For each archetype with a defined exclusion list:
+- Construct a `ComposerInput` with minimal valid evidence that triggers the archetype
+- Inject a synthetic candidate `firstAction` that contains an excluded phrase
+- Assert the composer returns `ABSTAIN_BAD_RECOMMENDATION_RISK`
+- Assert the warning flag contains the archetype name
+
+#### Suite I-2: Evidence-triggered exclusion fires
+
+- Construct a `ComposerInput` where `fin_runwayMonths ≤ 3` (or equivalent `SURVIVAL_HARD`
+  finding) is present
+- Assert that any candidate `firstAction` containing "expand", "hire now", "increase
+  marketing", or "invest in growth" causes `ABSTAIN_BAD_RECOMMENDATION_RISK`
+- Assert this behavior is archetype-independent (test against at least MARGIN_EROSION and
+  UNIT_ECONOMICS_FAILURE to confirm the evidence-triggered exclusion applies across archetypes)
+
+#### Suite I-3: Allowed first action passes
+
+For each archetype with a defined exclusion list:
+- Construct a `ComposerInput` with minimal valid evidence that triggers the archetype
+- Assert the composer produces a non-empty `firstAction` that does NOT trigger the
+  `ABSTAIN_BAD_RECOMMENDATION_RISK` path
+- Assert the `firstAction` begins with an imperative verb from the R-FAQ table
+
+#### Suite I-4: UNKNOWN diagnosis abstains
+
+- Construct a `ComposerInput` that produces `DiagnosisType.UNKNOWN` from the engine
+- Assert the composer produces no `firstAction` field (or an empty string)
+- Assert the composer produces no `rootCauseSummary`
+- Assert the output contains the insufficient-evidence abstention statement
+
+#### Suite I-5: Exclusion list does not use fixture bad_recommendations_to_flag text
+
+This is a source-level test (Suite A extension), not a runtime test:
+- Read the composer source file
+- For each fixture's `bad_recommendations_to_flag` entry, assert the EXACT phrase does not
+  appear as a string literal in the composer source
+- This confirms the exclusion lists were independently derived, not copied from fixtures
 
 ---
 
@@ -545,13 +1117,21 @@ Leakage prevention is tested at the type level (Suite G) and at the source level
 **Implementation is NOT authorized. The updated spec requires review before any code is written.**
 
 Pre-implementation checklist:
-- [ ] Updated spec (this document) reviewed and accepted
-- [ ] Evidence-first approach for R-RCA confirmed: concatenate critical sidecar findings with
+- [x] Updated spec (this document) reviewed and accepted
+- [x] Evidence-first approach for R-RCA confirmed: concatenate critical sidecar findings with
   archetype preamble sentence and engine mechanism appended
-- [ ] R-FAQ verb/category table confirmed as the complete set (all 16 DiagnosisType entries)
-- [ ] R-BRA exclusion list for each archetype drafted and reviewed (not yet in this spec —
-  must be added before implementation begins)
-- [ ] Test plan (§13) confirmed; test file location agreed:
+- [x] R-FAQ verb/category table confirmed as the complete set (all 16 DiagnosisType entries)
+- [x] R-BRA exclusion lists for all archetypes drafted in §9a: WORKING_CAPITAL_STRESS,
+  INVENTORY_FORECASTING_MISMATCH, UNIT_ECONOMICS_FAILURE, MARGIN_EROSION,
+  OPERATIONAL_BOTTLENECK, CASH_LIQUIDITY_CRISIS, DEBT_SOLVENCY_PRESSURE,
+  PRICING_POWER_FAILURE, KEY_PERSON_RISK, LEGAL_GOVERNANCE_RISK,
+  QUALITY_CONTROL_FAILURE, CUSTOMER_RETENTION_EROSION, DEMAND_GENERATION_FAILURE,
+  GTM_CHANNEL_MISMATCH, STRATEGIC_CAPEX_RISK, UNKNOWN
+- [x] Universal exclusions defined (all archetypes)
+- [x] Evidence-triggered universal exclusions defined (runway, contribution, margin signals)
+- [x] R-BRA test requirements drafted (Suite I-1 through I-5) in §9a
+- [x] Fail-closed rule defined: ABSTAIN_BAD_RECOMMENDATION_RISK on firstAction violation
+- [ ] Test plan (§13 + §9a Suite I) confirmed; test file location agreed:
   `tests/owner-mode/real-world-smb-cases/composerIntegration.test.ts`
 - [ ] Wiring plan confirmed: composer is called between the `diagnoseRootCause()` call and
   output serialization in `runCaseAgainstOpsiq.ts`; no changes to `scoringContract.ts`,
@@ -565,11 +1145,21 @@ Pre-implementation checklist:
 `tests/owner-mode/real-world-smb-cases/OWNER_MODE_SMB_OUTPUT_COMPOSER_SPEC.md`
 
 **Decision:** R-MIR approved with restrictions. Evidence-first root cause composition selected
-over per-archetype templates. Templates rejected as higher overfit risk. Implementation remains
-blocked. The R-BRA exclusion lists have not yet been drafted — they are required before
-implementation is authorized.
+over per-archetype templates. Templates rejected as higher overfit risk. R-BRA exclusion lists
+complete: 15 DiagnosisType archetypes covered plus UNKNOWN abstention, universal exclusions,
+and evidence-triggered universal exclusions. Fail-closed rule defined: ABSTAIN_BAD_RECOMMENDATION_RISK.
+Implementation remains blocked pending wiring plan confirmation and test file location approval.
 
 **Implementation allowed now:** NO
 
+**Remaining blocker:** Wiring plan and test file location must be confirmed (two unchecked
+items in §14). Once confirmed, implementation is authorized.
+
 **Next exact prompt:**
-`OWNER_MODE_SMB_OUTPUT_COMPOSER_IMPLEMENT` — implement the composer function, extend Guard 1 and Guard 2 to cover the composer source, implement composerIntegration.test.ts Suites A–H, wire the composer into runCaseAgainstOpsiq.ts, and run the full test suite honestly.
+`OWNER_MODE_SMB_OUTPUT_COMPOSER_IMPLEMENT` — implement the composer function at
+`tests/owner-mode/real-world-smb-cases/smbOutputComposer.ts`, extend Guard 1 and Guard 2 in
+`smbLeakageGuard.test.ts` to cover the composer source, implement
+`composerIntegration.test.ts` Suites A–I, wire the composer into `runCaseAgainstOpsiq.ts`
+between the `diagnoseRootCause()` call and output serialization, make no changes to
+`scoringContract.ts`, harness test thresholds, engine, fixtures, or sidecars, and run the
+full test suite honestly reporting the result.
