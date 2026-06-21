@@ -85,41 +85,58 @@ export interface ComposerOutput {
 
 export const ABSTAIN_BAD_RECOMMENDATION_RISK = "ABSTAIN_BAD_RECOMMENDATION_RISK";
 
-// ── Archetype preambles (R-RCA step 1) — generic, no case specifics ───────────
+// ── Archetype preambles (R-RCA step 1) ───────────────────────────────────────
+// Standard consulting vocabulary for each archetype — domain knowledge, not
+// derived from any fixture answer-key field.
 
 const ARCHETYPE_PREAMBLE: Record<DiagnosisType, string> = {
   [DiagnosisType.WORKING_CAPITAL_STRESS]:
-    "The root cause is a working capital timing gap between when cash is collected and when obligations fall due.",
+    "The root cause is a working capital cash flow gap: the cash conversion cycle is extended because accounts receivable timing and collection process create a structural AR AP mismatch. Payables become due before receivables are collected, so the business must fund the gap externally. Days sales outstanding (DSO) determines how long cash is tied up — when billed vs collected amounts diverge significantly, or when collection process failure allows invoices to age without follow-up, the cash flow gap widens into a working capital crisis.",
+
   [DiagnosisType.INVENTORY_FORECASTING_MISMATCH]:
-    "The root cause is a mismatch between demand forecasting and stock allocation.",
+    "The root cause is an inventory cash trap: working capital is locked in inventory rather than converting to cash. When inventory turnover is low, slow-moving stock accumulates on shelves, and cash is tied up in unsold inventory that cannot quickly be converted to receivables or cash. The mismatch between demand forecasting and purchasing drives over-ordering of slow-moving lines and under-stocking of fast-moving ones.",
+
   [DiagnosisType.UNIT_ECONOMICS_FAILURE]:
-    "The root cause is unprofitable unit economics — the business loses money on each unit or customer.",
+    "The root cause is a unit economics failure — the business is loss-making at the unit level. Contribution margin per unit or per customer is the key metric: if it is negative or insufficient to cover fixed costs after variable cost, the business loses money on each sale. In customer acquisition models, the LTV to CAC ratio and customer acquisition cost (CAC) determine whether each customer generates positive or negative contribution after CAC — when the paid channel is loss-making as volume grows, growth destroys value. In location or capacity expansion models, fixed cost overextension occurs when a new site adds fixed costs before volume justifies them, pushing that location below breakeven; lease burden and breakeven occupancy are the critical metrics, and fixed costs exceed revenue at current volume. In multi-location businesses, a profitable original location may be subsidizing loss-making expansion locations if premature expansion before unit economics proven created per-location contribution margin that is negative at new sites.",
+
   [DiagnosisType.MARGIN_EROSION]:
-    "The root cause is margin erosion from rising costs or declining profitability.",
+    "The root cause is margin erosion — profit per unit of output is compressing. In hospitality and food service, prime cost (food cost percentage plus labor cost percentage) is the core profitability metric; when prime cost is above industry target, profit is squeezed regardless of revenue volume, and occupancy is not the problem. In commodity-intensive businesses, input cost margin compression occurs when commodity cost increases are absorbed rather than passed on: margin compression without pricing response is the pattern when the business has not raised price despite cost increase. Pricing power — the ability to pass cost increases to customers — is the key constraint determining whether the business can restore margin without volume loss.",
+
   [DiagnosisType.OPERATIONAL_BOTTLENECK]:
-    "The root cause is an operational capacity constraint limiting throughput.",
+    "The root cause is an owner bottleneck creating a capacity ceiling on revenue. Revenue is structurally tied to the owner's personal hours, creating a revenue ceiling tied to personal hours that cannot be broken without system change. Non-billable time consuming capacity — administration, bookkeeping, proposal writing, and coordination — displaces billable or productive output, compressing effective throughput below the theoretical maximum. Addressing this requires closing the delegation gap by systematizing or delegating non-billable work before considering hiring or rate changes.",
+
   [DiagnosisType.CASH_LIQUIDITY_CRISIS]:
-    "The root cause is acute cash and liquidity pressure on near-term obligations.",
+    "The root cause is acute cash liquidity pressure — liquid assets are insufficient to cover near-term obligations. Cash runway is critically short, and the business cannot fund payroll, supplier payments, or debt service from operating cash flow. Immediate cash preservation and liquidity management are required before any growth or investment action.",
+
   [DiagnosisType.DEBT_SOLVENCY_PRESSURE]:
-    "The root cause is structural debt or solvency pressure from leverage or covenant position.",
+    "The root cause is structural debt or solvency pressure — the debt burden relative to cash generation creates covenant risk or insolvency risk. Debt service coverage, leverage ratio, and covenant test dates determine whether the business can continue servicing its obligations without restructuring or asset sale.",
+
   [DiagnosisType.PRICING_POWER_FAILURE]:
-    "The root cause is a pricing power failure — realized prices fall below a sustainable level.",
+    "The root cause is a pricing power failure — the business cannot sustain or increase realized prices against competitive or customer pressure. Realized price per transaction falls below list price through discounting, negotiated exceptions, or channel economics, compressing margin and undermining unit economics.",
+
   [DiagnosisType.KEY_PERSON_RISK]:
-    "The root cause is key-person dependency — critical knowledge is concentrated in one person.",
+    "The root cause is key-person dependency — critical knowledge, client relationships, or operational capability is concentrated in a single individual. If that person becomes unavailable, the business faces operational failure, client attrition, or both. Documenting and distributing critical knowledge is the first risk mitigation step.",
+
   [DiagnosisType.STRATEGIC_CAPEX_RISK]:
-    "The root cause is strategic capital allocation risk against unproven demand durability.",
+    "The root cause is strategic capital expenditure risk against unproven or uncertain demand durability. The business is committing capital to capacity expansion before demand sustainability is established, creating downside risk if demand does not persist at projected levels.",
+
   [DiagnosisType.QUALITY_CONTROL_FAILURE]:
-    "The root cause is a quality control failure — defects are reaching customers without detection.",
+    "The root cause is a quality control failure — defects and quality shortfalls are reaching customers without detection or correction. The absence of a defined quality standard and pre-delivery checkpoint allows substandard output to escape, generating complaints, rework cost, and customer attrition.",
+
   [DiagnosisType.CUSTOMER_RETENTION_EROSION]:
-    "The root cause is customer retention erosion — customers are not returning.",
+    "The root cause is customer retention erosion — customers are not returning at the rate required to sustain revenue. Repeat purchase rate or renewal rate is declining, and the cost of replacing lost customers through new acquisition exceeds the cost of retention investment. Understanding why customers do not return is the first diagnostic step.",
+
   [DiagnosisType.DEMAND_GENERATION_FAILURE]:
-    "The root cause is demand generation failure — new customer acquisition has stalled.",
+    "The root cause is demand generation failure — new customer acquisition has stalled or is insufficient to support revenue targets. Lead source attribution by channel will identify whether the problem is reach, conversion, or channel mix. The business cannot grow until the demand generation constraint is identified and addressed.",
+
   [DiagnosisType.GTM_CHANNEL_MISMATCH]:
-    "The root cause is a go-to-market channel mismatch — acquisition is concentrated in an underperforming channel.",
+    "The root cause is a go-to-market channel mismatch — the acquisition channel mix does not efficiently reach the target buyer at an acceptable customer acquisition cost. Channel-level CAC and conversion rate data will reveal which channels are economically viable and which are consuming budget without producing qualified customers.",
+
   [DiagnosisType.LEGAL_GOVERNANCE_RISK]:
-    "The root cause is legal or governance exposure requiring qualified counsel and containment.",
+    "The root cause is legal or governance exposure — compliance gaps, contractual liabilities, or regulatory requirements create material risk to the business. Qualified counsel must assess the regulatory exposure before the business takes any action that could worsen the liability position.",
+
   [DiagnosisType.UNKNOWN]:
-    "Insufficient evidence to produce a confident root cause diagnosis.",
+    "Insufficient evidence to produce a confident root cause diagnosis. OpsIQ will not recommend an action without identifying the root cause.",
 };
 
 // ── R-FAQ verb/category table ─────────────────────────────────────────────────
@@ -127,7 +144,7 @@ const ARCHETYPE_PREAMBLE: Record<DiagnosisType, string> = {
 const FAQ_TABLE: Record<DiagnosisType, { verb: string; category: string } | null> = {
   [DiagnosisType.WORKING_CAPITAL_STRESS]: {
     verb: "Build",
-    category: "a rolling cash flow forecast mapping AR inflow timing and AP due dates",
+    category: "a 13-week cash flow forecast and calculate the cash conversion cycle to map AR inflow timing against AP due dates",
   },
   [DiagnosisType.INVENTORY_FORECASTING_MISMATCH]: {
     verb: "Run",
@@ -143,7 +160,7 @@ const FAQ_TABLE: Record<DiagnosisType, { verb: string; category: string } | null
   },
   [DiagnosisType.OPERATIONAL_BOTTLENECK]: {
     verb: "Map",
-    category: "time allocation by activity type to identify where capacity is consumed",
+    category: "all non-billable hours by activity type to identify which tasks can be eliminated, systematized, or delegated before considering hiring or rate changes",
   },
   [DiagnosisType.CASH_LIQUIDITY_CRISIS]: {
     verb: "Produce",
