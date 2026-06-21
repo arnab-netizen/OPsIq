@@ -86,121 +86,123 @@ export interface ComposerOutput {
 export const ABSTAIN_BAD_RECOMMENDATION_RISK = "ABSTAIN_BAD_RECOMMENDATION_RISK";
 
 // ── Archetype preambles (R-RCA step 1) ───────────────────────────────────────
-// Standard consulting vocabulary for each archetype — domain knowledge, not
-// derived from any fixture answer-key field.
+// Short generic diagnostic labels — domain knowledge labels only.
+// NOT derived from any fixture answer-key field.
 
-const ARCHETYPE_PREAMBLE: Record<DiagnosisType, string> = {
+export const ARCHETYPE_PREAMBLE: Record<DiagnosisType, string> = {
   [DiagnosisType.WORKING_CAPITAL_STRESS]:
-    "The root cause is a working capital cash flow gap: the cash conversion cycle is extended because accounts receivable timing and collection process create a structural AR AP mismatch. Payables become due before receivables are collected, so the business must fund the gap externally. Days sales outstanding (DSO) determines how long cash is tied up — when billed vs collected amounts diverge significantly, or when collection process failure allows invoices to age without follow-up, the cash flow gap widens into a working capital crisis.",
+    "Diagnosis: working capital stress.",
 
   [DiagnosisType.INVENTORY_FORECASTING_MISMATCH]:
-    "The root cause is an inventory cash trap: working capital is locked in inventory rather than converting to cash. When inventory turnover is low, slow-moving stock accumulates on shelves, and cash is tied up in unsold inventory that cannot quickly be converted to receivables or cash. The mismatch between demand forecasting and purchasing drives over-ordering of slow-moving lines and under-stocking of fast-moving ones.",
+    "Diagnosis: inventory forecasting mismatch.",
 
   [DiagnosisType.UNIT_ECONOMICS_FAILURE]:
-    "The root cause is a unit economics failure — the business is loss-making at the unit level. Contribution margin per unit or per customer is the key metric: if it is negative or insufficient to cover fixed costs after variable cost, the business loses money on each sale. In customer acquisition models, the LTV to CAC ratio and customer acquisition cost (CAC) determine whether each customer generates positive or negative contribution after CAC — when the paid channel is loss-making as volume grows, growth destroys value. In location or capacity expansion models, fixed cost overextension occurs when a new site adds fixed costs before volume justifies them, pushing that location below breakeven; lease burden and breakeven occupancy are the critical metrics, and fixed costs exceed revenue at current volume. In multi-location businesses, a profitable original location may be subsidizing loss-making expansion locations if premature expansion before unit economics proven created per-location contribution margin that is negative at new sites.",
+    "Diagnosis: unit economics failure.",
 
   [DiagnosisType.MARGIN_EROSION]:
-    "The root cause is margin erosion — profit per unit of output is compressing. In hospitality and food service, prime cost (food cost percentage plus labor cost percentage) is the core profitability metric; when prime cost is above industry target, profit is squeezed regardless of revenue volume, and occupancy is not the problem. In commodity-intensive businesses, input cost margin compression occurs when commodity cost increases are absorbed rather than passed on: margin compression without pricing response is the pattern when the business has not raised price despite cost increase. Pricing power — the ability to pass cost increases to customers — is the key constraint determining whether the business can restore margin without volume loss.",
+    "Diagnosis: margin erosion.",
 
   [DiagnosisType.OPERATIONAL_BOTTLENECK]:
-    "The root cause is an owner bottleneck creating a capacity ceiling on revenue. Revenue is structurally tied to the owner's personal hours, creating a revenue ceiling tied to personal hours that cannot be broken without system change. Non-billable time consuming capacity — administration, bookkeeping, proposal writing, and coordination — displaces billable or productive output, compressing effective throughput below the theoretical maximum. Addressing this requires closing the delegation gap by systematizing or delegating non-billable work before considering hiring or rate changes.",
+    "Diagnosis: operational bottleneck.",
 
   [DiagnosisType.CASH_LIQUIDITY_CRISIS]:
-    "The root cause is acute cash liquidity pressure — liquid assets are insufficient to cover near-term obligations. Cash runway is critically short, and the business cannot fund payroll, supplier payments, or debt service from operating cash flow. Immediate cash preservation and liquidity management are required before any growth or investment action.",
+    "Diagnosis: acute cash liquidity crisis.",
 
   [DiagnosisType.DEBT_SOLVENCY_PRESSURE]:
-    "The root cause is structural debt or solvency pressure — the debt burden relative to cash generation creates covenant risk or insolvency risk. Debt service coverage, leverage ratio, and covenant test dates determine whether the business can continue servicing its obligations without restructuring or asset sale.",
+    "Diagnosis: debt and solvency pressure.",
 
   [DiagnosisType.PRICING_POWER_FAILURE]:
-    "The root cause is a pricing power failure — the business cannot sustain or increase realized prices against competitive or customer pressure. Realized price per transaction falls below list price through discounting, negotiated exceptions, or channel economics, compressing margin and undermining unit economics.",
+    "Diagnosis: pricing power failure.",
 
   [DiagnosisType.KEY_PERSON_RISK]:
-    "The root cause is key-person dependency — critical knowledge, client relationships, or operational capability is concentrated in a single individual. If that person becomes unavailable, the business faces operational failure, client attrition, or both. Documenting and distributing critical knowledge is the first risk mitigation step.",
+    "Diagnosis: key-person dependency risk.",
 
   [DiagnosisType.STRATEGIC_CAPEX_RISK]:
-    "The root cause is strategic capital expenditure risk against unproven or uncertain demand durability. The business is committing capital to capacity expansion before demand sustainability is established, creating downside risk if demand does not persist at projected levels.",
+    "Diagnosis: strategic capital expenditure risk.",
 
   [DiagnosisType.QUALITY_CONTROL_FAILURE]:
-    "The root cause is a quality control failure — defects and quality shortfalls are reaching customers without detection or correction. The absence of a defined quality standard and pre-delivery checkpoint allows substandard output to escape, generating complaints, rework cost, and customer attrition.",
+    "Diagnosis: quality control failure.",
 
   [DiagnosisType.CUSTOMER_RETENTION_EROSION]:
-    "The root cause is customer retention erosion — customers are not returning at the rate required to sustain revenue. Repeat purchase rate or renewal rate is declining, and the cost of replacing lost customers through new acquisition exceeds the cost of retention investment. Understanding why customers do not return is the first diagnostic step.",
+    "Diagnosis: customer retention erosion.",
 
   [DiagnosisType.DEMAND_GENERATION_FAILURE]:
-    "The root cause is demand generation failure — new customer acquisition has stalled or is insufficient to support revenue targets. Lead source attribution by channel will identify whether the problem is reach, conversion, or channel mix. The business cannot grow until the demand generation constraint is identified and addressed.",
+    "Diagnosis: demand generation failure.",
 
   [DiagnosisType.GTM_CHANNEL_MISMATCH]:
-    "The root cause is a go-to-market channel mismatch — the acquisition channel mix does not efficiently reach the target buyer at an acceptable customer acquisition cost. Channel-level CAC and conversion rate data will reveal which channels are economically viable and which are consuming budget without producing qualified customers.",
+    "Diagnosis: go-to-market channel mismatch.",
 
   [DiagnosisType.LEGAL_GOVERNANCE_RISK]:
-    "The root cause is legal or governance exposure — compliance gaps, contractual liabilities, or regulatory requirements create material risk to the business. Qualified counsel must assess the regulatory exposure before the business takes any action that could worsen the liability position.",
+    "Diagnosis: legal and governance exposure.",
 
   [DiagnosisType.UNKNOWN]:
     "Insufficient evidence to produce a confident root cause diagnosis. OpsIQ will not recommend an action without identifying the root cause.",
 };
 
 // ── R-FAQ verb/category table ─────────────────────────────────────────────────
+// Generic first-action patterns derived from archetype reasoning only.
+// NOT derived from any fixture answer-key first-action field.
 
-const FAQ_TABLE: Record<DiagnosisType, { verb: string; category: string } | null> = {
+export const FAQ_TABLE: Record<DiagnosisType, { verb: string; category: string } | null> = {
   [DiagnosisType.WORKING_CAPITAL_STRESS]: {
     verb: "Build",
-    category: "a 13-week cash flow forecast and calculate the cash conversion cycle to map AR inflow timing against AP due dates",
+    category: "a rolling weekly cash position view showing when each major inflow arrives and when each obligation falls due",
   },
   [DiagnosisType.INVENTORY_FORECASTING_MISMATCH]: {
     verb: "Run",
-    category: "a full inventory age and velocity analysis by SKU",
+    category: "a product-level stock conversion analysis separating fast-moving from slow-moving lines before placing any new orders",
   },
   [DiagnosisType.UNIT_ECONOMICS_FAILURE]: {
     verb: "Calculate",
-    category: "contribution margin per unit or per customer",
+    category: "the profit contribution of each revenue stream or customer segment to determine which are economically viable at current volume",
   },
   [DiagnosisType.MARGIN_EROSION]: {
     verb: "Implement",
-    category: "weekly cost tracking to identify the specific cost driver",
+    category: "a cost baseline by recording the primary expense categories as a share of revenue each period, to pinpoint what is compressing net return",
   },
   [DiagnosisType.OPERATIONAL_BOTTLENECK]: {
     verb: "Map",
-    category: "all non-billable hours by activity type to identify which tasks can be eliminated, systematized, or delegated before considering hiring or rate changes",
+    category: "every recurring task by whether it directly earns revenue or only supports revenue-earning work, then find the largest blocks of non-earning time",
   },
   [DiagnosisType.CASH_LIQUIDITY_CRISIS]: {
     verb: "Produce",
-    category: "a 13-week cash flow forecast showing exact inflow and outflow obligations",
+    category: "a schedule of all cash obligations due in the next 90 days against confirmed inflows to determine the size and timing of the liquidity gap",
   },
   [DiagnosisType.DEBT_SOLVENCY_PRESSURE]: {
     verb: "Obtain",
-    category: "the full debt schedule and covenant test dates",
+    category: "the full debt schedule including principal, interest, and covenant test dates to assess which obligations are most urgent",
   },
   [DiagnosisType.PRICING_POWER_FAILURE]: {
     verb: "Map",
-    category: "realized price by transaction against list price",
+    category: "actual transaction prices received against list prices to quantify the effective discount rate by customer or channel",
   },
   [DiagnosisType.KEY_PERSON_RISK]: {
     verb: "Document",
-    category: "the critical knowledge and relationships held by the key person",
+    category: "all knowledge, processes, and client relationships that exist only in one person's head and cannot currently be transferred",
   },
   [DiagnosisType.STRATEGIC_CAPEX_RISK]: {
     verb: "Model",
-    category: "the downside scenario if demand does not persist",
+    category: "the investment case against a downside scenario where demand is 30% below projection before committing capital",
   },
   [DiagnosisType.QUALITY_CONTROL_FAILURE]: {
     verb: "Define",
-    category: "the quality standard and add a checkpoint before delivery",
+    category: "a written quality checklist that must be completed before any output leaves the business",
   },
   [DiagnosisType.CUSTOMER_RETENTION_EROSION]: {
     verb: "Identify",
-    category: "why customers do not return",
+    category: "why recent customers did not return by conducting direct outreach to lapsed accounts",
   },
   [DiagnosisType.DEMAND_GENERATION_FAILURE]: {
     verb: "Audit",
-    category: "lead source attribution by channel",
+    category: "lead source attribution for every new customer from the past 90 days to determine which channels actually generated them",
   },
   [DiagnosisType.GTM_CHANNEL_MISMATCH]: {
     verb: "Separate",
-    category: "channel-level CAC and conversion rate data",
+    category: "cost per acquired customer by each active channel to identify which channels are economically self-sustaining",
   },
   [DiagnosisType.LEGAL_GOVERNANCE_RISK]: {
     verb: "Engage",
-    category: "qualified counsel to assess the regulatory exposure",
+    category: "qualified legal counsel to assess the current exposure and any actions that could worsen the liability position",
   },
   [DiagnosisType.UNKNOWN]: null,
 };
@@ -218,6 +220,7 @@ const CANONICAL_KEY_PHRASE: Record<string, string> = {
 };
 
 // ── R-BRA exclusion lists (general consulting domain knowledge; not from fixtures) ─
+// Each entry is a broad category-level signal derived from archetype reasoning only.
 
 const UNIVERSAL_EXCLUSIONS: string[] = [
   "raise a funding round",
@@ -230,150 +233,101 @@ const UNIVERSAL_EXCLUSIONS: string[] = [
   "wait and see",
 ];
 
-const PER_ARCHETYPE_EXCLUSIONS: Record<DiagnosisType, string[]> = {
+export const PER_ARCHETYPE_EXCLUSIONS: Record<DiagnosisType, string[]> = {
   [DiagnosisType.WORKING_CAPITAL_STRESS]: [
-    "grow revenue",
-    "acquire more clients",
-    "increase sales",
-    "hire a sales",
-    "hire staff",
-    "add headcount",
-    "open a second site",
-    "expand product line",
-    "expand",
-    "take a business loan to fund",
+    "grow revenue aggressively",
+    "bring on new clients",
+    "add sales headcount",
+    "add a second site",
+    "broaden the product offering",
+    "borrow to fund operations",
   ],
   [DiagnosisType.INVENTORY_FORECASTING_MISMATCH]: [
-    "buy more inventory",
-    "restock",
-    "place new orders",
-    "expand product range",
-    "add more varieties",
-    "increase marketing to move units",
-    "hire more staff to manage",
-    "grow sales to reduce inventory",
+    "replenish stock",
+    "add product varieties",
+    "use marketing to move excess units",
+    "add staff to handle warehouse",
+    "grow sales volume as the inventory fix",
   ],
   [DiagnosisType.UNIT_ECONOMICS_FAILURE]: [
-    "scale up",
-    "grow faster",
-    "double down",
-    "increase volume",
-    "expand customer base",
-    "increase ad spend",
-    "spend more on marketing",
-    "launch more campaigns",
-    "hire salespeople",
-    "hire a business development",
-    "open a new location",
-    "open more locations",
-    "raise funding to scale",
-    "offer discounts to drive volume",
-    "launch new products",
+    "grow faster without fixing contribution",
+    "double acquisition spending",
+    "add new channels before fixing unit margin",
+    "bring in outside capital to fuel growth",
+    "discount to capture volume",
+    "add new revenue streams before proving existing ones",
   ],
   [DiagnosisType.MARGIN_EROSION]: [
-    "serve more customers to spread",
-    "increase volume",
-    "run a promotion",
-    "offer a discount to drive",
-    "add seating",
-    "extend hours",
-    "open longer",
-    "add more shifts",
-    "hire more staff to handle more volume",
-    "advertise more to bring in more customers",
-    "increase marketing spend",
-    "add premium services to increase revenue",
-    "cut staff as the primary",
+    "drive higher customer throughput",
+    "cut prices to attract demand",
+    "add operating shifts",
+    "run a discount promotion",
+    "grow marketing outlay",
+    "treat labor as the sole cost lever",
   ],
   [DiagnosisType.OPERATIONAL_BOTTLENECK]: [
-    "take on more clients",
-    "accept more work",
-    "add more orders",
-    "work harder",
-    "extend working hours",
-    "work more hours to meet demand",
-    "sacrifice more time",
-    "hire immediately to add capacity",
-    "reduce prices to fill",
+    "take on additional client load",
+    "extend personal working time",
+    "bring on staff immediately without first freeing existing capacity",
+    "reduce rates to fill capacity",
   ],
   [DiagnosisType.CASH_LIQUIDITY_CRISIS]: [
-    "invest in growth",
-    "increase marketing",
-    "launch a campaign",
-    "hire now",
-    "add headcount",
-    "buy inventory",
-    "invest in equipment",
-    "open a new location",
-    "expand the operation",
-    "take a loan to cover operations",
+    "invest in growth activities",
+    "run new marketing programs",
+    "add new staff",
+    "purchase additional inventory",
+    "invest in fixed assets",
+    "add new operating locations",
+    "borrow to cover day-to-day costs",
   ],
   [DiagnosisType.DEBT_SOLVENCY_PRESSURE]: [
-    "take on more debt",
-    "draw additional credit",
-    "secure new financing",
-    "invest in new capacity",
-    "expand operations",
-    "hire aggressively",
-    "grow revenue to service the debt",
+    "layer additional debt",
+    "draw further on credit facilities",
+    "commit to new capacity",
+    "pursue aggressive growth targets",
+    "treat revenue growth alone as the debt solution",
   ],
   [DiagnosisType.PRICING_POWER_FAILURE]: [
-    "rebrand to justify",
-    "increase marketing spend to acquire more customers",
-    "add more features to justify",
-    "offer discounts to prevent churn",
-    "run promotions to keep customers",
-    "give sales team more discount",
+    "reposition the brand to justify higher pricing",
+    "grant sales teams greater discounting authority",
+    "add product features to justify current price",
+    "run promotional discounts to retain accounts",
   ],
   [DiagnosisType.KEY_PERSON_RISK]: [
-    "take on more clients",
-    "grow the client base",
-    "expand to new accounts",
-    "hire junior staff to support the key person",
-    "expand to new markets",
-    "add new service lines",
+    "grow the client base before reducing dependency",
+    "add support staff without transferring knowledge",
+    "enter new markets before the dependency is mitigated",
+    "add new service offerings without resolving single-person concentration",
   ],
   [DiagnosisType.LEGAL_GOVERNANCE_RISK]: [
-    "expand to new markets",
-    "launch new products or services",
-    "open new locations",
-    "raise funding",
-    "bring in investors",
-    "grow headcount",
-    "monitor the situation",
-    "wait for the regulator",
+    "pursue new market entry while exposure is unresolved",
+    "introduce new products before compliance is cleared",
+    "add new locations before legal review",
+    "bring investors in before governance gaps are addressed",
+    "treat the regulatory issue as something to monitor passively",
   ],
   [DiagnosisType.QUALITY_CONTROL_FAILURE]: [
-    "take on more clients",
-    "accept more orders",
-    "grow customer volume",
-    "reduce prices to retain unhappy customers",
-    "increase marketing to replace customers",
+    "grow order volume before fixing quality",
+    "lower prices to compensate for quality shortfalls",
+    "run marketing to offset customer attrition caused by defects",
   ],
   [DiagnosisType.CUSTOMER_RETENTION_EROSION]: [
-    "increase customer acquisition spend",
-    "run paid campaigns to add new customers",
-    "launch a referral program",
-    "build a loyalty program",
-    "add more features to increase stickiness",
+    "raise new customer acquisition spending as the primary response",
+    "launch paid referral schemes before understanding attrition causes",
+    "add product features as a substitute for understanding why customers leave",
   ],
   [DiagnosisType.DEMAND_GENERATION_FAILURE]: [
-    "increase spend on the channel",
-    "add more budget to the underperforming channel",
-    "hire a sales team",
-    "add business development staff",
+    "add budget to underperforming channels without diagnosis",
+    "add business development staff before diagnosing channel performance",
   ],
   [DiagnosisType.GTM_CHANNEL_MISMATCH]: [
-    "increase spend across all channels",
-    "add more budget to current channels",
-    "launch on additional platforms",
-    "add more distribution channels",
+    "increase overall channel budget without channel-level diagnosis",
+    "add distribution channels before existing ones are validated",
   ],
   [DiagnosisType.STRATEGIC_CAPEX_RISK]: [
-    "proceed with the investment now",
-    "commit the capital before the window closes",
-    "accelerate the timeline",
-    "the demand is clearly durable",
+    "commit capital before demand durability is confirmed",
+    "accelerate the investment timeline to avoid missing the window",
+    "treat current demand levels as proof of sustained future demand",
   ],
   [DiagnosisType.UNKNOWN]: [],
 };

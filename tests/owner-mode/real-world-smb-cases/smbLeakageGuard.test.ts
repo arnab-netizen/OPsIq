@@ -11,6 +11,11 @@ import { loadRealWorldSmbFixtures } from "./loadFixtures";
 import { runCaseAgainstOpsiq } from "./runCaseAgainstOpsiq";
 import { normalizeFixtureToEvidence } from "./normalizeFixtureToEvidence";
 import { diagnoseRootCause } from "@/services/consulting-engine/diagnosis-engine";
+import {
+  ARCHETYPE_PREAMBLE,
+  FAQ_TABLE,
+  PER_ARCHETYPE_EXCLUSIONS,
+} from "./smbOutputComposer";
 
 // Strict leakage-detection scoring — 80% threshold for >3-token phrases (vs 70% in scoring contract)
 function normalizeText(text: string): string {
@@ -261,6 +266,129 @@ describe("SMB leakage guard: must_identify coverage from engine output alone", (
   });
 });
 
+// ── Guard 10: Composer preamble covers <60% of must_identify terms ──
+// The preamble is now a short diagnostic label. It must not contain enough
+// must_identify vocabulary to artificially boost ROOT_CAUSE_ALIGNMENT scoring.
+describe("SMB leakage guard: composer preamble must_identify coverage", () => {
+  it("composer preamble covers less than 60% of must_identify terms for each supported case", () => {
+    const fixtures = loadRealWorldSmbFixtures();
+    const violations: string[] = [];
+
+    for (const fixture of fixtures) {
+      const norm = normalizeFixtureToEvidence(fixture);
+      if (norm.unsupportedArchetype) continue;
+
+      const diagnosis = diagnoseRootCause(norm.evidenceItems, fixture.scenario.business);
+      const type = diagnosis.primaryRootCause.type;
+      const preamble = ARCHETYPE_PREAMBLE[type] ?? "";
+      const mustIdentify = fixture.expected_opsiq_diagnosis.scoring_criteria.must_identify;
+
+      const matchCount = mustIdentify.filter((term) => {
+        const h = normalizeText(preamble);
+        const p = normalizeText(term);
+        const tokens = p.split(" ").filter((t) => t.length > 2);
+        if (tokens.length === 0) return h.includes(p);
+        if (tokens.length <= 3) return h.includes(p);
+        const mc = tokens.filter((t) => h.includes(t)).length;
+        return mc / tokens.length >= 0.7;
+      }).length;
+
+      const coverage = mustIdentify.length > 0 ? matchCount / mustIdentify.length : 0;
+      if (coverage >= 0.6) {
+        violations.push(
+          `${fixture.case_id}: preamble covers ${Math.round(coverage * 100)}% of must_identify terms (>=60% signals contamination)`
+        );
+      }
+    }
+
+    expect(
+      violations,
+      `Composer preamble covers >=60% of must_identify terms — contamination detected:\n${violations.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
+// ── Guard 11: FAQ_TABLE first-action text has <50% key-token overlap with expected_first_action ──
+// Key tokens = first 6 words >4 chars from expected_first_action.
+// If the match ratio is >=0.5, the FAQ entry was likely derived from the fixture.
+describe("SMB leakage guard: FAQ_TABLE key-token overlap with expected_first_action", () => {
+  it("FAQ_TABLE first-action text has less than 50% key-token overlap with expected_first_action for each supported case", () => {
+    const fixtures = loadRealWorldSmbFixtures();
+    const violations: string[] = [];
+
+    for (const fixture of fixtures) {
+      const norm = normalizeFixtureToEvidence(fixture);
+      if (norm.unsupportedArchetype) continue;
+
+      const diagnosis = diagnoseRootCause(norm.evidenceItems, fixture.scenario.business);
+      const type = diagnosis.primaryRootCause.type;
+      const faqEntry = FAQ_TABLE[type];
+      if (!faqEntry) continue;
+
+      const faqText = normalizeText(`${faqEntry.verb} ${faqEntry.category}`);
+      const expectedFirstAction = fixture.expected_opsiq_diagnosis.expected_first_action;
+
+      // Key tokens: first 6 words longer than 4 chars from expected_first_action
+      const keyTokens = normalizeText(expectedFirstAction)
+        .split(" ")
+        .filter((t) => t.length > 4)
+        .slice(0, 6);
+
+      if (keyTokens.length === 0) continue;
+
+      const matchCount = keyTokens.filter((t) => faqText.includes(t)).length;
+      const ratio = matchCount / keyTokens.length;
+
+      if (ratio >= 0.5) {
+        violations.push(
+          `${fixture.case_id}: FAQ_TABLE[${type}] has ${Math.round(ratio * 100)}% key-token overlap with expected_first_action (>=50% signals contamination). Key tokens: [${keyTokens.join(", ")}]. Matched: ${matchCount}/${keyTokens.length}`
+        );
+      }
+    }
+
+    expect(
+      violations,
+      `FAQ_TABLE entries share >=50% key-token overlap with fixture expected_first_action:\n${violations.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
+// ── Guard 12: No PER_ARCHETYPE_EXCLUSIONS entry is an exact substring of any bad_recommendations_to_flag phrase ──
+describe("SMB leakage guard: PER_ARCHETYPE_EXCLUSIONS vs bad_recommendations_to_flag", () => {
+  it("no PER_ARCHETYPE_EXCLUSIONS entry is an exact substring of any fixture bad_recommendations_to_flag phrase", () => {
+    const fixtures = loadRealWorldSmbFixtures();
+    const violations: string[] = [];
+
+    // Collect all bad_recommendations_to_flag phrases across all fixtures
+    const allBadRecs: Array<{ caseId: string; phrase: string }> = [];
+    for (const fixture of fixtures) {
+      for (const phrase of fixture.expected_opsiq_diagnosis.bad_recommendations_to_flag) {
+        allBadRecs.push({ caseId: fixture.case_id, phrase });
+      }
+    }
+
+    // Check every exclusion entry against every bad_rec phrase
+    for (const [archetype, exclusions] of Object.entries(PER_ARCHETYPE_EXCLUSIONS)) {
+      for (const exclusion of exclusions) {
+        const normExclusion = normalizeText(exclusion);
+        for (const { caseId, phrase } of allBadRecs) {
+          const normPhrase = normalizeText(phrase);
+          if (normPhrase.includes(normExclusion)) {
+            violations.push(
+              `PER_ARCHETYPE_EXCLUSIONS[${archetype}]: "${exclusion}" is an exact substring of ${caseId} bad_rec "${phrase}"`
+            );
+          }
+        }
+      }
+    }
+
+    expect(
+      violations,
+      `PER_ARCHETYPE_EXCLUSIONS entries derived from fixture bad_recommendations_to_flag:\n${violations.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
 // ── Guard 6: Unsupported cases return scope gap, not diagnosis ──
 describe("SMB leakage guard: unsupported cases excluded", () => {
   it("unsupported cases return unsupportedArchetype=true and scope gap output", async () => {
@@ -293,5 +421,121 @@ describe("SMB leakage guard: unsupported cases excluded", () => {
 
     expect(unsupportedCount).toBe(3);
     expect(supportedCount).toBe(9);
+  });
+});
+
+// ── Guard 10: Composer preamble alone covers <60% of must_identify terms ──
+describe("SMB leakage guard: composer preamble coverage vs must_identify", () => {
+  it("composer preamble alone covers less than 60% of must_identify terms for each supported case", () => {
+    const fixtures = loadRealWorldSmbFixtures();
+    const SUPPORTED = ["SMB-001","SMB-002","SMB-003","SMB-004","SMB-006","SMB-007","SMB-008","SMB-010","SMB-012"];
+    const violations: string[] = [];
+
+    for (const fixture of fixtures) {
+      if (!SUPPORTED.includes(fixture.case_id)) continue;
+
+      const norm = normalizeFixtureToEvidence(fixture);
+      if (norm.unsupportedArchetype) continue;
+      const diagnosis = diagnoseRootCause(norm.evidenceItems, fixture.scenario.business);
+      const type = diagnosis.primaryRootCause.type;
+      const preamble = ARCHETYPE_PREAMBLE[type] ?? "";
+
+      const mustIdentify = fixture.expected_opsiq_diagnosis.scoring_criteria.must_identify;
+      const matchCount = mustIdentify.filter((term) => {
+        const h = normalizeText(preamble);
+        const p = normalizeText(term);
+        const tokens = p.split(" ").filter((t) => t.length > 2);
+        if (tokens.length === 0) return h.includes(p);
+        if (tokens.length <= 3) return h.includes(p);
+        const mc = tokens.filter((t) => h.includes(t)).length;
+        return mc / tokens.length >= 0.7;
+      }).length;
+
+      const coverage = matchCount / mustIdentify.length;
+      if (coverage >= 0.6) {
+        violations.push(
+          `${fixture.case_id}: preamble covers ${Math.round(coverage * 100)}% of must_identify (≥60% signals leakage)`
+        );
+      }
+    }
+
+    expect(
+      violations,
+      `Preamble covers ≥60% of must_identify — leakage detected:\n${violations.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
+// ── Guard 11: FAQ_TABLE overlap with expected_first_action ──
+describe("SMB leakage guard: FAQ_TABLE overlap with expected_first_action", () => {
+  it("FAQ_TABLE first-action text has less than 50% key-token overlap with expected_first_action for each supported case", () => {
+    const fixtures = loadRealWorldSmbFixtures();
+    const SUPPORTED = ["SMB-001","SMB-002","SMB-003","SMB-004","SMB-006","SMB-007","SMB-008","SMB-010","SMB-012"];
+    const violations: string[] = [];
+
+    for (const fixture of fixtures) {
+      if (!SUPPORTED.includes(fixture.case_id)) continue;
+
+      const norm = normalizeFixtureToEvidence(fixture);
+      if (norm.unsupportedArchetype) continue;
+      const diagnosis = diagnoseRootCause(norm.evidenceItems, fixture.scenario.business);
+      const type = diagnosis.primaryRootCause.type;
+      const faqEntry = FAQ_TABLE[type];
+      if (!faqEntry) continue;
+
+      const faqText = `${faqEntry.verb} ${faqEntry.category}`;
+      const expected = fixture.expected_opsiq_diagnosis.expected_first_action;
+
+      const normalize = (t: string) =>
+        t.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+      const keyTokens = normalize(expected).split(" ").filter((w) => w.length > 4).slice(0, 6);
+      const faqNorm = normalize(faqText);
+      const matched = keyTokens.filter((t) => faqNorm.includes(t));
+      const ratio = keyTokens.length > 0 ? matched.length / keyTokens.length : 0;
+
+      if (ratio >= 0.5) {
+        violations.push(
+          `${fixture.case_id}: FAQ entry has ${Math.round(ratio * 100)}% key-token overlap with expected_first_action (≥50% signals derivation)`
+        );
+      }
+    }
+
+    expect(
+      violations,
+      `FAQ_TABLE entries derived from expected_first_action:\n${violations.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
+// ── Guard 12: PER_ARCHETYPE_EXCLUSIONS vs bad_recommendations_to_flag ──
+describe("SMB leakage guard: PER_ARCHETYPE_EXCLUSIONS vs bad_recommendations_to_flag", () => {
+  it("no exclusion entry is an exact substring of any fixture bad_recommendations_to_flag phrase", () => {
+    const fixtures = loadRealWorldSmbFixtures();
+    const violations: string[] = [];
+
+    const normalize = (t: string) =>
+      t.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+
+    for (const fixture of fixtures) {
+      const badRecs = fixture.expected_opsiq_diagnosis.bad_recommendations_to_flag;
+      for (const [, exclusions] of Object.entries(PER_ARCHETYPE_EXCLUSIONS)) {
+        for (const ex of exclusions) {
+          const normEx = normalize(ex);
+          for (const bad of badRecs) {
+            const normBad = normalize(bad);
+            if (normBad.includes(normEx)) {
+              violations.push(
+                `${fixture.case_id}: exclusion "${ex}" is substring of bad_rec "${bad}"`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    expect(
+      violations,
+      `Exclusion entries are substrings of bad_recommendations_to_flag:\n${violations.join("\n")}`
+    ).toHaveLength(0);
   });
 });
