@@ -419,9 +419,11 @@ export type SubMechanism =
   | "WC_SLOW_CLIENT_PAY"
   | "DEMAND_STAGNATION_SUBSCRIBER_CHURN"
   | "DEMAND_STAGNATION_MEMBER_CHURN"
+  | "DEMAND_STAFF_ROTATION_RETENTION"
   | "GTM_TARGETING_SCOPE_MISMATCH"
   | "MARGIN_DISCOUNT_DEPENDENCY"
   | "MARGIN_FOOD_COST_ABSORPTION"
+  | "MARGIN_SUPPLIER_COST_BLENDED"
   | "MARGIN_COMMODITY_PASS_THROUGH"
   | null;
 
@@ -549,6 +551,15 @@ export function detectSubMechanism(
       ) {
         return "MARGIN_DISCOUNT_DEPENDENCY";
       }
+      // Supplier cost increases with blended reporting masking product-level performance
+      if (
+        sidecarText.includes("supplier") ||
+        sidecarText.includes("product categor") ||
+        sidecarText.includes("single combined figure") ||
+        sidecarText.includes("blended")
+      ) {
+        return "MARGIN_SUPPLIER_COST_BLENDED";
+      }
       const profitChange = getNum(input, "profitChangePercent");
       if (
         profitChange !== undefined &&
@@ -570,6 +581,16 @@ export function detectSubMechanism(
       // Membership-based stagnation (gym, clubs)
       if (sidecarText.includes("member")) {
         return "DEMAND_STAGNATION_MEMBER_CHURN";
+      }
+      // Staff-rotation-driven early client departure (service firms: cleaning, maintenance, care)
+      if (
+        sidecarText.includes("operative") ||
+        sidecarText.includes("cleaning staff") ||
+        sidecarText.includes("staff assign") ||
+        sidecarText.includes("client tenure") ||
+        sidecarText.includes("roster")
+      ) {
+        return "DEMAND_STAFF_ROTATION_RETENTION";
       }
       return null;
     }
@@ -851,6 +872,37 @@ export function buildSubMechanismSentence(
         `catering softer bookings have been misidentified as the primary cause when the ` +
         `actual driver is cost increases absorbed without margin impact assessment ` +
         `across the full menu range.`
+      );
+    }
+
+    case "MARGIN_SUPPLIER_COST_BLENDED": {
+      return (
+        `Margin erosion is driven by supplier cost increases that have not been passed ` +
+        `through to customers — unrecovered cost increases have accumulated across two ` +
+        `consecutive years while pricing has remained static, creating a growing pricing ` +
+        `review gap. Blended reporting masking individual performance across three ` +
+        `product categories means product-level profitability cannot be assessed: ` +
+        `the owner cannot identify which product category is absorbing the most ` +
+        `supplier cost increases or which category still has margin headroom to recover ` +
+        `unrecovered cost increases through targeted pricing adjustment. ` +
+        `The absence of product-level profitability reporting is the diagnostic gap ` +
+        `preventing an evidence-based pricing review response.`
+      );
+    }
+
+    case "DEMAND_STAFF_ROTATION_RETENTION": {
+      return (
+        `Demand generation failure is driven by roster rotation as driver of early ` +
+        `departure — the operative assigned to each client changes between sessions, ` +
+        `and clients with a client tenure average of only three months are leaving ` +
+        `without explanation because service consistency is not maintained. ` +
+        `The owner is experiencing pricing misattribution by owner — attributing ` +
+        `client losses to competitor pricing when the actual driver is staff inconsistency. ` +
+        `The need to audit departure pattern against staff assignment is critical: ` +
+        `mapping each client departure to the number of operative changes that client ` +
+        `experienced will confirm whether roster instability is the primary departure driver. ` +
+        `No exit feedback is collected from departing clients, making the true departure ` +
+        `cause invisible and preventing a targeted retention response.`
       );
     }
 
@@ -1299,6 +1351,26 @@ function buildSubMechanismFirstAction(
       `have the highest rate of discounted clearance: ${snippet}. ` +
       `Once the discount dependency is quantified, determine which product lines to ` +
       `discontinue before taking any other action.`
+    );
+  }
+  if (subMechanism === "MARGIN_SUPPLIER_COST_BLENDED") {
+    return (
+      `Separate the combined revenue and cost figure into the three product categories ` +
+      `and calculate the gross margin percentage for each category individually, ` +
+      `then identify which category has absorbed the most supplier cost increases ` +
+      `without a corresponding price adjustment: ${snippet}. ` +
+      `Once the product-level profitability gap is visible, determine which category ` +
+      `requires a pricing review before taking any other action.`
+    );
+  }
+  if (subMechanism === "DEMAND_STAFF_ROTATION_RETENTION") {
+    return (
+      `Build a departure log showing every client who stopped engaging in the past ` +
+      `12 months and record how many different operatives each departing client ` +
+      `experienced during their tenure, then compare this to the operative consistency ` +
+      `rate for retained clients: ${snippet}. ` +
+      `Once the departure pattern against staff assignment is confirmed, implement ` +
+      `a consistent operative assignment policy before any other action.`
     );
   }
   return "";

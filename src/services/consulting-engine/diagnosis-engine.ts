@@ -380,7 +380,10 @@ const rootCausePatterns: RootCausePattern[] = [
   // margin / cash pressure (and proposed-cut adversarial framings) do NOT fire.
   {
     name: "Demand Generation Failure",
-    pattern: (evidence) => evidence.some((e) => fin_isDemandFailure(e)),
+    // W3: second path via fin_isChurnDrivenDemandFailure for service businesses where
+    // demand declines through early client departure (retention-driven demand failure).
+    pattern: (evidence) =>
+      evidence.some((e) => fin_isDemandFailure(e)) || fin_isChurnDrivenDemandFailure(evidence),
     confidence: (evidence) => {
       const sev = evidence.some(
         (e) => fin_isDemandFailure(e) && (fin_num(e, "newCustomerRate") !== undefined || fin_num(e, "leadVolume") !== undefined)
@@ -849,6 +852,27 @@ function fin_isDemandFailure(e: EvidenceItem): boolean {
   return fin_num(e, "newCustomerRate") !== undefined || fin_num(e, "leadVolume") !== undefined || fin_num(e, "pipelineValue") !== undefined || fin_num(e, "funnelConversionPct") !== undefined;
 }
 
+// W3: Churn-driven demand failure — fires when customer_retention evidence shows critical
+// early client departure AND a demandDurabilityMonths numeric exists (short client tenure).
+// This captures service businesses where demand declines because existing clients leave
+// early (retention failure), not because new customer acquisition has collapsed.
+// Safety guards: requires is_critical=true departure signal AND demandDurabilityMonths numeric;
+// generic satisfaction complaints alone do NOT fire; financial_health or market_position
+// evidence alone does NOT fire.
+const CHURN_DEPARTURE_TEXT =
+  /stop.{0,20}(engaging|after[\s\w]{0,10}session)|client.{0,30}(depart|leave|stop|exit|tenure)|depart\w*.{0,20}client|early.{0,20}(departure|churn|exit)|replac\w*.{0,20}(client|customer)/;
+
+function fin_isChurnDrivenDemandFailure(evidence: EvidenceItem[]): boolean {
+  const hasCriticalDepartureSignal = evidence.some(
+    (e) =>
+      e.dimension === "customer_retention" &&
+      e.isCritical === true &&
+      CHURN_DEPARTURE_TEXT.test(fin_text(e))
+  );
+  if (!hasCriticalDepartureSignal) return false;
+  return evidence.some((e) => fin_num(e, "demandDurabilityMonths") !== undefined);
+}
+
 // W1: extended with pipeline/conversion/win-rate/CAC-payback vocabulary that describes
 // channel performance without explicit "paid-search" / "channel mix" terminology.
 const GTM_TEXT = /paid[- ]search|paid[- ]social|channel mix|channel-driven|acquisition (cost|channel)|go-to-market|\bgtm\b|distribution channel|sales motion|market segment|channel attribution|pipeline conversion|win rate|\bwin-rate\b|qualified lead conversion|sales cycle|demo[- ]to[- ]close|cac payback|channel roi|digital advertising|online advertising|advertising targeting|lead generation channel/;
@@ -900,8 +924,12 @@ const LEGAL_TEXT =
 // P3-G additions: off-balance-sheet, related-party, conflicts of interest, structural/
 // accounting opacity — circumspect accounting / SPV / governance-risk vocabulary that
 // signals Enron-style financial-engineering risk without using the word "fraud".
+// W3: "enquiry" removed from STRONG_LEGAL_TEXT — it is a common British-English word for
+// client contact/intake volume and fires false-positive LEGAL in market_position context.
+// "enquiry" remains in LEGAL_TEXT (and LEGAL_TEXT_G) so it still contributes to the 2+
+// distinct-hit count threshold, but a single standalone "enquiry" no longer triggers LEGAL alone.
 const STRONG_LEGAL_TEXT =
-  /misconduct|\bfraud\b|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction\w*|penalt\w*|non-?complian\w*|moratorium|misappropriat\w*|embezzl\w*|\baudit\b|off-?balance-?sheet|related.?party|conflicts? of interest|structural opacity|accounting opacity|regulatory intervention|capital inadequac\w*|capital.?adequacy.*insufficient|insufficient.*capital.?adequacy|rbi.*intervention|central bank.*intervention|intervention.*(?:rbi|central bank|regulator)|regulator.*(?:seize|take over|supersede|appoint|place|put).*bank|banking.*licen[sc]e.*(?:revoke|cancel|suspend)|licen[sc]e.*(?:revoke|cancel|suspend).*bank/;
+  /misconduct|\bfraud\b|consent order|investigation|inquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction\w*|penalt\w*|non-?complian\w*|moratorium|misappropriat\w*|embezzl\w*|\baudit\b|off-?balance-?sheet|related.?party|conflicts? of interest|structural opacity|accounting opacity|regulatory intervention|capital inadequac\w*|capital.?adequacy.*insufficient|insufficient.*capital.?adequacy|rbi.*intervention|central bank.*intervention|intervention.*(?:rbi|central bank|regulator)|regulator.*(?:seize|take over|supersede|appoint|place|put).*bank|banking.*licen[sc]e.*(?:revoke|cancel|suspend)|licen[sc]e.*(?:revoke|cancel|suspend).*bank/;
 
 // Global version for counting distinct LEGAL_TEXT hits within a single finding
 const LEGAL_TEXT_G =
