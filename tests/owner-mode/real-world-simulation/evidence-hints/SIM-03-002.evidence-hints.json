@@ -1,0 +1,107 @@
+{
+  "case_id": "SIM-03-002",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "weekly net surplus is noticeably lower than two years ago despite customer volumes remaining similar",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Lower surplus with stable volume is a critical margin erosion signal. financial_health dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "ingredient and packaging costs have risen significantly over the past 24 months",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Input cost inflation is a critical adverse margin signal. financial_health dimension; is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "the owner has absorbed rising costs without adjusting what customers are charged",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Cost absorption without recovery is a margin erosion mechanism. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "catering booking volume is slightly below last year but the owner cannot measure its financial impact separately",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Soft catering bookings as a secondary signal — included at LOW confidence because the primary margin driver is input cost, not catering volume."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 780K; 9 staff; café selling prices have not been updated in three years; catering arm operates alongside café",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Three-year price freeze with rising ingredient costs confirms the margin erosion mechanism. is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): catering booking volume is slightly below last year and owner attributes the entire surplus decline to this",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Catering softness is a misleading partial signal — it cannot explain a multi-year sustained margin decline on its own. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): customer numbers through the café have remained broadly stable",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Stable customer count is a misleading signal when the problem is cost margin not volume. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): a nearby competitor café closed recently potentially increasing foot traffic",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Competitor closure is a misleading demand signal when the problem is input cost not volume. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_revenue",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 4,
+      "value_override": -18,
+      "transform_note": "Proxy: ingredient cost inflation over 24 months without any price adjustment in a food service business typically produces a 15-25% shift in direct cost percentage. -18 used as a conservative estimate to signal material margin erosion direction to the engine."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "fin_isMarginErosion (confirmed ingredient cost percentage versus three years ago elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": "discountPct",
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-03-002 is a margin erosion case driven by food cost inflation not recovered through menu repricing. No must_identify vocabulary used (food cost as proportion of revenue, menu pricing not reviewed, cost absorption without recovery, direct costs rising against stable selling prices, margin erosion over time — none appear in findings). Negative marginPct proxy signals erosion direction."
+}

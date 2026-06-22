@@ -1,0 +1,105 @@
+{
+  "case_id": "SIM-04-002",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "demand_generation_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "most clients stop engaging after two to four sessions without providing an explanation",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Early client departure after 2-4 sessions is a critical customer retention failure signal. customer_retention dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "owner spends a significant portion of each week acquiring new clients to replace those who have stopped",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Ongoing replacement marketing is an adverse retention signal. customer_retention dimension. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "the operative assigned to each client changes frequently between sessions",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Frequent change of operative between client visits is a critical service consistency failure signal. operational_efficiency dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "multiple clients have specifically mentioned that a different person performed their most recent visit",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Client comments about operative changes directly link inconsistency to departure risk. customer_retention dimension; is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 410K; 7 cleaning staff; average client tenure approximately 3 months; no exit feedback collected from departing clients",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Three-month average client tenure with no exit feedback and confirmed staff rotation is a critical retention failure profile. is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): a nearby competitor recently reduced their prices which the owner believes is drawing clients away",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Competitor price reduction is a misleading signal when client departure aligns with operative changes, not price comparisons. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): new client enquiry volume is healthy and initial booking conversion is acceptable",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Strong acquisition metrics are misleading when the retention problem is the root cause of business performance decline. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): no direct quality complaints have been received from clients who have departed",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of explicit complaints is a misleading signal — clients experiencing operative changes typically leave without complaining. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "avg_client_tenure_months",
+      "canonical_key": "demandDurabilityMonths",
+      "evidence_item_index": 4
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-04-002 is a customer retention failure case driven by service inconsistency. No must_identify vocabulary used (staff consistency per client, roster rotation as driver of early departure, client tenure average of only three months, pricing misattribution by owner, need to audit departure pattern against staff assignment — none appear in findings). demandDurabilityMonths mapped from avg_client_tenure_months."
+}

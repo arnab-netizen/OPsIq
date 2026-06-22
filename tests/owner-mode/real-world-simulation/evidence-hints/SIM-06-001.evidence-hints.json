@@ -1,0 +1,104 @@
+{
+  "case_id": "SIM-06-001",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": null,
+  "unsupported_expected_archetypes": [
+    {
+      "smb_label": "operational_stage_bottleneck",
+      "gap_reason": "No archetype in the engine models production stage bottleneck or throughput constraint analysis. The engine cannot locate which production stage is the binding constraint from the available diagnostic dimensions."
+    }
+  ],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "average order lead time has extended from 8 weeks to 14 weeks over the past 18 months",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "A 75% increase in lead time over 18 months is a critical operational efficiency degradation signal. operational_efficiency dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "the business is declining potential orders because it cannot commit to a delivery date within an acceptable timeframe",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Declining orders due to lead time is a critical market position and revenue risk signal. market_position dimension; is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "all production staff report feeling busy throughout the working day but the owner is unable to identify which part of the process is causing delays",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Uniform busyness without an identified delay point is a critical operational diagnostic gap — this is the hallmark presentation of an unlocated production constraint. operational_efficiency dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "completed pieces are sometimes waiting in the finishing area for extended periods before delivery is scheduled",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Work-in-progress accumulating in the finishing area suggests the constraint may be upstream of finishing. operational_efficiency dimension. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 620K; 5 production staff; average lead time 14 weeks; 8 orders declined in the past quarter",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "8 orders declined in one quarter with a 14-week lead time is a material revenue opportunity cost. The absence of stage-level time data means the constraint location is unknown. is_critical=true. No must_identify vocabulary used (stage-level dwell time, work-in-progress waiting, constraint location, lead time extension, cost of adding staff before locating constraint — none appear)."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): all five production staff appear busy throughout the working day, which the owner interprets as evidence of a general headcount shortage",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Uniform staff busyness is a misleading signal when the root cause is an unlocated single-stage constraint — non-constrained stages may be idle or working slowly while looking busy. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the business has maintained a waiting list for several months, which the owner interprets as demand requiring additional staff",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "A waiting list is a demand signal, not a capacity solution — it does not indicate that adding headcount would resolve the throughput constraint. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): a peer business in the same industry hired additional craftspeople and reported improved throughput",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Peer anecdote is a misleading signal — the peer business's constraint profile may differ entirely from this business. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-06-001 is an UNSUPPORTED case (SC-06). No archetype in the OpsIQ engine models production stage bottleneck or throughput constraint analysis. The engine will return SCOPE_GAP or UNKNOWN for this case. No must_identify vocabulary used (stage-level dwell time analysis needed, visible work-in-progress waiting between stages, constraint location unknown before staffing decision, lead time extension as symptom of bottleneck not headcount, cost of adding staff before locating constraint — none appear in findings). Bad recommendation vocabulary excluded (hire two additional craftspeople, invest in a larger workshop facility, reduce furniture designs, outsource finishing stage — none appear in findings)."
+}

@@ -1,0 +1,107 @@
+{
+  "case_id": "SIM-01-001",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner drawing on personal credit line each time bi-weekly payroll obligations fall due",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Personal credit use for payroll is an acute adverse liquidity signal. financial_health dimension; is_critical=true because payroll dependency on personal credit is an immediate operational solvency signal. Finding paraphrased from symptom — no must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "cash balance depletes sharply when payroll obligations fall due despite growing revenue",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Cash depletion at payroll is an adverse timing signal. Not critical because it is a recurring pattern rather than a singular failure event. financial_health dimension. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "revenue increasing over time but cash position is not improving commensurately",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue-cash divergence is a financial health adverse signal consistent with a payment timing problem. No outcome vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "enterprise clients consistently settling their invoices later than the agreed period",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Enterprise client late settlement is a critical adverse liquidity signal directly generating the cash timing gap. financial_health dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 1.8M; 12 employees; bi-weekly payroll schedule; enterprise client contracts with payment terms that result in funds arriving after payroll falls due based on reported settlement patterns",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary of the timing gap. Bi-weekly payroll cadence vs enterprise client settlement cycle is the structural mismatch. is_critical=true, HIGH confidence as these are confirmed owner-reported figures. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue grew 22 percent year on year",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth is a misleading signal masking the payment timing problem. Included as non-critical LOW confidence so the engine treats it correctly."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): client roster is described as full with no vacant service slots",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Full roster is a misleading signal suggesting business health when the actual issue is payment timing. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): payroll obligations have been met so far through personal credit drawdowns",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "The fact that payroll has not been missed is a misleading stability signal — it is being maintained through personal credit, not through healthy cash flow. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_revenue",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 4,
+      "value_override": 60,
+      "transform_note": "Enterprise client settlement pattern implies approximately 60-day average inbound payment lag. annual_revenue is the only numeric fixture field; value_override of 60 days used as DSO proxy based on described enterprise client payment behaviour."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "receivablesAging",
+      "would_improve_pattern": "fin_isWorkingCapital (receivablesAging with days value elevates to HIGH confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": "dso",
+      "would_improve_pattern": "fin_isWorkingCapital (dso numeric elevates to HIGH confidence)"
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-01-001 is a payment-timing working-capital case. All findings derived from input_packet fields. No must_identify vocabulary used (overdue invoices, slow-paying clients, billing cycle timing, payroll gap, outstanding balances — none appear in findings). DSO approximated from enterprise client settlement pattern at 60 days via value_override."
+}

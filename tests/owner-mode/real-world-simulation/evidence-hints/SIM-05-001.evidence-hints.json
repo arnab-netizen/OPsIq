@@ -1,0 +1,112 @@
+{
+  "case_id": "SIM-05-001",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "gtm_channel_mismatch",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "over 200 monthly enquiries arriving but fewer than 4 percent proceed to retained client status",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "High volume with very low conversion is a critical GTM channel mismatch signal. market_position dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "intake staff spending a substantial proportion of each day on enquiries that do not advance",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Staff time consumed by non-converting enquiries is an adverse operational signal consistent with a channel mismatch. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "average quality of incoming enquiries has declined over the past 12 months as advertising targeting has broadened",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Declining enquiry quality coinciding with broader targeting is a direct GTM channel mismatch signal. market_position dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "a notable proportion of incoming enquiries relate to service categories the firm does not handle",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Out-of-scope enquiries confirming targeting mismatch. market_position dimension; is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 1.2M; 6 staff; 200 monthly enquiries; conversion rate below 4 percent; digital advertising the primary acquisition channel with broadened targeting over 18 months",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "The combination of high volume, very low conversion, and broadened targeting is the GTM mismatch profile. is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): enquiry volume has grown substantially following 18 months of increased digital advertising investment",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Volume growth from advertising is a misleading signal when the enquiries are not converting. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): intake team follows up each enquiry within 24 hours which the owner considers strong performance",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Fast follow-up is a misleading performance indicator when the enquiries themselves are not in scope for conversion. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): owner believes that more investment in the same advertising channels will produce more retained clients",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Owner attribution of the problem to insufficient advertising volume is a misleading framing signal. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "monthly_enquiries",
+      "canonical_key": "leadVolume",
+      "evidence_item_index": 4
+    },
+    {
+      "fixture_key": "annual_revenue",
+      "canonical_key": "funnelConversionPct",
+      "evidence_item_index": 4,
+      "value_override": 4,
+      "transform_note": "Owner-stated conversion rate is under 4 percent. funnelConversionPct set to 4 as an upper-bound proxy for the adversely low conversion rate."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "funnelConversionPct",
+      "would_improve_pattern": "fin_isGtmMismatch (conversion rate breakdown by enquiry type would confirm targeting mismatch)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": "channelConversionPct",
+      "would_improve_pattern": "fin_isGtmMismatch (conversion rate by channel would confirm which targeting configuration is generating non-converting volume)"
+    }
+  ],
+  "validation_notes": "SIM-05-001 is a GTM channel mismatch case where advertising targeting is generating out-of-scope enquiries. No must_identify vocabulary used (targeting mismatch generating out-of-scope enquiries, in-scope versus out-of-scope enquiry conversion gap, intake capacity consumed by unqualifiable leads, advertising configuration as the upstream cause, matter type qualification rate — none appear in findings)."
+}
