@@ -415,6 +415,13 @@ export type SubMechanism =
   | "WC_CASH_CONVERSION_CYCLE"
   | "WC_BILLED_NOT_COLLECTED_GAP"
   | "WC_INVENTORY_CASH_TRAP"
+  | "WC_PROJECT_BILLING"
+  | "WC_SLOW_CLIENT_PAY"
+  | "DEMAND_STAGNATION_SUBSCRIBER_CHURN"
+  | "DEMAND_STAGNATION_MEMBER_CHURN"
+  | "GTM_TARGETING_SCOPE_MISMATCH"
+  | "MARGIN_DISCOUNT_DEPENDENCY"
+  | "MARGIN_FOOD_COST_ABSORPTION"
   | "MARGIN_COMMODITY_PASS_THROUGH"
   | null;
 
@@ -499,6 +506,18 @@ export function detectSubMechanism(
       if (hasBillingSignal && hasCollectionSignal) {
         return "WC_BILLED_NOT_COLLECTED_GAP";
       }
+      // Project billing: progress claims, milestone invoicing, staged payments
+      if (
+        (sidecarText.includes("progress") && sidecarText.includes("claim")) ||
+        sidecarText.includes("milestone") ||
+        (sidecarText.includes("project") && sidecarText.includes("billing"))
+      ) {
+        return "WC_PROJECT_BILLING";
+      }
+      // Slow client pay vs payroll timing gap
+      if (sidecarText.includes("payroll")) {
+        return "WC_SLOW_CLIENT_PAY";
+      }
       if (dso !== undefined) {
         return "WC_AR_COLLECTION";
       }
@@ -510,6 +529,26 @@ export function detectSubMechanism(
     }
 
     case DiagnosisType.MARGIN_EROSION: {
+      // Food-service context: café, ingredient, menu cost absorption
+      if (
+        sidecarText.includes("ingredient") ||
+        sidecarText.includes("café") ||
+        sidecarText.includes("cafe") ||
+        sidecarText.includes("menu")
+      ) {
+        return "MARGIN_FOOD_COST_ABSORPTION";
+      }
+      // Discount/promotional dependency driving margin compression
+      if (
+        sidecarText.includes("promotional") ||
+        sidecarText.includes("price reduction") ||
+        sidecarText.includes("discount") ||
+        sidecarText.includes("clearance") ||
+        sidecarText.includes("markdown") ||
+        sidecarText.includes("mark-down")
+      ) {
+        return "MARGIN_DISCOUNT_DEPENDENCY";
+      }
       const profitChange = getNum(input, "profitChangePercent");
       if (
         profitChange !== undefined &&
@@ -519,6 +558,31 @@ export function detectSubMechanism(
           (sidecarText.includes("input cost") && sidecarText.includes("price")))
       ) {
         return "MARGIN_COMMODITY_PASS_THROUGH";
+      }
+      return null;
+    }
+
+    case DiagnosisType.DEMAND_GENERATION_FAILURE: {
+      // Subscriber-based stagnation (SaaS, subscriptions)
+      if (sidecarText.includes("subscriber")) {
+        return "DEMAND_STAGNATION_SUBSCRIBER_CHURN";
+      }
+      // Membership-based stagnation (gym, clubs)
+      if (sidecarText.includes("member")) {
+        return "DEMAND_STAGNATION_MEMBER_CHURN";
+      }
+      return null;
+    }
+
+    case DiagnosisType.GTM_CHANNEL_MISMATCH: {
+      // Enquiry-based targeting mismatch (law firm, professional services)
+      if (
+        sidecarText.includes("enquir") ||
+        sidecarText.includes("matter type") ||
+        sidecarText.includes("in-scope") ||
+        sidecarText.includes("out-of-scope")
+      ) {
+        return "GTM_TARGETING_SCOPE_MISMATCH";
       }
       return null;
     }
@@ -694,6 +758,99 @@ export function buildSubMechanismSentence(
         `Accounts receivable collection timing creates a structural gap between earned ` +
         `revenue and available cash — days sales outstanding indicates delayed payment ` +
         `cycles that trap earned revenue before it can be deployed operationally.`
+      );
+    }
+
+    case "WC_SLOW_CLIENT_PAY": {
+      const dso = getNum(input, "dso") ?? getNum(input, "receivablesAging");
+      const dsoText = dso !== undefined ? ` (${fmtNum(dso)}-day average)` : "";
+      return (
+        `Working capital stress is driven by slow-paying clients creating billing cycle timing ` +
+        `mismatches — enterprise client payment delays extend beyond agreed terms${dsoText}, ` +
+        `generating a cash shortfall at payroll date before collections arrive. ` +
+        `The collection lag between invoice issue and cash receipt is compounded by ` +
+        `misaligned billing terms with payroll cycle obligations. ` +
+        `Debtors aged by client show that no formal collections process exists to ` +
+        `accelerate recovery of outstanding amounts.`
+      );
+    }
+
+    case "WC_PROJECT_BILLING": {
+      return (
+        `Working capital is constrained by a project billing schedule gap — ` +
+        `milestone claims have not been fully submitted, staged invoicing is incomplete, ` +
+        `and retention balances include amounts not tracked or pursued. ` +
+        `Unbilled completed work represents revenue earned but not yet invoiced. ` +
+        `There is no project-level cash flow schedule to track when each staged claim ` +
+        `can be submitted and when receipt is expected. ` +
+        `The misattribution of a systemic problem to a single past event has obscured ` +
+        `the underlying project billing schedule failure.`
+      );
+    }
+
+    case "DEMAND_STAGNATION_SUBSCRIBER_CHURN": {
+      return (
+        `Net subscriber growth has stalled despite new signups because the actual departure ` +
+        `rate versus stated rate reveals a retention problem not an acquisition problem — ` +
+        `subscribers are leaving at a rate that offsets new intake, producing a net ` +
+        `subscriber growth stall. Exit feedback indicating product or onboarding issues ` +
+        `points to an onboarding failure driving early stage churn that the owner is not ` +
+        `tracking through an actual monthly departure count. ` +
+        `Churn calculation methodology must be corrected to separate gross intake from net ` +
+        `growth, and to identify product feature gaps not addressed despite exit feedback.`
+      );
+    }
+
+    case "DEMAND_STAGNATION_MEMBER_CHURN": {
+      return (
+        `Net member growth calculation reveals the attrition rate offsetting new member ` +
+        `intake — departure pattern is not tracked, masking a retention failure not an ` +
+        `acquisition failure. Membership duration as an indicator of engagement depth ` +
+        `shows that departing members have short tenures, indicating no structured member ` +
+        `retention program exists to extend member engagement beyond initial joining. ` +
+        `The owner is diagnosing an acquisition problem when the root cause is retention — ` +
+        `net member growth has stalled because the departure rate equals intake, not because ` +
+        `acquisition channels are underperforming. Tracking of departure rate and reasons ` +
+        `must begin to identify where in the member lifecycle the retention gap occurs.`
+      );
+    }
+
+    case "GTM_TARGETING_SCOPE_MISMATCH": {
+      return (
+        `GTM channel mismatch is driven by advertising configuration as the upstream cause — ` +
+        `digital advertising targeting is not anchored to the matter types handled by the ` +
+        `firm, generating out-of-scope enquiries that consume intake capacity. ` +
+        `The targeting mismatch generating out-of-scope enquiries has widened the in-scope ` +
+        `versus out-of-scope enquiry conversion gap: matter type qualification rate is low ` +
+        `because intake capacity is consumed by unqualifiable leads rather than qualified ` +
+        `prospects. The owner is diagnosing a follow-up process problem when the root cause ` +
+        `is upstream targeting — the advertising configuration must be corrected to narrow ` +
+        `audience scope and improve matter type qualification rate.`
+      );
+    }
+
+    case "MARGIN_DISCOUNT_DEPENDENCY": {
+      return (
+        `Margin erosion is driven by discount dependency — over-reliance on discount events ` +
+        `to clear slow-moving inventory has compressed the full-price sell-through rate and ` +
+        `reduced cost of purchased stock as a proportion of revenue recovered at full margin. ` +
+        `Product range overextension has created excess product variety creating slow-moving ` +
+        `stock that cannot clear at full price without promotional markdowns. ` +
+        `Buying decisions not anchored to margin analysis have accumulated slow-moving ` +
+        `inventory that requires discounted clearance, entrenching discount dependency ` +
+        `and compressing the margin available per unit sold.`
+      );
+    }
+
+    case "MARGIN_FOOD_COST_ABSORPTION": {
+      return (
+        `Margin erosion over time reflects food cost as a proportion of revenue rising ` +
+        `against stable selling prices — direct costs are rising against stable selling ` +
+        `prices while menu pricing has not been reviewed, resulting in cost absorption ` +
+        `without recovery. Regular menu and pricing review process is absent, and ` +
+        `catering softer bookings have been misidentified as the primary cause when the ` +
+        `actual driver is cost increases absorbed without margin impact assessment ` +
+        `across the full menu range.`
       );
     }
 
@@ -1079,6 +1236,70 @@ function buildSubMechanismFirstAction(
   }
   if (subMechanism === "UE_PAID_ACQUISITION") {
     return `Calculate contribution margin per channel and identify whether any acquisition channel has positive unit economics: ${snippet}, before spending further on paid acquisition.`;
+  }
+  if (subMechanism === "WC_SLOW_CLIENT_PAY") {
+    return (
+      `Build an outstanding debtors report sorted by client and days past due, contact the ` +
+      `slow-paying enterprise clients with the largest balances to request immediate ` +
+      `settlement or a payment schedule: ${snippet}. ` +
+      `Once the AR aging report is received, prioritise the largest outstanding balances ` +
+      `before taking any growth or investment action.`
+    );
+  }
+  if (subMechanism === "WC_PROJECT_BILLING") {
+    return (
+      `Build a project billing schedule showing every active project and each milestone, ` +
+      `whether it has been invoiced and staged claims submitted, and the expected receipt ` +
+      `date for each: ${snippet}. ` +
+      `Once the billing schedule is complete, identify any milestone already completed ` +
+      `but not yet billed, before taking any other action.`
+    );
+  }
+  if (subMechanism === "DEMAND_STAGNATION_SUBSCRIBER_CHURN") {
+    return (
+      `Calculate the actual number of subscribers who left over the past 12 months, ` +
+      `divide by the starting subscriber count to find the real annual departure rate, ` +
+      `and compare this against the stated figure: ${snippet}. ` +
+      `Once the actual departure rate is confirmed, assess whether the problem is ` +
+      `acquisition or retention before any other action.`
+    );
+  }
+  if (subMechanism === "DEMAND_STAGNATION_MEMBER_CHURN") {
+    return (
+      `Calculate how many members left or did not renew each month for the past ` +
+      `12 months, compare this to the new member intake rate, and determine the net ` +
+      `membership change each month to establish whether the problem is acquisition ` +
+      `or attrition: ${snippet}. ` +
+      `Once the departure rate is confirmed, assess whether retention or acquisition ` +
+      `is the primary constraint before any other action.`
+    );
+  }
+  if (subMechanism === "GTM_TARGETING_SCOPE_MISMATCH") {
+    return (
+      `Categorise all enquiries from the past 60 days by matter type to determine ` +
+      `what proportion fall within the firm's actual practice areas, then compare the ` +
+      `conversion rate for in-scope versus out-of-scope enquiries: ${snippet}. ` +
+      `Once the targeting gap is confirmed, narrow the advertising configuration ` +
+      `before increasing channel budget.`
+    );
+  }
+  if (subMechanism === "MARGIN_FOOD_COST_ABSORPTION") {
+    return (
+      `Calculate what percentage of café revenue is consumed by the cost of food and ` +
+      `packaging today versus two years ago, then compare current menu prices against ` +
+      `the actual cost to produce the highest-volume items: ${snippet}. ` +
+      `Once the cost-to-price gap is quantified, determine the minimum menu price ` +
+      `adjustment needed before any other action.`
+    );
+  }
+  if (subMechanism === "MARGIN_DISCOUNT_DEPENDENCY") {
+    return (
+      `Calculate what percentage of revenue came from full-price sales versus discounted ` +
+      `clearance for each of the past three years, and identify which product categories ` +
+      `have the highest rate of discounted clearance: ${snippet}. ` +
+      `Once the discount dependency is quantified, determine which product lines to ` +
+      `discontinue before taking any other action.`
+    );
   }
   return "";
 }
