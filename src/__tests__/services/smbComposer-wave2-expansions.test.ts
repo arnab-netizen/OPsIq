@@ -3,14 +3,14 @@ import {
   detectSubMechanism,
   buildSubMechanismSentence,
   type SubMechanism,
-} from "@tests/owner-mode/real-world-smb-cases/smbOutputComposer";
+} from "../../../tests/owner-mode/real-world-smb-cases/smbOutputComposer";
 import {
   DiagnosisType,
   DiagnosisConfidence,
   ConfidenceLevel,
   type EvidenceItem,
 } from "@/domain/consulting-engine/types";
-import type { ComposerInput } from "@tests/owner-mode/real-world-smb-cases/smbOutputComposer";
+import type { ComposerInput } from "../../../tests/owner-mode/real-world-smb-cases/smbOutputComposer";
 
 // ── Minimal builder helpers ──────────────────────────────────────────────────
 
