@@ -21,40 +21,41 @@ beforeEach(() => {
   _resetSimulationFixtureCache();
 });
 
-// ── Empty corpus (fixture file absent) ───────────────────────────────────────
+// ── Corpus present (fixture file exists with Batch 1 cases) ──────────────────
 
-describe("loadSimulationFixtures: empty corpus returns NOT_READY", () => {
-  it("returns NOT_READY when fixture file does not exist", () => {
+describe("loadSimulationFixtures: corpus is READY with Batch 1 cases", () => {
+  it("returns READY when fixture file exists with valid cases", () => {
     const corpus = loadSimulationFixtures();
-    expect(corpus.status).toBe("NOT_READY");
+    expect(corpus.status).toBe("READY");
   });
 
-  it("returns empty fixtures array when NOT_READY", () => {
+  it("returns 12 fixtures for Batch 1", () => {
     const corpus = loadSimulationFixtures();
-    expect(corpus.fixtures).toHaveLength(0);
+    expect(corpus.fixtures.length).toBeGreaterThanOrEqual(12);
   });
 
-  it("includes a human-readable reason when NOT_READY", () => {
+  it("reason is undefined when READY", () => {
     const corpus = loadSimulationFixtures();
-    expect(corpus.reason).toBeTruthy();
-    expect(typeof corpus.reason).toBe("string");
+    expect(corpus.reason).toBeUndefined();
   });
 });
 
-// ── listSimulationCaseIds with empty corpus ──────────────────────────────────
+// ── listSimulationCaseIds with real corpus ───────────────────────────────────
 
-describe("listSimulationCaseIds: empty corpus returns empty array", () => {
-  it("returns [] when corpus is NOT_READY", () => {
+describe("listSimulationCaseIds: returns case IDs when corpus is READY", () => {
+  it("returns non-empty array when corpus is READY", () => {
     const ids = listSimulationCaseIds();
-    expect(ids).toEqual([]);
+    expect(ids.length).toBeGreaterThan(0);
   });
 });
 
-// ── getSimulationCaseById with empty corpus ───────────────────────────────────
+// ── getSimulationCaseById with real corpus ────────────────────────────────────
 
-describe("getSimulationCaseById: throws on NOT_READY corpus", () => {
-  it("throws when corpus is NOT_READY", () => {
-    expect(() => getSimulationCaseById("SIM-01-001")).toThrow(/NOT_READY/);
+describe("getSimulationCaseById: returns case when corpus is READY", () => {
+  it("returns a fixture when case_id exists in Batch 1", () => {
+    const fixture = getSimulationCaseById("SIM-01-001");
+    expect(fixture).toBeDefined();
+    expect(fixture.case_id).toBe("SIM-01-001");
   });
 });
 
@@ -222,23 +223,23 @@ describe("parseAndValidateSimulationFixtures: duplicate IDs fail", () => {
   });
 });
 
-// ── NOT_READY is never PASS ───────────────────────────────────────────────────
+// ── READY corpus has cases and can be scored ──────────────────────────────────
 
-describe("NOT_READY corpus cannot be treated as PASS", () => {
-  it("NOT_READY status is not equal to READY", () => {
+describe("READY corpus has loadable cases", () => {
+  it("READY status is READY", () => {
     const corpus = loadSimulationFixtures();
-    expect(corpus.status).not.toBe("READY");
+    expect(corpus.status).toBe("READY");
   });
 
-  it("fixture count is 0 in NOT_READY state", () => {
+  it("fixture count is > 0 when corpus is READY", () => {
     const corpus = loadSimulationFixtures();
-    expect(corpus.fixtures.length).toBe(0);
+    expect(corpus.fixtures.length).toBeGreaterThan(0);
   });
 
-  it("empty fixture list cannot satisfy a pass-rate check", () => {
+  it("all loaded fixtures have valid case_id format", () => {
     const corpus = loadSimulationFixtures();
-    const supportedCount = corpus.fixtures.filter(() => true).length;
-    // No cases = 0/0 — undefined pass rate — cannot be reported as pass
-    expect(supportedCount).toBe(0);
+    for (const f of corpus.fixtures) {
+      expect(f.case_id).toMatch(/^SIM-\d{2}-\d{3}$/);
+    }
   });
 });
