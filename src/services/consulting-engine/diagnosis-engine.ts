@@ -314,7 +314,8 @@ const rootCausePatterns: RootCausePattern[] = [
   },
   {
     name: "Working Capital Stress",
-    pattern: (evidence) => evidence.some((e) => fin_isWorkingCapital(e)),
+    // W1: also fires on fin_isWorkingCapitalPaired (two independent WC narrative signals).
+    pattern: (evidence) => evidence.some((e) => fin_isWorkingCapital(e)) || fin_isWorkingCapitalPaired(evidence),
     confidence: (evidence) => {
       const sev = evidence.some(
         (e) =>
@@ -408,8 +409,15 @@ const rootCausePatterns: RootCausePattern[] = [
     name: "GTM / Channel Mismatch",
     pattern: (evidence) => evidence.some((e) => fin_isGtmMismatch(e)),
     confidence: (evidence) => {
+      // W1: HIGH when any strong channel-level numeric is present (original channelCac/
+      // channelMix plus funnelConversionPct and leadVolume from the W1 gate expansion).
       const sev = evidence.some(
-        (e) => fin_isGtmMismatch(e) && (fin_num(e, "channelCac") !== undefined || fin_num(e, "channelMix") !== undefined)
+        (e) =>
+          fin_isGtmMismatch(e) &&
+          (fin_num(e, "channelCac") !== undefined ||
+            fin_num(e, "channelMix") !== undefined ||
+            fin_num(e, "funnelConversionPct") !== undefined ||
+            fin_num(e, "leadVolume") !== undefined)
       );
       return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
     },
@@ -750,17 +758,41 @@ function fin_isDebtSolvency(e: EvidenceItem): boolean {
   return DEBT_TEXT.test(t) && (numeric || DEBT_SELF_CORROBORATING.test(t));
 }
 
-const WC_TEXT = /receivabl|days sales outstanding|\bdso\b|cash conversion|days payable|\bdpo\b|working capital|cash[- ]conversion cycle|collections (timing|cycle)/;
+// W1: extended with AR/AP narrative synonyms. `receivabl` already matches the JSON key
+// "receivablesAging" via fin_text serialisation; the synonyms cover business-English
+// paraphrases ("slow-paying clients", "payment delays", "outstanding invoices") that
+// appear in narrative evidence without the canonical WC field name.
+const WC_TEXT = /receivabl|days sales outstanding|\bdso\b|cash conversion|days payable|\bdpo\b|working capital|cash[- ]conversion cycle|collections (timing|cycle)|receivable aging|invoice aging|payable timing|cash conversion mismatch|billed but uncollected|payment collection lag|slow[- ]pay\w*|late[- ]pay\w*|payment delay\w*|overdue invoice\w*|outstanding invoice\w*|debtor day\w*/;
 function fin_isWorkingCapital(e: EvidenceItem): boolean {
   if (e.dimension !== "financial_health") return false;
   const t = fin_text(e);
+  // W1: receivablesAging alone is now sufficient (was: required dpo pairing). dso and
+  // cashConversionDays remain independently sufficient as before. Generic "cash pressure"
+  // still does NOT fire — it lacks WC_TEXT vocabulary.
   const numeric =
     fin_num(e, "dso") !== undefined ||
     fin_num(e, "cashConversionDays") !== undefined ||
-    (fin_num(e, "receivablesAging") !== undefined && fin_num(e, "dpo") !== undefined);
-  // Require AR/AP/CCC vocabulary AND a working-capital numeric (DSO / cash-conversion
-  // / receivables+payables). Generic "collections slowed" (no DSO/CCC) does NOT fire.
+    fin_num(e, "receivablesAging") !== undefined;
+  // Require AR/AP/CCC vocabulary AND a WC numeric. Generic inventory cash lockup or
+  // "collections slowed" (no WC vocabulary) does NOT fire.
   return WC_TEXT.test(t) && numeric;
+}
+
+// W1: paired narrative path — fires when 2+ distinct financial_health items match
+// WC_TEXT with at least one carrying a WC numeric. Satisfies the "two independent WC
+// signals" requirement for partial-numeric cases. Generic "cash pressure" alone has no
+// WC_TEXT match and cannot trigger this path.
+function fin_isWorkingCapitalPaired(evidence: EvidenceItem[]): boolean {
+  const fh = evidence.filter((e) => e.dimension === "financial_health");
+  const wcItems = fh.filter((e) => WC_TEXT.test(fin_text(e)));
+  if (wcItems.length < 2) return false;
+  return wcItems.some(
+    (e) =>
+      fin_num(e, "dso") !== undefined ||
+      fin_num(e, "cashConversionDays") !== undefined ||
+      fin_num(e, "receivablesAging") !== undefined ||
+      fin_num(e, "dpo") !== undefined
+  );
 }
 
 const PRICING_TEXT = /priced (well )?below|below (comparable|competitor)|under-?pric|self-inflicted discount|discount (granted|reached|leakage)|realized price.*below|discount.*freely|no pricing governance|no discount-approval|price realization/;
@@ -800,23 +832,46 @@ function fin_isPricingTransition(e: EvidenceItem): boolean {
 
 // ─── E2 slice 2 demand / GTM / inventory triggers (strict; adverse-specific) ──
 const DEMAND_TEXT = /new-customer (acquisition|demand|volume|footfall|count).*(stall|collaps|fell|fall|weak|down)|collaps\w*[^.]{0,40}new[- ]?customer|acquisition has stalled|top-of-funnel.*(collaps|fell|weak)|lead volume (collaps|fell|weak|down)|demand (collaps|fell|softened|deteriorat|dried)|funnel.*(collaps|deteriorat)|online sessions (fell|collaps)|traffic (fell|collaps|weak)|volume deleverage|new[- ]customer demand collaps/;
+
+// W1: stagnation extensions — adverse demand framing without explicit collapse verbs.
+// Requires market_position dimension AND a demand numeric (gate in fin_isDemandFailure).
+// Fires on sustained stagnation / plateau framing with a demand context; does NOT fire
+// on generic seasonal softness ("sales were light", "revenue slowed") which has no
+// subscriber / membership / flatlined / attrition context.
+const DEMAND_STAGNATION_TEXT = /subscriber.*(count|base|number|growth).*(flat\b|stagnant|plateau\w*|not grow\w*|unchanged|constant)|flat.{0,20}(subscription\b|subscriber\b|membership\b)|stagnant.{0,20}(subscription\b|subscriber\b|membership\b)|membership.*(flat\b|stagnant|plateau\w*|not grow\w*|unchanged)|lead.*(flow|volume|count|rate).*(flat\b|stagnant|plateau\w*|slow\w*|not grow\w*|weak\w*)|demand.*(stagnant|plateau\w*|flatlined|not grow\w*)|acquisition.*(stagnant|flat\b|plateau\w*|not grow\w*|unchanged)|pipeline.*(stagnant|flat\b)|attrition.{0,20}(exceed\w*|offset\w*|outpac\w*).{0,30}(new|acquisition|intake|join\w*)|departure.rate.{0,20}(exceed\w*|offset\w*|outpac\w*)|\bflatlined\b|qualified lead.*(weak\w*|slow\w*|thin)|pipeline slow\w*/;
+
 function fin_isDemandFailure(e: EvidenceItem): boolean {
   if (e.dimension !== "market_position") return false;
   const t = fin_text(e);
-  // Require ADVERSE demand framing (collapse/stall/fell/weak) AND a demand numeric;
-  // a generic revenue/margin decline or a proposed marketing CUT does NOT fire.
-  if (!DEMAND_TEXT.test(t)) return false;
+  // Require ADVERSE demand framing (collapse/stall/fell/weak OR W1 stagnation) AND a
+  // demand numeric; generic revenue/margin decline or a proposed marketing CUT does NOT fire.
+  if (!DEMAND_TEXT.test(t) && !DEMAND_STAGNATION_TEXT.test(t)) return false;
   return fin_num(e, "newCustomerRate") !== undefined || fin_num(e, "leadVolume") !== undefined || fin_num(e, "pipelineValue") !== undefined || fin_num(e, "funnelConversionPct") !== undefined;
 }
 
-const GTM_TEXT = /paid[- ]search|paid[- ]social|channel mix|channel-driven|acquisition (cost|channel)|go-to-market|\bgtm\b|distribution channel|sales motion|market segment|channel attribution/;
+// W1: extended with pipeline/conversion/win-rate/CAC-payback vocabulary that describes
+// channel performance without explicit "paid-search" / "channel mix" terminology.
+const GTM_TEXT = /paid[- ]search|paid[- ]social|channel mix|channel-driven|acquisition (cost|channel)|go-to-market|\bgtm\b|distribution channel|sales motion|market segment|channel attribution|pipeline conversion|win rate|\bwin-rate\b|qualified lead conversion|sales cycle|demo[- ]to[- ]close|cac payback|channel roi|digital advertising|online advertising|advertising targeting|lead generation channel/;
 function fin_isGtmMismatch(e: EvidenceItem): boolean {
   if (e.dimension !== "market_position") return false;
   const t = fin_text(e);
-  // Require channel/distribution evidence with a channel-economics numeric; a generic
+  // Require channel/GTM vocabulary AND a channel-economics or funnel numeric; a generic
   // growth slowdown (no channel signal) does NOT fire.
   if (!GTM_TEXT.test(t)) return false;
-  return fin_num(e, "channelCac") !== undefined || fin_num(e, "channelMix") !== undefined || fin_num(e, "channelConversionPct") !== undefined;
+  // W1: added funnelConversionPct, leadVolume, winRate, pipelineConversionPct,
+  // salesCycleDays, cacPaybackMonths, channelRoi as valid GTM corroborators.
+  return (
+    fin_num(e, "channelCac") !== undefined ||
+    fin_num(e, "channelMix") !== undefined ||
+    fin_num(e, "channelConversionPct") !== undefined ||
+    fin_num(e, "funnelConversionPct") !== undefined ||
+    fin_num(e, "leadVolume") !== undefined ||
+    fin_num(e, "winRate") !== undefined ||
+    fin_num(e, "pipelineConversionPct") !== undefined ||
+    fin_num(e, "salesCycleDays") !== undefined ||
+    fin_num(e, "cacPaybackMonths") !== undefined ||
+    fin_num(e, "channelRoi") !== undefined
+  );
 }
 
 function fin_isInventoryMismatch(e: EvidenceItem): boolean {
