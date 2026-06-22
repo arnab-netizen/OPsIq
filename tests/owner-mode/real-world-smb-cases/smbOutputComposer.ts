@@ -413,6 +413,7 @@ export type SubMechanism =
   | "UE_PAID_ACQUISITION"
   | "WC_AR_COLLECTION"
   | "WC_CASH_CONVERSION_CYCLE"
+  | "WC_BILLED_NOT_COLLECTED_GAP"
   | "WC_INVENTORY_CASH_TRAP"
   | "MARGIN_COMMODITY_PASS_THROUGH"
   | null;
@@ -484,6 +485,19 @@ export function detectSubMechanism(
         (sidecarText.includes("payables") && sidecarText.includes("receivables"))
       ) {
         return "WC_CASH_CONVERSION_CYCLE";
+      }
+      // Billed-vs-collected gap: billing signal + collection/overdue signal → AR collection gap
+      const hasBillingSignal =
+        sidecarText.includes("billed") ||
+        sidecarText.includes("invoice") ||
+        sidecarText.includes("billing");
+      const hasCollectionSignal =
+        sidecarText.includes("collected") ||
+        sidecarText.includes("overdue") ||
+        sidecarText.includes("follow-up") ||
+        sidecarText.includes("aging");
+      if (hasBillingSignal && hasCollectionSignal) {
+        return "WC_BILLED_NOT_COLLECTED_GAP";
       }
       if (dso !== undefined) {
         return "WC_AR_COLLECTION";
@@ -632,6 +646,27 @@ export function buildSubMechanismSentence(
         `The business currently lacks pricing power to offset rising input costs: ` +
         `price has not been raised despite ongoing cost increases, compressing margin ` +
         `on each unit sold.`
+      );
+    }
+
+    case "WC_BILLED_NOT_COLLECTED_GAP": {
+      const dso = getNum(input, "dso") ?? getNum(input, "receivablesAging");
+      if (dso !== undefined) {
+        return (
+          `Working capital stress is driven by a gap between billed vs collected revenue — ` +
+          `invoices are raised but payment lags behind, creating a cash flow gap between ` +
+          `earned revenue and available cash. With accounts receivable outstanding at a ` +
+          `${fmtNum(dso)}-day average (days sales outstanding), invoice aging is the ` +
+          `primary constraint on operational liquidity. Overdue invoices are not being ` +
+          `resolved through a structured receivables follow-up cadence.`
+        );
+      }
+      return (
+        `Working capital stress is driven by a gap between billed vs collected revenue — ` +
+        `invoices are raised but payment lags behind, creating a cash flow gap between ` +
+        `earned revenue and available cash. Invoice aging is the primary constraint on ` +
+        `operational liquidity: overdue invoices accumulate without a structured ` +
+        `receivables follow-up cadence to accelerate collection.`
       );
     }
 
