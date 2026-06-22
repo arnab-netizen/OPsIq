@@ -35,13 +35,16 @@ describe("normalizeSimulationFixtureToEvidence: structural contract", () => {
     expect(result.expectedArchetypeSynonym).toBe("working_capital_stress");
   });
 
-  it("marks SC-06 cases as unsupportedArchetype=true", () => {
+  // W4 CORRECTION: SIM-06-001 reclassified from SCOPE_GAP to SUPPORTED (operational_bottleneck).
+  // OPERATIONAL_BOTTLENECK now accepts market_position critical declining-order evidence as
+  // co-requirement, enabling the engine to diagnose manufacturing throughput constraint cases.
+  it("marks SIM-06-001 as unsupportedArchetype=false (W4: now supported as operational_bottleneck)", () => {
     const fixture = getFixture("SIM-06-001");
     const result = normalizeSimulationFixtureToEvidence(fixture);
-    expect(result.unsupportedArchetype).toBe(true);
-    expect(result.expectedBehavior).toBe("ABSTAIN_OR_SCOPE_GAP");
-    expect(result.expectedArchetypeSynonym).toBeNull();
-    expect(result.unsupportedArchetypes.length).toBeGreaterThan(0);
+    expect(result.unsupportedArchetype).toBe(false);
+    expect(result.expectedBehavior).toBe("DIAGNOSE");
+    expect(result.expectedArchetypeSynonym).toBe("operational_bottleneck");
+    expect(result.unsupportedArchetypes.length).toBe(0);
   });
 
   it("marks SIM-06-002 as unsupportedArchetype=true", () => {
@@ -144,21 +147,23 @@ describe("runSimulationCaseAgainstOpsiq: calls real diagnosis engine", () => {
 
 // ── Unsupported cases: SCOPE_GAP path ────────────────────────────────────────
 
-describe("runSimulationCaseAgainstOpsiq: unsupported SC-06 cases return SCOPE_GAP", () => {
-  it("SIM-06-001 returns unsupportedArchetype=true", async () => {
+describe("runSimulationCaseAgainstOpsiq: SC-06 case status after W4 reclassification", () => {
+  // W4 CORRECTION: SIM-06-001 is now SUPPORTED (operational_bottleneck archetype).
+  // The test description and assertions below reflect the corrected state.
+  it("SIM-06-001 returns unsupportedArchetype=false (W4: reclassified to supported)", async () => {
     const fixture = getFixture("SIM-06-001");
     const result = await runSimulationCaseAgainstOpsiq(fixture);
-    expect(result.unsupportedArchetype).toBe(true);
-    expect(result.failureClassification).toBe("SIM_ENGINE_GAP");
+    expect(result.unsupportedArchetype).toBe(false);
+    expect(result.failureClassification).not.toBe("SIM_ENGINE_GAP");
   });
 
-  it("SIM-06-001 output contains SCOPE GAP marker", async () => {
+  it("SIM-06-001 output does not contain SCOPE GAP marker (W4: now a supported diagnosis)", async () => {
     const fixture = getFixture("SIM-06-001");
     const result = await runSimulationCaseAgainstOpsiq(fixture);
-    expect(result.output).toContain("SCOPE GAP");
+    expect(result.output).not.toContain("SCOPE GAP");
   });
 
-  it("SIM-06-002 returns unsupportedArchetype=true", async () => {
+  it("SIM-06-002 returns unsupportedArchetype=true (SIM-06-002 remains scope gap)", async () => {
     const fixture = getFixture("SIM-06-002");
     const result = await runSimulationCaseAgainstOpsiq(fixture);
     expect(result.unsupportedArchetype).toBe(true);

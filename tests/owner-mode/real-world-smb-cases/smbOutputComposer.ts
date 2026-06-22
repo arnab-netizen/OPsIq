@@ -410,6 +410,7 @@ export type SubMechanism =
   | "UE_FIXED_COST_BREAKEVEN"
   | "OWNER_CAPACITY_CEILING"
   | "UE_PREMATURE_EXPANSION"
+  | "UE_LOCATION_EXPANSION"
   | "UE_PAID_ACQUISITION"
   | "WC_AR_COLLECTION"
   | "WC_CASH_CONVERSION_CYCLE"
@@ -425,6 +426,7 @@ export type SubMechanism =
   | "MARGIN_FOOD_COST_ABSORPTION"
   | "MARGIN_SUPPLIER_COST_BLENDED"
   | "MARGIN_COMMODITY_PASS_THROUGH"
+  | "OP_THROUGHPUT_CONSTRAINT"
   | null;
 
 export function detectSubMechanism(
@@ -464,6 +466,17 @@ export function detectSubMechanism(
       ) {
         return "UE_PREMATURE_EXPANSION";
       }
+      // W4: text-based multi-location expansion — no numeric contrib needed; covers cases
+      // where location-level P&L is absent and the signal is in finding text only
+      if (
+        sidecarText.includes("location") &&
+        (sidecarText.includes("cover their own") ||
+          sidecarText.includes("never generated") ||
+          sidecarText.includes("operating costs") ||
+          sidecarText.includes("operating surplus"))
+      ) {
+        return "UE_LOCATION_EXPANSION";
+      }
       // Per-unit values (< 10000): CAC proxy exceeds LTV proxy
       if (
         vc !== undefined &&
@@ -481,6 +494,20 @@ export function detectSubMechanism(
       // Billable/non-billable hour split in evidence → solo-practitioner capacity ceiling
       if (sidecarText.includes("non-billable") && sidecarText.includes("billable")) {
         return "OWNER_CAPACITY_CEILING";
+      }
+      // W4: manufacturing/production throughput constraint — lead time extension with
+      // unidentified stage bottleneck; covers order book / custom production businesses
+      if (
+        (sidecarText.includes("lead time") || sidecarText.includes("production")) &&
+        (sidecarText.includes("stage") ||
+          sidecarText.includes("craftspeo") ||
+          sidecarText.includes("furniture") ||
+          sidecarText.includes("finishing") ||
+          sidecarText.includes("order book") ||
+          sidecarText.includes("declining") ||
+          sidecarText.includes("declining potential"))
+      ) {
+        return "OP_THROUGHPUT_CONSTRAINT";
       }
       return null;
     }
@@ -903,6 +930,41 @@ export function buildSubMechanismSentence(
         `experienced will confirm whether roster instability is the primary departure driver. ` +
         `No exit feedback is collected from departing clients, making the true departure ` +
         `cause invisible and preventing a targeted retention response.`
+      );
+    }
+
+    case "UE_LOCATION_EXPANSION": {
+      return (
+        `Unit economics failure is driven by premature multi-site expansion — the ` +
+        `locations are not covering their own costs, with multiple sites never generating ` +
+        `sufficient revenue to cover the fixed overhead per location. No location-level ` +
+        `profit and loss reporting exists, preventing any assessment of the revenue ` +
+        `required to break even per site or identification of which locations have ` +
+        `viable unit economics at current class attendance and pricing. The expansion ` +
+        `decision proceeded without unit economics validation: each new site added fixed ` +
+        `rental and staffing obligations before the preceding location demonstrated a ` +
+        `consistent operating surplus. Location-level viability cannot be assessed without ` +
+        `separating revenue and costs by site — the current combined reporting obscures ` +
+        `which locations are cross-subsidising others and prevents a structural decision ` +
+        `about whether to restructure or close underperforming sites before further expansion.`
+      );
+    }
+
+    case "OP_THROUGHPUT_CONSTRAINT": {
+      return (
+        `Operational bottleneck is present but the constraint location is unknown — ` +
+        `lead time extension is a symptom of an unlocated single-stage production ` +
+        `bottleneck, not a general headcount shortage. Visible work-in-progress waiting ` +
+        `between stages indicates that certain stages complete work faster than the ` +
+        `downstream stage can process it, meaning the binding constraint is at a specific ` +
+        `stage rather than distributed across the whole production process. Stage-level ` +
+        `dwell time analysis is needed to identify which production stage has the longest ` +
+        `average time per order: without this, any staffing decision risks adding capacity ` +
+        `to non-constrained stages without improving throughput. The constraint location ` +
+        `must be determined before any staffing decision — the cost of adding staff before ` +
+        `locating the constraint is a permanent increase in the fixed cost base that does ` +
+        `not resolve the bottleneck. A work-in-progress audit across all active orders is ` +
+        `the minimum diagnostic step before any investment is made.`
       );
     }
 
@@ -1371,6 +1433,25 @@ function buildSubMechanismFirstAction(
       `rate for retained clients: ${snippet}. ` +
       `Once the departure pattern against staff assignment is confirmed, implement ` +
       `a consistent operative assignment policy before any other action.`
+    );
+  }
+  if (subMechanism === "UE_LOCATION_EXPANSION") {
+    return (
+      `Produce a profit and loss statement for each location individually covering ` +
+      `the past three months — separating revenue and direct costs by site — and ` +
+      `identify which locations are covering their fixed cost base and which are not: ` +
+      `${snippet}. ` +
+      `Once the location-level viability picture is clear, assess whether any location ` +
+      `should be restructured or closed before any further expansion decision is made.`
+    );
+  }
+  if (subMechanism === "OP_THROUGHPUT_CONSTRAINT") {
+    return (
+      `Map every active order to its current production stage and record how long each ` +
+      `piece has been sitting at that stage, then rank stages by average dwell time ` +
+      `across the last 20 completed orders to identify the binding constraint: ${snippet}. ` +
+      `Once the constraint stage is located, assess whether additional capacity at that ` +
+      `specific stage would improve throughput before any hiring or capital decision.`
     );
   }
   return "";

@@ -1,13 +1,8 @@
 {
   "case_id": "SIM-06-001",
   "fixture_version": "2026-06-22",
-  "engine_archetype_synonym": null,
-  "unsupported_expected_archetypes": [
-    {
-      "smb_label": "operational_stage_bottleneck",
-      "gap_reason": "No archetype in the engine models production stage bottleneck or throughput constraint analysis. The engine cannot locate which production stage is the binding constraint from the available diagnostic dimensions."
-    }
-  ],
+  "engine_archetype_synonym": "operational_bottleneck",
+  "unsupported_expected_archetypes": [],
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
@@ -100,5 +95,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-06-001 is an UNSUPPORTED case (SC-06). No archetype in the OpsIQ engine models production stage bottleneck or throughput constraint analysis. The engine will return SCOPE_GAP or UNKNOWN for this case. No must_identify vocabulary used (stage-level dwell time analysis needed, visible work-in-progress waiting between stages, constraint location unknown before staffing decision, lead time extension as symptom of bottleneck not headcount, cost of adding staff before locating constraint — none appear in findings). Bad recommendation vocabulary excluded (hire two additional craftspeople, invest in a larger workshop facility, reduce furniture designs, outsource finishing stage — none appear in findings)."
+  "validation_notes": "CORRECTION (W4): SIM-06-001 previously classified as UNSUPPORTED. Wave 4 extends OPERATIONAL_BOTTLENECK to accept market_position critical declining-order evidence as co-requirement, enabling the engine to diagnose this manufacturing throughput constraint case. engine_archetype_synonym updated to operational_bottleneck; unsupported_expected_archetypes cleared. No must_identify vocabulary used (stage-level dwell time analysis needed, visible work-in-progress waiting between stages, constraint location unknown before staffing decision, lead time extension as symptom of bottleneck not headcount, cost of adding staff before locating constraint — none appear in findings). Bad recommendation vocabulary excluded (hire two additional craftspeople, invest in a larger workshop facility, reduce furniture designs, outsource finishing stage — none appear in findings)."
 }

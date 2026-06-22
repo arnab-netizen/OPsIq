@@ -26,14 +26,25 @@ interface RootCausePattern {
 const rootCausePatterns: RootCausePattern[] = [
   {
     name: "Operational Bottleneck",
+    // W4: co-requirement extended to also accept market_position critical evidence with
+    // declining order signal — covers manufacturing/service throughput cases where lead
+    // time extension causes order rejection (market impact) rather than customer churn
+    // (retention impact). Safety: still requires op_isBottleneckSignal() (operational_efficiency
+    // + isCritical + OPERATIONAL_TOPIC) as the primary gate; market_position alone does not fire.
     pattern: (evidence) =>
       evidence.some((e) => op_isBottleneckSignal(e)) &&
-      evidence.some(
+      (evidence.some(
         (e) =>
           e.dimension === "customer_retention" &&
           (e.finding.toLowerCase().includes("low repeat") ||
             e.finding.toLowerCase().includes("defect"))
-      ),
+      ) ||
+      evidence.some(
+        (e) =>
+          e.dimension === "market_position" &&
+          e.isCritical &&
+          /declin\w*|turn\w* away|turn\w* down|rejecti\w*|refus\w*|cannot.*commit|unable.*commit/i.test(e.finding)
+      )),
     confidence: (evidence) => {
       const efficiencyEvidence = evidence.filter(
         (e) => e.dimension === "operational_efficiency"
@@ -667,6 +678,14 @@ function fin_isLiquidityPressurePaired(evidence: EvidenceItem[]): boolean {
 const UNITECON_HARD =
   /negative contribution|negative unit|unprofitabl\w*|loss per unit|loss-making|cac exceeds|cac\s*>\s*ltv|ltv\s*<\s*cac|ltv below cac|payback too long|burning (?:money )?on each|lose money on each|upside[- ]?down unit/;
 const UNITECON_TOPIC = /contribution|unit econom|\bcac\b|payback|ltv|per[- ]?(?:unit|customer|subscriber|member) econ/;
+// W4: location-level fixed-cost overcommitment — captures multi-site expansion cases
+// where individual locations never cover their own operating costs. Requires isCritical
+// financial_health evidence; generic "costs increased" without location-level framing
+// does NOT fire. Safety guard: isCritical=true prevents generic cost commentary from
+// triggering this path (non-critical cost observations do not establish a structural unit
+// economics failure).
+const LOCATION_UNIT_PATTERN =
+  /cover.{0,40}(own|their).{0,30}(cost|operating)|never.{0,30}(generat|cover|produc)\w*.{0,30}(surplus|profit|cost)|locat\w*.{0,30}not.{0,20}(cover|generat|viab|sustain)|sites?.{0,20}not.{0,20}(cover|viab|sustain)/;
 function fin_isUnitEconomicsFailure(e: EvidenceItem): boolean {
   if (e.dimension !== "financial_health") return false;
   const t = fin_text(e);
@@ -677,6 +696,8 @@ function fin_isUnitEconomicsFailure(e: EvidenceItem): boolean {
     return true; // adverse numeric
   }
   if (UNITECON_HARD.test(t)) return true;
+  // W4: location-level fixed-cost signal — isCritical required to exclude generic cost mentions
+  if (e.isCritical && LOCATION_UNIT_PATTERN.test(t)) return true;
   return softDistress(t, UNITECON_TOPIC);
 }
 

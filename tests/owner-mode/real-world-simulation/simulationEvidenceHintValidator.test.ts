@@ -530,23 +530,34 @@ describe("All 12 simulation sidecar files exist and pass validation", () => {
   }
 });
 
-// ── Gap cases: SIM-06-001 and SIM-06-002 ─────────────────────────────────────
+// ── Gap cases: SIM-06-001 (W4: reclassified) and SIM-06-002 ─────────────────
+// W4 CORRECTION: SIM-06-001 was reclassified from SCOPE_GAP to SUPPORTED in Wave 4.
+// The OPERATIONAL_BOTTLENECK archetype now accepts market_position critical declining-order
+// evidence as a co-requirement, enabling diagnosis of manufacturing throughput constraints.
+// SIM-06-002 remains a scope gap (scheduling/routing conflict — no archetype modelled).
 
-describe("SC-06 gap cases have null engine_archetype_synonym", () => {
-  const GAP_CASES = ["SIM-06-001", "SIM-06-002"];
+describe("SC-06 gap cases: SIM-06-002 remains scope gap; SIM-06-001 reclassified (W4)", () => {
+  it("SIM-06-002 has engine_archetype_synonym: null (still scope gap)", () => {
+    const sidecar = loadSidecar("SIM-06-002") as Record<string, unknown>;
+    expect(sidecar["engine_archetype_synonym"]).toBeNull();
+  });
 
-  for (const caseId of GAP_CASES) {
-    it(`${caseId} has engine_archetype_synonym: null`, () => {
-      const sidecar = loadSidecar(caseId) as Record<string, unknown>;
-      expect(sidecar["engine_archetype_synonym"]).toBeNull();
-    });
+  it("SIM-06-002 has non-empty unsupported_expected_archetypes (still scope gap)", () => {
+    const sidecar = loadSidecar("SIM-06-002") as Record<string, unknown>;
+    expect(Array.isArray(sidecar["unsupported_expected_archetypes"])).toBe(true);
+    expect((sidecar["unsupported_expected_archetypes"] as unknown[]).length).toBeGreaterThan(0);
+  });
 
-    it(`${caseId} has non-empty unsupported_expected_archetypes`, () => {
-      const sidecar = loadSidecar(caseId) as Record<string, unknown>;
-      expect(Array.isArray(sidecar["unsupported_expected_archetypes"])).toBe(true);
-      expect((sidecar["unsupported_expected_archetypes"] as unknown[]).length).toBeGreaterThan(0);
-    });
-  }
+  it("SIM-06-001 has engine_archetype_synonym: operational_bottleneck (W4: now supported)", () => {
+    const sidecar = loadSidecar("SIM-06-001") as Record<string, unknown>;
+    expect(sidecar["engine_archetype_synonym"]).toBe("operational_bottleneck");
+  });
+
+  it("SIM-06-001 has empty unsupported_expected_archetypes (W4: now supported)", () => {
+    const sidecar = loadSidecar("SIM-06-001") as Record<string, unknown>;
+    expect(Array.isArray(sidecar["unsupported_expected_archetypes"])).toBe(true);
+    expect((sidecar["unsupported_expected_archetypes"] as unknown[]).length).toBe(0);
+  });
 });
 
 // ── Covered cases: SC-01 through SC-05 ───────────────────────────────────────
