@@ -412,6 +412,9 @@ export type SubMechanism =
   | "UE_PREMATURE_EXPANSION"
   | "UE_PAID_ACQUISITION"
   | "WC_AR_COLLECTION"
+  | "WC_CASH_CONVERSION_CYCLE"
+  | "WC_INVENTORY_CASH_TRAP"
+  | "MARGIN_COMMODITY_PASS_THROUGH"
   | null;
 
 export function detectSubMechanism(
@@ -473,9 +476,35 @@ export function detectSubMechanism(
     }
 
     case DiagnosisType.WORKING_CAPITAL_STRESS: {
+      const cashConvDays = getNum(input, "cashConversionDays");
       const dso = getNum(input, "dso") ?? getNum(input, "receivablesAging");
+      // Both-sided timing mismatch (receivables + payables) → cash conversion cycle
+      if (
+        cashConvDays !== undefined ||
+        (sidecarText.includes("payables") && sidecarText.includes("receivables"))
+      ) {
+        return "WC_CASH_CONVERSION_CYCLE";
+      }
       if (dso !== undefined) {
         return "WC_AR_COLLECTION";
+      }
+      return null;
+    }
+
+    case DiagnosisType.INVENTORY_FORECASTING_MISMATCH: {
+      return "WC_INVENTORY_CASH_TRAP";
+    }
+
+    case DiagnosisType.MARGIN_EROSION: {
+      const profitChange = getNum(input, "profitChangePercent");
+      if (
+        profitChange !== undefined &&
+        profitChange < 0 &&
+        (sidecarText.includes("pricing response") ||
+          sidecarText.includes("last price increase") ||
+          (sidecarText.includes("input cost") && sidecarText.includes("price")))
+      ) {
+        return "MARGIN_COMMODITY_PASS_THROUGH";
       }
       return null;
     }
@@ -553,6 +582,56 @@ export function buildSubMechanismSentence(
         `Customer acquisition cost exceeds the per-customer revenue contribution — ` +
         `the paid acquisition channel is generating negative unit economics and deepening ` +
         `the cumulative loss with each additional customer acquired.`
+      );
+    }
+
+    case "WC_CASH_CONVERSION_CYCLE": {
+      const dso = getNum(input, "dso") ?? getNum(input, "receivablesAging");
+      const dpo = getNum(input, "dpo");
+      if (dso !== undefined && dpo !== undefined) {
+        const gap = Math.round(dso - dpo);
+        return (
+          `Working capital is stressed by a cash conversion cycle timing imbalance — ` +
+          `accounts receivable timing stretches to ${fmtNum(dso)} days while payables fall due ` +
+          `before receivables are collected, creating a ${fmtNum(gap)}-day cash flow gap. ` +
+          `The AR/AP mismatch means the business must bridge the gap between when revenue ` +
+          `is earned and when cash arrives.`
+        );
+      }
+      if (dso !== undefined) {
+        return (
+          `Working capital is stressed by a cash conversion cycle timing imbalance — ` +
+          `accounts receivable timing stretches to ${fmtNum(dso)} days while payables fall ` +
+          `due before receivables are collected from clients, creating a structural cash flow gap. ` +
+          `The AR/AP mismatch means earned cash must be bridged by credit until client payments arrive.`
+        );
+      }
+      return (
+        `Working capital is stressed by a cash conversion cycle timing imbalance — ` +
+        `accounts receivable timing lags while payables fall due before receivables are ` +
+        `collected from clients, creating a structural cash flow gap. ` +
+        `The AR/AP mismatch requires ongoing credit to bridge the gap between when ` +
+        `revenue is earned and when cash arrives.`
+      );
+    }
+
+    case "WC_INVENTORY_CASH_TRAP": {
+      return (
+        `Working capital is locked in an inventory cash trap — slow-moving stock holds ` +
+        `cash tied up in unsold lines that cannot be redeployed until units sell. ` +
+        `Inventory turnover at current rates is insufficient to maintain operational ` +
+        `liquidity: overstock accumulates in low-demand lines while high-demand items ` +
+        `face stockouts.`
+      );
+    }
+
+    case "MARGIN_COMMODITY_PASS_THROUGH": {
+      return (
+        `Input cost increases have not been passed through to selling prices — margin ` +
+        `compression without a pricing response has eroded gross margin percentage. ` +
+        `The business currently lacks pricing power to offset rising input costs: ` +
+        `price has not been raised despite ongoing cost increases, compressing margin ` +
+        `on each unit sold.`
       );
     }
 
