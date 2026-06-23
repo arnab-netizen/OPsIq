@@ -46,7 +46,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 7 | Experiment design | **VERIFIED (STATIC_TESTED_ONLY)** — pure lifecycle 133 tests green; persistence gap documented |
 | 8 | Execution orchestration | **VERIFIED (STATIC_TESTED_ONLY)** — action FSM/proof 65 tests green |
 | 9 | Outcome verification + attribution | **VERIFIED (STATIC_TESTED_ONLY)** — outcome+attribution 212 tests green |
-| 10 | Private owner learning eligibility gate | NOT_STARTED (impl PRESENT; verify + security negatives) |
+| 10 | Private owner learning eligibility gate | **VERIFIED (API_TESTED)** — 426 domain + 152 route tests green; DB persistence gated |
 | 11 | Governance / audit / model risk | NOT_STARTED (impl PRESENT; verify) |
 | 12 | Owner dashboard command center | NOT_STARTED (PARTIAL panels) |
 | 12.5 | Trust & explainability QA | NOT_STARTED |
@@ -86,7 +86,13 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 9 verified (no code). Proceed to **Phase 10 — Private Owner Learning Eligibility Gate**: verify `OwnerLearningEligibilityReview` + `ControlledLearningCandidate` + controlled-learning services (verified-outcome-only, attribution threshold, operator/public denial); run the learning + security negatives that are runnable without DB.
+Phase 10 verified (no code). Proceed to **Phase 11 — Governance / Audit / Model Risk**: verify audit trail (`AuditEvent` hash chain, `CanonicalEvent`), model/prompt/rule versioning (`model-versioning.ts`), and decision reconstruction; run audit tests.
+
+### Phase 10 decision record (private owner learning eligibility) — VERIFICATION ONLY (no code)
+- **Eligibility gate (verified-outcome-only + attribution threshold):** `domain/owner-mode/learning-eligibility.ts` + `controlled-learning.ts`; consumes `causal-attribution.ATTRIBUTION_BLOCKS_LEARNING` so unverified/disputed/insufficient/confounded/external outcomes cannot create candidates. `OwnerLearningEligibilityReview` (allowsLearning/isTerminalRejection/requiresHumanReview) + `ControlledLearningCandidate`.
+- **Owner-private + operator/public denial:** `domain/owner-mode/security-rules.ts`; 12 controlled-learning-* services (admission/candidate/attribution/regression/consent/harm/privacy/rejection/retention/review/rollback/rollout); 15 `owner/learning-*` routes.
+- **Tests verified green:** domain learning suite (controlled-learning + learning-eligibility + admission-rejection/harm-attribution/privacy/regression/review/rollout-rollback) = 9 files / 426; learning **route** tests (admissions/attribution-reviews/candidates/consent/harm-events/privacy/rejections/retention/reviews/rollback/rollout + reviews) = 12 files / 152 → auth + validation boundaries exercised at the handler.
+- **Known limitation:** `*.db.test.ts` (controlled-learning-candidate.db, admission.db) are DB-gated → full DB-backed persistence + cross-workspace denial not run here; route-handler auth is proven, DB persistence is not.
 
 ### Phase 9 decision record (outcome verification + attribution) — VERIFICATION ONLY (no code)
 - **Outcome verification:** `OwnerActionOutcome` (outcomeStatus worked/partially/did_not_work/…/external_event_interference, before/after values, evidenceQuality, externalEventFlag); `domain/owner-mode/outcome-validation.ts` (`validateValidationCriteria`, `assertRecommendationHasCriteria`, `computeTargetDelta`); outcome services + outcome-core.
