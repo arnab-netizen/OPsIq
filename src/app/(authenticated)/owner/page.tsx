@@ -11,11 +11,22 @@ const RISK_VARIANT = (score: number): "success" | "default" | "warning" | "destr
 const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
   score >= 70 ? "success" : score >= 50 ? "default" : score >= 30 ? "warning" : "destructive";
 
+const FETCH_TIMEOUT_MS = 10_000;
+
 async function api(path: string) {
-  const res = await fetch(path, { headers: { "Content-Type": "application/json" } });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
-  return data;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(path, { headers: { "Content-Type": "application/json" }, signal: controller.signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error?.message || data?.error || `Request failed (${res.status})`);
+    return data;
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") throw new Error("Request timed out after 10 seconds. Check your connection and try again.");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 const DOMAIN_LINK: Record<string, string> = {
@@ -55,6 +66,15 @@ export default function OwnerCommandCenterPage() {
   }, [load]);
 
   if (loading) return <div className="p-8">Loading owner command center…</div>;
+  if (error && !data) return (
+    <div className="mx-auto max-w-5xl py-8 px-4">
+      <div className="rounded-md border border-destructive/20 bg-destructive/5 p-6 text-sm text-destructive">
+        <p className="font-medium mb-2">Failed to load command center</p>
+        <p className="mb-4">{error}</p>
+        <Button onClick={() => load()} className="min-h-[44px]">Retry</Button>
+      </div>
+    </div>
+  );
 
   const businesses: any[] = data?.businesses ?? [];
   const profile = data?.profile ?? null;
