@@ -47,7 +47,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 8 | Execution orchestration | **VERIFIED (STATIC_TESTED_ONLY)** — action FSM/proof 65 tests green |
 | 9 | Outcome verification + attribution | **VERIFIED (STATIC_TESTED_ONLY)** — outcome+attribution 212 tests green |
 | 10 | Private owner learning eligibility gate | **VERIFIED (API_TESTED)** — 426 domain + 152 route tests green; DB persistence gated |
-| 11 | Governance / audit / model risk | NOT_STARTED (impl PRESENT; verify) |
+| 11 | Governance / audit / model risk | **VERIFIED (API_TESTED)** — 294 audit/governance tests green |
 | 12 | Owner dashboard command center | NOT_STARTED (PARTIAL panels) |
 | 12.5 | Trust & explainability QA | NOT_STARTED |
 | 13 | Laundry vertical slice (end-to-end) | NOT_STARTED |
@@ -86,7 +86,14 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 10 verified (no code). Proceed to **Phase 11 — Governance / Audit / Model Risk**: verify audit trail (`AuditEvent` hash chain, `CanonicalEvent`), model/prompt/rule versioning (`model-versioning.ts`), and decision reconstruction; run audit tests.
+Phase 11 verified (no code). Proceed to **Phase 12 — Owner Dashboard Command Center**: verify dashboard panels are backed by real backend contracts (no fabricated data); this is the first phase where the Phase-2 diagnosis-permission classifier could be surfaced if a panel needs it. UI-first checks per §31.
+
+### Phase 11 decision record (governance / audit / model risk) — VERIFICATION ONLY (no code)
+- **Audit trail:** `AuditEvent` (hash-chained `previousHash`) + `CanonicalEvent` (event-sourcing); `services/audit-trail.ts`, `services/audit-event-hash-chain-validator.ts`. Who/when/why captured via audit-events constants.
+- **Model/prompt/rule versioning:** `domain/owner-mode/model-versioning.ts`; AI trace `domain/owner-mode/ai-observability-trace.ts`.
+- **Decision reconstruction:** decisions route + owner-trust explanations/audit-trail (`owner/trust/*`), trust-page.
+- **Tests verified green:** model-versioning + ai-observability-trace + hash-chain-validator (187) + audit-trail + api/decisions + owner-trust trust-page (107) = 6 files / 294.
+- **Known limitation:** DB-backed audit persistence (`*.db.test.ts`) gated → handler/logic verified, DB persistence not.
 
 ### Phase 10 decision record (private owner learning eligibility) — VERIFICATION ONLY (no code)
 - **Eligibility gate (verified-outcome-only + attribution threshold):** `domain/owner-mode/learning-eligibility.ts` + `controlled-learning.ts`; consumes `causal-attribution.ATTRIBUTION_BLOCKS_LEARNING` so unverified/disputed/insufficient/confounded/external outcomes cannot create candidates. `OwnerLearningEligibilityReview` (allowsLearning/isTerminalRejection/requiresHumanReview) + `ControlledLearningCandidate`.
