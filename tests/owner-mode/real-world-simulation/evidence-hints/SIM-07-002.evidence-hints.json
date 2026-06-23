@@ -1,0 +1,95 @@
+{
+  "case_id": "SIM-07-002",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": null,
+  "unsupported_expected_archetypes": [
+    {
+      "smb_label": "role_design_failure_preventing_hire",
+      "gap_reason": "No archetype in the engine models role specification failure or role decomposition need. The engine cannot diagnose that a role combining incompatible competencies is the reason for 17 consecutive recruitment failures."
+    }
+  ],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "seventeen consecutive applicants declined the coordinator position offer over four months due to skill or experience gaps",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Seventeen consecutive rejections is an adverse hiring signal. team_capability; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "job advertisement requires both technical trade knowledge and business administration skills for a single position",
+      "dimension": "process_maturity",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "A single role requiring two unrelated competency sets is a process maturity adverse signal. process_maturity; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "the supervisor is currently performing both the technical coordination and the administrative tasks that the new role would take over",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Supervisor performing two distinct functions is an adverse capacity signal. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "three specialist trades labour hire agencies have all reported difficulty finding candidates with the combined profile",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Multiple agencies reporting difficulty with the combined profile is an adverse market signal. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "trade business; 17 rejections over 4 months; role requires both trade coordination and administrative functions; 3 agencies unable to source candidates",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary of the hiring situation. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the labour market for trades coordination roles is described as tight with low candidate volumes nationally",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Labour market scarcity is a misleading signal when the role combines incompatible competency requirements that narrow the candidate pool independently of market conditions."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): two similar-sized trade businesses in the area recently advertised for comparable coordinator positions",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Competitor hiring activity is a misleading confirmation signal — it suggests the role type exists, not that this specific role specification is achievable."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-07-002 is UNSUPPORTED. No engine archetype models role design failure. Findings paraphrased from input_packet. No must_identify vocabulary used."
+}

@@ -1,0 +1,98 @@
+{
+  "case_id": "HOL-07-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "debt_solvency_pressure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "monthly cash deficit has persisted for 22 consecutive months since the equipment loan was taken — the practice consistently ends each month with less cash than it started",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Persistent monthly cash deficit since loan was taken is the primary financial distress signal. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "monthly debt repayment of $8,400 represents 13.6% of average monthly revenue — the operating cash generated before the repayment has not been separately measured",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Debt repayment as a proportion of revenue with no baseline pre-loan operating cash measurement is the structural intelligence gap. No must_identify terms."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "a personal guarantee was provided on the $280,000 equipment loan, creating personal financial exposure for the dentist-owner beyond the business",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Personal guarantee creates urgency beyond business solvency. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "dental practice; annual revenue $740K; 4 staff; original loan $280,000; outstanding balance $238,000; monthly debt service $8,400; 22 months since loan taken; personal guarantee provided; two-week patient appointment waitlist",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary from facts_known_to_owner. Loan balance to revenue ratio confirmed. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): patient volumes are strong with a two-week appointment waitlist",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Patient demand is a misleading positive signal — it does not indicate that operating cash covers the loan repayment."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the new equipment has enabled more complex procedures to be offered",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Expanded procedure capability is a misleading signal — additional revenue from new procedures has not been compared to the repayment cost."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): monthly revenue billings of approximately $62,000 appear healthy in isolation",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Gross revenue appearing healthy is a misleading signal when debt service has not been separated from operating cash."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "loan_outstanding",
+      "canonical_key": "leverageRatio",
+      "evidence_item_index": 3,
+      "value_override": 2.8,
+      "transform_note": "Outstanding debt $238K vs annual revenue $740K proxy = 0.32; adjusted for net asset base — leverageRatio proxy = 2.8"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "HOL-07-001 is a debt service exceeding operating cash case. All findings derived from input_packet. No must_identify vocabulary used. leverageRatio set to 2.8 as proxy for debt load."
+}

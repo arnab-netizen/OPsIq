@@ -1,0 +1,117 @@
+{
+  "case_id": "SMB-010",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "gross margin fell from 41% to 28% over 18 months with no pricing response",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "13-percentage-point margin decline over 18 months is an acute adverse margin signal. financial_health; is_critical=true; HIGH confidence. Avoids 'input cost margin compression', 'margin compression without pricing response'."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "owner working same or more hours for significantly less net income",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Declining owner income despite constant effort is a financial health adverse signal. is_critical=true."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "fear of raising prices is preventing any pricing response to cost increases",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Owner price-sensitivity belief is a market_position signal relevant to pricing power. Finding avoids 'pricing power' which is a must_identify-adjacent term."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "no data exists on what price increase the market will actually tolerate",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of price-sensitivity data is a market intelligence gap. market_position dimension."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "Current gross margin 28%; gross margin 18 months ago 41%; flour cost up 34%; butter cost up 28%; eggs cost up 41% over 18 months; last price increase was 2 years ago; owner believes customers are price sensitive; no competitor price monitoring",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Margin decline from 41% to 28% is a -13pp adverse change driven by input costs rising 28-41% while prices unchanged. is_critical=true; HIGH confidence. Avoids must_identify terms ('commodity cost increase', 'price has not been raised despite cost increase')."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue is holding steady and customer volume has not declined",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue stability is a misleading signal \u2014 it masks the margin compression."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): loyal customer base and positive community reputation",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Customer loyalty is a misleading signal that reinforces the owner's belief prices cannot be raised."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): stable revenue is interpreted by owner as evidence that prices cannot be raised",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Owner's market interpretation is a misleading signal \u2014 no actual price testing has been done."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "gross_margin_current_pct",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 4
+    },
+    {
+      "fixture_key": "gross_margin_18_months_ago_pct",
+      "canonical_key": "profitChangePercent",
+      "evidence_item_index": 4,
+      "value_override": -13,
+      "transform_note": "profitChangePercent computed as (gross_margin_current_pct - gross_margin_18_months_ago_pct) = 28 - 41 = -13. Negative value signals margin decline over the period."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-010 is a cost-driven margin compression case. Must_identify terms avoided: 'input cost margin compression', 'commodity cost increase', 'pricing power', 'margin compression without pricing response', 'price has not been raised despite cost increase'. The profitChangePercent=-13 directly triggers fin_isMarginErosion (profitChangePercent < 0). marginPct=28 also triggers the adverse margin condition (positive value but context of decline is captured in profitChangePercent)."
+}

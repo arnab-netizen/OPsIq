@@ -1,0 +1,37 @@
+{
+  "case_id": "RW_US_TOYSRUS_2017_DEBT_OVERHANG",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Toys R Us faced a compounding crisis where LBO debt destroyed the capital flexibility needed to respond to retail disruption. The $400 million annual interest burden consumed cash that should have funded omnichannel investment, store experience improvement, and competitive response. The capital structure constraint, not solely retail competition, was the proximate cause of inability to adapt. Root causes: debt overhang from LBO, liquidity pressure from interest burden, capital-structure constraint preventing investment, underinvestment due to debt burden, retail and e-commerce disruption, weak strategic flexibility, and inability to deleverage through operations.",
+  "expert_first_action": "Immediate debt restructuring to eliminate or reduce the $400 million annual interest burden; preserve liquidity through the holiday season; prioritize creditor negotiation over marketing-only fixes; pursue selective store footprint reduction; invest only where omnichannel economics are defensible; prepare formal Chapter 11 restructuring as contingency if debt negotiation fails.",
+  "actual_decision": "Toys R Us filed for bankruptcy in September 2017.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "LBO structure created debt burden incompatible with retail investment requirements",
+    "Sustained underinvestment in omnichannel capabilities due to debt-service priority",
+    "Delayed debt restructuring until bankruptcy became unavoidable"
+  ],
+  "beneficial_actions": [
+    "Company engaged in creditor discussions before filing",
+    "Sought formal debt relief through bankruptcy process"
+  ],
+  "citation": "Reuters September 2017: how $5 billion of debt caught up with Toys R Us; Time magazine Chapter 11 reporting; Washington Post: Toys R Us files for bankruptcy amid struggle to pay down billions in debt",
+  "actual_outcome": "Toys R Us filed for Chapter 11 bankruptcy in September 2017. Case moved toward store closures and liquidation. Debt burden and interest cost were central alongside retail competition. The company could not resolve the combined debt and operating challenge.",
+  "documented_root_causes": [
+    "Debt overhang \u2014 $5.2 billion from leveraged buyout",
+    "Liquidity pressure \u2014 $400 million annual interest burden",
+    "Capital-structure constraint \u2014 LBO debt prevented competitive investment",
+    "Underinvestment \u2014 omnichannel capabilities not funded due to debt service priority",
+    "Retail and e-commerce disruption \u2014 Amazon and mass retailers eroding market share",
+    "Weak strategic flexibility \u2014 all decisions constrained by debt obligations",
+    "Inability to deleverage through operations \u2014 no credible path without restructuring"
+  ],
+  "final_business_state": "Filed Chapter 11 September 2017. Moved to store closures and liquidation. Brand assets sold separately.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
+}

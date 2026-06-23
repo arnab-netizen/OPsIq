@@ -213,10 +213,7 @@ export function detectAndResolveContradictions(
  */
 export function hasBlockingContradiction(contract: BusinessFactsContract): boolean {
   for (const contradiction of contract.contradictions) {
-    if (
-      contradiction.status === "unresolved" &&
-      ["material_conflict", "critical_conflict"].includes(contradiction.status)
-    ) {
+    if (["material_conflict", "critical_conflict"].includes(contradiction.status)) {
       return true;
     }
   }

@@ -1,0 +1,80 @@
+{
+  "caseId": "RW_INDIA_PAYTM_2024_RBI_RESTRICTIONS",
+  "businessProblem": "On 31 January 2024, RBI issued directions restricting Paytm Payments Bank from accepting fresh deposits or credit transactions after an upcoming deadline, citing persistent non-compliances and continuing material supervisory concerns. RBI had already halted new customer onboarding in 2022. The wider Paytm payment ecosystem (One97 Communications) is materially dependent on Paytm Payments Bank for payment processing and wallet operations. The company must determine the highest-priority actions to achieve regulatory compliance, migrate operations, and protect its merchant and consumer base.",
+  "evidence": [
+    {
+      "dimension": "legal",
+      "finding": "RBI restricted Paytm Payments Bank from accepting fresh deposits or credit transactions after specified deadline, citing persistent non-compliances and continuing material supervisory concerns",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "legal",
+      "finding": "RBI had in 2022 already directed Paytm Payments Bank to halt new customer onboarding due to compliance concerns; the 2024 restriction represents escalation of a multi-year regulatory concern",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Persistent multi-year pattern of regulatory concern indicates systemic compliance and governance control deficiency, not a single isolated non-compliance",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Board and management under acute pressure to present credible remediation to RBI; regulatory relationship is severely strained",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Paytm's broader payments ecosystem (consumer wallets, merchant payment processing) is heavily dependent on Paytm Payments Bank for transaction routing",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Existing customer balances may be used subject to RBI conditions; however, no fresh deposits or credit transactions permitted after deadline",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Merchant payment flows at risk of disruption if the company cannot migrate to compliant partner banks before the restriction deadline",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "Trust and reputation risk to Paytm brand is significant; merchants and consumers may shift to competitor payment platforms if operational continuity is at risk",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Significant portion of One97 Communications payment revenue is dependent on Paytm Payments Bank operations; restriction creates material revenue risk for the listed parent",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    }
+  ],
+  "clientContext": {
+    "industry": "Fintech / Payments",
+    "size": "Large listed fintech company with significant consumer and merchant payment network",
+    "revenueImpactUrgency": "Critical — restriction on fresh deposits and credit transactions threatens core payment revenue and merchant network if operations cannot be migrated to compliant partner banks before the deadline"
+  },
+  "ownerConstraintProfile": {
+    "bottleneckRisk": "High — founder-led listed company where strategic decisions on compliance and business-model restructuring require rapid senior-level commitment",
+    "followThroughRisk": "High — persistent multi-year compliance failure suggests prior remediation commitments were not fully executed",
+    "resistanceToChange": "Medium — business model restructuring away from captive bank dependency requires strategic and operational transformation",
+    "managementCapability": "Under severe stress — management must simultaneously manage RBI remediation, operational migration to partner banks, and investor and merchant confidence preservation"
+  }
+}

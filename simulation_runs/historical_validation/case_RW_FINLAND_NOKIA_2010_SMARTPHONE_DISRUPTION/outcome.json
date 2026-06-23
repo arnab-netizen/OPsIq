@@ -1,0 +1,35 @@
+{
+  "case_id": "RW_FINLAND_NOKIA_2010_SMARTPHONE_DISRUPTION",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Nokia failed to respond adequately to smartphone disruption due to platform fragmentation, organizational inertia, ecosystem weakness, and delayed decisive action. The Symbian platform's usability and developer ecosystem gaps could not be closed fast enough, and internal platform competition fragmented resources. Root causes: strategic disruption response failure, Symbian ecosystem weakness, platform fragmentation and strategic indecision, product and UX gap versus iPhone and Android, developer ecosystem weakness, slow response to accelerating competition, organizational inertia.",
+  "expert_first_action": "Urgent platform consolidation decision \u2014 choose one platform and commit all resources to it; developer ecosystem investment and incentivization; faster smartphone product-cycle execution; UX redesign; explicitly evaluate external partnership as an alternative to internal rebuild; protect cash and core brand during pivot.",
+  "actual_decision": "Nokia entered strategic partnership with Microsoft in February 2011 and adopted Windows Phone as primary smartphone platform.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Delayed platform consolidation decision \u2014 allowed competitive gap to widen",
+    "Maintained multiple platform tracks spreading resources thin",
+    "Relied on scale as competitive protection against ecosystem-driven disruption",
+    "Organizational inertia slowed response pace"
+  ],
+  "beneficial_actions": [
+    "Eventually made a decisive platform partnership decision \u2014 though delay was costly",
+    "Maintained financial resources to fund the transition"
+  ],
+  "citation": "Nokia 2010 Annual Report / SEC Form 20-F; Nokia strategic communications; Wired journalism 2010-2011; Nokia-Microsoft partnership announcement February 2011; Nokia handset business sold to Microsoft 2013-2014",
+  "actual_outcome": "Nokia entered strategic partnership with Microsoft February 2011, adopted Windows Phone. Nokia's handset competitive position continued to weaken substantially. Nokia sold devices and services business to Microsoft in 2013-2014. Nokia lost former smartphone leadership permanently.",
+  "documented_root_causes": [
+    "Strategic disruption response failure \u2014 insufficient speed and commitment",
+    "Symbian ecosystem weakness \u2014 developer and app store gaps versus iOS and Android",
+    "Platform fragmentation and strategic indecision \u2014 multiple tracks, uncommitted direction",
+    "Product and UX gap versus iPhone and Android",
+    "Developer ecosystem weakness \u2014 risk of abandonment materialized",
+    "Slow response to accelerating smartphone adoption",
+    "Organizational inertia \u2014 large incumbent culture slowed decision-making"
+  ],
+  "final_business_state": "Nokia handset business sold to Microsoft 2013-2014. Smartphone market leadership permanently lost.",
+  "expected_diagnosis_codes": [],
+  "expected_action_codes": [
+    "STRUCTURAL_REPAIR",
+    "STABILIZATION"
+  ]
+}

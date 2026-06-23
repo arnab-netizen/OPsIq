@@ -1,0 +1,98 @@
+{
+  "case_id": "HOL-04-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "demand_generation_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "new client intake has fallen from 18 clients per year to 4 clients per year over two years — a decline of more than 75% in incoming new business",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Collapsing new client intake is the primary demand generation failure signal. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "three of the five primary introduction sources for new clients have retired and have not been replaced with alternative relationships",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Loss of introduction sources without replacement is the structural cause of intake decline. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "the practice has never implemented any marketing, advertising, or structured business development activity — all new client intake has historically come from word of mouth",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of any active demand generation activity is the structural vulnerability. No must_identify terms."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "two long-standing clients have departed in the same period, adding further revenue attrition to the declining new client intake",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Client attrition compounds the intake decline. Not primary driver but additive pressure."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "three-accountant practice; annual revenue $480K; new clients this year 4 versus 18 two years ago; existing client retention 91%; three accountants currently at capacity with existing workload",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. New client intake volume documented. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): existing client retention rate is 91% and satisfaction feedback is positive",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "High retention is a misleading signal — it masks the collapse in new client intake."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the three accountants are at current capacity, which the owner interprets as a sign of health",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Capacity utilisation is a misleading stability signal — capacity is being consumed by existing clients, not sustained by new intake."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "new_clients_this_year",
+      "canonical_key": "newCustomerRate",
+      "evidence_item_index": 4,
+      "value_override": 4,
+      "transform_note": "new_clients_this_year=4 used directly as newCustomerRate (annual intake collapsed from 18 to 4)"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "HOL-04-001 is a referral-pipeline-collapse demand generation failure case. All findings derived from input_packet. No must_identify vocabulary used. newCustomerRate set to 4 from new_clients_this_year."
+}

@@ -1,0 +1,122 @@
+{
+  "case_id": "SMB-001",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "owner cannot make payroll without credit line draw",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Payroll inability without credit line is an acute adverse liquidity signal matching LIQUIDITY_HARD pattern vocabulary. financial_health dimension; is_critical=true because this is an immediate operational cash crisis."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "bank balance declining each month despite revenue growth",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Declining bank balance in a growing business is a financial health adverse signal. Not marked critical because it is a trend, not an acute event. financial_health dimension."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "supplier relationships strained by late payments",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Supplier strain is an operational consequence of the payment timing problem. Assigned operational_efficiency because it affects supply chain continuity."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "owner reports feeling financially stressed despite sales growth",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Owner perception signal about financial condition. LOW confidence as subjective. financial_health dimension. Finding paraphrased to avoid outcome vocabulary."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "Receivables outstanding $280K with average client payment terms of 60 days; payables due $140K with average supplier terms of 30 days; bank balance $14K; credit line drawn $85K; gross margin 38%",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary of the payment-timing gap. 60-day inbound vs 30-day outbound terms is the core structural problem. is_critical=true, HIGH confidence as these are confirmed owner-reported figures. No outcome vocabulary used \u2014 finding describes observable financial position."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue is up 18% year-over-year and appears healthy",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth is a misleading signal masking the payment-timing problem. Included as non-critical LOW confidence so the engine does not treat revenue growth as health indicator."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): gross margin of 38% looks acceptable for the category",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Gross margin adequacy is a misleading signal. The problem is not margin compression but payment timing. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): business has been operating for 6 years and appears profitable on paper",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Business longevity and paper profitability do not indicate healthy cash flow. Misleading signal included as non-critical."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "average_client_payment_terms_days",
+      "canonical_key": "dso",
+      "evidence_item_index": 4
+    },
+    {
+      "fixture_key": "receivables_outstanding_usd",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 4,
+      "value_override": 60,
+      "transform_note": "receivables_outstanding_usd is a dollar amount; using average_client_payment_terms_days (60 days) as the receivables aging proxy since aging-in-days is not separately available."
+    },
+    {
+      "fixture_key": "gross_margin_pct",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 4
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "receivablesAging",
+      "would_improve_pattern": "fin_isWorkingCapital (dso numeric elevates to HIGH confidence)"
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": "cashConversionDays",
+      "would_improve_pattern": "fin_isWorkingCapital (cashConversionDays triggers HIGH confidence path)"
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 4,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-001 is a payment-timing working-capital case. All findings derived from fixture scenario \u2014 no outcome vocabulary (must_identify terms: cash conversion cycle, working capital, AR AP mismatch, accounts receivable timing, payables due before receivables collected, cash flow gap \u2014 none appear in findings). DSO approximated from client payment terms (60 days) since exact AR aging days not separately available; transform_note explains the conversion. Misleading signals included as non-critical LOW-confidence items."
+}

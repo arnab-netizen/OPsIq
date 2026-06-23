@@ -1,0 +1,80 @@
+{
+  "case_id": "SIM-13-005",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "gross margin is declining \u2014 commercial installation margins are estimated at approximately 18 percent after labour and materials, while reported blended margin is 38%; arithmetic inconsistency exists between the blended margin figure and the implied service-line margins; the commercial margin is being compressed by rising input costs over eighteen months",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "margin erosion has been ongoing for eighteen months \u2014 owner attributes the declining margin to materials cost increases; input costs are rising faster than prices have been adjusted on the commercial installation service line",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue $1.1M; reported blended gross margin 38%; commercial installations 70% of revenue at estimated 18% margin; residential service calls estimated 60% margin; no service-line P&L in 2 years; 18 months margin pressure; arithmetic inconsistency between blended margin and service-line composition",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): owner reports a 38% blended gross margin \u2014 the blended figure masks the commercial installation margin compression",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): materials cost increases are the stated cause \u2014 owner believes input cost management is the primary lever",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "commercial_installation_margin_estimate",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 0,
+      "value_override": -20,
+      "transform_note": "Commercial installation margin ~18% vs 38% blended; margin compression = ~20 pp; marginPct = -20 as proxy for margin decline from target"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: financial_health + MARGIN_HARD (margin erosion, declining margin, cost inflation) + negative marginPct"
+}

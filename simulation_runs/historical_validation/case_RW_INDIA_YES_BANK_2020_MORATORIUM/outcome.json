@@ -1,0 +1,40 @@
+{
+  "case_id": "RW_INDIA_YES_BANK_2020_MORATORIUM",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Yes Bank's crisis was caused by a combination of aggressive lending without adequate risk management, governance failures that allowed stressed assets to accumulate, and an inability to raise sufficient capital to restore solvency confidence. The systemic implications required regulatory intervention rather than a private-market solution. Root causes: asset-quality deterioration from poor risk management, capital inadequacy, liquidity confidence crisis, governance and risk-management failure, regulatory intervention risk, depositor confidence fragility.",
+  "expert_first_action": "Regulator-led emergency capital reconstruction; immediate credible capital injection from state-backed institutions; liquidity backstop; board and governance reset with RBI oversight; transparent bad-loan recognition; protect depositor confidence with explicit government guarantee framework.",
+  "actual_decision": "RBI and Indian authorities imposed moratorium on 5 March 2020. SBI-led reconstruction scheme implemented.",
+  "outcome_polarity": "CONTAINED \u2014 systemic failure prevented by regulatory intervention",
+  "harmful_actions": [
+    "Aggressive lending without adequate risk management created the stressed-asset problem",
+    "Governance failures allowed asset-quality deterioration to continue",
+    "Multiple failed private capital-raising attempts delayed resolution",
+    "Depositor confidence was allowed to deteriorate before intervention"
+  ],
+  "beneficial_actions": [
+    "RBI imposed moratorium preventing disorderly bank failure",
+    "SBI-led reconstruction with other banks provided credible capital injection",
+    "RBI emergency liquidity backstop provided",
+    "Depositors did not experience losses \u2014 confidence protected by intervention",
+    "Board and governance reset implemented under RBI oversight"
+  ],
+  "citation": "Yale Journal of Financial Crises, Volume 7 Issue 2 2025: Yes Bank case study; ideas.repec.org/a/ysm/ypfsfc Yes Bank case; Yes Bank Q3 FY2019-20 statutory release; RBI moratorium notification 5 March 2020; SBI reconstruction scheme",
+  "actual_outcome": "RBI imposed moratorium on Yes Bank on 5 March 2020. Yes Bank reconstructed with SBI and other Indian banks. SBI-led capital injection and RBI emergency liquidity provided. Depositors did not experience losses. Bank continued as reconstructed entity.",
+  "documented_root_causes": [
+    "Asset-quality deterioration \u2014 high stressed and non-performing asset exposure from poor risk management",
+    "Capital inadequacy \u2014 insufficient capital to absorb losses",
+    "Liquidity confidence crisis \u2014 depositor confidence fragile",
+    "Governance and risk-management failure \u2014 allowed asset-quality problem to develop",
+    "Regulatory intervention risk \u2014 private-market solution window closed",
+    "Depositor confidence fragility \u2014 systemic implications required government backstop"
+  ],
+  "final_business_state": "Reconstructed under RBI-supervised scheme. SBI-led capital injection. Depositors protected. Bank continued operating.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
+}

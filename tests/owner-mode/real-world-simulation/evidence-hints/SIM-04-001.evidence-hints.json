@@ -1,0 +1,112 @@
+{
+  "case_id": "SIM-04-001",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "demand_generation_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "total subscriber count is not growing despite consistent addition of new subscribers each month",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Flat subscriber count with positive new additions implies equal monthly departures — a critical demand/retention failure signal. customer_retention dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "owner cannot account for why subscriber numbers are not growing despite reported low departure rates",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Owner's inability to reconcile subscriber count with stated departure rate is a diagnostic gap signal. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "departing subscribers cite difficulty with the onboarding process and gaps in product functionality",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Exit feedback citing onboarding and feature gaps is a critical subscriber lifecycle failure signal. customer_retention dimension; is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "revenue growth has stalled at the same time as the net subscriber count has plateaued",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue stall concurrent with subscriber count plateau confirms demand failure rather than product maturity. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "200 current subscribers; AUD 290K annual recurring revenue; 12 new signups per month; subscriber count flat implies approximately 12 departures per month — inconsistent with owner's stated departure rate",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Mathematical implication of flat count + 12 monthly additions = 12 monthly departures. Owner's stated rate is inconsistent with observable data. is_critical=true. No must_identify vocabulary used (churn rate, net revenue retention, customer lifetime value, monthly recurring revenue, cohort retention — none appear)."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): owner states annual subscriber departure rate is approximately 5 percent — implying strong retention",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Owner's stated 5 percent annual departure rate is a misleading signal — the actual implied rate from observable data is far higher. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): new monthly signups are consistent at 12 per month suggesting acquisition is working",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Consistent new signups are a misleading signal when they are fully offset by departures. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): long-tenured early subscribers have stayed with the product and provided positive reviews",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Positive early adopter retention is a misleading signal when newer cohort retention is the problem. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "monthly_new_signups",
+      "canonical_key": "newCustomerRate",
+      "evidence_item_index": 4
+    },
+    {
+      "fixture_key": "current_subscribers",
+      "canonical_key": "funnelConversionPct",
+      "evidence_item_index": 4,
+      "value_override": 6,
+      "transform_note": "Implied monthly departure rate: 12 departures / 200 subscribers = 6 percent monthly departure rate. funnelConversionPct used as proxy for subscriber retention efficiency — a 6% monthly departure rate is adversely high for a SaaS business."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-04-001 is a demand/retention failure case with a data conflict — owner states 5% annual churn but observable data implies ~72% annualised departure rate. No must_identify vocabulary used (actual departure rate versus stated rate, net subscriber growth stall despite new signups, retention problem not acquisition problem, exit feedback indicating product or onboarding issues, churn calculation methodology — none appear in findings)."
+}

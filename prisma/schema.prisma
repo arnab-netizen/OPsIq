@@ -222,6 +222,19 @@ model ClientAccount {
   workspaceDecisionMemories           OwnerDecisionMemory[] @relation("WorkspaceDecisionMemories")
   workspaceBusinessSnapshots          OwnerBusinessStateSnapshot[] @relation("WorkspaceBusinessSnapshots")
   workspaceMetricTimeline             OwnerBusinessMetricTimeline[] @relation("WorkspaceMetricTimeline")
+  workspaceControlledLearningCandidates ControlledLearningCandidate[] @relation("WorkspaceControlledLearningCandidates")
+  workspaceControlledLearningAuditEntries ControlledLearningCandidateAuditEntry[] @relation("WorkspaceControlledLearningAuditEntries")
+  workspaceControlledLearningReviews ControlledLearningReview[] @relation("WorkspaceControlledLearningReviews")
+  workspaceControlledLearningAdmissions ControlledLearningAdmission[] @relation("WorkspaceControlledLearningAdmissions")
+  workspaceControlledLearningRejections ControlledLearningRejection[] @relation("WorkspaceControlledLearningRejections")
+  workspaceControlledLearningPrivacyControls ControlledLearningPrivacyControl[] @relation("WorkspaceControlledLearningPrivacyControls")
+  workspaceControlledLearningConsentRecords ControlledLearningConsentRecord[] @relation("WorkspaceControlledLearningConsentRecords")
+  workspaceControlledLearningRetentionPolicies ControlledLearningRetentionPolicy[] @relation("WorkspaceControlledLearningRetentionPolicies")
+  workspaceControlledLearningRegressionResults ControlledLearningRegressionResult[] @relation("WorkspaceControlledLearningRegressionResults")
+  workspaceControlledLearningRolloutFlags ControlledLearningRolloutFlag[] @relation("WorkspaceControlledLearningRolloutFlags")
+  workspaceControlledLearningRollbackEvents ControlledLearningRollbackEvent[] @relation("WorkspaceControlledLearningRollbackEvents")
+  workspaceControlledLearningHarmEvents ControlledLearningHarmEvent[] @relation("WorkspaceControlledLearningHarmEvents")
+  workspaceControlledLearningAttributionReviews ControlledLearningAttributionReview[] @relation("WorkspaceControlledLearningAttributionReviews")
 
   @@index([status])
   @@map("client_accounts")
@@ -3948,4 +3961,274 @@ model OwnerBusinessMetricTimeline {
   @@index([metricName])
   @@index([periodLabel])
   @@map("owner_business_metrics_timeline")
+}
+
+model ControlledLearningCandidate {
+  id                          String   @id @default(cuid())
+  workspaceId                 String   @db.Uuid
+  businessId                  String
+  sourceRecommendationId      String?
+  sourceOwnerDecisionId       String
+  sourceActionId              String
+  sourceOutcomeId             String
+  outcomeRecordedAt           DateTime? // server-side outcome window anchor (HIGH-3); null = window unverifiable
+  eligibilityStatus           String
+  rejectionReasons            String   @db.Text
+  evidenceSourceType          String
+  evidenceSummary             String   @db.Text
+  humanReviewed               Boolean  @default(false)
+  reviewerId                  String?
+  promotionLocked             Boolean  @default(false)
+  promotedAt                  DateTime?
+  auditFingerprint            String
+  metadata                    String   @db.Text
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+  workspace                   ClientAccount @relation("WorkspaceControlledLearningCandidates", fields: [workspaceId], references: [id])
+  auditEntries                ControlledLearningCandidateAuditEntry[]
+  reviews                     ControlledLearningReview[]
+  admissions                  ControlledLearningAdmission[]
+  rejections                  ControlledLearningRejection[]
+  privacyControls             ControlledLearningPrivacyControl[]
+  consentRecords              ControlledLearningConsentRecord[]
+  regressionResults           ControlledLearningRegressionResult[]
+  rolloutFlags                ControlledLearningRolloutFlag[]
+  rollbackEvents              ControlledLearningRollbackEvent[]
+  harmEvents                  ControlledLearningHarmEvent[]
+  attributionReviews          ControlledLearningAttributionReview[]
+
+  @@unique([workspaceId, auditFingerprint])
+  @@index([workspaceId])
+  @@index([businessId])
+  @@index([eligibilityStatus])
+  @@index([promotionLocked])
+  @@map("controlled_learning_candidates")
+}
+
+model ControlledLearningCandidateAuditEntry {
+  id          String   @id @default(cuid())
+  workspaceId String   @db.Uuid
+  candidateId String
+  action      String
+  actorId     String?
+  detail      String   @db.Text
+  timestamp   DateTime
+  createdAt   DateTime @default(now())
+  workspace   ClientAccount @relation("WorkspaceControlledLearningAuditEntries", fields: [workspaceId], references: [id])
+  candidate   ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([action])
+  @@map("controlled_learning_candidate_audit_entries")
+}
+
+model ControlledLearningReview {
+  id                String   @id @default(cuid())
+  workspaceId       String   @db.Uuid
+  candidateId       String
+  reviewerId        String
+  decision          String   // "APPROVED" | "REJECTED" | "DEFERRED"
+  reviewNotes       String   @db.Text
+  reviewedAt        DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  workspace         ClientAccount @relation("WorkspaceControlledLearningReviews", fields: [workspaceId], references: [id])
+  candidate         ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([decision])
+  @@map("controlled_learning_reviews")
+}
+
+model ControlledLearningAdmission {
+  id                String   @id @default(cuid())
+  workspaceId       String   @db.Uuid
+  candidateId       String
+  admittedBy        String
+  admittedAt        DateTime
+  sourceLabel       String
+  evidenceOrigin    String
+  eligibilityStatus String
+  admissionNotes    String   @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  workspace         ClientAccount @relation("WorkspaceControlledLearningAdmissions", fields: [workspaceId], references: [id])
+  candidate         ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@unique([workspaceId, candidateId])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@map("controlled_learning_admissions")
+}
+
+model ControlledLearningRejection {
+  id                String   @id @default(cuid())
+  workspaceId       String   @db.Uuid
+  candidateId       String
+  rejectedBy        String
+  rejectedAt        DateTime
+  rejectionReason   String   @db.Text
+  rejectionCode     String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  workspace         ClientAccount @relation("WorkspaceControlledLearningRejections", fields: [workspaceId], references: [id])
+  candidate         ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@unique([workspaceId, candidateId])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@map("controlled_learning_rejections")
+}
+
+model ControlledLearningPrivacyControl {
+  id              String   @id @default(cuid())
+  workspaceId     String   @db.Uuid
+  candidateId     String
+  controlType     String   // "ANONYMIZE" | "REDACT" | "EXCLUDE" | "QUARANTINE"
+  appliedBy       String
+  appliedAt       DateTime
+  reason          String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningPrivacyControls", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([controlType])
+  @@map("controlled_learning_privacy_controls")
+}
+
+model ControlledLearningConsentRecord {
+  id              String   @id @default(cuid())
+  workspaceId     String   @db.Uuid
+  candidateId     String
+  consentGiven    Boolean
+  consentBy       String
+  consentAt       DateTime
+  consentScope    String   // "WORKSPACE_ONLY" | "ANONYMIZED_AGGREGATE" | "NONE"
+  consentNotes    String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningConsentRecords", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@map("controlled_learning_consent_records")
+}
+
+model ControlledLearningRetentionPolicy {
+  id              String   @id @default(cuid())
+  workspaceId     String   @db.Uuid
+  retentionDays   Int
+  appliedBy       String
+  appliedAt       DateTime
+  policyNotes     String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningRetentionPolicies", fields: [workspaceId], references: [id])
+  @@unique([workspaceId])
+  @@index([workspaceId])
+  @@map("controlled_learning_retention_policies")
+}
+
+model ControlledLearningRegressionResult {
+  id                String   @id @default(cuid())
+  workspaceId       String   @db.Uuid
+  candidateId       String
+  testRunId         String
+  testVerdict       String   // "PASS" | "FAIL" | "INCONCLUSIVE"
+  regressionScore   Float
+  testedBy          String
+  testedAt          DateTime
+  testNotes         String   @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  workspace         ClientAccount @relation("WorkspaceControlledLearningRegressionResults", fields: [workspaceId], references: [id])
+  candidate         ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([testVerdict])
+  @@map("controlled_learning_regression_results")
+}
+
+model ControlledLearningRolloutFlag {
+  id            String   @id @default(cuid())
+  workspaceId   String   @db.Uuid
+  candidateId   String
+  rolloutStage  String   // "SHADOW" | "CANARY" | "PARTIAL" | "FULL" | "PAUSED"
+  rolloutPct    Float    // 0.0 - 100.0
+  enabledBy     String
+  enabledAt     DateTime
+  flagNotes     String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  workspace     ClientAccount @relation("WorkspaceControlledLearningRolloutFlags", fields: [workspaceId], references: [id])
+  candidate     ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@unique([workspaceId, candidateId])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([rolloutStage])
+  @@map("controlled_learning_rollout_flags")
+}
+
+model ControlledLearningRollbackEvent {
+  id              String   @id @default(cuid())
+  workspaceId     String   @db.Uuid
+  candidateId     String
+  rolledBackBy    String
+  rolledBackAt    DateTime
+  rollbackReason  String   @db.Text
+  rollbackCode    String   // "REGRESSION_DETECTED" | "HARM_DETECTED" | "MANUAL_OVERRIDE" | "POLICY_VIOLATION"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningRollbackEvents", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([rollbackCode])
+  @@map("controlled_learning_rollback_events")
+}
+
+model ControlledLearningHarmEvent {
+  id              String   @id @default(cuid())
+  workspaceId     String   @db.Uuid
+  candidateId     String
+  harmType        String   // "FINANCIAL_LOSS" | "DECISION_ERROR" | "DATA_CORRUPTION" | "COMPLIANCE_VIOLATION" | "SAFETY_RISK"
+  severity        String   // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  detectedBy      String
+  detectedAt      DateTime
+  harmDescription String   @db.Text
+  mitigated       Boolean  @default(false)
+  mitigatedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningHarmEvents", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  attributionReviews ControlledLearningAttributionReview[]
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([harmType])
+  @@index([severity])
+  @@map("controlled_learning_harm_events")
+}
+
+model ControlledLearningAttributionReview {
+  id              String   @id @default(cuid())
+  workspaceId     String   @db.Uuid
+  candidateId     String
+  harmEventId     String
+  reviewedBy      String
+  reviewedAt      DateTime
+  verdict         String   // "ATTRIBUTED" | "NOT_ATTRIBUTED" | "PARTIAL" | "INCONCLUSIVE"
+  confidenceScore Float
+  reviewNotes     String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  workspace       ClientAccount @relation("WorkspaceControlledLearningAttributionReviews", fields: [workspaceId], references: [id])
+  candidate       ControlledLearningCandidate @relation(fields: [candidateId], references: [id])
+  harmEvent       ControlledLearningHarmEvent @relation(fields: [harmEventId], references: [id])
+  @@index([workspaceId])
+  @@index([candidateId])
+  @@index([harmEventId])
+  @@index([verdict])
+  @@map("controlled_learning_attribution_reviews")
 }

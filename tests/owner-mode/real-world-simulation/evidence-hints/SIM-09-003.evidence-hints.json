@@ -1,0 +1,80 @@
+{
+  "case_id": "SIM-09-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "unit_economics_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "nine consecutive months of operating losses \u2014 the business is loss-making and has been unable to reach breakeven despite a pending contract and a supplier negotiation both of which remain unresolved",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "unit economics are unprofitable at current revenue of $890K; profitability is contingent on two events (contract win and supplier cost reduction) that have not materialised after months of negotiation",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue $890K; nine consecutive loss months; pending contract $180K in negotiation for 5 months; supplier negotiation target 12% reduction but opening offer only 3%; 6 staff",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): a pending contract worth $180,000 is under active negotiation",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): supplier has indicated willingness to reduce rates \u2014 opening offer was 3%",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "months_of_consecutive_losses",
+      "canonical_key": "contributionMargin",
+      "evidence_item_index": 2,
+      "value_override": -8500,
+      "transform_note": "Nine months of losses on $890K revenue (~$74K/month); negative contribution margin proxy = -$8,500/month"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: financial_health + UNITECON (loss-making, unprofitable) + negative contributionMargin"
+}

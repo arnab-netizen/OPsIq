@@ -1,0 +1,87 @@
+{
+  "case_id": "SIM-13-002",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "cash balance of $4,100 against a $28,000 supplier payment due in fourteen days \u2014 the cash conversion cycle is not generating sufficient liquidity despite a 35 percent gross margin on $480K revenue",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "working capital is not available despite reported profitability \u2014 the receivables collection cycle or payables timing is creating a cash flow gap that the operating margin cannot cover in time",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue approximately $480K; annual COGS approximately $240K; reported gross margin 35%; arithmetic inconsistency: COGS $240K on revenue $480K implies 50% COGS but owner reports 35% margin; the self-reported financials are inconsistent and require reconciliation; current bank balance $4,100; supplier payment due $28,000 in 14 days; nine years in operation",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): gross margin of 35% on $480K revenue appears healthy and sufficient to cover obligations",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the business has operated for nine years indicating proven viability",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_revenue_approximate",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 0,
+      "value_override": 45,
+      "transform_note": "Cash shortfall despite 35% margin on $480K revenue suggests receivables aging of ~45 days or more; receivablesAging = 45 proxy"
+    },
+    {
+      "fixture_key": "current_bank_balance",
+      "canonical_key": "cashConversionDays",
+      "evidence_item_index": 1,
+      "value_override": 60,
+      "transform_note": "Working capital gap suggests extended cash conversion cycle; cashConversionDays = 60 proxy"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: financial_health + WC_TEXT (working capital, receivables collection, cash conversion) + receivablesAging + cashConversionDays numerics"
+}

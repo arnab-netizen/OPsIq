@@ -1,0 +1,67 @@
+{
+  "case_id": "SIM-12-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "operational_bottleneck",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner capacity is a binding bottleneck \u2014 booked three weeks in advance and working six days per week; throughput cannot increase without additional staffing; backlog of demand cannot be fulfilled at current capacity",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "revenue is constrained by the owner capacity ceiling \u2014 the queue of unmet demand at three weeks forward indicates a throughput bottleneck, not a demand problem",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "revenue two years ago $180K; current revenue $340K; net margin two years ago 32%; current net margin 19%; 6 days per week; 3 weeks forward booking; 3 staff; mix shift toward fleet and commercial work at lower margin rates is diluting the average below premium",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): gross margin compression from 32% to 19% \u2014 owner attributes this entirely to rising input costs; fleet and commercial job mix shift is an alternative explanation",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): hiring an additional operator appears to solve both the capacity and margin problems simultaneously",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: operational_efficiency + isCritical + OPERATIONAL_TOPIC (bottleneck, throughput, backlog, capacity, queue)"
+}

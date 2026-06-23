@@ -1,0 +1,41 @@
+{
+  "case_id": "RW_INDIA_CCD_2019_DEBT_TURNAROUND",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Coffee Day Enterprises faced a compounding crisis of severe debt, a sudden catastrophic key-person loss, and creditor confidence collapse. The company's recovery required a complete leadership transition, creditor stabilization, and systematic non-core asset monetization while preserving the core caf\u00e9 brand. Root causes: debt solvency pressure, key-person and founder dependency, governance and reputational crisis, creditor confidence risk, complex group and non-core asset burden, need for asset monetization, retail operating rationalization, and leadership transition risk.",
+  "expert_first_action": "Immediate creditor communication and standstill to prevent panic defaults; install credible interim leadership and governance; preserve core caf\u00e9 operations; identify and initiate sale of non-core assets; ring-fence caf\u00e9 brand; develop transparent debt-reduction roadmap for lenders.",
+  "actual_decision": "Successor leadership (Malavika Hegde) took over. The company pursued debt reduction through asset monetization, cost control, and business focus.",
+  "outcome_polarity": "POSITIVE",
+  "harmful_actions": [
+    "Over-leveraged group structure created systemic vulnerability to single key-person loss",
+    "Excessive debt relative to core caf\u00e9 business cash flows"
+  ],
+  "beneficial_actions": [
+    "Malavika Hegde installed as successor CEO providing credible governance continuity",
+    "Non-core asset monetization pursued systematically",
+    "Debt reduced from approximately \u20b970 billion in 2019 to \u20b94.65 billion by 2023",
+    "Core caf\u00e9 brand preserved and operations continued",
+    "Cost control and business focus implemented"
+  ],
+  "citation": "Emerald 2025 case abstract: debt reduced from ~INR 70 billion in 2019 to INR 4.65 billion in 2023. Coffee Day Annual Report 2021 reported net debt \u20b91,731 crore. Improvement attributed to debt reduction, asset monetization, cost control, business focus, operational restructuring.",
+  "actual_outcome": "Successful debt turnaround. Debt reduced from approximately \u20b970 billion in 2019 to \u20b94.65 billion by 2023. Company continued operating. Malavika Hegde credited with leading the turnaround through asset monetization, cost control, and operational focus.",
+  "documented_root_causes": [
+    "Debt solvency pressure \u2014 \u20b970 billion in group debt",
+    "Key-person and founder dependency \u2014 founder death created governance vacuum",
+    "Governance and reputational crisis \u2014 sudden founder loss shook creditor confidence",
+    "Creditor confidence risk \u2014 founder was the credible counterparty",
+    "Complex group and non-core asset burden \u2014 required monetization",
+    "Need for asset monetization \u2014 only path to debt reduction",
+    "Retail operating rationalization \u2014 store footprint needed review",
+    "Leadership transition risk \u2014 successor had to be credible and decisive"
+  ],
+  "final_business_state": "Successful turnaround. Debt reduced ~94% by 2023. Company operating. Core brand preserved.",
+  "expected_diagnosis_codes": [
+    "key_person_risk",
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION",
+    "STRUCTURAL_REPAIR"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Cox & Kings collapsed under a debt and liquidity crisis compounded by group-structural complexity that obscured the true liability position, weak cash controls across entities, underlying travel-business margin pressure, and governance failures that allowed the situation to become unmanageable before creditors enforced.",
+  "expert_first_action": "Secure an immediate lender standstill agreement to halt enforcement while a group-level cash and liability mapping exercise is completed by independent advisors.",
+  "actual_decision": "Company continued operating without securing a standstill or undertaking decisive restructuring; debt obligations remained unresolved.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Failure to secure a lender standstill before creditor enforcement escalated",
+    "Failure to map and disclose true group-wide liability and cash position",
+    "Continued multi-geography operations without rationalising group structure",
+    "No independent forensic review initiated despite cash-control concerns",
+    "No meaningful asset monetisation to reduce debt before insolvency"
+  ],
+  "beneficial_actions": [
+    "None documented prior to insolvency proceedings commencing"
+  ],
+  "citation": "Companies House insolvency record for Cox & Kings (UK) Limited (company number 00316651); Hudson Weir insolvency practitioner reporting on Cox & Kings bankruptcy; IPA insolvency-insider industry updates.",
+  "actual_outcome": "Cox & Kings entities entered insolvency and bankruptcy processes. Cox & Kings (UK) Limited entered administration on 25 November 2019 and subsequently entered creditors' voluntary liquidation. Indian entities faced insolvency proceedings. The group did not survive as a going concern.",
+  "documented_root_causes": [
+    "Debt and liquidity crisis from excessive borrowing relative to cash generation",
+    "Group-structure complexity obscuring true liability position",
+    "Weak cash controls and poor visibility across group entities",
+    "Travel-business revenue and margin pressure",
+    "Governance and internal control failures",
+    "Creditor enforcement risk not addressed in time"
+  ],
+  "final_business_state": "Group entities entered insolvency and liquidation processes; Cox & Kings did not survive as an independent going-concern travel business.",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STABILIZATION"
+  ]
+}

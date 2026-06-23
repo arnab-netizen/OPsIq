@@ -1,0 +1,28 @@
+{
+  "source_urls": [
+    "https://www.myvi.in/content/dam/microsite/pdfs/Results/VIL_QR_Q4FY20.pdf",
+    "https://www.careratings.com/upload/CompanyFiles/PR/31012023090836_Vodafone_Idea_Limited.pdf",
+    "https://www.fitchratings.com/research/corporate-finance/jio-bharti-to-gain-market-share-on-supreme-court-verdict-07-09-2020"
+  ],
+  "source_type": "Company financial disclosure, credit rating report, independent rating agency analysis",
+  "source_quality": {
+    "tier_a": [
+      "Vodafone Idea Q4 FY2020 quarterly results disclosure (company investor relations) confirming AGR liability recognition and financial position at decision date",
+      "Supreme Court / DoT-related AGR ruling documentation confirming payment obligations"
+    ],
+    "tier_b": [
+      "CARE Ratings report on Vodafone Idea (January 2023) providing credit analysis including AGR dues and debt profile",
+      "Fitch Ratings commentary (September 2020) on market-share implications of AGR verdict for competitors and Vodafone Idea"
+    ]
+  },
+  "reliability_tier": "A",
+  "supports_ground_truth": true,
+  "contamination_risk": "Medium",
+  "contamination_notes": "Later government relief package details, equity conversion by government, dues freeze or repayment schedule changes, later fundraising outcomes, and future survival or failure status must not appear in input.json. Use only FY2020 disclosed facts and AGR liability as recognized at the decision date.",
+  "source_limitations": [
+    "Input restricted to facts observable at March 2020; government relief measures and later restructuring remain in outcome only",
+    "CARE Ratings report (2023) used for outcome context only; 2020 financial facts drawn from Q4 FY2020 disclosure",
+    "Fitch commentary (September 2020) is post-decision-date and used for outcome competitive analysis only",
+    "Exact AGR dues quantum as finally settled is post-decision-date; input uses company-disclosed estimated liability"
+  ]
+}

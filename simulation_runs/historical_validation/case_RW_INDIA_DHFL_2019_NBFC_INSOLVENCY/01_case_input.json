@@ -1,0 +1,80 @@
+{
+  "caseId": "RW_INDIA_DHFL_2019_NBFC_INSOLVENCY",
+  "businessProblem": "DHFL, a large housing finance NBFC, faces a compounding crisis of wholesale-funding liquidity stress and governance credibility damage at January 2019. The post-IL&FS NBFC sector liquidity crunch has tightened refinancing capacity, while public allegations of shell-company transactions and fund diversion have damaged market trust. The company must determine the highest-priority actions to preserve liquidity, restore governance credibility, and avoid formal regulatory intervention before the situation becomes irreversible.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "DHFL's wholesale funding model is acutely vulnerable to the post-IL&FS NBFC liquidity squeeze; refinancing capacity is materially constrained",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Liquidity position is under pressure as lenders reassess NBFC exposure and fresh borrowing becomes increasingly difficult",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Asset quality of the loan book is uncertain given publicly reported governance allegations; the true extent of any impairment is not yet determined",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Ability to disburse new loans is constrained as funding access tightens; core lending operations are at risk",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "Market confidence in DHFL is deteriorating due to sector-wide NBFC stress compounded by company-specific governance allegations",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "NBFC sector broadly under pressure following IL&FS collapse; contagion risk elevating cost and availability of wholesale funding for all NBFCs",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Public allegations of shell-company transactions and fund diversion have been reported (unproven at decision date); allegations represent a governance credibility risk regardless of final adjudication",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "No independent forensic review or governance reset has been announced in response to public allegations",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "legal",
+      "finding": "Regulatory scrutiny on NBFC sector has intensified following IL&FS; governance allegations increase the risk of formal regulatory intervention against DHFL specifically",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    }
+  ],
+  "clientContext": {
+    "industry": "Housing finance / NBFC",
+    "size": "Large listed housing finance company with significant retail and wholesale loan book",
+    "revenueImpactUrgency": "Critical — funding access is deteriorating rapidly; without intervention, payment obligations risk default within months"
+  },
+  "ownerConstraintProfile": {
+    "bottleneckRisk": "High — promoter-controlled entity with governance allegations directed at ownership and management layer",
+    "followThroughRisk": "High — no decisive governance action or independent review initiated despite public allegations",
+    "resistanceToChange": "High — governance reset requires promoters to accept external scrutiny and potential personal accountability",
+    "managementCapability": "Severely compromised — management credibility is damaged by allegations and the ability to lead a credible recovery is in question"
+  }
+}

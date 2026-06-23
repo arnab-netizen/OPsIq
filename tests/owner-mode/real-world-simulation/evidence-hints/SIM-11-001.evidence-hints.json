@@ -1,0 +1,67 @@
+{
+  "case_id": "SIM-11-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "quality_control_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "six formal client complaints and three regulatory incident notifications in six months \u2014 complaint and escalation rate is mounting; regulatory compliance incidents include missed visits and care plan non-compliance",
+      "dimension": "quality_delivery",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "scheduling is managed via WhatsApp and a shared paper roster \u2014 the absence of a formal scheduling system creates defect risk; missed visits and medication reminder failures are quality failures traceable to process gaps",
+      "dimension": "quality_delivery",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "31 staff; annual revenue $2.4M; 6 formal client complaints last 6 months; 3 regulatory incidents last 6 months; 2 staff on performance management; scheduling via WhatsApp; scheduling system last updated 4 years ago",
+      "dimension": "quality_delivery",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): two staff members are actively subject to performance management proceedings indicating management accountability",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): owner expects improvement once the performance proceedings conclude",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: quality_delivery + isCritical + QUALITY_TOPIC (complaint, escalation, regulatory incidents) + QUALITY_SEVERE (mounting, rising)"
+}

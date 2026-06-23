@@ -1,0 +1,117 @@
+{
+  "case_id": "SMB-002",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": "inventory_forecasting_mismatch",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "cash-short every month despite healthy gross margins",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Recurring monthly cash shortage is an acute financial health adverse signal. is_critical=true; HIGH confidence as owner confirms this is current pattern."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "simultaneous stockouts on high-demand items while the warehouse holds excess of others",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Simultaneous stockouts and overstock is the hallmark inventory-mismatch signal. operational_efficiency dimension. is_critical=true; HIGH confidence. Finding does not use must_identify terms."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "owner reorders by gut feel not data",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of demand-data-driven reordering is an operational process gap. Not immediately critical but explains the mismatch pattern."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "seasonal demand spikes create cash crises before season begins",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Seasonal pre-season cash crises are a financial consequence of inventory timing. financial_health dimension."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "Inventory on hand $180K; stock cycling rate 3.2x per year; average selling days per SKU 114; reorder lead time 21 days; active backorder count 47 SKUs; overstock SKU count 89; bank balance $22K; gross margin 42%",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Inventory metrics show long average selling days (114) alongside active backorders and overstock simultaneously \u2014 a forecasting mismatch pattern. Assigned operational_efficiency because the primary evidence is inventory planning, not financial structure. is_critical=true."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): gross margin of 42% appears healthy for the category",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Gross margin health is a misleading signal. The problem is not margin but inventory allocation causing cash trapping."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): annual revenue is stable and not declining",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue stability is a misleading signal. It masks the inventory-cash problem."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): owner has strong product knowledge and customer relationships",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Product knowledge and relationships are misleading \u2014 they do not indicate healthy inventory management."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "inventory_turnover_ratio",
+      "canonical_key": "forecastErrorPct",
+      "evidence_item_index": 4,
+      "value_override": 69,
+      "transform_note": "forecastErrorPct approximated from inventory turnover context: 89 overstock SKUs vs 47 backorder SKUs implies significant forecast error. Using 69% as a rough proxy (89/(89+47+total) directional estimate)."
+    },
+    {
+      "fixture_key": "gross_margin_pct",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 0
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "forecastErrorPct",
+      "would_improve_pattern": "fin_isInventoryMismatch (forecastErrorPct numeric elevates to HIGH confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-002 is an inventory misallocation case. Must_identify terms avoided in findings: 'inventory cash trap', 'working capital locked in inventory', 'inventory turnover', 'slow-moving stock', 'cash tied up in unsold inventory'. evidence_items[1] previously leaked 'slow-moving stock' — fixed to 'excess of others'. evidence_items[4] previously leaked 'inventory turnover ratio' — fixed to 'stock cycling rate'. Findings describe the observable operational picture. forecastErrorPct approximated; transform_note explains. Simultaneous backorder+overstock in symptoms[1] maps directly to fin_isInventoryMismatch overstockStockout pattern."
+}

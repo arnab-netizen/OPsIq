@@ -1,0 +1,80 @@
+{
+  "case_id": "SIM-09-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "unit_economics_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "six consecutive months of operating losses \u2014 the business is loss-making at current revenue and cost structure despite three separate turnaround interventions all of which failed to return to breakeven",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "owner has personally funded $68,000 of accumulated losses over six months \u2014 the unit economics are not viable at current volumes; the business loses money on its core activity",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "monthly revenue $52K\u2013$58K; six consecutive loss months; owner personal funding $68,000 from personal savings; three failed interventions; 8 staff; annual revenue run rate $680K",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue range appears steady at $52K\u2013$58K per month \u2014 volume is not the stated issue",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): three interventions have been attempted showing management responsiveness",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "months_of_consecutive_losses",
+      "canonical_key": "contributionMargin",
+      "evidence_item_index": 2,
+      "value_override": -11333,
+      "transform_note": "Total losses $68K over 6 months = approx $11,333/month negative contribution margin proxy"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: financial_health + UNITECON (loss-making, unit economics not viable) + negative contributionMargin numeric"
+}

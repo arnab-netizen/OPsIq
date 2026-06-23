@@ -1,0 +1,45 @@
+{
+  "case_id": "RW_INDIA_JET_AIRWAYS_2019_INSOLVENCY",
+  "company": "Jet Airways (India) Ltd.",
+  "decision_date": "2019-04-17",
+  "industry": "Airline",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "Jet Airways suspended all operations in April 2019 after lenders declined to provide further emergency funding",
+    "Company was heavily debt-laden and unable to sustain ongoing operations",
+    "High operating cost structure made Jet Airways uncompetitive against low-cost carriers",
+    "Ongoing obligations to creditors, employees, customers seeking refunds, and operational creditors remained unpaid or at risk",
+    "Distress factors included: liquidity shortage, unsustainable debt, high fixed operating costs, competitive pressure from LCCs, and failed emergency rescue funding",
+    "Operations cessation triggered loss of aircraft slots, routes, and operational continuity",
+    "Cross-border complications existed due to Dutch jurisdiction connections",
+    "Insolvency proceedings were a foreseeable next step given operational suspension and lender refusal"
+  ],
+  "financial_signals_at_decision_date": {
+    "debt_status": "Heavily debt-laden — specific figures subject to creditor committee",
+    "lender_decision": "Lenders declined further emergency funding as of April 2019",
+    "liquidity_status": "Insufficient to continue operations",
+    "operating_cost_structure": "High — uncompetitive with low-cost carriers",
+    "creditor_obligations": "Unpaid or at risk across financial, employee, customer, and operational-creditor categories"
+  },
+  "operating_signals_at_decision_date": {
+    "operations_status": "Suspended as of April 2019",
+    "slots_and_routes": "At risk from operational cessation",
+    "employee_status": "Unpaid, uncertain employment continuation",
+    "competitive_context": "Low-cost carrier competition intensifying in Indian domestic market"
+  },
+  "governance_signals_at_decision_date": {
+    "lender_committee": "Declined emergency rescue funding",
+    "cross_border_complexity": "Dutch jurisdiction connection adds complexity",
+    "management_credibility": "Undermined by inability to secure rescue funding or maintain operations",
+    "insolvency_contingency": "Not yet triggered formally as of decision date"
+  },
+  "risk_flags_at_decision_date": [
+    "Operations already suspended — value destruction accelerating with every day of non-operation",
+    "Lenders have already declined further funding — no known alternative rescue committed",
+    "Aircraft slots and routes losing value with operational cessation",
+    "Employee and customer obligations unpaid or unresolved",
+    "Cross-border insolvency complexity adds coordination cost",
+    "No formal insolvency protection yet — assets remain exposed"
+  ],
+  "question": "Given suspended operations, lender refusal of emergency funding, debt pressure, competitive structural weakness, and stakeholder obligations across employees, customers, and creditors, diagnose root causes and recommend the highest-priority action plan before formal insolvency proceedings."
+}

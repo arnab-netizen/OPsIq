@@ -1,0 +1,40 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "Kodak's distress was rooted in the failure to replace the highly profitable film business with a comparably profitable digital revenue model before the legacy business collapsed. The company had invested in digital without achieving the scale or margins needed to sustain its cost structure. Patent monetization was a real but insufficient lever \u2014 it could provide short-term liquidity but could not substitute for an operating business viable enough to service obligations. The legacy cost structure, consumer photography ambitions, and the pace of decline all pointed toward a formal restructuring being necessary unless monetization proceeds were very large and very rapid.",
+  "expert_first_action": "Preserve cash immediately; accelerate exit from declining consumer film and camera segments; identify viable commercial imaging niches; pursue patent monetization as a liquidity bridge while simultaneously preparing contingency restructuring plans.",
+  "actual_decision": "Kodak filed for Chapter 11 bankruptcy protection in January 2012. The company pursued restructuring and patent monetization through the bankruptcy process. It ultimately exited bankruptcy as a smaller commercial imaging-focused business having shed consumer photography entirely.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Relying on patent monetization as the primary turnaround strategy without operational restructuring",
+    "Maintaining legacy cost structure and consumer film nostalgia strategy too long",
+    "Delaying formal restructuring preparation while liquidity deteriorated",
+    "Attempting to compete in consumer digital photography without a path to profitability"
+  ],
+  "beneficial_actions": [
+    "Preserving cash through aggressive cost reduction",
+    "Monetizing patents as a near-term liquidity bridge",
+    "Exiting declining consumer photography segments decisively",
+    "Focusing on commercial imaging niches with defensible economics",
+    "Preparing formal restructuring as a contingency before liquidity became critical",
+    "Reducing fixed manufacturing and operational footprint to match viable business scope"
+  ],
+  "citation": "Eastman Kodak Q3 2011 SEC filing; Kodak Chapter 11 bankruptcy filing January 2012 (SEC exhibit); Reuters coverage of Kodak bankruptcy January 2012",
+  "actual_outcome": "Kodak filed Chapter 11 in January 2012. The company pursued patent monetization and restructuring through bankruptcy. It emerged from bankruptcy as a significantly smaller commercial printing and imaging company, having exited consumer photography entirely. The restructuring was protracted and value destruction was substantial.",
+  "documented_root_causes": [
+    "Strategic disruption: digital photography eliminated the film profit pool without a comparable replacement",
+    "Failure to replace legacy profit pool with a viable digital business model at sufficient scale",
+    "Slow and insufficient business-model transition leaving the company exposed to accelerating decline",
+    "Acute cash and liquidity crisis requiring immediate action",
+    "Overreliance on patent monetization as a substitute for operating turnaround",
+    "Legacy cost structure incompatible with current and projected revenue"
+  ],
+  "final_business_state": "Emerged from Chapter 11 bankruptcy as a much smaller commercial imaging-focused business; consumer photography business abandoned entirely",
+  "expected_diagnosis_codes": [
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR",
+    "STABILIZATION"
+  ]
+}

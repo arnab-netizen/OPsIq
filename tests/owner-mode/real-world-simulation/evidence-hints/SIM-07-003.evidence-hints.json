@@ -1,0 +1,87 @@
+{
+  "case_id": "SIM-07-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "key_person_dependency",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "sole technical operator with eleven years of service is departing in four weeks \u2014 no succession plan, no cross-training, and no knowledge transfer has been initiated",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "critical operational knowledge including client maintenance schedules, parts supplier relationships, and equipment specifications is undocumented and held exclusively by the departing technician",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "nine-person service business; the departing specialist has eleven years of tenure; twelve long-term clients; no successor identified; specialist skill level means the knowledge transfer window closes before any recruitment process can complete",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the owner is initiating a search for a new specialist to fill the departing role",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the business has operated profitably with the current team structure",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "weeks_until_departure",
+      "canonical_key": "keyPersonCount",
+      "evidence_item_index": 0,
+      "value_override": 1,
+      "transform_note": "Single critical technician; keyPersonCount=1 indicates sole operator risk"
+    },
+    {
+      "fixture_key": "headcount",
+      "canonical_key": "successionReady",
+      "evidence_item_index": 2,
+      "value_override": 0,
+      "transform_note": "No succession plan in place; successionReady=0"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: team_capability + KEYPERSON_TEXT (sole operator, undocumented, no succession) + keyPersonCount=1 numeric"
+}

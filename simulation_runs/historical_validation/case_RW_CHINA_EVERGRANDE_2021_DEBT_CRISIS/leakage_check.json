@@ -1,0 +1,27 @@
+{
+  "case_id": "RW_CHINA_EVERGRANDE_2021_DEBT_CRISIS",
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json mention confirmed default, liquidation order, restructuring failure, PwC/audit disputes, final founder/legal outcomes, or 2024/2025 liquidator actions?",
+      "finding": "Input.json does not mention confirmed default, liquidation orders, restructuring failure, audit disputes, or founder legal outcomes. It describes September 2021 liquidity/liability/project facts: approximately $300 billion liabilities, presale obligations, liquidity pressure, and absence of concluded restructuring plan.",
+      "verdict": "PASS"
+    },
+    "hindsight_leakage": {
+      "question": "Does input.json use knowledge of the confirmed default or later liquidation proceedings to frame the pre-default situation?",
+      "finding": "Input.json uses language appropriate to the decision date: 'acute liquidity pressure', 'bond and debt payment stress', 'no credible restructuring plan announced'. No confirmed default, liquidation order, or outcome characterization appears.",
+      "verdict": "PASS"
+    },
+    "future_date_leakage": {
+      "question": "Does input.json contain any dates, events, or facts from after 30 September 2021?",
+      "finding": "No future dates or post-decision-date facts appear in input.json. The 2021 annual report figures (published 2023) and Reuters December 2021 default confirmation are not referenced in input.",
+      "verdict": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "question": "Does input.json contain expert conclusions about Evergrande's default, liquidation, or restructuring failure that were only knowable after September 2021?",
+      "finding": "Input.json presents only observable risk signals at September 2021: liability scale, liquidity pressure, presale exposure, leverage model, and property market confidence deterioration. No outcome conclusions are embedded.",
+      "verdict": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "PASS - input.json contains only decision-date facts with no outcome, hindsight, or future leakage"
+}

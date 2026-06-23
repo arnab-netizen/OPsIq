@@ -1,0 +1,27 @@
+{
+  "case_id": "RW_INDIA_YES_BANK_2020_MORATORIUM",
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json mention RBI moratorium 5 March 2020, SBI rescue plan, reconstruction scheme, emergency liquidity injection, or deposit-base rebound?",
+      "finding": "input.json contains none of these outcome references. It correctly describes regulatory intervention as 'increasingly probable' — a prospective risk statement, not a confirmed outcome.",
+      "verdict": "PASS"
+    },
+    "hindsight_leakage": {
+      "question": "Does input.json contain hindsight conclusions about the moratorium or reconstruction?",
+      "finding": "input.json frames the situation prospectively at 4 March 2020 — one day before the moratorium. No moratorium or reconstruction conclusion embedded.",
+      "verdict": "PASS"
+    },
+    "future_date_leakage": {
+      "question": "Does input.json reference events or data from after 4 March 2020?",
+      "finding": "No post-4-March-2020 facts appear in input.json.",
+      "verdict": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "question": "Does input.json assume the RBI moratorium or SBI rescue as the outcome?",
+      "finding": "input.json frames this as an open crisis requiring diagnosis. No moratorium or rescue outcome conclusion embedded.",
+      "verdict": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "All leakage checks pass. input.json is clean of outcome, hindsight, future-date, and expert-conclusion leakage."
+}

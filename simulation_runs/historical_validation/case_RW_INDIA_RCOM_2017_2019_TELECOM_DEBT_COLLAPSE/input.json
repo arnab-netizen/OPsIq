@@ -1,0 +1,47 @@
+{
+  "case_id": "RW_INDIA_RCOM_2017_2019_TELECOM_DEBT_COLLAPSE",
+  "company": "Reliance Communications Ltd.",
+  "decision_date": "2017-12-31",
+  "industry": "Telecom",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "RCom had accumulated very high total debt burden across its operations",
+    "Telecom industry competition intensified sharply after aggressive low-price market disruption by a new entrant",
+    "Wireless operations were under severe pressure from price compression and subscriber churn",
+    "Ericsson and other creditors were actively pursuing outstanding payment claims",
+    "Significant asset-sale and restructuring pressure was visible from creditor and market signals",
+    "Company had announced strategic transition plans but execution remained incomplete",
+    "Revenue was declining due to the telecom price war affecting the entire sector",
+    "Legacy wireless operating model had not been successfully transitioned to a lower-cost structure",
+    "Wholesale debt obligations significantly exceeded operating cash generation capacity",
+    "Creditor enforcement risk was rising as payment deadlines approached"
+  ],
+  "financial_signals_at_decision_date": {
+    "debt_level": "Very high; total debt significantly exceeded operating cash generation capacity",
+    "revenue_trend": "Declining due to intensified telecom price competition",
+    "cash_generation": "Insufficient to service existing debt obligations from operations alone",
+    "asset_sale_dependency": "Company dependent on asset monetization to address debt; no completed major asset sales yet",
+    "creditor_claims": "Ericsson and other creditors actively pursuing payment claims"
+  },
+  "operating_signals_at_decision_date": {
+    "wireless_operations": "Severely pressured; subscriber base and revenue under strain from industry price war",
+    "strategic_transition": "Announced but not yet executed; legacy operating model still dominant",
+    "network_assets": "Present but monetization was incomplete and delayed",
+    "competitive_position": "Materially weakened following industry disruption by low-price entrant"
+  },
+  "governance_signals_at_decision_date": {
+    "restructuring_plan": "Asset sales and debt restructuring announced but not completed",
+    "creditor_relations": "Deteriorating; creditors actively enforcing claims",
+    "leadership_pressure": "Under pressure to deliver concrete resolution on debt and asset sales"
+  },
+  "risk_flags_at_decision_date": [
+    "Solvency risk from accumulated high debt relative to cash flow",
+    "Sustained revenue decline driven by telecom price war",
+    "Failed operating model transition to competitive low-cost structure",
+    "Creditor enforcement actions by Ericsson and other creditors",
+    "Asset monetization plans delayed or incomplete",
+    "Liquidity crisis risk if asset sales do not close on schedule",
+    "No credible near-term path to positive free cash flow from operations alone"
+  ],
+  "question": "Diagnose the root causes of RCom's distress as of end-2017 and recommend the highest-priority action plan."
+}

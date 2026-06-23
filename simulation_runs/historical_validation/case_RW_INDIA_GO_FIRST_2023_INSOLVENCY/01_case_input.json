@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_INDIA_GO_FIRST_2023_INSOLVENCY",
+  "businessProblem": "Go First has voluntarily filed for insolvency on 2 May 2023, citing faulty Pratt & Whitney engines grounding 50% of its A320neo fleet. It has exhausted all financial resources and owes ₹65.21 billion to financial creditors. Diagnose root causes and recommend highest-priority action plan.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Go First owes financial creditors ₹65.21 billion (approximately USD 798 million) per NCLT filing as of 2 May 2023",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, NCLT filing 2 May 2023"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Company stated it had 'exhausted all financial resources' in its NCLT voluntary insolvency filing",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, NCLT filing 2 May 2023"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Revenue severely impaired by 50% capacity reduction due to fleet grounding",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, AirInsight analysis"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Approximately 25 aircraft — 50% of A320neo fleet — grounded due to Pratt & Whitney engine issues as of 1 May 2023",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "AirInsight, Reuters 2 May 2023"
+    },
+    {
+      "dimension": "operations",
+      "finding": "High fixed-cost airline model made the company extremely vulnerable to a 50% capacity shock",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Industry analysis, Reuters"
+    },
+    {
+      "dimension": "legal",
+      "finding": "Active legal-commercial dispute with Pratt & Whitney over engine reliability and grounding — root cause not contractually resolved",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters 10 May 2023, IBBI/NCLT filings"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Voluntary insolvency filing on 2 May 2023 — management acknowledged inability to continue without insolvency protection",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters 2 May 2023"
+    },
+    {
+      "dimension": "market",
+      "finding": "Lessor and creditor claims likely to conflict during insolvency proceedings given complex aircraft-financing structures",
+      "confidence": "MEDIUM",
+      "isCritical": false,
+      "source": "Industry analysis"
+    }
+  ],
+  "clientContext": {
+    "companyName": "Go Airlines (India) Ltd. / Go First",
+    "country": "India",
+    "industry": "Airline",
+    "stage": "Voluntary insolvency / pre-NCLT admission",
+    "decisionDate": "2023-05-02",
+    "primaryStakeholder": "Board, IRP (pending), creditors, DGCA"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "CRITICAL",
+    "resistanceToChange": "LOW — voluntary filing signals management acknowledges crisis",
+    "managementCapability": "LOW — cash exhausted, unable to resolve supplier dispute independently",
+    "keyPersonDependency": "MEDIUM",
+    "accountabilityWeakness": "HIGH — cash exhausted without resolution plan"
+  }
+}

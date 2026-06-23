@@ -1,0 +1,72 @@
+{
+  "case_id": "SIM-13-006",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "customer_retention_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "annual client churn rate of 23 percent on a base of 62 managed properties \u2014 fourteen properties lost in twelve months is a high churn rate for a property management business where relationships are typically long-tenured",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "low repeat and retention rate \u2014 one in four properties leaves annually; the owner accepts departure reasons at face value without systematic exit analysis, indicating no structured approach to reducing client churn",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "managed properties 12 months ago 62; properties won last 12 months 18; properties lost 14; managed properties today 66; 23% annual departure rate; management fee 8% of rental income; advertising $1,400/month; 7 years operation",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): new property wins of 18 in 12 months have offset the 14 departures \u2014 net portfolio is growing",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): owner attributes most departures to landlords selling investment properties \u2014 an external cause",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: customer_retention + isCritical + RETENTION_TOPIC (churn, low repeat, one-time) \u2014 text signal with high churn rate"
+}

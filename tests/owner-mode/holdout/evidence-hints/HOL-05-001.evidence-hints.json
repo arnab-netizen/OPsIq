@@ -1,0 +1,98 @@
+{
+  "case_id": "HOL-05-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "key_person_dependency",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "the head chef has been with the restaurant for seven years and is in active discussions with a competing establishment about a new role",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Imminent departure of the central delivery person is the critical operational risk. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "all signature dishes exist only in the head chef's memory — no written recipes, preparation guides, or method documentation exist anywhere in the business",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of any procedural documentation creates a total knowledge loss risk on departure. No must_identify terms."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "no other kitchen employee has been trained to lead service or independently replicate the current menu; the owner has no culinary background",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of any backup capability confirms the single-person dependency. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "restaurant bookings three weeks ahead are driven by the head chef's personal reputation — recent reviews specifically name the chef",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue and booking demand are individually attributed to the chef — departure risk affects both operations and market position."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "fine dining restaurant; annual revenue $1.6M; 14 employees; head chef tenure 7 years; fully booked three weeks ahead; owner has no culinary training; no documented recipes anywhere in the business",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary from facts_known_to_owner. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the restaurant is fully booked three weeks in advance and revenue has grown 24% over two years",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Strong booking and revenue growth are misleading signals — they reflect the chef's current presence, not a durable operational capability."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): recent customer reviews specifically praise the tasting menu, indicating strong current product quality",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Positive reviews are a misleading signal — they reinforce the dependency rather than indicating resilience."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "chef_tenure_years",
+      "canonical_key": "keyPersonCount",
+      "evidence_item_index": 4,
+      "value_override": 1,
+      "transform_note": "1 key person controls all culinary delivery — keyPersonCount=1 confirms single-person dependency"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "HOL-05-001 is a culinary key-person dependency case with imminent departure risk. All findings derived from input_packet. No must_identify vocabulary used."
+}

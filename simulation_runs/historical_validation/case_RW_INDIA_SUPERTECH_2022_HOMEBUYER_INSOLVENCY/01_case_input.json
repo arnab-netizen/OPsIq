@@ -1,0 +1,61 @@
+{
+  "caseId": "RW_INDIA_SUPERTECH_2022_HOMEBUYER_INSOLVENCY",
+  "businessProblem": "Supertech Ltd. requires immediate diagnosis of root causes and a highest-priority action plan given a Rs 432+ crore lender default, pending insolvency petition, significant homebuyer delivery failures across multiple projects, and cash-flow mismatch creating an acute insolvency risk as of 24 March 2022.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Default of more than Rs 432 crore to Union Bank of India linked to Eco Village II project; insolvency petition pending before NCLT",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Union Bank of India petition and lender records"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Cash-flow mismatch between project collections and delivery/debt obligations; insufficient liquidity to service debt and complete projects simultaneously",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Project financial analysis"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Significant homebuyer delivery delays and project-completion failures across multiple residential projects; construction progress stalled",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Homebuyer complaints and project status reporting"
+    },
+    {
+      "dimension": "market",
+      "finding": "Homebuyer trust collapsed due to repeated non-delivery; large pipeline of committed but incomplete projects",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Homebuyer confidence signals and project pipeline data"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Inadequate project-level fund ring-fencing; management credibility impaired by delivery failures and growing legal actions",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Governance review and sector regulatory norms"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Multiple lender exposure with no coordinated resolution; no concluded standstill or restructuring arrangement",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Lender exposure and creditor coordination analysis"
+    }
+  ],
+  "clientContext": {
+    "industry": "Real estate",
+    "size": "Major residential developer with large multi-city project portfolio",
+    "revenueImpactUrgency": "Critical - pending insolvency petition, homebuyer delivery failure, lender default"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "HIGH",
+    "resistanceToChange": "MEDIUM",
+    "communicationBreakdown": "HIGH",
+    "managementCapability": "LOW",
+    "accountabilityWeakness": "HIGH",
+    "bottleneckRisk": "HIGH"
+  }
+}

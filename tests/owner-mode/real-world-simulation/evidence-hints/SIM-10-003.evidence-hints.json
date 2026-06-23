@@ -1,0 +1,87 @@
+{
+  "case_id": "SIM-10-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "key_person_dependency",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "seven of twelve commercial client accounts have reduced scope or not renewed since the acquisition handover \u2014 the previous owner was the sole relationship holder for these clients; no knowledge transfer of client relationships occurred at handover",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "revenue collapsed from $780K to $540K run rate within eight months of acquisition \u2014 the key-person risk was concentrated in the previous owner's client relationships which were not transferred; the business held no succession for client management",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "acquisition price $380K; pre-acquisition revenue $780K; net profit $140K; current revenue run rate $540K; net profit last 8 months $12K; 7 of 12 commercial clients reduced/not renewed; previous owner no longer involved",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): crew, equipment, and operational processes were all unchanged following the acquisition",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the acquisition was completed at a price reflecting the expected revenue base",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "client_accounts_reduced_or_not_renewed",
+      "canonical_key": "keyPersonCount",
+      "evidence_item_index": 0,
+      "value_override": 1,
+      "transform_note": "Previous owner was sole client relationship holder; keyPersonCount=1 for the departed key-person"
+    },
+    {
+      "fixture_key": "previous_owner_still_involved",
+      "canonical_key": "successionReady",
+      "evidence_item_index": 0,
+      "value_override": 0,
+      "transform_note": "Previous owner not involved post-acquisition; successionReady=0"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: team_capability + KEYPERSON_TEXT (sole relationship holder, no succession) + keyPersonCount=1"
+}

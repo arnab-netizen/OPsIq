@@ -1,0 +1,27 @@
+{
+  "case_id": "RW_INDIA_FUTURE_RETAIL_2022_INSOLVENCY",
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json mention NCLT admission on 20 July 2022, liquidation order, or CIRP result?",
+      "finding": "input.json contains no reference to NCLT admission date, liquidation order, or CIRP outcome. All facts are anchored to 14 April 2022 decision date.",
+      "verdict": "PASS"
+    },
+    "hindsight_leakage": {
+      "question": "Does input.json contain hindsight conclusions such as 'the company failed' or 'restructuring was impossible'?",
+      "finding": "input.json describes the situation as it was known at decision date — active petition, failed transaction, creditor resistance — without drawing outcome conclusions.",
+      "verdict": "PASS"
+    },
+    "future_date_leakage": {
+      "question": "Does input.json reference events or data from after 14 April 2022?",
+      "finding": "No post-decision-date facts appear in input.json. Financial figures are anchored to 31 March 2022 or earlier.",
+      "verdict": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "question": "Does input.json contain expert conclusions that assume knowledge of the outcome (e.g., 'insolvency was inevitable')?",
+      "finding": "input.json frames the situation as uncertain and open to diagnosis. No deterministic outcome conclusions embedded.",
+      "verdict": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "All leakage checks pass. input.json is clean of outcome, hindsight, future-date, and expert-conclusion leakage."
+}

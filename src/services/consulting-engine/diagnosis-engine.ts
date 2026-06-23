@@ -26,14 +26,25 @@ interface RootCausePattern {
 const rootCausePatterns: RootCausePattern[] = [
   {
     name: "Operational Bottleneck",
+    // W4: co-requirement extended to also accept market_position critical evidence with
+    // declining order signal — covers manufacturing/service throughput cases where lead
+    // time extension causes order rejection (market impact) rather than customer churn
+    // (retention impact). Safety: still requires op_isBottleneckSignal() (operational_efficiency
+    // + isCritical + OPERATIONAL_TOPIC) as the primary gate; market_position alone does not fire.
     pattern: (evidence) =>
       evidence.some((e) => op_isBottleneckSignal(e)) &&
-      evidence.some(
+      (evidence.some(
         (e) =>
           e.dimension === "customer_retention" &&
           (e.finding.toLowerCase().includes("low repeat") ||
             e.finding.toLowerCase().includes("defect"))
-      ),
+      ) ||
+      evidence.some(
+        (e) =>
+          e.dimension === "market_position" &&
+          e.isCritical &&
+          /declin\w*|turn\w* away|turn\w* down|rejecti\w*|refus\w*|cannot.*commit|unable.*commit/i.test(e.finding)
+      )),
     confidence: (evidence) => {
       const efficiencyEvidence = evidence.filter(
         (e) => e.dimension === "operational_efficiency"
@@ -180,7 +191,7 @@ const rootCausePatterns: RootCausePattern[] = [
   // reversible (see intervention-design-engine).
   {
     name: "Cash / Liquidity Crisis",
-    pattern: (evidence) => evidence.some((e) => fin_isLiquidityCrisis(e)),
+    pattern: (evidence) => evidence.some((e) => fin_isLiquidityCrisis(e)) || fin_isLiquidityPressurePaired(evidence),
     confidence: (evidence) => {
       const sev = evidence.filter((e) => fin_isLiquidityCrisis(e));
       const hard = sev.some(
@@ -287,7 +298,10 @@ const rootCausePatterns: RootCausePattern[] = [
           fin_isDebtSolvency(e) &&
           ((fin_num(e, "covenantHeadroom") !== undefined && (fin_num(e, "covenantHeadroom") as number) <= 0.06) ||
             (fin_num(e, "interestCoverage") !== undefined && (fin_num(e, "interestCoverage") as number) <= 1.3) ||
-            (fin_num(e, "leverageRatio") !== undefined && (fin_num(e, "leverageRatio") as number) >= 4))
+            (fin_num(e, "leverageRatio") !== undefined && (fin_num(e, "leverageRatio") as number) >= 4) ||
+            // P4-A: FCCB failure / CDR referral are HIGH-severity structural events even
+            // without a covenant or leverage numeric — they represent formal debt distress.
+            DEBT_HIGH_SEVERITY.test(fin_text(e)))
       );
       return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
     },
@@ -311,7 +325,8 @@ const rootCausePatterns: RootCausePattern[] = [
   },
   {
     name: "Working Capital Stress",
-    pattern: (evidence) => evidence.some((e) => fin_isWorkingCapital(e)),
+    // W1: also fires on fin_isWorkingCapitalPaired (two independent WC narrative signals).
+    pattern: (evidence) => evidence.some((e) => fin_isWorkingCapital(e)) || fin_isWorkingCapitalPaired(evidence),
     confidence: (evidence) => {
       const sev = evidence.some(
         (e) =>
@@ -340,7 +355,9 @@ const rootCausePatterns: RootCausePattern[] = [
   },
   {
     name: "Pricing Power Failure",
-    pattern: (evidence) => evidence.some((e) => fin_isPricingPower(e)),
+    // P4-B: extended to include pricing-model transition risk (fin_isPricingTransition)
+    // alongside the original price-realization gap path (fin_isPricingPower).
+    pattern: (evidence) => evidence.some((e) => fin_isPricingPower(e) || fin_isPricingTransition(e)),
     confidence: (evidence) => {
       const sev = evidence.some(
         (e) =>
@@ -374,7 +391,10 @@ const rootCausePatterns: RootCausePattern[] = [
   // margin / cash pressure (and proposed-cut adversarial framings) do NOT fire.
   {
     name: "Demand Generation Failure",
-    pattern: (evidence) => evidence.some((e) => fin_isDemandFailure(e)),
+    // W3: second path via fin_isChurnDrivenDemandFailure for service businesses where
+    // demand declines through early client departure (retention-driven demand failure).
+    pattern: (evidence) =>
+      evidence.some((e) => fin_isDemandFailure(e)) || fin_isChurnDrivenDemandFailure(evidence),
     confidence: (evidence) => {
       const sev = evidence.some(
         (e) => fin_isDemandFailure(e) && (fin_num(e, "newCustomerRate") !== undefined || fin_num(e, "leadVolume") !== undefined)
@@ -403,8 +423,15 @@ const rootCausePatterns: RootCausePattern[] = [
     name: "GTM / Channel Mismatch",
     pattern: (evidence) => evidence.some((e) => fin_isGtmMismatch(e)),
     confidence: (evidence) => {
+      // W1: HIGH when any strong channel-level numeric is present (original channelCac/
+      // channelMix plus funnelConversionPct and leadVolume from the W1 gate expansion).
       const sev = evidence.some(
-        (e) => fin_isGtmMismatch(e) && (fin_num(e, "channelCac") !== undefined || fin_num(e, "channelMix") !== undefined)
+        (e) =>
+          fin_isGtmMismatch(e) &&
+          (fin_num(e, "channelCac") !== undefined ||
+            fin_num(e, "channelMix") !== undefined ||
+            fin_num(e, "funnelConversionPct") !== undefined ||
+            fin_num(e, "leadVolume") !== undefined)
       );
       return sev ? DiagnosisConfidence.HIGH : DiagnosisConfidence.MODERATE;
     },
@@ -470,7 +497,8 @@ const rootCausePatterns: RootCausePattern[] = [
     // owns it. Legal fires only when the governance/regulatory breach is the issue and
     // no critical safety/recall/defect quality signal is competing.
     pattern: (evidence) =>
-      evidence.some((e) => fin_isLegalGovernance(e)) && !fin_hasCriticalSafetyQuality(evidence),
+      (evidence.some((e) => fin_isLegalGovernance(e)) || fin_isLegalGovernanceByText(evidence)) &&
+      !fin_hasCriticalSafetyQuality(evidence),
     confidence: (evidence) => {
       const sev = evidence.some(
         (e) =>
@@ -502,8 +530,10 @@ const rootCausePatterns: RootCausePattern[] = [
   },
   {
     name: "Key-Person Dependency",
-    pattern: (evidence) => evidence.some((e) => fin_isKeyPerson(e)),
+    pattern: (evidence) => evidence.some((e) => fin_isKeyPerson(e)) || evidence.some((e) => fin_isFounderDeath(e)),
     confidence: (evidence) => {
+      // Founder death is irreversible and unambiguous — always HIGH
+      if (evidence.some((e) => fin_isFounderDeath(e))) return DiagnosisConfidence.HIGH;
       const sev = evidence.some(
         (e) =>
           fin_isKeyPerson(e) &&
@@ -518,7 +548,9 @@ const rootCausePatterns: RootCausePattern[] = [
       description: "Key-person dependency: critical knowledge / relationships concentrated in one person",
       mechanismDescription:
         "Critical system knowledge, client relationships, or revenue are concentrated in a single undocumented person with no succession — a single point of failure that survives any program-level fix.",
-      evidenceIds: evidence.filter((e) => e.dimension === "team_capability").map((e) => e.id),
+      evidenceIds: evidence
+        .filter((e) => e.dimension === "team_capability" || e.dimension === "process_maturity")
+        .map((e) => e.id),
       confidence: DiagnosisConfidence.MODERATE,
       alternativeExplanations: [
         "A general staffing constraint rather than a single-person dependency",
@@ -607,7 +639,7 @@ function softDistress(t: string, topic: RegExp): boolean {
 }
 
 const LIQUIDITY_HARD =
-  /out of cash|cannot make payroll|missed payroll|cannot meet payroll|cash crunch|cash shortfall|liquidity crisis|burning (?:through )?cash|insolven/;
+  /out of cash|cannot make payroll|missed payroll|cannot meet payroll|cash crunch|cash shortfall|liquidity crisis|burning (?:through )?cash|insolven|active default|asset.?liability mismatch|salary arrears|wage arrears|payroll arrears/;
 // Soft topic deliberately NARROW — only terms whose distress polarity is decided
 // by the adverse gate. Bare "cash"/"reserve" are EXCLUDED: they appear in benign
 // ("healthy cash reserve") and non-liquidity ("operating cash flow", "cannot
@@ -624,9 +656,36 @@ function fin_isLiquidityCrisis(e: EvidenceItem): boolean {
   return softDistress(t, LIQUIDITY_TOPIC); // topic + adverse direction, not positive
 }
 
+// P3-F: "liquidity pressure" paired with a corroborating financial-decline signal.
+// "Liquidity pressure" alone is insufficiently specific (could appear in forward-looking
+// or management commentary without genuine crisis). It fires only when a second critical
+// financial_health item confirms operational/debt decline (asset monetisation to fund
+// operations, comparable-store-sales decline, debt-limiting investment, revenue decline).
+// "business pressure" / "financial pressure" alone do NOT match LIQUIDITY_PRESSURE_PHRASE.
+const LIQUIDITY_PRESSURE_PHRASE =
+  /liquidity pressure|liquidity.*constrain\w*|constrain\w*.*liquidity|limited.*(?:capital|financial) flexib\w*|(?:capital|financial) flexib\w*.*limited|constrain\w*.*(?:capital|financial) flexib\w*/;
+const LIQUIDITY_CORROBORATOR =
+  /asset (sale|monetiz)|fund(?:ing)? operations|comparable.*(?:store )?sales.*down|comp\w* sales.*down|revenue.*declin|operating.*declin|debt.*limit|leverage.*constrain/;
+function fin_isLiquidityPressurePaired(evidence: EvidenceItem[]): boolean {
+  const fh = evidence.filter((e) => e.dimension === "financial_health" && e.isCritical);
+  const pressureItems = fh.filter((e) => LIQUIDITY_PRESSURE_PHRASE.test(fin_text(e)));
+  if (pressureItems.length === 0) return false;
+  // Corroborator must be a DISTINCT item — the pressure finding alone is not enough
+  const otherItems = fh.filter((e) => !pressureItems.includes(e));
+  return otherItems.some((e) => LIQUIDITY_CORROBORATOR.test(fin_text(e)));
+}
+
 const UNITECON_HARD =
   /negative contribution|negative unit|unprofitabl\w*|loss per unit|loss-making|cac exceeds|cac\s*>\s*ltv|ltv\s*<\s*cac|ltv below cac|payback too long|burning (?:money )?on each|lose money on each|upside[- ]?down unit/;
 const UNITECON_TOPIC = /contribution|unit econom|\bcac\b|payback|ltv|per[- ]?(?:unit|customer|subscriber|member) econ/;
+// W4: location-level fixed-cost overcommitment — captures multi-site expansion cases
+// where individual locations never cover their own operating costs. Requires isCritical
+// financial_health evidence; generic "costs increased" without location-level framing
+// does NOT fire. Safety guard: isCritical=true prevents generic cost commentary from
+// triggering this path (non-critical cost observations do not establish a structural unit
+// economics failure).
+const LOCATION_UNIT_PATTERN =
+  /cover.{0,40}(own|their).{0,30}(cost|operating)|never.{0,30}(generat|cover|produc)\w*.{0,30}(surplus|profit|cost)|locat\w*.{0,30}not.{0,20}(cover|generat|viab|sustain)|sites?.{0,20}not.{0,20}(cover|viab|sustain)/;
 function fin_isUnitEconomicsFailure(e: EvidenceItem): boolean {
   if (e.dimension !== "financial_health") return false;
   const t = fin_text(e);
@@ -637,6 +696,8 @@ function fin_isUnitEconomicsFailure(e: EvidenceItem): boolean {
     return true; // adverse numeric
   }
   if (UNITECON_HARD.test(t)) return true;
+  // W4: location-level fixed-cost signal — isCritical required to exclude generic cost mentions
+  if (e.isCritical && LOCATION_UNIT_PATTERN.test(t)) return true;
   return softDistress(t, UNITECON_TOPIC);
 }
 
@@ -688,7 +749,23 @@ function ret_isRetentionErosion(e: EvidenceItem): boolean {
 }
 
 // ─── E2 slice 1 financial-structural triggers (strict; specific evidence only) ─
-const DEBT_TEXT = /covenant|leverage|interest cover|refinanc|maturity|debt service|debt-service|gearing|solvency|debt load|payables.*due|short-term (debt|facility)/;
+// P4-A additions: \bfccb\b (foreign currency convertible bond), foreign currency convertible,
+// corporate debt restructuring, \bcdr\b (CDR abbreviation in financial context), liability
+// management — all unambiguous formal debt-restructuring vocabulary that cannot arise from
+// ordinary operations discussions; each requires financial_health dimension context via the
+// dimension guard in fin_isDebtSolvency.
+const DEBT_TEXT = /covenant|leverage|interest cover|refinanc|maturity|debt service|debt-service|gearing|solvency|debt load|payables.*due|short-term (debt|facility)|debt[- ]laden|obligation.*unpaid|\bfccb\b|foreign currency convertible|corporate debt restructuring|\bcdr\b|liability management/;
+// Self-corroborating debt-distress phrases: inherently indicate structural debt distress
+// with no additional numeric or phrase needed. Includes P4-A additions for CDR/FCCB events.
+// P4-A: added \bfccb\b, foreign currency convertible, corporate debt restructuring, \bcdr\b,
+// high leverage, debt restructur (covers "debt restructuring"), liability management —
+// all self-sufficient evidence of formal debt distress in the financial_health dimension.
+const DEBT_SELF_CORROBORATING = /covenant|maturity|debt service|debt-service|refinanc|acute solvency|solvency.*acute|cannot service|debt[- ]laden|obligation.*unpaid|\bfccb\b|foreign currency convertible|corporate debt restructuring|\bcdr\b|high leverage|debt restructur|liability management/;
+// HIGH-severity signals within debt-solvency evidence: formal restructuring events that
+// are unambiguously severe (FCCB failure/negotiation, CDR referral, FCCB outstanding).
+// Used to elevate confidence to HIGH when no leverageRatio/covenantHeadroom/interestCoverage
+// numeric is present.
+const DEBT_HIGH_SEVERITY = /\bfccb\b|foreign currency convertible|corporate debt restructuring|\bcdr\b/;
 function fin_isDebtSolvency(e: EvidenceItem): boolean {
   if (e.dimension !== "financial_health") return false;
   const t = fin_text(e);
@@ -697,21 +774,49 @@ function fin_isDebtSolvency(e: EvidenceItem): boolean {
     fin_num(e, "covenantHeadroom") !== undefined ||
     fin_num(e, "interestCoverage") !== undefined;
   // Require debt-structural vocabulary; a corroborating structural numeric or an
-  // explicit covenant/maturity phrase. Generic cash pressure has neither.
-  return DEBT_TEXT.test(t) && (numeric || /covenant|maturity|debt service|debt-service|refinanc/.test(t));
+  // explicit covenant/maturity/debt-distress phrase. Generic cash pressure has neither.
+  // P3-C additions: "acute solvency", "solvency.*acute", "cannot service" are unambiguous
+  // debt-distress corroborators when paired with an existing DEBT_TEXT match (e.g. solvency);
+  // "debt-laden" and "obligation.*unpaid" are self-corroborating debt-structural terms.
+  // P4-A: added FCCB, CDR, high-leverage as self-corroborating terms in DEBT_SELF_CORROBORATING.
+  return DEBT_TEXT.test(t) && (numeric || DEBT_SELF_CORROBORATING.test(t));
 }
 
-const WC_TEXT = /receivabl|days sales outstanding|\bdso\b|cash conversion|days payable|\bdpo\b|working capital|cash[- ]conversion cycle|collections (timing|cycle)/;
+// W1: extended with AR/AP narrative synonyms. `receivabl` already matches the JSON key
+// "receivablesAging" via fin_text serialisation; the synonyms cover business-English
+// paraphrases ("slow-paying clients", "payment delays", "outstanding invoices") that
+// appear in narrative evidence without the canonical WC field name.
+const WC_TEXT = /receivabl|days sales outstanding|\bdso\b|cash conversion|days payable|\bdpo\b|working capital|cash[- ]conversion cycle|collections (timing|cycle)|receivable aging|invoice aging|payable timing|cash conversion mismatch|billed but uncollected|payment collection lag|slow[- ]pay\w*|late[- ]pay\w*|payment delay\w*|overdue invoice\w*|outstanding invoice\w*|debtor day\w*/;
 function fin_isWorkingCapital(e: EvidenceItem): boolean {
   if (e.dimension !== "financial_health") return false;
   const t = fin_text(e);
+  // W1: receivablesAging alone is now sufficient (was: required dpo pairing). dso and
+  // cashConversionDays remain independently sufficient as before. Generic "cash pressure"
+  // still does NOT fire — it lacks WC_TEXT vocabulary.
   const numeric =
     fin_num(e, "dso") !== undefined ||
     fin_num(e, "cashConversionDays") !== undefined ||
-    (fin_num(e, "receivablesAging") !== undefined && fin_num(e, "dpo") !== undefined);
-  // Require AR/AP/CCC vocabulary AND a working-capital numeric (DSO / cash-conversion
-  // / receivables+payables). Generic "collections slowed" (no DSO/CCC) does NOT fire.
+    fin_num(e, "receivablesAging") !== undefined;
+  // Require AR/AP/CCC vocabulary AND a WC numeric. Generic inventory cash lockup or
+  // "collections slowed" (no WC vocabulary) does NOT fire.
   return WC_TEXT.test(t) && numeric;
+}
+
+// W1: paired narrative path — fires when 2+ distinct financial_health items match
+// WC_TEXT with at least one carrying a WC numeric. Satisfies the "two independent WC
+// signals" requirement for partial-numeric cases. Generic "cash pressure" alone has no
+// WC_TEXT match and cannot trigger this path.
+function fin_isWorkingCapitalPaired(evidence: EvidenceItem[]): boolean {
+  const fh = evidence.filter((e) => e.dimension === "financial_health");
+  const wcItems = fh.filter((e) => WC_TEXT.test(fin_text(e)));
+  if (wcItems.length < 2) return false;
+  return wcItems.some(
+    (e) =>
+      fin_num(e, "dso") !== undefined ||
+      fin_num(e, "cashConversionDays") !== undefined ||
+      fin_num(e, "receivablesAging") !== undefined ||
+      fin_num(e, "dpo") !== undefined
+  );
 }
 
 const PRICING_TEXT = /priced (well )?below|below (comparable|competitor)|under-?pric|self-inflicted discount|discount (granted|reached|leakage)|realized price.*below|discount.*freely|no pricing governance|no discount-approval|price realization/;
@@ -728,25 +833,90 @@ function fin_isPricingPower(e: EvidenceItem): boolean {
   return numeric || /priced (well )?below|below (comparable|competitor)|self-inflicted discount|no pricing governance|no discount-approval/.test(t);
 }
 
+// P4-B: Pricing-model transition failure — a separate pricing_power failure mode from
+// price-realization gap. Fires when a SINGLE market_position/process_maturity item
+// contains BOTH a pricing-model-change signal (coupon/promotional → everyday pricing)
+// AND a customer-behavior/perception risk signal (promo-sensitive customer base,
+// behavior change required, price perception mismatch). Requiring both signals in the
+// same evidence item prevents generic "coupons" or "everyday pricing" mentions (which
+// appear in normal retail commentary) from triggering without an explicit risk pairing.
+//
+// Deliberate non-matches: "pricing pressure from competitors" (no model-change signal),
+// "summer discount sale" (bare "discount" without the model-change pattern), "retail
+// sales declined" (no pricing signals at all).
+const PRICING_MODEL_CHANGE =
+  /coupon\w*|promotional pricing|everyday (?:low )?pric\w*|\bedlp\b|pricing model change|pricing transition|promo.?to.?everyday|from.*(?:coupon|promotional).*to.*(?:everyday|value pric\w*)/;
+const PRICING_CUSTOMER_RISK =
+  /behav\w+ change.*(?:requir|strateg\w*|pric\w*)|promo.?sensitiv\w*|accustom\w+ to.*(?:promo|coupon|discount)|price perception|perceived.*(?:value|price\b)|cognitive repricing|repricing.*customer|traffic.*(?:risk|loss)|conversion.*(?:risk|loss)/;
+function fin_isPricingTransition(e: EvidenceItem): boolean {
+  if (e.dimension !== "market_position" && e.dimension !== "process_maturity") return false;
+  const t = fin_text(e);
+  return PRICING_MODEL_CHANGE.test(t) && PRICING_CUSTOMER_RISK.test(t);
+}
+
 // ─── E2 slice 2 demand / GTM / inventory triggers (strict; adverse-specific) ──
 const DEMAND_TEXT = /new-customer (acquisition|demand|volume|footfall|count).*(stall|collaps|fell|fall|weak|down)|collaps\w*[^.]{0,40}new[- ]?customer|acquisition has stalled|top-of-funnel.*(collaps|fell|weak)|lead volume (collaps|fell|weak|down)|demand (collaps|fell|softened|deteriorat|dried)|funnel.*(collaps|deteriorat)|online sessions (fell|collaps)|traffic (fell|collaps|weak)|volume deleverage|new[- ]customer demand collaps/;
+
+// W1: stagnation extensions — adverse demand framing without explicit collapse verbs.
+// Requires market_position dimension AND a demand numeric (gate in fin_isDemandFailure).
+// Fires on sustained stagnation / plateau framing with a demand context; does NOT fire
+// on generic seasonal softness ("sales were light", "revenue slowed") which has no
+// subscriber / membership / flatlined / attrition context.
+const DEMAND_STAGNATION_TEXT = /subscriber.*(count|base|number|growth).*(flat\b|stagnant|plateau\w*|not grow\w*|unchanged|constant)|flat.{0,20}(subscription\b|subscriber\b|membership\b)|stagnant.{0,20}(subscription\b|subscriber\b|membership\b)|membership.*(flat\b|stagnant|plateau\w*|not grow\w*|unchanged)|lead.*(flow|volume|count|rate).*(flat\b|stagnant|plateau\w*|slow\w*|not grow\w*|weak\w*)|demand.*(stagnant|plateau\w*|flatlined|not grow\w*)|acquisition.*(stagnant|flat\b|plateau\w*|not grow\w*|unchanged)|pipeline.*(stagnant|flat\b)|attrition.{0,20}(exceed\w*|offset\w*|outpac\w*).{0,30}(new|acquisition|intake|join\w*)|departure.rate.{0,20}(exceed\w*|offset\w*|outpac\w*)|\bflatlined\b|qualified lead.*(weak\w*|slow\w*|thin)|pipeline slow\w*/;
+
 function fin_isDemandFailure(e: EvidenceItem): boolean {
   if (e.dimension !== "market_position") return false;
   const t = fin_text(e);
-  // Require ADVERSE demand framing (collapse/stall/fell/weak) AND a demand numeric;
-  // a generic revenue/margin decline or a proposed marketing CUT does NOT fire.
-  if (!DEMAND_TEXT.test(t)) return false;
+  // Require ADVERSE demand framing (collapse/stall/fell/weak OR W1 stagnation) AND a
+  // demand numeric; generic revenue/margin decline or a proposed marketing CUT does NOT fire.
+  if (!DEMAND_TEXT.test(t) && !DEMAND_STAGNATION_TEXT.test(t)) return false;
   return fin_num(e, "newCustomerRate") !== undefined || fin_num(e, "leadVolume") !== undefined || fin_num(e, "pipelineValue") !== undefined || fin_num(e, "funnelConversionPct") !== undefined;
 }
 
-const GTM_TEXT = /paid[- ]search|paid[- ]social|channel mix|channel-driven|acquisition (cost|channel)|go-to-market|\bgtm\b|distribution channel|sales motion|market segment|channel attribution/;
+// W3: Churn-driven demand failure — fires when customer_retention evidence shows critical
+// early client departure AND a demandDurabilityMonths numeric exists (short client tenure).
+// This captures service businesses where demand declines because existing clients leave
+// early (retention failure), not because new customer acquisition has collapsed.
+// Safety guards: requires is_critical=true departure signal AND demandDurabilityMonths numeric;
+// generic satisfaction complaints alone do NOT fire; financial_health or market_position
+// evidence alone does NOT fire.
+const CHURN_DEPARTURE_TEXT =
+  /stop.{0,20}(engaging|after[\s\w]{0,10}session)|client.{0,30}(depart|leave|stop|exit|tenure)|depart\w*.{0,20}client|early.{0,20}(departure|churn|exit)|replac\w*.{0,20}(client|customer)/;
+
+function fin_isChurnDrivenDemandFailure(evidence: EvidenceItem[]): boolean {
+  const hasCriticalDepartureSignal = evidence.some(
+    (e) =>
+      e.dimension === "customer_retention" &&
+      e.isCritical === true &&
+      CHURN_DEPARTURE_TEXT.test(fin_text(e))
+  );
+  if (!hasCriticalDepartureSignal) return false;
+  return evidence.some((e) => fin_num(e, "demandDurabilityMonths") !== undefined);
+}
+
+// W1: extended with pipeline/conversion/win-rate/CAC-payback vocabulary that describes
+// channel performance without explicit "paid-search" / "channel mix" terminology.
+const GTM_TEXT = /paid[- ]search|paid[- ]social|channel mix|channel-driven|acquisition (cost|channel)|go-to-market|\bgtm\b|distribution channel|sales motion|market segment|channel attribution|pipeline conversion|win rate|\bwin-rate\b|qualified lead conversion|sales cycle|demo[- ]to[- ]close|cac payback|channel roi|digital advertising|online advertising|advertising targeting|lead generation channel/;
 function fin_isGtmMismatch(e: EvidenceItem): boolean {
   if (e.dimension !== "market_position") return false;
   const t = fin_text(e);
-  // Require channel/distribution evidence with a channel-economics numeric; a generic
+  // Require channel/GTM vocabulary AND a channel-economics or funnel numeric; a generic
   // growth slowdown (no channel signal) does NOT fire.
   if (!GTM_TEXT.test(t)) return false;
-  return fin_num(e, "channelCac") !== undefined || fin_num(e, "channelMix") !== undefined || fin_num(e, "channelConversionPct") !== undefined;
+  // W1: added funnelConversionPct, leadVolume, winRate, pipelineConversionPct,
+  // salesCycleDays, cacPaybackMonths, channelRoi as valid GTM corroborators.
+  return (
+    fin_num(e, "channelCac") !== undefined ||
+    fin_num(e, "channelMix") !== undefined ||
+    fin_num(e, "channelConversionPct") !== undefined ||
+    fin_num(e, "funnelConversionPct") !== undefined ||
+    fin_num(e, "leadVolume") !== undefined ||
+    fin_num(e, "winRate") !== undefined ||
+    fin_num(e, "pipelineConversionPct") !== undefined ||
+    fin_num(e, "salesCycleDays") !== undefined ||
+    fin_num(e, "cacPaybackMonths") !== undefined ||
+    fin_num(e, "channelRoi") !== undefined
+  );
 }
 
 function fin_isInventoryMismatch(e: EvidenceItem): boolean {
@@ -768,6 +938,24 @@ function fin_isInventoryMismatch(e: EvidenceItem): boolean {
 // performance / management / capacity / growth / cash framings do NOT fire.
 const LEGAL_TEXT =
   /regulat\w*|complian\w*|non-?complian\w*|governance|misconduct|\bfraud\b|\baudit\b|enforcement|licens\w*|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction|penalt\w*|\bbreach\b/;
+
+// Specific legal/governance terms that are unambiguous without numeric corroboration.
+// Excludes "enforcement" (overloaded: creditor enforcement ≠ regulatory enforcement)
+// and generic regulatory/governance vocabulary that appears in non-legal cases.
+// P3-G additions: off-balance-sheet, related-party, conflicts of interest, structural/
+// accounting opacity — circumspect accounting / SPV / governance-risk vocabulary that
+// signals Enron-style financial-engineering risk without using the word "fraud".
+// W3: "enquiry" removed from STRONG_LEGAL_TEXT — it is a common British-English word for
+// client contact/intake volume and fires false-positive LEGAL in market_position context.
+// "enquiry" remains in LEGAL_TEXT (and LEGAL_TEXT_G) so it still contributes to the 2+
+// distinct-hit count threshold, but a single standalone "enquiry" no longer triggers LEGAL alone.
+const STRONG_LEGAL_TEXT =
+  /misconduct|\bfraud\b|consent order|investigation|inquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction\w*|penalt\w*|non-?complian\w*|moratorium|misappropriat\w*|embezzl\w*|\baudit\b|off-?balance-?sheet|related.?party|conflicts? of interest|structural opacity|accounting opacity|regulatory intervention|capital inadequac\w*|capital.?adequacy.*insufficient|insufficient.*capital.?adequacy|rbi.*intervention|central bank.*intervention|intervention.*(?:rbi|central bank|regulator)|regulator.*(?:seize|take over|supersede|appoint|place|put).*bank|banking.*licen[sc]e.*(?:revoke|cancel|suspend)|licen[sc]e.*(?:revoke|cancel|suspend).*bank/;
+
+// Global version for counting distinct LEGAL_TEXT hits within a single finding
+const LEGAL_TEXT_G =
+  /regulat\w*|complian\w*|non-?complian\w*|governance|misconduct|\bfraud\b|\baudit\b|enforcement|licens\w*|consent order|investigation|inquiry|enquiry|conduct (rule|breach|failure)|control failure|unauthori[sz]ed account|sanction|penalt\w*|\bbreach\b/g;
+
 function fin_isLegalGovernance(e: EvidenceItem): boolean {
   if (e.dimension !== "process_maturity" && e.dimension !== "market_position") return false;
   const t = fin_text(e);
@@ -779,6 +967,29 @@ function fin_isLegalGovernance(e: EvidenceItem): boolean {
     fin_num(e, "regulatoryDeadlineDays") !== undefined ||
     fin_num(e, "exposureAmount") !== undefined
   );
+}
+
+// Textual-only path: fires when historical evidence contains strong governance/legal/fraud
+// signals that are unambiguous without numeric corroboration. An item is "substantive" if
+// it matches STRONG_LEGAL_TEXT (specific fraud/regulatory terms) OR contains 2+ distinct
+// LEGAL_TEXT hits (indicating the finding is centrally about legal/governance, not a passing
+// mention). Requires 2+ matching items with at least one substantive, or 1 substantive item.
+// Guards against weak incidental mentions ("regulated industries", "technology licensing").
+function fin_isLegalGovernanceByText(evidence: EvidenceItem[]): boolean {
+  const relevant = evidence.filter(
+    (e) =>
+      (e.dimension === "process_maturity" || e.dimension === "market_position") &&
+      (LEGAL_TEXT.test(fin_text(e)) || STRONG_LEGAL_TEXT.test(fin_text(e)))
+  );
+  if (relevant.length === 0) return false;
+  const isSubstantive = (e: EvidenceItem): boolean => {
+    const t = fin_text(e);
+    return STRONG_LEGAL_TEXT.test(t) || (t.match(LEGAL_TEXT_G) ?? []).length >= 2;
+  };
+  const hasSubstantive = relevant.some(isSubstantive);
+  if (relevant.length >= 2 && hasSubstantive) return true;
+  if (relevant.length === 1 && isSubstantive(relevant[0])) return true;
+  return false;
 }
 function fin_hasCriticalSafetyQuality(evidence: EvidenceItem[]): boolean {
   return evidence.some(
@@ -802,6 +1013,18 @@ function fin_isKeyPerson(e: EvidenceItem): boolean {
     fin_num(e, "successionReady") !== undefined ||
     fin_num(e, "revenueConcentrationPct") !== undefined
   );
+}
+
+// P3-D fix: founder-death path. Fires on process_maturity dimension when explicit
+// founder/key-person death vocabulary is present. "Founder died" is self-sufficient —
+// no numeric required (death is irreversible and unambiguous). Ordinary leadership
+// changes ("CEO resigned", "new CEO appointed") do not match.
+const FOUNDER_DEATH_TEXT =
+  /founder.*died|founder.*death|founder.*deceased|death.*founder|sudden.*death|key.?person.*died|key.?person.*death|complete.*key.?person.*loss/;
+function fin_isFounderDeath(e: EvidenceItem): boolean {
+  if (e.dimension !== "process_maturity") return false;
+  if (!e.isCritical) return false;
+  return FOUNDER_DEATH_TEXT.test(fin_text(e));
 }
 
 // Capex is multi-signal: a capital INVESTMENT amount + an irreversibility signal +

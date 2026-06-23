@@ -1,0 +1,112 @@
+{
+  "case_id": "SIM-05-002",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "demand_generation_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "total active member count has remained unchanged at approximately 310 for two years despite a consistent inflow of new joiners each month",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Flat membership base over two years with confirmed new joiners implies an equal monthly departure rate — a critical retention failure signal. customer_retention dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "the owner is unable to account for why member numbers are not growing given that new people are joining each month",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Owner's inability to reconcile new joiners with flat membership is a diagnostic gap signal. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "members who joined six to twelve months ago are no longer active and have not renewed their memberships",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Members departing within 6-12 months of joining is a critical early-exit signal. customer_retention dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "revenue per active member is declining as the proportion of short-term membership types increases",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Declining per-member revenue from shorter-term memberships is a secondary financial signal. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 480K; 5 staff; 310 active members; 18 new members joining per month on average; two-year period of flat total membership",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "The mathematical implication of 310 steady-state members with 18 monthly joiners is that approximately 18 members depart each month. This is the structural retention problem. is_critical=true. No must_identify vocabulary used (attrition rate, net member growth, retention failure, departure pattern, membership duration — none appear)."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): new member signup rate of 18 per month appears healthy and the owner uses this to support the view that marketing performance is satisfactory",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Strong new-joiner volume is a misleading signal when it is neutralised by an equal departure rate. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): social media engagement and follower numbers have grown substantially over 18 months",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Social media growth is a misleading signal when the problem is member retention, not awareness. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): a recent promotional campaign produced a temporary increase in new signups that the owner cites as justification for further advertising investment",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "A promotional signup spike is a misleading signal — it may add to the inflow temporarily while the departure problem remains unaddressed. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "new_member_monthly_average",
+      "canonical_key": "newCustomerRate",
+      "evidence_item_index": 4
+    },
+    {
+      "fixture_key": "active_members",
+      "canonical_key": "funnelConversionPct",
+      "evidence_item_index": 4,
+      "value_override": 6,
+      "transform_note": "Implied monthly departure rate: 18 departures / 310 members = approximately 5.8 percent per month. funnelConversionPct used as proxy for member retention efficiency — a ~6% monthly departure rate is adversely high for a membership-based fitness business."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "demandDurabilityMonths",
+      "would_improve_pattern": "fin_isDemandGenerationFailure (monthly non-renewal or cancellation count would confirm the departure rate implied by flat membership)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": "demandDurabilityMonths",
+      "would_improve_pattern": "fin_isDemandGenerationFailure (average membership duration by type would confirm early-exit pattern)"
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-05-002 is a demand/retention failure case (TT-5 signal trap) where the owner misattributes flat membership to insufficient marketing reach. No must_identify vocabulary used (attrition rate offsetting new member intake, net member growth calculation, retention failure not acquisition failure, departure pattern not tracked, membership duration as an indicator of engagement depth — none appear in findings). Bad recommendation vocabulary excluded (broader advertising campaigns, social media spend, free trial membership, new equipment — none appear in findings)."
+}

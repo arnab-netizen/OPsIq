@@ -1,0 +1,107 @@
+{
+  "case_id": "SIM-03-001",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "annual amount retained after costs has declined for two consecutive years with no identified cause",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Two-year decline in net surplus is a critical margin erosion signal. financial_health dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "purchase prices paid to suppliers have increased but the owner cannot quantify the change by product",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Rising supplier prices without quantification is a financial health adverse signal. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "no price adjustments have been made to customers in over 18 months despite changing input costs",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Customer pricing not adjusted while costs move is a margin erosion contributor. financial_health dimension. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "owner is unable to identify which products or customers are contributing most and least to business returns",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of visibility into financial contribution by product is a critical diagnostic gap. financial_health dimension; is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 1.1M; 6 staff; three product categories all reported as a single combined figure; no breakout by category available",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Combined reporting across three product categories without breakout is the structural gap preventing diagnosis. is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): overall revenue has not declined and all major customers have been retained",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue stability and customer retention are misleading signals when margin is declining in unmonitored categories. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): a new wholesale account was opened six months ago adding volume",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "New account volume is a misleading signal when the profitability of that volume is unknown. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): owner believes cost pressure is a general market condition affecting all businesses equally",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Attribution to general market conditions is a misleading signal that masks category-specific cost movements. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_revenue",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 4,
+      "value_override": -12,
+      "transform_note": "Proxy: two-year surplus decline without identified cause in a stable-revenue business implies approximately -12% shift in effective margin percentage. Negative value signals margin erosion direction to the engine."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "fin_isMarginErosion (confirmed margin change by product category would elevate confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-03-001 is a margin erosion case with deliberate data gaps — no product-level reporting exists. No must_identify vocabulary used (product-level profitability, supplier cost increases, pricing review gap, blended reporting masking individual performance, unrecovered cost increases — none appear in findings). Margin proxy negative to signal erosion."
+}

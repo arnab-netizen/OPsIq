@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_INDIA_KINGFISHER_2012_COLLAPSE",
+  "businessProblem": "Kingfisher Airlines has grounded its fleet, owes seven months of salary arrears, faces active DGCA licence-cancellation review, and has never been profitable. Cash losses are continuing. Diagnose root causes and recommend highest-priority action plan before licence outcome.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Kingfisher Airlines has never turned a profit since launch",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters contemporaneous reporting, company annual report FY2011-12"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Accumulated losses as at FY2011-12 end exceeded 50% of net worth; cash losses in FY2011-12 and FY2010-11",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Kingfisher Annual Report FY2011-12"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Domestic revenue declined from ₹47,731 million in FY2010-11 to ₹41,126 million in FY2011-12",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Kingfisher Annual Report FY2011-12"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Seven months of salary arrears owed to employees as of 5 October 2012",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, 5 October 2012"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Kingfisher has grounded its entire fleet as of 5 October 2012",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, 5 October 2012"
+    },
+    {
+      "dimension": "operations",
+      "finding": "No flights operating; airline effectively ceased service as of decision date",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, DGCA statements"
+    },
+    {
+      "dimension": "legal",
+      "finding": "Aviation regulator DGCA seeking legal opinion on cancelling Kingfisher operating licence",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Reuters, 5 October 2012"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Persistent negative unit economics and no credible turnaround plan presented to regulator",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "Reuters, public reporting"
+    }
+  ],
+  "clientContext": {
+    "companyName": "Kingfisher Airlines Ltd.",
+    "country": "India",
+    "industry": "Airline",
+    "stage": "Operational collapse / pre-licence-suspension",
+    "decisionDate": "2012-10-05",
+    "primaryStakeholder": "Board, management, and DGCA regulator"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "CRITICAL",
+    "resistanceToChange": "HIGH",
+    "managementCapability": "VERY LOW — unable to pay staff or restore operations",
+    "keyPersonDependency": "HIGH — founder-led airline",
+    "accountabilityWeakness": "CRITICAL — seven months of salary arrears with no resolution"
+  }
+}

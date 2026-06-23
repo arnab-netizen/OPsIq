@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_US_HERTZ_2020_CHAPTER11",
+  "businessProblem": "Hertz faces near-total revenue collapse from COVID-19 travel demand destruction, with large fleet-financing obligations, high leverage, and severe liquidity pressure as of 15 May 2020. Formal restructuring is being evaluated. Diagnose root causes and recommend highest-priority action plan.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Revenue severely impaired by near-total COVID-19 travel demand collapse beginning early 2020",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Hertz SEC filing / Chapter 11 press release, public reporting May 2020"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Hertz carries large fleet-financing obligations that are contractually rigid and continue regardless of revenue",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Hertz SEC filing, public reporting"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Liquidity pressure severe — insufficient cash to service debt and fleet-financing at collapsed revenue levels",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting, SEC filing"
+    },
+    {
+      "dimension": "finance",
+      "finding": "High pre-existing leverage compounds the revenue shock impact",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting, SEC filing"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Fleet utilization near zero due to travel restrictions — core revenue-generating asset is idle",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Industry reporting, company statements"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Fleet disposal is an option but used-vehicle market prices are depressed in the crisis environment",
+      "confidence": "MEDIUM",
+      "isCritical": false,
+      "source": "Industry reporting"
+    },
+    {
+      "dimension": "market",
+      "finding": "COVID-19 travel demand collapse duration unknown — recovery timeline deeply uncertain as of May 2020",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Industry reporting, government travel restriction data"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Management evaluating formal restructuring options including Chapter 11 — no formal decision yet as of 15 May 2020",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "Public reporting May 2020"
+    }
+  ],
+  "clientContext": {
+    "companyName": "Hertz Global Holdings",
+    "country": "United States",
+    "industry": "Vehicle rental",
+    "stage": "Liquidity crisis / pre-restructuring",
+    "decisionDate": "2020-05-15",
+    "primaryStakeholder": "Board, lenders, creditors"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "HIGH",
+    "resistanceToChange": "MEDIUM — management actively evaluating options",
+    "managementCapability": "MEDIUM — experienced but facing unprecedented external shock",
+    "keyPersonDependency": "LOW — public company with distributed governance",
+    "accountabilityWeakness": "MEDIUM — creditor standstill not yet achieved"
+  }
+}

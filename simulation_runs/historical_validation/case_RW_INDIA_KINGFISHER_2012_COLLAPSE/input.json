@@ -1,0 +1,46 @@
+{
+  "case_id": "RW_INDIA_KINGFISHER_2012_COLLAPSE",
+  "company": "Kingfisher Airlines Ltd.",
+  "decision_date": "2012-10-05",
+  "industry": "Airline",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "Kingfisher Airlines had never turned a profit since its launch",
+    "By 5 October 2012 the airline had grounded its entire fleet",
+    "Employees were seven months behind on salary payments",
+    "Aviation regulator DGCA was seeking legal opinion on cancelling Kingfisher's operating licence",
+    "Accumulated losses at end of FY2011-12 exceeded 50% of net worth",
+    "Cash losses occurred during FY2011-12 and the preceding financial year",
+    "FY2011-12 domestic revenue declined from ₹47,731 million (FY2010-11) to ₹41,126 million",
+    "FY2011-12 income from services was ₹54,935 million",
+    "Problem combined severe cash shortage, salary arrears, grounded operations, regulatory risk, debt pressure, and poor unit economics"
+  ],
+  "financial_signals_at_decision_date": {
+    "profit_history": "Never profitable since launch",
+    "accumulated_loss_vs_networth": "Exceeded 50% as of FY2011-12 end",
+    "cash_loss_years": ["FY2010-11", "FY2011-12"],
+    "domestic_revenue_fy2012_million_inr": 41126,
+    "domestic_revenue_fy2011_million_inr": 47731,
+    "income_from_services_fy2012_million_inr": 54935,
+    "salary_arrears_months": 7
+  },
+  "operating_signals_at_decision_date": {
+    "fleet_status": "Grounded as of early October 2012",
+    "operations_status": "No flights operating",
+    "employee_morale": "Severely impaired by seven months of unpaid salaries"
+  },
+  "governance_signals_at_decision_date": {
+    "regulatory_status": "DGCA seeking legal opinion on licence cancellation",
+    "licence_risk": "High — regulator actively considering action",
+    "management_credibility": "Undermined by inability to pay staff or restore operations"
+  },
+  "risk_flags_at_decision_date": [
+    "Fleet already grounded — operational continuity broken",
+    "Seven months of salary arrears — employee confidence destroyed",
+    "DGCA actively considering licence cancellation",
+    "No profitable history to reference for turnaround credibility",
+    "Revenue declining year-over-year with cash losses",
+    "Accumulated losses exceeding 50% of net worth signals insolvency proximity"
+  ],
+  "question": "Given grounded fleet, seven months of salary arrears, active regulatory licence review, persistent losses, and cash shortage, diagnose root causes and recommend the highest-priority action plan to prevent licence suspension and restore operational viability."
+}

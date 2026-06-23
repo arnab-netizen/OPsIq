@@ -1,0 +1,43 @@
+name: Owner Mode — Real-World SMB Cases
+
+on:
+  push:
+    paths:
+      - "tests/owner-mode/real-world-smb-cases/**"
+      - "src/services/consulting-engine/**"
+      - "src/domain/consulting-engine/**"
+  pull_request:
+    paths:
+      - "tests/owner-mode/real-world-smb-cases/**"
+      - "src/services/consulting-engine/**"
+      - "src/domain/consulting-engine/**"
+  workflow_dispatch:
+
+jobs:
+  smb-case-harness:
+    name: SMB Case Fixture Validation and Scoring Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck SMB case harness files
+        run: npx tsc --noEmit --project tsconfig.json 2>&1 | head -50 || true
+        # Non-blocking typecheck — report errors but do not fail CI here.
+        # The test suite below provides the hard gate.
+
+      - name: Run SMB real-world case tests
+        run: npm run test:owner-real-world-smb
+        env:
+          # No DB required for this test suite — fixture validation and scoring are pure.
+          TEST_WITH_DB: "false"

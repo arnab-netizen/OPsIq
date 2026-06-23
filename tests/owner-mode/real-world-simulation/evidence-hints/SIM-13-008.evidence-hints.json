@@ -1,0 +1,72 @@
+{
+  "case_id": "SIM-13-008",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "operational_bottleneck",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner is a binding operational bottleneck \u2014 every quote, every client call, and every design sign-off requires owner approval; this throughput constraint prevents capacity utilisation and revenue growth beyond what the owner can personally process",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "production facility has a backlog and capacity constraint \u2014 idle two days per week waiting for materials while near-full capacity three days per week indicates a scheduling and materials-lead-time bottleneck, not a labour capacity shortage",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue approximately $380K for 3 consecutive years; owner 60+ hours per week; owner approval required for every quote, call, and design; production near-full 3 days, idle 2 days waiting for materials; scheduling knowledge owner-only; 5 staff",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): owner working 60+ hours per week suggests maximum effort \u2014 additional hours appear not possible",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): production is near-full capacity three days per week suggesting the facility is well-utilised",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: operational_efficiency + isCritical + OPERATIONAL_TOPIC (bottleneck, throughput, capacity, backlog, queue, slow)"
+}

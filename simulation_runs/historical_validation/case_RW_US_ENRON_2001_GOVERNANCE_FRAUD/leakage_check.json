@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json contain the actual outcome?",
+      "finding": "No outcome information present in input",
+      "verdict": "PASS"
+    },
+    "hindsight_leakage": {
+      "question": "Does input.json contain hindsight information?",
+      "finding": "All facts are from decision-date perspective only",
+      "verdict": "PASS"
+    },
+    "future_date_leakage": {
+      "question": "Does input.json reference future dates or events?",
+      "finding": "No future dates or post-decision events referenced",
+      "verdict": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "question": "Does input.json contain expert conclusions from after the decision date?",
+      "finding": "No post-decision expert conclusions present",
+      "verdict": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "PASS - input.json contains only decision-date facts with no outcome, hindsight, or future leakage"
+}

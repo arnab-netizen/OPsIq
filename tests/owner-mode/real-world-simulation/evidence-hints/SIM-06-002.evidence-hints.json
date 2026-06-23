@@ -1,0 +1,104 @@
+{
+  "case_id": "SIM-06-002",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": null,
+  "unsupported_expected_archetypes": [
+    {
+      "smb_label": "scheduling_inefficiency_misdiagnosed_as_headcount_shortage",
+      "gap_reason": "No archetype in the engine models operational scheduling efficiency or capacity utilisation misattribution. The engine cannot reconcile a stated utilisation figure against operational experience of declining contracts without a scheduling-specific diagnostic pathway."
+    }
+  ],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "five new contract enquiries were declined in the past month because the owner believes there are insufficient staff to service them",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Declining new contracts while reporting spare capacity is a critical contradictory operational signal. market_position dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "some field staff report periods of travel or waiting between site visits during the working day",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Staff reporting idle time between visits directly contradicts the owner's claim of insufficient capacity — a critical operational signal. operational_efficiency dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "the owner prepares the weekly staff schedule manually, a process that takes several hours each week",
+      "dimension": "process_maturity",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Manual roster construction is a process maturity gap that may contribute to suboptimal assignment decisions. process_maturity dimension. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "several contracts require non-standard start times that create gaps in individual staff schedules during the working day",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Non-standard contract start times creating schedule gaps is an operational efficiency signal suggesting assignment sequencing problems. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 1.6M; 14 field staff; 5 contracts declined in the past month; owner reports approximately 70 percent staff utilisation",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "The combination of 14 staff at 70% utilisation implying material spare capacity and simultaneously declining new contracts is a direct data conflict requiring resolution before any hiring decision. is_critical=true. No must_identify vocabulary used (gap between stated utilisation and experienced capacity shortage, scheduling and routing, need to audit actual versus paid hours, travel time and idle gaps, roster optimisation — none appear)."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the owner's instinct is that more staff are needed and a recruitment process has already begun",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Owner hiring intent based on felt capacity shortage is a misleading signal when stated utilisation implies significant spare hours. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): a nearby competitor has advertised for cleaning staff, which the owner interprets as evidence of a general labour shortage in the area",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Competitor hiring activity is a misleading signal — it does not indicate this business has an absolute staff shortage when utilisation figures suggest otherwise. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): revenue has grown 18 percent this year, which the owner cites as justification for expanding the team",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth is a misleading signal when the question is whether existing capacity is being used efficiently before adding further headcount cost. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-06-002 is an UNSUPPORTED case (SC-06, TT-4 data conflict). No archetype in the OpsIQ engine models scheduling efficiency or capacity utilisation misattribution. The engine will return SCOPE_GAP or UNKNOWN. No must_identify vocabulary used (gap between stated utilisation and experienced capacity shortage, scheduling and routing as potential source of hidden capacity, need to audit actual versus paid hours before hiring, travel time and idle gaps consuming effective capacity, roster optimisation opportunity — none appear in findings). Bad recommendation vocabulary excluded (hire four additional cleaning staff immediately, purchase additional cleaning equipment, raise prices to reduce demand, expand into a new geographic area — none appear in findings)."
+}

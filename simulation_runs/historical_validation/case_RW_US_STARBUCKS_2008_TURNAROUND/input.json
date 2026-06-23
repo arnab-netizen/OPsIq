@@ -1,0 +1,49 @@
+{
+  "case_id": "RW_US_STARBUCKS_2008_TURNAROUND",
+  "company": "Starbucks Corporation",
+  "decision_date": "2008-01-07",
+  "industry": "Coffee retail",
+  "geography": "US",
+  "known_facts_at_decision_date": [
+    "Starbucks had expanded its store count rapidly over preceding years",
+    "Comparable-store sales were under pressure",
+    "The premium coffeehouse experience that differentiated Starbucks was at risk of dilution",
+    "Rapid store growth had created potential cannibalization between nearby locations",
+    "Operational inconsistency across a large store network was an observable risk",
+    "The brand was built on a premium positioning that required consistent in-store experience",
+    "Business still had strong brand equity, a large customer base, and an extensive store network",
+    "Overexpansion and experience degradation were identified as central risks at the decision date",
+    "Partner (employee) engagement was a recognized driver of customer experience quality",
+    "Howard Schultz had returned to the CEO role as of January 7, 2008",
+    "The macroeconomic environment was deteriorating in early 2008, adding pressure to premium discretionary spending"
+  ],
+  "financial_signals_at_decision_date": {
+    "comparable_store_sales": "Under pressure; declining trend",
+    "revenue_model": "Dependent on store count growth and per-visit spend; both under pressure",
+    "cost_structure": "Fixed-cost intensive due to large store network",
+    "profitability_trend": "Declining with pressure from overexpansion and experience erosion",
+    "financial_condition": "Stressed but not in acute insolvency; operational recovery required"
+  },
+  "operating_signals_at_decision_date": {
+    "store_count": "Very high and growing rapidly; cannibalization risk present",
+    "experience_consistency": "Degrading across expanded network",
+    "brand_premium_positioning": "At risk of erosion from overexpansion and experience dilution",
+    "partner_engagement": "Inconsistent; linked to experience quality decline",
+    "new_store_quality": "Declining returns as expansion extended into lower-quality locations"
+  },
+  "governance_signals_at_decision_date": {
+    "leadership": "Founder Howard Schultz returned as CEO on January 7, 2008",
+    "strategic_clarity": "Transitional; new leadership direction being established",
+    "board_awareness": "High; leadership change reflects recognition of strategic distress",
+    "decision_urgency": "High; experience and financial trends both deteriorating"
+  },
+  "risk_flags_at_decision_date": [
+    "Premium brand erosion risk from store experience inconsistency",
+    "Cannibalization risk from excessive store density",
+    "Customer attrition risk if coffeehouse experience continues to degrade",
+    "Partner disengagement risk contributing to service quality decline",
+    "Macroeconomic pressure risk on premium discretionary coffee spending",
+    "Competitive risk from lower-cost alternatives as premium positioning weakens"
+  ],
+  "question": "Diagnose the root causes of Starbucks' performance deterioration as of January 7, 2008 and recommend the highest-priority turnaround plan, given only facts observable at that decision date."
+}

@@ -1,0 +1,107 @@
+{
+  "case_id": "SIM-02-002",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner drawings have declined each year for three consecutive years despite higher revenue",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Declining owner earnings with rising revenue is a critical margin erosion signal. financial_health dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "promotional price reductions are now required to clear unsold product each season",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Discount events to clear stock is an adverse margin signal. financial_health dimension. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "storage and warehousing costs have increased as the number of product lines has grown",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Growing storage costs from product proliferation is an operational cost efficiency adverse signal."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "the proportion of revenue retained after costs has declined every year for three years",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Progressive multi-year decline in retained proportion of revenue is a critical margin erosion signal. financial_health dimension; is_critical=true. Avoids must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 620K; 4 staff; revenue grew 58 percent over three years; margins declining despite volume growth",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth without margin improvement confirms a margin erosion pattern rather than a growth problem. is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue grew 58 percent over three years",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth is a misleading signal masking the margin compression. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): website traffic is at an all-time high",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Traffic volume is a misleading vanity metric when profitability is declining. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): the active customer mailing list has tripled in size",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Growing subscriber list is a misleading signal when margin is declining. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_revenue",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 4,
+      "value_override": -15,
+      "transform_note": "Proxy margin change: three consecutive years of declining retained proportion at +58% revenue growth implies approximately -15% change in margin percentage over the period. Negative value signals margin erosion to the engine."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "fin_isMarginErosion (confirmed marginPct decline elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": "discountPct",
+      "would_improve_pattern": "fin_isPricingPower (discount percentage data confirms markdown dependency)"
+    }
+  ],
+  "validation_notes": "SIM-02-002 is a margin erosion case driven by promotional discounting and product range overextension. No must_identify vocabulary used (cost of purchased stock as proportion of revenue, discount dependency, slow-moving inventory, full-price sell-through rate, product range overextension — none appear in findings). Margin proxy is negative to signal erosion direction."
+}

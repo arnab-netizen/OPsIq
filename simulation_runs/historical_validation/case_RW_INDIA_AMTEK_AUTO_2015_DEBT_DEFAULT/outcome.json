@@ -1,0 +1,33 @@
+{
+  "caseId": "RW_INDIA_AMTEK_AUTO_2015_DEBT_DEFAULT",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "DEBT_CRISIS",
+  "expert_first_action": "CREDITOR_STANDSTILL_AND_DEBT_RESTRUCTURING",
+  "actual_decision": "Bond default in September 2015 triggered lender and creditor pressure; company attempted asset sales and restructuring negotiations",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Continued acquisition-led expansion without viable debt-service model",
+    "Delayed credible asset-sale execution",
+    "No confirmed lender standstill or formal coordination in place before default"
+  ],
+  "beneficial_actions": [
+    "Management acknowledged debt reduction need and initiated asset-sale exploration"
+  ],
+  "citation": "IBBI/NCLT CIRP proceedings; published reports of bond default and group debt quantum; auto sector analyst reports 2015",
+  "actual_outcome": "Amtek Auto entered CIRP under IBC. Extended insolvency resolution process. Liberty House/Deccan-linked resolution plan attempts. NCLAT and Supreme Court proceedings. Group did not achieve debt-free restart under original management.",
+  "documented_root_causes": [
+    "Acquisition-led leverage model unsustainable",
+    "Cash generation insufficient relative to debt quantum",
+    "Auto-sector slowdown reduced cash flow support",
+    "Asset-liability mismatch from long-dated acquisition assets vs. near-term debt obligations",
+    "No credible lender coordination before default crystallized"
+  ],
+  "final_business_state": "INSOLVENCY_RESOLUTION",
+  "expected_diagnosis_codes": [
+    "debt_solvency_pressure"
+  ],
+  "expected_action_codes": [
+    "STABILIZATION",
+    "STRUCTURAL_REPAIR"
+  ]
+}

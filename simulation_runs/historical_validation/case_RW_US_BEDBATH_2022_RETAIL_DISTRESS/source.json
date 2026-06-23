@@ -1,0 +1,15 @@
+{
+  "caseId": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
+  "source_urls": [
+    "https://www.sec.gov/Archives/edgar/data/886158/000088615822000117/bbby-20220831.htm",
+    "https://www.sec.gov/Archives/edgar/data/886158/000119312523112034/d479924dex991.htm",
+    "https://www.reuters.com/business/retail-consumer/bed-bath-beyond-files-bankruptcy-protection-2023-04-23/"
+  ],
+  "source_type": "Mixed: SEC regulatory filings (10-Q period ending 2022-08-31, bankruptcy-related exhibit), Reuters credible journalism on the bankruptcy filing",
+  "source_quality": "A-level: SEC filings are primary regulatory documents with direct evidentiary authority. The 10-Q for the period ending 2022-08-31 is the most authoritative source for the decision-date financial and operational state. B-level: Reuters journalism on the April 2023 bankruptcy filing.",
+  "reliability_tier": "High",
+  "supports_ground_truth": true,
+  "contamination_risk": "Medium-high",
+  "contamination_notes": "The bankruptcy-related SEC exhibit and Reuters article describe events and outcomes that postdate the decision date of 2022-08-31. The meme-stock episode in August 2022 was highly publicized and creates contamination risk if referenced in input files. These materials are used only to ground outcome.json. Input files are constructed only from facts knowable at 2022-08-31 as reported in the contemporaneous 10-Q and company disclosures. Chapter 11 filing, store liquidation, Overstock brand acquisition, and confirmed bankruptcy outcome are all post-decision and excluded from input.json and 01_case_input.json.",
+  "source_limitations": "The SEC 10-Q for 2022-08-31 is the primary input-grounding document; later bankruptcy filings establish the outcome. Meme-stock trading activity and its aftermath must not be referenced as an outcome in input files. Final store closure counts, liquidation process details, and Overstock acquisition terms belong only in outcome scoring."
+}

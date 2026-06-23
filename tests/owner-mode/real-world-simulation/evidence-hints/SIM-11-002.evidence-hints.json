@@ -1,0 +1,72 @@
+{
+  "case_id": "SIM-11-002",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "quality_control_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "product return rate has tripled from 1.2 percent to 4.8 percent over the period in which headcount doubled from 8 to 16 \u2014 the return rate rise is concurrent with rapid headcount growth, not with the supplier change",
+      "dimension": "quality_delivery",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "quality issue predates the supplier change and has not resolved four months after the switch \u2014 rework rate and defect rate are rising; the quality failure is ongoing and unresolved",
+      "dimension": "quality_delivery",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "current headcount 16; headcount 18 months ago 8; annual revenue $1.9M; return rate before issue 1.2%; current return rate 4.8%; quality issue ongoing 4 months; supplier changed; 2 retailer clients",
+      "dimension": "quality_delivery",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): a supplier change occurred shortly before the first product returns \u2014 owner attributes the return rate increase to the supplier",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): supplier has since been changed back to the original \u2014 owner believes this resolves the quality issue",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: quality_delivery + isCritical + QUALITY_TOPIC (return rate, defect) + QUALITY_SEVERE (tripling, rising)"
+}

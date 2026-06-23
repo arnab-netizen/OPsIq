@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_INDIA_YES_BANK_2020_MORATORIUM",
+  "businessProblem": "Yes Bank faces deteriorating asset quality, failed capital-raising attempts, fragile depositor confidence, and known governance and risk-management concerns as of 4 March 2020. Systemic implications make this a financial stability issue. Diagnose root causes and recommend highest-priority action plan before regulatory intervention.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Yes Bank's asset quality is deteriorating with high stressed and non-performing asset exposure",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Yes Bank Q3 FY2019-20 statutory release, regulatory disclosures"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Bank needs capital and has failed to secure sufficient credible capital through private-market attempts",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting, Yale financial crises case material"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Capital adequacy insufficient to absorb stressed asset losses without external injection",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Regulatory framework requirements, public reporting"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Depositor and market confidence under pressure — franchise value at risk if confidence collapses",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting, Yale case material"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Yes Bank's size and interconnectedness means failure carries systemic implications for Indian financial system",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Yale financial crises case material, public reporting"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Known governance and risk-management concerns contributed to the asset-quality deterioration",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting, Yale case material"
+    },
+    {
+      "dimension": "legal",
+      "finding": "RBI actively monitoring capital adequacy and asset quality — regulatory intervention increasingly probable",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting, regulatory framework"
+    },
+    {
+      "dimension": "market",
+      "finding": "Private capital-raising window closing — market confidence in management's ability to execute capital plan is low",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "Public reporting"
+    }
+  ],
+  "clientContext": {
+    "companyName": "Yes Bank Ltd.",
+    "country": "India",
+    "industry": "Banking",
+    "stage": "Banking crisis / pre-regulatory intervention",
+    "decisionDate": "2020-03-04",
+    "primaryStakeholder": "RBI, Yes Bank board, government"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "CRITICAL — window for self-rescue has effectively closed",
+    "resistanceToChange": "HIGH — management had resisted adequate governance reform",
+    "managementCapability": "CRITICALLY COMPROMISED — failed multiple capital-raising attempts",
+    "keyPersonDependency": "HIGH — prior management's decisions created current crisis",
+    "accountabilityWeakness": "CRITICAL — governance failures allowed asset-quality problem to develop"
+  }
+}

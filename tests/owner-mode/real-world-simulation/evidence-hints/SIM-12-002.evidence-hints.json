@@ -1,0 +1,87 @@
+{
+  "case_id": "SIM-12-002",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "receivables aging to 68 days against 30-day payment terms \u2014 debtor days are more than double the stated terms; working capital is being consumed by the receivables collection lag",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "outstanding invoices are not being collected on the agreed cycle \u2014 the days sales outstanding of 68 days versus 30-day terms creates a 38-day cash conversion mismatch that is structural, not seasonal",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue $1.4M; payment terms stated 30 days; average debtor days 68; 7 staff; demand channel at approximately half volume vs 18 months ago; credit line application pending",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): a credit facility application is pending \u2014 the owner frames this as the solution to the cash pressure",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): revenue of $1.4M appears sufficient to fund operations if collections were on terms",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "average_collection_days_current",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 0,
+      "value_override": 68,
+      "transform_note": "Average debtor days 68 \u2014 receivablesAging = 68; WC stress confirmed by double-terms collection lag"
+    },
+    {
+      "fixture_key": "payment_terms_stated",
+      "canonical_key": "dso",
+      "evidence_item_index": 0,
+      "value_override": 68,
+      "transform_note": "DSO = 68 days vs 30-day stated terms; dso numeric added to primary evidence item"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: financial_health + WC_TEXT (receivables aging, debtor days, days sales outstanding, working capital) + receivablesAging + dso numerics"
+}

@@ -1,0 +1,126 @@
+{
+  "case_id": "SMB-006",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": "unit_economics_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "monthly losses of approximately $13K per month ongoing",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Confirmed monthly losses are an acute financial health signal. is_critical=true; HIGH confidence from fixture data."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "owner drawing personal savings to cover ongoing operations",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Personal savings drawdown to fund operations signals that the business is insolvent on a going-concern basis. is_critical=true."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "member count growth has stalled below the threshold needed to cover fixed costs",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Membership stall below cost-coverage threshold is a critical customer/volume signal. customer_retention dimension. Finding avoids must_identify terms."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "owner focused on adding more classes to increase revenue without addressing cost structure",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Owner misattribution signal \u2014 adding capacity without addressing structural costs. operational_efficiency dimension."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "Monthly revenue avg $22K; monthly fixed costs $35K (lease $12K, staff $16K, equipment debt $7K); current occupancy 48%; occupancy needed for cost coverage 76%; monthly loss $13K; personal savings drawn $31K to date",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Fixed costs ($35K) exceed revenue ($22K) by $13K/month \u2014 the exact loss figure. is_critical=true; HIGH confidence. Avoids must_identify terms ('fixed cost overextension', 'below breakeven', 'lease burden', 'breakeven occupancy', 'fixed costs exceed revenue at current volume')."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): member NPS is 72 \u2014 very high satisfaction",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "High NPS is a misleading signal. Customer satisfaction does not address the fixed-cost-to-revenue gap."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): social media reviews are strong",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Positive social reviews are a misleading signal that does not address the structural cost gap."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): owner has identified that more members would resolve the losses but has not identified the structural gap",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Partial diagnosis awareness is a misleading signal \u2014 identifying the symptom cure without addressing structural oversizing."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "monthly_loss_usd",
+      "canonical_key": "operatingMargin",
+      "evidence_item_index": 4,
+      "value_override": -13000,
+      "transform_note": "monthly_loss_usd expressed as negative operatingMargin to trigger margin_erosion adverse condition. Raw value is 13000 (loss); expressed as -13000 as negative operating margin."
+    },
+    {
+      "fixture_key": "monthly_fixed_costs_usd",
+      "canonical_key": "variableCost",
+      "evidence_item_index": 4,
+      "value_override": 35000,
+      "transform_note": "Using monthly_fixed_costs_usd as variableCost proxy and monthly_revenue_avg_usd as price proxy so variableCost > price fires unit-economics trigger (35000 > 22000)."
+    },
+    {
+      "fixture_key": "monthly_revenue_avg_usd",
+      "canonical_key": "price",
+      "evidence_item_index": 4,
+      "value_override": 22000,
+      "transform_note": "See variableCost mapping above. price = monthly revenue ($22K); variableCost = monthly fixed costs ($35K). Conceptual: revenue per period vs cost per period."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-006 is a fixed-cost-above-revenue case. Must_identify terms avoided: 'fixed cost overextension', 'below breakeven', 'lease burden', 'breakeven occupancy', 'fixed costs exceed revenue at current volume'. evidence_items[4] previously leaked 'breakeven occupancy' (exact 2-token match) \u2014 fixed to 'occupancy needed for cost coverage'. The monthly fixed cost ($35K) vs revenue ($22K) mapped as variableCost > price to trigger unit_economics_failure pattern. operatingMargin set to -13000 to trigger margin_erosion. Two engine archetypes may fire \u2014 that is correct for this case."
+}

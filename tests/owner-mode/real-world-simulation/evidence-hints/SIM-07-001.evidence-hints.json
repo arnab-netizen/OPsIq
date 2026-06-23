@@ -1,0 +1,95 @@
+{
+  "case_id": "SIM-07-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": null,
+  "unsupported_expected_archetypes": [
+    {
+      "smb_label": "management_behaviour_retention_driver",
+      "gap_reason": "No archetype in the engine models management behaviour as the primary driver of staff attrition. The engine cannot separate management-caused turnover from compensation-caused or market-caused turnover."
+    }
+  ],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "three of five tradespeople have left within eighteen months despite two pay increases in the same period",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Turnover persisting after pay rises is an adverse retention signal that conflicts with the owner's compensation attribution. team_capability. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "exit interviews consistently reference team leadership and job site conditions rather than compensation as reasons for leaving",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Exit interviews pointing to leadership rather than pay is a critical adverse team signal. team_capability; is_critical=true. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "owner is aware of the exit interview content but has not taken any action with the field supervisor",
+      "dimension": "process_maturity",
+      "is_critical": true,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Owner inaction on known exit interview findings is a process maturity adverse signal. process_maturity. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "field supervisor has been in the role for three years and the turnover increase coincides with his appointment",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Turnover increase coinciding with supervisor appointment is a timing correlation adverse signal. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "trades business; 5 tradespeople; 3 departed in 18 months; two pay increases in same period; exit interviews reference field supervisor",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary of the retention situation. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): pay rates are now above market median for the trade according to the owner",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Above-market pay is a misleading signal when exit interviews attribute departures to management rather than compensation."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): new recruits are available and the business has not struggled to fill vacancies after each departure",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Available replacement candidates is a misleading signal — it does not explain why experienced staff are leaving."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-07-001 is UNSUPPORTED. No engine archetype models management behaviour as a retention driver. Findings paraphrased from input_packet. No must_identify vocabulary used."
+}

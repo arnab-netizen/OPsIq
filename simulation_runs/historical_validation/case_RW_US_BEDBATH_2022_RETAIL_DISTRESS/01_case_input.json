@@ -1,0 +1,68 @@
+{
+  "caseId": "RW_US_BEDBATH_2022_RETAIL_DISTRESS",
+  "businessProblem": "Bed Bath & Beyond Inc. faces a multi-dimensional retail distress crisis as of August 2022. Vendor and supplier confidence has collapsed, resulting in inventory gaps that directly harm customer traffic and sales. Prior management spent heavily on share repurchases, depleting liquidity that could have supported operational stability. A new leadership team is attempting a turnaround but execution is at an early stage. The company must simultaneously stabilize vendor relationships, secure turnaround financing, restore inventory basics, close unprofitable stores, and recover customer relevance — or face bankruptcy.",
+  "evidence": [
+    {
+      "dimension": "Vendor and supplier confidence",
+      "finding": "Key suppliers have reduced or suspended shipments due to concerns over Bed Bath & Beyond's payment reliability and viability, causing material inventory gaps across the store network.",
+      "confidence": 0.96,
+      "isCritical": true,
+      "source": "Company SEC filings and press statements, August 2022"
+    },
+    {
+      "dimension": "Liquidity",
+      "finding": "The company's cash position and credit availability are critically stressed; turnaround financing is being actively sought as of the decision date.",
+      "confidence": 0.95,
+      "isCritical": true,
+      "source": "SEC filings (10-Q/8-K), August 2022"
+    },
+    {
+      "dimension": "Capital allocation history",
+      "finding": "Substantial capital was spent on share repurchases in prior years under previous management, depleting reserves that could otherwise have supported operational investment or liquidity buffers.",
+      "confidence": 0.94,
+      "isCritical": true,
+      "source": "Company financial statements and SEC filings, 2019–2022"
+    },
+    {
+      "dimension": "Merchandising and assortment",
+      "finding": "A prior strategy to replace national brands with owned brands disrupted the product assortment and eroded customer trust and loyalty.",
+      "confidence": 0.91,
+      "isCritical": true,
+      "source": "Company strategic disclosures and analyst commentary, 2020–2022"
+    },
+    {
+      "dimension": "Sales trajectory",
+      "finding": "Comparable-store sales have been declining over multiple periods, reflecting both structural demand weakness and execution failure.",
+      "confidence": 0.93,
+      "isCritical": true,
+      "source": "Company quarterly earnings reports, 2021–2022"
+    },
+    {
+      "dimension": "Turnaround plan",
+      "finding": "New management has announced a turnaround plan including store closures, capital raising, and operational changes, but results have not yet been demonstrated as of the decision date.",
+      "confidence": 0.88,
+      "isCritical": false,
+      "source": "Company press releases and investor communications, summer 2022"
+    },
+    {
+      "dimension": "Customer relevance",
+      "finding": "Inventory inadequacy and assortment disruption have reduced customer traffic; the combination of empty shelves and competitive alternatives has weakened the brand's position.",
+      "confidence": 0.89,
+      "isCritical": true,
+      "source": "Company disclosures and retail industry commentary, 2022"
+    }
+  ],
+  "clientContext": {
+    "company": "Bed Bath & Beyond Inc.",
+    "country": "United States",
+    "industry": "Retail / home goods",
+    "decisionDate": "2022-08-31",
+    "consultingStage": "Crisis stabilization — vendor, liquidity, and inventory recovery required before strategic positioning"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "High — prior management's capital allocation decisions created the crisis; new management credibility with vendors and lenders is unproven",
+    "resistanceToChange": "Medium — new leadership is directionally open to change but organizational capability and vendor trust must be rebuilt",
+    "communicationStyle": "Formal corporate and investor-relations; constrained by SEC disclosure obligations and lender sensitivities",
+    "keyPersonDependency": "Medium-high — new CEO is critical to turnaround credibility; loss of key turnaround leadership would significantly worsen vendor and lender confidence"
+  }
+}

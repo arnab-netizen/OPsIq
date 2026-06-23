@@ -1,0 +1,80 @@
+{
+  "caseId": "RW_INDIA_ZEE_SONY_2024_MERGER_FAILURE",
+  "businessProblem": "Zee Entertainment's proposed merger with Sony Pictures Networks India is at critical risk as of 21 January 2024. The deal deadline has arrived with closing conditions unresolved and no confirmed extension in place. Leadership and governance disagreements between the parties have been reported. The merger is strategically essential for Zee's competitive positioning against well-funded rivals in Indian media. Without the deal, Zee has no publicly confirmed standalone strategy. Zee must determine the highest-priority actions to either save the deal or protect its position if the deal fails.",
+  "evidence": [
+    {
+      "dimension": "governance",
+      "finding": "Leadership and governance terms for the merged entity remain disputed between Zee and Sony; no resolution announced at the decision date",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Certain closing conditions specified in the merger agreement remain unresolved; no confirmed mechanism for resolution has been publicly announced",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Deal deadline has arrived with no confirmed extension agreed between the parties, creating acute termination risk",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "The merger is strategically critical for Zee's competitive position; merged entity would provide scale and content synergies against well-funded streaming and broadcast competitors",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "Standalone Zee faces competitive pressure from Reliance-backed and other well-funded media players; the absence of a deal would leave Zee without equivalent scale",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "No publicly confirmed standalone fallback strategy exists for Zee in the event of deal failure; management bandwidth has been heavily consumed by merger negotiations",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Extended negotiation period has created execution fatigue and hardened positions; bilateral trust and flexibility appear constrained",
+      "confidence": "MEDIUM",
+      "isCritical": false,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Zee's standalone financial position has not been materially strengthened during the merger negotiation period; deal failure would remove anticipated scale and capital benefits",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "legal",
+      "finding": "If the deal is terminated without mutual agreement, legal and arbitration risk exists for both parties including potential claims arising from the termination",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    }
+  ],
+  "clientContext": {
+    "industry": "Media / Entertainment",
+    "size": "Large listed Indian media and entertainment company with significant broadcast and digital content presence",
+    "revenueImpactUrgency": "Critical — deal failure would eliminate strategic repositioning path and expose Zee to standalone competitive decline against better-funded peers"
+  },
+  "ownerConstraintProfile": {
+    "bottleneckRisk": "High — promoter involvement in leadership and governance terms creates personal stake in negotiation outcome that may conflict with optimal deal terms",
+    "followThroughRisk": "Medium — Zee has publicly committed to the merger; risk is that bilateral breakdown prevents execution rather than internal follow-through failure",
+    "resistanceToChange": "High — governance concessions on leadership terms that could unlock the deal may require promoter-level personal concessions that are being resisted",
+    "managementCapability": "Under stress — prolonged negotiation has constrained bandwidth and no standalone strategy has been built as a credible alternative"
+  }
+}

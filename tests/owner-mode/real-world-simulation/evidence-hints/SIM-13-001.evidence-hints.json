@@ -1,0 +1,87 @@
+{
+  "case_id": "SIM-13-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "outstanding invoices estimated at $40,000 have not been collected \u2014 billed but uncollected receivables are trapping working capital while payroll of $18,400 falls due with only $3,200 in the account",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "no accounts receivable tracking or invoicing follow-up process \u2014 owner has no visibility into the actual AR position; invoicing via Word PDF email with no follow-up; working capital is consumed by an unmanaged receivables cycle; cash conversion cycle is severely extended",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "monthly revenue approximately $52,000; payroll due $18,400; cash in account $3,200; 4 staff; billing via Word PDF email; outstanding invoices estimated around $40,000 (owner estimate from memory)",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): monthly revenue of approximately $52,000 appears sufficient to cover payroll obligations",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): owner has managed to meet previous payroll obligations despite the cash position",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "owner_estimate_of_outstanding_invoices",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 0,
+      "value_override": 45,
+      "transform_note": "Estimated $40K outstanding on $52K/month revenue implies ~45-day average debtor days; receivablesAging = 45"
+    },
+    {
+      "fixture_key": "cash_in_account_today",
+      "canonical_key": "dso",
+      "evidence_item_index": 1,
+      "value_override": 30,
+      "transform_note": "Invoicing without collections process implies DSO significantly above terms; dso = 30 as minimum threshold"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: financial_health + WC_TEXT (outstanding invoices, billed but uncollected, working capital, cash conversion) + receivablesAging + dso numerics"
+}

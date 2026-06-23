@@ -1,0 +1,50 @@
+{
+  "case_id": "RW_GLOBAL_FTX_2022_CRYPTO_EXCHANGE_COLLAPSE",
+  "company": "FTX Trading Ltd. / FTX Group",
+  "decision_date": "2022-11-08",
+  "industry": "Cryptocurrency exchange",
+  "geography": "Bahamas/Global",
+  "known_facts_at_decision_date": [
+    "FTX was a major global cryptocurrency exchange operating from the Bahamas",
+    "Confidence in FTX deteriorated rapidly following public concerns about financial links between FTX and Alameda Research",
+    "Customers rushed to withdraw funds from the platform in large volumes",
+    "Traders were reported to have withdrawn approximately $6 billion in 72 hours during the crisis period",
+    "Binance had publicly considered but then abandoned a rescue deal during the crisis period",
+    "The business faced a classic exchange-run dynamic where customer withdrawal demand exceeded available liquid assets",
+    "The reliability of customer fund segregation was under serious question",
+    "Affiliated-party exposure between FTX and Alameda Research created governance and balance-sheet opacity risk",
+    "Internal governance and control weaknesses were visible from the rapid onset of the liquidity crisis",
+    "The exchange's ability to honor customer withdrawals was publicly uncertain as of 8 November 2022",
+    "No credible rescue arrangement had been concluded by the decision date"
+  ],
+  "financial_signals_at_decision_date": {
+    "liquidity": "Exchange facing customer withdrawal demand exceeding available liquid assets",
+    "customer_withdrawals": "Approximately $6 billion in withdrawals reported in 72-hour crisis window",
+    "rescue_status": "Binance rescue deal announced then abandoned; no concluded rescue arrangement",
+    "balance_sheet_opacity": "Affiliated-party exposure and balance-sheet reliability deeply uncertain",
+    "customer_asset_segregation": "Segregation of customer assets from exchange/Alameda operations unverified"
+  },
+  "operating_signals_at_decision_date": {
+    "withdrawal_processing": "Exchange under extreme pressure to process customer withdrawals",
+    "platform_operations": "Operations under crisis conditions with confidence collapsed",
+    "alameda_exposure": "Alameda Research financial links creating correlated risk with exchange",
+    "governance": "Governance and control framework appeared inadequate for crisis management"
+  },
+  "governance_signals_at_decision_date": {
+    "customer_asset_protection": "Customer asset protection mechanisms unverified and under serious question",
+    "affiliated_party_controls": "Controls over Alameda-FTX financial relationships inadequate",
+    "board_oversight": "Board and governance structure not demonstrated as effective during crisis",
+    "transparency": "Transparency to customers and regulators inadequate during active liquidity crisis"
+  },
+  "risk_flags_at_decision_date": [
+    "Exchange-run dynamic with approximately $6 billion in withdrawals in 72 hours",
+    "Rescue deal abandoned; no concluded rescue arrangement",
+    "Customer fund segregation unverified",
+    "Affiliated-party (Alameda Research) exposure creating balance-sheet opacity",
+    "Governance and internal controls inadequate",
+    "Liquidity crisis with uncertain ability to honor customer withdrawals",
+    "Confidence collapse across customers, counterparties, and market",
+    "No credible path to restore confidence without immediate independent asset verification"
+  ],
+  "question": "Diagnose root causes and recommend highest-priority action plan for FTX Trading Ltd. as of 8 November 2022, given the active customer-run, approximately $6 billion in withdrawals, abandoned rescue deal, and uncertain customer asset segregation, before any bankruptcy filing or formal insolvency proceedings."
+}

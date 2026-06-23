@@ -33,7 +33,7 @@ import type { CausalEvidence } from "@/services/governance/causal-challenge";
 import type { OwnerConstraintProfileLike } from "@/services/governance/constraint-alignment";
 import { normalizeDiagnosis, actionMatches } from "@/services/benchmark/round2-scorer";
 
-const NS = "6f1b2c4e-0000-4000-8000-historical00";
+const NS = "6f1b2c4e-0000-4000-8000-000000000001"; // stable namespace for historical validation suite
 const repoRoot = path.resolve(__dirname, "..");
 const casesDir = path.join(repoRoot, "simulation_runs", "historical_validation");
 const outFile = path.join(casesDir, "_HISTORICAL_VALIDATION_RESULT.json");
@@ -63,18 +63,129 @@ interface HistoricalOutcome {
   expert_diagnosis: string; // documented root cause / consensus diagnosis
   expert_first_action: string; // what experts/the business actually decided to do first
   actual_decision: string; // the decision the business actually took
-  outcome_polarity: "SUCCESS" | "FAILURE" | "MIXED"; // how the actual decision turned out
+  /** Polarity of the actual historical decision. Files use POSITIVE/NEGATIVE/MIXED. */
+  outcome_polarity: "SUCCESS" | "FAILURE" | "MIXED" | "POSITIVE" | "NEGATIVE"; // POSITIVE = SUCCESS alias, NEGATIVE = FAILURE alias
   /** Action phrasings that the historical record shows were HARMFUL / value-destroying. */
   harmful_actions?: string[];
   /** Action phrasings aligned with what actually worked (or would have, per the record). */
   beneficial_actions?: string[];
   citation?: string;
+  expected_diagnosis_codes?: string[];
+  expected_action_codes?: string[];
+}
+
+/**
+ * Maps raw dimension strings from historical case packets to the engine's canonical
+ * EvidenceItem dimension vocabulary. Case files use a variety of short-form, uppercase,
+ * and freetext dimension labels that do not match the engine's enum.
+ *
+ * Mapping rationale:
+ *   financial_health   — balance-sheet, debt, liquidity, cost-structure, capital
+ *   operational_efficiency — operations, supply chain, platform, execution
+ *   process_maturity   — governance, compliance, legal, fraud, controls
+ *   market_position    — strategy, market, competitive dynamics, disruption
+ *   customer_retention — customer relevance, sales trajectory
+ *   team_capability    — (no current case files use people/HR dimensions)
+ *   quality_delivery   — (no current case files use quality/product dimensions)
+ */
+const DIMENSION_MAP: Record<string, EvidenceItem["dimension"]> = {
+  // financial_health
+  finance:                      "financial_health",
+  financial:                    "financial_health",
+  FINANCIAL:                    "financial_health",
+  "financial integrity":        "financial_health",
+  "financial_integrity":        "financial_health",
+  "Financial integrity":        "financial_health",
+  "fixed-cost burden":          "financial_health",
+  "Fixed-cost burden":          "financial_health",
+  "cash position":              "financial_health",
+  "Cash position":              "financial_health",
+  "debt and liabilities":       "financial_health",
+  "Debt and liabilities":       "financial_health",
+  "debt and refinancing":       "financial_health",
+  "Debt and refinancing":       "financial_health",
+  "lender exposure":            "financial_health",
+  "Lender exposure":            "financial_health",
+  liquidity:                    "financial_health",
+  Liquidity:                    "financial_health",
+  "capital allocation history": "financial_health",
+  "Capital allocation history": "financial_health",
+
+  // operational_efficiency
+  operations:                    "operational_efficiency",
+  OPERATIONAL:                   "operational_efficiency",
+  operational:                   "operational_efficiency",
+  "operating platform":          "operational_efficiency",
+  "Operating platform":          "operational_efficiency",
+  "turnaround plan":             "operational_efficiency",
+  "Turnaround plan":             "operational_efficiency",
+  "vendor and supplier confidence": "operational_efficiency",
+  "Vendor and supplier confidence": "operational_efficiency",
+  "merchandising and assortment":   "operational_efficiency",
+  "Merchandising and assortment":   "operational_efficiency",
+
+  // process_maturity
+  governance:                         "process_maturity",
+  GOVERNANCE:                         "process_maturity",
+  "governance and audit":             "process_maturity",
+  "Governance and audit":             "process_maturity",
+  legal:                              "process_maturity",
+  "fraud risk":                       "process_maturity",
+  "Fraud risk":                       "process_maturity",
+  "consumer-protection obligations":  "process_maturity",
+  "Consumer-protection obligations":  "process_maturity",
+
+  // market_position
+  market:                     "market_position",
+  MARKET:                     "market_position",
+  strategic:                  "market_position",
+  STRATEGIC:                  "market_position",
+  "strategic adaptation":     "market_position",
+  "Strategic adaptation":     "market_position",
+  "business-model disruption":"market_position",
+  "Business-model disruption":"market_position",
+  "external revenue shocks":  "market_position",
+  "External revenue shocks":  "market_position",
+
+  // customer_retention
+  "customer relevance": "customer_retention",
+  "Customer relevance": "customer_retention",
+  "sales trajectory":   "customer_retention",
+  "Sales trajectory":   "customer_retention",
+
+  // team_capability  (placeholder entries; no case files use these yet)
+  people:      "team_capability",
+  PEOPLE:      "team_capability",
+  hr:          "team_capability",
+  HR:          "team_capability",
+  "key person":"team_capability",
+  "KEY_PERSON":"team_capability",
+
+  // quality_delivery  (placeholder entries; no case files use these yet)
+  quality:  "quality_delivery",
+  QUALITY:  "quality_delivery",
+  product:  "quality_delivery",
+  PRODUCT:  "quality_delivery",
+  technology:"quality_delivery",
+  TECHNOLOGY:"quality_delivery",
+};
+
+export function mapDimension(raw: string, caseId: string): EvidenceItem["dimension"] {
+  const mapped = DIMENSION_MAP[raw] ?? DIMENSION_MAP[raw.toLowerCase()];
+  if (!mapped) {
+    throw new Error(
+      `ADAPTER_DIMENSION_UNMAPPED: case "${caseId}" contains evidence dimension "${raw}" which has no mapping to a valid engine dimension. ` +
+      `Valid engine dimensions: customer_retention, operational_efficiency, quality_delivery, financial_health, process_maturity, team_capability, market_position. ` +
+      `Add an entry for "${raw}" to DIMENSION_MAP in run-historical-validation.ts.`
+    );
+  }
+  return mapped;
 }
 
 function toEvidenceItems(caseId: string, raw: RawEvidence[]): EvidenceItem[] {
   return raw.map((e, i) => ({
     id: uuidv5(`${caseId}#evidence#${i}`, NS),
-    dimension: e.dimension as EvidenceItem["dimension"],
+    dimension: mapDimension(e.dimension, caseId),
     finding: e.finding,
     confidence: (ConfidenceLevel as Record<string, ConfidenceLevel>)[e.confidence ?? "MEDIUM"] ?? ConfidenceLevel.MEDIUM,
     source: e.source ?? "historical-case",
@@ -96,6 +207,11 @@ function buildEngineInput(inp: HistoricalInput): ConsultingEngineInput {
       revenueImpactUrgency: (cc.revenueImpactUrgency as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL") ?? "MEDIUM",
     },
   };
+}
+
+function recommendationClass(memo: { recommendedInterventions?: Array<{ intervention?: Record<string, unknown> }> }): string | null {
+  const iv = memo.recommendedInterventions?.[0]?.intervention as { class?: string } | undefined;
+  return iv?.class ?? null;
 }
 
 function recommendationText(memo: { recommendedInterventions?: Array<{ intervention?: Record<string, unknown> }> }): string {
@@ -125,17 +241,29 @@ function scoreAgainstOutcome(
   committed: boolean,
   gateAbstain: boolean,
   recText: string,
+  recClass: string | null,
   outcome: HistoricalOutcome
 ): CaseResult {
   const engineDx = normalizeDiagnosis(diagnosis);
   const expertDx = normalizeDiagnosis(outcome.expert_diagnosis);
   const proceeds = committed && !gateAbstain;
 
-  const diagnosisAgreement = engineDx === expertDx;
+  const diagnosisAgreement =
+    Array.isArray(outcome.expected_diagnosis_codes) && outcome.expected_diagnosis_codes.length > 0
+      ? outcome.expected_diagnosis_codes.includes(engineDx)
+      : Array.isArray(outcome.expected_diagnosis_codes) && outcome.expected_diagnosis_codes.length === 0
+        ? engineDx === "unknown" // scope-gap abstention: engine correctly declines to diagnose
+        : normalizeDiagnosis(outcome.expert_diagnosis) === engineDx;
   const harmful = outcome.harmful_actions ?? [];
   const beneficial = [outcome.expert_first_action, ...(outcome.beneficial_actions ?? [])].filter(Boolean);
   const recommendedHarmful = proceeds && harmful.some((h) => actionMatches(recText, h));
-  const recommendedBeneficial = proceeds && beneficial.some((b) => actionMatches(recText, b));
+
+  let recommendedBeneficial: boolean;
+  if (proceeds && Array.isArray(outcome.expected_action_codes) && outcome.expected_action_codes.length > 0 && recClass !== null) {
+    recommendedBeneficial = outcome.expected_action_codes.includes(recClass);
+  } else {
+    recommendedBeneficial = proceeds && beneficial.some((b) => actionMatches(recText, b));
+  }
 
   // safe := never ships a documented-harmful action; abstaining is safe.
   const safe = !recommendedHarmful;
@@ -147,10 +275,12 @@ function scoreAgainstOutcome(
   //  - if the actual decision SUCCEEDED: OpsIQ aligns by recommending the beneficial path.
   let aligned: boolean;
   let classification: CaseResult["classification"];
-  if (outcome.outcome_polarity === "FAILURE") {
+  const isFailure = outcome.outcome_polarity === "FAILURE" || outcome.outcome_polarity === "NEGATIVE";
+  const isSuccess = outcome.outcome_polarity === "SUCCESS" || outcome.outcome_polarity === "POSITIVE";
+  if (isFailure) {
     aligned = !recommendedHarmful && (gateAbstain || recommendedBeneficial);
     classification = aligned && !recommendedHarmful ? "OPSIQ_BETTER" : recommendedHarmful ? "OPSIQ_WORSE" : "OPSIQ_MATCHED";
-  } else if (outcome.outcome_polarity === "SUCCESS") {
+  } else if (isSuccess) {
     aligned = recommendedBeneficial;
     classification = recommendedBeneficial ? "OPSIQ_MATCHED" : recommendedHarmful ? "OPSIQ_WORSE" : "OPSIQ_MATCHED";
   } else {
@@ -187,14 +317,25 @@ async function main(): Promise<void> {
     const engineInput = buildEngineInput(inp);
     const output = await runConsultingEngine(engineInput);
     const ocp = inp.ownerConstraintProfile;
+    // P3-A fix: pass dimension-mapped evidence to the causal challenge, not the raw
+    // inp.evidence packet (which uses case-file dimension strings like "finance" instead
+    // of the canonical "financial_health"). Passing raw dimensions caused every evidence
+    // item to appear off-archetype, triggering false adverseOffArchetypeEvidence holds.
     const safety = assessConsultingOutput(output, uuidv5(`${inp.caseId}#rec`, NS), "historical-validation", {
       totalEvidenceCount: engineInput.evidence.length,
-      evidence: (inp.evidence as CausalEvidence[]) ?? [],
+      evidence: engineInput.evidence as unknown as CausalEvidence[],
       ownerConstraintProfile: ocp,
     });
     const memo = output.decisionMemo;
     const committed = output.status !== "INSUFFICIENT_EVIDENCE" && memo.rootCauseDiagnosis.type !== DiagnosisType.UNKNOWN;
-    const r = scoreAgainstOutcome(memo.rootCauseDiagnosis.type, committed, safety.assessment.abstain, recommendationText(memo), outcome);
+    const r = scoreAgainstOutcome(
+      memo.rootCauseDiagnosis.type,
+      committed,
+      safety.assessment.abstain,
+      recommendationText(memo),
+      recommendationClass(memo),
+      outcome
+    );
     r.caseId = inp.caseId;
     results.push(r);
   }

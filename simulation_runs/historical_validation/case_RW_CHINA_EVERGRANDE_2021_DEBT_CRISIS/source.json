@@ -1,0 +1,25 @@
+{
+  "case_id": "RW_CHINA_EVERGRANDE_2021_DEBT_CRISIS",
+  "source_urls": [
+    "https://www.reuters.com/world/china/china-evergrande-shares-set-rise-after-it-misses-debt-deadline-2021-12-08/",
+    "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/0830/2023083002315.pdf",
+    "https://doc.irasia.com/listco/hk/evergrande/annual/2021/res.pdf",
+    "https://www.reuters.com/world/china/china-evergrandes-unit-receives-liquidation-order-hong-kong-court-2025-01-13/"
+  ],
+  "source_type": "Reuters news reporting, HKEX company filings, Evergrande 2021 Annual Report, liquidation order reporting",
+  "source_quality": {
+    "tier_A": "Evergrande 2021 Annual Report (total liabilities RMB 2,580.15 billion as of 31 December 2021); HKEX company filings; court/liquidator documents",
+    "tier_B": "Reuters reporting on default and liquidation; academic property-sector crisis analysis"
+  },
+  "reliability_tier": "A/B",
+  "supports_ground_truth": true,
+  "contamination_risk": "High",
+  "contamination_notes": "Reuters December 2021 article is post-decision-date and confirms default. Evergrande 2021 annual report (published 2023) is outcome-stage. HKEX 2023 filing is outcome-stage. Reuters 2025 liquidation order article is heavily outcome-stage. All must be used only in outcome.json. Input.json uses only September 2021 publicly reported liability scale, liquidity pressure, and project-completion concerns.",
+  "source_limitations": [
+    "2021 Annual Report was published in 2023 and contains year-end figures post-decision-date",
+    "Reuters default confirmation article is from December 2021, three months after decision date",
+    "HKEX 2023 filing and Reuters 2025 liquidation report are substantially outcome-stage",
+    "Internal Evergrande project cash-flow and liability detail not publicly accessible at decision date",
+    "Chinese government regulatory correspondence and internal restructuring analysis not public"
+  ]
+}

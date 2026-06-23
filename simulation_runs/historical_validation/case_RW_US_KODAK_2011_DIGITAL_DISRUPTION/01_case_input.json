@@ -1,0 +1,66 @@
+{
+  "caseId": "RW_US_KODAK_2011_DIGITAL_DISRUPTION",
+  "businessProblem": "Eastman Kodak faces acute liquidity pressure as of September 30, 2011, with its traditional film business in terminal structural decline and the digital transition failing to produce a profitable replacement revenue model. The company holds a significant imaging patent portfolio as a potential monetization lever, but patent monetization alone cannot substitute for an operating turnaround. The cost structure is oversized for the current and projected revenue base. The company must determine an urgent action plan to preserve liquidity, exit unviable business lines, and identify whether a viable operating business can be preserved without a formal restructuring.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Kodak faces acute liquidity pressure. Revenue is declining sharply as the film business collapses. The cost structure is built for a much larger film-era volume and is incompatible with current revenue. Operating losses are accelerating.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "market",
+      "finding": "The traditional film business is in terminal structural decline driven by digital photography adoption. There is no realistic path to recovery of film economics. Consumer photography and film processing revenue is falling without a viable floor.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Digital transition investments, including consumer digital camera products, have not achieved profitable scale. Kodak has failed to build a digital business with economics comparable to the legacy film model.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Kodak holds a significant portfolio of imaging-related patents. Patent monetization is a potential near-term liquidity lever, but it is a finite resource and cannot substitute for an operating business that is self-sustaining.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Commercial printing and imaging represents a potentially viable business niche with less commoditization than the consumer photography market. This segment may provide a foundation for a viable smaller business.",
+      "confidence": "MEDIUM",
+      "isCritical": false,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "operations",
+      "finding": "The manufacturing and operational footprint is significantly oversized relative to current and projected viable revenue. Fixed-cost reduction is required regardless of strategic direction chosen.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Board pressure is very high given liquidity status. Restructuring options are under active consideration. Decision urgency is acute; available runway without intervention is limited.",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "decision-date observable facts"
+    }
+  ],
+  "clientContext": {
+    "industry": "Photography and imaging",
+    "size": "Large legacy public company in acute distress; significant historical brand and patent assets but declining operating business",
+    "revenueImpactUrgency": "Critical — liquidity pressure is acute; months of runway without successful monetization or restructuring action"
+  },
+  "ownerConstraintProfile": {
+    "bottleneckRisk": "High — decisions of this magnitude (restructuring, patent monetization, segment exit) require board and leadership alignment on a direction; decision paralysis is a real risk",
+    "followThroughRisk": "High — large organization with legacy film-era culture; executing rapid cost reduction and segment exits requires sustained management discipline",
+    "resistanceToChange": "High — legacy brand identity and organizational culture rooted in film business; resistance to exiting consumer photography is likely despite strategic necessity",
+    "managementCapability": "Uncertain — management has overseen the failed digital transition; capability to execute a rapid restructuring and business-model pivot is unproven"
+  }
+}

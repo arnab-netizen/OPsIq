@@ -1,0 +1,35 @@
+{
+  "case_id": "RW_US_JCPENNEY_2012_PRICING_FAILURE",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "J.C. Penney's pricing strategy failed because it underestimated the strength of existing customers' promo-conditioning and implemented an irreversible full-chain change without behavioral validation. The absence of pilot testing meant the entire customer base was exposed simultaneously to a change that required significant psychological and behavioral adjustment. Root causes: pricing strategy and customer psychology mismatch, poor change management, customer segmentation failure, brand repositioning risk, traffic and conversion risk, and overconfidence in executive transplant strategy.",
+  "expert_first_action": "Pilot pricing changes before full-chain rollout; segment customers by promotional sensitivity to identify which segments can accept everyday pricing; maintain some promotional mechanisms during transition to retain core customers; track traffic and conversion weekly with clear performance triggers; preserve core customer base while testing new approach; avoid full-chain abrupt change; communicate value of everyday pricing clearly through sustained marketing.",
+  "actual_decision": "J.C. Penney implemented the full-chain pricing change without a disclosed pilot. Traffic and conversion declined sharply.",
+  "outcome_polarity": "NEGATIVE",
+  "harmful_actions": [
+    "Full-chain rollout without pilot testing exposed the entire customer base simultaneously",
+    "Simultaneous pricing, brand, and store redesign changes compounded execution risk",
+    "No real-time customer response monitoring or rollback triggers identified",
+    "Removal of promotional mechanisms alienated promo-sensitive core customers immediately"
+  ],
+  "beneficial_actions": [
+    "The everyday pricing concept had strategic merit if implemented gradually with customer validation"
+  ],
+  "citation": "HBS Working Knowledge: what went wrong at J.C. Penney; Forbes: was Ron Johnson's strategy wrong; Paddle pricing analysis; later sales decline and CEO removal documented by SEC filings and financial journalism",
+  "actual_outcome": "Sales and customer traffic declined sharply after the pricing strategy rollout. Core customer base was alienated by removal of promotional pricing. Ron Johnson was removed as CEO in 2013. Analyses identified abrupt pricing change, customer-behavior misunderstanding, and brand mismatch as the primary failure factors.",
+  "documented_root_causes": [
+    "Pricing strategy and customer psychology mismatch \u2014 core customers were promo-conditioned",
+    "Poor change management \u2014 abrupt full-chain rollout without validation",
+    "Customer segmentation failure \u2014 existing segment not compatible with everyday pricing model",
+    "Brand repositioning risk \u2014 simultaneous name and pricing change compounded confusion",
+    "Traffic and conversion risk \u2014 chain-wide loss from day one",
+    "Overconfidence in executive transplant strategy \u2014 Apple retail concept did not transfer"
+  ],
+  "final_business_state": "Sales and traffic declined sharply. CEO Ron Johnson removed 2013. Strategy reversed. Company continued but significantly weakened.",
+  "expected_diagnosis_codes": [
+    "pricing_power"
+  ],
+  "expected_action_codes": [
+    "STRUCTURAL_REPAIR",
+    "STABILIZATION"
+  ]
+}

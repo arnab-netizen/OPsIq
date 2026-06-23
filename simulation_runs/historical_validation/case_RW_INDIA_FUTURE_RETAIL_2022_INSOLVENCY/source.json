@@ -1,0 +1,24 @@
+{
+  "case_id": "RW_INDIA_FUTURE_RETAIL_2022_INSOLVENCY",
+  "source_urls": [
+    "https://ibclaw.in/bank-of-india-vs-future-retail-ltd-nclt-mumbai-bench/",
+    "https://ibbi.gov.in/claims/order-process/L51909MH2007PLC268269",
+    "https://retail.economictimes.indiatimes.com/news/industry/bank-of-india-moves-nclt-against-future-retail-files-insolvency-plea/90848360",
+    "https://www.fortuneindia.com/enterprise/nclt-orders-insolvency-proceedings-against-future-retail/109020"
+  ],
+  "source_type": "Legal records, regulatory filings, financial journalism",
+  "source_quality": {
+    "tier_A": ["NCLT Mumbai order — Company Petition (IB)-527(MB)/2022", "IBBI case records L51909MH2007PLC268269", "Bank of India NCLT petition"],
+    "tier_B": ["Economic Times Retail reporting", "Fortune India reporting", "Moneycontrol", "Reuters", "Supreme Court Observer"]
+  },
+  "reliability_tier": "A-B",
+  "supports_ground_truth": true,
+  "contamination_risk": "Medium",
+  "contamination_notes": "Outcome sources (NCLT admission, liquidation order) must not appear in input.json. Pre-admission petition facts are clean for input use.",
+  "source_limitations": [
+    "NCLT/IBBI records are strongest for admission and legal outcome",
+    "ET and Fortune India are secondary journalistic sources",
+    "Input.json must use only pre-admission facts as of 14 April 2022",
+    "Outcome.json may include NCLT admission 20 July 2022 and later CIRP progression"
+  ]
+}

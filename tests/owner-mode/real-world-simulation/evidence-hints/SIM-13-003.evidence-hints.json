@@ -1,0 +1,80 @@
+{
+  "case_id": "SIM-13-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "gross margin has compressed significantly \u2014 net profit fell from $74,400 to $28,000 while revenue grew from $620K to $890K; the profit decline is sixty-two percent while revenue grew forty-four percent; margin erosion is the primary driver of the profit deterioration",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "input costs are rising faster than price \u2014 subcontractor crews have received two rate increases in two years while the rate schedule has not been reviewed; cost inflation is compressing operating margin",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "revenue year minus 2 $620K; current revenue $890K; net profit year minus 2 $74,400; current net profit $28,000; 3 subcontractor crews; pricing via rate schedule set 3 years ago not reviewed; two subcontractor rate increases",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue has grown 44 percent over two years \u2014 the business appears to be growing",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): owner has maintained a full work schedule and a growing client base",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "net_profit_current_year",
+      "canonical_key": "profitChangePercent",
+      "evidence_item_index": 2,
+      "value_override": -62,
+      "transform_note": "Net profit fell from $74,400 to $28,000 \u2014 a 62% decline; profitChangePercent = -62"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: financial_health + MARGIN_HARD (margin erosion, margin compressed, cost inflation) + negative profitChangePercent"
+}

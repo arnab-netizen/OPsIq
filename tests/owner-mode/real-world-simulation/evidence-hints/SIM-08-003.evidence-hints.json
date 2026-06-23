@@ -1,0 +1,96 @@
+{
+  "case_id": "SIM-08-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "debt_solvency_pressure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "three debt refinancings in twenty-four months \u2014 each refinancing extended the maturity and increased the total facility; outstanding debt has grown to $520,000 rather than declining",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "monthly debt service of $14,800 on annual revenue of $2.8M; continued refinancing rather than debt reduction signals solvency pressure \u2014 the business cannot service and retire the debt from operating cash",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue $2.8M; total debt outstanding $520,000; three refinancings in 24 months each increasing facility; current monthly repayment $14,800; new lender rate reduction 45bps; 19 staff",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.missing_inputs_opsiq_should_request[0]",
+      "finding": "serial refinancing history required \u2014 three consecutive refinancings with growing facility size; debt maturity schedule and covenant headroom must be reviewed before assessing structural solvency risk",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.missing_inputs_opsiq_should_request[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the lender offered a 45 basis point interest rate reduction suggesting access to refinancing",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): revenue at $2.8M is substantial and appears capable of servicing the debt",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "total_debt_outstanding",
+      "canonical_key": "leverageRatio",
+      "evidence_item_index": 2,
+      "value_override": 4.5,
+      "transform_note": "Debt $520K on $2.8M revenue; leverage proxy = 4.5; three refinancings signal chronic debt-servicing difficulty"
+    },
+    {
+      "fixture_key": "current_monthly_repayment",
+      "canonical_key": "covenantHeadroom",
+      "evidence_item_index": 2,
+      "value_override": 0.05,
+      "transform_note": "Recurring refinancing with growing facility implies minimal covenant headroom; covenantHeadroom proxy = 0.05"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: financial_health + DEBT_TEXT (debt service, refinanc, maturity, solvency) + leverageRatio + covenantHeadroom numerics"
+}

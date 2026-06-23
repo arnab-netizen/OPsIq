@@ -1,0 +1,30 @@
+{
+  "source_urls": [
+    "https://www.pib.gov.in/PressReleasePage.aspx?PRID=1548093",
+    "https://www.mca.gov.in/MinistryV2/pressreleases.html",
+    "https://www.nclt.gov.in/"
+  ],
+  "source_type": "Government of India official press release, Ministry of Corporate Affairs filings, NCLT case records",
+  "source_quality": {
+    "tier_a": [
+      "Government of India PIB Press Release PRID=1548093, October 1, 2018 — official government statement on IL&FS defaults, market contagion, and board supersession",
+      "Ministry of Corporate Affairs official releases and NCLT filings on IL&FS resolution",
+      "NCLT case records on IL&FS board supersession and resolution proceedings"
+    ],
+    "tier_b": [
+      "Credible Indian financial journalism covering IL&FS defaults and market impact in August-September 2018",
+      "Academic and professional case studies on IL&FS liquidity failure and NBFC sector contagion"
+    ]
+  },
+  "reliability_tier": "HIGH",
+  "supports_ground_truth": true,
+  "contamination_risk": "MEDIUM-HIGH",
+  "contamination_notes": "The PIB/government release is dated October 1, 2018 and documents the board supersession and new board appointment. These facts must remain in outcome.json only. Input must use only the August-September 2018 default and market stress facts that were observable before October 1, 2018.",
+  "source_limitations": [
+    "PIB release documents the government intervention on October 1, 2018 — board supersession details are outcome only",
+    "New board composition (Uday Kotak-led) is post-decision and excluded from input",
+    "Later asset-monetisation strategy and resolution outcomes are post-decision and excluded from input",
+    "NCLT resolution proceedings are post-decision and excluded from input",
+    "References to 'India's Lehman moment' are retrospective framing and excluded from input"
+  ]
+}

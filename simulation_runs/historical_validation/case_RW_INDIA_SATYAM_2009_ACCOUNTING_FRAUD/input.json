@@ -1,0 +1,44 @@
+{
+  "case_id": "RW_INDIA_SATYAM_2009_ACCOUNTING_FRAUD",
+  "company": "Satyam Computer Services Ltd.",
+  "decision_date": "2008-12-16",
+  "industry": "IT services",
+  "geography": "India",
+  "known_facts_at_decision_date": [
+    "Satyam reported itself as a profitable IT services company with strong financials as of December 2008",
+    "On 16 December 2008, Satyam's board proposed acquiring Maytas Properties and Maytas Infra — entities linked to the promoter family",
+    "Investors objected strongly to the proposed related-party acquisition, causing the proposal to be withdrawn within hours",
+    "The proposed acquisitions raised governance concerns, related-party transaction risks, capital allocation questions, and board oversight concerns",
+    "The visible issue was a controversial related-party acquisition; the deeper issue could involve financial-statement reliability and governance credibility",
+    "The company's reported cash balances and profitability had not yet been publicly admitted as false",
+    "The event signaled potential promoter motivation to convert company cash into promoter-controlled real-estate assets"
+  ],
+  "financial_signals_at_decision_date": {
+    "reported_financials": "Profitable IT services company per public filings — not yet verified independently",
+    "proposed_acquisition_targets": ["Maytas Properties", "Maytas Infra"],
+    "acquisition_connection": "Both targets connected to the promoter family",
+    "acquisition_withdrawal": "Withdrawn within hours due to investor objection",
+    "cash_reliability": "Unverified — reported cash position not independently confirmed"
+  },
+  "operating_signals_at_decision_date": {
+    "it_services_operations": "Ongoing — large IT services company with significant workforce and clients",
+    "market_position": "Significant Indian IT services player",
+    "management_credibility": "Under severe question following related-party acquisition proposal"
+  },
+  "governance_signals_at_decision_date": {
+    "board_decision": "Proposed related-party acquisitions of promoter-family entities",
+    "investor_reaction": "Immediate strong objection — acquisition withdrawn within hours",
+    "promoter_control": "Promoter proposed acquisitions that would benefit promoter-connected entities",
+    "independent_board_oversight": "Seriously questioned by the attempted acquisition",
+    "audit_reliability": "Unverified — auditors had signed off on reported financials"
+  },
+  "risk_flags_at_decision_date": [
+    "Related-party acquisition proposal — promoter seeking to transfer company resources to personal assets",
+    "Board approved proposal without adequate independent scrutiny — oversight failure",
+    "Reported cash position may be unreliable — motivation for acquisition suggests cash verification needed",
+    "Financial statement reliability risk — if cash is overstated, accounts are falsified",
+    "Investor confidence severely damaged by governance failure",
+    "Fraud risk: related-party transaction attempt is a known red flag for financial reporting fraud"
+  ],
+  "question": "Following the proposed related-party acquisition of Maytas Properties and Maytas Infra by Satyam's board, and the strong investor objection that forced withdrawal, diagnose root causes and recommend the highest-priority action plan to restore governance credibility and verify financial integrity."
+}

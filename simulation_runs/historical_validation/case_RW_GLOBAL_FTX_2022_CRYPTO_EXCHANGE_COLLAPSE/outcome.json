@@ -1,0 +1,41 @@
+{
+  "case_id": "RW_GLOBAL_FTX_2022_CRYPTO_EXCHANGE_COLLAPSE",
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "FTX suffered a catastrophic governance and liquidity failure rooted in the commingling of customer assets with affiliated-party (Alameda Research) operations, absence of meaningful segregation of customer funds, and a governance and control structure that was wholly inadequate for the scale of the exchange. When customer confidence collapsed and withdrawal demand surged, the exchange was unable to honor obligations, revealing a fundamental insolvency masked by governance opacity.",
+  "expert_first_action": "Immediate controlled halt of new deposit acceptance and withdrawal processing pending independent verification of customer asset segregation, with simultaneous preparation for Chapter 11 filing if customer asset shortfall is confirmed.",
+  "actual_decision": "FTX Trading Ltd. and affiliates filed voluntary petitions for Chapter 11 bankruptcy protection on 11 and 14 November 2022. John J. Ray III was appointed CEO. First-day declaration described severe liquidity crisis requiring emergency Chapter 11.",
+  "outcome_polarity": "TERMINAL",
+  "harmful_actions": [
+    "Commingling of customer funds with Alameda Research operations",
+    "Absence of customer asset segregation in exchange operations",
+    "Governance and control structure wholly inadequate for scale of exchange",
+    "Use of FTT token as collateral creating circular and fragile balance sheet",
+    "Abandonment of Binance rescue deal without alternative solution",
+    "Failure to disclose true financial position to customers and regulators"
+  ],
+  "beneficial_actions": [
+    "Chapter 11 filing provided formal framework for customer and creditor claims",
+    "Appointment of experienced restructuring CEO (John J. Ray III) enabled professional administration",
+    "Kroll appointment as claims and noticing agent provided structured claims process"
+  ],
+  "citation": "Kroll bankruptcy docket for FTX restructuring proceedings. PACER first-day declaration by John J. Ray III. Reuters reporting on FTX bankruptcy and $6 billion withdrawal crisis. Kroll PDF of first-day declaration.",
+  "actual_outcome": "FTX Trading Ltd. and affiliates filed Chapter 11 on 11 and 14 November 2022. John J. Ray III appointed CEO and described severe liquidity crisis in first-day declaration. Criminal proceedings followed against FTX founders. Customer assets substantially impaired at time of filing. Estate recovery processes initiated through Kroll-administered claims process.",
+  "documented_root_causes": [
+    "Liquidity crisis from customer-run exceeding available liquid assets",
+    "Customer fund trust failure through commingling with Alameda Research",
+    "Governance and control failure at fundamental level",
+    "Related-party exposure between FTX and Alameda Research",
+    "Balance-sheet opacity concealing true financial position",
+    "Absence of customer asset segregation",
+    "Rescue-deal dependency (Binance) that was abandoned leaving no alternative"
+  ],
+  "final_business_state": "Chapter 11 filed 11-14 November 2022. John J. Ray III appointed CEO. Criminal proceedings initiated against founders. Customer asset recovery process through bankruptcy estate. Exchange operations ceased.",
+  "expected_diagnosis_codes": [
+    "legal_governance_risk",
+    "cash_liquidity_crisis"
+  ],
+  "expected_action_codes": [
+    "CONTAINMENT",
+    "STRUCTURAL_REPAIR"
+  ]
+}

@@ -25,6 +25,8 @@
     "test:mvp": "vitest run src/__tests__/mvp-operational-flow.test.ts",
     "test:db": "TEST_WITH_DB=true vitest run --testNamePattern='\\[db\\]'",
     "test:stripe-sim": "vitest run src/tests/stripe-sim/stripe-simulation.test.ts",
+    "test:owner-real-world-smb": "vitest run tests/owner-mode/real-world-smb-cases",
+    "test:owner-real-world-simulation": "vitest run tests/owner-mode/real-world-simulation",
     "dev:backbone": "vitest run src/__tests__/backbone.test.ts",
     "governance:scan-shadow-reads": "tsx src/governance/auth-shadow-read-scanner.ts",
     "governance:classify-shadows": "tsx src/governance/shadow-read-classifier.ts",

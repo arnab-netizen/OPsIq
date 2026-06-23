@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_US_JCPENNEY_2012_PRICING_FAILURE",
+  "businessProblem": "J.C. Penney is implementing a full-chain strategic repositioning in early 2012: moving from promotional/coupon pricing to everyday low pricing, rebranding to JCP, and redesigning stores. The strategy targets a customer base that is historically promo-sensitive. No pilot testing disclosed. Risk of immediate traffic and conversion loss if core customers do not respond. Diagnose main risks and recommend highest-priority action plan.",
+  "evidence": [
+    {
+      "dimension": "market",
+      "finding": "J.C. Penney's existing customer base is highly accustomed to promotional pricing, coupons, and discount events — behavior change required by new strategy is significant",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "HBS Working Knowledge analysis, public strategy announcements"
+    },
+    {
+      "dimension": "operations",
+      "finding": "New everyday low pricing strategy being rolled out across the full chain simultaneously — no disclosed phased or pilot approach",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Company announcements early 2012, HBS Working Knowledge"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Strategy involves simultaneous changes: pricing model, brand name (to JCP), and store redesign — compounding execution risk",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Company announcements, public reporting"
+    },
+    {
+      "dimension": "market",
+      "finding": "Customer price perception may not shift immediately from 'sale price' to 'everyday price' — cognitive repricing takes time and communication investment",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Pricing strategy analysis, HBS Working Knowledge, Paddle pricing analysis"
+    },
+    {
+      "dimension": "operations",
+      "finding": "New CEO Ron Johnson imported strategy from Apple retail — applicability to J.C. Penney's customer segment and department store format carries transfer risk",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "Forbes analysis, HBS Working Knowledge"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Traffic and conversion risk is chain-wide from day one — no control stores to measure impact separately",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Industry analysis"
+    },
+    {
+      "dimension": "governance",
+      "finding": "No publicly disclosed real-time customer response monitoring or rollback plan — strategic optionality appears limited",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "Public reporting, absence of disclosed pilot framework"
+    },
+    {
+      "dimension": "market",
+      "finding": "Department store competitive environment requires clear value communication — simplified pricing must be perceived as value, not price reduction removal",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "Retail industry analysis"
+    }
+  ],
+  "clientContext": {
+    "companyName": "J.C. Penney",
+    "country": "United States",
+    "industry": "Department-store retail",
+    "stage": "Strategic repositioning — early implementation",
+    "decisionDate": "2012-02-01",
+    "primaryStakeholder": "CEO, Board, merchandising and marketing leadership"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "HIGH — full commitment to unproven strategy without rollback plan",
+    "resistanceToChange": "LOW — leadership aggressively pursuing change",
+    "managementCapability": "UNCERTAIN — new leadership with untested strategy transfer",
+    "keyPersonDependency": "HIGH — strategy entirely CEO-dependent",
+    "accountabilityWeakness": "HIGH — no disclosed customer feedback monitoring or performance triggers"
+  }
+}

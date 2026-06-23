@@ -1,0 +1,77 @@
+{
+  "caseId": "RW_INDIA_CCD_2019_DEBT_TURNAROUND",
+  "businessProblem": "Coffee Day Enterprises faces a sudden founder-death crisis in July 2019 with approximately ₹70 billion in debt, creditor confidence under severe pressure, no identified successor leadership, and a complex multi-business group structure. Diagnose root causes and recommend highest-priority action plan.",
+  "evidence": [
+    {
+      "dimension": "finance",
+      "finding": "Coffee Day Enterprises carrying approximately ₹70 billion (₹7,000 crore) in debt as of 2019",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Case study sources — Emerald 2025, ResearchGate, IJAR; Coffee Day annual reports"
+    },
+    {
+      "dimension": "finance",
+      "finding": "Multiple lenders and creditors had exposure to Coffee Day group entities — coordinated creditor management required",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting, case study sources"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Café Coffee Day is an established large national retail café network continuing operations at decision date",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "Coffee Day Annual Report 2019"
+    },
+    {
+      "dimension": "operations",
+      "finding": "Complex multi-business group structure includes non-core assets beyond the café business",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Coffee Day Annual Report 2019, case study sources"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Founder V.G. Siddhartha died in late July 2019 — sudden and complete key-person loss",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Public reporting, Coffee Day disclosures"
+    },
+    {
+      "dimension": "governance",
+      "finding": "Founder was the central figure in creditor and investor relationships — creditor confidence immediately at risk",
+      "confidence": "HIGH",
+      "isCritical": true,
+      "source": "Case study analysis, public reporting"
+    },
+    {
+      "dimension": "governance",
+      "finding": "No publicly identified successor leadership as of decision date — governance vacuum",
+      "confidence": "MEDIUM",
+      "isCritical": true,
+      "source": "Public reporting July 2019"
+    },
+    {
+      "dimension": "market",
+      "finding": "Café Coffee Day brand has strong recognition — preserving brand value is key to operational continuity and debt-recovery value",
+      "confidence": "HIGH",
+      "isCritical": false,
+      "source": "Industry analysis"
+    }
+  ],
+  "clientContext": {
+    "companyName": "Coffee Day Enterprises Ltd. / Café Coffee Day",
+    "country": "India",
+    "industry": "Retail/café",
+    "stage": "Crisis stabilization / debt turnaround",
+    "decisionDate": "2019-07-31",
+    "primaryStakeholder": "Board, successor leadership, lenders"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "CRITICAL — founder deceased, no established successor",
+    "resistanceToChange": "MEDIUM — crisis may enable change if new leadership acts decisively",
+    "managementCapability": "UNCERTAIN — dependent on successor leadership capability",
+    "keyPersonDependency": "CRITICAL — founder was irreplaceable key person",
+    "accountabilityWeakness": "HIGH — creditor confidence undermined by sudden governance vacuum"
+  }
+}

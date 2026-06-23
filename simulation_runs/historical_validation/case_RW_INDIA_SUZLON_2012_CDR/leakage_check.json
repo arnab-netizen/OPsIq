@@ -1,0 +1,59 @@
+{
+  "case_id": "RW_INDIA_SUZLON_2012_CDR",
+  "decision_date": "2012-10-29",
+  "check_date": "2026-06-20",
+
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json / 01_case_input.json mention CDR approval result, approval date, or that restructuring was granted?",
+      "finding": "CLEAN — input.json states only that the company has 'referred its debt to the CDR cell' and 'was seeking moratorium / longer repayment profile / interest concessions.' No approval, no approval date, no granted relief. The future tense seeking is preserved.",
+      "verdict": "PASS"
+    },
+
+    "hindsight_leakage": {
+      "question": "Does input.json / 01_case_input.json contain retrospective or hindsight language ('the real problem was', 'in retrospect', 'would later', 'ultimately', 'turned out to be', 'escape bankruptcy')?",
+      "finding": "CLEAN — all language in both input files reflects (a) observable financial metrics at or before the decision date, (b) management's own stated strategic intent ('comprehensive liability management' is a direct Suzlon FY13 statement, not retrospective analyst framing), and (c) the current status of ongoing processes (FCCB discussions 'continuing'). No retrospective framing detected.",
+      "verdict": "PASS"
+    },
+
+    "future_date_leakage": {
+      "question": "Does input.json / 01_case_input.json contain any events or metrics dated after 29 October 2012?",
+      "finding": "CLEAN — all dated references are at or before the decision date: (1) net debt/equity 2.9x as of 30 June 2012 (pre-decision), (2) H1 FY13 revenue/EBIT (April–September 2012, pre-decision), (3) CDR referral on 29 October 2012 (the decision event itself, not a future event). No post-29-October-2012 dates appear.",
+      "verdict": "PASS"
+    },
+
+    "expert_conclusion_leakage": {
+      "question": "Does input.json / 01_case_input.json contain documented root-cause labels from the outcome sources ('debt overhang', 'overexpansion', 'acquisition integration failure') or expert diagnostic conclusions?",
+      "finding": "CLEAN — input.json describes symptoms: high leverage ratio, negative EBIT margin, constrained working capital, failed FCCB extension, currency depreciation impact. The ResearchGate-sourced phrase 'aggressive international expansion' used in the DECISION CONTEXT in the case packet has been excluded from input.json. The business problem in 01_case_input.json mentions 'acquired subsidiaries' in the business model field (factual, not diagnostic) but does not label it an 'overexpansion' failure. No expert diagnosis labels appear in the engine-visible files.",
+      "verdict": "PASS"
+    },
+
+    "cdr_approval_amount_leakage": {
+      "question": "Does input.json / 01_case_input.json mention the $1.8 billion CDR approval amount (Reuters)?",
+      "finding": "CLEAN — no dollar amount appears anywhere in input.json or 01_case_input.json.",
+      "verdict": "PASS"
+    },
+
+    "cdr_approval_date_leakage": {
+      "question": "Does input.json / 01_case_input.json mention the December 31, 2012 Empowered Group approval date or the January 23–24, 2013 announcement?",
+      "finding": "CLEAN — no post-October-2012 dates appear in either engine-visible file.",
+      "verdict": "PASS"
+    },
+
+    "moratorium_granted_leakage": {
+      "question": "Does input.json / 01_case_input.json state that a moratorium was granted (vs. sought)?",
+      "finding": "CLEAN — both input files use the language 'was seeking moratorium' and 'seeking moratorium on principal and interest.' No file states that the moratorium was granted or implemented.",
+      "verdict": "PASS"
+    },
+
+    "repower_context_leakage": {
+      "question": "Does input.json / 01_case_input.json mention REpower acquisition as a labeled failure or root cause?",
+      "finding": "CLEAN — the REpower acquisition is mentioned in the DECISION CONTEXT section of the case packet but was deliberately excluded from the engine-visible input files. The 01_case_input.json mentions 'acquired subsidiaries' in the business model (factual descriptor), not as a diagnostic cause.",
+      "verdict": "PASS"
+    }
+  },
+
+  "pass": true,
+  "overall_verdict": "ALL CHECKS PASS — 8 of 8 leakage vectors clean",
+  "notes": "The input files contain only decision-date observable facts (financial metrics, operational status, management-stated intent, ongoing process status). All outcome information, post-decision dates, approval results, expert diagnoses, and retrospective conclusions are isolated to outcome.json and source.json, which are not passed to the engine by the harness. The case is ready for blind replay."
+}

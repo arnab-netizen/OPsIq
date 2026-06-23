@@ -1,0 +1,27 @@
+{
+  "case_id": "RW_UAE_ABRAAJ_2018_PRIVATE_EQUITY_COLLAPSE",
+  "checks": {
+    "outcome_leakage": {
+      "question": "Does input.json mention provisional liquidation (June 2018), criminal charges, final fraud/misappropriation findings, asset-sale outcomes, or post-collapse books/articles?",
+      "finding": "Input.json does not mention provisional liquidation, criminal charges, confirmed misappropriation findings, asset sales, or post-collapse publications. It describes February 2018 investor concerns about healthcare fund cash usage, governance and fiduciary control weakness, and group liquidity uncertainty.",
+      "verdict": "PASS"
+    },
+    "hindsight_leakage": {
+      "question": "Does input.json use post-liquidation knowledge of confirmed misappropriation or fraud to frame the February 2018 situation?",
+      "finding": "Input.json uses language appropriate to the February 2018 concern stage: 'investor concerns', 'alleged commingling risk', 'not verifiably maintained', 'governance credibility impaired'. No confirmed misappropriation or final legal finding is presented as a February 2018 fact.",
+      "verdict": "PASS"
+    },
+    "future_date_leakage": {
+      "question": "Does input.json contain any dates, events, or facts from after 28 February 2018?",
+      "finding": "No future dates or post-decision-date facts appear in input.json. The provisional liquidation (June 2018), criminal proceedings, and later books/articles are not referenced.",
+      "verdict": "PASS"
+    },
+    "expert_conclusion_leakage": {
+      "question": "Does input.json contain expert conclusions about confirmed Abraaj misappropriation, liquidation outcome, or criminal findings that were only knowable after February 2018?",
+      "finding": "Input.json presents only the observable warning signs at February 2018: institutional investor concerns about fund cash, fiduciary control gaps, group liquidity uncertainty. No confirmed misappropriation, liquidation conclusion, or criminal finding is embedded.",
+      "verdict": "PASS"
+    }
+  },
+  "pass": true,
+  "overall_verdict": "PASS - input.json contains only decision-date facts with no outcome, hindsight, or future leakage"
+}

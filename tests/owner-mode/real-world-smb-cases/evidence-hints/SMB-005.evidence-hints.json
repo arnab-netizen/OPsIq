@@ -1,0 +1,131 @@
+{
+  "case_id": "SMB-005",
+  "fixture_version": "2026-06-20",
+  "engine_archetype_synonym": null,
+  "unsupported_expected_archetypes": [
+    {
+      "smb_label": "revenue_concentration_single_client_dependency",
+      "gap_reason": "NO_ENGINE_ARCHETYPE",
+      "closest_engine_archetype": "key_person_risk",
+      "recommended_extension": "Add REVENUE_CONCENTRATION_RISK DiagnosisType covering single-client or single-channel financial dependency where concentration is revenue-structural, not knowledge-based."
+    }
+  ],
+  "evidence_items": [
+    {
+      "source_path": "scenario.symptoms[0]",
+      "finding": "owner reports anxiety when primary client shows any dissatisfaction",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Owner anxiety tied to a single client signals market_position fragility. is_critical=true because this is a structural business-risk signal. Finding paraphrased from fixture to avoid outcome terms."
+    },
+    {
+      "source_path": "scenario.symptoms[1]",
+      "finding": "no new business development activity is occurring",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of pipeline development is a critical market_position failure. is_critical=true; HIGH confidence."
+    },
+    {
+      "source_path": "scenario.symptoms[2]",
+      "finding": "all staffing and investment decisions feel too risky to make",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Decision paralysis driven by client concentration risk is a financial fragility signal. financial_health dimension."
+    },
+    {
+      "source_path": "scenario.symptoms[3]",
+      "finding": "owner has not raised rates for fear of losing the primary client",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Rate suppression due to client dependency is a market_position pricing power signal. HIGH confidence as owner confirms this directly."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "74% of $380K annual revenue from a single month-to-month client; 4-year relationship; 3 secondary clients generating $99K; owner spends 35 hours/week on primary client; qualified pipeline value $18K",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "74% revenue from one client on a month-to-month contract is the defining structural fact. market_position dimension. is_critical=true. Finding avoids must_identify terms ('revenue concentration', 'single client dependency', '74% from one client', 'existential fragility', 'no pipeline development')."
+    },
+    {
+      "source_path": "scenario.facts_known_to_owner",
+      "finding": "74% of total revenue derives from a single client; business has no succession or diversification plan if that client departs",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "team_capability evidence item created to host revenueConcentrationPct canonical key mapping. Registry assigns revenueConcentrationPct to team_capability dimension. Derived from same facts as index 4 but framed as organizational dependency risk rather than market position fragility."
+    },
+    {
+      "source_path": "scenario.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue appears stable and profitable at $380K",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue stability from a single client masks the fragility of the position."
+    },
+    {
+      "source_path": "scenario.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): primary client relationship seems strong after 4 years",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Long relationship duration is a misleading signal \u2014 month-to-month contract means the relationship provides no structural security."
+    },
+    {
+      "source_path": "scenario.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): owner has deep expertise and strong client satisfaction",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Expert delivery quality does not reduce the risk of single-client dependency."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "primary_client_revenue_pct",
+      "canonical_key": "revenueConcentrationPct",
+      "evidence_item_index": 5
+    },
+    {
+      "fixture_key": "pipeline_qualified_leads_value_usd",
+      "canonical_key": "pipelineValue",
+      "evidence_item_index": 4
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": "pipelineValue",
+      "would_improve_pattern": "fin_isDemandFailure (pipelineValue numeric)"
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 3,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SMB-005 is an archetype-gap case. Engine has no REVENUE_CONCENTRATION archetype. revenueConcentrationPct (74%) is mapped to evidence_item_index 5 (team_capability dimension) per registry requirement. A separate market_position evidence item (index 4) holds the same facts framed as pipeline fragility. pipelineValue mapped to index 4 (market_position). Must_identify terms avoided in all findings: 'revenue concentration', 'single client dependency', '74% from one client', 'existential fragility', 'no pipeline development'."
+}

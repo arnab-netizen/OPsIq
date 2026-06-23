@@ -1,0 +1,87 @@
+{
+  "case_id": "SIM-13-007",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "demand_generation_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "annual bookings have flatlined at approximately twenty-eight per year for fourteen months despite tripling advertising spend and a forty percent increase in enquiry volume \u2014 new-customer acquisition has stalled; the top-of-funnel growth is not converting to bookings",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "lead volume is growing but pipeline is not converting \u2014 enquiry volume is up approximately forty percent but bookings are flat; the funnel conversion rate from enquiry to booking is unknown and likely very low",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "monthly ad spend current $2,400; 8 months ago $800 (threefold increase); website traffic doubled last 6 months; enquiry volume up 40%; annual bookings approximately 28; bookings flat for 14 months; pricing not reviewed 3 years",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): enquiry volume is up 40% and website traffic has doubled \u2014 the owner interprets this as an advertising success",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): advertising spend has tripled suggesting the owner is actively investing in demand generation",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_bookings_current",
+      "canonical_key": "funnelConversionPct",
+      "evidence_item_index": 0,
+      "value_override": 3,
+      "transform_note": "28 annual bookings on doubled enquiry volume implies very low funnel conversion rate; funnelConversionPct = 3 proxy"
+    },
+    {
+      "fixture_key": "bookings_flat_for_months",
+      "canonical_key": "leadVolume",
+      "evidence_item_index": 1,
+      "value_override": 28,
+      "transform_note": "Annual bookings flat at 28 \u2014 leadVolume = 28 as annual booking count proxy"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: market_position + DEMAND_STAGNATION (flatlined, acquisition has stalled, pipeline not converting) + funnelConversionPct + leadVolume numerics"
+}

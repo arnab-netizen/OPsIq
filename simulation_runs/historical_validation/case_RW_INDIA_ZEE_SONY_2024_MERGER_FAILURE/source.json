@@ -1,0 +1,30 @@
+{
+  "source_urls": [
+    "https://www.sony.com/en/SonyInfo/IR/news/20240122_E.pdf",
+    "https://www.reuters.com/markets/deals/sony-sends-termination-letter-zee-over-india-merger-bloomberg-news-2024-01-22/",
+    "https://www.reuters.com/markets/deals/indias-zee-sony-bepl-settle-merger-disputes-2024-08-27/"
+  ],
+  "source_type": "Official corporate IR notice, credible financial journalism on deal termination and settlement",
+  "source_quality": {
+    "tier_a": [
+      "Sony Pictures Networks India official notice (22 January 2024) of termination of definitive merger agreements — primary corporate source confirming termination event",
+      "Zee Entertainment stock exchange filings regarding merger status and termination dispute",
+      "Company tribunal/arbitration filings (Zee and Sony)"
+    ],
+    "tier_b": [
+      "Reuters report (22 January 2024) on Sony termination letter — credible financial journalism",
+      "Reuters report (27 August 2024) on Zee-Sony BEPL dispute settlement — outcome context only"
+    ]
+  },
+  "reliability_tier": "A",
+  "supports_ground_truth": true,
+  "contamination_risk": "Medium",
+  "contamination_notes": "The Sony termination notice (22 January 2024) is an outcome event and must not appear in input.json, which is dated 21 January 2024. Arbitration claims, any termination fee amounts, settlement terms, and final deal-failure facts must remain in outcome only. Input contains only deadline/conditions/dispute risk visible before termination.",
+  "source_limitations": [
+    "Sony termination notice is dated 22 January 2024 — one day after the decision date; it is outcome evidence and must not appear in input",
+    "Specific termination fee or emergency relief claim amounts are post-termination facts; must remain in outcome only",
+    "August 2024 settlement and claim withdrawal are post-outcome facts; not in input",
+    "Internal detail of which specific closing conditions were disputed is not fully publicly disclosed; input uses general characterization",
+    "Post-termination market reaction must not appear in input"
+  ]
+}

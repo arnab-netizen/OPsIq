@@ -1,0 +1,87 @@
+{
+  "case_id": "SIM-13-004",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "key_person_dependency",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "forty-five percent of total revenue is concentrated in a single government agency client whose contract renews in eight months \u2014 key-person risk is expressed as revenue concentration rather than an individual; the business holds no succession strategy if this contract is not renewed",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "the government client relationship is managed exclusively by the owner \u2014 the sole operator manages all client obligations, reporting systems, and delivery coordination for the contract that represents $310,000 of $685,000 in revenue; single client concentration at 45% of total revenue creates structural fragility",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "revenue 18 months ago $380K; current revenue $685K; government contract value $310K; other client revenue $375K; net profit $12,400 (1.8% margin); contract renewal in 8 months; costs added for enterprise client",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): total revenue has grown from $380K to $685K \u2014 80% growth appears to confirm a strong growth trajectory",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the government client has remained a client through multiple delivery cycles",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "government_contract_value",
+      "canonical_key": "revenueConcentrationPct",
+      "evidence_item_index": 0,
+      "value_override": 45,
+      "transform_note": "Government client = 45% of total revenue ($310K / $685K); revenueConcentrationPct = 45"
+    },
+    {
+      "fixture_key": "net_margin_percent",
+      "canonical_key": "keyPersonCount",
+      "evidence_item_index": 1,
+      "value_override": 1,
+      "transform_note": "Sole owner manages the concentrated revenue relationship; keyPersonCount = 1"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "Calibrated W1: team_capability + KEYPERSON_TEXT (sole operator, revenue concentration) + revenueConcentrationPct + keyPersonCount numerics"
+}

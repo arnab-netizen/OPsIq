@@ -1,0 +1,31 @@
+{
+  "source_urls": [
+    "https://www.fca.org.uk/news/statements/fca-statement-nmc-health-plc",
+    "https://www.reuters.com/article/business/nmc-health-discovers-27-billion-in-debt-bringing-total-to-5-billion-idUSKBN21C2Q1/",
+    "https://www.ft.com/content/11c3b293-68ed-4aa3-b1a1-c3ba57e071b3"
+  ],
+  "source_type": "Regulatory statements, newswire reporting, financial journalism",
+  "source_quality": {
+    "tier_a": [
+      "UK Financial Conduct Authority (FCA) official statements on NMC Health plc",
+      "UK court and administrator reports from NMC Health administration proceedings",
+      "Company regulatory announcements to London Stock Exchange"
+    ],
+    "tier_b": [
+      "Reuters newswire reporting on NMC Health debt discovery",
+      "Financial Times investigative and news coverage of NMC Health governance failure",
+      "Credible financial journalism covering the administration and governance crisis"
+    ]
+  },
+  "reliability_tier": "HIGH",
+  "supports_ground_truth": true,
+  "contamination_risk": "MEDIUM",
+  "contamination_notes": "Later discovered debt scale (approximately $5 billion total) is a post-administration finding and must remain in outcome.json only. Input.json covers pre-administration warning signals and uncertainty around financial reporting reliability. Some Financial Times content is paywalled. FCA statement and Reuters reports include post-decision confirmed findings which must not appear in input.",
+  "source_limitations": [
+    "Confirmed final undisclosed debt quantum is a post-administration discovery and must be excluded from input.json",
+    "Proven fraud findings and later enforcement actions are post-decision and must remain in outcome only",
+    "Some FT investigative content is behind a paywall",
+    "UAE regulatory materials may require separate access and are not fully public",
+    "Administrator reports provide most complete financial picture but are post-decision documents"
+  ]
+}

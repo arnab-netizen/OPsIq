@@ -1,0 +1,38 @@
+{
+  "grounding_class": "REAL_SOURCE_BACKED",
+  "expert_diagnosis": "IBM's distress stemmed from structural dependence on a hardware and mainframe revenue model that was being disrupted by distributed computing, compounded by a cost structure built for a larger and more stable revenue base, organizational complexity that slowed response, and a gap between IBM's traditional product-centric offering and what enterprise customers actually needed in an integrated-solutions world. The breakup debate was a distraction from the more important question of whether IBM's integrated enterprise capability could be repositioned as a services and solutions asset.",
+  "expert_first_action": "Avoid premature breakup pending a rigorous assessment of whether IBM's integrated enterprise relationships represent a defensible competitive advantage; simultaneously impose aggressive cost discipline and begin reorienting the commercial model around enterprise customer solutions rather than hardware products.",
+  "actual_decision": "IBM under Lou Gerstner did not break the company apart. Gerstner preserved IBM as an integrated enterprise. IBM shifted its strategic focus toward services, customer solutions, and enterprise integration. The company imposed significant cost discipline and restructured operations while protecting core enterprise relationships.",
+  "outcome_polarity": "POSITIVE",
+  "harmful_actions": [
+    "Breaking IBM into smaller independent units before assessing integrated enterprise value",
+    "Allowing cost structure misalignment to persist without immediate restructuring",
+    "Continuing hardware-centric positioning without reorienting toward enterprise services",
+    "Allowing organizational paralysis from unresolved strategic direction"
+  ],
+  "beneficial_actions": [
+    "Preserving IBM as an integrated company to protect enterprise relationship value",
+    "Aggressive cost cutting and organizational restructuring",
+    "Reorienting commercial model toward enterprise services and integration solutions",
+    "Protecting and deepening core enterprise customer relationships",
+    "Exiting or reducing structurally weak hardware segments",
+    "Simplifying organization around customer outcomes rather than product lines"
+  ],
+  "citation": "IBM Annual Report 1993; Wharton Knowledge at Wharton Gerstner turnaround analysis; Wired coverage of IBM Global Services 1997; Gerstner memoir 'Who Says Elephants Can't Dance'",
+  "actual_outcome": "IBM did not break apart. Under Gerstner's leadership IBM returned to profitability, built a major global services and enterprise integration business, and became one of the world's leading technology services companies. The IBM Global Services division became a primary revenue driver.",
+  "documented_root_causes": [
+    "Strategic disruption from distributed computing displacing mainframe and hardware economics",
+    "Structural dependence on hardware revenues that were in secular decline",
+    "Cost structure built for a larger and more stable business than current reality",
+    "Organizational complexity slowing strategic response",
+    "Gap between IBM's product-centric model and enterprise customer integration needs",
+    "Failure to build services and solutions capability at scale before crisis",
+    "Risk of destroying integrated enterprise value through premature breakup"
+  ],
+  "final_business_state": "Successful transformation to services-led enterprise technology company with recovered profitability and sustained global scale",
+  "expected_diagnosis_codes": [],
+  "expected_action_codes": [
+    "STRUCTURAL_REPAIR",
+    "GROWTH_ENABLEMENT"
+  ]
+}

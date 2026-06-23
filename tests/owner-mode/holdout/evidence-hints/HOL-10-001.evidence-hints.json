@@ -1,0 +1,89 @@
+{
+  "case_id": "HOL-10-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "gross margin has fallen from 52% to 36% as headcount grew from 4 to 8 — labour costs have scaled proportionally faster than revenue over two years",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Margin compression driven by faster labour cost growth than revenue is the primary financial health signal. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "fixed-price managed service contracts signed two years ago have not been repriced while the hours of support required per client has increased as client infrastructure has grown more complex",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Static fixed-price contracts with increasing delivery cost is the structural driver of margin erosion. No must_identify terms."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "new hires are at market rates 20–25% above original team members, increasing the average cost per hour of service delivery above the rates used when contracts were originally priced",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Rising average wage rate compounds fixed-price contract underprice. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "IT managed services provider; annual revenue $1.4M; 8 staff; gross margin 2 years ago 52%; current gross margin 36%; client base expanded from 12 to 22 clients; several new enterprise clients on long-term fixed-price agreements",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary from facts_known_to_owner. Margin change from 52% to 36% = -16 percentage points. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue has grown from $700K to $1.4M over two years — doubling in size appears to signal health",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue doubling is a misleading signal — it obscures the fact that margin has compressed sharply as labour costs scaled."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the client base has grown from 12 to 22 clients and several enterprise clients have signed long-term agreements",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Client base growth and enterprise contract wins are misleading signals — long-term fixed-price agreements at historical rates may now be loss-making."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "gross_margin_current_pct",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 3,
+      "value_override": -16,
+      "transform_note": "Margin compressed from 52% to 36% — profitChangePercent proxy = -16 percentage points; marginPct set as change value"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "margin_isMarginErosion (per-contract marginPct confirms loss-making agreements)"
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "HOL-10-001 is a fixed-price contract underprice with rising labour cost margin erosion case. All findings derived from input_packet. No must_identify vocabulary used. marginPct set to -16 from 52% to 36% compression."
+}

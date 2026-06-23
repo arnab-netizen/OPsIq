@@ -1,0 +1,68 @@
+{
+  "caseId": "RW_UK_PATISSERIE_VALERIE_2018_ACCOUNTING_BLACK_HOLE",
+  "businessProblem": "Patisserie Holdings plc has discovered significant accounting irregularities, resulting in suspension of share trading. Management, the board, and lenders face acute uncertainty over the true cash position, debt level, and reliability of previously reported financials. The crisis is not demand-driven; it is a financial-control and governance failure requiring immediate forensic verification and stakeholder management.",
+  "evidence": [
+    {
+      "dimension": "Financial integrity",
+      "finding": "Significant accounting irregularities were identified in company financial records, undermining confidence in previously reported positions.",
+      "confidence": 0.97,
+      "isCritical": true,
+      "source": "Company announcement / share trading suspension notice, October 2018"
+    },
+    {
+      "dimension": "Cash position",
+      "finding": "True cash balances are unconfirmed and could not be verified from existing internal records as of the decision date.",
+      "confidence": 0.95,
+      "isCritical": true,
+      "source": "Company and lender communications, October 2018"
+    },
+    {
+      "dimension": "Debt and liabilities",
+      "finding": "Actual debt obligations and liability exposure are uncertain pending forensic review.",
+      "confidence": 0.93,
+      "isCritical": true,
+      "source": "Company and lender communications, October 2018"
+    },
+    {
+      "dimension": "Governance and audit",
+      "finding": "Internal financial controls failed to prevent or detect material accounting irregularities. External audit oversight did not surface the issues prior to crisis.",
+      "confidence": 0.92,
+      "isCritical": true,
+      "source": "Board and audit committee communications, October 2018"
+    },
+    {
+      "dimension": "Operating platform",
+      "finding": "Physical café and bakery retail operations were continuing at the time of the share suspension; outward trading had appeared normal prior to crisis disclosure.",
+      "confidence": 0.90,
+      "isCritical": false,
+      "source": "Company trading statements pre-crisis, October 2018"
+    },
+    {
+      "dimension": "Fraud risk",
+      "finding": "The nature of the irregularities raised potential fraud risk, not yet confirmed as of the decision date.",
+      "confidence": 0.80,
+      "isCritical": true,
+      "source": "Company disclosure and regulatory context, October 2018"
+    },
+    {
+      "dimension": "Lender exposure",
+      "finding": "Lenders faced uncertainty over actual covenant compliance and security given unverified financial position.",
+      "confidence": 0.88,
+      "isCritical": true,
+      "source": "Lender communications, October 2018"
+    }
+  ],
+  "clientContext": {
+    "company": "Patisserie Holdings plc / Patisserie Valerie",
+    "country": "United Kingdom",
+    "industry": "Café / bakery / food service retail",
+    "decisionDate": "2018-10-09",
+    "consultingStage": "Crisis stabilization and forensic verification"
+  },
+  "ownerConstraintProfile": {
+    "followThroughRisk": "High — management credibility undermined by financial control failure; ability to execute unassisted is in doubt",
+    "resistanceToChange": "Unknown — board and management have not yet established whether internal teams can be trusted to self-correct",
+    "communicationStyle": "Formal corporate and regulatory; communication constrained by share trading suspension and legal obligations",
+    "keyPersonDependency": "High — finance function and audit oversight were the critical failure points; key-person dependency in financial management is a primary risk"
+  }
+}

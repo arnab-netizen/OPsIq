@@ -1,0 +1,87 @@
+{
+  "case_id": "SIM-12-004",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "SEO subscription service pricing has not been reviewed in three years \u2014 margin erosion risk exists on the largest service line ($840K of $2.1M revenue); a three-year price freeze on an evolving service means the overall margin of 52% cannot be validated without service-level cost separation; specialist delivery dependency on this service line is a concurrent structural problem",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "gross margin on the SEO subscription service line is unknown and declining \u2014 three years without a price review during which delivery requirements have evolved means the reported 52% overall margin may conceal a compressed or negative margin on the subscription line; price freeze combined with specialist dependency creates two independent risks",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "single specialist managing 38 of 40 SEO subscription clients \u2014 this is a sole operator dependency; no cross-training, no documented processes, and no succession for the primary revenue-generating service line",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[2] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue $2.1M; reported overall gross margin 52%; SEO subscription monthly price $1,200/client; 40 active subscription clients; subscription revenue $840K; 3 years at current price freeze; one specialist manages 38 clients; 14 staff",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): 52% overall gross margin on $2.1M revenue appears healthy on its face",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the SEO specialist is described as highly capable and client-retention rates appear strong",
+      "dimension": "team_capability",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "seo_retainer_years_at_current_price",
+      "canonical_key": "profitChangePercent",
+      "evidence_item_index": 0,
+      "value_override": -15,
+      "transform_note": "Three years without price review during evolving delivery requirements implies margin erosion on retainer line; profitChangePercent proxy = -15"
+    },
+    {
+      "fixture_key": "seo_specialist_client_count",
+      "canonical_key": "keyPersonCount",
+      "evidence_item_index": 2,
+      "value_override": 1,
+      "transform_note": "Single specialist managing 38 of 40 clients; keyPersonCount=1"
+    },
+    {
+      "fixture_key": "seo_retainer_annual_revenue",
+      "canonical_key": "successionReady",
+      "evidence_item_index": 2,
+      "value_override": 0,
+      "transform_note": "No documented processes for retainer delivery; successionReady=0"
+    }
+  ],
+  "clarification_requests": [],
+  "validation_notes": "Calibrated W1: financial_health + MARGIN_HARD (margin erosion, gross margin declining) + team_capability + KEYPERSON_TEXT (sole operator)"
+}

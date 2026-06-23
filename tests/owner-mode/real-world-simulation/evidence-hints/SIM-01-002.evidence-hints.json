@@ -1,0 +1,107 @@
+{
+  "case_id": "SIM-01-002",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "cash position unstable across every project cycle with no predictable inflow pattern",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Unstable cash across all projects is an acute adverse liquidity signal. financial_health dimension; is_critical=true. Finding paraphrased from symptom — no must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "owner cannot determine when funds will arrive from projects currently in progress",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Inability to predict inflows is an adverse cash management signal. Not critical but systemic. financial_health dimension."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "multiple active contracts running simultaneously with no cash inflow schedule in place",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Multiple projects without inflow tracking is a structural working-capital signal. is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "amounts withheld from prior completed contracts remain unreceived for more than six months",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Long-outstanding held-back amounts from completed contracts is a critical adverse receivables signal. financial_health dimension; is_critical=true. No must_identify vocabulary used (retention balances avoided)."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue AUD 2.1M; 8 employees; project type is commercial electrical fitout with multiple active contracts and no formal progress-claim schedule",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Factual summary of business context. No must_identify vocabulary used. 2.1M revenue and 8 staff confirms meaningful working-capital exposure."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): owner attributes current cash stress entirely to a single late-payment event from 14 months ago that has since been resolved",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Owner narrative anchors diagnosis to a past resolved event. This is a misleading signal that masks the structural nature of the current problem. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): revenue has been stable and no major client has been lost",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Stable revenue is a misleading stability signal when cash stress exists across all active projects. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): new commercial projects are being won without difficulty",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Continued new project acquisition masks the working-capital problem. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_revenue",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 3,
+      "value_override": 180,
+      "transform_note": "Held-back amounts from completed contracts outstanding for 6+ months implies approximately 180-day receivables aging for retention amounts. annual_revenue is the only numeric fixture field; value_override of 180 days used as receivables aging proxy."
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "receivablesAging",
+      "would_improve_pattern": "fin_isWorkingCapital (explicit receivables aging data elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-01-002 is a project payment timing / progress claim working-capital case. All findings paraphrased from input_packet fields. No must_identify vocabulary used (project billing schedule, milestone claims, staged invoicing, retention balances, unbilled completed work — none appear in findings). 180-day receivables aging proxy used for held-back amounts."
+}

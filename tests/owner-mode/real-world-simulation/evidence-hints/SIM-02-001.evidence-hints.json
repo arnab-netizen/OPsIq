@@ -1,0 +1,99 @@
+{
+  "case_id": "SIM-02-001",
+  "fixture_version": "2026-06-22",
+  "engine_archetype_synonym": "unit_economics_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "no location has produced a sustained positive operating surplus since opening",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "No location covering its own cost base is a critical unit economics failure signal. financial_health dimension; is_critical=true. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "owner cannot draw a personal wage despite combined network revenue growing to AUD 1.4M",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner unable to draw income despite scale is a critical adverse financial health signal. financial_health dimension; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "committed rental and instructor staffing costs increase with each additional location opened",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Growing committed cost base with each new site is a unit economics adverse signal. financial_health dimension. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "two of the four locations have never generated enough revenue to cover their own operating costs",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Two sites consistently below their own cost base is a critical negative contribution margin signal. financial_health dimension; is_critical=true. Avoids must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "four locations; combined annual revenue AUD 1.4M; 18 total staff; no location-level profit and loss available",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Four-location network with combined revenue and no site-level reporting is a unit economics gap. is_critical=true. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): total class bookings across the network have grown each quarter",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Growing booking volume is a misleading signal when costs are growing faster. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): a new corporate wellness contract was recently secured",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "New contract acquisition is a misleading positive signal when underlying unit economics are negative. Non-critical, LOW confidence."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): social media following has grown substantially over two years",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Social media growth is a misleading vanity metric when the business cannot cover its cost base. Non-critical, LOW confidence."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "contributionMargin",
+      "would_improve_pattern": "fin_isUnitEconomicsFailure (contribution margin per location elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-02-001 is a unit economics failure case driven by premature multi-site expansion. All findings paraphrased from input_packet. No must_identify vocabulary used (fixed overhead per location, revenue required to break even per site, location-level viability, expansion decision without unit economics, locations not covering their own costs — none appear in findings). No numeric canonical key mappings available from the fixture facts."
+}
