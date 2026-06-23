@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -190,6 +191,7 @@ export default function OwnerIntakePage() {
                   <div>
                     <span className="font-medium">{it.targetDomain}</span>{" "}
                     <span className="text-muted-foreground">· {it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
+                    {it.source && <Badge variant="muted" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted"}>{it.validationStatus}</Badge>
@@ -220,8 +222,11 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
         <div className="text-xs uppercase text-muted-foreground">Candidate — review before confirming</div>
         <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted"}>{intake.validationStatus}</Badge>
       </div>
-      <div className="text-sm text-muted-foreground">
-        {intake.targetDomain} · {intake.source} · {intake.rowCount} row(s) · normalization {intake.normalizationStatus}
+      <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
+        <span>{intake.targetDomain} · {intake.source} · {intake.rowCount} row(s) · normalization {intake.normalizationStatus}</span>
+        {intake.source && (
+          <Badge variant="muted">Evidence quality: {sourceQualityTier(intake.source as IntakeSource)}</Badge>
+        )}
       </div>
       {Array.isArray(intake.unmappedColumns) && intake.unmappedColumns.length > 0 && (
         <p className="text-xs text-muted-foreground">Unmapped columns (ignored): {intake.unmappedColumns.join(", ")}</p>

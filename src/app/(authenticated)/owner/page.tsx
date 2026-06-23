@@ -156,6 +156,15 @@ export default function OwnerCommandCenterPage() {
                 </div>
               </section>
 
+              {data.isStaleData && (
+                <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm flex items-center justify-between">
+                  <span>
+                    <strong>Stale data:</strong> Your finance data is {data.dataAgeDays} day{data.dataAgeDays === 1 ? "" : "s"} old — diagnosis may not reflect current conditions.
+                  </span>
+                  <Link href="/owner/intake" className="ml-4 underline whitespace-nowrap">Update now →</Link>
+                </div>
+              )}
+
               {missing.length > 0 && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
                   <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.

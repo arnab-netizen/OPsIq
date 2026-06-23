@@ -320,6 +320,8 @@ export interface BusinessConditionResult {
   hasData: boolean;
   domainsWired: string[];
   profile: BusinessConditionProfile | null;
+  isStaleData: boolean;
+  dataAgeDays: number | null;
 }
 
 /**
@@ -344,7 +346,7 @@ export async function getBusinessCondition(
   if (!selectedBusinessId && businesses.length > 0) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null };
+    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null, isStaleData: false, dataAgeDays: null };
   }
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
@@ -462,6 +464,20 @@ export async function getBusinessCondition(
       ? (latestFinanceSnapshot.missingCriticalData as string[])
       : [];
 
+  // Compute data staleness from the latest finance snapshot's periodEnd (honest: 0 when no snapshot).
+  const STALE_DAYS = 45;
+  const now = opts.now ?? new Date();
+  let isStaleData = false;
+  let dataAgeDays: number | null = null;
+  if (latestFinanceSnapshot?.periodEnd) {
+    const periodEnd = latestFinanceSnapshot.periodEnd instanceof Date
+      ? latestFinanceSnapshot.periodEnd
+      : new Date(latestFinanceSnapshot.periodEnd as string);
+    const ageDays = Math.floor((now.getTime() - periodEnd.getTime()) / 86_400_000);
+    dataAgeDays = ageDays;
+    isStaleData = ageDays > STALE_DAYS;
+  }
+
   if (domainScores.length === 0) {
     return {
       businesses: businessList,
@@ -469,6 +485,8 @@ export async function getBusinessCondition(
       hasData: false,
       domainsWired: [],
       profile: null,
+      isStaleData: false,
+      dataAgeDays: null,
     };
   }
 
@@ -478,7 +496,7 @@ export async function getBusinessCondition(
     domainScores,
     topActions,
     missingCriticalData,
-    now: opts.now,
+    now,
   });
 
   return {
@@ -487,5 +505,7 @@ export async function getBusinessCondition(
     hasData: true,
     domainsWired: domainScores.map((d) => d.domain),
     profile,
+    isStaleData,
+    dataAgeDays,
   };
 }
