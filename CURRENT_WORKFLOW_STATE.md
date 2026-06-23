@@ -44,7 +44,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 5 | Recommendation portfolio + feasibility | **VERIFIED (STATIC_TESTED_ONLY)** — ranking+feasibility+survival-first green |
 | 6 | Scenario / what-if | **VERIFIED (STATIC_TESTED_ONLY)** — scenario-engine 36 tests green |
 | 7 | Experiment design | **VERIFIED (STATIC_TESTED_ONLY)** — pure lifecycle 133 tests green; persistence gap documented |
-| 8 | Execution orchestration | NOT_STARTED (impl PRESENT; verify) |
+| 8 | Execution orchestration | **VERIFIED (STATIC_TESTED_ONLY)** — action FSM/proof 65 tests green |
 | 9 | Outcome verification + attribution | NOT_STARTED (impl PRESENT; verify) |
 | 10 | Private owner learning eligibility gate | NOT_STARTED (impl PRESENT; verify + security negatives) |
 | 11 | Governance / audit / model risk | NOT_STARTED (impl PRESENT; verify) |
@@ -86,7 +86,13 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 7 verified (no code). Proceed to **Phase 8 — Execution Orchestration**: verify `OwnerAction`/`OwnerActionExecutionLog` + execution services (assignment, steps, proof requirement, completion ≠ verified); close only a precise gap if one exists.
+Phase 8 verified (no code). Proceed to **Phase 9 — Outcome Verification + Attribution**: verify `OwnerActionOutcome` + `OwnerCausalAttribution` + outcome/verification services (baseline/target/actual, measurement window, confounders, attribution confidence, statuses); close only a precise gap if one exists.
+
+### Phase 8 decision record (execution orchestration) — VERIFICATION ONLY (no code)
+- **Action FSM + proof:** `domain/owner-mode/action-tracking.ts` — `ActionStatus` (pending/in_progress/completed/blocked/cancelled/overdue), `ACTION_STATUS_TRANSITIONS` (completed terminal in the action FSM — distinct from verification), `proofText` EXEC-RULE-3 (proof min length enforced), `ExecutionComplianceScore`, deviation severity. Models `OwnerAction`/`OwnerActionExecutionLog` (proofText/proofAttachmentUrl/executionComplianceScore)/`OwnerBlocker`. Execution-core engines (action-fsm, orchestrator, capacity, rollback, failure) under `services/execution-core/`.
+- **completion ≠ verified (§26):** action FSM terminates at `completed`; success verification is the separate Phase-9 outcome layer — a completed action is never auto-marked verified-success.
+- **Tests verified green:** action-tracking (50) + execution-core crash-recovery (15) = 65; full-loop-validation (baseline) covers the execution→verification handoff.
+- **Known limitation:** operator route update + owner-sop services persistence are DB-gated (`owner-sop/services.db.test.ts`) → no DB/API_TESTED claim for the route boundary.
 
 ### Phase 7 decision record (experiment design) — VERIFICATION ONLY (no code)
 - **Design + lifecycle (pure, tested):** `domain/experiment/experiment.ts` (`Hypothesis` with statement/`successMetric`/`successThreshold`/`failureThreshold`/`testDurationWeeks`/`reviewCadenceWeeks`, `validateHypothesis`, `validateExperimentPlan`) and `services/experiment/experiment-lifecycle.service.ts` (`createExperiment`→`approveExperiment`→`startExperiment`→`updateExecution`→`recordResult`→`captureLearning`, `analyzeOutcome`). Owner approval required before start. Route `engagements/[id]/experiments`.
