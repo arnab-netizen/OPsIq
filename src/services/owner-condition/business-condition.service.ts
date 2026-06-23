@@ -324,6 +324,8 @@ export interface BusinessConditionResult {
   isStaleData: boolean;
   dataAgeDays: number | null;
   missingInputsWithPriority: MissingInput[];
+  lastDiagnosedAt: string | null; // ISO date string of most recent domain diagnosis
+  nextReassessmentDue: string | null; // ISO date string (lastDiagnosedAt + 30 days)
 }
 
 /**
@@ -348,7 +350,7 @@ export async function getBusinessCondition(
   if (!selectedBusinessId && businesses.length > 0) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null, isStaleData: false, dataAgeDays: null, missingInputsWithPriority: [] };
+    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null, isStaleData: false, dataAgeDays: null, missingInputsWithPriority: [], lastDiagnosedAt: null, nextReassessmentDue: null };
   }
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
@@ -484,6 +486,22 @@ export async function getBusinessCondition(
     ? computeMissingInputsWithPriority(latestFinanceSnapshot as Record<string, unknown>)
     : [];
 
+  // Reassessment schedule: derived from the most recent domain diagnosis (30 days cadence).
+  const REASSESSMENT_DAYS = 30;
+  let lastDiagnosedAt: string | null = null;
+  let nextReassessmentDue: string | null = null;
+  if (domainScores.length > 0) {
+    const latestScore = domainScores.reduce((latest, s) => {
+      const t = s.generatedAt instanceof Date ? s.generatedAt : new Date(s.generatedAt as string);
+      const l = latest instanceof Date ? latest : new Date(latest as string);
+      return t > l ? s.generatedAt : latest;
+    }, domainScores[0].generatedAt);
+    const lastDate = latestScore instanceof Date ? latestScore : new Date(latestScore as string);
+    lastDiagnosedAt = lastDate.toISOString();
+    const nextDate = new Date(lastDate.getTime() + REASSESSMENT_DAYS * 86_400_000);
+    nextReassessmentDue = nextDate.toISOString();
+  }
+
   if (domainScores.length === 0) {
     return {
       businesses: businessList,
@@ -494,6 +512,8 @@ export async function getBusinessCondition(
       isStaleData: false,
       dataAgeDays: null,
       missingInputsWithPriority,
+      lastDiagnosedAt: null,
+      nextReassessmentDue: null,
     };
   }
 
@@ -515,5 +535,7 @@ export async function getBusinessCondition(
     isStaleData,
     dataAgeDays,
     missingInputsWithPriority,
+    lastDiagnosedAt,
+    nextReassessmentDue,
   };
 }

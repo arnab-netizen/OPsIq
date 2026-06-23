@@ -283,6 +283,17 @@ export default function OwnerCommandCenterPage() {
 
               <section className="border rounded-lg p-4 bg-white">
                 <h2 className="font-bold mb-1">Reassessment</h2>
+                {data.lastDiagnosedAt && (
+                  <div className="text-xs text-muted-foreground mb-2 space-y-0.5">
+                    <div>Last diagnosed: {new Date(data.lastDiagnosedAt).toLocaleDateString()}</div>
+                    {data.nextReassessmentDue && (
+                      <div className={new Date(data.nextReassessmentDue) <= new Date() ? "text-warning font-medium" : ""}>
+                        Next reassessment {new Date(data.nextReassessmentDue) <= new Date() ? "overdue" : "due"}:{" "}
+                        {new Date(data.nextReassessmentDue).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <p className="text-sm text-muted-foreground mb-3">
                   Run a new diagnosis cycle after updating data, completing actions, or when conditions change.
                 </p>
