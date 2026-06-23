@@ -42,7 +42,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 3 | Financial survival + unit economics | **VERIFIED (STATIC_TESTED_ONLY)** — already implemented; 229 tests green; no code added |
 | 4 | Decision + evidence snapshot | **VERIFIED (STATIC_TESTED_ONLY)** — 355 tests green; route-auth DB-gated |
 | 5 | Recommendation portfolio + feasibility | **VERIFIED (STATIC_TESTED_ONLY)** — ranking+feasibility+survival-first green |
-| 6 | Scenario / what-if | NOT_STARTED (engine PRESENT; verify) |
+| 6 | Scenario / what-if | **VERIFIED (STATIC_TESTED_ONLY)** — scenario-engine 36 tests green |
 | 7 | Experiment design | NOT_STARTED |
 | 8 | Execution orchestration | NOT_STARTED (impl PRESENT; verify) |
 | 9 | Outcome verification + attribution | NOT_STARTED (impl PRESENT; verify) |
@@ -86,7 +86,13 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 5 verified (no code). Proceed to **Phase 6 — Scenario / What-If V1**: verify scenario comparison (`services/consulting-engine/scenario-engine.ts`, `decision-core/scenarios-engine.ts`, `/api/scenario`) covers do-nothing/conservative/recommended/aggressive/defensive options with missing-data disclosure and no fabricated numbers.
+Phase 6 verified (no code). Proceed to **Phase 7 — Experiment Design Layer**: verify convert-decision-to-experiment + hypothesis/success/failure/stop criteria (engagements/experiments routes + services); close only a precise gap if one exists.
+
+### Phase 6 decision record (scenario / what-if) — VERIFICATION ONLY (no code)
+- **Engine:** `services/consulting-engine/scenario-engine.ts` `generateScenarios()` produces Aggressive (best-case) / Staged (Recommended) / Defensive (minimal-risk) options, each with explicit `assumptions[]` + `risks[]` (narrative, not fabricated projections). Richer `decision-core/scenarios-engine.ts` `ScenariosEngine` for decision-path comparison. Route `/api/scenario`.
+- **Option coverage vs §24:** do-nothing/conservative→Defensive Hold; recommended→Staged; aggressive→Aggressive Recovery; defensive-cash/stop-action→Defensive. Assumptions disclosed; no fabricated numbers.
+- **Tests verified green:** `benchmark/scenario-engine.test.ts` (36).
+- **Known limitation:** route-level `/api/scenario` is DB-gated → no API/DB_TESTED claim.
 
 ### Phase 5 decision record (portfolio + feasibility) — VERIFICATION ONLY (no code)
 - **Feasibility + ranking:** `services/decisions/priority-engine.ts` — `evaluateConstraints` (is_feasible, constraint_penalty, blocking/limiting constraints, conflicts), `calculatePriority` (impact/effort/credibility/reversibility, non-reversible-critical boost, low-effort-high-impact flag), `rankRecommendations`.
