@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated code (Prisma client, etc.) is not authored source: its lint
+    // profile tracks the generator version, not developer intent.
+    "src/generated/**",
   ]),
   // PHASE G2: Auth enforcement rules
   {
