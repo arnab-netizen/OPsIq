@@ -208,17 +208,26 @@ export default function OwnerCommandCenterPage() {
               <section className="border rounded-lg p-4 bg-white">
                 <h2 className="font-bold mb-3">Domain scores</h2>
                 <div className="space-y-2">
-                  {(profile.domainScores ?? []).map((d: any) => (
-                    <div key={d.domain} className="flex justify-between items-center border-b py-1 text-sm">
-                      <span className="capitalize font-medium">{d.domain}</span>
-                      <span className="flex gap-2 items-center text-muted-foreground">
-                        <Badge variant={HEALTH_VARIANT(d.healthScore)}>health {Math.round(d.healthScore)}</Badge>
-                        <Badge variant={RISK_VARIANT(d.riskScore)}>risk {Math.round(d.riskScore)}</Badge>
-                        <span>opp {Math.round(d.opportunityScore)}</span>
-                        {DOMAIN_LINK[d.domain] && <Link href={DOMAIN_LINK[d.domain]} className="underline">open</Link>}
-                      </span>
-                    </div>
-                  ))}
+                  {(profile.domainScores ?? []).map((d: any) => {
+                    const findingCount: number = (d.topFindingCodes ?? []).length;
+                    const actionCount: number = (d.topActionCodes ?? []).length;
+                    return (
+                      <div key={d.domain} className="flex justify-between items-center border-b py-1 text-sm">
+                        <span className="capitalize font-medium">{d.domain}</span>
+                        <span className="flex flex-wrap gap-2 items-center text-muted-foreground">
+                          <Badge variant={HEALTH_VARIANT(d.healthScore)}>health {Math.round(d.healthScore)}</Badge>
+                          <Badge variant={RISK_VARIANT(d.riskScore)}>risk {Math.round(d.riskScore)}</Badge>
+                          <span>opp {Math.round(d.opportunityScore)}</span>
+                          <span className="text-xs">
+                            {findingCount > 0 ? `${findingCount} finding${findingCount !== 1 ? "s" : ""}` : <span className="text-destructive/70">no findings</span>}
+                            {" · "}
+                            {actionCount > 0 ? `${actionCount} action${actionCount !== 1 ? "s" : ""}` : "no actions"}
+                          </span>
+                          {DOMAIN_LINK[d.domain] && <Link href={DOMAIN_LINK[d.domain]} className="underline">open</Link>}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             </div>
