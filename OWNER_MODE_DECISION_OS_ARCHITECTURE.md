@@ -97,6 +97,32 @@ missing-input guidance via `services/owner-intake/intake.service.ts`
 
 ---
 
+---
+
+## Capability: Housekeeping Archetype (Decision-OS §33/§34) — Phase 14
+
+**Location:** `src/domain/business-facts/kpi-profiles.ts` — `HOUSEKEEPING` `KPIProfile`
++ `housekeeping` registry entry in `KPI_PROFILES`.
+
+**Why/where:** the archetype framework already existed (registered KPI profiles
+consumed via `getKPIProfile`); laundry passed in Phase 13, unlocking the second
+archetype. Housekeeping was absent. Added as a single registered data profile —
+no generic-engine, laundry, schema, route, or UI change — keeping archetype
+logic isolated (the established pattern).
+
+**Shape:** capacity/staff-bound economics — KPIs (jobs/cleaner/day, staff
+utilization, travel-time ratio, revenue/cleaner-hour, rework rate, client
+retention), the §34 "Staff Capacity Bottleneck" + quality/rework failure modes,
+labour/utilization/travel critical ratios, required data + minimum diagnosis
+points, and a capacity-&-scheduling action pattern.
+
+**Tests:** `src/__tests__/business-facts/kpi-profiles.test.ts` — registration/
+discoverability, capacity-centric KPIs, §34 staff-capacity failure mode,
+laundry-isolation (no chemical KPI in housekeeping; no cleaner KPI in laundry),
+fail-safe null on unknown archetype.
+
+---
+
 **Explicitly NOT added in Phase 1** (would be dead code / duplication):
 a new decision-status enum or prompt↔repo status mapping (repo status machine is
 already canonical); a new threshold config (centralized already); extraction of

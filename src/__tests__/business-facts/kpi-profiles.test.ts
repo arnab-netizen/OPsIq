@@ -130,6 +130,44 @@ describe("B11 KPI profiles — profile structure", () => {
   });
 });
 
+describe("Phase 14 — housekeeping archetype (registered, isolated)", () => {
+  it("retrieves housekeeping profile and is registered + discoverable", () => {
+    const profile = getKPIProfile("housekeeping");
+    expect(profile).not.toBeNull();
+    expect(profile!.industry_type).toBe("housekeeping");
+    expect(hasProfile("housekeeping")).toBe(true);
+    expect(listAvailableProfiles().some((p) => p.id === "housekeeping")).toBe(true);
+  });
+
+  it("is capacity/staff-centric (its differentiating KPIs)", () => {
+    const profile = getKPIProfile("housekeeping")!;
+    const kpiNames = profile.core_kpis.map((k) => k.kpi_name);
+    expect(kpiNames.some((n) => n.includes("Cleaner"))).toBe(true);
+    expect(kpiNames.some((n) => n.includes("Utilization"))).toBe(true);
+    expect(kpiNames.some((n) => n.includes("Travel"))).toBe(true);
+  });
+
+  it("models the §34 staff/capacity failure mode", () => {
+    const profile = getKPIProfile("housekeeping")!;
+    const failures = profile.common_failure_modes.map((f) => f.failure_name.toLowerCase());
+    expect(failures.some((f) => f.includes("capacity") || f.includes("staff"))).toBe(true);
+  });
+
+  it("is isolated from laundry (no cross-contamination of either profile)", () => {
+    const housekeeping = getKPIProfile("housekeeping")!;
+    const laundry = getKPIProfile("laundry")!;
+    expect(housekeeping.industry_type).not.toBe(laundry.industry_type);
+    const hkKpis = housekeeping.core_kpis.map((k) => k.kpi_name);
+    const launKpis = laundry.core_kpis.map((k) => k.kpi_name);
+    expect(hkKpis.some((n) => n.includes("Chemical"))).toBe(false); // laundry-only
+    expect(launKpis.some((n) => n.includes("Cleaner"))).toBe(false); // housekeeping-only
+  });
+
+  it("unknown archetype still fails safely (null), not silently to a known profile", () => {
+    expect(getKPIProfile("unknown_archetype_zzz")).toBeNull();
+  });
+});
+
 describe("B11 KPI profiles — acceptance gates", () => {
   it("gate 1: laundry profile includes required KPIs", () => {
     const profile = getKPIProfile("laundry")!;

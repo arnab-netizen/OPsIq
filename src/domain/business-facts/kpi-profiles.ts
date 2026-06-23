@@ -603,6 +603,155 @@ const LAUNDRY: KPIProfile = {
   ],
 };
 
+const HOUSEKEEPING: KPIProfile = {
+  industry_type: "housekeeping",
+  display_name: "Housekeeping / Cleaning Services",
+  description:
+    "Residential or commercial cleaning services where staff are dispatched to client sites; economics are labour- and capacity-bound.",
+
+  core_kpis: [
+    {
+      kpi_name: "Jobs per Cleaner per Day",
+      measurement_unit: "jobs",
+      calculation_method: "Completed jobs / active cleaners / working days",
+      frequency: "daily",
+      why_matters: "Primary throughput driver; too low means idle paid staff, too high risks quality",
+    },
+    {
+      kpi_name: "Staff Utilization",
+      measurement_unit: "%",
+      calculation_method: "Billable on-site hours / paid hours",
+      frequency: "weekly",
+      why_matters: "Below 60% = paying for idle/travel time; above 90% = no slack for sickness or churn",
+    },
+    {
+      kpi_name: "Travel Time Ratio",
+      measurement_unit: "%",
+      calculation_method: "Travel hours / total paid hours",
+      frequency: "weekly",
+      why_matters: "Travel is unbillable cost; dispersed jobs erode margin like delivery cost in laundry",
+    },
+    {
+      kpi_name: "Revenue per Cleaner-Hour",
+      measurement_unit: "₹/hour",
+      calculation_method: "Service revenue / total cleaner hours",
+      frequency: "monthly",
+      why_matters: "Core unit economics; must exceed fully-loaded wage + travel + overhead per hour",
+    },
+    {
+      kpi_name: "Rework / Complaint Rate",
+      measurement_unit: "%",
+      calculation_method: "Jobs requiring re-clean or refund / total jobs",
+      frequency: "monthly",
+      why_matters: "Rework consumes capacity twice and drives churn in a referral-driven business",
+    },
+    {
+      kpi_name: "Client Retention Rate",
+      measurement_unit: "%",
+      calculation_method: "Recurring clients retained / clients at period start",
+      frequency: "monthly",
+      why_matters: "Recurring contracts stabilise capacity planning and reduce acquisition cost",
+    },
+  ],
+
+  common_failure_modes: [
+    {
+      failure_name: "Staff Capacity Bottleneck",
+      symptoms: [
+        "Turning away jobs / long booking lead times",
+        "Owner or supervisor covering shifts personally",
+        "Overtime rising while new bookings stall",
+      ],
+      typical_root_causes: [
+        "Under-hiring relative to demand",
+        "High cleaner churn / absenteeism",
+        "Poor scheduling and route clustering",
+      ],
+      financial_impact: "Revenue capped by headcount; growth blocked and existing staff burn out",
+      timeline_if_unchecked: "Lost bookings weekly; churn compounds within 1-2 months",
+    },
+    {
+      failure_name: "Quality / Rework Spiral",
+      symptoms: ["Rising complaints and re-cleans", "Client cancellations after first job"],
+      typical_root_causes: ["Rushed jobs to hit capacity", "Inadequate training", "No checklist/QA"],
+      financial_impact: "Rework consumes capacity twice; referral pipeline dries up",
+      timeline_if_unchecked: "Reputation and retention decline in 2-3 months",
+    },
+  ],
+
+  critical_ratios: [
+    {
+      ratio_name: "Gross Margin",
+      numerator: "Revenue - cleaner wages - travel - supplies",
+      denominator: "Revenue",
+      healthy_range: { min: 0.25, max: 0.45 },
+      unit: "percentage",
+      why_critical: "Labour-heavy; below 25% cannot cover supervision, admin and overhead",
+    },
+    {
+      ratio_name: "Staff Utilization",
+      numerator: "Billable on-site hours",
+      denominator: "Paid hours",
+      healthy_range: { min: 0.6, max: 0.85 },
+      unit: "percentage",
+      why_critical: "Below 60% bleeds idle wage cost; above 85% leaves no resilience for absence",
+    },
+    {
+      ratio_name: "Travel Time Ratio",
+      numerator: "Travel hours",
+      denominator: "Total paid hours",
+      healthy_range: { min: 0.0, max: 0.2 },
+      unit: "percentage",
+      why_critical: "Above 20% means routing inefficiency is eating margin",
+    },
+  ],
+
+  required_data_sources: [
+    "Jobs by client with location, duration and assigned cleaner",
+    "Cleaner roster with paid vs billable hours",
+    "Wage and overtime records",
+    "Travel/transport costs or mileage",
+    "Supplies cost",
+    "Complaint / re-clean log",
+    "Client contract and retention data",
+  ],
+
+  minimum_data_points_for_diagnosis: [
+    "30+ days of job data with durations and assigned cleaners",
+    "Roster with paid vs billable hours for 2+ weeks",
+    "Wage records for 1+ month",
+    "Complaint/re-clean log for 2+ months",
+  ],
+
+  action_patterns: [
+    {
+      pattern_name: "Capacity & Scheduling Optimization",
+      when_to_apply: "When staff utilization > 85% with lost bookings, or travel ratio > 20%",
+      typical_steps: [
+        "Cluster jobs geographically to cut travel time",
+        "Forecast demand and pre-hire/cross-train before peak",
+        "Introduce a QA checklist to cut rework that wastes capacity",
+        "Tier recurring contracts to smooth scheduling",
+      ],
+      expected_timeline: "4-6 weeks to test and measure",
+      success_metrics: ["Utilization 60-85%", "Travel ratio < 15%", "Rework rate < 5%"],
+    },
+  ],
+
+  benchmark_notes:
+    "Housekeeping economics are dominated by labour and travel; capacity (headcount × utilization) is the binding constraint, analogous to machine capacity in laundry but human and churn-prone.",
+  applicable_benchmarks: [
+    "Cleaner wages: 45-60% of revenue",
+    "Travel: under 15% of paid hours for clustered routes",
+    "Supplies: 5-10% of revenue",
+  ],
+  caveats: [
+    "Capacity is human and churn-sensitive; staffing buffers matter",
+    "Seasonality (spring cleaning, holidays, move-outs) shifts demand",
+    "Trust and reliability drive retention in a referral-led market",
+  ],
+};
+
 // --- Profile Registry ---
 
 export const KPI_PROFILES: Record<string, KPIProfile> = {
@@ -610,6 +759,7 @@ export const KPI_PROFILES: Record<string, KPIProfile> = {
   saas: SAAS,
   restaurant: RESTAURANT,
   laundry: LAUNDRY,
+  housekeeping: HOUSEKEEPING,
 };
 
 /**

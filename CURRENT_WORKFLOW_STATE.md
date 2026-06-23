@@ -51,7 +51,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 12 | Owner dashboard command center | **VERIFIED (UI_TESTED + API_TESTED)** — 167 tests green |
 | 12.5 | Trust & explainability QA | **VERIFIED (UI_TESTED)** — 84 trust/explainability/adversarial tests green |
 | 13 | Laundry vertical slice (end-to-end) | **VERIFIED (OWNER_FLOW_TESTED)** — full-loop + SMB harness 716 tests green |
-| 14 | Housekeeping archetype | NOT_STARTED |
+| 14 | Housekeeping archetype | **IMPLEMENTED (STATIC_TESTED_ONLY)** — registered + isolated; kpi-profiles 37 tests green |
 | 15 | Benchmark harness | NOT_STARTED |
 | 16 | Final reliability gate | NOT_STARTED |
 
@@ -86,7 +86,16 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 13 verified (no code). Proceed to **Phase 14 — Housekeeping Archetype**: verify housekeeping archetype registration/KPIs are isolated from generic engine + laundry. Run housekeeping/operations + archetype tests.
+Phase 14 implemented. Proceed to **Phase 15 — Owner Mode Benchmark Harness**: verify the benchmark runner + case format + scoring (root-cause/first-action accuracy, dangerous/hallucinated/overclaim rates) exists; run benchmark suites.
+
+### Phase 14 decision record (housekeeping archetype) — NEW CODE (1 profile + tests)
+- **Gap found:** `KPI_PROFILES` registered only local_service/saas/restaurant/laundry — **no dedicated housekeeping archetype** (laundry passed in Phase 13, so housekeeping is now allowed per §33).
+- **Minimum-code:** added one `HOUSEKEEPING` `KPIProfile` data record + `housekeeping:` registry entry in `domain/business-facts/kpi-profiles.ts` (capacity/staff-centric KPIs: jobs/cleaner/day, staff utilization, travel-time ratio, revenue/cleaner-hour, rework rate, retention; §34 "Staff Capacity Bottleneck" failure mode; labour/travel critical ratios; capacity-scheduling action pattern). **No generic-engine change, no laundry change, no schema/route/UI.** Isolated as a registered data profile (the archetype pattern).
+- **Tests:** extended `business-facts/kpi-profiles.test.ts` — registration/discoverability, capacity-centric KPIs, §34 staff-capacity failure mode, **laundry-isolation (no chemical KPI in housekeeping, no cleaner KPI in laundry)**, fail-safe null on unknown archetype. 37/37 pass; tsc 0 errors.
+- **Regression:** business-facts (47 files) + owner-mode domain green EXCEPT one **PRE-EXISTING** failure (see below) unrelated to this change.
+
+### PRE-EXISTING baseline failure (documented per §1.20 — NOT introduced, NOT worsened)
+`src/__tests__/business-facts/intake-adapter.test.ts > "converts a valid finance CSV intake into a VALID business-facts contract"` — asserts `intake.validationStatus === "valid"` but gets `"partial"` (fails in `buildCsvIntake`, before any KPI-profile use; intake-adapter does not import kpi-profiles). Confirmed failing on committed HEAD with Phase-14 changes stashed. Out of owner-mode scope; left untouched to avoid speculative cross-module change. Flagged here so later slices do not hide a new regression behind it.
 
 ### Phase 13 decision record (laundry vertical slice) — VERIFICATION ONLY (no code)
 - **End-to-end owner loop:** `domain/owner-mode/full-loop-validation.test.ts` exercises input-quality→diagnosis→decision→action→evidence→verification→outcome→learning-eligibility→dashboard. Laundry archetype in `domain/business-facts/kpi-profiles.ts` (kg/pieces/day, chemical cost/kg, delivery-cost ratio, repeat-customer rate, machine utilization).
