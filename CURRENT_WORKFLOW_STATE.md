@@ -39,7 +39,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 0.5 | Baseline regression harness (install deps, run baseline, map flows→tests) | **STATIC_TESTED_ONLY** (deps installed; owner-mode baseline green; DB tests blocked — see below) |
 | 1 | Status/threshold canon + source-classification mapping | **STATIC_TESTED_ONLY** (canon verified; source-classification gap G4 closed) |
 | 2 | Data quality + input guidance gate | **STATIC_TESTED_ONLY** (scoring/guidance PRESENT+verified; §15 permission-state classifier added) |
-| 3 | Financial survival + unit economics | NOT_STARTED (impl PARTIAL; verify/extract helpers) |
+| 3 | Financial survival + unit economics | **VERIFIED (STATIC_TESTED_ONLY)** — already implemented; 229 tests green; no code added |
 | 4 | Decision + evidence snapshot | NOT_STARTED (impl PARTIAL; status-canon mapping) |
 | 5 | Recommendation portfolio + feasibility | NOT_STARTED (impl PRESENT; verify) |
 | 6 | Scenario / what-if | NOT_STARTED (engine PRESENT; verify) |
@@ -86,7 +86,17 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 2 complete (STATIC_TESTED_ONLY). Proceed to **Phase 3 — Financial Survival + Unit Economics**: verify existing survival/unit-economics logic (`consulting-engine/survival-prioritization.ts`, `growth/unit-economics` route, owner-finance/cashflow services); extract the named `calculateFinancialSurvival` / `calculateUnitEconomics` pure helpers (Gap G2) only where a real caller/test needs them; prove the growth-affordability and insufficient-data disclosure gates. No DB-tested claims until a Postgres test DB is provisioned.
+Phase 3 verified (no code). Proceed to **Phase 4 — Decision + Evidence Snapshot on Existing Recommendation Path**: verify `OwnerDecision`/`owner-decision.ts` validation + approval states + owner-only enforcement and the evidence bundle/snapshot path; close only a precise gap if one exists. No DB-tested claims until a Postgres test DB is provisioned.
+
+### Phase 3 decision record (financial survival + unit economics) — VERIFICATION ONLY
+Already implemented and tested; **no code added** (aliasing the prompt's `calculateFinancialSurvival`/`calculateUnitEconomics` over existing functions would be forbidden duplication, Gap G2 resolved as "exists under canonical names").
+- **Survival (pure):** `domain/owner-finance/metrics.ts` — `survivalState()` (SAFE/WATCH/AT_RISK/CRITICAL/INSOLVENT_RISK), `survivalTier()`, `computeFinancialMetrics()`, `cashRunwayDays()`, `breakEvenRevenue()`, gross/net/contribution margins. Parallel `domain/owner-cashflow/metrics.ts`. `SURVIVAL_RUNWAY_MONTHS=3` in `consulting-engine/survival-prioritization.ts`.
+- **Insufficient-financial-data:** `domain/owner-finance/data-confidence.ts` (`calculateDataConfidence`, `missingCriticalFinanceInputs`) lowers confidence on missing inputs.
+- **Growth-affordability gate (fail-closed):** `services/financial-constraints.ts` `evaluateFinancialConstraints()` → `canAffordGrowth/Experiment/Acquisition/Talent`; blocks growth when survival at risk / runway short / debt high.
+- **Cash-critical defensive priority:** `services/consulting-engine/survival-prioritization.ts` `chooseFirstAction()`.
+- **Unit economics:** `services/growth/unit-economics-engine.ts` — CAC, LTV, CAC-payback, LTV:CAC ratio, contribution metrics + break-even units, `assessUnitEconomicsHealth`; route `POST /api/growth/unit-economics`.
+- **Tests verified green:** owner-finance metrics+diagnosis, owner-cashflow, financial-constraints, survival-prioritization, unit-economics-engine, survival-intelligence → **11 files / 229 passed, 5 DB-gated skipped**.
+- **Known limitation:** persistence (`owner-finance/persistence.db.test.ts`, `services.db.test.ts`) is DB-gated and not run here (no DATABASE_URL) → no DB_TESTED claim.
 
 ### Phase 2 decision record (data quality + input guidance)
 - **Already implemented + verified:** `domain/business-facts/data-quality.ts` (`scoreDataQuality` → `data_quality_score`, 7 dimensions, `high_confidence_blocked`, `recommendation_confidence_tier/cap`), completeness/recency/source-reliability/extraction subscores, and the §12 `<50` high-confidence block. Owner-facing missing-input guidance exists live via `services/owner-intake/intake.service.ts` (`getIntakeDashboard` → `priorityGuidance`) behind route `GET /api/owner/intake/dashboard`.
