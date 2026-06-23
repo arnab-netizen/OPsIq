@@ -22,6 +22,7 @@ import {
   type OwnerAction,
   type BusinessConditionProfile,
 } from "@/domain/owner-spine/contracts";
+import { computeMissingInputsWithPriority, type MissingInput } from "@/domain/owner-finance/data-confidence";
 
 /** Map a persisted finance cycle row to a spine DomainScore (pure). */
 export function financeCycleToDomainScore(cycle: any): DomainScore {
@@ -322,6 +323,7 @@ export interface BusinessConditionResult {
   profile: BusinessConditionProfile | null;
   isStaleData: boolean;
   dataAgeDays: number | null;
+  missingInputsWithPriority: MissingInput[];
 }
 
 /**
@@ -346,7 +348,7 @@ export async function getBusinessCondition(
   if (!selectedBusinessId && businesses.length > 0) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null, isStaleData: false, dataAgeDays: null };
+    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null, isStaleData: false, dataAgeDays: null, missingInputsWithPriority: [] };
   }
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
@@ -478,6 +480,10 @@ export async function getBusinessCondition(
     isStaleData = ageDays > STALE_DAYS;
   }
 
+  const missingInputsWithPriority = latestFinanceSnapshot
+    ? computeMissingInputsWithPriority(latestFinanceSnapshot as Record<string, unknown>)
+    : [];
+
   if (domainScores.length === 0) {
     return {
       businesses: businessList,
@@ -487,6 +493,7 @@ export async function getBusinessCondition(
       profile: null,
       isStaleData: false,
       dataAgeDays: null,
+      missingInputsWithPriority,
     };
   }
 
@@ -507,5 +514,6 @@ export async function getBusinessCondition(
     profile,
     isStaleData,
     dataAgeDays,
+    missingInputsWithPriority,
   };
 }

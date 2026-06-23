@@ -54,10 +54,68 @@ const IMPORTANT_FIELDS: (keyof FinancialSnapshotInput)[] = [
   "refundAmount",
 ];
 
+export type MissingInputPriority = "CRITICAL" | "IMPORTANT";
+
+export interface MissingInput {
+  field: string;
+  priority: MissingInputPriority;
+}
+
 export interface DataConfidenceResult {
   dataConfidenceScore: number; // 0..100
   missingCritical: string[];
   isStale: boolean;
+}
+
+const CRITICAL_FIELDS = new Set(["revenue", "costs", "cashOnHand"]);
+
+/**
+ * Classify a missing finance input field by priority tier.
+ * CRITICAL: diagnosis is unreliable without it.
+ * IMPORTANT: diagnosis is less accurate without it.
+ */
+export function missingInputPriority(field: string): MissingInputPriority {
+  return CRITICAL_FIELDS.has(field) ? "CRITICAL" : "IMPORTANT";
+}
+
+/**
+ * Compute both CRITICAL and IMPORTANT missing inputs from a snapshot row.
+ * Operates on raw snapshot DB fields (camelCase Prisma names).
+ */
+export function computeMissingInputsWithPriority(snapshot: Record<string, unknown>): MissingInput[] {
+  const result: MissingInput[] = [];
+
+  function miss(v: unknown): boolean {
+    return v === null || v === undefined || (typeof v === "number" && !Number.isFinite(v));
+  }
+
+  // Critical fields
+  if (miss(snapshot.revenue)) result.push({ field: "revenue", priority: "CRITICAL" });
+  const hasCost = !miss(snapshot.costOfGoods) || !miss(snapshot.fixedCosts) ||
+    !miss(snapshot.variableCosts) || !miss(snapshot.rent) ||
+    !miss(snapshot.payroll) || !miss(snapshot.utilities);
+  if (!hasCost) result.push({ field: "costs", priority: "CRITICAL" });
+  if (miss(snapshot.cashOnHand)) result.push({ field: "cashOnHand", priority: "CRITICAL" });
+
+  // Important fields
+  const importantChecks: [string, string][] = [
+    ["costOfGoods", "costOfGoods"],
+    ["fixedCosts", "fixedCosts"],
+    ["payroll", "payroll"],
+    ["debtPayments", "debtPayments"],
+    ["receivables", "receivables"],
+    ["payables", "payables"],
+    ["ownerWithdrawals", "ownerWithdrawals"],
+    ["orderCount", "orderCount"],
+    ["customerCount", "customerCount"],
+    ["discountAmount", "discountAmount"],
+    ["refundReworkCost", "refundReworkCost"],
+  ];
+  for (const [snapshotKey, label] of importantChecks) {
+    if (miss(snapshot[snapshotKey])) result.push({ field: label, priority: "IMPORTANT" });
+  }
+
+  return result;
 }
 
 /** Whether the reporting period ended more than `staleDays` before `now`. */

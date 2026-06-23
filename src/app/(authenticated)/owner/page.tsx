@@ -80,6 +80,7 @@ export default function OwnerCommandCenterPage() {
   const profile = data?.profile ?? null;
   const next = profile?.recommendedNextAction ?? null;
   const missing: string[] = profile?.missingCriticalData ?? [];
+  const missingWithPriority: Array<{ field: string; priority: string }> = data?.missingInputsWithPriority ?? [];
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
@@ -165,7 +166,22 @@ export default function OwnerCommandCenterPage() {
                 </div>
               )}
 
-              {missing.length > 0 && (
+              {missingWithPriority.length > 0 && (
+                <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm space-y-1">
+                  <strong>Missing finance inputs:</strong>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {missingWithPriority.map((m: any) => (
+                      <span key={m.field} className="inline-flex items-center gap-1">
+                        <Badge variant={m.priority === "CRITICAL" ? "destructive" : "warning"}>{m.priority}</Badge>
+                        <span>{m.field}</span>
+                      </span>
+                    ))}
+                  </div>
+                  <Link href="/owner/intake" className="text-xs underline">Add missing data →</Link>
+                </div>
+              )}
+
+              {missing.length > 0 && missingWithPriority.length === 0 && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
                   <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.
                 </div>
