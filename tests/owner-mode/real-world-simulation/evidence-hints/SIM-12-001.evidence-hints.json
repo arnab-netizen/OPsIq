@@ -1,0 +1,90 @@
+{
+  "case_id": "SIM-12-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "annual revenue has declined from $2.9M to $2.2M over two years — a 24% decline",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "24% revenue decline over two years is a critical adverse financial health signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "gross margin has compressed from 28% to 18% over the same two-year period — an independent deterioration from the revenue decline",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Gross margin compression from 28% to 18% occurring simultaneously with revenue decline suggests two separate causes. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "the owner has not tracked project-level margins and cannot identify which project types or client relationships are driving each decline",
+      "dimension": "process_maturity",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of project-level margin tracking preventing diagnosis of the cause of either decline is a critical adverse process signal. process_maturity; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "the owner generates all new business through personal consultations and has had fewer available hours for consultations as operations have demanded more time",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner serving as the sole business development resource while operational demands increase is an adverse capacity signal. operational_efficiency; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "building renovation; revenue $2.9M to $2.2M; margin 28% to 18%; no project margin tracking; owner sole business developer; input costs not tracked",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the building materials sector has seen broad cost increases in the period — giving a plausible external explanation for margin pressure",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Industry-wide materials cost increases are a misleading signal that they explain this specific margin compression — without project-level data the attribution cannot be confirmed."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the revenue decline coincided with a broader residential renovation market slowdown in the region",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "A market-wide slowdown is a misleading signal that it explains this business's revenue decline — without project pipeline data the cause cannot be attributed to market conditions alone."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "margin_erosion (margin percentage elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-12-001 is SUPPORTED via margin_erosion as primary archetype. Mixed-cause: margin compression is the primary supported signal. Revenue decline may map to demand_generation_failure as secondary. No must_identify vocabulary."
+}

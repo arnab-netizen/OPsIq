@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-13-004",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "key_person_dependency",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "45% of total revenue ($310K of $685K) is concentrated in a single government agency client",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue concentration of 45% in a single client is a critical adverse dependency signal. team_capability; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "net profit of $12,400 on $685K revenue (1.8%) despite 80% revenue growth in 18 months",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "1.8% net margin despite 80% revenue growth is a critical adverse margin signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "cost base was restructured to service the enterprise client — contractor, LMS licence, reporting infrastructure added",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Cost base rebuilt for one client creates structural fragility if the client relationship changes. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "government contract renewal is due in eight months and no alternative enterprise client is in the pipeline",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Imminent contract renewal with no pipeline alternative is a critical adverse concentration risk signal. market_position; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "digital training; $685K revenue; $310K from government client; 1.8% net margin; cost restructured for enterprise; contract renewal in 8 months; no enterprise pipeline",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): 80% revenue growth in 18 months signals successful enterprise market entry and validated approach",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth driven by a single client is a misleading enterprise success signal — it validates one relationship, not a market."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): a government agency client provides contract stability and market credibility",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Government contract credibility is a misleading stability signal when the contract represents 45% of revenue and renews in eight months."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "government_contract_value",
+      "canonical_key": "revenueConcentrationPct",
+      "evidence_item_index": 0,
+      "value_override": 45,
+      "transform_note": "$310K of $685K total revenue = 45% revenue concentration in one client"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "revenueConcentrationPct",
+      "would_improve_pattern": "key_person (revenue concentration elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-13-004 is SUPPORTED via key_person_dependency (revenue concentration variant). Single client concentration with rebuilt cost base. No must_identify vocabulary."
+}

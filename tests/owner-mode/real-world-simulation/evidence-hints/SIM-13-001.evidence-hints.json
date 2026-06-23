@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-13-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner cannot meet payroll this week despite reporting steady monthly revenue of $52K for eight months",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Payroll shortfall in the presence of reported steady revenue is a critical adverse working capital signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "owner estimates outstanding invoices at approximately $40,000 but has no formal tracking system",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Unverified estimate of outstanding invoices with no formal AR system is a critical adverse visibility signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "invoicing is done via Word PDF emails with no accounts receivable follow-up schedule",
+      "dimension": "process_maturity",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Manual ad hoc invoicing without a collection process is a critical adverse process maturity signal. process_maturity; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "owner has drawn on personal savings twice in the past four months to cover shortfalls",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Repeated personal savings drawdowns is a critical adverse liquidity signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "cleaning services; $52K monthly revenue; $3,200 cash today; $18,400 payroll due Friday; no AR system; Word invoicing; personal savings borrowed twice in 4 months",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue has been steady at $52K per month for eight months suggesting no revenue problem",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Steady revenue is a misleading signal when cash is insufficient for payroll — the issue is likely timing between invoice issue and receipt."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): a large invoice of approximately $22,000 is expected to clear this week",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Expected invoice clearance is a misleading one-off relief signal — it does not address the structural collection process gap that created the shortfall."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "owner_estimate_of_outstanding_invoices",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 1,
+      "value_override": 45,
+      "transform_note": "Estimated $40K outstanding on $52K monthly revenue implies approximately 30-45 days average outstanding; value_override 45 days as conservative proxy"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "receivablesAging",
+      "would_improve_pattern": "working_capital (receivables aging elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-13-001 is SUPPORTED via working_capital_stress. Missing AR data: sidecar cannot resolve collection lag without bank statements. No must_identify vocabulary."
+}

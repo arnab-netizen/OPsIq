@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-08-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "debt_solvency_pressure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "three separate refinancing transactions over twenty-four months with total debt increasing from $95K to $210K across the same period",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Three refinancings with growing total debt is a critical adverse debt spiral signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "current monthly debt repayment of $14,800 on $210K outstanding balance",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Monthly debt service of $14,800 is a critical adverse cash flow signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "revenue has remained approximately stable at $580K over the twenty-four month refinancing period",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Stable revenue during a period of growing debt is an adverse signal that the debt growth is not investment-driven. financial_health."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "owner attributes the need to refinance to interest rate increases in the market over the past two years",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner attribution of refinancing need to interest rate increases while total debt grows is an adverse plausibility signal requiring verification. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "hospitality business; $580K stable revenue; debt grew from $95K to $210K over 24 months; 3 refinancings; $14,800/month repayment; owner attributes to rate increases",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): interest rates in the market increased approximately 45 basis points over the period the owner references",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "A 45 basis point rate increase is a misleading signal — the arithmetic savings from a 45bp reduction on $210K of debt are approximately $2,340 per year, which cannot explain $14,800/month repayments or three refinancings."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the owner has maintained relationships with two lenders and describes them as supportive",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Lender willingness to refinance is a misleading signal — it reflects credit appetite, not operational viability."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "current_debt_total",
+      "canonical_key": "leverageRatio",
+      "evidence_item_index": 1,
+      "value_override": 4.3,
+      "transform_note": "$210K debt; $14,800/month repayment = $177,600/year on $580K revenue"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "interestCoverage",
+      "would_improve_pattern": "debt_solvency (interest coverage elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-08-003 is SUPPORTED via debt_solvency_pressure archetype. The adversarial layer (rate increase explanation) should be defeated by debt growth evidence. No must_identify vocabulary."
+}

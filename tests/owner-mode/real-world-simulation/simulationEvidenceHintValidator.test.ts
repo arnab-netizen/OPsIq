@@ -18,6 +18,14 @@ const EXPECTED_CASE_IDS = [
   "SIM-04-001", "SIM-04-002",
   "SIM-05-001", "SIM-05-002",
   "SIM-06-001", "SIM-06-002",
+  "SIM-07-001", "SIM-07-002", "SIM-07-003",
+  "SIM-08-001", "SIM-08-002", "SIM-08-003",
+  "SIM-09-001", "SIM-09-002", "SIM-09-003",
+  "SIM-10-001", "SIM-10-002", "SIM-10-003",
+  "SIM-11-001", "SIM-11-002",
+  "SIM-12-001", "SIM-12-002", "SIM-12-003", "SIM-12-004",
+  "SIM-13-001", "SIM-13-002", "SIM-13-003", "SIM-13-004",
+  "SIM-13-005", "SIM-13-006", "SIM-13-007", "SIM-13-008",
 ];
 
 function loadSidecar(caseId: string): unknown {
@@ -500,10 +508,10 @@ describe("fail-closed: invalid root type", () => {
 
 // ── Integration: all 12 real sidecar files ────────────────────────────────────
 
-describe("All 12 simulation sidecar files exist and pass validation", () => {
-  it("evidence-hints directory contains exactly 12 sidecar files", () => {
+describe("All 38 simulation sidecar files exist and pass validation", () => {
+  it("evidence-hints directory contains exactly 38 sidecar files", () => {
     const files = readdirSync(HINTS_DIR).filter((f) => f.endsWith(".evidence-hints.json"));
-    expect(files).toHaveLength(12);
+    expect(files).toHaveLength(38);
   });
 
   for (const caseId of EXPECTED_CASE_IDS) {

@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-12-002",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "average debtor days of 68 against 30-day payment terms — receivables running at more than double the agreed collection period",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "68-day average collection on 30-day terms is a critical adverse working capital signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "primary demand channel (trade show calendar) is delivering approximately half the lead volume of twelve months ago",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Primary channel delivering half the lead volume is a critical adverse demand generation signal. market_position; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "the business has no alternative demand channel and all new client relationships originate from trade shows",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Single channel dependency with declining channel performance is a critical adverse market position signal. market_position; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "the owner is requesting a credit facility to address cash pressure without having analysed whether the cash pressure is from collection lag or pipeline decline",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Credit facility request without diagnosis of whether the cash issue is structural or timing is an adverse evidence signal. financial_health."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "B2B office supplies; AR at 68 days vs 30-day terms; trade show leads at 50% of prior volume; credit facility request; no alternative demand channel",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the AR collection lag and the reduced lead volume together create a cash shortfall that appears to be a single working capital problem solvable with a credit line",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "The surface appearance of a single working capital problem is a misleading signal — these are two independent structural failures with different causes and different interventions."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the business has historically been profitable and has never required external financing before",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Historical profitability and no prior debt is a misleading stability signal — it does not mean a credit facility is the correct intervention when the cash shortfall has two independent structural causes."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "average_debtor_days",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 0,
+      "value_override": 68,
+      "transform_note": "68-day average debtor collection period directly represents receivables aging"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "receivablesAging",
+      "would_improve_pattern": "working_capital (receivables aging elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-12-002 is SUPPORTED via working_capital_stress as primary archetype. Secondary: demand_generation_failure. No must_identify vocabulary."
+}

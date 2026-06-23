@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-08-002",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "debt_solvency_pressure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner has not drawn a personal salary in eleven months despite reporting the business is profitable",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Eleven months without owner salary while claiming profitability is a critical adverse debt signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "monthly debt service of $12,400 on $340K outstanding balance consuming a significant proportion of any operating surplus",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Debt service consuming a large proportion of operating cash is a critical adverse leverage signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "owner believes the business is profitable but cannot quantify the net position after debt service",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Unquantified profitability claim in the presence of high debt service is an adverse evidence discipline signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "revenue has grown from $740K to $920K over two years but the owner's financial position has not improved commensurately",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth without owner financial improvement is an adverse structural signal. financial_health."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "business services; $920K revenue; $340K debt; $12,400/month repayment; 11 months without owner salary; stated 40% gross margin",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary of the debt and financial situation. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue grew from $740K to $920K over two years — a 24% increase",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth is a misleading signal when owner salary deferral and debt service indicate the growth has not translated to surplus cash."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the owner describes gross margin as approximately 40% on $920K revenue",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "A stated 40% gross margin is a misleading profitability signal when eleven months of salary deferral and $340K debt suggest the true net position is adverse."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "total_debt",
+      "canonical_key": "leverageRatio",
+      "evidence_item_index": 1,
+      "value_override": 3.0,
+      "transform_note": "$340K debt on $920K revenue; approximate leverage ratio 0.37x annual revenue but monthly debt service is $12,400"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "interestCoverage",
+      "would_improve_pattern": "debt_solvency (interest coverage elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-08-002 is SUPPORTED via debt_solvency_pressure archetype. Findings paraphrased. No must_identify vocabulary."
+}

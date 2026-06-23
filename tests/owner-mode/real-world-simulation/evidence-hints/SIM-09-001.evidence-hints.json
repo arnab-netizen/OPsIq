@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-09-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "unit_economics_failure",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "six consecutive months of losses since July with the business trading below its costs each month",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Six consecutive loss months is a critical adverse financial health signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "three separate revenue initiatives attempted over six months — all produced insufficient impact on the loss position",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Three failed revenue interventions without addressing the cost side is a critical adverse turnaround signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "owner has been drawing on personal savings to fund the business losses without setting a point at which funding would stop",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Personal savings funding business losses without a defined stop condition is a critical adverse risk signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "monthly fixed costs of approximately $28,000 against monthly revenue averaging $22,000 over the six-month loss period",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Fixed costs exceeding revenue by approximately $6,000 per month is a critical adverse unit economics signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "fitness studio; $22K avg monthly revenue; $28K monthly fixed costs; 6 consecutive loss months; 3 failed revenue interventions; owner funding from savings",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the membership renewal rate is 72% suggesting most members are satisfied with the service",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "High member renewal rate is a misleading signal when the monthly revenue is structurally below fixed costs — more members would not resolve the per-member economics if the cost base is too high."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the owner recently secured a corporate contract worth $3,200 per month and expects it to improve the position significantly",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "A new $3,200/month contract is a misleading signal — it does not bridge the $6,000/month gap and represents a fourth revenue initiative without a cost-side analysis."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "monthly_fixed_costs",
+      "canonical_key": "contributionMargin",
+      "evidence_item_index": 3,
+      "value_override": -6000,
+      "transform_note": "Monthly cost excess over revenue: $22,000 revenue minus $28,000 fixed costs = -$6,000 per month"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "contributionMargin",
+      "would_improve_pattern": "unit_economics (contribution margin per member elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-09-001 is SUPPORTED via unit_economics_failure archetype. Six months of costs exceeding revenue is a unit economics failure. No must_identify vocabulary."
+}

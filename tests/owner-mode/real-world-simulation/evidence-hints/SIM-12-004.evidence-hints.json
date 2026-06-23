@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-12-004",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "SEO retainer service representing 40% of total revenue has not had a pricing review in three years despite the market changing",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "40% of revenue on a three-year-old price point with no review is a critical adverse margin signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "one specialist manages 38 of 40 SEO retainer clients — the entirety of a service line generating $840K per year sits with one individual",
+      "dimension": "team_capability",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Single specialist responsible for 38 of 40 clients in a $840K service line is a critical adverse key-person dependency signal. team_capability; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "no service-line margin data is available — the 52% blended gross margin is calculated across all revenue without breakdown by service type",
+      "dimension": "process_maturity",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Blended margin without service-line breakdown makes it impossible to assess whether the highest-volume service is profitable. process_maturity; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "owner has been considering hiring a second SEO specialist but cannot determine whether the service line margin supports the additional cost",
+      "dimension": "process_maturity",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Inability to assess whether margin supports a hire due to absence of service-line data is an adverse process maturity signal. process_maturity."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "digital marketing agency; $2.1M revenue; 52% blended margin; SEO retainer $840K at 3-year price; 1 specialist on 38 clients; no service-line P&L",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): overall gross margin of 52% is healthy for a digital marketing agency and suggests the business is well-managed",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "A 52% blended margin is a misleading signal when 40% of revenue has no service-line margin data and is priced at a three-year-old rate — the blended figure may conceal a loss-making service line."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the SEO retainer has been the agency's highest-revenue service for three years and has grown its client count from 20 to 40 in that time",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Growing client count in the SEO retainer is a misleading demand signal — it does not indicate the service is profitable at the current price point, particularly with one specialist managing 38 clients."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "seo_clients_single_specialist",
+      "canonical_key": "revenueConcentrationPct",
+      "evidence_item_index": 1,
+      "value_override": 38,
+      "transform_note": "38 of 40 SEO retainer clients managed by one specialist — key-person concentration"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "margin_erosion (service-line margin elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-12-004 is SUPPORTED via margin_erosion as primary archetype. Secondary: key_person_dependency. No must_identify vocabulary."
+}

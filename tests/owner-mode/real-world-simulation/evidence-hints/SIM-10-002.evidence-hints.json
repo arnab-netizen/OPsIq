@@ -1,0 +1,90 @@
+{
+  "case_id": "SIM-10-002",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "customer_retention_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "three of twelve acquired clients have transferred to other accounting firms in the ten months since the acquisition closed",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Three client departures from twelve acquired clients in ten months is a critical adverse retention signal. customer_retention; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "acquired clients have been onboarded to new systems and contact points without maintaining continuity with the previous principal",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "System and contact change without continuity is a critical adverse integration signal. customer_retention; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "the owner has not contacted departing clients directly to understand why they left",
+      "dimension": "process_maturity",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "No systematic follow-up with departed clients is an adverse process maturity signal. process_maturity."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "the acquired firm's principal who held the client relationships did not remain post-acquisition and did not personally introduce clients to the new firm",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Previous principal not remaining post-acquisition with no structured client introduction is a critical adverse handover signal. customer_retention; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "accounting practice; 12 acquired clients; 3 departed in 10 months; previous principal left; new systems introduced; no departure interviews",
+      "dimension": "customer_retention",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue is tracking approximately at the projected level for the acquisition despite the three client departures",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue at projection is a misleading signal when three of twelve clients have departed — the projection may have overestimated client retention or underestimated new client additions."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the owner attributes the three client departures to clients who were already considering moving before the acquisition",
+      "dimension": "customer_retention",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Owner attribution of departures to pre-existing client intent is a misleading signal — it cannot be verified without exit interviews and does not explain why three of twelve departed within ten months."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-10-002 is SUPPORTED via customer_retention_erosion. Post-acquisition client departure maps to retention failure. No must_identify vocabulary."
+}

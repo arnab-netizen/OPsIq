@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-13-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "net profit declined from $74,400 to $28,000 while revenue grew from $620K to $890K — a 62% profit decline alongside 44% revenue growth",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Profit declining sharply while revenue grows is a critical adverse margin signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "subcontractor rates have increased twice in two years without any corresponding adjustment to the client price schedule",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Input cost increases not passed through to pricing is a critical adverse margin compression signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "pricing is set using a rate schedule established three years ago that has not been reviewed despite two subcontractor rate increases",
+      "dimension": "process_maturity",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Three-year-old pricing schedule unadjusted for cost increases is a critical adverse pricing process signal. process_maturity; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "owner tracks performance by total revenue only with no job-level margin tracking",
+      "dimension": "process_maturity",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of job-level margin tracking while growing a trades business is an adverse process maturity signal. process_maturity."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "residential painting; revenue $620K to $890K; net profit $74,400 to $28,000; 3-year rate schedule; 2 subcontractor rate increases; 3 crews",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue growth of 44% over two years strongly signals a successfully scaling business",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth is the primary misleading signal — 44% revenue growth while losing 62% of net profit means each additional job is generating less surplus than before."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): adding a third subcontractor crew signals successful capacity expansion aligned with market demand",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Capacity expansion is a misleading scaling signal when the margin per job may now be negative at current pricing relative to current subcontractor costs."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "net_profit_current_year",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 0,
+      "value_override": 3.1,
+      "transform_note": "$28,000 net profit on $890K revenue = 3.1% net margin, down from $74,400/$620K = 12%"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "margin_erosion (margin percentage elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-13-003 is SUPPORTED via margin_erosion. Subcontractor cost inflation not passed through to pricing is margin erosion. No must_identify vocabulary."
+}

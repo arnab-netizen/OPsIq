@@ -1,0 +1,90 @@
+{
+  "case_id": "SIM-13-002",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner cannot cover a $28,000 supplier payment due in fourteen days with only $4,100 in the business account",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Inability to cover an imminent supplier payment is a critical adverse cash crisis signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "owner reports annual revenue of $480K and annual COGS of approximately $240K — which implies a gross margin inconsistent with the stated 35% figure",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Internally inconsistent financial data prevents diagnosis. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "owner cannot explain where the cash from the year's trading has gone",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner unable to account for the cash position relative to revenue is a critical adverse financial visibility signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "owner tracks cash balance by checking a banking app on their phone with no formal cash flow model",
+      "dimension": "process_maturity",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Cash management by app balance with no forward projection is an adverse process maturity signal. process_maturity."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "gift shop; $480K revenue; $240K COGS (stated); 35% margin (stated); $4,100 cash; $28K supplier payment due in 14 days; no cash flow model",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): nine years in operation suggests a stable, well-established business that knows how to manage cash",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Long operating history is a misleading stability signal — it does not mean the financials are accurate or that the cash position is understood."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): January is described as always slow — framing the crisis as a predictable seasonal pattern",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Seasonal attribution is a misleading framing signal when the owner cannot reconcile the revenue, COGS, and margin figures."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "cashRunwayMonths",
+      "would_improve_pattern": "working_capital (cash runway elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-13-002 is SUPPORTED via working_capital_stress. Inconsistent financials are a data quality signal that working capital stress scoring will surface. No must_identify vocabulary."
+}

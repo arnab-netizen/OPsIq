@@ -1,0 +1,98 @@
+{
+  "case_id": "SIM-12-003",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "operational_bottleneck",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner works six days per week and is booked three weeks in advance with no capacity for additional bookings",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner fully booked six days per week is an adverse operational capacity signal. operational_efficiency; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "gross margin has declined from 32% to 19% over fourteen months despite prices remaining unchanged",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Gross margin decline from 32% to 19% with unchanged prices is a critical adverse financial health signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "fleet and commercial work has grown from approximately 20% to 45% of bookings over the past twelve months",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Fleet and commercial work growing from 20% to 45% of bookings is an adverse revenue mix signal. financial_health; is_critical=true."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "the owner has not calculated the margin difference between premium retail bookings and fleet or commercial contracts",
+      "dimension": "process_maturity",
+      "is_critical": false,
+      "confidence": "MEDIUM",
+      "no_outcome_leakage": true,
+      "rationale": "Absence of margin analysis by booking type while mix shifts adversely is an adverse process signal. process_maturity."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "mobile auto detailing; 6-day week; 3-week advance booking; margin 32% to 19%; fleet/commercial 20% to 45% of bookings; prices unchanged",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): the business is fully booked three weeks in advance with the owner working six days a week — a textbook presentation of an owner capacity ceiling",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Full booking and six-day weeks is a misleading signal that hiring an operator is both necessary and sufficient — the margin decline is independent of the capacity constraint and requires its own diagnosis."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): materials costs have increased approximately 8% over the past twelve months due to supply chain conditions",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "An 8% materials cost increase is a misleading signal that it explains the 13 percentage point margin decline — an 8% cost increase on materials that represent a portion of revenue cannot explain a 13 point margin compression."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "margin_12_months_ago",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 1,
+      "value_override": 32,
+      "transform_note": "Prior margin 32%, current 19% — 13 percentage point compression"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "margin_erosion (margin percentage elevates confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "SIM-12-003 is SUPPORTED via operational_bottleneck as primary archetype. Secondary: margin_erosion from customer mix shift. No must_identify vocabulary."
+}
