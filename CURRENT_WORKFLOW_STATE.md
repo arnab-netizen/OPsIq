@@ -43,7 +43,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 4 | Decision + evidence snapshot | **VERIFIED (STATIC_TESTED_ONLY)** — 355 tests green; route-auth DB-gated |
 | 5 | Recommendation portfolio + feasibility | **VERIFIED (STATIC_TESTED_ONLY)** — ranking+feasibility+survival-first green |
 | 6 | Scenario / what-if | **VERIFIED (STATIC_TESTED_ONLY)** — scenario-engine 36 tests green |
-| 7 | Experiment design | NOT_STARTED |
+| 7 | Experiment design | **VERIFIED (STATIC_TESTED_ONLY)** — pure lifecycle 133 tests green; persistence gap documented |
 | 8 | Execution orchestration | NOT_STARTED (impl PRESENT; verify) |
 | 9 | Outcome verification + attribution | NOT_STARTED (impl PRESENT; verify) |
 | 10 | Private owner learning eligibility gate | NOT_STARTED (impl PRESENT; verify + security negatives) |
@@ -86,7 +86,12 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 6 verified (no code). Proceed to **Phase 7 — Experiment Design Layer**: verify convert-decision-to-experiment + hypothesis/success/failure/stop criteria (engagements/experiments routes + services); close only a precise gap if one exists.
+Phase 7 verified (no code). Proceed to **Phase 8 — Execution Orchestration**: verify `OwnerAction`/`OwnerActionExecutionLog` + execution services (assignment, steps, proof requirement, completion ≠ verified); close only a precise gap if one exists.
+
+### Phase 7 decision record (experiment design) — VERIFICATION ONLY (no code)
+- **Design + lifecycle (pure, tested):** `domain/experiment/experiment.ts` (`Hypothesis` with statement/`successMetric`/`successThreshold`/`failureThreshold`/`testDurationWeeks`/`reviewCadenceWeeks`, `validateHypothesis`, `validateExperimentPlan`) and `services/experiment/experiment-lifecycle.service.ts` (`createExperiment`→`approveExperiment`→`startExperiment`→`updateExecution`→`recordResult`→`captureLearning`, `analyzeOutcome`). Owner approval required before start. Route `engagements/[id]/experiments`.
+- **Tests verified green:** experiment-lifecycle.service + api/experiments = 2 files / 133 passed.
+- **Known PRE-EXISTING limitation (not introduced; not safely closable now):** there is **no `Experiment` DB model**; `createExperiment` builds an in-memory object and the engagements `GET .../experiments` returns an empty list (labeled TODO). Adding an `Experiment` table would trip the New Table Gate condition 6 (DB tests must prove it) which is impossible while DATABASE_URL is absent — so persistence is intentionally deferred, not stubbed-in. The pure experiment-design contract this phase requires is fully present + tested.
 
 ### Phase 6 decision record (scenario / what-if) — VERIFICATION ONLY (no code)
 - **Engine:** `services/consulting-engine/scenario-engine.ts` `generateScenarios()` produces Aggressive (best-case) / Staged (Recommended) / Defensive (minimal-risk) options, each with explicit `assumptions[]` + `risks[]` (narrative, not fabricated projections). Richer `decision-core/scenarios-engine.ts` `ScenariosEngine` for decision-path comparison. Route `/api/scenario`.
