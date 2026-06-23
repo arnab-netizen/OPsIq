@@ -129,6 +129,12 @@ export default function OwnerIntakePage() {
         </div>
       )}
 
+      {dashboard?.priorityGuidance && (
+        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+          <strong>Priority:</strong> {dashboard.priorityGuidance}
+        </div>
+      )}
+
       {confirmed && (
         <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex items-center justify-between">
           <span>Data confirmed. OpsIQ is now ready to analyze your business.</span>

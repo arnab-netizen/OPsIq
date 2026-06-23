@@ -140,10 +140,21 @@ export async function getIntakeDashboard(workspaceId: string, requestedBusinessI
     orderBy: { createdAt: "desc" },
   });
 
+  // Compute priority guidance: domains with no confirmed intake, ordered by diagnostic importance.
+  const DOMAIN_PRIORITY = ["finance", "cashflow", "sales", "operations", "sop", "marketing", "strategy"] as const;
+  const confirmedDomains = new Set(
+    intakes.filter((i: any) => i.ownerConfirmed).map((i: any) => i.targetDomain)
+  );
+  const missingPriorityDomains = DOMAIN_PRIORITY.filter((d) => !confirmedDomains.has(d));
+  const priorityGuidance = missingPriorityDomains.length > 0
+    ? `Your diagnosis needs data for: ${missingPriorityDomains.slice(0, 3).join(", ")}. Provide ${missingPriorityDomains[0]} first.`
+    : null;
+
   return {
     businesses: businessList,
     selectedBusinessId,
     intakes,
     hasData: intakes.length > 0,
+    priorityGuidance,
   };
 }
