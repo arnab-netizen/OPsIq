@@ -121,7 +121,7 @@ export function computeMissingInputsWithPriority(snapshot: Record<string, unknow
 /** Whether the reporting period ended more than `staleDays` before `now`. */
 export function isStaleSnapshot(periodEnd: string, now: Date, staleDays: number): boolean {
   const end = new Date(periodEnd).getTime();
-  if (Number.isNaN(end)) return false;
+  if (Number.isNaN(end)) return true; // unparseable date treated as stale (fail-closed)
   const ageDays = (now.getTime() - end) / (1000 * 60 * 60 * 24);
   return ageDays > staleDays;
 }
