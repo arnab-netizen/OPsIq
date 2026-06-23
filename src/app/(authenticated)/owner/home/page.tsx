@@ -92,12 +92,31 @@ export default function OwnerHomePage() {
 
   return (
     <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl py-6 px-4">
-      <div className="flex items-center justify-between mb-4 gap-2">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Owner Home</h1>
-          <p className="text-muted-foreground text-xs">Risk first. Money first. One clear set of next actions.</p>
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Owner Home</h1>
+            <p className="text-muted-foreground text-xs">Risk first. Money first. One clear set of next actions.</p>
+          </div>
+          <Link href="/owner"><Button>Command Center</Button></Link>
         </div>
-        <Link href="/owner"><Button>Full view</Button></Link>
+        <nav className="flex flex-wrap gap-1.5" aria-label="Domain navigation">
+          {[
+            { label: "Finance", href: "/owner/finance" },
+            { label: "Cashflow", href: "/owner/cashflow" },
+            { label: "Sales", href: "/owner/sales" },
+            { label: "Operations", href: "/owner/operations" },
+            { label: "Execution", href: "/owner/execution" },
+            { label: "Marketing", href: "/owner/marketing" },
+            { label: "Strategy", href: "/owner/strategy" },
+            { label: "Data Intake", href: "/owner/intake" },
+            { label: "Recovery", href: "/owner/recovery" },
+          ].map(({ label, href }) => (
+            <Link key={href} href={href}>
+              <Button className="min-h-[44px] text-xs py-1 px-2">{label}</Button>
+            </Link>
+          ))}
+        </nav>
       </div>
 
       {error && (
