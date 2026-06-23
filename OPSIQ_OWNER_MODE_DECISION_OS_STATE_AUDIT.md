@@ -32,11 +32,18 @@ The correct posture for every subsequent slice is **reuse-and-verify**, not buil
 | Git branch correct | ✅ `claude/opsiq-owner-mode-decision-os-3tgwkm` | `git branch --show-current` |
 | Working tree clean at start | ✅ | `git status` |
 | `node_modules` present in fresh container | ❌ **MISSING (0 packages)** at audit start | `ls node_modules` → 0 |
-| Dependency install | ⏳ Run during Phase 0 (`npm install`) | required before ANY test can run |
-| `npx prisma validate` (cold) | ⚠️ Inconclusive cold (npm noise only) — must re-run after install | — |
-| `npx vitest` (cold) | ❌ Fails cold: `MODULE_NOT_FOUND` for vite — caused by absent `node_modules`, not a code defect | — |
+| Dependency install | ✅ Resolved with `npm install --ignore-scripts` (632 pkgs) | see note below |
+| `prisma generate` | ✅ Client 7.8.0 → `src/generated/prisma` | `./node_modules/.bin/prisma generate` |
+| Owner-mode domain test dir | ✅ **34 files / 1831 tests passed** | `vitest run src/__tests__/domain/owner-mode/` |
+| Auth access test | ✅ included in green run above | `services/auth/access.test.ts` |
+| Full suite (~529 files) | ⚠️ exceeds container 9-min wall-clock; **no failures observed** in the portion that ran | not claimed as full pass |
+| DB-backed (`[db]`) tests | ⛔ **BLOCKED** — no local `DATABASE_URL` | harness skips DB init |
 
-**Baseline blocker (documented, not hidden):** The fresh remote container ships **without dependencies installed**. No test suite (vitest), Prisma generate, or typecheck can execute until `npm install` completes. This is an environment/setup blocker, **not** a code regression. Per §1.20 and §11, baseline test results must be captured *after* install; until then, no "baseline pass" may be claimed. See `CURRENT_WORKFLOW_STATE.md` for the live baseline-command checklist.
+**Install root-cause (resolved):** repeated `npm install` `ECONNRESET`s were caused by Prisma's `postinstall` engine-binary download (external host) aborting and triggering a full npm rollback — not by the npm package fetch itself. Installing with `--ignore-scripts` then running `prisma generate` locally is the working path in this environment.
+
+**Remaining baseline constraints (documented, not hidden):**
+- **DB tests blocked:** the test harness logs `DATABASE_URL not configured for local testing, skipping DB initialization`. Per §10 (anti-mock) / §11, **no slice may claim `DB_TESTED`** until a Postgres test DB is provisioned. Static + non-DB behavior is the ceiling in this container.
+- **Full suite not run to completion:** the ~529-file suite times out against the container budget; the owner-mode domain (1831 tests) + auth is the captured green baseline. No full-suite pass is claimed.
 
 **Toolchain (from `package.json`):**
 - Next.js `16.2.3` (App Router), React `19.2.4`, TypeScript, Zod, Prisma `^7.7.0` + PostgreSQL, Vitest `^4.1.4`.

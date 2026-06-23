@@ -36,7 +36,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | Phase | Name | Status |
 |---|---|---|
 | 0 | Repo truth + Owner Mode state audit | **DOC_ONLY_COMPLETE** |
-| 0.5 | Baseline regression harness (install deps, run baseline, map flows→tests) | **IN_PROGRESS** (blocked on dependency install — see below) |
+| 0.5 | Baseline regression harness (install deps, run baseline, map flows→tests) | **STATIC_TESTED_ONLY** (deps installed; owner-mode baseline green; DB tests blocked — see below) |
 | 1 | Status/threshold canon + pure scoring helpers | NOT_STARTED |
 | 2 | Data quality + input guidance gate | NOT_STARTED (impl PRESENT; verify) |
 | 3 | Financial survival + unit economics | NOT_STARTED (impl PARTIAL; verify/extract helpers) |
@@ -59,23 +59,24 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 
 ---
 
-## BASELINE BLOCKER (must clear before any feature slice)
+## BASELINE STATUS (Phase 0.5 — captured 2026-06-23)
 
-The fresh remote container ships **without `node_modules`**. First `npm install` failed with a transient network `ECONNRESET` (npm rolled back to 0 packages); a resilient retry is in progress. Until dependencies install, **no baseline test result may be claimed** (per prompt §1.20 / §11).
+The fresh remote container ships **without `node_modules`**. Root-cause of repeated `npm install` failures: Prisma's `postinstall` (`prisma generate` → engine binary download from an external host) aborts with `ECONNRESET` and npm rolls the whole install back. **Fix:** `npm install --ignore-scripts` installs all 632 packages cleanly; `./node_modules/.bin/prisma generate` then succeeds locally (client generated to `src/generated/prisma`). Use `--ignore-scripts` for installs in this environment.
 
-When deps are present, the Phase 0.5 baseline commands to run and record:
+Baseline commands run and **recorded results**:
 
-```
-./node_modules/.bin/prisma validate
-./node_modules/.bin/prisma generate
-npx vitest run src/__tests__/domain/owner-mode/full-loop-validation.test.ts
-npx vitest run src/__tests__/domain/owner-mode/owner-decision.test.ts
-npx vitest run src/__tests__/domain/owner-mode/outcome-tracking.test.ts
-npx vitest run src/__tests__/domain/owner-mode/controlled-learning.test.ts
-npx vitest run src/__tests__/services/auth/access.test.ts
-# DB-backed (requires PostgreSQL):
-TEST_WITH_DB=true npx vitest run --testNamePattern='\[db\]'
-```
+| Command | Result |
+|---|---|
+| `npm install --ignore-scripts` | ✅ 632 packages |
+| `./node_modules/.bin/prisma generate` | ✅ Prisma Client 7.8.0 generated |
+| `./node_modules/.bin/prisma validate` | ⚠️ resets on a network update-check; schema validity confirmed by successful `generate` |
+| `vitest run src/__tests__/domain/owner-mode/full-loop-validation + owner-decision` | ✅ 129/129 |
+| `vitest run outcome-tracking + controlled-learning + services/auth/access` | ✅ 163/163 |
+| `vitest run src/__tests__/domain/owner-mode/` (whole dir) | ✅ **34 files, 1831 tests passed** |
+| Full `vitest run` (all ~529 files) | recorded in audit §1 |
+| `TEST_WITH_DB=true … '[db]'` (PostgreSQL-backed) | ⛔ **BLOCKED** — no local `DATABASE_URL`; test setup skips DB init. DB-backed claims deferred until a Postgres test DB is provisioned. |
+
+**DB-test blocker (documented per §10 anti-mock / §11):** DB-backed (`[db]`) tests cannot run in this container — the test harness logs `DATABASE_URL not configured for local testing, skipping DB initialization`. Until a Postgres test database is wired, no slice may claim `DB_TESTED`; static + non-DB API behavior is the ceiling here.
 
 Quarantined tests to re-activate before claiming related slices TESTED:
 `src/__ignored_tests__/workspace-isolation-enforcement.test.ts`,
@@ -85,4 +86,4 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Complete **Phase 0.5**: finish dependency install, run the baseline command list above, record true pass/fail in this file, then proceed to Phase 1 (status/threshold/helper canon) — reusing existing `statuses.ts` / `threshold-service.ts` and closing only Gap Register rows G2–G4.
+Phase 0.5 baseline is captured and green (static/non-DB). Proceed to **Phase 1 — status/threshold/helper canon**: reuse existing `domain/constants/statuses.ts` and `thresholds/threshold-service.ts`; add a canonical decision-status + source-classification **mapping layer** (Gap Register G3/G4) only with an active caller + test; extract named pure helpers (G2) only where a downstream phase needs them. No DB-tested claims until a Postgres test DB is provisioned.
