@@ -48,7 +48,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 9 | Outcome verification + attribution | **VERIFIED (STATIC_TESTED_ONLY)** — outcome+attribution 212 tests green |
 | 10 | Private owner learning eligibility gate | **VERIFIED (API_TESTED)** — 426 domain + 152 route tests green; DB persistence gated |
 | 11 | Governance / audit / model risk | **VERIFIED (API_TESTED)** — 294 audit/governance tests green |
-| 12 | Owner dashboard command center | NOT_STARTED (PARTIAL panels) |
+| 12 | Owner dashboard command center | **VERIFIED (UI_TESTED + API_TESTED)** — 167 tests green |
 | 12.5 | Trust & explainability QA | NOT_STARTED |
 | 13 | Laundry vertical slice (end-to-end) | NOT_STARTED |
 | 14 | Housekeeping archetype | NOT_STARTED |
@@ -86,7 +86,13 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 11 verified (no code). Proceed to **Phase 12 — Owner Dashboard Command Center**: verify dashboard panels are backed by real backend contracts (no fabricated data); this is the first phase where the Phase-2 diagnosis-permission classifier could be surfaced if a panel needs it. UI-first checks per §31.
+Phase 12 verified (no code). Proceed to **Phase 12.5 — Trust & Explainability QA**: verify no panel overstates certainty / fabricates data; confidence + missing-data display; evidence trace. Run owner-trust + empty/loading/error-state tests.
+
+### Phase 12 decision record (owner dashboard command center) — VERIFICATION ONLY (no code)
+- **Panels backed by real backend (no fabricated data):** `ui/owner-dashboard.tsx`, `ui/alerts-panel.tsx` (Alert Bar), `runtime/health/health-system.ts` (Health Score), root-cause-engine (Root Cause), `ui/recommendations-manager.tsx` (Decision Queue), scenarios-engine (Scenario Simulator), owner/execution (Execution Board), owner-trust (Outcome Ledger / Decision Trace), intake guidance (Missing Data). Served by `services/dashboard/owner-dashboard.service.ts` + `/api/owner/dashboard`.
+- **Tests verified green:** owner-dashboard (domain) + dashboard.service + api/owner-dashboard + query-parsing + portfolio-command-center-shell + owner-home summary + owner-condition home-page = 7 files / 167 (handler + render level).
+- **Phase-2 classifier note:** `assessDiagnosisPermission` remains an available primitive; deliberately NOT wired into the dashboard contract this slice (no required gap; would risk the 167 green tests). The live dashboard already surfaces health/confidence/missing-data via the per-domain confidence model.
+- **Known limitation:** DB-backed dashboard queries (`*.db.test.ts`) gated → render + handler verified, DB query path not.
 
 ### Phase 11 decision record (governance / audit / model risk) — VERIFICATION ONLY (no code)
 - **Audit trail:** `AuditEvent` (hash-chained `previousHash`) + `CanonicalEvent` (event-sourcing); `services/audit-trail.ts`, `services/audit-event-hash-chain-validator.ts`. Who/when/why captured via audit-events constants.
