@@ -41,7 +41,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 2 | Data quality + input guidance gate | **STATIC_TESTED_ONLY** (scoring/guidance PRESENT+verified; §15 permission-state classifier added) |
 | 3 | Financial survival + unit economics | **VERIFIED (STATIC_TESTED_ONLY)** — already implemented; 229 tests green; no code added |
 | 4 | Decision + evidence snapshot | **VERIFIED (STATIC_TESTED_ONLY)** — 355 tests green; route-auth DB-gated |
-| 5 | Recommendation portfolio + feasibility | NOT_STARTED (impl PRESENT; verify) |
+| 5 | Recommendation portfolio + feasibility | **VERIFIED (STATIC_TESTED_ONLY)** — ranking+feasibility+survival-first green |
 | 6 | Scenario / what-if | NOT_STARTED (engine PRESENT; verify) |
 | 7 | Experiment design | NOT_STARTED |
 | 8 | Execution orchestration | NOT_STARTED (impl PRESENT; verify) |
@@ -86,7 +86,14 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 4 verified (no code). Proceed to **Phase 5 — Recommendation Portfolio + Feasibility**: verify ranked-portfolio + feasibility scoring (`services/decisions/priority-engine.ts`, recommendation engine) including survival/unit-econ-aware ranking and do-nothing/stop-action support; close only a precise gap if one exists.
+Phase 5 verified (no code). Proceed to **Phase 6 — Scenario / What-If V1**: verify scenario comparison (`services/consulting-engine/scenario-engine.ts`, `decision-core/scenarios-engine.ts`, `/api/scenario`) covers do-nothing/conservative/recommended/aggressive/defensive options with missing-data disclosure and no fabricated numbers.
+
+### Phase 5 decision record (portfolio + feasibility) — VERIFICATION ONLY (no code)
+- **Feasibility + ranking:** `services/decisions/priority-engine.ts` — `evaluateConstraints` (is_feasible, constraint_penalty, blocking/limiting constraints, conflicts), `calculatePriority` (impact/effort/credibility/reversibility, non-reversible-critical boost, low-effort-high-impact flag), `rankRecommendations`.
+- **Survival-aware / growth-blocking ranking:** `services/consulting-engine/survival-prioritization.ts` `chooseFirstAction` (survival-first) + `services/financial-constraints.ts` (blocks growth when survival at risk) — survival actions outrank growth.
+- **do-nothing / stop-action / data-collection (mapped equivalents, §1.16 — no duplicate enum):** represented at the decision layer via `deferred` (do-nothing/defer), `rejected` (stop-action), `needs_more_data` (collect-data); Stage-A `RECOMMENDATION_TYPES` also includes `investigate` (data-collection) and `stabilize`.
+- **Tests verified green:** g3-priority-engine + pc01-survival-dominance (16), owner-portfolio + decisions (13, 2 DB-skipped), plus Phase-3 survival/constraints suites.
+- **Known limitation:** portfolio persistence/route ranking is DB-gated → no DB_TESTED claim; do-nothing/stop/collect are decision-state equivalents rather than distinct persisted portfolio categories.
 
 ### Phase 4 decision record (decision + evidence) — VERIFICATION ONLY (no code)
 - **Decision object + lifecycle:** `domain/owner-mode/owner-decision.ts` (`validateOwnerDecision` DEC-RULE-1..6, `OWNER_DECISION_STATUS_TRANSITIONS`, `validateDecisionRights`, `assertAllowsActionCreation`) on the `OwnerDecision`/`OwnerDecisionRights` models.
