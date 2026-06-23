@@ -236,6 +236,8 @@ export const AUDIT_EVENTS = {
   OWNER_FINANCE_SNAPSHOT_RECORDED: "owner.finance_snapshot_recorded",
   OWNER_FINANCE_DIAGNOSIS_RUN: "owner.finance_diagnosis_run",
   OWNER_FINANCE_ACTION_UPDATED: "owner.finance_action_updated",
+  OWNER_FINANCE_ACTION_COMPLETED: "owner.finance_action_completed",
+  OWNER_FINANCE_REASSESSMENT_TRIGGERED: "owner.finance_reassessment_triggered",
   OWNER_FINANCE_OUTCOME_VERIFIED: "owner.finance_outcome_verified",
 
   // Owner Cashflow (Module 5)
