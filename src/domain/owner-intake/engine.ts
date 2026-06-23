@@ -171,6 +171,56 @@ export function buildCsvIntake(
     });
   }
 
+  // Cross-field consistency checks for finance domain data.
+  // These detect likely data-entry errors (wrong units, GST not removed, etc.)
+  // before data is confirmed and stored. Inconsistencies are flagged as warnings
+  // (non-blocking) so the owner can investigate rather than being hard-rejected.
+  const hasFinanceCrossFields =
+    fieldSpecs.some((f) => f.name === "revenue") &&
+    fieldSpecs.some((f) => f.name === "costOfGoodsOrServices");
+  if (hasFinanceCrossFields) {
+    records.forEach((record, r) => {
+      const revenue = typeof record["revenue"] === "number" ? record["revenue"] : null;
+      const cogs = typeof record["costOfGoodsOrServices"] === "number" ? record["costOfGoodsOrServices"] : null;
+      const fixedCosts = typeof record["fixedCosts"] === "number" ? record["fixedCosts"] : null;
+      const variableCosts = typeof record["variableCosts"] === "number" ? record["variableCosts"] : null;
+      const receivables = typeof record["receivables"] === "number" ? record["receivables"] : null;
+
+      if (revenue !== null && revenue > 0) {
+        // COGS > 3× revenue almost certainly indicates wrong units or GST-inclusive data
+        if (cogs !== null && cogs > revenue * 3) {
+          errorReport.push({
+            row: r + 1,
+            field: "costOfGoodsOrServices",
+            code: "inconsistent_data",
+            message: `costOfGoodsOrServices (${cogs}) is more than 3× revenue (${revenue}). Check for unit errors or GST-inclusive figures.`,
+          });
+          anyOptionalInvalid = true;
+        }
+        // Total operating costs > 5× revenue indicates wrong units or scale mismatch
+        if (fixedCosts !== null && variableCosts !== null && fixedCosts + variableCosts > revenue * 5) {
+          errorReport.push({
+            row: r + 1,
+            field: "fixedCosts",
+            code: "inconsistent_data",
+            message: `Combined fixedCosts + variableCosts (${fixedCosts + variableCosts}) is more than 5× revenue (${revenue}). Check for unit errors or scale mismatch.`,
+          });
+          anyOptionalInvalid = true;
+        }
+        // Receivables > 2× annual revenue indicates wrong period or unit error
+        if (receivables !== null && receivables > revenue * 2) {
+          errorReport.push({
+            row: r + 1,
+            field: "receivables",
+            code: "inconsistent_data",
+            message: `receivables (${receivables}) is more than 2× revenue (${revenue}). Verify the period and check for unit errors.`,
+          });
+          anyOptionalInvalid = true;
+        }
+      }
+    });
+  }
+
   const validationStatus: IntakeValidationStatus =
     rows.length === 0 ? "invalid" : anyRequiredBroken ? "invalid" : anyOptionalInvalid ? "partial" : "valid";
 
