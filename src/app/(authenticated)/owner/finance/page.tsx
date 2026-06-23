@@ -387,6 +387,12 @@ function FinanceCycleView({
         </div>
       </div>
 
+      {(score?.dataConfidenceScore ?? cycle.dataConfidenceScore) < 30 && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive font-medium">
+          ⚠ Data confidence is critically low ({Math.round(score?.dataConfidenceScore ?? cycle.dataConfidenceScore)}/100 — BLOCKED tier). Diagnosis results are unreliable and should not be acted upon without providing the missing critical inputs below.
+        </div>
+      )}
+
       {missing.length > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm">
           <strong>Missing critical data:</strong> {missing.join(", ")} — provide these to raise confidence.
