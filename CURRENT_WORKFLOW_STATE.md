@@ -19,6 +19,18 @@ Next slice: "OWNER MODE DB-PROOF + INTAKE-BLOCKER SLICE" (see audit §19).
 
 ---
 
+## AI READINESS (Phase A audit — see `OWNER_MODE_AI_READINESS_AUDIT.md`)
+
+Two separate tracks. **Deterministic track:** `OWNER_INTERNAL_ALPHA` (conditional, unchanged). **AI track:** `AI_ARCHITECTURE_READY_PROVIDER_MISSING`; **live AI = `BLOCKED_NO_AI_PROVIDER`**.
+
+Truth: there is **no AI provider, SDK, key, prompt, output schema, or LLM call** anywhere. But a deterministic **AI-governance skeleton already exists** and is reusable: `ai-observability-trace.ts` (in-memory loop trace ledger w/ public/internal redaction), `model-versioning.ts` (model/prompt/ruleset/eval versions), `AIProposalSandbox` (DB model, governed AI-proposal-requires-approval), and hard guards `AI_IS_NOT_A_VERIFIER`/`assertVerifierIsNotAI` (SEC-006), `/llm_output/i` evidence rejection, source-classification. Missing = the AI *execution* pipeline (provider boundary, prompts, output schemas, post-AI validator, context builder, calls, evals).
+
+**Genuine owner decision blocker:** choosing an AI provider + supplying an API key (cost / data-privacy / vendor). Until then live AI cannot be proven.
+
+**Recommended next slice "AI-1 — Governed copilot foundation (mock track)":** provider boundary (port + Unavailable/Mock impls, no SDK), task registry + one LOW-risk task (`MISSING_QUESTION_GENERATION`) schema, post-AI validator (reject taxonomy), workspace-scoped context builder, in-memory ledger extension, and mock guardrail + prompt-injection + hallucinated-evidence + AI-unavailable-fallback tests. Buildable now with **zero cost / no key / no DB** → targets `AI_MOCK_GUARDRAIL_TESTED`; live AI deferred to the owner's provider choice.
+
+---
+
 ## CONTROLLING STATEMENT
 
 This execution is **Owner Mode only**. Public SaaS / billing / Product Hunt / marketing / public onboarding remain FROZEN (see SCOPE FREEZE below).
