@@ -106,6 +106,11 @@ export function buildCsvIntake(
           errorReport.push({ row: rowNum, field: f.name, code: "negative_value", message: `"${f.name}" cannot be negative (got ${n}).` });
         } else {
           record[f.name] = n;
+          if (f.type === "currency" && n > 0 && n < 1000) {
+            errorReport.push({ row: rowNum, field: f.name, code: "soft_limit_warning", message: `"${f.name}" value ${n} seems very low — confirm it is in full currency units, not thousands.` });
+          } else if (f.type === "currency" && n > 100_000_000) {
+            errorReport.push({ row: rowNum, field: f.name, code: "soft_limit_warning", message: `"${f.name}" value ${n} seems very high — confirm it is correct.` });
+          }
         }
       } else if (f.type === "date") {
         const d = parseDate(raw);
