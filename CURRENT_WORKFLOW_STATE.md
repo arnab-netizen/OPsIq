@@ -7,6 +7,18 @@ Companion audit: `OPSIQ_OWNER_MODE_DECISION_OS_STATE_AUDIT.md`
 
 ---
 
+## TRIAL READINESS (post-Phase-16 audit — see `OWNER_MODE_TRIAL_READINESS_AUDIT.md`)
+
+Classification: **NOT_READY_FOR_OWNER_TRIAL** → `OWNER_TRIAL_READY_WITH_MANUAL_INPUTS` once the two blockers below clear. Trial is feasible at **zero external cost, manual/CSV inputs**. The only hard external connection is **PostgreSQL**; there is **no LLM/AI provider, no billing, no connector** required.
+
+**TRIAL_BLOCKER 1 — No DB-backed proof.** Persistence + §13 security DB negatives + scored benchmark unproven (no reachable DB in-container). Closable FREE via the existing CI `postgres:16` service (`ci.yml`) or a local Postgres.
+
+**TRIAL_BLOCKER 2 — Deterministic, un-quarantined `intake-adapter` failure.** `business-facts/intake-adapter.test.ts` expects `validationStatus="valid"` but gets `"partial"`. Pure (no DB) ⇒ would **red CI's blocking lane** (NOT in `.claude/test-quarantine.json`). Cause: `domain/owner-intake/engine.ts` sets `anyOptionalInvalid=true` when the optional `gstBasis` column is absent — so real owner finance CSVs without `gstBasis` are graded `partial`. **Supersedes the earlier "pre-existing, out-of-scope" note in the Phase-14 record** — it is real and CI-affecting, but needs a product decision (engine fix vs stale-test fix). Not fixed here (audit-only).
+
+Next slice: "OWNER MODE DB-PROOF + INTAKE-BLOCKER SLICE" (see audit §19).
+
+---
+
 ## CONTROLLING STATEMENT
 
 This execution is **Owner Mode only**. Public SaaS / billing / Product Hunt / marketing / public onboarding remain FROZEN (see SCOPE FREEZE below).
