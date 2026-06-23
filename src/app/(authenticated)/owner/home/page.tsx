@@ -154,18 +154,30 @@ export default function OwnerHomePage() {
                 {s.requiredActions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No open actions — keep verifying outcomes.</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {s.requiredActions.map((a: any, i: number) => (
-                      <div key={`${a.domain}-${a.findingCode}-${i}`} className="border-b pb-2">
-                        <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
-                        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center">
-                          <Badge variant="muted">{a.domain}</Badge>
-                          <span>priority {Math.round(a.priorityScore)}</span>
-                          <span>· impact {Math.round(a.expectedImpactScore)}</span>
-                          <span>· verify via {a.verificationMetric}</span>
-                          {DOMAIN_LINK[a.domain] && <Link href={DOMAIN_LINK[a.domain]} className="underline">open</Link>}
+                      DOMAIN_LINK[a.domain] ? (
+                        <Link
+                          key={`${a.domain}-${a.findingCode}-${i}`}
+                          href={DOMAIN_LINK[a.domain]}
+                          className="block w-full py-3 px-3 rounded-lg border-b hover:bg-accent/50 transition-colors min-h-[44px]"
+                        >
+                          <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
+                            <Badge variant="muted">{a.domain}</Badge>
+                            <span>priority {Math.round(a.priorityScore)}</span>
+                            <span>· impact {Math.round(a.expectedImpactScore)}</span>
+                          </div>
+                        </Link>
+                      ) : (
+                        <div key={`${a.domain}-${a.findingCode}-${i}`} className="py-3 px-3 border-b min-h-[44px]">
+                          <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
+                            <Badge variant="muted">{a.domain}</Badge>
+                            <span>priority {Math.round(a.priorityScore)}</span>
+                          </div>
                         </div>
-                      </div>
+                      )
                     ))}
                   </div>
                 )}
