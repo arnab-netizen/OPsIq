@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
@@ -34,6 +35,7 @@ async function api(path: string, init?: RequestInit) {
 }
 
 export default function OwnerIntakePage() {
+  const router = useRouter();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export default function OwnerIntakePage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [preview, setPreview] = useState<any | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
 
   const load = useCallback(async (businessId?: string | null) => {
     setLoading(true);
@@ -94,6 +97,7 @@ export default function OwnerIntakePage() {
       await api(`/api/owner/intake/uploads/${intakeId}/confirm`, { method: "POST" });
       setPreview(null);
       await load(selected);
+      setConfirmed(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to confirm");
     } finally {
@@ -121,6 +125,18 @@ export default function OwnerIntakePage() {
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {confirmed && (
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex items-center justify-between">
+          <span>Data confirmed. OpsIQ is now ready to analyze your business.</span>
+          <button
+            onClick={() => router.push("/owner")}
+            className="ml-4 font-medium underline hover:no-underline whitespace-nowrap"
+          >
+            Go to Command Center →
+          </button>
         </div>
       )}
 

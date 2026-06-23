@@ -111,8 +111,8 @@ export default function OwnerCommandCenterPage() {
 
           {!data?.hasData || !profile ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
-              No business condition yet. Run a diagnosis in{" "}
-              <Link href="/owner/finance" className="underline">Finance</Link> to populate the command center.
+              Your OpsIQ diagnosis requires business data.{" "}
+              <Link href="/owner/intake" className="underline">Upload your data →</Link>
             </div>
           ) : (
             <div className="space-y-6">
