@@ -23,7 +23,6 @@ import {
   PER_ARCHETYPE_EXCLUSIONS,
 } from "./smbOutputComposer";
 import type { SmbFixture } from "./fixtureSchema";
-import { scoreOutput } from "./scoringContract";
 
 // ── Fixture and sidecar loading helpers ──────────────────────────────────────
 
@@ -601,13 +600,10 @@ describe("G6: sub-mechanism additions do not cause score regression", () => {
     "SMB-012": 0.59,
   };
 
-  // Tolerance: allow up to 0.03 regression (rounding / test order variation)
-  const REGRESSION_TOLERANCE = 0.03;
-
   it.each(SUPPORTED_CASES)("%s score does not regress from pre-Phase-2A baseline", (caseId) => {
     const fixture = fixtures.find((f) => f.case_id === caseId);
     if (!fixture) return;
-    const sidecar = loadSidecar(caseId);
+    loadSidecar(caseId);
     // Sub-mechanisms are tested via the full compose flow — evidenceItems must be
     // provided externally. For harness regression we only need to verify total ≥ baseline - tolerance.
     // The full integration is covered in smbHarness.test.ts which runs the engine.

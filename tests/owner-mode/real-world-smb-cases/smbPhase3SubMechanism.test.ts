@@ -21,7 +21,6 @@ import {
   composeOwnerOutput,
   detectSubMechanism,
   buildSubMechanismSentence,
-  serializeComposerOutput,
   PER_ARCHETYPE_EXCLUSIONS,
 } from "./smbOutputComposer";
 import type { SmbFixture } from "./fixtureSchema";
@@ -29,18 +28,12 @@ import { scoreOutput } from "./scoringContract";
 import { runCaseAgainstOpsiq } from "./runCaseAgainstOpsiq";
 
 const FIXTURE_PATH = join(__dirname, "opsiq_real_world_smb_case_fixtures.jsonl");
-const SIDECAR_DIR = join(__dirname, "evidence-hints");
 
 function loadFixtures(): SmbFixture[] {
   return readFileSync(FIXTURE_PATH, "utf-8")
     .split("\n")
     .filter((l) => l.trim().length > 0)
     .map((l) => JSON.parse(l) as SmbFixture);
-}
-
-function loadSidecar(caseId: string): ComposerSidecar {
-  const p = join(SIDECAR_DIR, `${caseId}.evidence-hints.json`);
-  return JSON.parse(readFileSync(p, "utf-8")) as ComposerSidecar;
 }
 
 function makeDiagnosis(
