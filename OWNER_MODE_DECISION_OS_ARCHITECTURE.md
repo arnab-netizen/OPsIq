@@ -61,6 +61,42 @@ evidence strength; persisted state remains owned by those subsystems.
 (13 cases: class set, weight bounds + ordering invariant, capture→class mapping,
 validation overlay, fail-closed `UNKNOWN`, lineage fallback).
 
+---
+
+## Capability: Diagnosis Permission Gate (Decision-OS §15/§16) — Phase 2
+
+**Module:** `src/domain/business-facts/diagnosis-permission.ts` (pure; no DB/IO/LLM).
+
+**Why it exists:** §15 requires a named diagnosis-permission status. The repo
+scored data quality and had a boolean presentability gate but no five-state
+vocabulary. Closes that gap with one pure derivation over the existing
+`DataQualityScore` — no new table/route/engine, no recomputation.
+
+**Contract:**
+- `DIAGNOSIS_PERMISSIONS` — `SAFE_TO_DIAGNOSE, PARTIAL_DIAGNOSIS_ONLY, REQUIRES_OWNER_INPUT, INSUFFICIENT_DATA, UNSAFE_TO_CONCLUDE`.
+- `assessDiagnosisPermission(score, {blockingMissingCount?, hasContradictoryEvidence?, criticalFinancialMissing?})`
+  → `{ permission, confidenceCap, blocksFinalRecommendation, blocksHighConfidence, reasons[] }`.
+- Enforcement (tested, §16): INSUFFICIENT_DATA / UNSAFE_TO_CONCLUDE block any final
+  ranked recommendation; `high_confidence_blocked` or missing critical financial
+  data block HIGH confidence and cap `confidenceCap`. Fail-closed: a weak score
+  can never resolve to SAFE_TO_DIAGNOSE.
+
+**Tests:** `src/__tests__/domain/owner-mode/diagnosis-permission.test.ts` (6 cases)
+compose the real `scoreDataQuality` with the gate over the shared
+`contracts/business-facts.examples.json` fixtures.
+
+**Known limitation:** not yet surfaced through a live route. The live owner
+diagnosis services enforce a separate per-domain numeric confidence gate
+(`domain/owner-*/data-confidence.ts`, `< 30` block); unifying them with this
+named status is a deferred integration, not a minimum-code Phase 2 requirement.
+
+**Existing data-quality surface (verified, reused — not rebuilt):**
+`scoreDataQuality` + dimension subscores in `data-quality.ts`; owner-facing
+missing-input guidance via `services/owner-intake/intake.service.ts`
+(`getIntakeDashboard.priorityGuidance`) behind `GET /api/owner/intake/dashboard`.
+
+---
+
 **Explicitly NOT added in Phase 1** (would be dead code / duplication):
 a new decision-status enum or prompt↔repo status mapping (repo status machine is
 already canonical); a new threshold config (centralized already); extraction of

@@ -38,7 +38,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 0 | Repo truth + Owner Mode state audit | **DOC_ONLY_COMPLETE** |
 | 0.5 | Baseline regression harness (install deps, run baseline, map flows→tests) | **STATIC_TESTED_ONLY** (deps installed; owner-mode baseline green; DB tests blocked — see below) |
 | 1 | Status/threshold canon + source-classification mapping | **STATIC_TESTED_ONLY** (canon verified; source-classification gap G4 closed) |
-| 2 | Data quality + input guidance gate | NOT_STARTED (impl PRESENT; verify) |
+| 2 | Data quality + input guidance gate | **STATIC_TESTED_ONLY** (scoring/guidance PRESENT+verified; §15 permission-state classifier added) |
 | 3 | Financial survival + unit economics | NOT_STARTED (impl PARTIAL; verify/extract helpers) |
 | 4 | Decision + evidence snapshot | NOT_STARTED (impl PARTIAL; status-canon mapping) |
 | 5 | Recommendation portfolio + feasibility | NOT_STARTED (impl PRESENT; verify) |
@@ -86,7 +86,12 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 1 complete (STATIC_TESTED_ONLY). Proceed to **Phase 2 — Data Quality + Input Guidance Gate**: verify the existing `domain/business-facts/data-quality.ts` (`scoreDataQuality`, confidence cap) and its diagnosis-permission/missing-input behavior with tests; wire the new source-classification canon into evidence/data-quality confidence weighting only where a real consumer needs it. No DB-tested claims until a Postgres test DB is provisioned.
+Phase 2 complete (STATIC_TESTED_ONLY). Proceed to **Phase 3 — Financial Survival + Unit Economics**: verify existing survival/unit-economics logic (`consulting-engine/survival-prioritization.ts`, `growth/unit-economics` route, owner-finance/cashflow services); extract the named `calculateFinancialSurvival` / `calculateUnitEconomics` pure helpers (Gap G2) only where a real caller/test needs them; prove the growth-affordability and insufficient-data disclosure gates. No DB-tested claims until a Postgres test DB is provisioned.
+
+### Phase 2 decision record (data quality + input guidance)
+- **Already implemented + verified:** `domain/business-facts/data-quality.ts` (`scoreDataQuality` → `data_quality_score`, 7 dimensions, `high_confidence_blocked`, `recommendation_confidence_tier/cap`), completeness/recency/source-reliability/extraction subscores, and the §12 `<50` high-confidence block. Owner-facing missing-input guidance exists live via `services/owner-intake/intake.service.ts` (`getIntakeDashboard` → `priorityGuidance`) behind route `GET /api/owner/intake/dashboard`.
+- **Genuine gap closed:** the canonical §15 five-state **diagnosis-permission** vocabulary (`SAFE_TO_DIAGNOSE`…`UNSAFE_TO_CONCLUDE`) did not exist (only boolean `canPresentDiagnosis` + `high_confidence_blocked`). Added one pure helper `domain/business-facts/diagnosis-permission.ts` (`assessDiagnosisPermission`) that derives the state + §16 enforcement flags (`blocksFinalRecommendation`, `blocksHighConfidence`, capped `confidenceCap`) from an already-computed `DataQualityScore`. Tests compose the real `scoreDataQuality` → `assessDiagnosisPermission` chain.
+- **Deliberately NOT done (minimum-code / regression-risk):** the live owner diagnosis services use a **separate** per-domain confidence model (`domain/owner-*/data-confidence.ts`, with a `dataConfidenceScore < 30` block + `missingCritical`). Rewiring all 7 to the business-facts pipeline + adopting the named permission status across routes would be a large, regression-prone refactor — deferred. **Known limitation:** the new permission classifier is not yet surfaced through a live route (classified STATIC_TESTED_ONLY, below the phase's API_TESTED target); the existing per-domain numeric gate already enforces input quality in production.
 
 ### Phase 1 decision record (status/threshold/source canon)
 - **Status vocabulary already canonical** — `domain/constants/statuses.ts` (action/evidence/approval/recommendation/intervention/business-condition/health, etc.) and `domain/owner-mode/owner-decision.ts` (`OwnerDecisionStatus` + `OWNER_DECISION_STATUS_TRANSITIONS`). Per Phase 1 restriction, **no new status enum created**, nothing renamed. A prompt↔repo decision-status mapping helper was deliberately NOT added: it would be dead code (no caller), and the repo vocabulary is already the canonical owner decision state machine.
