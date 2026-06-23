@@ -83,6 +83,7 @@ export interface FinancialDerivedMetrics {
   breakEvenRevenue: number | null;
   dailyBreakEvenRevenue: number | null;
   cashRunwayDays: number | null;
+  cashDaysOfCosts: number | null; // cash / daily cost — valid even when profitable
   debtServicePressurePct: number | null;
   receivablesPressurePct: number | null;
   payablesPressurePct: number | null;

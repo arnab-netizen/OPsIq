@@ -140,6 +140,16 @@ export function cashRunwayDays(input: FinancialSnapshotInput): number | null {
   return round1(cash / dailyBurn);
 }
 
+/** Cash divided by daily total costs — measures absolute cash cushion independent of profitability. */
+export function cashDaysOfCosts(input: FinancialSnapshotInput): number | null {
+  const cash = num(input.cashOnHand);
+  const costs = totalCosts(input);
+  const days = periodDays(input);
+  if (cash === null || costs === null || days === null || costs <= 0) return null;
+  const dailyCost = costs / days;
+  return round1(cash / dailyCost);
+}
+
 export function debtServicePressurePct(input: FinancialSnapshotInput): number | null {
   const revenue = num(input.revenue);
   const emi = num(input.loanEmiDebtPayments);
@@ -394,6 +404,7 @@ export function computeFinancialMetrics(
     breakEvenRevenue: breakEvenRevenue(input),
     dailyBreakEvenRevenue: dailyBreakEvenRevenue(input),
     cashRunwayDays: cashRunwayDays(input),
+    cashDaysOfCosts: cashDaysOfCosts(input),
     debtServicePressurePct: debtServicePressurePct(input),
     receivablesPressurePct: receivablesPressurePct(input),
     payablesPressurePct: payablesPressurePct(input),
