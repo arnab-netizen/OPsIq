@@ -99,10 +99,16 @@ export async function confirmDataIntake(intakeId: string, actorId: string, works
     );
   }
 
-  const updated = await db.ownerDataIntake.update({
-    where: { id: intakeId },
+  // Atomic guard: updateMany with ownerConfirmed:false predicate prevents double-confirm
+  // if two concurrent requests both pass the read-then-check above.
+  const result = await db.ownerDataIntake.updateMany({
+    where: { id: intakeId, workspaceId, ownerConfirmed: false },
     data: { ownerConfirmed: true, confirmedAt: new Date(), confirmedBy: actorId },
   });
+  if (result.count === 0) {
+    throw new ConflictError("This intake has already been confirmed.");
+  }
+  const updated = await db.ownerDataIntake.findFirstOrThrow({ where: { id: intakeId, workspaceId } });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_DATA_INTAKE_CONFIRMED,
