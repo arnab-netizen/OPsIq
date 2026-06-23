@@ -70,19 +70,19 @@ export default function OwnerCommandCenterPage() {
             One business condition. One highest-impact next action. Evidence, not guesses.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/owner/home"><Button>Home</Button></Link>
-          <Link href="/owner/finance"><Button>Finance</Button></Link>
-          <Link href="/owner/cashflow"><Button>Cashflow</Button></Link>
-          <Link href="/owner/sales"><Button>Sales</Button></Link>
-          <Link href="/owner/operations"><Button>Operations</Button></Link>
-          <Link href="/owner/execution"><Button>Execution</Button></Link>
-          <Link href="/owner/marketing"><Button>Marketing</Button></Link>
-          <Link href="/owner/strategy"><Button>Strategy</Button></Link>
-          <Link href="/owner/portfolio"><Button>Portfolio</Button></Link>
-          <Link href="/owner/intake"><Button>Data Intake</Button></Link>
-          <Link href="/owner/trust"><Button>Trust</Button></Link>
-          <Link href="/owner/recovery"><Button>Recovery</Button></Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/owner/home"><Button className="min-h-[44px] min-w-[44px] py-3">Home</Button></Link>
+          <Link href="/owner/finance"><Button className="min-h-[44px] min-w-[44px] py-3">Finance</Button></Link>
+          <Link href="/owner/cashflow"><Button className="min-h-[44px] min-w-[44px] py-3">Cashflow</Button></Link>
+          <Link href="/owner/sales"><Button className="min-h-[44px] min-w-[44px] py-3">Sales</Button></Link>
+          <Link href="/owner/operations"><Button className="min-h-[44px] min-w-[44px] py-3">Operations</Button></Link>
+          <Link href="/owner/execution"><Button className="min-h-[44px] min-w-[44px] py-3">Execution</Button></Link>
+          <Link href="/owner/marketing"><Button className="min-h-[44px] min-w-[44px] py-3">Marketing</Button></Link>
+          <Link href="/owner/strategy"><Button className="min-h-[44px] min-w-[44px] py-3">Strategy</Button></Link>
+          <Link href="/owner/portfolio"><Button className="min-h-[44px] min-w-[44px] py-3">Portfolio</Button></Link>
+          <Link href="/owner/intake"><Button className="min-h-[44px] min-w-[44px] py-3">Data Intake</Button></Link>
+          <Link href="/owner/trust"><Button className="min-h-[44px] min-w-[44px] py-3">Trust</Button></Link>
+          <Link href="/owner/recovery"><Button className="min-h-[44px] min-w-[44px] py-3">Recovery</Button></Link>
         </div>
       </div>
 
