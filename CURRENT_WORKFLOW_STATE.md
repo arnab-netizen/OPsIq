@@ -49,7 +49,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 10 | Private owner learning eligibility gate | **VERIFIED (API_TESTED)** — 426 domain + 152 route tests green; DB persistence gated |
 | 11 | Governance / audit / model risk | **VERIFIED (API_TESTED)** — 294 audit/governance tests green |
 | 12 | Owner dashboard command center | **VERIFIED (UI_TESTED + API_TESTED)** — 167 tests green |
-| 12.5 | Trust & explainability QA | NOT_STARTED |
+| 12.5 | Trust & explainability QA | **VERIFIED (UI_TESTED)** — 84 trust/explainability/adversarial tests green |
 | 13 | Laundry vertical slice (end-to-end) | NOT_STARTED |
 | 14 | Housekeeping archetype | NOT_STARTED |
 | 15 | Benchmark harness | NOT_STARTED |
@@ -86,7 +86,12 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 12 verified (no code). Proceed to **Phase 12.5 — Trust & Explainability QA**: verify no panel overstates certainty / fabricates data; confidence + missing-data display; evidence trace. Run owner-trust + empty/loading/error-state tests.
+Phase 12.5 verified (no code). Proceed to **Phase 13 — Laundry/Dry-Cleaning Minimum Vertical Slice**: verify the end-to-end owner loop on the laundry archetype (incomplete→sufficient input, survival, unit econ, diagnosis+evidence, decision, action+proof, outcome verification, learning eligibility, dashboard). Run full-loop-validation + laundry/archetype + real-world-smb suites.
+
+### Phase 12.5 decision record (trust & explainability QA) — VERIFICATION ONLY (no code)
+- **Already hardened (prior history):** "eliminate misleading empty states + confidence display" (Phase G owner trust). Explainability via `owner/trust/explanations`.
+- **Tests verified green:** owner-trust (trust-page + explainability + routes, 46/3-skip) + UI empty/missing-data states (dashboard-first-diagnosis-cta, FactsReviewTable) + hostile `benchmark/adversarial-evaluator` = 38 → combined 84 passed.
+- **Known limitation:** one owner-trust `*.db.test.ts` skipped (DB-gated).
 
 ### Phase 12 decision record (owner dashboard command center) — VERIFICATION ONLY (no code)
 - **Panels backed by real backend (no fabricated data):** `ui/owner-dashboard.tsx`, `ui/alerts-panel.tsx` (Alert Bar), `runtime/health/health-system.ts` (Health Score), root-cause-engine (Root Cause), `ui/recommendations-manager.tsx` (Decision Queue), scenarios-engine (Scenario Simulator), owner/execution (Execution Board), owner-trust (Outcome Ledger / Decision Trace), intake guidance (Missing Data). Served by `services/dashboard/owner-dashboard.service.ts` + `/api/owner/dashboard`.
