@@ -147,6 +147,12 @@ export default function OwnerCommandCenterPage() {
             />
           </div>
 
+          {businesses.length > 1 && selected && (
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              {businesses.find((b) => b.id === selected)?.name ?? ""}
+            </h2>
+          )}
+
           {!data?.hasData || !profile ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
               Your OpsIQ diagnosis requires business data.{" "}
