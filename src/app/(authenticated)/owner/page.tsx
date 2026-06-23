@@ -168,6 +168,16 @@ export default function OwnerCommandCenterPage() {
                   <>
                     <div className="text-lg font-semibold">{next.title}</div>
                     <p className="text-sm text-muted-foreground">{next.description}</p>
+                    {next.evidenceRationale && (
+                      <p className="text-xs text-muted-foreground mt-1 italic">
+                        Why: {next.evidenceRationale}
+                      </p>
+                    )}
+                    {next.evidence && next.evidence.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Based on: {next.evidence.join(" · ")}
+                      </p>
+                    )}
                     <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2 items-center">
                       <Badge variant="muted">{next.domain}</Badge>
                       <span>priority {Math.round(next.priorityScore)}</span>
@@ -177,7 +187,7 @@ export default function OwnerCommandCenterPage() {
                     </div>
                     {DOMAIN_LINK[next.domain] && (
                       <Link href={DOMAIN_LINK[next.domain]} className="inline-block mt-3">
-                        <Button>Open {next.domain}</Button>
+                        <Button className="min-h-[44px]">Open {next.domain}</Button>
                       </Link>
                     )}
                   </>
