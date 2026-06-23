@@ -398,6 +398,12 @@ function FinanceCycleView({
           <div className="text-xs uppercase text-muted-foreground">Recommended next financial action</div>
           <div className="font-semibold">{recommended.title}</div>
           <p className="text-xs text-muted-foreground">{recommended.description}</p>
+          {recommended.evidenceRationale && (
+            <p className="text-xs text-muted-foreground italic">Why: {recommended.evidenceRationale}</p>
+          )}
+          {Array.isArray(recommended.evidence) && recommended.evidence.length > 0 && (
+            <p className="text-xs text-muted-foreground">Based on: {recommended.evidence.join(" · ")}</p>
+          )}
           <p className="text-xs text-muted-foreground">
             priority {Math.round(recommended.priorityScore)} · impact {Math.round(recommended.expectedImpactScore)} · effort {Math.round(recommended.effortScore)} · verify via {recommended.verificationMetric}
           </p>
@@ -406,7 +412,7 @@ function FinanceCycleView({
 
       <section className="border rounded-lg p-4 bg-white">
         <h2 className="font-bold mb-3">Findings ({cycle.findings.length})</h2>
-        {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No financial issues detected.</p>}
+        {cycle.findings.length === 0 && <p className="text-sm text-muted-foreground">No findings generated — this may indicate missing input data rather than a healthy business. Check data confidence above.</p>}
         <div className="space-y-3">
           {cycle.findings.map((f: any) => (
             <div key={f.id} className="border-l-4 pl-3 py-1" style={{ borderColor: f.findingType === "opportunity" ? "#16a34a" : "#f59e0b" }}>

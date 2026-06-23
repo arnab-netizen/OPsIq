@@ -152,10 +152,15 @@ export default function OwnerHomePage() {
               {/* Business health */}
               <section className="border rounded-lg p-4 bg-white text-center">
                 <div className="text-xs uppercase text-muted-foreground">Business health</div>
-                <div className="mt-1">
+                <div className="mt-1 flex flex-wrap justify-center gap-2">
                   <Badge variant={HEALTH_VARIANT(s.businessHealthScore)}>
                     {Math.round(s.businessHealthScore)}/100
                   </Badge>
+                  {typeof s.dataConfidenceScore === "number" && (
+                    <Badge variant="muted">
+                      confidence {Math.round(s.dataConfidenceScore)}/100
+                    </Badge>
+                  )}
                 </div>
               </section>
 
@@ -171,7 +176,7 @@ export default function OwnerHomePage() {
               <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Today&apos;s required actions</div>
                 {s.requiredActions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No open actions — keep verifying outcomes.</p>
+                  <p className="text-sm text-muted-foreground">No open actions from diagnosed domains — run a diagnosis in each domain to see required actions.</p>
                 ) : (
                   <div className="space-y-1">
                     {s.requiredActions.map((a: any, i: number) => (
@@ -208,7 +213,7 @@ export default function OwnerHomePage() {
               <section className="border rounded-lg p-4 bg-white">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Top risks</div>
                 {s.top3Risks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No risks detected.</p>
+                  <p className="text-sm text-muted-foreground">No risks from diagnosed domains — run a domain diagnosis to surface risks.</p>
                 ) : (
                   <div className="space-y-2">
                     {s.top3Risks.map((r: any) => (
@@ -228,7 +233,7 @@ export default function OwnerHomePage() {
               <section className="border rounded-lg p-4 bg-white md:mt-0">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Top opportunities</div>
                 {s.top3Opportunities.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No opportunities detected.</p>
+                  <p className="text-sm text-muted-foreground">No opportunities from diagnosed domains — run a domain diagnosis to surface opportunities.</p>
                 ) : (
                   <div className="space-y-2">
                     {s.top3Opportunities.map((o: any) => (
