@@ -145,7 +145,7 @@ export function cashDaysOfCosts(input: FinancialSnapshotInput): number | null {
   const cash = num(input.cashOnHand);
   const costs = totalCosts(input);
   const days = periodDays(input);
-  if (cash === null || costs === null || days === null || costs <= 0) return null;
+  if (cash === null || costs === null || days === null || costs < 1) return null; // guard against near-zero float
   const dailyCost = costs / days;
   return round1(cash / dailyCost);
 }

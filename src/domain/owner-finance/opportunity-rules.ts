@@ -77,7 +77,9 @@ export function buildFinanceOpportunityFindings(
     );
   }
 
-  // Break-even recovery opportunity
+  // Break-even recovery opportunity. Intentional dual-signal: FIN_BELOW_BREAK_EVEN (risk/high)
+  // fires in risk-rules for the same condition. Two signals are kept because the risk
+  // tells the owner WHAT is wrong; this opportunity tells them HOW to fix it.
   const revenue = typeof input.revenue === "number" && Number.isFinite(input.revenue) ? input.revenue : null;
   if (revenue !== null && m.breakEvenRevenue !== null && revenue < m.breakEvenRevenue) {
     const gap = Math.round(m.breakEvenRevenue - revenue);
