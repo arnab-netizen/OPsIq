@@ -37,7 +37,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 |---|---|---|
 | 0 | Repo truth + Owner Mode state audit | **DOC_ONLY_COMPLETE** |
 | 0.5 | Baseline regression harness (install deps, run baseline, map flows→tests) | **STATIC_TESTED_ONLY** (deps installed; owner-mode baseline green; DB tests blocked — see below) |
-| 1 | Status/threshold canon + pure scoring helpers | NOT_STARTED |
+| 1 | Status/threshold canon + source-classification mapping | **STATIC_TESTED_ONLY** (canon verified; source-classification gap G4 closed) |
 | 2 | Data quality + input guidance gate | NOT_STARTED (impl PRESENT; verify) |
 | 3 | Financial survival + unit economics | NOT_STARTED (impl PARTIAL; verify/extract helpers) |
 | 4 | Decision + evidence snapshot | NOT_STARTED (impl PARTIAL; status-canon mapping) |
@@ -86,4 +86,10 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 0.5 baseline is captured and green (static/non-DB). Proceed to **Phase 1 — status/threshold/helper canon**: reuse existing `domain/constants/statuses.ts` and `thresholds/threshold-service.ts`; add a canonical decision-status + source-classification **mapping layer** (Gap Register G3/G4) only with an active caller + test; extract named pure helpers (G2) only where a downstream phase needs them. No DB-tested claims until a Postgres test DB is provisioned.
+Phase 1 complete (STATIC_TESTED_ONLY). Proceed to **Phase 2 — Data Quality + Input Guidance Gate**: verify the existing `domain/business-facts/data-quality.ts` (`scoreDataQuality`, confidence cap) and its diagnosis-permission/missing-input behavior with tests; wire the new source-classification canon into evidence/data-quality confidence weighting only where a real consumer needs it. No DB-tested claims until a Postgres test DB is provisioned.
+
+### Phase 1 decision record (status/threshold/source canon)
+- **Status vocabulary already canonical** — `domain/constants/statuses.ts` (action/evidence/approval/recommendation/intervention/business-condition/health, etc.) and `domain/owner-mode/owner-decision.ts` (`OwnerDecisionStatus` + `OWNER_DECISION_STATUS_TRANSITIONS`). Per Phase 1 restriction, **no new status enum created**, nothing renamed. A prompt↔repo decision-status mapping helper was deliberately NOT added: it would be dead code (no caller), and the repo vocabulary is already the canonical owner decision state machine.
+- **Thresholds already centralized** — `services/thresholds/threshold-service.ts` (`DEFAULT_THRESHOLDS`) + per-domain `domain/owner-*/thresholds.ts`. No new config layer created.
+- **Source classification was the only genuine gap (G4)** — the canonical 8-class vocabulary (`VERIFIED_RECORD`…`UNKNOWN`) did not exist. Added one pure module `domain/owner-mode/source-classification.ts` mapping existing `ExtractionMethod`/`SourceDocumentKind`/`FactValidationStatus` → canon, with trust ordering enforcing §1.10. Tests are the active caller now; Phase 2 consumes it for evidence/data-quality weighting.
+- **Pure helper extraction (G2) deferred** — `calculateFinancialSurvival`/`calculateUnitEconomics`/`calculateAttributionConfidence`/`checkLearningEligibility` are embedded in services with no standalone caller; extracting them now would be dead code. They are addressed in their own phases (3/9/10) where callers + tests exist.
