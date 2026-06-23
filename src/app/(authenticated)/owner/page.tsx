@@ -59,12 +59,14 @@ const DOMAIN_LINK: Record<string, string> = {
 
 export default function OwnerCommandCenterPage() {
   const [data, setData] = useState<any | null>(null);
+  const [businesses, setBusinesses] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const load = useCallback(async (businessId?: string | null) => {
-    setLoading(true);
+  const loadProfile = useCallback(async (businessId?: string | null) => {
+    setProfileLoading(true);
     setError(null);
     try {
       const qs = businessId ? `?businessId=${businessId}` : "";
@@ -74,9 +76,24 @@ export default function OwnerCommandCenterPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
-      setLoading(false);
+      setProfileLoading(false);
     }
   }, []);
+
+  const load = useCallback(async (businessId?: string | null) => {
+    if (businesses === null) {
+      setLoading(true);
+      try {
+        const biz = await api("/api/owner/businesses");
+        setBusinesses(biz.businesses ?? []);
+      } catch {
+        // fall through to full load
+      } finally {
+        setLoading(false);
+      }
+    }
+    await loadProfile(businessId);
+  }, [businesses, loadProfile]);
 
   useEffect(() => {
     load();
@@ -93,7 +110,7 @@ export default function OwnerCommandCenterPage() {
     </div>
   );
 
-  const businesses: any[] = data?.businesses ?? [];
+  const businessList: any[] = businesses ?? data?.businesses ?? [];
   const profile = data?.profile ?? null;
   const next = profile?.recommendedNextAction ?? null;
   const missing: string[] = profile?.missingCriticalData ?? [];
@@ -144,7 +161,7 @@ export default function OwnerCommandCenterPage() {
         </div>
       )}
 
-      {businesses.length === 0 ? (
+      {businessList.length === 0 ? (
         <div className="border rounded-lg p-8 text-center text-muted-foreground">
           No businesses yet. Start in <Link href="/owner/finance" className="underline">Finance</Link> or{" "}
           <Link href="/owner/recovery" className="underline">Recovery</Link> to create one.
@@ -157,17 +174,21 @@ export default function OwnerCommandCenterPage() {
               label="Business"
               value={selected ?? undefined}
               onChange={(e: any) => load(e.target.value)}
-              options={businesses.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
+              options={businessList.map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
             />
           </div>
 
-          {businesses.length > 1 && selected && (
+          {businessList.length > 1 && selected && (
             <h2 className="text-xl font-semibold text-foreground mb-2">
-              {businesses.find((b) => b.id === selected)?.name ?? ""}
+              {businessList.find((b) => b.id === selected)?.name ?? ""}
             </h2>
           )}
 
-          {!data?.hasData || !profile ? (
+          {profileLoading ? (
+            <div className="border rounded-lg p-8 text-center text-muted-foreground animate-pulse">
+              Loading diagnosis…
+            </div>
+          ) : !data?.hasData || !profile ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">
               Your OpsIQ diagnosis requires business data.{" "}
               <Link href="/owner/intake" className="underline">Upload your data →</Link>
