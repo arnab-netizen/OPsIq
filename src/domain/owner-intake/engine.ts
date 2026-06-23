@@ -8,6 +8,7 @@
  * connector data must be confirmed before it can feed a diagnosis (execution.md §17).
  */
 import { parseCsv } from "./csv";
+import { GST_BASIS_VALUES } from "./field-specs";
 import type {
   IntakeSource,
   IntakeFieldSpec,
@@ -16,6 +17,8 @@ import type {
   IntakeValidationStatus,
   NormalizedRecord,
 } from "./types";
+
+const GST_CURRENCY_FIELDS = ["revenue", "costOfGoodsOrServices", "fixedCosts", "variableCosts", "cashOnHand", "receivables"] as const;
 
 /** Canonical key for matching a header to a field name (case/space/punct-insensitive). */
 function canon(s: string): string {
@@ -125,6 +128,47 @@ export function buildCsvIntake(
     if (f.required && !fieldToCol.has(f.name) && rows.length > 0) {
       anyRequiredBroken = true;
     }
+  }
+
+  // GST normalisation: if the spec includes gstBasis and any row provides it,
+  // validate the value and divide all finance currency fields by 1.1 for inclusive rows.
+  const hasGstBasisField = fieldSpecs.some((f) => f.name === "gstBasis");
+  if (hasGstBasisField) {
+    records.forEach((record, r) => {
+      const rawBasis = record["gstBasis"];
+      if (rawBasis === null || rawBasis === undefined) {
+        // gstBasis absent — emit advisory warning only (non-blocking)
+        errorReport.push({
+          row: r + 1,
+          field: "gstBasis",
+          code: "gst_basis_unknown",
+          message: `GST basis not specified. If revenue figures are GST-inclusive, set gstBasis to "inclusive" so figures are normalised to ex-GST.`,
+        });
+        anyOptionalInvalid = true;
+        return;
+      }
+      const basis = String(rawBasis).trim().toLowerCase();
+      if (!GST_BASIS_VALUES.includes(basis as typeof GST_BASIS_VALUES[number])) {
+        errorReport.push({
+          row: r + 1,
+          field: "gstBasis",
+          code: "gst_basis_unknown",
+          message: `"${rawBasis}" is not a valid GST basis. Use "inclusive" or "exclusive".`,
+        });
+        anyOptionalInvalid = true;
+        return;
+      }
+      if (basis === "inclusive") {
+        for (const field of GST_CURRENCY_FIELDS) {
+          const v = record[field];
+          if (typeof v === "number") {
+            record[field] = Math.round((v / 1.1) * 100) / 100;
+          }
+        }
+        // Record the normalised basis so downstream readers know the values are ex-GST.
+        record["gstBasis"] = "exclusive_normalised";
+      }
+    });
   }
 
   const validationStatus: IntakeValidationStatus =

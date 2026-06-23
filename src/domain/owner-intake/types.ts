@@ -48,7 +48,7 @@ export type IntakeNormalizationStatus = (typeof INTAKE_NORMALIZATION_STATUSES)[n
 export interface IntakeFieldError {
   row: number; // 1-based data row index
   field: string;
-  code: "missing_required" | "invalid_number" | "negative_value" | "invalid_date" | "unmapped_column";
+  code: "missing_required" | "invalid_number" | "negative_value" | "invalid_date" | "unmapped_column" | "inconsistent_data" | "gst_basis_unknown";
   message: string;
 }
 
