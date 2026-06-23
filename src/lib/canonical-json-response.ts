@@ -97,6 +97,7 @@ const ALLOWLISTED_HEADERS = new Set([
   "x-ratelimit-limit",
   "x-ratelimit-remaining",
   "x-ratelimit-reset",
+  "retry-after", // Rate limiting: when to retry after 429
 ]);
 
 /**
