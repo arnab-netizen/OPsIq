@@ -40,7 +40,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 1 | Status/threshold canon + source-classification mapping | **STATIC_TESTED_ONLY** (canon verified; source-classification gap G4 closed) |
 | 2 | Data quality + input guidance gate | **STATIC_TESTED_ONLY** (scoring/guidance PRESENT+verified; §15 permission-state classifier added) |
 | 3 | Financial survival + unit economics | **VERIFIED (STATIC_TESTED_ONLY)** — already implemented; 229 tests green; no code added |
-| 4 | Decision + evidence snapshot | NOT_STARTED (impl PARTIAL; status-canon mapping) |
+| 4 | Decision + evidence snapshot | **VERIFIED (STATIC_TESTED_ONLY)** — 355 tests green; route-auth DB-gated |
 | 5 | Recommendation portfolio + feasibility | NOT_STARTED (impl PRESENT; verify) |
 | 6 | Scenario / what-if | NOT_STARTED (engine PRESENT; verify) |
 | 7 | Experiment design | NOT_STARTED |
@@ -86,7 +86,15 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 3 verified (no code). Proceed to **Phase 4 — Decision + Evidence Snapshot on Existing Recommendation Path**: verify `OwnerDecision`/`owner-decision.ts` validation + approval states + owner-only enforcement and the evidence bundle/snapshot path; close only a precise gap if one exists. No DB-tested claims until a Postgres test DB is provisioned.
+Phase 4 verified (no code). Proceed to **Phase 5 — Recommendation Portfolio + Feasibility**: verify ranked-portfolio + feasibility scoring (`services/decisions/priority-engine.ts`, recommendation engine) including survival/unit-econ-aware ranking and do-nothing/stop-action support; close only a precise gap if one exists.
+
+### Phase 4 decision record (decision + evidence) — VERIFICATION ONLY (no code)
+- **Decision object + lifecycle:** `domain/owner-mode/owner-decision.ts` (`validateOwnerDecision` DEC-RULE-1..6, `OWNER_DECISION_STATUS_TRANSITIONS`, `validateDecisionRights`, `assertAllowsActionCreation`) on the `OwnerDecision`/`OwnerDecisionRights` models.
+- **Approval state mapping (prompt canon → repo canon, no enum change per Phase-1 rule):** PENDING_OWNER_DECISION→`needs_more_data`/`needs_human_review`; APPROVED→`accepted`; REJECTED & MARKED_INFEASIBLE→`rejected` (+reason); NEEDS_MORE_EVIDENCE→`needs_more_data`; SUPERSEDED/modified→`modified`; CONVERTED_TO_EXPERIMENT→experiment infra (Phase 7); OWNER_OVERRIDE→anti-overreliance acknowledgement (below).
+- **Owner-override + evidence-requirement (§1.13/§21):** `domain/owner-mode/recommendation-verification.ts` — `runVerification`, `checkAntiOverrelianceComplete`, `assertVerificationAllowsOwnerDecision` (DEC-RULE-4: `unsafe_to_recommend` blocks any decision; overreliance acknowledgement preserves the warning before an owner proceeds on weak confidence).
+- **Evidence bundle/snapshot:** `EvidenceBundle`/`EvidenceItem`, `OwnerEvidenceRecord`, `OwnerRecommendationEvidence`; domain `diagnosis-evidence`, `evidence-capture`, `evidence-verification`.
+- **Tests verified green:** owner-decision, recommendation-verification, recommendation-tracking, decision-memory (235) + diagnosis-evidence, evidence-capture, evidence-verification (120) = **7 files / 355 passed**.
+- **Known limitation:** operator-cannot-approve / cross-workspace-denied are route-boundary checks needing DB+auth (DB-gated here) → no API/DB_TESTED claim for the security matrix this slice; domain-level gating verified.
 
 ### Phase 3 decision record (financial survival + unit economics) — VERIFICATION ONLY
 Already implemented and tested; **no code added** (aliasing the prompt's `calculateFinancialSurvival`/`calculateUnitEconomics` over existing functions would be forbidden duplication, Gap G2 resolved as "exists under canonical names").
