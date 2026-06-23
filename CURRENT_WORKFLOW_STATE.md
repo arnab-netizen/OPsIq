@@ -50,7 +50,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 11 | Governance / audit / model risk | **VERIFIED (API_TESTED)** — 294 audit/governance tests green |
 | 12 | Owner dashboard command center | **VERIFIED (UI_TESTED + API_TESTED)** — 167 tests green |
 | 12.5 | Trust & explainability QA | **VERIFIED (UI_TESTED)** — 84 trust/explainability/adversarial tests green |
-| 13 | Laundry vertical slice (end-to-end) | NOT_STARTED |
+| 13 | Laundry vertical slice (end-to-end) | **VERIFIED (OWNER_FLOW_TESTED)** — full-loop + SMB harness 716 tests green |
 | 14 | Housekeeping archetype | NOT_STARTED |
 | 15 | Benchmark harness | NOT_STARTED |
 | 16 | Final reliability gate | NOT_STARTED |
@@ -86,7 +86,13 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 12.5 verified (no code). Proceed to **Phase 13 — Laundry/Dry-Cleaning Minimum Vertical Slice**: verify the end-to-end owner loop on the laundry archetype (incomplete→sufficient input, survival, unit econ, diagnosis+evidence, decision, action+proof, outcome verification, learning eligibility, dashboard). Run full-loop-validation + laundry/archetype + real-world-smb suites.
+Phase 13 verified (no code). Proceed to **Phase 14 — Housekeeping Archetype**: verify housekeeping archetype registration/KPIs are isolated from generic engine + laundry. Run housekeeping/operations + archetype tests.
+
+### Phase 13 decision record (laundry vertical slice) — VERIFICATION ONLY (no code)
+- **End-to-end owner loop:** `domain/owner-mode/full-loop-validation.test.ts` exercises input-quality→diagnosis→decision→action→evidence→verification→outcome→learning-eligibility→dashboard. Laundry archetype in `domain/business-facts/kpi-profiles.ts` (kg/pieces/day, chemical cost/kg, delivery-cost ratio, repeat-customer rate, machine utilization).
+- **Real-world SMB harness:** `tests/owner-mode/real-world-smb-cases` (realWorldSmbHarness, smbLeakageGuard, smbInterpolation, composerIntegration, smbRegressionLock, evidenceHintSidecar, normalizeFixtureToEvidence, …).
+- **Tests verified green:** full-loop + laundry-touching domain metrics/kpi-profiles (261) + SMB case harness (455) = **26 files / 716 passed**.
+- **Known limitation:** DB-backed persistence segments of the loop are gated (no DATABASE_URL) → the loop is proven at pure + service + harness level (OWNER_FLOW_TESTED), not via live Postgres.
 
 ### Phase 12.5 decision record (trust & explainability QA) — VERIFICATION ONLY (no code)
 - **Already hardened (prior history):** "eliminate misleading empty states + confidence display" (Phase G owner trust). Explainability via `owner/trust/explanations`.
