@@ -109,18 +109,32 @@ export default function OwnerCommandCenterPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/owner/home"><Button className="min-h-[44px] min-w-[44px] py-3">Home</Button></Link>
-          <Link href="/owner/finance"><Button className="min-h-[44px] min-w-[44px] py-3">Finance</Button></Link>
-          <Link href="/owner/cashflow"><Button className="min-h-[44px] min-w-[44px] py-3">Cashflow</Button></Link>
-          <Link href="/owner/sales"><Button className="min-h-[44px] min-w-[44px] py-3">Sales</Button></Link>
-          <Link href="/owner/operations"><Button className="min-h-[44px] min-w-[44px] py-3">Operations</Button></Link>
-          <Link href="/owner/execution"><Button className="min-h-[44px] min-w-[44px] py-3">Execution</Button></Link>
-          <Link href="/owner/marketing"><Button className="min-h-[44px] min-w-[44px] py-3">Marketing</Button></Link>
-          <Link href="/owner/strategy"><Button className="min-h-[44px] min-w-[44px] py-3">Strategy</Button></Link>
-          <Link href="/owner/portfolio"><Button className="min-h-[44px] min-w-[44px] py-3">Portfolio</Button></Link>
-          <Link href="/owner/intake"><Button className="min-h-[44px] min-w-[44px] py-3">Data Intake</Button></Link>
-          <Link href="/owner/trust"><Button className="min-h-[44px] min-w-[44px] py-3">Trust</Button></Link>
-          <Link href="/owner/recovery"><Button className="min-h-[44px] min-w-[44px] py-3">Recovery</Button></Link>
+          {[
+            { label: "Home", href: "/owner/home", domain: null },
+            { label: "Finance", href: "/owner/finance", domain: "finance" },
+            { label: "Cashflow", href: "/owner/cashflow", domain: "cashflow" },
+            { label: "Sales", href: "/owner/sales", domain: "sales" },
+            { label: "Operations", href: "/owner/operations", domain: "operations" },
+            { label: "Execution", href: "/owner/execution", domain: "sop" },
+            { label: "Marketing", href: "/owner/marketing", domain: "marketing" },
+            { label: "Strategy", href: "/owner/strategy", domain: "strategy" },
+            { label: "Portfolio", href: "/owner/portfolio", domain: null },
+            { label: "Data Intake", href: "/owner/intake", domain: null },
+            { label: "Trust", href: "/owner/trust", domain: null },
+            { label: "Recovery", href: "/owner/recovery", domain: "recovery" },
+          ].map(({ label, href, domain }) => {
+            const isRecommended = domain !== null && next?.domain === domain;
+            return (
+              <Link key={href} href={href}>
+                <Button
+                  className={`min-h-[44px] min-w-[44px] py-3${isRecommended ? " ring-2 ring-foreground" : ""}`}
+                  title={isRecommended ? "Recommended domain" : undefined}
+                >
+                  {label}{isRecommended ? " ★" : ""}
+                </Button>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
