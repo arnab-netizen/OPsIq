@@ -169,7 +169,19 @@ export default function OwnerCommandCenterPage() {
                   </Badge>
                   <Badge variant="muted">Data confidence {Math.round(profile.dataConfidenceScore)}/100</Badge>
                 </div>
-                <div className="text-xs text-muted-foreground mt-2">
+                {(() => {
+                  const topFindings: any[] = profile.topFindings ?? [];
+                  const driver = topFindings.find((f: any) => f.severity === "critical") ??
+                    topFindings.find((f: any) => f.severity === "high") ??
+                    topFindings[0];
+                  return driver ? (
+                    <div className="text-xs text-muted-foreground mt-2">
+                      <span className="font-medium">Primary driver:</span>{" "}
+                      <span className="capitalize">{driver.domain}</span> — {driver.title}
+                    </div>
+                  ) : null;
+                })()}
+                <div className="text-xs text-muted-foreground mt-1">
                   Domains wired: {(data.domainsWired ?? []).join(", ") || "none"}
                 </div>
               </section>
