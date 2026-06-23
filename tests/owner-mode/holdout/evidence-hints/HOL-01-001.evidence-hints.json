@@ -1,0 +1,107 @@
+{
+  "case_id": "HOL-01-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "working_capital_stress",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "owner is drawing on a personal credit line each month to meet payroll obligations despite a full maintenance contract schedule",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Personal credit use for payroll is an acute adverse liquidity signal. Paraphrased from symptom — no must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "one commercial client is 120 days past the invoice date on an outstanding balance of $38,000",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Single large overdue balance concentrated in one client is a critical liquidity risk. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "property management and strata clients are consistently settling invoices between 60 and 90 days after issue",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Extended settlement cycle across multiple clients creates a structural cash timing gap. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "bank account balance approaches zero at end of each month despite a full contract schedule generating revenue",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "End-of-month cash depletion is a direct liquidity signal. No must_identify terms used."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "commercial landscaping business; annual revenue $920K; 9 employees; one strata client with an outstanding invoice of $38,000 unpaid beyond 120 days; average settlement period from clients is 75 days",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary from facts_known_to_owner. Average debtor days 75 used directly. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): three new maintenance contracts have recently been signed",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "New contract wins are a misleading stability signal masking the invoice collection problem."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): client relationships appear positive with no complaints from clients who are settling late",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Positive client relationships are a misleading signal — they do not indicate timely payment behaviour."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): annual revenue has grown 18% year-on-year",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth masks the collection lag problem."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "average_debtor_days",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 4,
+      "value_override": 75,
+      "transform_note": "average_debtor_days=75 used directly as receivablesAging proxy"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": "receivablesAging",
+      "would_improve_pattern": "fin_isWorkingCapital (receivablesAging with days value elevates to HIGH confidence)"
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": "dso",
+      "would_improve_pattern": "fin_isWorkingCapital (dso numeric elevates to HIGH confidence)"
+    }
+  ],
+  "validation_notes": "HOL-01-001 is a receivables-lag working-capital case. All findings derived from input_packet fields. No must_identify vocabulary used. receivablesAging set to 75 days from average_debtor_days."
+}

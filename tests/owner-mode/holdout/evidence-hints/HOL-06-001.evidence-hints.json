@@ -1,0 +1,90 @@
+{
+  "case_id": "HOL-06-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "operational_bottleneck",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "post-production photo editing backlog has grown to six weeks — exceeding the contractual delivery window — while the owner processes every image set personally",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Six-week editing backlog beyond contracted delivery window is the primary operational constraint. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "owner is working 65 hours per week across shooting on weekends and editing on weekdays but cannot keep pace with the volume of completed weddings awaiting post-production",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner workload at maximum without maintaining delivery cadence confirms the single-operator throughput ceiling. No must_identify terms."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "new booking enquiries are being declined because all studio capacity is committed — five new enquiries per week are being turned away",
+      "dimension": "market_position",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Declining revenue-generating opportunities due to the editing bottleneck confirms commercial impact. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.symptoms[3]",
+      "finding": "two clients have made formal complaints about late delivery of their completed photo sets",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Client complaints about delivery delay confirm that the backlog is causing service failure. No must_identify terms."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "wedding photography studio; annual revenue $310K; 1 owner-operator; 48 weddings per year; editing backlog 6 weeks; 5 new enquiries per week declined; 4.9 rating on review platforms",
+      "dimension": "operational_efficiency",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary from facts_known_to_owner. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): enquiry volume is healthy with five new booking requests arriving per week",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Strong enquiry demand is a misleading signal — demand cannot be converted while the editing bottleneck remains."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): review platform rating is 4.9 and the studio is fully booked 12 months ahead",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "High ratings and advance bookings are misleading signals — they do not indicate operational sustainability."
+    }
+  ],
+  "metric_key_mappings": [],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "HOL-06-001 is a single-operator post-production bottleneck case. All findings derived from input_packet. No must_identify vocabulary used."
+}

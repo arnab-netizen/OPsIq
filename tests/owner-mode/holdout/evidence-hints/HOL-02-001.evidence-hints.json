@@ -1,0 +1,98 @@
+{
+  "case_id": "HOL-02-001",
+  "fixture_version": "2026-06-23",
+  "engine_archetype_synonym": "margin_erosion",
+  "unsupported_expected_archetypes": [],
+  "evidence_items": [
+    {
+      "source_path": "input_packet.symptoms[0]",
+      "finding": "gross margin has compressed from 44% to 29% over 18 months — a 15 percentage point decline — while wholesale prices charged to clients have not changed",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Margin compression with static pricing is the primary financial health signal. Paraphrased from symptoms. No must_identify vocabulary used."
+    },
+    {
+      "source_path": "input_packet.symptoms[1]",
+      "finding": "flour, butter, and egg costs have risen approximately 35% over the same 18-month period with no adjustment to wholesale rates charged to cafes and restaurants",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Ingredient cost inflation without repricing is the direct driver of margin compression. No must_identify terms."
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "owner is reducing personal drawings to cover the operating shortfall caused by the margin decline",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Owner drawing reduction is a direct financial distress indicator. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "artisan bakery; annual revenue $680K; 6 employees; gross margin 18 months ago 44%; current gross margin 29%; ingredient cost increase approximately 35% across core inputs",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Structured summary from facts_known_to_owner. Margin change from 44% to 29% = -15 percentage points. No must_identify vocabulary."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[0]",
+      "finding": "Surface signal (not root cause): revenue has grown 12% over the same 18-month period",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Revenue growth is a misleading signal masking the margin destruction from cost inflation."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): the order book remains fully committed with no client cancellations",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Full order book is a misleading positive signal — demand strength does not indicate margin health."
+    },
+    {
+      "source_path": "input_packet.misleading_signals[2]",
+      "finding": "Surface signal (not root cause): clients have provided positive feedback on product quality",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Client satisfaction is a misleading signal unrelated to input cost inflation."
+    }
+  ],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "gross_margin_current_pct",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 3,
+      "value_override": -15,
+      "transform_note": "Margin compressed from 44% to 29% — profitChangePercent proxy = -15 percentage points; marginPct set as change value"
+    }
+  ],
+  "clarification_requests": [
+    {
+      "missing_input_index": 0,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    },
+    {
+      "missing_input_index": 1,
+      "canonical_key_if_applicable": "marginPct",
+      "would_improve_pattern": "margin_isMarginErosion (per-product marginPct confirms erosion)"
+    },
+    {
+      "missing_input_index": 2,
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
+    }
+  ],
+  "validation_notes": "HOL-02-001 is a cost-inflation margin erosion case. All findings derived from input_packet. No must_identify vocabulary used. marginPct set to -15 (44% to 29% compression)."
+}
