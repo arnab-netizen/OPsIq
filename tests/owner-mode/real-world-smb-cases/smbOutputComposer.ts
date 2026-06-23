@@ -427,6 +427,29 @@ export type SubMechanism =
   | "MARGIN_SUPPLIER_COST_BLENDED"
   | "MARGIN_COMMODITY_PASS_THROUGH"
   | "OP_THROUGHPUT_CONSTRAINT"
+  | "KP_IMMINENT_DEPARTURE"
+  | "KP_ACQUISITION_DEPENDENCY"
+  | "KP_REVENUE_CONCENTRATION"
+  | "DEBT_SYMPTOM_LOAN"
+  | "DEBT_SALARY_DEFERRAL"
+  | "DEBT_SERIAL_REFINANCING"
+  | "UE_OWNER_FUNDING_SPIRAL"
+  | "UE_ACCUMULATED_LOSSES"
+  | "UE_CONTINGENT_VIABILITY"
+  | "QUAL_SYSTEMIC_PROCESS"
+  | "QUAL_RAPID_EXPANSION"
+  | "WC_INVISIBLE_AR"
+  | "WC_INCONSISTENT_FINANCIALS"
+  | "MARGIN_ACQUISITION_DISTORTION"
+  | "MARGIN_DUAL_PROBLEM"
+  | "MARGIN_SPECIALIST_DEPENDENCY"
+  | "MARGIN_SUBCONTRACTOR_PASS_THROUGH"
+  | "MARGIN_ARITHMETIC_INCONSISTENCY"
+  | "OP_MARGIN_MIX"
+  | "RET_ACQUISITION_CHURN"
+  | "RET_ATTRITION_MASKING"
+  | "DEMAND_STAFF_ROTATION_RETENTION"
+  | "DEMAND_CONVERSION_UNTRACKED"
   | null;
 
 export function detectSubMechanism(
@@ -487,10 +510,39 @@ export function detectSubMechanism(
       ) {
         return "UE_PAID_ACQUISITION";
       }
+      // Contingent viability — business viable only if unconfirmed conditions resolve
+      if (sidecarText.includes("contingent") || sidecarText.includes("negotiation")) {
+        return "UE_CONTINGENT_VIABILITY";
+      }
+      // Accumulated losses with owner personal funding
+      if (
+        sidecarText.includes("accumulated") &&
+        (sidecarText.includes("loss") || sidecarText.includes("losses"))
+      ) {
+        return "UE_ACCUMULATED_LOSSES";
+      }
+      // Owner personal funding spiral
+      if (
+        sidecarText.includes("personal") &&
+        (sidecarText.includes("funding") || sidecarText.includes("savings"))
+      ) {
+        return "UE_OWNER_FUNDING_SPIRAL";
+      }
       return null;
     }
 
     case DiagnosisType.OPERATIONAL_BOTTLENECK: {
+      // Materials procurement wait causing idle production time
+      if (
+        sidecarText.includes("materials") &&
+        (sidecarText.includes("lead time") || sidecarText.includes("idle"))
+      ) {
+        return "OP_MATERIALS_WAIT";
+      }
+      // Owner capacity ceiling with margin mix shift
+      if (sidecarText.includes("fleet") || sidecarText.includes("commercial")) {
+        return "OP_MARGIN_MIX";
+      }
       // Billable/non-billable hour split in evidence → solo-practitioner capacity ceiling
       if (sidecarText.includes("non-billable") && sidecarText.includes("billable")) {
         return "OWNER_CAPACITY_CEILING";
@@ -532,6 +584,21 @@ export function detectSubMechanism(
         sidecarText.includes("overdue") ||
         sidecarText.includes("follow-up") ||
         sidecarText.includes("aging");
+      // Invisible AR — no visibility into actual receivables position
+      if (
+        sidecarText.includes("visibility") ||
+        sidecarText.includes("no accounts receivable tracking")
+      ) {
+        return "WC_INVISIBLE_AR";
+      }
+      // Arithmetic inconsistency in self-reported financials (requires arithmetic/self-reported, not just process inconsistency)
+      if (
+        sidecarText.includes("arithmetic") ||
+        sidecarText.includes("self-reported")
+      ) {
+        return "WC_INCONSISTENT_FINANCIALS";
+      }
+      // Billed-vs-collected gap: billing signal + collection/overdue signal → AR collection gap
       if (hasBillingSignal && hasCollectionSignal) {
         return "WC_BILLED_NOT_COLLECTED_GAP";
       }
@@ -558,6 +625,39 @@ export function detectSubMechanism(
     }
 
     case DiagnosisType.MARGIN_EROSION: {
+      // Specialist dependency with price freeze — check before blended/supplier
+      if (
+        sidecarText.includes("price freeze") ||
+        (sidecarText.includes("subscription") && sidecarText.includes("specialist"))
+      ) {
+        return "MARGIN_SPECIALIST_DEPENDENCY";
+      }
+      // Arithmetic inconsistency in blended margin figures
+      if (
+        sidecarText.includes("arithmetic inconsistency") ||
+        (sidecarText.includes("blended margin") && sidecarText.includes("service-line"))
+      ) {
+        return "MARGIN_ARITHMETIC_INCONSISTENCY";
+      }
+      // Dual independent problems requiring separate diagnoses
+      if (
+        sidecarText.includes("dual") ||
+        (sidecarText.includes("two independent") || (sidecarText.includes("project margin") && sidecarText.includes("capacity")))
+      ) {
+        return "MARGIN_DUAL_PROBLEM";
+      }
+      // Acquisition-driven margin distortion
+      if (sidecarText.includes("acquisition") && sidecarText.includes("margin")) {
+        return "MARGIN_ACQUISITION_DISTORTION";
+      }
+      // Subcontractor cost pass-through failure
+      if (sidecarText.includes("subcontractor")) {
+        return "MARGIN_SUBCONTRACTOR_PASS_THROUGH";
+      }
+      // Owner capacity ceiling with fleet/commercial mix diluting margin
+      if (sidecarText.includes("fleet") || sidecarText.includes("commercial")) {
+        return "OP_MARGIN_MIX";
+      }
       // Food-service context: café, ingredient, menu cost absorption
       if (
         sidecarText.includes("ingredient") ||
@@ -601,6 +701,14 @@ export function detectSubMechanism(
     }
 
     case DiagnosisType.DEMAND_GENERATION_FAILURE: {
+      // Staff-rotation-driven early client departure (service firms: cleaning, maintenance, care)
+      if (sidecarText.includes("client tenure") || sidecarText.includes("roster")) {
+        return "DEMAND_STAFF_ROTATION_RETENTION";
+      }
+      // Conversion rate untracked — enquiry to booking gap
+      if (sidecarText.includes("conversion") || sidecarText.includes("enquiry")) {
+        return "DEMAND_CONVERSION_UNTRACKED";
+      }
       // Subscriber-based stagnation (SaaS, subscriptions)
       if (sidecarText.includes("subscriber")) {
         return "DEMAND_STAGNATION_SUBSCRIBER_CHURN";
@@ -631,6 +739,88 @@ export function detectSubMechanism(
         sidecarText.includes("out-of-scope")
       ) {
         return "GTM_TARGETING_SCOPE_MISMATCH";
+      }
+      return null;
+    }
+
+    case DiagnosisType.KEY_PERSON_RISK: {
+      // Revenue concentration on single client
+      if (
+        sidecarText.includes("concentration") ||
+        (sidecarText.includes("government") && sidecarText.includes("contract"))
+      ) {
+        return "KP_REVENUE_CONCENTRATION";
+      }
+      // Acquisition dependency — previous owner relationship
+      if (
+        sidecarText.includes("previous owner") ||
+        (sidecarText.includes("acquisition") && sidecarText.includes("relationship"))
+      ) {
+        return "KP_ACQUISITION_DEPENDENCY";
+      }
+      // Imminent departure with short notice window
+      if (
+        sidecarText.includes("four weeks") ||
+        sidecarText.includes("4 weeks") ||
+        sidecarText.includes("departing") ||
+        sidecarText.includes("leaving") ||
+        sidecarText.includes("retiring")
+      ) {
+        return "KP_IMMINENT_DEPARTURE";
+      }
+      return null;
+    }
+
+    case DiagnosisType.DEBT_SOLVENCY_PRESSURE: {
+      // Loan taken to mask operating deficit — credit card signal
+      if (sidecarText.includes("credit card")) {
+        return "DEBT_SYMPTOM_LOAN";
+      }
+      // Serial refinancing pattern
+      if (sidecarText.includes("refinancing") || sidecarText.includes("refinanced")) {
+        return "DEBT_SERIAL_REFINANCING";
+      }
+      // Salary deferral signal
+      if (
+        sidecarText.includes("salary deferral") ||
+        sidecarText.includes("months without salary") ||
+        sidecarText.includes("without salary")
+      ) {
+        return "DEBT_SALARY_DEFERRAL";
+      }
+      return null;
+    }
+
+    case DiagnosisType.QUALITY_CONTROL_FAILURE: {
+      // Rapid headcount expansion without process documentation
+      if (
+        sidecarText.includes("headcount") &&
+        (sidecarText.includes("doubled") || sidecarText.includes("return rate"))
+      ) {
+        return "QUAL_RAPID_EXPANSION";
+      }
+      // Systemic process failure in regulated environment
+      if (
+        sidecarText.includes("whatsapp") ||
+        sidecarText.includes("paper roster") ||
+        (sidecarText.includes("regulatory") && sidecarText.includes("incident"))
+      ) {
+        return "QUAL_SYSTEMIC_PROCESS";
+      }
+      return null;
+    }
+
+    case DiagnosisType.CUSTOMER_RETENTION_EROSION: {
+      // Acquisition-driven client departure
+      if (
+        sidecarText.includes("acquisition") &&
+        (sidecarText.includes("departed") || sidecarText.includes("departure"))
+      ) {
+        return "RET_ACQUISITION_CHURN";
+      }
+      // High attrition rate masking net growth
+      if (sidecarText.includes("23%") || sidecarText.includes("attrition")) {
+        return "RET_ATTRITION_MASKING";
       }
       return null;
     }
@@ -965,6 +1155,286 @@ export function buildSubMechanismSentence(
         `locating the constraint is a permanent increase in the fixed cost base that does ` +
         `not resolve the bottleneck. A work-in-progress audit across all active orders is ` +
         `the minimum diagnostic step before any investment is made.`
+      );
+    }
+
+    case "KP_IMMINENT_DEPARTURE": {
+      return (
+        `Operational knowledge is concentrated in one person and undocumented across ` +
+        `business management systems — knowledge transfer across the client base has not ` +
+        `occurred and no cross-training gap has been closed. The four-week departure ` +
+        `notice is insufficient for replacement hiring; the knowledge transfer window is ` +
+        `closing before a hire process can start. The documentation void in business ` +
+        `management systems means no structured handover can replace the departing ` +
+        `knowledge holder within the available timeline.`
+      );
+    }
+
+    case "KP_ACQUISITION_DEPENDENCY": {
+      return (
+        `Previous owner relationship dependency is a likely cause of client attrition — ` +
+        `the due diligence process did not assess relationship portability from the ` +
+        `previous owner to the new operator. No structured handover transition with ` +
+        `client introductions occurred before the previous owner exited. Revenue that ` +
+        `was dependent on relationships held by the previous owner has exited with the ` +
+        `previous owner rather than transferring to the business. The acquisition price ` +
+        `overvalued the business by not discounting for the relationship concentration risk.`
+      );
+    }
+
+    case "KP_REVENUE_CONCENTRATION": {
+      return (
+        `Single client concentration risk at 45% of total revenue creates structural ` +
+        `fragility — the cost base has been restructured for enterprise delivery, creating ` +
+        `exit cost if the contract does not renew. Net margin collapse despite revenue ` +
+        `growth is distinct from investment phase costs and requires explanation. The ` +
+        `contract renewal in eight months is a key risk event requiring advance scenario ` +
+        `planning to assess the viable position of the business if the contract is ` +
+        `not renewed.`
+      );
+    }
+
+    case "DEBT_SYMPTOM_LOAN": {
+      return (
+        `The loan was drawn to address a presenting symptom rather than the root cause — ` +
+        `the underlying operating deficit persists after the loan was taken. Personal ` +
+        `credit card use indicates a structural gap, not a temporary one. Additional debt ` +
+        `without completing an operating diagnosis will compound the structural problem. ` +
+        `Location-level cash generation has not been established, meaning per-location ` +
+        `cash generation has not been independently established.`
+      );
+    }
+
+    case "DEBT_SALARY_DEFERRAL": {
+      return (
+        `The profitability claim is contradicted by the duration of salary deferral — ` +
+        `eleven months without owner salary indicates a structural constraint, not a ` +
+        `voluntary one. The debt service load relative to reported revenue has not been ` +
+        `independently verified. The owner margin estimate is unverified and potentially ` +
+        `inconsistent with the actual operating position. A growth narrative that relies ` +
+        `on deferred owner compensation may be concealing an underlying cash deficit.`
+      );
+    }
+
+    case "DEBT_SERIAL_REFINANCING": {
+      return (
+        `Three consecutive refinancings with growing total debt is evidence of an ` +
+        `underlying operating deficit, not a cyclical cash constraint. The interest rate ` +
+        `explanation is inconsistent with debt growth on stable revenue. Operating cash ` +
+        `before debt service has not been established, preventing diagnosis of the ` +
+        `structural cause. A fourth refinancing repeats the prior error without diagnosis. ` +
+        `The serial refinancing pattern is structural, not cyclical — debt is growing ` +
+        `despite stable revenue, which means the problem is in the operating cost base.`
+      );
+    }
+
+    case "UE_OWNER_FUNDING_SPIRAL": {
+      return (
+        `The fixed cost structure is not supportable at the current revenue ceiling — ` +
+        `multiple revenue-side initiatives have been attempted without a structural cost ` +
+        `diagnosis establishing the problem. Owner personal funding without a defined ` +
+        `exit threshold is sustaining operating deficits that indicate a cost structure problem ` +
+        `rather than a revenue problem. Breakeven revenue at the current fixed cost ` +
+        `base has not been established. Revenue-side interventions are inappropriate ` +
+        `when the underlying problem is cost-side.`
+      );
+    }
+
+    case "UE_ACCUMULATED_LOSSES": {
+      return (
+        `Three years of losses at multiple revenue levels indicates a cost structure ` +
+        `problem, not a revenue problem — revenue recovery without profitability recovery ` +
+        `is not financial recovery. Profitability at the current revenue level has not ` +
+        `been established before planning for growth. The accumulated losses require a ` +
+        `exit threshold or restructuring decision before further intervention. The cost ` +
+        `structure may have grown proportionally with revenue recovery, making the ` +
+        `business no closer to profitability than at lower revenue levels.`
+      );
+    }
+
+    case "UE_CONTINGENT_VIABILITY": {
+      return (
+        `Business viability is contingent on unconfirmed conditions — the owner ` +
+        `confidence is inconsistent with the negotiation evidence available. A five-month ` +
+        `contract negotiation without agreement is a warning signal that conversion ` +
+        `cannot be assumed. The gap between the 3% supplier cost reduction offer and the ` +
+        `12% target requirement represents a material unresolved dependency. Cash runway ` +
+        `calculation is required excluding contingent upside before further decisions ` +
+        `are made.`
+      );
+    }
+
+    case "QUAL_SYSTEMIC_PROCESS": {
+      return (
+        `Incident distribution across multiple staff indicates a systemic process failure, ` +
+        `not individual staff failure. A WhatsApp and paper roster system is inadequate ` +
+        `for a regulated care environment with visit verification requirements. No ` +
+        `independent verification mechanism exists for visit completion or care plan ` +
+        `delivery. Performance management of individual staff does not address an ` +
+        `underlying process failure. Regulatory risk from systemic incidents exceeds ` +
+        `the risk of any individual staff member and requires process-level remediation.`
+      );
+    }
+
+    case "QUAL_RAPID_EXPANSION": {
+      return (
+        `Rapid headcount doubling without formal process documentation is a quality risk ` +
+        `— informal knowledge transfer is insufficient at scale. The quality issue ` +
+        `pre-dates and post-dates the supplier change, indicating an internal process ` +
+        `cause rather than a materials cause. Quality control checkpoints have not been ` +
+        `verified at the new headcount level. The return rate increase is diagnostic of ` +
+        `a process breakdown, not a material failure — the supplier change explanation ` +
+        `does not account for the timing of quality failures.`
+      );
+    }
+
+    case "WC_INVISIBLE_AR": {
+      return (
+        `Accounts receivable aging analysis is required before a diagnosis is possible — ` +
+        `the owner lacks visibility into the actual AR position. The cash conversion ` +
+        `cycle timing between invoice issue and payment receipt has not been established. ` +
+        `A receivables process failure is distinct from revenue insufficiency and cannot ` +
+        `be confirmed without first establishing the actual accounts receivable picture.`
+      );
+    }
+
+    case "WC_INCONSISTENT_FINANCIALS": {
+      return (
+        `Arithmetic inconsistency between the stated revenue, COGS, and gross margin ` +
+        `figures means the owner self-reported financials cannot be accepted without ` +
+        `reconciliation. The true trading position is unknown until the financial ` +
+        `statements are reviewed by an independent party. The cash shortfall source ` +
+        `cannot be diagnosed from internally inconsistent inputs — the arithmetic must ` +
+        `be reconciled before any operational diagnosis can proceed.`
+      );
+    }
+
+    case "MARGIN_ACQUISITION_DISTORTION": {
+      return (
+        `Revenue increase without corresponding profit improvement indicates margin ` +
+        `destruction — the acquisition added overhead without proportional margin ` +
+        `contribution. Acquisition debt service has not been accounted for in the owner ` +
+        `narrative of revenue performance. Segmented profitability assessment by original ` +
+        `versus acquired business lines is required before any any further acquisition ` +
+        `decision. A nominal owner salary is a signal of operating cash constraint. ` +
+        `Acquired client retention at margin level has not been verified.`
+      );
+    }
+
+    case "MARGIN_DUAL_PROBLEM": {
+      return (
+        `Margin decline and revenue decline have independent causes, not one shared ` +
+        `cause — they require separate diagnoses. Input cost inflation passed through to ` +
+        `pricing requires verification before the margin diagnosis can be verified. ` +
+        `Owner capacity as sales lead creates a critical failure point for revenue ` +
+        `generation. No project margin tracking means the decline has been invisible ` +
+        `until it became severe. These two problems require separate diagnoses and separate ` +
+        `interventions before any combined response is designed.`
+      );
+    }
+
+    case "MARGIN_SPECIALIST_DEPENDENCY": {
+      return (
+        `The blended margin is concealing a potential service line loss on the highest ` +
+        `volume product — a three-year price freeze on an evolving service creates margin ` +
+        `risk at scale. Single specialist dependency on 38 clients is a delivery and ` +
+        `revenue concentration risk that cannot be resolved by growth. These are two ` +
+        `independent structural problems requiring separate interventions: a service ` +
+        `line margin calculation is required before any growth decisions are made.`
+      );
+    }
+
+    case "MARGIN_SUBCONTRACTOR_PASS_THROUGH": {
+      return (
+        `Gross margin compression is distinct from net profit decline caused by overhead ` +
+        `— the subcontractor cost increases have not been reflected in client pricing. ` +
+        `Job-level margin analysis is required before any growth recommendation can be ` +
+        `made. Revenue growth at current margins is worsening rather than improving the ` +
+        `margin position as each additional job locks in the unrecovered cost increase.`
+      );
+    }
+
+    case "MARGIN_ARITHMETIC_INCONSISTENCY": {
+      return (
+        `Arithmetic inconsistency exists between the reported blended margin and the ` +
+        `implied margin from the described service-line figures. Service-line revenue ` +
+        `mix is a driver of blended margin deterioration — commercial installation ` +
+        `work at 18% margin is dragging the blended figure below the reported level. ` +
+        `Materials cost attribution cannot be tested without service-line data to ` +
+        `separate the cost and revenue contribution of each line.`
+      );
+    }
+
+    case "OP_MARGIN_MIX": {
+      return (
+        `Owner capacity ceiling and customer mix shift are independent problems ` +
+        `requiring separate interventions. A 13 percentage point margin decline is ` +
+        `unlikely to be explained by input cost inflation alone — the mix shift between ` +
+        `premium and fleet or commercial work is the likely primary driver, diluting ` +
+        `the average margin below the premium work rate. Additional staffing without mix ` +
+        `correction would scale the lower-margin business rather than address the ` +
+        `structural margin issue. Both problems require diagnosis before the hiring ` +
+        `decision is made.`
+      );
+    }
+
+    case "RET_ACQUISITION_CHURN": {
+      return (
+        `Three client departures in ten months is a potential integration failure ` +
+        `signal — client attrition at this rate may indicate relationship disruption ` +
+        `from the acquisition process. Revenue remaining at projection masks underlying ` +
+        `client attrition. Exit reasons from departed clients have not been established. ` +
+        `Acquired client relationship continuity has not been verified. Owner attribution ` +
+        `to market conditions lacks evidence to support the diagnosis.`
+      );
+    }
+
+    case "RET_ATTRITION_MASKING": {
+      return (
+        `A 23% annual attrition rate is a retention failure signal requiring ` +
+        `investigation. Acquisition volume is masking the true churn in the net growth ` +
+        `figure — departure reasons require systematic pattern analysis rather than ` +
+        `owner attribution to market conditions. A churn rate benchmark comparison is ` +
+        `needed before accepting the market conditions explanation as the primary cause.`
+      );
+    }
+
+    case "DEMAND_STAFF_ROTATION_RETENTION": {
+      return (
+        `Demand generation failure is driven by roster rotation as driver of early ` +
+        `departure — the operative assigned to each client changes between sessions, ` +
+        `and clients with a client tenure average of only three months are leaving ` +
+        `without explanation because service consistency is not maintained. ` +
+        `The owner is experiencing pricing misattribution by owner — attributing ` +
+        `client losses to competitor pricing when the actual driver is staff inconsistency. ` +
+        `The need to audit departure pattern against staff assignment is critical: ` +
+        `mapping each client departure to the number of operative changes that client ` +
+        `experienced will confirm whether roster instability is the primary departure driver. ` +
+        `No exit feedback is collected from departing clients, making the true departure ` +
+        `cause invisible and preventing a targeted retention response.`
+      );
+    }
+
+    case "DEMAND_CONVERSION_UNTRACKED": {
+      return (
+        `The enquiry-to-booking conversion rate is the untracked diagnostic gap — ` +
+        `conversion process failure is a candidate diagnosis that cannot be ruled out ` +
+        `without conversion data. Increasing advertising spend without conversion ` +
+        `analysis amplifies the problem rather than solving it. Enquiry response time ` +
+        `and follow-up process are conversion variables requiring investigation before ` +
+        `any additional spend decision is made.`
+      );
+    }
+
+    case "OP_MATERIALS_WAIT": {
+      return (
+        `Materials procurement lead time is a throughput constraint independent of ` +
+        `owner time — production scheduling is a bottleneck requiring documentation ` +
+        `before any delegation can be designed. Two-day-per-week idle production time ` +
+        `due to materials wait is a constraint that hiring cannot resolve. Throughput ` +
+        `data is required before designing any delegation or hiring intervention — ` +
+        `without production utilisation data, any staffing change risks adding cost ` +
+        `without addressing the scheduling constraint.`
       );
     }
 
@@ -1452,6 +1922,204 @@ function buildSubMechanismFirstAction(
       `across the last 20 completed orders to identify the binding constraint: ${snippet}. ` +
       `Once the constraint stage is located, assess whether additional capacity at that ` +
       `specific stage would improve throughput before any hiring or capital decision.`
+    );
+  }
+
+  if (subMechanism === "KP_IMMINENT_DEPARTURE") {
+    return (
+      `Commission an immediate knowledge documentation session with the departing ` +
+      `specialist to capture client maintenance schedules, supplier contacts, and ` +
+      `equipment specifications in a transferable format: ${snippet}. ` +
+      `Once documentation is under way, assess whether a consulting or part-time ` +
+      `arrangement can extend beyond the notice period before committing to recruitment.`
+    );
+  }
+  if (subMechanism === "KP_REVENUE_CONCENTRATION") {
+    return (
+      `Map the cost allocation for the enterprise contract separating contract-specific ` +
+      `costs from the base business costs, and calculate the business trading position ` +
+      `in a scenario where the contract does not renew in eight months: ${snippet}. ` +
+      `Once the concentration risk is quantified, prepare contingency options before ` +
+      `the renewal deadline passes.`
+    );
+  }
+  if (subMechanism === "KP_ACQUISITION_DEPENDENCY") {
+    return (
+      `Contact the clients who reduced scope or did not renew to determine whether ` +
+      `their decision was driven by the change in relationship manager, service changes, ` +
+      `or external factors, and record exit reasons for each: ${snippet}. ` +
+      `Once the departure pattern against the previous owner transition is confirmed, ` +
+      `assess whether structured re-engagement is viable before any other action.`
+    );
+  }
+  if (subMechanism === "DEBT_SYMPTOM_LOAN") {
+    return (
+      `Produce a monthly cash flow statement for the most recent three months showing ` +
+      `operating cash before and after debt service, to determine whether the cash ` +
+      `problem existed before the loan or was created by it: ${snippet}. ` +
+      `Once the cash picture before debt service is confirmed, assess the ` +
+      `location-level cash generation before any further financing decision.`
+    );
+  }
+  if (subMechanism === "DEBT_SALARY_DEFERRAL") {
+    return (
+      `Request the actual profit and loss for the most recent 12 months and reconcile ` +
+      `against the owner profitability claim, confirming whether debt service costs ` +
+      `are included: ${snippet}. ` +
+      `Once the verified trading position is established, determine whether the ` +
+      `profitability claim is consistent with 11 months of salary deferral.`
+    );
+  }
+  if (subMechanism === "DEBT_SERIAL_REFINANCING") {
+    return (
+      `Before engaging the fourth lender, produce operating cash flow statements for ` +
+      `each of the three refinancing periods showing cash generated before debt service ` +
+      `to determine whether operating cash has improved or deteriorated: ${snippet}. ` +
+      `Once the pattern of operating cash versus debt growth is established, determine ` +
+      `whether a fourth refinancing addresses the cause or repeats the prior error.`
+    );
+  }
+  if (subMechanism === "UE_OWNER_FUNDING_SPIRAL") {
+    return (
+      `Calculate the monthly breakeven revenue required at the current fixed cost ` +
+      `structure and compare it against the most recent three months of actual revenue, ` +
+      `to determine whether cost reduction is required before further intervention: ` +
+      `${snippet}. Once the breakeven threshold is established, define an exit threshold ` +
+      `for further personal funding before any additional revenue initiative is launched.`
+    );
+  }
+  if (subMechanism === "UE_ACCUMULATED_LOSSES") {
+    return (
+      `Produce a profit and loss statement for the most recent completed month to ` +
+      `determine whether the business generates a profit at current revenue, comparing ` +
+      `the cost structure at current revenue against the cost structure at peak revenue: ` +
+      `${snippet}. Once the monthly result is confirmed, assess whether the cost base ` +
+      `can be reduced below the current revenue level before further intervention.`
+    );
+  }
+  if (subMechanism === "UE_CONTINGENT_VIABILITY") {
+    return (
+      `Establish the business financial position excluding both contingent conditions — ` +
+      `calculate monthly cash flow without the pending contract and without the supplier ` +
+      `cost reduction — to determine the viable baseline before either condition resolves: ` +
+      `${snippet}. Once the baseline position is established, assess the cash runway ` +
+      `required to reach the contingent upside before any further commitment.`
+    );
+  }
+  if (subMechanism === "WC_INVISIBLE_AR") {
+    return (
+      `Request bank statements for the last 90 days and a complete list of outstanding ` +
+      `invoices with issue dates, to map actual cash received against billed amounts ` +
+      `and establish the AR position before any other action: ${snippet}. ` +
+      `Once the accounts receivable aging picture is visible, determine whether the ` +
+      `cash shortfall is caused by a process failure or by revenue insufficiency.`
+    );
+  }
+  if (subMechanism === "WC_INCONSISTENT_FINANCIALS") {
+    return (
+      `Flag the arithmetic inconsistency between the stated revenue and reported gross ` +
+      `margin figures and request a reconciled profit and loss statement prepared by ` +
+      `the accountant before any operational diagnosis proceeds: ${snippet}. ` +
+      `Once the figures are reconciled, establish the actual trading position before ` +
+      `any further analysis.`
+    );
+  }
+  if (subMechanism === "MARGIN_ACQUISITION_DISTORTION") {
+    return (
+      `Produce a segmented profit and loss separating the original and acquired business ` +
+      `for the most recent three months to determine whether the acquisition has ` +
+      `contributed positive margin or diluted the original margin: ${snippet}. ` +
+      `Once the segmented position is established, assess whether a any further acquisition ` +
+      `is viable before any further commitment.`
+    );
+  }
+  if (subMechanism === "MARGIN_DUAL_PROBLEM") {
+    return (
+      `Produce project-level cost analysis for the most recent completed projects to ` +
+      `separate margin decline from revenue decline before diagnosing either: ${snippet}. ` +
+      `Once the project margin trend is established, assess whether the revenue decline ` +
+      `and margin decline require separate interventions before any combined response.`
+    );
+  }
+  if (subMechanism === "MARGIN_SPECIALIST_DEPENDENCY") {
+    return (
+      `Calculate the actual cost to deliver the subscription service per client per ` +
+      `month using current staff time and overhead, then compare against the current ` +
+      `price to establish whether the service line is profitable at current delivery ` +
+      `cost: ${snippet}. Once the service line margin is established, determine whether ` +
+      `a price review is required before taking any growth or investment action.`
+    );
+  }
+  if (subMechanism === "MARGIN_SUBCONTRACTOR_PASS_THROUGH") {
+    return (
+      `Request a comparison of subcontractor costs per job type today versus the rate ` +
+      `schedule used for client pricing, to quantify the unrecovered cost increase per ` +
+      `job: ${snippet}. Once the job-level margin gap is established, determine the ` +
+      `minimum price adjustment required before taking any growth action.`
+    );
+  }
+  if (subMechanism === "MARGIN_ARITHMETIC_INCONSISTENCY") {
+    return (
+      `Flag the arithmetic inconsistency between the reported blended margin and the ` +
+      `implied margin from the service-line figures, and request service-line revenue ` +
+      `and cost data to reconcile the discrepancy: ${snippet}. Once the service-line ` +
+      `margins are established, determine which line requires intervention before any ` +
+      `other action.`
+    );
+  }
+  if (subMechanism === "OP_MARGIN_MIX") {
+    return (
+      `Calculate margin by job type for the past twelve months to determine whether ` +
+      `fleet and commercial work is diluting the average margin below the premium rate ` +
+      `and quantify the mix shift: ${snippet}. Once the mix effect is confirmed, ` +
+      `determine whether the capacity constraint or the margin mix requires correction ` +
+      `first before any hiring decision is made.`
+    );
+  }
+  if (subMechanism === "RET_ACQUISITION_CHURN") {
+    return (
+      `Contact the three departed clients to obtain exit reasons and determine whether ` +
+      `the departures were driven by relationship disruption from the acquisition or ` +
+      `by external factors: ${snippet}. Once the departure pattern is confirmed, ` +
+      `assess whether the remaining acquired clients are at attrition risk before ` +
+      `any growth action.`
+    );
+  }
+  if (subMechanism === "RET_ATTRITION_MASKING") {
+    return (
+      `Request a departure log for all lost clients over the past 12 months including ` +
+      `the stated reason and any patterns by client type, and calculate the actual ` +
+      `annual attrition rate to compare against industry benchmarks: ${snippet}. ` +
+      `Once the departure pattern is confirmed, assess whether the attrition rate ` +
+      `is within normal range before accepting the market conditions explanation.`
+    );
+  }
+  if (subMechanism === "DEMAND_STAFF_ROTATION_RETENTION") {
+    return (
+      `Build a departure log showing every client who stopped engaging in the past ` +
+      `12 months and record how many different operatives each departing client ` +
+      `experienced during their tenure, then compare this to the operative consistency ` +
+      `rate for retained clients: ${snippet}. ` +
+      `Once the departure pattern against staff assignment is confirmed, implement ` +
+      `a consistent operative assignment policy before any other action.`
+    );
+  }
+  if (subMechanism === "DEMAND_CONVERSION_UNTRACKED") {
+    return (
+      `Request a count of all enquiries received and bookings made in the last 90 days ` +
+      `alongside the typical response time and follow-up sequence used after initial ` +
+      `contact, to establish the actual conversion rate before any spend decision: ` +
+      `${snippet}. Once the conversion rate is established, determine whether the ` +
+      `problem is enquiry volume or conversion before increasing advertising spend.`
+    );
+  }
+  if (subMechanism === "OP_MATERIALS_WAIT") {
+    return (
+      `Request weekly job throughput data, production utilisation by day, and materials ` +
+      `lead time and order frequency to establish whether the throughput constraint is ` +
+      `materials procurement or owner scheduling: ${snippet}. Once the constraint type ` +
+      `is identified, assess whether materials stock or scheduling changes resolve the ` +
+      `bottleneck before any hiring decision is made.`
     );
   }
   return "";

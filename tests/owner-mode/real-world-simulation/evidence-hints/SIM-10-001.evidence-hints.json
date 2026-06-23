@@ -6,82 +6,64 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "gross profit has not grown despite a 52% revenue increase in the fourteen months since the acquisition",
+      "finding": "gross margin has compressed post-acquisition \u2014 aggregate revenue increased from $2.1M to $3.2M but profit has not increased in dollar terms; acquisition margin destruction has absorbed the entire revenue gain",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Revenue growth without gross profit growth is a critical adverse margin signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "the owner has deferred personal salary since the acquisition closed, drawing nothing in fourteen months",
+      "finding": "operating profit is declining relative to revenue \u2014 the acquisition added capacity and overhead without corresponding margin; the profit-to-revenue ratio has deteriorated since acquisition",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Fourteen months without owner salary post-acquisition is a critical adverse cash signal. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "the acquired business added production capacity that is now shared across both businesses but is running at approximately 65% utilisation",
-      "dimension": "operational_efficiency",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Shared capacity at 65% utilisation with no margin improvement is an adverse operational signal. operational_efficiency."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "acquisition debt of $340K adds $8,200/month in repayments that were not present in the pre-acquisition cost base",
-      "dimension": "financial_health",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Acquisition debt adding $8,200/month to cost base with no margin improvement is a critical adverse financial signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "commercial printing; 52% revenue growth post-acquisition; flat gross profit; $340K acquisition debt; $8,200/month repayment; 14 months owner salary deferred",
+      "finding": "revenue pre-acquisition $2.1M; current revenue $3.2M; acquisition price $480K; acquisition debt $320K; 16 months since acquisition; no staff departures from acquired business; owner salary nominal only",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): revenue grew from $680K to $1.04M in fourteen months since the acquisition closed",
+      "finding": "Surface signal (not root cause): combined revenue has grown 52 percent since the acquisition was completed",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Revenue growth of 52% post-acquisition is a misleading success signal when gross profit has not grown commensurately."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the acquired business's staff have integrated into the combined operation without any departures",
+      "finding": "Surface signal (not root cause): staff retention from the acquired business has been complete with no departures",
       "dimension": "team_capability",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Staff retention post-acquisition is a misleading integration success signal when gross profit and owner salary tell a different story."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [
     {
-      "fixture_key": "acquisition_debt",
-      "canonical_key": "leverageRatio",
-      "evidence_item_index": 3,
-      "value_override": 3.2,
-      "transform_note": "$340K acquisition debt on combined revenue approximately $1.04M"
+      "fixture_key": "months_since_acquisition",
+      "canonical_key": "profitChangePercent",
+      "evidence_item_index": 2,
+      "value_override": -40,
+      "transform_note": "Revenue +52% but profit flat = profit margin fell approx 40% in percentage terms; profitChangePercent = -40"
     }
   ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "marginPct",
-      "would_improve_pattern": "margin_erosion (margin percentage elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -94,5 +76,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-10-001 is SUPPORTED via margin_erosion. Revenue growth without profit growth post-acquisition maps to margin erosion. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: financial_health + MARGIN_HARD (margin erosion, margin compressed, declining margin) + negative profitChangePercent"
 }

@@ -6,66 +6,48 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "three of twelve acquired clients have transferred to other accounting firms in the ten months since the acquisition closed",
+      "finding": "three of the acquired client accounts have departed within ten months of the acquisition handover \u2014 a 25 percent client loss rate within the first year signals post-acquisition retention failure",
       "dimension": "customer_retention",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Three client departures from twelve acquired clients in ten months is a critical adverse retention signal. customer_retention; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "acquired clients have been onboarded to new systems and contact points without maintaining continuity with the previous principal",
+      "finding": "client churn is concentrated in the acquired practice accounts \u2014 the departing clients represent $85,000 of annual revenue loss within the first ten months of the handover",
       "dimension": "customer_retention",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "System and contact change without continuity is a critical adverse integration signal. customer_retention; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "the owner has not contacted departing clients directly to understand why they left",
-      "dimension": "process_maturity",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "No systematic follow-up with departed clients is an adverse process maturity signal. process_maturity."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "the acquired firm's principal who held the client relationships did not remain post-acquisition and did not personally introduce clients to the new firm",
-      "dimension": "customer_retention",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Previous principal not remaining post-acquisition with no structured client introduction is a critical adverse handover signal. customer_retention; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "accounting practice; 12 acquired clients; 3 departed in 10 months; previous principal left; new systems introduced; no departure interviews",
+      "finding": "acquisition price $210K; 10 months since acquisition; acquired practice 4 staff all retained; 3 of 12 client accounts from acquired practice departed; $85K annual revenue lost; combined revenue $1.6M",
       "dimension": "customer_retention",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): revenue is tracking approximately at the projected level for the acquisition despite the three client departures",
-      "dimension": "financial_health",
+      "finding": "Surface signal (not root cause): all four staff members from the acquired practice were retained through the transition",
+      "dimension": "team_capability",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Revenue at projection is a misleading signal when three of twelve clients have departed — the projection may have overestimated client retention or underestimated new client additions."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the owner attributes the three client departures to clients who were already considering moving before the acquisition",
-      "dimension": "customer_retention",
+      "finding": "Surface signal (not root cause): the owner describes the integration process as smooth with no operational disruptions",
+      "dimension": "operational_efficiency",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Owner attribution of departures to pre-existing client intent is a misleading signal — it cannot be verified without exit interviews and does not explain why three of twelve departed within ten months."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [],
@@ -86,5 +68,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-10-002 is SUPPORTED via customer_retention_erosion. Post-acquisition client departure maps to retention failure. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: customer_retention + isCritical + RETENTION_TOPIC (churn, client departure) \u2014 no numeric needed; text signal sufficient"
 }

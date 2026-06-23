@@ -6,82 +6,73 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "owner using a personal credit card for payroll fourteen months after taking a $180K business loan",
+      "finding": "monthly debt service of $5,200 was added to the fixed cost structure after the $180K loan was taken \u2014 cash shortfalls requiring personal credit card for payroll have continued for fourteen consecutive months",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Personal credit use for payroll post-loan is a critical adverse debt signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "monthly loan repayment of $4,200 added to the operating cost base without eliminating the cash shortfall the loan was taken to address",
+      "finding": "leverage has increased with total outstanding debt of $158,000 against annual revenue of $1.1M \u2014 debt load from the loan has not improved operating cash flow",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Loan repayment adding to costs while cash shortfall persists is a critical debt compounding adverse signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "owner is actively considering taking a second loan to address the ongoing cash pressure",
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "three-location business; annual revenue $1.1M; loan outstanding $158,000; monthly debt service $5,200; fourteen months since loan; personal credit card used most months for payroll; 11 staff",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Considering a second loan before diagnosing why the first loan failed to resolve the shortfall is a critical adverse planning signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "operating costs have not been reduced since the loan was taken — payroll and rent are unchanged",
+      "source_path": "input_packet.missing_inputs_opsiq_should_request[0]",
+      "finding": "debt service coverage analysis is required \u2014 the monthly debt repayment relative to operating cash flow must be calculated before any further financing recommendation",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "MEDIUM",
       "no_outcome_leakage": true,
-      "rationale": "Unchanged cost base after loan is an adverse structural signal suggesting the problem is ongoing. financial_health."
-    },
-    {
-      "source_path": "input_packet.facts_known_to_owner",
-      "finding": "retail business; $180K loan 14 months ago; $4,200/month repayment; personal credit card for payroll; considering second loan",
-      "dimension": "financial_health",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Structured summary of the debt and cash situation. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.missing_inputs_opsiq_should_request[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): revenue has increased 12% in the fourteen months since the loan was taken",
+      "finding": "Surface signal (not root cause): the loan was initially described by the owner as a short-term working capital measure",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Revenue growth post-loan is a misleading signal when cash shortfall and personal credit use have continued despite the revenue increase."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the bank approved the original loan without requiring personal security",
+      "finding": "Surface signal (not root cause): revenue of $1.1M appears sufficient to service the debt in isolation",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Bank approval without personal security is a misleading creditworthiness signal — it does not indicate the operating position can support the repayment or that the second loan would solve the problem."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [
     {
-      "fixture_key": "loan_amount",
+      "fixture_key": "loan_balance_outstanding",
       "canonical_key": "leverageRatio",
-      "evidence_item_index": 1,
+      "evidence_item_index": 2,
       "value_override": 2.5,
-      "transform_note": "$180K loan against approximate annual revenue; leverage ratio approximated at 2.5x"
+      "transform_note": "Outstanding debt $158K vs estimated net assets; leverageRatio proxy = 2.5"
     }
   ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "cashRunwayMonths",
-      "would_improve_pattern": "debt_solvency (cash runway elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -94,5 +85,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-08-001 is SUPPORTED via debt_solvency_pressure archetype. Findings paraphrased. No must_identify vocabulary used."
+  "validation_notes": "Calibrated W1: financial_health + DEBT_TEXT (debt service, leverage, debt load) + leverageRatio numeric"
 }

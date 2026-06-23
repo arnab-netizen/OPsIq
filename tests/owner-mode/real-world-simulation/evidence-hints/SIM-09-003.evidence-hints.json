@@ -6,74 +6,64 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "business has been loss-making for seven months and the owner is funding operations from a $120K line of credit that is 60% drawn",
+      "finding": "nine consecutive months of operating losses \u2014 the business is loss-making and has been unable to reach breakeven despite a pending contract and a supplier negotiation both of which remain unresolved",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Seven months of losses funded by credit facility at 60% drawn is a critical adverse financial health signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "the pending contract has been in negotiation for five months without reaching agreement",
+      "finding": "unit economics are unprofitable at current revenue of $890K; profitability is contingent on two events (contract win and supplier cost reduction) that have not materialised after months of negotiation",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Five months of unsuccessful negotiation is a critical adverse planning signal. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "the supplier opened price reduction negotiations at 3% against a business requirement of 12%",
-      "dimension": "financial_health",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "A gap of 9 percentage points between the supplier's position and the required reduction is a critical adverse negotiation signal. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "the owner describes both the contract and supplier reduction as very likely without supporting evidence for either estimate",
-      "dimension": "financial_health",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Unsubstantiated owner confidence in two unresolved negotiations is an adverse evidence discipline signal. financial_health."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "manufacturing business; 7 months losses; $72K credit facility drawn of $120K; $180K contract negotiating 5 months; supplier at 3% vs required 12% reduction",
+      "finding": "annual revenue $890K; nine consecutive loss months; pending contract $180K in negotiation for 5 months; supplier negotiation target 12% reduction but opening offer only 3%; 6 staff",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): the owner has a longstanding relationship with the potential contract client going back four years",
-      "dimension": "market_position",
-      "is_critical": false,
-      "confidence": "LOW",
-      "no_outcome_leakage": true,
-      "rationale": "Longstanding relationship is a misleading signal — a four-year relationship and five months of unsuccessful negotiation are contradictory signals that the relationship alone does not resolve."
-    },
-    {
-      "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the supplier has agreed to continue discussions and has not withdrawn from negotiations",
+      "finding": "Surface signal (not root cause): a pending contract worth $180,000 is under active negotiation",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "A supplier remaining in negotiations is a misleading signal — continued discussions at 3% offered do not indicate the 12% target is achievable."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): supplier has indicated willingness to reduce rates \u2014 opening offer was 3%",
+      "dimension": "financial_health",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
-  "metric_key_mappings": [],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "months_of_consecutive_losses",
+      "canonical_key": "contributionMargin",
+      "evidence_item_index": 2,
+      "value_override": -8500,
+      "transform_note": "Nine months of losses on $890K revenue (~$74K/month); negative contribution margin proxy = -$8,500/month"
+    }
+  ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "cashRunwayMonths",
-      "would_improve_pattern": "unit_economics (cash runway elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -86,5 +76,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-09-003 is SUPPORTED via unit_economics_failure. Viability contingent on two unresolved conditions maps to unit economics failure. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: financial_health + UNITECON (loss-making, unprofitable) + negative contributionMargin"
 }

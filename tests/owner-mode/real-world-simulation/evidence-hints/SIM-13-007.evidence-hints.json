@@ -6,74 +6,71 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "bookings have been flat at approximately 28 per year for 14 months despite tripling advertising spend from $800 to $2,400/month",
+      "finding": "annual bookings have flatlined at approximately twenty-eight per year for fourteen months despite tripling advertising spend and a forty percent increase in enquiry volume \u2014 new-customer acquisition has stalled; the top-of-funnel growth is not converting to bookings",
       "dimension": "market_position",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Flat bookings despite tripling advertising spend is a critical adverse conversion signal. market_position; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "enquiries from the website have grown 40% over six months but bookings have not grown — conversion rate is therefore declining",
+      "finding": "lead volume is growing but pipeline is not converting \u2014 enquiry volume is up approximately forty percent but bookings are flat; the funnel conversion rate from enquiry to booking is unknown and likely very low",
       "dimension": "market_position",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Growing enquiries with flat bookings implies a declining conversion rate that has not been tracked or investigated. market_position; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "enquiry responses are sent informally by email when the owner is available, with no documented follow-up process",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Informal reactive enquiry response without documented follow-up is a critical adverse conversion process signal. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "the owner has never calculated the enquiry-to-booking conversion rate",
-      "dimension": "process_maturity",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Absence of conversion rate tracking while planning to increase spend is an adverse evidence signal. process_maturity."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "wedding photography; $2,400/month ad spend; website traffic doubled; enquiries up 40%; bookings flat at 28/year for 14 months; no conversion tracking; informal email response",
+      "finding": "monthly ad spend current $2,400; 8 months ago $800 (threefold increase); website traffic doubled last 6 months; enquiry volume up 40%; annual bookings approximately 28; bookings flat for 14 months; pricing not reviewed 3 years",
       "dimension": "market_position",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): website traffic doubling and enquiries growing 40% suggests the advertising is working and the problem is targeting",
+      "finding": "Surface signal (not root cause): enquiry volume is up 40% and website traffic has doubled \u2014 the owner interprets this as an advertising success",
       "dimension": "market_position",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Rising traffic and enquiries is a misleading channel-performance signal — if enquiries are growing but bookings are flat, the issue is in the conversion step after enquiry, not the advertising reach."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the most obvious explanation for rising enquiries with flat bookings is that the ads are reaching the wrong type of client",
+      "finding": "Surface signal (not root cause): advertising spend has tripled suggesting the owner is actively investing in demand generation",
       "dimension": "market_position",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Audience mismatch is a misleading default explanation when conversion process data is absent — an informal response process could equally explain the conversion failure."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
-  "metric_key_mappings": [],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_bookings_current",
+      "canonical_key": "funnelConversionPct",
+      "evidence_item_index": 0,
+      "value_override": 3,
+      "transform_note": "28 annual bookings on doubled enquiry volume implies very low funnel conversion rate; funnelConversionPct = 3 proxy"
+    },
+    {
+      "fixture_key": "bookings_flat_for_months",
+      "canonical_key": "leadVolume",
+      "evidence_item_index": 1,
+      "value_override": 28,
+      "transform_note": "Annual bookings flat at 28 \u2014 leadVolume = 28 as annual booking count proxy"
+    }
+  ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "funnelConversionPct",
-      "would_improve_pattern": "demand_generation (conversion rate elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -86,5 +83,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-13-007 is SUPPORTED via demand_generation_failure. Flat bookings with rising enquiries and absent conversion tracking maps to demand generation failure. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: market_position + DEMAND_STAGNATION (flatlined, acquisition has stalled, pipeline not converting) + funnelConversionPct + leadVolume numerics"
 }

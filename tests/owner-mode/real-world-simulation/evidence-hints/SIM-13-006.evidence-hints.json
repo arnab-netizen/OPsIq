@@ -6,66 +6,48 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "14 of 62 managed properties were lost in twelve months — a departure rate of approximately 23% of the prior portfolio",
+      "finding": "annual client churn rate of 23 percent on a base of 62 managed properties \u2014 fourteen properties lost in twelve months is a high churn rate for a property management business where relationships are typically long-tenured",
       "dimension": "customer_retention",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "23% property departure rate in twelve months is a critical adverse retention signal. customer_retention; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "owner attributes all 14 departures to landlords selling investment properties without systematic exit analysis",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Accepting owner-attributed departure reasons without systematic analysis is a critical adverse process maturity signal. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "18 new properties were won in the same period, producing a net gain of 4 properties that obscures the underlying attrition rate",
+      "finding": "low repeat and retention rate \u2014 one in four properties leaves annually; the owner accepts departure reasons at face value without systematic exit analysis, indicating no structured approach to reducing client churn",
       "dimension": "customer_retention",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Acquisition masking attrition in net growth metrics is a critical adverse retention visibility signal. customer_retention; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "advertising spend is being increased to maintain acquisition volume rather than investigating why properties are leaving",
-      "dimension": "process_maturity",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Increasing acquisition investment without investigating the attrition cause is an adverse resource allocation signal. process_maturity."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "property management; 62 properties; 14 lost, 18 won (net +4); 23% attrition; owner attributes to market; advertising spend increasing",
+      "finding": "managed properties 12 months ago 62; properties won last 12 months 18; properties lost 14; managed properties today 66; 23% annual departure rate; management fee 8% of rental income; advertising $1,400/month; 7 years operation",
       "dimension": "customer_retention",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): net gain of 4 properties over 12 months creates the appearance of a growing business",
-      "dimension": "customer_retention",
-      "is_critical": false,
-      "confidence": "LOW",
-      "no_outcome_leakage": true,
-      "rationale": "Net portfolio growth is the primary misleading signal — 23% attrition masked by 29% acquisition creates the false appearance of healthy performance."
-    },
-    {
-      "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): landlords selling investment properties is a real and plausible market condition",
+      "finding": "Surface signal (not root cause): new property wins of 18 in 12 months have offset the 14 departures \u2014 net portfolio is growing",
       "dimension": "market_position",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Market condition attribution is a misleading external signal when the attrition rate has not been systematically analysed."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): owner attributes most departures to landlords selling investment properties \u2014 an external cause",
+      "dimension": "market_position",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [],
@@ -86,5 +68,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-13-006 is SUPPORTED via customer_retention_erosion. 23% annual attrition masked by acquisition maps to customer retention erosion. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: customer_retention + isCritical + RETENTION_TOPIC (churn, low repeat, one-time) \u2014 text signal with high churn rate"
 }

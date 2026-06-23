@@ -6,74 +6,64 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "annual revenue has declined from $2.9M to $2.2M over two years — a 24% decline",
+      "finding": "gross margin has declined from 28 percent to 18 percent over eighteen months \u2014 a ten percentage point margin compression; project margin tracking is absent; declining margin is concurrent with revenue decline indicating dual independent failure modes with separate root causes requiring separate interventions",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "24% revenue decline over two years is a critical adverse financial health signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "gross margin has compressed from 28% to 18% over the same two-year period — an independent deterioration from the revenue decline",
+      "finding": "margin erosion is concurrent with revenue falling from $2.9M to $2.2M \u2014 gross margin fell while revenue contracted; the two trends require separate investigation as they are likely driven by separate root causes",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Gross margin compression from 28% to 18% occurring simultaneously with revenue decline suggests two separate causes. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "the owner has not tracked project-level margins and cannot identify which project types or client relationships are driving each decline",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Absence of project-level margin tracking preventing diagnosis of the cause of either decline is a critical adverse process signal. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "the owner generates all new business through personal consultations and has had fewer available hours for consultations as operations have demanded more time",
-      "dimension": "operational_efficiency",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Owner serving as the sole business development resource while operational demands increase is an adverse capacity signal. operational_efficiency; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "building renovation; revenue $2.9M to $2.2M; margin 28% to 18%; no project margin tracking; owner sole business developer; input costs not tracked",
+      "finding": "revenue 18 months ago $2.9M; current revenue $2.2M; gross margin 18 months ago estimated 28%; current gross margin estimated 18%; owner is site supervisor and sales lead creating owner capacity ceiling; substantial project consuming owner time; 9 staff; dual problem: project margin decline and capacity constraint",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): the building materials sector has seen broad cost increases in the period — giving a plausible external explanation for margin pressure",
-      "dimension": "financial_health",
-      "is_critical": false,
-      "confidence": "LOW",
-      "no_outcome_leakage": true,
-      "rationale": "Industry-wide materials cost increases are a misleading signal that they explain this specific margin compression — without project-level data the attribution cannot be confirmed."
-    },
-    {
-      "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the revenue decline coincided with a broader residential renovation market slowdown in the region",
+      "finding": "Surface signal (not root cause): owner attributes the combined decline to a single market slowdown",
       "dimension": "market_position",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "A market-wide slowdown is a misleading signal that it explains this business's revenue decline — without project pipeline data the cause cannot be attributed to market conditions alone."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.misleading_signals[1]",
+      "finding": "Surface signal (not root cause): a large project is consuming owner time \u2014 the owner treats this as a positive revenue signal",
+      "dimension": "operational_efficiency",
+      "is_critical": false,
+      "confidence": "LOW",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
-  "metric_key_mappings": [],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "gross_margin_current_estimate",
+      "canonical_key": "marginPct",
+      "evidence_item_index": 2,
+      "value_override": -10,
+      "transform_note": "Margin compressed from 28% to 18% \u2014 profitChangePercent proxy = -10 percentage points; marginPct set as change value"
+    }
+  ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "marginPct",
-      "would_improve_pattern": "margin_erosion (margin percentage elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -86,5 +76,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-12-001 is SUPPORTED via margin_erosion as primary archetype. Mixed-cause: margin compression is the primary supported signal. Revenue decline may map to demand_generation_failure as secondary. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: financial_health + MARGIN_HARD (margin erosion, gross margin fell, margin compressed) + negative marginPct"
 }

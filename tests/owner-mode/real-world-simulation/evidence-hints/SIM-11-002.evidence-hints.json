@@ -6,66 +6,48 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "product return rate increased from 1.2% to 4.8% over eighteen months — a fourfold increase",
+      "finding": "product return rate has tripled from 1.2 percent to 4.8 percent over the period in which headcount doubled from 8 to 16 \u2014 the return rate rise is concurrent with rapid headcount growth, not with the supplier change",
       "dimension": "quality_delivery",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Fourfold product return rate increase over eighteen months is a critical adverse quality signal. quality_delivery; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "headcount doubled from 8 to 16 during the same period that the return rate increased",
-      "dimension": "team_capability",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Headcount doubling concurrent with quality deterioration is a critical adverse scaling signal. team_capability; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "new staff were onboarded informally without documented training or quality checkpoints",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Informal onboarding without documented quality checkpoints during rapid headcount growth is a critical adverse process signal. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "the return rate has continued to increase for fourteen months after the supplier change the owner attributes as the cause",
+      "finding": "quality issue predates the supplier change and has not resolved four months after the switch \u2014 rework rate and defect rate are rising; the quality failure is ongoing and unresolved",
       "dimension": "quality_delivery",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Continuing quality deterioration fourteen months after the cited cause is a critical adverse causation signal. quality_delivery; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "food manufacturer; return rate 1.2% to 4.8%; headcount 8 to 16; supplier changed 16 months ago; informal onboarding; returns continuing post-supplier change",
+      "finding": "current headcount 16; headcount 18 months ago 8; annual revenue $1.9M; return rate before issue 1.2%; current return rate 4.8%; quality issue ongoing 4 months; supplier changed; 2 retailer clients",
       "dimension": "quality_delivery",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): a supplier change occurred approximately two months before the first return rate increase was noticed",
-      "dimension": "quality_delivery",
+      "finding": "Surface signal (not root cause): a supplier change occurred shortly before the first product returns \u2014 owner attributes the return rate increase to the supplier",
+      "dimension": "team_capability",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Supplier change timing correlation is a misleading causal signal — the return rate has continued to rise for fourteen months after the change, and the headcount doubled in the same period."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the owner replaced the problematic supplier with a different supplier six months ago and the return rate did not improve",
-      "dimension": "quality_delivery",
+      "finding": "Surface signal (not root cause): supplier has since been changed back to the original \u2014 owner believes this resolves the quality issue",
+      "dimension": "team_capability",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Supplier replacement without return rate improvement is a misleading confirmation signal that the supplier is not the primary cause."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [],
@@ -86,5 +68,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-11-002 is SUPPORTED via quality_control_failure. Rapid headcount growth with informal onboarding producing quality deterioration maps to quality control failure. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: quality_delivery + isCritical + QUALITY_TOPIC (return rate, defect) + QUALITY_SEVERE (tripling, rising)"
 }

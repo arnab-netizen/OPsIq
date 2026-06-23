@@ -6,82 +6,80 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "three separate refinancing transactions over twenty-four months with total debt increasing from $95K to $210K across the same period",
+      "finding": "three debt refinancings in twenty-four months \u2014 each refinancing extended the maturity and increased the total facility; outstanding debt has grown to $520,000 rather than declining",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Three refinancings with growing total debt is a critical adverse debt spiral signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "current monthly debt repayment of $14,800 on $210K outstanding balance",
+      "finding": "monthly debt service of $14,800 on annual revenue of $2.8M; continued refinancing rather than debt reduction signals solvency pressure \u2014 the business cannot service and retire the debt from operating cash",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Monthly debt service of $14,800 is a critical adverse cash flow signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "revenue has remained approximately stable at $580K over the twenty-four month refinancing period",
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "annual revenue $2.8M; total debt outstanding $520,000; three refinancings in 24 months each increasing facility; current monthly repayment $14,800; new lender rate reduction 45bps; 19 staff",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.missing_inputs_opsiq_should_request[0]",
+      "finding": "serial refinancing history required \u2014 three consecutive refinancings with growing facility size; debt maturity schedule and covenant headroom must be reviewed before assessing structural solvency risk",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "MEDIUM",
       "no_outcome_leakage": true,
-      "rationale": "Stable revenue during a period of growing debt is an adverse signal that the debt growth is not investment-driven. financial_health."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "owner attributes the need to refinance to interest rate increases in the market over the past two years",
-      "dimension": "financial_health",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Owner attribution of refinancing need to interest rate increases while total debt grows is an adverse plausibility signal requiring verification. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.facts_known_to_owner",
-      "finding": "hospitality business; $580K stable revenue; debt grew from $95K to $210K over 24 months; 3 refinancings; $14,800/month repayment; owner attributes to rate increases",
-      "dimension": "financial_health",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.missing_inputs_opsiq_should_request[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): interest rates in the market increased approximately 45 basis points over the period the owner references",
+      "finding": "Surface signal (not root cause): the lender offered a 45 basis point interest rate reduction suggesting access to refinancing",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "A 45 basis point rate increase is a misleading signal — the arithmetic savings from a 45bp reduction on $210K of debt are approximately $2,340 per year, which cannot explain $14,800/month repayments or three refinancings."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the owner has maintained relationships with two lenders and describes them as supportive",
+      "finding": "Surface signal (not root cause): revenue at $2.8M is substantial and appears capable of servicing the debt",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Lender willingness to refinance is a misleading signal — it reflects credit appetite, not operational viability."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [
     {
-      "fixture_key": "current_debt_total",
+      "fixture_key": "total_debt_outstanding",
       "canonical_key": "leverageRatio",
-      "evidence_item_index": 1,
-      "value_override": 4.3,
-      "transform_note": "$210K debt; $14,800/month repayment = $177,600/year on $580K revenue"
+      "evidence_item_index": 2,
+      "value_override": 4.5,
+      "transform_note": "Debt $520K on $2.8M revenue; leverage proxy = 4.5; three refinancings signal chronic debt-servicing difficulty"
+    },
+    {
+      "fixture_key": "current_monthly_repayment",
+      "canonical_key": "covenantHeadroom",
+      "evidence_item_index": 2,
+      "value_override": 0.05,
+      "transform_note": "Recurring refinancing with growing facility implies minimal covenant headroom; covenantHeadroom proxy = 0.05"
     }
   ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "interestCoverage",
-      "would_improve_pattern": "debt_solvency (interest coverage elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -94,5 +92,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-08-003 is SUPPORTED via debt_solvency_pressure archetype. The adversarial layer (rate increase explanation) should be defeated by debt growth evidence. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: financial_health + DEBT_TEXT (debt service, refinanc, maturity, solvency) + leverageRatio + covenantHeadroom numerics"
 }

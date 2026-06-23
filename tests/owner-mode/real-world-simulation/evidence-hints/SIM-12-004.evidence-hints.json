@@ -6,93 +6,82 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "SEO retainer service representing 40% of total revenue has not had a pricing review in three years despite the market changing",
+      "finding": "SEO subscription service pricing has not been reviewed in three years \u2014 margin erosion risk exists on the largest service line ($840K of $2.1M revenue); a three-year price freeze on an evolving service means the overall margin of 52% cannot be validated without service-level cost separation; specialist delivery dependency on this service line is a concurrent structural problem",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "40% of revenue on a three-year-old price point with no review is a critical adverse margin signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "one specialist manages 38 of 40 SEO retainer clients — the entirety of a service line generating $840K per year sits with one individual",
+      "finding": "gross margin on the SEO subscription service line is unknown and declining \u2014 three years without a price review during which delivery requirements have evolved means the reported 52% overall margin may conceal a compressed or negative margin on the subscription line; price freeze combined with specialist dependency creates two independent risks",
+      "dimension": "financial_health",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.symptoms[2]",
+      "finding": "single specialist managing 38 of 40 SEO subscription clients \u2014 this is a sole operator dependency; no cross-training, no documented processes, and no succession for the primary revenue-generating service line",
       "dimension": "team_capability",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Single specialist responsible for 38 of 40 clients in a $840K service line is a critical adverse key-person dependency signal. team_capability; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "no service-line margin data is available — the 52% blended gross margin is calculated across all revenue without breakdown by service type",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Blended margin without service-line breakdown makes it impossible to assess whether the highest-volume service is profitable. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "owner has been considering hiring a second SEO specialist but cannot determine whether the service line margin supports the additional cost",
-      "dimension": "process_maturity",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Inability to assess whether margin supports a hire due to absence of service-line data is an adverse process maturity signal. process_maturity."
+      "rationale": "Derived from input_packet.symptoms[2] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "digital marketing agency; $2.1M revenue; 52% blended margin; SEO retainer $840K at 3-year price; 1 specialist on 38 clients; no service-line P&L",
+      "finding": "annual revenue $2.1M; reported overall gross margin 52%; SEO subscription monthly price $1,200/client; 40 active subscription clients; subscription revenue $840K; 3 years at current price freeze; one specialist manages 38 clients; 14 staff",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): overall gross margin of 52% is healthy for a digital marketing agency and suggests the business is well-managed",
+      "finding": "Surface signal (not root cause): 52% overall gross margin on $2.1M revenue appears healthy on its face",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "A 52% blended margin is a misleading signal when 40% of revenue has no service-line margin data and is priced at a three-year-old rate — the blended figure may conceal a loss-making service line."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the SEO retainer has been the agency's highest-revenue service for three years and has grown its client count from 20 to 40 in that time",
-      "dimension": "market_position",
+      "finding": "Surface signal (not root cause): the SEO specialist is described as highly capable and client-retention rates appear strong",
+      "dimension": "team_capability",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Growing client count in the SEO retainer is a misleading demand signal — it does not indicate the service is profitable at the current price point, particularly with one specialist managing 38 clients."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [
     {
-      "fixture_key": "seo_clients_single_specialist",
-      "canonical_key": "revenueConcentrationPct",
-      "evidence_item_index": 1,
-      "value_override": 38,
-      "transform_note": "38 of 40 SEO retainer clients managed by one specialist — key-person concentration"
-    }
-  ],
-  "clarification_requests": [
-    {
-      "missing_input_index": 0,
-      "canonical_key_if_applicable": "marginPct",
-      "would_improve_pattern": "margin_erosion (service-line margin elevates confidence)"
+      "fixture_key": "seo_retainer_years_at_current_price",
+      "canonical_key": "profitChangePercent",
+      "evidence_item_index": 0,
+      "value_override": -15,
+      "transform_note": "Three years without price review during evolving delivery requirements implies margin erosion on retainer line; profitChangePercent proxy = -15"
     },
     {
-      "missing_input_index": 1,
-      "canonical_key_if_applicable": null,
-      "would_improve_pattern": null
+      "fixture_key": "seo_specialist_client_count",
+      "canonical_key": "keyPersonCount",
+      "evidence_item_index": 2,
+      "value_override": 1,
+      "transform_note": "Single specialist managing 38 of 40 clients; keyPersonCount=1"
     },
     {
-      "missing_input_index": 2,
-      "canonical_key_if_applicable": null,
-      "would_improve_pattern": null
+      "fixture_key": "seo_retainer_annual_revenue",
+      "canonical_key": "successionReady",
+      "evidence_item_index": 2,
+      "value_override": 0,
+      "transform_note": "No documented processes for retainer delivery; successionReady=0"
     }
   ],
-  "validation_notes": "SIM-12-004 is SUPPORTED via margin_erosion as primary archetype. Secondary: key_person_dependency. No must_identify vocabulary."
+  "clarification_requests": [],
+  "validation_notes": "Calibrated W1: financial_health + MARGIN_HARD (margin erosion, gross margin declining) + team_capability + KEYPERSON_TEXT (sole operator)"
 }

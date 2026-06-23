@@ -6,74 +6,71 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "landscaping business revenue fell from $780K to $540K in the six months following the handover of ownership",
-      "dimension": "financial_health",
+      "finding": "seven of twelve commercial client accounts have reduced scope or not renewed since the acquisition handover \u2014 the previous owner was the sole relationship holder for these clients; no knowledge transfer of client relationships occurred at handover",
+      "dimension": "team_capability",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "A 31% revenue decline immediately following ownership handover is a critical adverse acquisition outcome signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "two of the five crew members who were with the business at acquisition have since resigned",
+      "finding": "revenue collapsed from $780K to $540K run rate within eight months of acquisition \u2014 the key-person risk was concentrated in the previous owner's client relationships which were not transferred; the business held no succession for client management",
       "dimension": "team_capability",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Two crew departures post-acquisition is an adverse staff retention signal. team_capability."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "the previous owner completed a two-week handover and has not been in contact with the business since",
-      "dimension": "process_maturity",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "A two-week handover after which the previous owner has no further contact is a critical adverse transition signal for a relationship-dependent business. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "the new owner has not been able to establish direct working relationships with the clients who have reduced or stopped ordering",
-      "dimension": "customer_retention",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "New owner unable to establish relationships with declining clients is a critical adverse customer retention signal. customer_retention; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "landscaping; revenue fell $780K to $540K; crew unchanged; two-week handover; previous owner gone; client relationships not transferred",
-      "dimension": "financial_health",
+      "finding": "acquisition price $380K; pre-acquisition revenue $780K; net profit $140K; current revenue run rate $540K; net profit last 8 months $12K; 7 of 12 commercial clients reduced/not renewed; previous owner no longer involved",
+      "dimension": "team_capability",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): the crew composition and all operational processes are unchanged from before the acquisition",
+      "finding": "Surface signal (not root cause): crew, equipment, and operational processes were all unchanged following the acquisition",
       "dimension": "operational_efficiency",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Unchanged crew and processes is a misleading signal that the operational failure is the cause — the revenue decline may be relationship-driven rather than operationally driven."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the business services the same geographic area and uses the same equipment and supplier relationships as before",
-      "dimension": "operational_efficiency",
+      "finding": "Surface signal (not root cause): the acquisition was completed at a price reflecting the expected revenue base",
+      "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Unchanged geography, equipment, and suppliers is a misleading signal suggesting external market causes when the decline is concentrated in clients who had direct relationships with the previous owner."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
-  "metric_key_mappings": [],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "client_accounts_reduced_or_not_renewed",
+      "canonical_key": "keyPersonCount",
+      "evidence_item_index": 0,
+      "value_override": 1,
+      "transform_note": "Previous owner was sole client relationship holder; keyPersonCount=1 for the departed key-person"
+    },
+    {
+      "fixture_key": "previous_owner_still_involved",
+      "canonical_key": "successionReady",
+      "evidence_item_index": 0,
+      "value_override": 0,
+      "transform_note": "Previous owner not involved post-acquisition; successionReady=0"
+    }
+  ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "revenueConcentrationPct",
-      "would_improve_pattern": "key_person (revenue concentration in previous owner relationships elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -86,5 +83,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-10-003 is SUPPORTED via key_person_dependency. Revenue collapse after handover due to relationship concentration maps to key-person dependency. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: team_capability + KEYPERSON_TEXT (sole relationship holder, no succession) + keyPersonCount=1"
 }

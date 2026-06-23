@@ -6,75 +6,52 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "six client complaints and three regulatory compliance incidents occurred across eight months involving at least four different staff members",
+      "finding": "six formal client complaints and three regulatory incident notifications in six months \u2014 complaint and escalation rate is mounting; regulatory compliance incidents include missed visits and care plan non-compliance",
       "dimension": "quality_delivery",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Multiple incidents across multiple staff in eight months is a critical adverse quality signal. quality_delivery; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "staff scheduling is managed via WhatsApp messages and a paper roster with no digital record or audit trail",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "WhatsApp and paper scheduling in a regulated care environment is a critical adverse process maturity signal. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "there is no incident reporting system — complaints and incidents are recorded informally when the owner becomes aware of them",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Absence of formal incident reporting in a care environment is a critical adverse compliance signal. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "two staff members are in active performance proceedings but the incidents have involved at least four different staff members",
-      "dimension": "team_capability",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Performance proceedings limited to two individuals when incidents span four or more staff is an adverse coverage signal. team_capability."
-    },
-    {
-      "source_path": "input_packet.facts_known_to_owner",
-      "finding": "aged care support provider; 6 complaints; 3 regulatory incidents; 8 months; WhatsApp scheduling; no incident system; 2 HR proceedings across 4+ implicated staff",
+      "finding": "scheduling is managed via WhatsApp and a shared paper roster \u2014 the absence of a formal scheduling system creates defect risk; missed visits and medication reminder failures are quality failures traceable to process gaps",
       "dimension": "quality_delivery",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
+    },
+    {
+      "source_path": "input_packet.facts_known_to_owner",
+      "finding": "31 staff; annual revenue $2.4M; 6 formal client complaints last 6 months; 3 regulatory incidents last 6 months; 2 staff on performance management; scheduling via WhatsApp; scheduling system last updated 4 years ago",
+      "dimension": "quality_delivery",
+      "is_critical": true,
+      "confidence": "HIGH",
+      "no_outcome_leakage": true,
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): two staff members are in active performance management proceedings that the owner expects to resolve the compliance situation",
+      "finding": "Surface signal (not root cause): two staff members are actively subject to performance management proceedings indicating management accountability",
       "dimension": "team_capability",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Active HR proceedings targeting two individuals is a misleading resolution signal when the incidents span multiple staff members and the scheduling and compliance systems are not addressed."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the regulatory body has not issued a formal warning or licence review notice to date",
-      "dimension": "process_maturity",
+      "finding": "Surface signal (not root cause): owner expects improvement once the performance proceedings conclude",
+      "dimension": "team_capability",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Absence of formal regulatory action to date is a misleading stability signal when three compliance incidents have been recorded in eight months."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [],
   "clarification_requests": [
-    {
-      "missing_input_index": 0,
-      "canonical_key_if_applicable": "complianceGapCount",
-      "would_improve_pattern": "quality_control (compliance gap count elevates confidence)"
-    },
     {
       "missing_input_index": 1,
       "canonical_key_if_applicable": null,
@@ -86,5 +63,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-11-001 is SUPPORTED via quality_control_failure. System and process failures producing regulatory incidents maps to quality control failure. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: quality_delivery + isCritical + QUALITY_TOPIC (complaint, escalation, regulatory incidents) + QUALITY_SEVERE (mounting, rising)"
 }

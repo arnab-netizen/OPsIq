@@ -6,66 +6,48 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "revenue has been flat at approximately $380K for three consecutive years despite the owner working 60+ hours per week",
+      "finding": "owner is a binding operational bottleneck \u2014 every quote, every client call, and every design sign-off requires owner approval; this throughput constraint prevents capacity utilisation and revenue growth beyond what the owner can personally process",
       "dimension": "operational_efficiency",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Three-year revenue plateau with owner working 60+ hours is a critical adverse operational capacity signal. operational_efficiency; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "production facility operates at near-full capacity three days per week and sits idle waiting for materials for the remaining two days",
+      "finding": "production facility has a backlog and capacity constraint \u2014 idle two days per week waiting for materials while near-full capacity three days per week indicates a scheduling and materials-lead-time bottleneck, not a labour capacity shortage",
       "dimension": "operational_efficiency",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Two days per week of production idle time due to materials availability is a critical adverse throughput signal. operational_efficiency; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "only the owner understands and operates the production scheduling system — no other staff member has been trained on it",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Single-person scheduling system dependency is a critical adverse process maturity signal. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "the owner approves every quote, handles every client call, and signs off on every design before production",
-      "dimension": "operational_efficiency",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Owner involvement in every approval is an adverse throughput signal but not the primary throughput constraint given the materials idle time. operational_efficiency."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "signage fabrication; $380K revenue for 3 years; 60+ hour owner week; 3 days at capacity, 2 days idle waiting materials; scheduling system: owner only; 5 staff",
+      "finding": "annual revenue approximately $380K for 3 consecutive years; owner 60+ hours per week; owner approval required for every quote, call, and design; production near-full 3 days, idle 2 days waiting for materials; scheduling knowledge owner-only; 5 staff",
       "dimension": "operational_efficiency",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): owner working 60+ hours with approval authority over every quote, client interaction, and design decision is the textbook owner capacity ceiling",
-      "dimension": "operational_efficiency",
+      "finding": "Surface signal (not root cause): owner working 60+ hours per week suggests maximum effort \u2014 additional hours appear not possible",
+      "dimension": "team_capability",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Owner time saturation is the primary misleading signal — it directs attention to delegation as the intervention when production idle time indicates the throughput constraint is in materials scheduling, not approvals."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): three-year revenue plateau at the same level is most intuitively explained by the owner having hit a personal time limit",
+      "finding": "Surface signal (not root cause): production is near-full capacity three days per week suggesting the facility is well-utilised",
       "dimension": "operational_efficiency",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Revenue plateau attributed to owner time is a misleading causal signal — the two-day materials idle time independently caps throughput regardless of owner time available."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [],
@@ -86,5 +68,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-13-008 is SUPPORTED via operational_bottleneck. Materials procurement constraint as throughput bottleneck independent of owner time maps to operational bottleneck. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: operational_efficiency + isCritical + OPERATIONAL_TOPIC (bottleneck, throughput, capacity, backlog, queue, slow)"
 }

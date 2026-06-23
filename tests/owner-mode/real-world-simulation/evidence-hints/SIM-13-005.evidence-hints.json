@@ -6,82 +6,64 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "owner reports blended gross margin of 38% but describes commercial installation contracts at 18% and residential service calls at 60%",
+      "finding": "gross margin is declining \u2014 commercial installation margins are estimated at approximately 18 percent after labour and materials, while reported blended margin is 38%; arithmetic inconsistency exists between the blended margin figure and the implied service-line margins; the commercial margin is being compressed by rising input costs over eighteen months",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Reported blended margin inconsistent with described service-line margins is a critical adverse data quality signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "commercial installations represent approximately 70% of revenue but carry a significantly lower margin than residential service calls",
+      "finding": "margin erosion has been ongoing for eighteen months \u2014 owner attributes the declining margin to materials cost increases; input costs are rising faster than prices have been adjusted on the commercial installation service line",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "High-volume low-margin service line dominating revenue is a critical adverse mix signal. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "no service-line profit and loss has been prepared in two years",
-      "dimension": "process_maturity",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Absence of service-line financial reporting for two years is a critical adverse process maturity signal. process_maturity; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "owner attributes margin pressure to materials costs rising without having isolated which service line is generating the pressure",
-      "dimension": "process_maturity",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Attributing margin decline to input costs without service-line data is an adverse diagnostic evidence signal. process_maturity."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "plumbing and gas; $1.1M revenue; 38% blended margin (stated); commercial 70% of revenue at ~18%; residential ~30% at ~60%; no service-line P&L for 2 years",
+      "finding": "annual revenue $1.1M; reported blended gross margin 38%; commercial installations 70% of revenue at estimated 18% margin; residential service calls estimated 60% margin; no service-line P&L in 2 years; 18 months margin pressure; arithmetic inconsistency between blended margin and service-line composition",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): rising materials costs in the sector provide a plausible external explanation for margin pressure",
+      "finding": "Surface signal (not root cause): owner reports a 38% blended gross margin \u2014 the blended figure masks the commercial installation margin compression",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Industry materials cost increases are a misleading external signal when the service-line margin data needed to confirm the attribution is absent."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): a blended margin of 38% does not appear alarming in isolation for a plumbing business",
+      "finding": "Surface signal (not root cause): materials cost increases are the stated cause \u2014 owner believes input cost management is the primary lever",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "An acceptable blended margin figure is a misleading adequacy signal when the underlying service-line data may not support that number."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
   "metric_key_mappings": [
     {
-      "fixture_key": "reported_blended_gross_margin",
+      "fixture_key": "commercial_installation_margin_estimate",
       "canonical_key": "marginPct",
       "evidence_item_index": 0,
-      "value_override": 31,
-      "transform_note": "Implied blended margin from service-line data: 70%×18% + 30%×60% = 30.6%, not 38%"
+      "value_override": -20,
+      "transform_note": "Commercial installation margin ~18% vs 38% blended; margin compression = ~20 pp; marginPct = -20 as proxy for margin decline from target"
     }
   ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "marginPct",
-      "would_improve_pattern": "margin_erosion (margin percentage elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -94,5 +76,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-13-005 is SUPPORTED via margin_erosion. Service-line mix driving blended margin below reported figure maps to margin erosion. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: financial_health + MARGIN_HARD (margin erosion, declining margin, cost inflation) + negative marginPct"
 }

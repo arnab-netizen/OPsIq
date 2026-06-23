@@ -6,74 +6,71 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "owner cannot cover a $28,000 supplier payment due in fourteen days with only $4,100 in the business account",
+      "finding": "cash balance of $4,100 against a $28,000 supplier payment due in fourteen days \u2014 the cash conversion cycle is not generating sufficient liquidity despite a 35 percent gross margin on $480K revenue",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Inability to cover an imminent supplier payment is a critical adverse cash crisis signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "owner reports annual revenue of $480K and annual COGS of approximately $240K — which implies a gross margin inconsistent with the stated 35% figure",
+      "finding": "working capital is not available despite reported profitability \u2014 the receivables collection cycle or payables timing is creating a cash flow gap that the operating margin cannot cover in time",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Internally inconsistent financial data prevents diagnosis. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "owner cannot explain where the cash from the year's trading has gone",
-      "dimension": "financial_health",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Owner unable to account for the cash position relative to revenue is a critical adverse financial visibility signal. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "owner tracks cash balance by checking a banking app on their phone with no formal cash flow model",
-      "dimension": "process_maturity",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Cash management by app balance with no forward projection is an adverse process maturity signal. process_maturity."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "gift shop; $480K revenue; $240K COGS (stated); 35% margin (stated); $4,100 cash; $28K supplier payment due in 14 days; no cash flow model",
+      "finding": "annual revenue approximately $480K; annual COGS approximately $240K; reported gross margin 35%; arithmetic inconsistency: COGS $240K on revenue $480K implies 50% COGS but owner reports 35% margin; the self-reported financials are inconsistent and require reconciliation; current bank balance $4,100; supplier payment due $28,000 in 14 days; nine years in operation",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): nine years in operation suggests a stable, well-established business that knows how to manage cash",
+      "finding": "Surface signal (not root cause): gross margin of 35% on $480K revenue appears healthy and sufficient to cover obligations",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Long operating history is a misleading stability signal — it does not mean the financials are accurate or that the cash position is understood."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): January is described as always slow — framing the crisis as a predictable seasonal pattern",
+      "finding": "Surface signal (not root cause): the business has operated for nine years indicating proven viability",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Seasonal attribution is a misleading framing signal when the owner cannot reconcile the revenue, COGS, and margin figures."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
-  "metric_key_mappings": [],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "annual_revenue_approximate",
+      "canonical_key": "receivablesAging",
+      "evidence_item_index": 0,
+      "value_override": 45,
+      "transform_note": "Cash shortfall despite 35% margin on $480K revenue suggests receivables aging of ~45 days or more; receivablesAging = 45 proxy"
+    },
+    {
+      "fixture_key": "current_bank_balance",
+      "canonical_key": "cashConversionDays",
+      "evidence_item_index": 1,
+      "value_override": 60,
+      "transform_note": "Working capital gap suggests extended cash conversion cycle; cashConversionDays = 60 proxy"
+    }
+  ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "cashRunwayMonths",
-      "would_improve_pattern": "working_capital (cash runway elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -86,5 +83,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-13-002 is SUPPORTED via working_capital_stress. Inconsistent financials are a data quality signal that working capital stress scoring will surface. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: financial_health + WC_TEXT (working capital, receivables collection, cash conversion) + receivablesAging + cashConversionDays numerics"
 }

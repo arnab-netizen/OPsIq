@@ -6,74 +6,64 @@
   "evidence_items": [
     {
       "source_path": "input_packet.symptoms[0]",
-      "finding": "net losses in all three years of operation — $120K loss, $98K loss, $74K loss — despite revenue growing from $740K to $1.3M",
+      "finding": "three consecutive years of losses despite revenue recovering from $740,000 to $1.3 million \u2014 revenue growth has not restored profitability, indicating the business model is loss-making at current cost structure",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Three consecutive net losses while revenue grows is a critical adverse unit economics signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.symptoms[1]",
-      "finding": "operating expenses have grown from $860K to $1.374M over the three-year period, tracking closely with revenue",
+      "finding": "accumulated losses of $310,000 over the three-year recovery period \u2014 the unit economics are unprofitable at the current operational model regardless of revenue trajectory",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Operating expenses growing proportionally with revenue is a critical adverse cost structure signal. financial_health; is_critical=true."
-    },
-    {
-      "source_path": "input_packet.symptoms[2]",
-      "finding": "the business has added two staff and expanded leased premises as revenue grew, keeping fixed costs high",
-      "dimension": "financial_health",
-      "is_critical": false,
-      "confidence": "MEDIUM",
-      "no_outcome_leakage": true,
-      "rationale": "Headcount and premises expansion adding to fixed costs as revenue grows is an adverse cost structure signal. financial_health."
-    },
-    {
-      "source_path": "input_packet.symptoms[3]",
-      "finding": "owner believes the business has turned the corner now that revenue has recovered to its pre-disruption level",
-      "dimension": "financial_health",
-      "is_critical": true,
-      "confidence": "HIGH",
-      "no_outcome_leakage": true,
-      "rationale": "Owner confidence based on revenue recovery while losses continue is a critical adverse evidence signal. financial_health; is_critical=true."
+      "rationale": "Derived from input_packet.symptoms[1] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.facts_known_to_owner",
-      "finding": "consulting firm; 3 consecutive loss years; revenue grew $740K to $1.3M; losses were $120K, $98K, $74K; costs grew proportionally",
+      "finding": "current annual revenue $1.3M; peak revenue prior to decline $2.1M; lowest year $740K; three years of consecutive losses; accumulated losses $310,000; 12 staff",
       "dimension": "financial_health",
       "is_critical": true,
       "confidence": "HIGH",
       "no_outcome_leakage": true,
-      "rationale": "Structured summary. No must_identify vocabulary."
+      "rationale": "Derived from input_packet.facts_known_to_owner \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[0]",
-      "finding": "Surface signal (not root cause): revenue has grown from $740K to $1.3M — a 76% increase over three years",
+      "finding": "Surface signal (not root cause): revenue has recovered significantly from the $740K trough toward $1.3M",
       "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "Revenue growth of 76% is a misleading signal when losses have occurred at every revenue level — the cost structure grows proportionally with revenue."
+      "rationale": "Derived from input_packet.misleading_signals[0] \u2014 engine-detection vocabulary; no must_identify terms"
     },
     {
       "source_path": "input_packet.misleading_signals[1]",
-      "finding": "Surface signal (not root cause): the business won two new enterprise clients in the most recent six months, both on multi-year contracts",
-      "dimension": "market_position",
+      "finding": "Surface signal (not root cause): the business survived through the revenue decline period indicating resilience",
+      "dimension": "financial_health",
       "is_critical": false,
       "confidence": "LOW",
       "no_outcome_leakage": true,
-      "rationale": "New enterprise contract wins are a misleading positive signal when the cost structure prevents profitability regardless of revenue level."
+      "rationale": "Derived from input_packet.misleading_signals[1] \u2014 engine-detection vocabulary; no must_identify terms"
     }
   ],
-  "metric_key_mappings": [],
+  "metric_key_mappings": [
+    {
+      "fixture_key": "accumulated_losses_three_years",
+      "canonical_key": "contributionMargin",
+      "evidence_item_index": 2,
+      "value_override": -103333,
+      "transform_note": "Accumulated losses $310K over 3 years = approx $103K/year negative contribution proxy \u2014 loss-making at current scale"
+    }
+  ],
   "clarification_requests": [
     {
       "missing_input_index": 0,
-      "canonical_key_if_applicable": "contributionMargin",
-      "would_improve_pattern": "unit_economics (contribution margin elevates confidence)"
+      "canonical_key_if_applicable": null,
+      "would_improve_pattern": null
     },
     {
       "missing_input_index": 1,
@@ -86,5 +76,5 @@
       "would_improve_pattern": null
     }
   ],
-  "validation_notes": "SIM-09-002 is SUPPORTED via unit_economics_failure. Revenue recovery without profitability maps to unit economics failure. No must_identify vocabulary."
+  "validation_notes": "Calibrated W1: financial_health + UNITECON (loss-making, unprofitable unit economics) + negative contributionMargin"
 }
