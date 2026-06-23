@@ -6,6 +6,23 @@ import { Badge, Button, Select } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
+const MISSING_INPUT_REASON: Record<string, string> = {
+  revenue: "needed to compute margins, cash runway, and survival risk",
+  costs: "needed to determine profitability and cost structure",
+  cashOnHand: "needed to compute cash runway and survival risk",
+  costOfGoods: "needed to compute gross margin",
+  fixedCosts: "needed to separate structural vs. variable costs",
+  payroll: "needed to assess payroll sustainability",
+  debtPayments: "needed to assess debt coverage and liquidity risk",
+  receivables: "needed to compute days-sales-outstanding and cash conversion",
+  payables: "needed to assess supplier payment risk",
+  ownerWithdrawals: "needed to assess owner cash drain",
+  orderCount: "needed to compute revenue per order",
+  customerCount: "needed to compute revenue per customer",
+  discountAmount: "needed to assess discount impact on margins",
+  refundReworkCost: "needed to assess quality and rework drain",
+};
+
 const RISK_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
   score >= 70 ? "destructive" : score >= 40 ? "warning" : score >= 20 ? "default" : "success";
 const HEALTH_VARIANT = (score: number): "success" | "default" | "warning" | "destructive" =>
@@ -167,14 +184,19 @@ export default function OwnerCommandCenterPage() {
               )}
 
               {missingWithPriority.length > 0 && (
-                <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm space-y-1">
-                  <strong>Missing finance inputs:</strong>
-                  <div className="flex flex-wrap gap-2 mt-1">
+                <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm space-y-2">
+                  <strong>Missing finance inputs ({missingWithPriority.filter((m: any) => m.priority === "CRITICAL").length} critical, {missingWithPriority.filter((m: any) => m.priority === "IMPORTANT").length} important):</strong>
+                  <div className="space-y-1 mt-1">
                     {missingWithPriority.map((m: any) => (
-                      <span key={m.field} className="inline-flex items-center gap-1">
-                        <Badge variant={m.priority === "CRITICAL" ? "destructive" : "warning"}>{m.priority}</Badge>
-                        <span>{m.field}</span>
-                      </span>
+                      <div key={m.field} className="flex items-start gap-2">
+                        <Badge variant={m.priority === "CRITICAL" ? "destructive" : "warning"} className="mt-0.5 shrink-0">{m.priority}</Badge>
+                        <span>
+                          <span className="font-medium">{m.field}</span>
+                          {MISSING_INPUT_REASON[m.field] && (
+                            <span className="text-muted-foreground"> — {MISSING_INPUT_REASON[m.field]}</span>
+                          )}
+                        </span>
+                      </div>
                     ))}
                   </div>
                   <Link href="/owner/intake" className="text-xs underline">Add missing data →</Link>
