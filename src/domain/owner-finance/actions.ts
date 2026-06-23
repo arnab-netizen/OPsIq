@@ -16,6 +16,21 @@ import {
 import type { FinanceDiagnosisResult } from "./diagnosis";
 import { buildFinanceRecommendations, FINANCE_REC_TEMPLATES, type FinanceRecommendation } from "./recommendations";
 
+/** Build a human-readable "because" rationale from source metric data. */
+function buildEvidenceRationale(
+  sourceMetric: string,
+  sourceValue: number | null,
+  threshold: number | null
+): string {
+  if (sourceValue !== null && threshold !== null) {
+    return `Your ${sourceMetric} is ${sourceValue.toLocaleString()} (threshold: ${threshold.toLocaleString()}).`;
+  }
+  if (sourceValue !== null) {
+    return `Your ${sourceMetric} is ${sourceValue.toLocaleString()}.`;
+  }
+  return `Based on your ${sourceMetric}.`;
+}
+
 /**
  * Convert one recommendation into an OwnerAction. `survivalRiskScore` (the
  * business-level finance risk) raises the priority of actions when the business
@@ -39,6 +54,9 @@ export function recommendationToOwnerAction(
     survivalRiskScore: clampScore(survivalRiskScore),
   });
 
+  // Build a traceable "because" statement from the source metric + value + threshold.
+  const rationale = buildEvidenceRationale(rec.sourceMetric, rec.sourceValue, rec.threshold);
+
   return {
     domain: "finance",
     findingCode: rec.findingCode,
@@ -55,6 +73,8 @@ export function recommendationToOwnerAction(
     verificationMetric: rec.verificationMetric,
     verificationMethod: rec.verificationMethod,
     expectedTimeframeDays: rec.expectedTimeframeDays,
+    evidenceRationale: rationale,
+    evidence: rec.evidence.length > 0 ? rec.evidence : undefined,
   };
 }
 

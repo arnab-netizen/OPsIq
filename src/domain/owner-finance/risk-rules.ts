@@ -222,6 +222,31 @@ export function buildFinanceRiskFindings(
     }
   }
 
+  // Absolute cash cushion warning: fires when cash < 14 days of total costs,
+  // regardless of profitability (plugs the gap where cashRunwayDays is null
+  // for marginally-profitable but cash-critical businesses).
+  if (
+    m.cashDaysOfCosts !== null &&
+    m.cashRunwayDays === null && // only when runway check did not already fire
+    m.cashDaysOfCosts < 14
+  ) {
+    findings.push(
+      risk({
+        code: "FIN_LOW_ABSOLUTE_CASH",
+        title: "Cash on hand covers less than 2 weeks of costs",
+        summary: "Even though the business is not in a net-loss position, cash reserves are critically thin; any disruption to revenue would immediately impair operations.",
+        sourceMetric: "cashDaysOfCosts",
+        sourceValue: m.cashDaysOfCosts,
+        threshold: 14,
+        severity: m.cashDaysOfCosts < 7 ? "critical" : "high",
+        confidence: conf,
+        impactScore: 75,
+        evidence: [`cashDaysOfCosts = ${m.cashDaysOfCosts} days < 14-day minimum`],
+        verificationMetric: "cashDaysOfCosts",
+      })
+    );
+  }
+
   // High fixed cost burden
   if (m.fixedCostBurdenPct !== null && m.fixedCostBurdenPct > t.highFixedCostBurdenPct) {
     findings.push(

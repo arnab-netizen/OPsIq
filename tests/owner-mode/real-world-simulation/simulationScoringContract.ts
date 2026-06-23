@@ -290,10 +290,7 @@ function scoreEvidenceDiscipline(
  * Light heuristic — signals like "if", "once", "pending", "subject to", "assuming",
  * "this analysis assumes" indicate conditional framing.
  */
-function scoreReassessmentQuality(
-  output: string,
-  _fixture: SimulationFixture
-): SimulationDimensionResult {
+function scoreReassessmentQuality(output: string): SimulationDimensionResult {
   const reasons: string[] = [];
   const matchedTerms: string[] = [];
   const missingTerms: string[] = [];
@@ -373,7 +370,7 @@ export function scoreSimulationOutput(
   const missingInputRequests = scoreMissingInputRequests(output, fixture);
   const badRecommendationAvoidance = scoreBadRecommendationAvoidance(output, fixture);
   const evidenceDiscipline = scoreEvidenceDiscipline(output, fixture);
-  const reassessmentQuality = scoreReassessmentQuality(output, fixture);
+  const reassessmentQuality = scoreReassessmentQuality(output);
   const learningLoopEligibility = scoreLearningLoopEligibility(rootCause);
 
   const totalScore =

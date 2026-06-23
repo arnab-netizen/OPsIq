@@ -11,6 +11,53 @@ import { computeFinancialMetrics } from "./metrics";
 import { resolveFinanceThresholds } from "./thresholds";
 import { buildFinanceRiskFindings } from "./risk-rules";
 import { buildFinanceOpportunityFindings } from "./opportunity-rules";
+import { missingCriticalFinanceInputs, type MissingInputPriority } from "./data-confidence";
+
+/** A structured entry in the missing inputs registry. */
+export interface MissingInputEntry {
+  field: string;
+  priority: MissingInputPriority;
+  impact: string;
+}
+
+const MISSING_INPUT_IMPACT: Record<string, string> = {
+  revenue: "profit margins, cash runway, survival risk score",
+  costs: "profitability, cost structure, net margin",
+  cashOnHand: "cash runway, survival risk, days of cash remaining",
+  costOfGoodsOrServices: "gross margin calculation",
+  fixedCosts: "structural vs. variable cost separation",
+  salaryPayroll: "payroll sustainability assessment",
+  loanEmiDebtPayments: "debt coverage and liquidity risk",
+  receivables: "days-sales-outstanding, cash conversion",
+  payables: "supplier payment risk",
+  ownerWithdrawals: "owner cash drain analysis",
+  orderCount: "revenue-per-order metric",
+  customerCount: "revenue-per-customer metric",
+  discountAmount: "discount impact on margins",
+  refundAmount: "refund drain on gross margin",
+};
+
+const IMPORTANT_INPUT_FIELDS: (keyof FinancialSnapshotInput)[] = [
+  "costOfGoodsOrServices", "fixedCosts", "salaryPayroll", "loanEmiDebtPayments",
+  "receivables", "payables", "ownerWithdrawals", "orderCount", "customerCount",
+  "discountAmount", "refundAmount",
+];
+
+/** Build a structured missing-inputs registry from a snapshot input. Deterministic, pure. */
+export function buildMissingInputsRegistry(input: FinancialSnapshotInput): MissingInputEntry[] {
+  const result: MissingInputEntry[] = [];
+  const criticalFields = missingCriticalFinanceInputs(input);
+  for (const field of criticalFields) {
+    result.push({ field, priority: "CRITICAL", impact: MISSING_INPUT_IMPACT[field] ?? "diagnosis accuracy" });
+  }
+  for (const field of IMPORTANT_INPUT_FIELDS) {
+    const value = input[field];
+    if (value === null || value === undefined || (typeof value === "number" && !Number.isFinite(value))) {
+      result.push({ field: String(field), priority: "IMPORTANT", impact: MISSING_INPUT_IMPACT[String(field)] ?? "diagnosis accuracy" });
+    }
+  }
+  return result;
+}
 
 const SEVERITY_RANK: Record<OwnerSeverity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
 
@@ -38,6 +85,7 @@ export interface FinanceDiagnosisResult {
   opportunityFindings: OwnerFinding[]; // ranked
   domainScore: DomainScore;
   missingCriticalData: string[];
+  missingInputsRegistry: MissingInputEntry[];
   generatedAt: Date;
 }
 
@@ -73,6 +121,7 @@ export function diagnoseFinanceSnapshot(
     opportunityFindings,
     domainScore,
     missingCriticalData: metrics.missingRequiredInputs,
+    missingInputsRegistry: buildMissingInputsRegistry(input),
     generatedAt: now,
   };
 }

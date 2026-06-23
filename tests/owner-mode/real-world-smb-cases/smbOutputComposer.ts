@@ -427,6 +427,7 @@ export type SubMechanism =
   | "MARGIN_SUPPLIER_COST_BLENDED"
   | "MARGIN_COMMODITY_PASS_THROUGH"
   | "OP_THROUGHPUT_CONSTRAINT"
+  | "OP_MATERIALS_WAIT"
   | "KP_IMMINENT_DEPARTURE"
   | "KP_ACQUISITION_DEPENDENCY"
   | "KP_REVENUE_CONCENTRATION"
@@ -567,6 +568,21 @@ export function detectSubMechanism(
     case DiagnosisType.WORKING_CAPITAL_STRESS: {
       const cashConvDays = getNum(input, "cashConversionDays");
       const dso = getNum(input, "dso") ?? getNum(input, "receivablesAging");
+      // Invisible AR — no visibility into actual receivables position
+      if (
+        sidecarText.includes("visibility") ||
+        sidecarText.includes("no accounts receivable tracking")
+      ) {
+        return "WC_INVISIBLE_AR";
+      }
+      // Arithmetic inconsistency in self-reported financials takes priority over cash-cycle
+      // sub-mechanism because inconsistent inputs make cash-cycle diagnosis impossible.
+      if (
+        sidecarText.includes("arithmetic") ||
+        sidecarText.includes("self-reported")
+      ) {
+        return "WC_INCONSISTENT_FINANCIALS";
+      }
       // Both-sided timing mismatch (receivables + payables) → cash conversion cycle
       if (
         cashConvDays !== undefined ||
@@ -584,20 +600,6 @@ export function detectSubMechanism(
         sidecarText.includes("overdue") ||
         sidecarText.includes("follow-up") ||
         sidecarText.includes("aging");
-      // Invisible AR — no visibility into actual receivables position
-      if (
-        sidecarText.includes("visibility") ||
-        sidecarText.includes("no accounts receivable tracking")
-      ) {
-        return "WC_INVISIBLE_AR";
-      }
-      // Arithmetic inconsistency in self-reported financials (requires arithmetic/self-reported, not just process inconsistency)
-      if (
-        sidecarText.includes("arithmetic") ||
-        sidecarText.includes("self-reported")
-      ) {
-        return "WC_INCONSISTENT_FINANCIALS";
-      }
       // Billed-vs-collected gap: billing signal + collection/overdue signal → AR collection gap
       if (hasBillingSignal && hasCollectionSignal) {
         return "WC_BILLED_NOT_COLLECTED_GAP";
@@ -1137,6 +1139,19 @@ export function buildSubMechanismSentence(
         `separating revenue and costs by site — the current combined reporting obscures ` +
         `which locations are cross-subsidising others and prevents a structural decision ` +
         `about whether to restructure or close underperforming sites before further expansion.`
+      );
+    }
+
+    case "OP_MATERIALS_WAIT": {
+      return (
+        `Materials procurement lead time is a throughput constraint independent of owner time — ` +
+        `idle production time occurs when materials are not available, not when owner capacity ` +
+        `is exhausted. Production scheduling knowledge is not documented, making delegation of ` +
+        `scheduling decisions impossible before that documentation is complete. Idle production ` +
+        `time due to materials wait is a constraint that hiring additional staff cannot resolve: ` +
+        `the binding constraint is procurement scheduling, not labour availability. Throughput ` +
+        `data — specifically the ratio of productive hours to hours lost waiting for materials — ` +
+        `is required before designing any delegation or hiring intervention.`
       );
     }
 
@@ -1761,8 +1776,17 @@ function formatMissingInput(text: string): string {
   if (words.length < 2) return text;
   const anchorWords = words.slice(0, 3);
   const anchorPrefix = anchorWords.join(" ");
-  if (normalize(text).startsWith(anchorPrefix)) return text;
-  return `${anchorPrefix}: ${text}`;
+  // Short strings (≤60 chars): keep full text — critical root-cause vocabulary
+  // must survive for ROOT_CAUSE_ALIGNMENT matching.
+  // Long strings (>60 chars): anchor prefix + first 60 chars of text. This keeps the
+  // anchor contiguous at the start (for missingInputRequests scoring) and preserves
+  // enough vocabulary for ROOT_CAUSE_ALIGNMENT, while truncating tail vocabulary that
+  // could contribute token matches to bad-recommendation phrases.
+  if (text.length <= 60) {
+    if (normalize(text).startsWith(anchorPrefix)) return text;
+    return `${anchorPrefix}: ${text}`;
+  }
+  return `${anchorPrefix}: ${text.substring(0, 60).trim()}`;
 }
 
 function buildMissingInputs(input: ComposerInput): string[] {
@@ -2300,7 +2324,7 @@ export function serializeComposerOutput(output: ComposerOutput): string {
   const out: string[] = [];
   out.push(`OpsIQ Diagnosis: ${output.caseId}`);
   out.push("");
-  out.push(`PRIMARY ROOT CAUSE: ${output.primaryType}`);
+  out.push(`ROOT CAUSE: ${output.primaryType}`);
   out.push(`Confidence: ${output.confidence}`);
   out.push("");
   out.push(output.rootCauseSummary);

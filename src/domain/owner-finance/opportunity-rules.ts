@@ -54,8 +54,11 @@ export function buildFinanceOpportunityFindings(
   const findings: OwnerFinding[] = [];
   const conf = clampConfidence(m.dataConfidenceScore / 100);
 
-  // Margin improvement opportunity (net margin below healthy bar but computable)
-  if (m.netMarginPct !== null && m.netMarginPct < t.healthyNetMarginPct) {
+  // Margin improvement opportunity: fires only when margin is weak-but-positive.
+  // Negative margin is already covered by FIN_NEGATIVE_NET_MARGIN (risk) and
+  // FIN_OPP_BREAK_EVEN_RECOVERY — adding a third "room to improve" signal on the
+  // same metric with lower urgency produces conflicting triage for the owner.
+  if (m.netMarginPct !== null && m.netMarginPct >= 0 && m.netMarginPct < t.healthyNetMarginPct) {
     findings.push(
       opportunity({
         code: "FIN_OPP_MARGIN_IMPROVEMENT",
@@ -74,7 +77,9 @@ export function buildFinanceOpportunityFindings(
     );
   }
 
-  // Break-even recovery opportunity
+  // Break-even recovery opportunity. Intentional dual-signal: FIN_BELOW_BREAK_EVEN (risk/high)
+  // fires in risk-rules for the same condition. Two signals are kept because the risk
+  // tells the owner WHAT is wrong; this opportunity tells them HOW to fix it.
   const revenue = typeof input.revenue === "number" && Number.isFinite(input.revenue) ? input.revenue : null;
   if (revenue !== null && m.breakEvenRevenue !== null && revenue < m.breakEvenRevenue) {
     const gap = Math.round(m.breakEvenRevenue - revenue);
@@ -96,8 +101,10 @@ export function buildFinanceOpportunityFindings(
     );
   }
 
-  // Receivables collection opportunity (only if receivables present and > 0)
-  if (m.receivablesPressurePct !== null && m.receivablesPressurePct > 0) {
+  // Receivables collection opportunity: requires pressure above a material threshold.
+  // Any positive receivables balance is normal operating state (net-30 terms etc.).
+  // Only flag when receivables pressure exceeds half the "high" threshold.
+  if (m.receivablesPressurePct !== null && m.receivablesPressurePct > t.highReceivablesPressurePct / 2) {
     findings.push(
       opportunity({
         code: "FIN_OPP_RECEIVABLES_COLLECTION",
@@ -136,8 +143,9 @@ export function buildFinanceOpportunityFindings(
     );
   }
 
-  // Leakage reduction opportunity (cost leakage present and > 0)
-  if (m.costLeakageRatioPct !== null && m.costLeakageRatioPct > 0) {
+  // Leakage reduction opportunity: requires at least 2% leakage ratio.
+  // Below 2% is within normal operational tolerance (rounding, small discounts).
+  if (m.costLeakageRatioPct !== null && m.costLeakageRatioPct >= 2) {
     findings.push(
       opportunity({
         code: "FIN_OPP_LEAKAGE_REDUCTION",

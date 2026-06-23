@@ -48,12 +48,31 @@ export type IntakeNormalizationStatus = (typeof INTAKE_NORMALIZATION_STATUSES)[n
 export interface IntakeFieldError {
   row: number; // 1-based data row index
   field: string;
-  code: "missing_required" | "invalid_number" | "negative_value" | "invalid_date" | "unmapped_column";
+  code: "missing_required" | "invalid_number" | "negative_value" | "invalid_date" | "unmapped_column" | "inconsistent_data" | "gst_basis_unknown" | "soft_limit_warning";
   message: string;
 }
 
 /** A normalized data row keyed by canonical field name. */
 export type NormalizedRecord = Record<string, number | string | null>;
+
+/** Evidence quality tier derived from intake source. */
+export type IntakeQualityTier = "Strong" | "Moderate" | "Weak" | "Assumed";
+
+const QUALITY_TIER_MAP: Record<IntakeSource, IntakeQualityTier> = {
+  accounting_export: "Strong",
+  bank_statement: "Strong",
+  pos_order_upload: "Strong",
+  csv_upload: "Moderate",
+  google_sheets: "Moderate",
+  manual_form: "Weak",
+  email_import: "Weak",
+  lead_import: "Assumed",
+};
+
+/** Deterministic evidence quality tier for an intake source. */
+export function sourceQualityTier(source: IntakeSource): IntakeQualityTier {
+  return QUALITY_TIER_MAP[source] ?? "Assumed";
+}
 
 /** The full deterministic intake result (a candidate awaiting owner confirmation). */
 export interface IntakeResult {

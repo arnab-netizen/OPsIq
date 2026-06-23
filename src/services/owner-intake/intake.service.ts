@@ -99,10 +99,16 @@ export async function confirmDataIntake(intakeId: string, actorId: string, works
     );
   }
 
-  const updated = await db.ownerDataIntake.update({
-    where: { id: intakeId },
+  // Atomic guard: updateMany with ownerConfirmed:false predicate prevents double-confirm
+  // if two concurrent requests both pass the read-then-check above.
+  const result = await db.ownerDataIntake.updateMany({
+    where: { id: intakeId, workspaceId, ownerConfirmed: false },
     data: { ownerConfirmed: true, confirmedAt: new Date(), confirmedBy: actorId },
   });
+  if (result.count === 0) {
+    throw new ConflictError("This intake has already been confirmed.");
+  }
+  const updated = await db.ownerDataIntake.findFirstOrThrow({ where: { id: intakeId, workspaceId } });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_DATA_INTAKE_CONFIRMED,
@@ -140,10 +146,21 @@ export async function getIntakeDashboard(workspaceId: string, requestedBusinessI
     orderBy: { createdAt: "desc" },
   });
 
+  // Compute priority guidance: domains with no confirmed intake, ordered by diagnostic importance.
+  const DOMAIN_PRIORITY = ["finance", "cashflow", "sales", "operations", "sop", "marketing", "strategy"] as const;
+  const confirmedDomains = new Set(
+    intakes.filter((i: any) => i.ownerConfirmed).map((i: any) => i.targetDomain)
+  );
+  const missingPriorityDomains = DOMAIN_PRIORITY.filter((d) => !confirmedDomains.has(d));
+  const priorityGuidance = missingPriorityDomains.length > 0
+    ? `Your diagnosis needs data for: ${missingPriorityDomains.slice(0, 3).join(", ")}. Provide ${missingPriorityDomains[0]} first.`
+    : null;
+
   return {
     businesses: businessList,
     selectedBusinessId,
     intakes,
     hasData: intakes.length > 0,
+    priorityGuidance,
   };
 }

@@ -22,6 +22,7 @@ import {
   type OwnerAction,
   type BusinessConditionProfile,
 } from "@/domain/owner-spine/contracts";
+import { computeMissingInputsWithPriority, type MissingInput } from "@/domain/owner-finance/data-confidence";
 
 /** Map a persisted finance cycle row to a spine DomainScore (pure). */
 export function financeCycleToDomainScore(cycle: any): DomainScore {
@@ -320,6 +321,11 @@ export interface BusinessConditionResult {
   hasData: boolean;
   domainsWired: string[];
   profile: BusinessConditionProfile | null;
+  isStaleData: boolean;
+  dataAgeDays: number | null;
+  missingInputsWithPriority: MissingInput[];
+  lastDiagnosedAt: string | null; // ISO date string of most recent domain diagnosis
+  nextReassessmentDue: string | null; // ISO date string (lastDiagnosedAt + 30 days)
 }
 
 /**
@@ -344,7 +350,7 @@ export async function getBusinessCondition(
   if (!selectedBusinessId && businesses.length > 0) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null };
+    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null, isStaleData: false, dataAgeDays: null, missingInputsWithPriority: [], lastDiagnosedAt: null, nextReassessmentDue: null };
   }
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
@@ -462,6 +468,40 @@ export async function getBusinessCondition(
       ? (latestFinanceSnapshot.missingCriticalData as string[])
       : [];
 
+  // Compute data staleness from the latest finance snapshot's periodEnd (honest: 0 when no snapshot).
+  const STALE_DAYS = 45;
+  const now = opts.now ?? new Date();
+  let isStaleData = false;
+  let dataAgeDays: number | null = null;
+  if (latestFinanceSnapshot?.periodEnd) {
+    const periodEnd = latestFinanceSnapshot.periodEnd instanceof Date
+      ? latestFinanceSnapshot.periodEnd
+      : new Date(latestFinanceSnapshot.periodEnd as string);
+    const ageDays = Math.floor((now.getTime() - periodEnd.getTime()) / 86_400_000);
+    dataAgeDays = ageDays;
+    isStaleData = ageDays > STALE_DAYS;
+  }
+
+  const missingInputsWithPriority = latestFinanceSnapshot
+    ? computeMissingInputsWithPriority(latestFinanceSnapshot as Record<string, unknown>)
+    : [];
+
+  // Reassessment schedule: derived from the most recent domain diagnosis (30 days cadence).
+  const REASSESSMENT_DAYS = 30;
+  let lastDiagnosedAt: string | null = null;
+  let nextReassessmentDue: string | null = null;
+  if (domainScores.length > 0) {
+    const latestScore = domainScores.reduce((latest, s) => {
+      const t = s.generatedAt instanceof Date ? s.generatedAt : new Date(s.generatedAt as string);
+      const l = latest instanceof Date ? latest : new Date(latest as string);
+      return t > l ? s.generatedAt : latest;
+    }, domainScores[0].generatedAt);
+    const lastDate = latestScore instanceof Date ? latestScore : new Date(latestScore as string);
+    lastDiagnosedAt = lastDate.toISOString();
+    const nextDate = new Date(lastDate.getTime() + REASSESSMENT_DAYS * 86_400_000);
+    nextReassessmentDue = nextDate.toISOString();
+  }
+
   if (domainScores.length === 0) {
     return {
       businesses: businessList,
@@ -469,6 +509,11 @@ export async function getBusinessCondition(
       hasData: false,
       domainsWired: [],
       profile: null,
+      isStaleData: false,
+      dataAgeDays: null,
+      missingInputsWithPriority,
+      lastDiagnosedAt: null,
+      nextReassessmentDue: null,
     };
   }
 
@@ -478,7 +523,7 @@ export async function getBusinessCondition(
     domainScores,
     topActions,
     missingCriticalData,
-    now: opts.now,
+    now,
   });
 
   return {
@@ -487,5 +532,10 @@ export async function getBusinessCondition(
     hasData: true,
     domainsWired: domainScores.map((d) => d.domain),
     profile,
+    isStaleData,
+    dataAgeDays,
+    missingInputsWithPriority,
+    lastDiagnosedAt,
+    nextReassessmentDue,
   };
 }

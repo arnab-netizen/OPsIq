@@ -24,9 +24,14 @@ function n(name: string, type: "number" | "currency" = "number"): IntakeFieldSpe
   return { name, type, nonNegative: true };
 }
 
+/** Valid GST basis values for finance intake. */
+export const GST_BASIS_VALUES = ["inclusive", "exclusive"] as const;
+export type GstBasis = (typeof GST_BASIS_VALUES)[number];
+
 export const INTAKE_FIELD_SPECS: Record<IntakeTargetDomain, IntakeFieldSpec[]> = {
   finance: [
     ...PERIOD,
+    { name: "gstBasis", type: "string", required: false, label: "GST basis (inclusive | exclusive)" },
     n("revenue", "currency"),
     n("costOfGoodsOrServices", "currency"),
     n("fixedCosts", "currency"),

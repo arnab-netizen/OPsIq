@@ -8,6 +8,7 @@
  * connector data must be confirmed before it can feed a diagnosis (execution.md §17).
  */
 import { parseCsv } from "./csv";
+import { GST_BASIS_VALUES } from "./field-specs";
 import type {
   IntakeSource,
   IntakeFieldSpec,
@@ -16,6 +17,8 @@ import type {
   IntakeValidationStatus,
   NormalizedRecord,
 } from "./types";
+
+const GST_CURRENCY_FIELDS = ["revenue", "costOfGoodsOrServices", "fixedCosts", "variableCosts", "cashOnHand", "receivables"] as const;
 
 /** Canonical key for matching a header to a field name (case/space/punct-insensitive). */
 function canon(s: string): string {
@@ -103,6 +106,11 @@ export function buildCsvIntake(
           errorReport.push({ row: rowNum, field: f.name, code: "negative_value", message: `"${f.name}" cannot be negative (got ${n}).` });
         } else {
           record[f.name] = n;
+          if (f.type === "currency" && n > 0 && n < 1000) {
+            errorReport.push({ row: rowNum, field: f.name, code: "soft_limit_warning", message: `"${f.name}" value ${n} seems very low — confirm it is in full currency units, not thousands.` });
+          } else if (f.type === "currency" && n > 100_000_000) {
+            errorReport.push({ row: rowNum, field: f.name, code: "soft_limit_warning", message: `"${f.name}" value ${n} seems very high — confirm it is correct.` });
+          }
         }
       } else if (f.type === "date") {
         const d = parseDate(raw);
@@ -125,6 +133,97 @@ export function buildCsvIntake(
     if (f.required && !fieldToCol.has(f.name) && rows.length > 0) {
       anyRequiredBroken = true;
     }
+  }
+
+  // GST normalisation: if the spec includes gstBasis and any row provides it,
+  // validate the value and divide all finance currency fields by 1.1 for inclusive rows.
+  const hasGstBasisField = fieldSpecs.some((f) => f.name === "gstBasis");
+  if (hasGstBasisField) {
+    records.forEach((record, r) => {
+      const rawBasis = record["gstBasis"];
+      if (rawBasis === null || rawBasis === undefined) {
+        // gstBasis absent — emit advisory warning only (non-blocking)
+        errorReport.push({
+          row: r + 1,
+          field: "gstBasis",
+          code: "gst_basis_unknown",
+          message: `GST basis not specified. If revenue figures are GST-inclusive, set gstBasis to "inclusive" so figures are normalised to ex-GST.`,
+        });
+        anyOptionalInvalid = true;
+        return;
+      }
+      const basis = String(rawBasis).trim().toLowerCase();
+      if (!GST_BASIS_VALUES.includes(basis as typeof GST_BASIS_VALUES[number])) {
+        errorReport.push({
+          row: r + 1,
+          field: "gstBasis",
+          code: "gst_basis_unknown",
+          message: `"${rawBasis}" is not a valid GST basis. Use "inclusive" or "exclusive".`,
+        });
+        anyOptionalInvalid = true;
+        return;
+      }
+      if (basis === "inclusive") {
+        for (const field of GST_CURRENCY_FIELDS) {
+          const v = record[field];
+          if (typeof v === "number") {
+            record[field] = Math.round((v / 1.1) * 100) / 100;
+          }
+        }
+        // Record the normalised basis so downstream readers know the values are ex-GST.
+        record["gstBasis"] = "exclusive_normalised";
+      }
+    });
+  }
+
+  // Cross-field consistency checks for finance domain data.
+  // These detect likely data-entry errors (wrong units, GST not removed, etc.)
+  // before data is confirmed and stored. Inconsistencies are flagged as warnings
+  // (non-blocking) so the owner can investigate rather than being hard-rejected.
+  const hasFinanceCrossFields =
+    fieldSpecs.some((f) => f.name === "revenue") &&
+    fieldSpecs.some((f) => f.name === "costOfGoodsOrServices");
+  if (hasFinanceCrossFields) {
+    records.forEach((record, r) => {
+      const revenue = typeof record["revenue"] === "number" ? record["revenue"] : null;
+      const cogs = typeof record["costOfGoodsOrServices"] === "number" ? record["costOfGoodsOrServices"] : null;
+      const fixedCosts = typeof record["fixedCosts"] === "number" ? record["fixedCosts"] : null;
+      const variableCosts = typeof record["variableCosts"] === "number" ? record["variableCosts"] : null;
+      const receivables = typeof record["receivables"] === "number" ? record["receivables"] : null;
+
+      if (revenue !== null && revenue > 0) {
+        // COGS > 3× revenue almost certainly indicates wrong units or GST-inclusive data
+        if (cogs !== null && cogs > revenue * 3) {
+          errorReport.push({
+            row: r + 1,
+            field: "costOfGoodsOrServices",
+            code: "inconsistent_data",
+            message: `costOfGoodsOrServices (${cogs}) is more than 3× revenue (${revenue}). Check for unit errors or GST-inclusive figures.`,
+          });
+          anyOptionalInvalid = true;
+        }
+        // Total operating costs > 5× revenue indicates wrong units or scale mismatch
+        if (fixedCosts !== null && variableCosts !== null && fixedCosts + variableCosts > revenue * 5) {
+          errorReport.push({
+            row: r + 1,
+            field: "fixedCosts",
+            code: "inconsistent_data",
+            message: `Combined fixedCosts + variableCosts (${fixedCosts + variableCosts}) is more than 5× revenue (${revenue}). Check for unit errors or scale mismatch.`,
+          });
+          anyOptionalInvalid = true;
+        }
+        // Receivables > 2× annual revenue indicates wrong period or unit error
+        if (receivables !== null && receivables > revenue * 2) {
+          errorReport.push({
+            row: r + 1,
+            field: "receivables",
+            code: "inconsistent_data",
+            message: `receivables (${receivables}) is more than 2× revenue (${revenue}). Verify the period and check for unit errors.`,
+          });
+          anyOptionalInvalid = true;
+        }
+      }
+    });
   }
 
   const validationStatus: IntakeValidationStatus =

@@ -1,0 +1,47 @@
+name: Owner Mode — Real-World Simulation Corpus
+
+on:
+  push:
+    paths:
+      - "tests/owner-mode/real-world-simulation/**"
+      - "src/services/consulting-engine/**"
+      - "src/domain/consulting-engine/**"
+  pull_request:
+    paths:
+      - "tests/owner-mode/real-world-simulation/**"
+      - "src/services/consulting-engine/**"
+      - "src/domain/consulting-engine/**"
+  workflow_dispatch:
+
+jobs:
+  simulation-corpus:
+    name: Real-World Simulation Corpus — Structural & Regression Lock Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck simulation harness
+        run: npx tsc --noEmit --project tsconfig.json 2>&1 | head -50 || true
+        # Non-blocking — test suite below is the hard gate.
+
+      - name: Run simulation corpus tests
+        run: npm run test:owner-real-world-simulation
+        env:
+          # No DB required — all simulation tests are pure logic (LANE_A).
+          TEST_WITH_DB: "false"
+        # Enforces:
+        # - Batch 1 regression lock (77 assertions, floors may not be lowered)
+        # - Structural harness tests (schema, validator, normalizer, scoring contract)
+        # - Sidecar validator (160 sidecars validated)
+        # - SIM-06-002 must remain classified SIM_ENGINE_GAP (scope gap)

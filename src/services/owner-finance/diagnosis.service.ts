@@ -14,6 +14,7 @@ import { NotFoundError } from "@/infra/errors";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { diagnoseFinanceSnapshot } from "@/domain/owner-finance/diagnosis";
 import { planFinanceActionsFromDiagnosis } from "@/domain/owner-finance/actions";
+import { calculateDataConfidence } from "@/domain/owner-finance/data-confidence";
 import { getFinancialSnapshot, rowToFinanceInput } from "./snapshot.service";
 
 export async function runFinanceDiagnosis(
@@ -31,6 +32,7 @@ export async function runFinanceDiagnosis(
   const input = rowToFinanceInput(snapshotRow);
   const diagnosis = diagnoseFinanceSnapshot(input);
   const plan = planFinanceActionsFromDiagnosis(diagnosis);
+  const confidence = calculateDataConfidence(input);
 
   const previousCycle = await db.ownerFinanceCycle.findFirst({
     where: { businessId, workspaceId },
@@ -115,6 +117,15 @@ export async function runFinanceDiagnosis(
     }
   });
 
+  const previousCycleForDrift = await db.ownerFinanceCycle.findFirst({
+    where: { businessId, workspaceId, id: { not: cycleId } },
+    orderBy: { sequenceNumber: "desc" },
+    select: { dataConfidenceScore: true, sequenceNumber: true },
+  });
+  const confidenceDelta = previousCycleForDrift
+    ? confidence.dataConfidenceScore - (previousCycleForDrift.dataConfidenceScore ?? 0)
+    : null;
+
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_FINANCE_DIAGNOSIS_RUN,
     actorId,
@@ -127,8 +138,28 @@ export async function runFinanceDiagnosis(
       findingCount: diagnosis.findings.length,
       actionCount: plan.actions.length,
       survivalState: diagnosis.metrics.survivalState,
+      dataConfidenceScore: confidence.dataConfidenceScore,
+      confidenceTier: confidence.confidenceTier,
+      missingCritical: confidence.missingCritical,
+      confidenceDelta,
     },
   });
+
+  if (confidence.dataConfidenceScore < 30) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_FINANCE_DIAGNOSIS_LOW_CONFIDENCE,
+      actorId,
+      workspaceId,
+      entityType: "OwnerFinanceCycle",
+      entityId: cycleId,
+      payload: {
+        businessId,
+        dataConfidenceScore: confidence.dataConfidenceScore,
+        confidenceTier: confidence.confidenceTier,
+        missingCritical: confidence.missingCritical,
+      },
+    });
+  }
 
   return getFinanceDiagnosis(cycleId, workspaceId);
 }
@@ -138,7 +169,7 @@ export async function getFinanceDiagnosis(cycleId: string, workspaceId: string) 
     where: { id: cycleId, workspaceId },
     include: {
       snapshot: true,
-      findings: { orderBy: { severity: "asc" } },
+      findings: { orderBy: [{ impactScore: "desc" }, { urgencyScore: "desc" }] },
       actions: {
         include: { verifications: { orderBy: { createdAt: "desc" } } },
         orderBy: { priorityScore: "desc" },
@@ -157,7 +188,7 @@ export async function listFinanceCycleFindings(cycleId: string, workspaceId: str
   if (!cycle) throw new NotFoundError("OwnerFinanceCycle", cycleId);
   return db.ownerFinanceFinding.findMany({
     where: { cycleId, workspaceId },
-    orderBy: [{ severity: "asc" }, { impactScore: "desc" }],
+    orderBy: [{ impactScore: "desc" }, { urgencyScore: "desc" }],
   });
 }
 

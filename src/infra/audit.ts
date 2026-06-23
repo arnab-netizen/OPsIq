@@ -35,11 +35,13 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
     return "fail-safe-no-workspace-id";
   }
 
-  // Fetch the last audit event for this workspace to chain hashes
+  // Fetch the last audit event for this workspace to chain hashes.
+  // Fetch eventName and occurredAt so the hash binds to actual event content
+  // (using only the eventId twice was incorrect — fixed here).
   const lastEvent = await db.auditEvent.findFirst({
     where: { workspaceId: input.workspaceId },
     orderBy: { occurredAt: "desc" },
-    select: { id: true, previousHash: true },
+    select: { id: true, previousHash: true, eventName: true, occurredAt: true },
   });
 
   const eventId = uuidv4();
@@ -57,7 +59,9 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
         : Prisma.DbNull,
       correlationId: input.correlationId ?? null,
       visibility: input.visibility ?? "internal",
-      previousHash: lastEvent ? computeEventHash(lastEvent.id, input.workspaceId, lastEvent.id, new Date()) : null,
+      previousHash: lastEvent
+        ? computeEventHash(lastEvent.id, input.workspaceId, lastEvent.eventName, lastEvent.occurredAt)
+        : null,
     },
   });
 
@@ -107,22 +111,36 @@ export async function queryAuditEvents(filter: {
   });
 }
 
-export async function verifyAuditChainIntegrity(workspaceId: string): Promise<{ isValid: boolean; tamperedAt?: number }> {
+export async function verifyAuditChainIntegrity(
+  workspaceId: string,
+  opts: { since?: Date } = {}
+): Promise<{ isValid: boolean; tamperedAt?: number; eventsChecked: number }> {
   const events = await db.auditEvent.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId,
+      ...(opts.since ? { occurredAt: { gte: opts.since } } : {}),
+    },
     orderBy: { occurredAt: "asc" },
-    select: { id: true, previousHash: true },
+    // Fetch eventName and occurredAt so hash recomputation uses the same inputs
+    // that were used when the chain was written. Using `new Date()` at verify
+    // time was non-deterministic and always-failing — fixed here.
+    select: { id: true, previousHash: true, eventName: true, occurredAt: true },
   });
 
   for (let i = 1; i < events.length; i++) {
     const currentEvent = events[i];
     const previousEvent = events[i - 1];
-    const expectedHash = computeEventHash(previousEvent.id, workspaceId, previousEvent.id, new Date());
+    const expectedHash = computeEventHash(
+      previousEvent.id,
+      workspaceId,
+      previousEvent.eventName,
+      previousEvent.occurredAt
+    );
 
     if (currentEvent.previousHash !== expectedHash) {
-      return { isValid: false, tamperedAt: i };
+      return { isValid: false, tamperedAt: i, eventsChecked: i };
     }
   }
 
-  return { isValid: true };
+  return { isValid: true, eventsChecked: Math.max(0, events.length - 1) };
 }

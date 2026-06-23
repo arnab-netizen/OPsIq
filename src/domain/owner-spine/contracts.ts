@@ -116,6 +116,9 @@ export const ownerActionSchema = z.object({
   verificationMetric: z.string().min(1),
   verificationMethod: z.string().min(1),
   expectedTimeframeDays: z.number().int().min(0),
+  // Evidence traceability — shown to owner so they can verify the action is evidence-based.
+  evidenceRationale: z.string().optional(),
+  evidence: z.array(z.string()).optional(),
 });
 export type OwnerAction = z.infer<typeof ownerActionSchema>;
 

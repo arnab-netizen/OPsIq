@@ -44,6 +44,14 @@ const rootCausePatterns: RootCausePattern[] = [
           e.dimension === "market_position" &&
           e.isCritical &&
           /declin\w*|turn\w* away|turn\w* down|rejecti\w*|refus\w*|cannot.*commit|unable.*commit/i.test(e.finding)
+      ) ||
+      // W5: revenue-ceiling corroboration — multi-year flat/capped revenue alongside an
+      // operational constraint confirms the constraint is limiting revenue growth, not
+      // just throughput. Generic across manufacturing, signage, trades, and service firms
+      // where the operational bottleneck directly caps revenue without producing churn.
+      evidence.some(
+        (e) =>
+          /\d+\s+consecutive\s+years?|revenue\s+(cap(ped)?|ceiling|stagnant|flat|stuck|plateau)|cannot\s+(grow|scale)\s+revenue|\d+\s+years.*same\s+revenue/i.test(e.finding)
       )),
     confidence: (evidence) => {
       const efficiencyEvidence = evidence.filter(
@@ -1001,7 +1009,7 @@ function fin_hasCriticalSafetyQuality(evidence: EvidenceItem[]): boolean {
 }
 
 const KEYPERSON_TEXT =
-  /founder-?engineer|owner-?operator|single (founder|owner|senior|specialist|operator|engineer|principal)|one (senior )?(specialist|person|engineer|operator|principal)|only one (senior|person|specialist|engineer)|sole (operator|specialist|owner|principal|trader)|rainmaker|key[- ]person|single point of failure|holds all (the )?(critical|client|system|pricing|recurring)|undocumented|no (documentation|backup|succession|cross-training)|senior (departure|rainmaker)|senior \w+ (left|departed)|took (their|the) client/;
+  /founder-?engineer|owner-?operator|single (founder|owner|senior|specialist|operator|engineer|principal)|one (senior )?(specialist|person|engineer|operator|principal)|only one (senior|person|specialist|engineer)|sole (operator|specialist|owner|principal|trader|relationship)|rainmaker|key[- ]person|single point of failure|holds all (the )?(critical|client|system|pricing|recurring)|undocumented|no (documentation|backup|succession|cross-training|knowledge transfer)|senior (departure|rainmaker)|senior \w+ (left|departed)|took (their|the) client/;
 function fin_isKeyPerson(e: EvidenceItem): boolean {
   if (e.dimension !== "team_capability") return false;
   const t = fin_text(e);

@@ -1,0 +1,51 @@
+name: Owner Mode — Holdout Validation Infrastructure
+
+on:
+  push:
+    paths:
+      - "tests/owner-mode/holdout/**"
+      - "src/services/consulting-engine/**"
+      - "src/domain/consulting-engine/**"
+  pull_request:
+    paths:
+      - "tests/owner-mode/holdout/**"
+      - "src/services/consulting-engine/**"
+      - "src/domain/consulting-engine/**"
+  workflow_dispatch:
+
+jobs:
+  holdout-infrastructure:
+    name: Holdout Sidecar Validation & Infrastructure Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck holdout harness
+        run: npx tsc --noEmit --project tsconfig.json 2>&1 | head -50 || true
+        # Non-blocking — test suite below is the hard gate.
+
+      - name: Run holdout infrastructure tests
+        run: npx vitest run tests/owner-mode/holdout
+        env:
+          # No DB required — holdout infrastructure is pure logic (LANE_A).
+          TEST_WITH_DB: "false"
+        # Enforces:
+        # - Holdout fixture schema validation (10 cases, HOL-NN-NNN format)
+        # - Holdout sidecar validator (10/10 sidecars)
+        # - Holdout normalizer (evidence item production from sidecars)
+        # - Leakage checks (fixture + sidecar)
+        #
+        # NOTE: This does NOT re-run first-run scoring — first-run results are
+        # sealed in tests/owner-mode/holdout/HOLDOUT_FIRST_RUN_REPORT.md.
+        # Re-running scores against sealed holdout is prohibited (anti-tuning rule).

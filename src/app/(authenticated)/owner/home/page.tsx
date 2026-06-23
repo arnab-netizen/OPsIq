@@ -91,13 +91,32 @@ export default function OwnerHomePage() {
   const s = data?.summary ?? null;
 
   return (
-    <div className="mx-auto max-w-md sm:max-w-2xl py-6 px-4">
-      <div className="flex items-center justify-between mb-4 gap-2">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Owner Home</h1>
-          <p className="text-muted-foreground text-xs">Risk first. Money first. One clear set of next actions.</p>
+    <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl py-6 px-4">
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Owner Home</h1>
+            <p className="text-muted-foreground text-xs">Risk first. Money first. One clear set of next actions.</p>
+          </div>
+          <Link href="/owner"><Button>Command Center</Button></Link>
         </div>
-        <Link href="/owner"><Button>Full view</Button></Link>
+        <nav className="flex flex-wrap gap-1.5" aria-label="Domain navigation">
+          {[
+            { label: "Finance", href: "/owner/finance" },
+            { label: "Cashflow", href: "/owner/cashflow" },
+            { label: "Sales", href: "/owner/sales" },
+            { label: "Operations", href: "/owner/operations" },
+            { label: "Execution", href: "/owner/execution" },
+            { label: "Marketing", href: "/owner/marketing" },
+            { label: "Strategy", href: "/owner/strategy" },
+            { label: "Data Intake", href: "/owner/intake" },
+            { label: "Recovery", href: "/owner/recovery" },
+          ].map(({ label, href }) => (
+            <Link key={href} href={href}>
+              <Button className="min-h-[44px] text-xs py-1 px-2">{label}</Button>
+            </Link>
+          ))}
+        </nav>
       </div>
 
       {error && (
@@ -133,15 +152,20 @@ export default function OwnerHomePage() {
               {/* Business health */}
               <section className="border rounded-lg p-4 bg-white text-center">
                 <div className="text-xs uppercase text-muted-foreground">Business health</div>
-                <div className="mt-1">
+                <div className="mt-1 flex flex-wrap justify-center gap-2">
                   <Badge variant={HEALTH_VARIANT(s.businessHealthScore)}>
                     {Math.round(s.businessHealthScore)}/100
                   </Badge>
+                  {typeof s.dataConfidenceScore === "number" && (
+                    <Badge variant="muted">
+                      confidence {Math.round(s.dataConfidenceScore)}/100
+                    </Badge>
+                  )}
                 </div>
               </section>
 
               {/* Danger surfaces (money first, then execution) */}
-              <section className="grid grid-cols-2 gap-2">
+              <section className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <DangerCard label="Cash danger" danger={s.cashDanger} />
                 <DangerCard label="Sales danger" danger={s.salesDanger} />
                 <DangerCard label="Operations danger" danger={s.operationsDanger} />
@@ -152,30 +176,44 @@ export default function OwnerHomePage() {
               <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Today&apos;s required actions</div>
                 {s.requiredActions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No open actions — keep verifying outcomes.</p>
+                  <p className="text-sm text-muted-foreground">No open actions from diagnosed domains — run a diagnosis in each domain to see required actions.</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {s.requiredActions.map((a: any, i: number) => (
-                      <div key={`${a.domain}-${a.findingCode}-${i}`} className="border-b pb-2">
-                        <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
-                        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center">
-                          <Badge variant="muted">{a.domain}</Badge>
-                          <span>priority {Math.round(a.priorityScore)}</span>
-                          <span>· impact {Math.round(a.expectedImpactScore)}</span>
-                          <span>· verify via {a.verificationMetric}</span>
-                          {DOMAIN_LINK[a.domain] && <Link href={DOMAIN_LINK[a.domain]} className="underline">open</Link>}
+                      DOMAIN_LINK[a.domain] ? (
+                        <Link
+                          key={`${a.domain}-${a.findingCode}-${i}`}
+                          href={DOMAIN_LINK[a.domain]}
+                          className="block w-full py-3 px-3 rounded-lg border-b hover:bg-accent/50 transition-colors min-h-[44px]"
+                        >
+                          <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
+                            <Badge variant="muted">{a.domain}</Badge>
+                            <span>priority {Math.round(a.priorityScore)}</span>
+                            <span>· impact {Math.round(a.expectedImpactScore)}</span>
+                          </div>
+                        </Link>
+                      ) : (
+                        <div key={`${a.domain}-${a.findingCode}-${i}`} className="py-3 px-3 border-b min-h-[44px]">
+                          <div className="font-semibold text-sm">{i + 1}. {a.title}</div>
+                          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2 items-center mt-0.5">
+                            <Badge variant="muted">{a.domain}</Badge>
+                            <span>priority {Math.round(a.priorityScore)}</span>
+                          </div>
                         </div>
-                      </div>
+                      )
                     ))}
                   </div>
                 )}
               </section>
 
+              {/* Top risks + opportunities side-by-side on tablet */}
+              <div className="md:grid md:grid-cols-2 md:gap-4 space-y-5 md:space-y-0">
               {/* Top 3 risks */}
               <section className="border rounded-lg p-4 bg-white">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Top risks</div>
                 {s.top3Risks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No risks detected.</p>
+                  <p className="text-sm text-muted-foreground">No risks from diagnosed domains — run a domain diagnosis to surface risks.</p>
                 ) : (
                   <div className="space-y-2">
                     {s.top3Risks.map((r: any) => (
@@ -192,10 +230,10 @@ export default function OwnerHomePage() {
               </section>
 
               {/* Top 3 opportunities */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-white md:mt-0">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Top opportunities</div>
                 {s.top3Opportunities.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No opportunities detected.</p>
+                  <p className="text-sm text-muted-foreground">No opportunities from diagnosed domains — run a domain diagnosis to surface opportunities.</p>
                 ) : (
                   <div className="space-y-2">
                     {s.top3Opportunities.map((o: any) => (
@@ -210,6 +248,7 @@ export default function OwnerHomePage() {
                   </div>
                 )}
               </section>
+              </div>
 
               {/* Last verified improvement */}
               <section className="border rounded-lg p-4 bg-white">

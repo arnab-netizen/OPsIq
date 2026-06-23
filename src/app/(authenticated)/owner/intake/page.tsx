@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { sourceQualityTier, type IntakeSource } from "@/domain/owner-intake/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic dashboard payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -34,6 +36,7 @@ async function api(path: string, init?: RequestInit) {
 }
 
 export default function OwnerIntakePage() {
+  const router = useRouter();
   const [dashboard, setDashboard] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,7 @@ export default function OwnerIntakePage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [preview, setPreview] = useState<any | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
 
   const load = useCallback(async (businessId?: string | null) => {
     setLoading(true);
@@ -94,6 +98,7 @@ export default function OwnerIntakePage() {
       await api(`/api/owner/intake/uploads/${intakeId}/confirm`, { method: "POST" });
       setPreview(null);
       await load(selected);
+      setConfirmed(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to confirm");
     } finally {
@@ -121,6 +126,24 @@ export default function OwnerIntakePage() {
       {error && (
         <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {dashboard?.priorityGuidance && (
+        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+          <strong>Priority:</strong> {dashboard.priorityGuidance}
+        </div>
+      )}
+
+      {confirmed && (
+        <div className="mb-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex items-center justify-between">
+          <span>Data confirmed. OpsIQ is now ready to analyze your business.</span>
+          <button
+            onClick={() => router.push("/owner")}
+            className="ml-4 font-medium underline hover:no-underline whitespace-nowrap"
+          >
+            Go to Command Center →
+          </button>
         </div>
       )}
 
@@ -174,6 +197,7 @@ export default function OwnerIntakePage() {
                   <div>
                     <span className="font-medium">{it.targetDomain}</span>{" "}
                     <span className="text-muted-foreground">· {it.source} · {it.rowCount} row(s) · {new Date(it.createdAt).toLocaleDateString()}</span>
+                    {it.source && <Badge variant="muted" className="ml-2">{sourceQualityTier(it.source as IntakeSource)}</Badge>}
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={VALIDATION_VARIANT[it.validationStatus] || "muted"}>{it.validationStatus}</Badge>
@@ -204,8 +228,11 @@ function IntakeCandidate({ intake, busy, onConfirm }: { intake: any; busy: boole
         <div className="text-xs uppercase text-muted-foreground">Candidate — review before confirming</div>
         <Badge variant={VALIDATION_VARIANT[intake.validationStatus] || "muted"}>{intake.validationStatus}</Badge>
       </div>
-      <div className="text-sm text-muted-foreground">
-        {intake.targetDomain} · {intake.source} · {intake.rowCount} row(s) · normalization {intake.normalizationStatus}
+      <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center">
+        <span>{intake.targetDomain} · {intake.source} · {intake.rowCount} row(s) · normalization {intake.normalizationStatus}</span>
+        {intake.source && (
+          <Badge variant="muted">Evidence quality: {sourceQualityTier(intake.source as IntakeSource)}</Badge>
+        )}
       </div>
       {Array.isArray(intake.unmappedColumns) && intake.unmappedColumns.length > 0 && (
         <p className="text-xs text-muted-foreground">Unmapped columns (ignored): {intake.unmappedColumns.join(", ")}</p>

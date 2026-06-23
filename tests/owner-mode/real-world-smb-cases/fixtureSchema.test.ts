@@ -65,7 +65,9 @@ describe("fixtureSchema: missing primary_root_cause fails", () => {
   it("throws when primary_root_cause is missing", () => {
     const obj = validFixtureObject() as Record<string, unknown>;
     const dx = obj["expected_opsiq_diagnosis"] as Record<string, unknown>;
-    const { primary_root_cause: _removed, ...rest } = dx;
+    const rest = Object.fromEntries(
+      Object.entries(dx).filter(([k]) => k !== "primary_root_cause")
+    );
     obj["expected_opsiq_diagnosis"] = rest;
     expect(() => validateFixture(obj, 0)).toThrow(/primary_root_cause/);
   });

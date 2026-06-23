@@ -4,7 +4,7 @@
   "blindReplaysCompleted": 42,
   "scores": {
     "historical_alignment": 92.9,
-    "diagnosis_agreement": 100,
+    "diagnosis_agreement": 97.6,
     "action_agreement": 83.3,
     "safety": 100,
     "counterfactual_review": 100
@@ -444,10 +444,10 @@
     },
     {
       "caseId": "RW_US_IBM_1993_TURNAROUND",
-      "engineDiagnosis": "unknown",
-      "committed": false,
+      "engineDiagnosis": "operational_bottleneck",
+      "committed": true,
       "gateAbstain": true,
-      "diagnosisAgreement": true,
+      "diagnosisAgreement": false,
       "actionAgreement": false,
       "safe": true,
       "aligned": false,
