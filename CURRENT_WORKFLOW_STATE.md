@@ -11,11 +11,11 @@ Companion audit: `OPSIQ_OWNER_MODE_DECISION_OS_STATE_AUDIT.md`
 
 Classification: **NOT_READY_FOR_OWNER_TRIAL** → `OWNER_TRIAL_READY_WITH_MANUAL_INPUTS` once the two blockers below clear. Trial is feasible at **zero external cost, manual/CSV inputs**. The only hard external connection is **PostgreSQL**; there is **no LLM/AI provider, no billing, no connector** required.
 
-**TRIAL_BLOCKER 1 — No DB-backed proof.** Persistence + §13 security DB negatives + scored benchmark unproven (no reachable DB in-container). Closable FREE via the existing CI `postgres:16` service (`ci.yml`) or a local Postgres.
+**TRIAL_BLOCKER 1 — No DB-backed proof. (OPEN, in-container-unrunnable.)** Persistence + §13 security DB negatives + scored benchmark unproven (no reachable DB in-container; Neon URL present but unreachable, no local Postgres). Closable FREE via the existing CI `postgres:16` service (`ci.yml`), which runs on push (`migrate deploy` → full `TEST_WITH_DB=true` suite). Cannot be asserted green until a CI run (or DB-enabled env) is observed.
 
-**TRIAL_BLOCKER 2 — Deterministic, un-quarantined `intake-adapter` failure.** `business-facts/intake-adapter.test.ts` expects `validationStatus="valid"` but gets `"partial"`. Pure (no DB) ⇒ would **red CI's blocking lane** (NOT in `.claude/test-quarantine.json`). Cause: `domain/owner-intake/engine.ts` sets `anyOptionalInvalid=true` when the optional `gstBasis` column is absent — so real owner finance CSVs without `gstBasis` are graded `partial`. **Supersedes the earlier "pre-existing, out-of-scope" note in the Phase-14 record** — it is real and CI-affecting, but needs a product decision (engine fix vs stale-test fix). Not fixed here (audit-only).
+**TRIAL_BLOCKER 2 — RESOLVED (commit pending below).** `domain/owner-intake/engine.ts` no longer degrades intake to `partial` when the optional `gstBasis` column is **absent** (an absent optional field is not "present-but-invalid"; advisory warning retained). Owner finance CSVs without `gstBasis` are now correctly `valid`. Regression: business-facts + owner-intake + owner-mode = 51 files / 2161 passed (was 1 failed) / 1 DB-skipped; tsc 0 errors. CI blocking lane no longer red on `intake-adapter`.
 
-Next slice: "OWNER MODE DB-PROOF + INTAKE-BLOCKER SLICE" (see audit §19).
+Next: push (triggers CI DB lane for BLOCKER 1); then the AI track per the decision below.
 
 ---
 
@@ -28,6 +28,10 @@ Truth: there is **no AI provider, SDK, key, prompt, output schema, or LLM call**
 **Genuine owner decision blocker:** choosing an AI provider + supplying an API key (cost / data-privacy / vendor). Until then live AI cannot be proven.
 
 **Recommended next slice "AI-1 — Governed copilot foundation (mock track)":** provider boundary (port + Unavailable/Mock impls, no SDK), task registry + one LOW-risk task (`MISSING_QUESTION_GENERATION`) schema, post-AI validator (reject taxonomy), workspace-scoped context builder, in-memory ledger extension, and mock guardrail + prompt-injection + hallucinated-evidence + AI-unavailable-fallback tests. Buildable now with **zero cost / no key / no DB** → targets `AI_MOCK_GUARDRAIL_TESTED`; live AI deferred to the owner's provider choice.
+
+**OWNER DECISION (recorded 2026-06-23):**
+- **Provider = OpenAI (GPT)** as the FIRST concrete live adapter, behind a **provider-agnostic boundary** (do not hardcode OpenAI throughout; keep mock provider for tests; no Anthropic/Gemini/local adapters now). Structured outputs / JSON Schema for all decision-relevant tasks. `OPENAI_API_KEY` gates live smoke tests; if absent → mock guardrail tests only, classify `AI_MOCK_GUARDRAIL_TESTED`/`AI_ARCHITECTURE_READY_PROVIDER_MISSING`, never `AI_OWNER_TRIAL_READY_WITH_AI`. Ledger logs model/prompt-version/schema-version/task/latency/tokens/validator-result/accept-reject. No unrelated-workspace data; AI never mutates state; deterministic services remain final authority. No public-SaaS AI, no autonomous agents, no external connectors.
+- **Sequencing = clear deterministic blockers first** (this slice): BLOCKER 2 resolved; BLOCKER 1 (DB proof) rides CI on push. AI-1 mock foundation comes after.
 
 ---
 

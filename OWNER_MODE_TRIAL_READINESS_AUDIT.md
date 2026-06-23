@@ -154,7 +154,7 @@ Accepted via CSV (`INTAKE_FIELD_SPECS`) or manual entry. Confidence is capped wh
 ## 14. Exact trial blocker list
 
 - **TRIAL_BLOCKER 1 — No DB-backed proof run.** Persistence + §13 security negatives + full-suite are unproven. *Closable free* via CI `postgres:16` (Path 1) or local Postgres (Path 2). Until done, owner data integrity + isolation are asserted, not measured.
-- **TRIAL_BLOCKER 2 — Deterministic, un-quarantined `intake-adapter` failure.** `src/__tests__/business-facts/intake-adapter.test.ts > "…VALID business-facts contract"` expects `validationStatus="valid"` but gets `"partial"`. Root cause: `domain/owner-intake/engine.ts` sets `anyOptionalInvalid=true` when the optional `gstBasis` column is absent (comment says "advisory, non-blocking" but it degrades status to `partial`). It is **pure (no DB)** ⇒ deterministic ⇒ would **red CI's blocking lane** (not in `.claude/test-quarantine.json`), and it means real owner finance CSVs without `gstBasis` are graded `partial`. Resolve by a product decision: either (a) absent-optional-`gstBasis` should not set `anyOptionalInvalid` (engine fix, keep advisory warning) and keep `valid`; or (b) update the stale test to expect `partial` and add `gstBasis` to the canonical CSV template. **Not fixed here (audit-only; needs a product call).**
+- **TRIAL_BLOCKER 2 — RESOLVED (2026-06-23).** `domain/owner-intake/engine.ts` no longer sets `anyOptionalInvalid=true` when the optional `gstBasis` column is **absent** — an absent optional field is not "present-but-invalid", so it must not degrade the intake to `partial` (matches the engine's own `validationStatus` contract and `owner-intake/engine.test.ts:123`). The advisory `gst_basis_unknown` warning is still emitted (non-blocking). Effect: owner finance CSVs without a `gstBasis` column are correctly graded `valid` (with an advisory to optionally add GST basis). Tests: `intake-adapter` + `owner-intake/engine` 19/19; business-facts + owner-intake + owner-mode regression 51 files / 2161 passed (previously 1 failed) / 1 DB-skipped; `tsc` 0 errors. A **present-but-invalid** gstBasis value still correctly yields `partial`.
 
 ## 15. Exact trial risk list
 
@@ -183,7 +183,7 @@ Only if the owner cannot run a local Postgres and wants an always-on hosted tria
 - [ ] One reachable Postgres provisioned; 3 required env vars set; `prisma validate` + `migrate deploy` clean.
 - [ ] CI run (or local) executes `TEST_WITH_DB=true` suite green (blocking lane) — DB persistence proven.
 - [ ] §13 security DB negatives pass (role-access, workspace isolation, file-intake) — isolation + operator/learning denial proven.
-- [ ] `intake-adapter` blocker resolved (engine fix or test+template update) so CI blocking lane is green.
+- [x] `intake-adapter` blocker resolved (engine fix: absent optional gstBasis stays `valid`) — CI blocking lane no longer red on this file.
 - [ ] `test:owner-real-world-smb` (+ optional simulation) run as a scored check.
 - [ ] Owner account + one business workspace created; archetype selected.
 - [ ] Minimum owner data loaded (finance REQUIRED_MINIMUM at least); incomplete-data refusal verified.
