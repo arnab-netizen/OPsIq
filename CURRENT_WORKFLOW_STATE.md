@@ -45,7 +45,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 6 | Scenario / what-if | **VERIFIED (STATIC_TESTED_ONLY)** — scenario-engine 36 tests green |
 | 7 | Experiment design | **VERIFIED (STATIC_TESTED_ONLY)** — pure lifecycle 133 tests green; persistence gap documented |
 | 8 | Execution orchestration | **VERIFIED (STATIC_TESTED_ONLY)** — action FSM/proof 65 tests green |
-| 9 | Outcome verification + attribution | NOT_STARTED (impl PRESENT; verify) |
+| 9 | Outcome verification + attribution | **VERIFIED (STATIC_TESTED_ONLY)** — outcome+attribution 212 tests green |
 | 10 | Private owner learning eligibility gate | NOT_STARTED (impl PRESENT; verify + security negatives) |
 | 11 | Governance / audit / model risk | NOT_STARTED (impl PRESENT; verify) |
 | 12 | Owner dashboard command center | NOT_STARTED (PARTIAL panels) |
@@ -86,7 +86,14 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 8 verified (no code). Proceed to **Phase 9 — Outcome Verification + Attribution**: verify `OwnerActionOutcome` + `OwnerCausalAttribution` + outcome/verification services (baseline/target/actual, measurement window, confounders, attribution confidence, statuses); close only a precise gap if one exists.
+Phase 9 verified (no code). Proceed to **Phase 10 — Private Owner Learning Eligibility Gate**: verify `OwnerLearningEligibilityReview` + `ControlledLearningCandidate` + controlled-learning services (verified-outcome-only, attribution threshold, operator/public denial); run the learning + security negatives that are runnable without DB.
+
+### Phase 9 decision record (outcome verification + attribution) — VERIFICATION ONLY (no code)
+- **Outcome verification:** `OwnerActionOutcome` (outcomeStatus worked/partially/did_not_work/…/external_event_interference, before/after values, evidenceQuality, externalEventFlag); `domain/owner-mode/outcome-validation.ts` (`validateValidationCriteria`, `assertRecommendationHasCriteria`, `computeTargetDelta`); outcome services + outcome-core.
+- **Attribution gate (§28, service-enforced + tested):** `domain/owner-mode/causal-attribution.ts` — `AttributionClass` (incl. confounded/external_event_dominant/insufficient_evidence), `ATTRIBUTION_BLOCKS_LEARNING` (confounded/external/insufficient → block), `ATTRIBUTION_LEARNING_CEILING`, `ATTRIBUTION_REQUIRES_HUMAN_REVIEW`, `classifyCausalAttribution` (CA-RULEs: confounding notes, external-event consistency, temporal proximity, `blocksLearning`). `services/governance/attribution-engine.ts`.
+- **completion ≠ verified-success; disputed/unclear/insufficient → no learning candidate:** enforced via outcome status + attribution `blocksLearning` (consumed by Phase 10 eligibility).
+- **Tests verified green:** outcome-tracking + outcome-validation + causal-attribution + failure-adjudication = 4 files / 212 passed.
+- **Known limitation:** outcome persistence/route is DB-gated → no DB/API_TESTED claim.
 
 ### Phase 8 decision record (execution orchestration) — VERIFICATION ONLY (no code)
 - **Action FSM + proof:** `domain/owner-mode/action-tracking.ts` — `ActionStatus` (pending/in_progress/completed/blocked/cancelled/overdue), `ACTION_STATUS_TRANSITIONS` (completed terminal in the action FSM — distinct from verification), `proofText` EXEC-RULE-3 (proof min length enforced), `ExecutionComplianceScore`, deviation severity. Models `OwnerAction`/`OwnerActionExecutionLog` (proofText/proofAttachmentUrl/executionComplianceScore)/`OwnerBlocker`. Execution-core engines (action-fsm, orchestrator, capacity, rollback, failure) under `services/execution-core/`.
