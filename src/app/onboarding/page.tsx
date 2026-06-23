@@ -247,11 +247,14 @@ export default function OnboardingPage() {
             <p className="text-gray-600 text-sm">
               Your workspace is ready. Team members will receive invitation emails shortly.
             </p>
+            <p className="text-gray-600 text-sm">
+              Now let&apos;s enter your business data so OpsIQ can analyze your situation.
+            </p>
             <button
-              onClick={() => router.push("/dashboard/inbox")}
+              onClick={() => router.push("/owner/intake")}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-medium text-sm"
             >
-              Go to Dashboard
+              Enter Business Data →
             </button>
           </div>
         )}
