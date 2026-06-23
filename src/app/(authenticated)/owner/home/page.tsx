@@ -91,7 +91,7 @@ export default function OwnerHomePage() {
   const s = data?.summary ?? null;
 
   return (
-    <div className="mx-auto max-w-md sm:max-w-2xl py-6 px-4">
+    <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl py-6 px-4">
       <div className="flex items-center justify-between mb-4 gap-2">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Owner Home</h1>
@@ -141,7 +141,7 @@ export default function OwnerHomePage() {
               </section>
 
               {/* Danger surfaces (money first, then execution) */}
-              <section className="grid grid-cols-2 gap-2">
+              <section className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <DangerCard label="Cash danger" danger={s.cashDanger} />
                 <DangerCard label="Sales danger" danger={s.salesDanger} />
                 <DangerCard label="Operations danger" danger={s.operationsDanger} />
@@ -183,6 +183,8 @@ export default function OwnerHomePage() {
                 )}
               </section>
 
+              {/* Top risks + opportunities side-by-side on tablet */}
+              <div className="md:grid md:grid-cols-2 md:gap-4 space-y-5 md:space-y-0">
               {/* Top 3 risks */}
               <section className="border rounded-lg p-4 bg-white">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Top risks</div>
@@ -204,7 +206,7 @@ export default function OwnerHomePage() {
               </section>
 
               {/* Top 3 opportunities */}
-              <section className="border rounded-lg p-4 bg-white">
+              <section className="border rounded-lg p-4 bg-white md:mt-0">
                 <div className="text-xs uppercase text-muted-foreground mb-2">Top opportunities</div>
                 {s.top3Opportunities.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No opportunities detected.</p>
@@ -222,6 +224,7 @@ export default function OwnerHomePage() {
                   </div>
                 )}
               </section>
+              </div>
 
               {/* Last verified improvement */}
               <section className="border rounded-lg p-4 bg-white">
