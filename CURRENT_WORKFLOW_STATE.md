@@ -53,7 +53,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 13 | Laundry vertical slice (end-to-end) | **VERIFIED (OWNER_FLOW_TESTED)** — full-loop + SMB harness 716 tests green |
 | 14 | Housekeeping archetype | **IMPLEMENTED (STATIC_TESTED_ONLY)** — registered + isolated; kpi-profiles 37 tests green |
 | 15 | Benchmark harness | **VERIFIED (BENCHMARK_TESTED)** — 322 benchmark tests green |
-| 16 | Final reliability gate | NOT_STARTED |
+| 16 | Final reliability gate | **COMPLETE — OWNER_INTERNAL_ALPHA (conditional)** — see RELIABILITY_REPORT |
 
 > Note: A prior execution tracked `execution.md` phases 0–28 on branch `claude/sleepy-dirac-m4bdb9`. That work produced most of the existing `Owner*` implementation. This document supersedes that tracker for the current minimum-code execution; the underlying code is reused, not discarded.
 
@@ -86,7 +86,11 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 15 verified (no code). Proceed to **Phase 16 — Final Owner Mode Reliability Gate**: author `OWNER_MODE_DECISION_OS_RELIABILITY_REPORT.md` consolidating all phase evidence, honest classification (alpha/beta/limited-use only), known risks (DB blocker), and go/no-go for owner internal use.
+All phases 0–16 complete. Final classification **OWNER_INTERNAL_ALPHA (conditional)** — see `OWNER_MODE_DECISION_OS_RELIABILITY_REPORT.md`. The single gate to BETA/LIMITED_USE is the environment verification gap: provision a Postgres test DB and run the DB-backed persistence + §13 security matrix + a live scored benchmark + a full-suite green run. No further code is required to reach those gates — only execution on a DB-enabled environment.
+
+### Phase 16 decision record (final reliability gate)
+- Authored `OWNER_MODE_DECISION_OS_RELIABILITY_REPORT.md`: acceptance-scenario coverage, per-phase evidence, minimum-code surface (2 new src + 2 new tests + 1 modified profile across the whole execution; 0 tables/routes/components/migrations), evidence-by-category, gating risks, go/no-go.
+- Honest classification: ALPHA, not higher — numeric reliability gates + DB-backed security/persistence are unmeasured in this container (no DATABASE_URL), so they are asserted-by-construction, not proven.
 
 ### Phase 15 decision record (benchmark harness) — VERIFICATION ONLY (no code)
 - **Harness present:** `domain/benchmark/` — `scoring-rubric.ts` (fail-gates incl. `hallucinated_fact`, dangerous-recommendation gates), `synthetic-scenario.ts`, `scenario-engine.ts` (grounded-cause / no-hallucinated-critical-risk checks), `round2-case-schema.ts`; services blind-test/dataset-evaluation/learning-observation/sales-pitch/growth-opportunity/round2-intake-validator; `benchmark/adversarial-evaluator`.
