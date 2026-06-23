@@ -52,7 +52,7 @@ FROZEN until Owner Mode Decision OS is reliability-gated: Public SaaS flows, Pro
 | 12.5 | Trust & explainability QA | **VERIFIED (UI_TESTED)** — 84 trust/explainability/adversarial tests green |
 | 13 | Laundry vertical slice (end-to-end) | **VERIFIED (OWNER_FLOW_TESTED)** — full-loop + SMB harness 716 tests green |
 | 14 | Housekeeping archetype | **IMPLEMENTED (STATIC_TESTED_ONLY)** — registered + isolated; kpi-profiles 37 tests green |
-| 15 | Benchmark harness | NOT_STARTED |
+| 15 | Benchmark harness | **VERIFIED (BENCHMARK_TESTED)** — 322 benchmark tests green |
 | 16 | Final reliability gate | NOT_STARTED |
 
 > Note: A prior execution tracked `execution.md` phases 0–28 on branch `claude/sleepy-dirac-m4bdb9`. That work produced most of the existing `Owner*` implementation. This document supersedes that tracker for the current minimum-code execution; the underlying code is reused, not discarded.
@@ -86,7 +86,14 @@ Quarantined tests to re-activate before claiming related slices TESTED:
 
 ## NEXT ACTION
 
-Phase 14 implemented. Proceed to **Phase 15 — Owner Mode Benchmark Harness**: verify the benchmark runner + case format + scoring (root-cause/first-action accuracy, dangerous/hallucinated/overclaim rates) exists; run benchmark suites.
+Phase 15 verified (no code). Proceed to **Phase 16 — Final Owner Mode Reliability Gate**: author `OWNER_MODE_DECISION_OS_RELIABILITY_REPORT.md` consolidating all phase evidence, honest classification (alpha/beta/limited-use only), known risks (DB blocker), and go/no-go for owner internal use.
+
+### Phase 15 decision record (benchmark harness) — VERIFICATION ONLY (no code)
+- **Harness present:** `domain/benchmark/` — `scoring-rubric.ts` (fail-gates incl. `hallucinated_fact`, dangerous-recommendation gates), `synthetic-scenario.ts`, `scenario-engine.ts` (grounded-cause / no-hallucinated-critical-risk checks), `round2-case-schema.ts`; services blind-test/dataset-evaluation/learning-observation/sales-pitch/growth-opportunity/round2-intake-validator; `benchmark/adversarial-evaluator`.
+- **Scoring dimensions (§34):** root-cause/first-action accuracy + dangerous/hallucinated/overclaim gates encoded in scoring-rubric.
+- **Required case coverage:** benchmark cases + the Phase-13 real-world SMB harness (455) cover cash-crisis / revenue-up-profit-down / marketing-ROI / staff-bottleneck / pricing / B2B / fake-improvement / missing/misleading/conflicting data / laundry-margin / housekeeping-capacity.
+- **Tests verified green:** 11 benchmark files / 322 passed.
+- **Known limitation:** `round2-case-schema.ts` contains intentional authoring denylist TODOs (not stubs); full live benchmark gate scoring against a real owner dataset is DB/dataset-gated.
 
 ### Phase 14 decision record (housekeeping archetype) — NEW CODE (1 profile + tests)
 - **Gap found:** `KPI_PROFILES` registered only local_service/saas/restaurant/laundry — **no dedicated housekeeping archetype** (laundry passed in Phase 13, so housekeeping is now allowed per §33).
