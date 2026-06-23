@@ -280,6 +280,24 @@ export default function OwnerCommandCenterPage() {
                   })}
                 </div>
               </section>
+
+              <section className="border rounded-lg p-4 bg-white">
+                <h2 className="font-bold mb-1">Reassessment</h2>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Run a new diagnosis cycle after updating data, completing actions, or when conditions change.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Link href="/owner/finance">
+                    <Button className="min-h-[44px]">Re-diagnose Finance</Button>
+                  </Link>
+                  <Link href="/owner/cashflow">
+                    <Button className="min-h-[44px]">Re-diagnose Cashflow</Button>
+                  </Link>
+                  <Link href="/owner/intake">
+                    <Button className="min-h-[44px]">Update data →</Button>
+                  </Link>
+                </div>
+              </section>
             </div>
           )}
         </>
