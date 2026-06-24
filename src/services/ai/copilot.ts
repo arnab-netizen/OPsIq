@@ -10,6 +10,7 @@
  * sensitive content and never secrets. Phase AI-6 can persist via the existing audit
  * event / ai-observability-trace mechanisms.
  */
+import type { ZodType } from "zod";
 import {
   missingQuestionOutputSchema,
   type MissingQuestionOutput,
@@ -92,6 +93,82 @@ export interface RunTaskOptions {
 function record(entry: AiCallLedgerEntry): AiCallLedgerEntry {
   LEDGER.push(entry);
   return entry;
+}
+
+/**
+ * Generic governed task runner (AI-4/5/6). Same pipeline as the specific runners:
+ * provider → schema validate → guardrail validate → ledger → advisory result. Every
+ * implemented task funnels through here so the governance is enforced in ONE place.
+ * `extract` returns the model-authored text to scan (excluding sample/example fields)
+ * and the evidence ids the model claims to have cited.
+ */
+export async function runGovernedAiTask<T>(
+  provider: AiProvider,
+  context: AiContext,
+  schema: ZodType<T>,
+  extract: (parsed: T) => { scannableText: string; citedEvidenceIds: string[] },
+  opts: RunTaskOptions & { promptVersion: string; schemaVersion: string }
+): Promise<AiCopilotResult<T>> {
+  const now = (opts.clock ?? (() => new Date().toISOString()))();
+  const base = {
+    aiCallId: nextCallId(),
+    workspaceId: context.workspaceId,
+    businessId: context.businessId,
+    taskType: context.taskType,
+    riskLevel: context.riskLevel,
+    promptVersion: opts.promptVersion,
+    schemaVersion: opts.schemaVersion,
+    createdAt: now,
+  };
+
+  const request: AiRequest = {
+    context,
+    promptVersion: opts.promptVersion,
+    schemaVersion: opts.schemaVersion,
+    options: {
+      modelTier: opts.modelTier ?? "cheap",
+      temperature: opts.temperature ?? 0,
+      maxTokens: opts.maxTokens ?? 1200,
+      timeoutMs: opts.timeoutMs ?? 25000,
+      maxRetries: opts.maxRetries ?? 1,
+    },
+  };
+
+  const res = await provider.generate(request);
+  if (!res.ok) {
+    const ledgerEntry = record({
+      ...base, modelProvider: res.modelProvider, modelName: "n/a", outputHash: "n/a",
+      validatorResult: "AI_UNAVAILABLE", accepted: false, latencyMs: 0, retryCount: res.retryCount, failureReason: res.detail,
+    });
+    return { status: "AI_UNAVAILABLE", accepted: false, output: null, validation: null, ledgerEntry, reasons: [res.detail] };
+  }
+
+  const parsed = schema.safeParse(res.raw);
+  if (!parsed.success) {
+    const ledgerEntry = record({
+      ...base, modelProvider: res.modelProvider, modelName: res.modelName, outputHash: hashPayload(res.raw),
+      validatorResult: "REJECTED_SCHEMA_INVALID", accepted: false, latencyMs: res.latencyMs, tokensUsed: res.tokensUsed,
+      retryCount: res.retryCount, failureReason: "schema validation failed",
+    });
+    return {
+      status: "REJECTED_SCHEMA_INVALID", accepted: false, output: null, validation: null, ledgerEntry,
+      reasons: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+    };
+  }
+
+  const { scannableText, citedEvidenceIds } = extract(parsed.data);
+  const validation = validateAiOutput({ scannableText, citedEvidenceIds }, context);
+
+  const ledgerEntry = record({
+    ...base, modelProvider: res.modelProvider, modelName: res.modelName, outputHash: hashPayload(res.raw),
+    validatorResult: validation.status, accepted: validation.accepted, latencyMs: res.latencyMs, tokensUsed: res.tokensUsed,
+    retryCount: res.retryCount, failureReason: validation.accepted ? undefined : validation.reasons.join("; "),
+  });
+
+  return {
+    status: validation.status, accepted: validation.accepted,
+    output: validation.accepted ? parsed.data : null, validation, ledgerEntry, reasons: validation.reasons,
+  };
 }
 
 /**
