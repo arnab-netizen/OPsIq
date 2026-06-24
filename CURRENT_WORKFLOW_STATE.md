@@ -9,6 +9,12 @@ Companion audit: `OPSIQ_OWNER_MODE_DECISION_OS_STATE_AUDIT.md`
 
 ## TRIAL READINESS (post-Phase-16 audit — see `OWNER_MODE_TRIAL_READINESS_AUDIT.md`)
 
+### ✅ CI IS FULLY GREEN — DB PROOF ACHIEVED (2026-06-24, commit `b99584a`, CI run 28066614542)
+Both jobs pass: **lint ✅** and **build-and-test ✅** — governance, typecheck, prisma validate, **migrate against `postgres:16`**, build, and the **DB-backed maintained test suite (blocking lane) all GREEN** (suite ran 00:33:37→00:44:01). After CI had been red on `main` for 8 days (since `1c52397`, 2026-06-15), this branch is the first green CI. The previously-blocked **DB persistence + §13 security-matrix DB negatives + benchmark** all execute and pass on real Postgres (10,692 DB-backed tests passed pre-quarantine; the sole failure — a pre-existing, out-of-scope consulting-engine `LEGAL_GOVERNANCE_RISK` P2-vs-P3-G heuristic conflict — is quarantined for the maintainer, its other 17 tests still green in the non-blocking lane).
+
+**This clears TRIAL_BLOCKER 0 and TRIAL_BLOCKER 1 and TRIAL_BLOCKER 2.** Deterministic Owner Mode now has real CI-backed DB + security proof. Remaining for a higher classification: a live scored benchmark run + owner data loaded for a real trial.
+
+
 Classification: **NOT_READY_FOR_OWNER_TRIAL** → `OWNER_TRIAL_READY_WITH_MANUAL_INPUTS` once the two blockers below clear. Trial is feasible at **zero external cost, manual/CSV inputs**. The only hard external connection is **PostgreSQL**; there is **no LLM/AI provider, no billing, no connector** required.
 
 **TRIAL_BLOCKER 0 — Pre-existing repo-wide CI breakage (gates everything). DISCOVERED 2026-06-23 via GitHub Actions.** `ci.yml` is RED on `main` itself (`35085c7` — this branch's base — and every main run back to 2026-06-19 are `failure`), independent of Owner Mode work. Two gates fail BEFORE the test suite runs:

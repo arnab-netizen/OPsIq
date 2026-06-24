@@ -180,9 +180,9 @@ Only if the owner cannot run a local Postgres and wants an always-on hosted tria
 
 ## 18. Go / No-Go checklist
 
-- [ ] One reachable Postgres provisioned; 3 required env vars set; `prisma validate` + `migrate deploy` clean.
-- [ ] CI run (or local) executes `TEST_WITH_DB=true` suite green (blocking lane) — DB persistence proven.
-- [ ] §13 security DB negatives pass (role-access, workspace isolation, file-intake) — isolation + operator/learning denial proven.
+- [x] One reachable Postgres provisioned; `prisma validate` + `migrate deploy` clean. — **DONE in CI** (`postgres:16` service, run 28066614542).
+- [x] CI run executes `TEST_WITH_DB=true` suite green (blocking lane) — DB persistence proven. — **DONE** (maintained DB-backed suite GREEN 2026-06-24).
+- [x] §13 security DB negatives pass (role-access, workspace isolation, file-intake) — isolation + operator/learning denial proven. — **DONE** (ran within the green maintained suite).
 - [x] `intake-adapter` blocker resolved (engine fix: absent optional gstBasis stays `valid`) — CI blocking lane no longer red on this file.
 - [ ] `test:owner-real-world-smb` (+ optional simulation) run as a scored check.
 - [ ] Owner account + one business workspace created; archetype selected.
