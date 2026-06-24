@@ -27,13 +27,15 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Run gated live OpenAI smoke (synthetic data only)
+      - name: Run gated live OpenAI smoke + AI-19 owner-flow (synthetic data only)
         env:
           RUN_LIVE_AI: "true"
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           NODE_ENV: test
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
-            echo "OPENAI_API_KEY secret is not set on this repo — the live suite will SKIP (not fake). Set it in repo Settings > Secrets to run live."
+            echo "OPENAI_API_KEY secret is not set on this repo — the live suites will SKIP (not fake). Set it in repo Settings > Secrets to run live."
           fi
-          npx vitest run src/__tests__/services/ai/openai-live-smoke.test.ts --testTimeout=60000
+          # Whole governed-AI test dir: AI-17 live smoke + AI-19 live owner-flow
+          # acceptance (both gated by RUN_LIVE_AI) plus keyless mock guardrail regression.
+          npx vitest run src/__tests__/services/ai/ --testTimeout=120000

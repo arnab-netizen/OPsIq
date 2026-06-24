@@ -229,8 +229,13 @@ export async function executeSyncWithTokenValidation(
 
     return result;
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown sync error";
+    // Internal failure handling: the raw technical message is recorded by
+    // handleSyncFailure for diagnostics (not rendered to a client). Captured via
+    // an explicit guard rather than an inline ternary.
+    let errorMessage = "Unknown sync error";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
     return await handleSyncFailure(
       prisma,
       connectionId,

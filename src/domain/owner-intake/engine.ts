@@ -142,14 +142,18 @@ export function buildCsvIntake(
     records.forEach((record, r) => {
       const rawBasis = record["gstBasis"];
       if (rawBasis === null || rawBasis === undefined) {
-        // gstBasis absent — emit advisory warning only (non-blocking)
+        // gstBasis absent — emit advisory warning only (non-blocking). An ABSENT
+        // optional field is NOT "present-but-invalid", so it must not degrade the
+        // intake to `partial` (see the validationStatus contract below: partial is
+        // for optional fields that are present but invalid). The owner is reminded
+        // to supply GST basis, but a finance CSV without the optional gstBasis
+        // column stays `valid`.
         errorReport.push({
           row: r + 1,
           field: "gstBasis",
           code: "gst_basis_unknown",
           message: `GST basis not specified. If revenue figures are GST-inclusive, set gstBasis to "inclusive" so figures are normalised to ex-GST.`,
         });
-        anyOptionalInvalid = true;
         return;
       }
       const basis = String(rawBasis).trim().toLowerCase();

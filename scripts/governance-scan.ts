@@ -14,7 +14,6 @@
  */
 
 import fs from "fs";
-import path from "path";
 import { glob } from "glob";
 
 // Frozen pre-existing governance findings live here. Any error-severity finding
@@ -79,14 +78,18 @@ class GovernanceScanner {
     this.reportResults();
   }
 
-  // Returns true for any test/spec file or test directory that must never be scanned.
+  // Returns true for any test/spec file, test directory, or GENERATED code that
+  // must never be scanned. Generated output (e.g. the Prisma client under
+  // src/generated/**) is not authored source — governing it produces findings
+  // that change with the generator version, not with developer intent.
   private isExcludedFile(file: string): boolean {
     const normalized = file.replace(/\\/g, "/");
     return (
       /\.(test|spec)\.(ts|tsx)$/.test(normalized) ||
       normalized.includes("/__tests__/") ||
       normalized.includes("/__ignored_tests__/") ||
-      normalized.includes("/node_modules/")
+      normalized.includes("/node_modules/") ||
+      normalized.includes("/generated/")
     );
   }
 
@@ -242,6 +245,11 @@ class GovernanceScanner {
   }
 
   private checkMetricUsage(file: string, line: string, lineNum: number): void {
+    // Metric DISPLAY governance (`<GovMetric />`) is a UI concern and only
+    // meaningful in JSX. Restricting to .tsx avoids false positives in backend
+    // .ts files where a variable named `metric` appears in a template literal
+    // (e.g. ``conflict_${metric}_...``) — that is not a metric render.
+    if (!file.endsWith(".tsx")) return;
     // Pattern: <div>{confidence}%</div> or raw metric display
     const patterns = [
       /\{(?:confidence|priority|impact|urgency|complexity|completion|risk)\}[%]?<\/div>/i,
