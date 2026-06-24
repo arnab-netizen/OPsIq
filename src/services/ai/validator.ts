@@ -32,7 +32,7 @@ export interface AiValidationResult {
 
 // ── Hostile / out-of-bounds patterns (an AI assistant must NEVER perform these) ──
 const APPROVAL_DIRECTIVE = /\b(i\s+)?(approve|approved|auto-?approve|sign\s*off|authori[sz]e)\b/i;
-const VERIFY_DIRECTIVE = /\b(mark(ed)?\s+(this|the|it)?\s*(outcome|result)?\s*(as\s+)?verif|outcome\s+verified|confirm(ed)?\s+success)\b/i;
+const VERIFY_DIRECTIVE = /\b(mark(ed)?\s+(this|the|it)?\s*(outcome|result)?\s*(as\s+)?verif\w*|outcome\s+verif\w*|confirm(ed)?\s+success)\b/i;
 const DELETE_AUDIT_DIRECTIVE = /\b(delete|drop|erase|wipe|clear)\b[^.]{0,40}\b(audit|log|event|ledger|trail)\b/i;
 const CROSS_WORKSPACE_DIRECTIVE = /\b(another|other|different|cross[-\s]?)\s*workspace\b/i;
 const UNSAFE_REASSURANCE = /\b(safe|fine|ok(ay)?|no\s+problem)\b[^.]{0,40}\b(even|despite|regardless)\b[^.]{0,40}\b(cash|runway|low|debt|insolven)\b/i;
