@@ -1,0 +1,39 @@
+name: AI Live Smoke (manual, gated)
+
+# Manual-only. NEVER runs on push/PR — live AI calls cost money and need a key.
+# Runs the gated OpenAI live-smoke suite on a GitHub runner (which has egress to
+# api.openai.com, unlike the restricted dev container). Uses the repo secret
+# OPENAI_API_KEY; GitHub masks secret values in logs automatically. Synthetic data
+# only — no real business data. If the secret is unset, the suite SKIPS (never fakes).
+on:
+  workflow_dispatch:
+
+jobs:
+  ai-live-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run gated live OpenAI smoke (synthetic data only)
+        env:
+          RUN_LIVE_AI: "true"
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          NODE_ENV: test
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY secret is not set on this repo — the live suite will SKIP (not fake). Set it in repo Settings > Secrets to run live."
+          fi
+          npx vitest run src/__tests__/services/ai/openai-live-smoke.test.ts --testTimeout=60000
