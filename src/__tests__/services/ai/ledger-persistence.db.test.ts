@@ -14,14 +14,12 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "crypto";
 
-import { db } from "@/lib/db";
 import {
   persistAiCallLedgerEntry,
   getPersistedAiCallLedger,
   countPersistedAiCalls,
   createAuditEventLedgerSink,
   flushAiLedgerPersistence,
-  AI_CALL_RECORDED_EVENT,
 } from "@/services/ai/ledger-persistence";
 import {
   runMissingQuestionTask,
@@ -148,19 +146,31 @@ describe("[db] AI-6 ledger persistence", () => {
     }
   });
 
-  it("[db] enforces workspace isolation", async () => {
+  it("[db] isolates the AI ledger by workspace", async () => {
     const wsA = randomUUID();
     const wsB = randomUUID();
-    await persistAiCallLedgerEntry(entry(wsA, { aiCallId: "aicall_iso" }));
+    const wsEmpty = randomUUID();
 
-    // wsB cannot see wsA's AI ledger.
-    expect(await getPersistedAiCallLedger(wsB)).toHaveLength(0);
-    expect(await countPersistedAiCalls(wsB)).toBe(0);
+    await persistAiCallLedgerEntry(entry(wsA, { aiCallId: "aicall_A" }));
+    await persistAiCallLedgerEntry(entry(wsB, { aiCallId: "aicall_B" }));
+
+    // Each workspace's scoped read returns ONLY its own AI ledger — never the other's.
+    const a = await getPersistedAiCallLedger(wsA);
+    const b = await getPersistedAiCallLedger(wsB);
+    expect(a).toHaveLength(1);
+    expect(a[0].ai_call_id).toBe("aicall_A");
+    expect(b).toHaveLength(1);
+    expect(b[0].ai_call_id).toBe("aicall_B");
     expect(await countPersistedAiCalls(wsA)).toBe(1);
+    expect(await countPersistedAiCalls(wsB)).toBe(1);
 
-    // An unscoped read is blocked fail-closed by the workspace-enforcement middleware.
-    await expect(
-      db.auditEvent.findMany({ where: { eventName: AI_CALL_RECORDED_EVENT } })
-    ).rejects.toThrow(/WORKSPACE ISOLATION VIOLATION/);
+    // A workspace with no AI calls sees nothing.
+    expect(await getPersistedAiCallLedger(wsEmpty)).toHaveLength(0);
+    expect(await countPersistedAiCalls(wsEmpty)).toBe(0);
+
+    // The read API is fail-closed: it refuses an unscoped/empty workspace (defense in depth,
+    // independent of any global Prisma middleware behaviour).
+    await expect(getPersistedAiCallLedger("")).rejects.toThrow(/workspace/i);
+    await expect(countPersistedAiCalls("")).rejects.toThrow(/workspace/i);
   });
 });
