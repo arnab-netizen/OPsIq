@@ -75,6 +75,7 @@ Governed AI copilot foundation built + mock-tested (6 AI test files / 50 tests),
 - **AI-9/10/13** advisory tasks: diagnosis-review (cannot finalize), owner-action red-team (advisory classification), outcome-review (cannot self-verify).
 - **AI-16** OpenAI adapter behind the port (fetch-based, no SDK, fail-closed AI_UNAVAILABLE without key).
 - **AI-18** scored eval harness — 100% mock guardrail coverage.
+- **AI-17 attempted (not faked):** `OPENAI_API_KEY` confirmed absent (no env / `.env` / CI secret). A **gated live-smoke harness** is in place (`openai-live-smoke.test.ts`, synthetic data only, ledger asserts no key) that runs real OpenAI calls only under `RUN_LIVE_AI=true` + key, and **skips cleanly** otherwise (verified: 5 cases skipped). Live AI stays `BLOCKED_NO_AI_PROVIDER`; classification unchanged `AI_MOCK_GUARDRAIL_TESTED`.
 - **Genuine blocker (stop condition):** **AI-17 live smoke + live AI-19 require `OPENAI_API_KEY`** (owner-supplied). Not faked. **Deferred (same pattern, no new safety):** AI-7/11/12/14/15 task runners. Deterministic Owner Mode unchanged at OWNER_INTERNAL_BETA; AI is strictly additive with a safe deterministic fallback.
 
 ### ✅ AI-1 DONE — Governed copilot mock guardrail foundation (2026-06-24)

@@ -63,7 +63,7 @@ PRESENT (in-memory, `copilot.ts`): every call recorded with task/risk/model/prov
 PRESENT + passing (AI-18, `eval-harness.ts`): scored coverage across `MOCK_AI_TESTED` / `GUARDRAIL_TESTED` / `PROMPT_INJECTION_TESTED` — 100% on the mock track.
 
 ## 14. Live AI test status
-`BLOCKED_NO_AI_PROVIDER` — AI-17 live smoke not run (no key). Not faked.
+`BLOCKED_NO_AI_PROVIDER` — `OPENAI_API_KEY` is absent (not in env, no `.env`, not a CI secret). **AI-17 was attempted, not faked.** A gated live-smoke suite is in place (`src/__tests__/services/ai/openai-live-smoke.test.ts`): it makes real OpenAI calls only when `RUN_LIVE_AI=true` AND `OPENAI_API_KEY` are set (synthetic data only; asserts the ledger never contains the key), and **skips cleanly** (5 cases skipped, never faked) otherwise. The blocker is now one step from cleared: provide the key + flag and the suite runs.
 
 ## 15. DB dependency status
 The AI mock foundation needs **no DB** (in-memory ledger). Persisting the ledger + `AIProposalSandbox` approval flow is DB-gated; the deterministic DB path is already green in CI when needed.
