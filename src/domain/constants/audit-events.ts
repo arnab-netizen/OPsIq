@@ -284,6 +284,9 @@ export const AUDIT_EVENTS = {
   FACT_REVIEW_MARKED_UNKNOWN: "fact.review_marked_unknown",
   FACT_REVIEW_UNDONE: "fact.review_undone",
 
+  // Governed AI Copilot (advisory-only; one event per accepted/rejected AI call)
+  AI_CALL_RECORDED: "ai.call_recorded",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
