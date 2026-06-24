@@ -58,9 +58,12 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
     it("should define all required jobs", () => {
       expect(workflowContent.jobs).toBeDefined();
       expect(workflowContent.jobs.verify).toBeDefined();
-      expect(workflowContent.jobs.test).toBeDefined();
       expect(workflowContent.jobs["branch-protection"]).toBeDefined();
       expect(workflowContent.jobs["deploy-staging"]).toBeDefined();
+    });
+
+    it("should NOT define a redundant test job (full suite runs in the required ci.yml build-and-test lane)", () => {
+      expect(workflowContent.jobs.test).toBeUndefined();
     });
   });
 
@@ -131,64 +134,10 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
     });
   });
 
-  describe("Test job", () => {
-    let testJob: any;
-
-    beforeAll(() => {
-      testJob = workflowContent.jobs.test;
-    });
-
-    it("should have correct name", () => {
-      expect(testJob.name).toBe("Run Tests");
-    });
-
-    it("should run on ubuntu-latest", () => {
-      expect(testJob["runs-on"]).toBe("ubuntu-latest");
-    });
-
-    it("should have 30 minute timeout", () => {
-      expect(testJob["timeout-minutes"]).toBe(30);
-    });
-
-    it("should depend on verify job", () => {
-      expect(testJob.needs).toBe("verify");
-    });
-
-    it("should set NODE_ENV=test and SKIP_ENV_VALIDATION=true", () => {
-      expect(testJob.env.NODE_ENV).toBe("test");
-      expect(testJob.env.SKIP_ENV_VALIDATION).toBe("true");
-    });
-
-    it("should checkout code", () => {
-      const checkoutStep = testJob.steps[0];
-      expect(checkoutStep.name).toContain("Checkout");
-    });
-
-    it("should setup Node.js 20", () => {
-      const nodeStep = testJob.steps[1];
-      expect(nodeStep.with["node-version"]).toBe("20");
-    });
-
-    it("should install dependencies", () => {
-      const installStep = testJob.steps[2];
-      expect(installStep.run).toBe("npm ci");
-    });
-
-    it("should run tests without continue-on-error (real gate)", () => {
-      const testStep = testJob.steps[3];
-      expect(testStep.name).toContain("Run tests");
-      expect(testStep.run).toContain("npm test");
-      // continue-on-error should not be set (tests must pass for gate to pass)
-      expect(testStep["continue-on-error"]).not.toBe(true);
-    });
-
-    it("should add test summary to GitHub Step Summary", () => {
-      const summaryStep = testJob.steps.find((s: any) => s.name && s.name.includes("Test Summary"));
-      expect(summaryStep).toBeDefined();
-      expect(summaryStep.if).toBe("always()");
-      expect(summaryStep.run).toContain("GITHUB_STEP_SUMMARY");
-    });
-  });
+  // The redundant "Run Tests" job was removed: it duplicated the required ci.yml
+  // build-and-test lane (which runs the full suite WITH a postgres:16 database).
+  // The full test suite — including all DB-backed tests — is covered there, so no
+  // structural assertions for a `test` job remain here.
 
   describe("Branch protection job", () => {
     let branchProtectionJob: any;
@@ -205,8 +154,8 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
       expect(branchProtectionJob["runs-on"]).toBe("ubuntu-latest");
     });
 
-    it("should depend on verify and test", () => {
-      expect(branchProtectionJob.needs).toEqual(["verify", "test"]);
+    it("should depend on verify", () => {
+      expect(branchProtectionJob.needs).toEqual(["verify"]);
     });
 
     it("should run even if previous jobs fail (always)", () => {
@@ -231,7 +180,6 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
       expect(statusStep.name).toContain("Report workflow status");
       expect(statusStep.if).toBe("always()");
       expect(statusStep.run).toContain("Verify (build/type/prisma)");
-      expect(statusStep.run).toContain("Tests");
     });
   });
 
@@ -250,8 +198,8 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
       expect(deployStagingJob["runs-on"]).toBe("ubuntu-latest");
     });
 
-    it("should depend on verify and test", () => {
-      expect(deployStagingJob.needs).toEqual(["verify", "test"]);
+    it("should depend on verify", () => {
+      expect(deployStagingJob.needs).toEqual(["verify"]);
     });
 
     it("should only trigger on main branch push", () => {
@@ -286,11 +234,6 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
   });
 
   describe("Gate enforcement", () => {
-    it("verify job must complete before test job runs", () => {
-      const testJob = workflowContent.jobs.test;
-      expect(testJob.needs).toBe("verify");
-    });
-
     it("branch-protection enforces verify passed for PRs", () => {
       const branchProtection = workflowContent.jobs["branch-protection"];
       const prCheckStep = branchProtection.steps[1];
@@ -347,26 +290,18 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
       expect(runs).toContain("npm run build");
     });
 
-    it("test job runs: npm ci, npm test", () => {
-      const testJob = workflowContent.jobs.test;
-      const runs = testJob.steps.map((s: any) => s.run).filter(Boolean);
-      expect(runs).toContain("npm ci");
-      expect(runs.some((run: string) => run.includes("npm test"))).toBe(true);
-    });
-
     it("branch-protection reports to GitHub summary", () => {
       const branchProtectionJob = workflowContent.jobs["branch-protection"];
       const statusStep = branchProtectionJob.steps[2];
       expect(statusStep.run).toContain("Workflow Status");
       expect(statusStep.run).toContain("needs.verify.result");
-      expect(statusStep.run).toContain("needs.test.result");
     });
   });
 
   describe("Deployment workflow", () => {
-    it("deploy-staging only runs after verify and test pass", () => {
+    it("deploy-staging only runs after verify passes", () => {
       const deployStagingJob = workflowContent.jobs["deploy-staging"];
-      expect(deployStagingJob.needs).toEqual(["verify", "test"]);
+      expect(deployStagingJob.needs).toEqual(["verify"]);
       expect(deployStagingJob.if).toContain("main");
       expect(deployStagingJob.if).toContain("push");
     });

@@ -46,19 +46,20 @@ The "identical code" premise was false: `ci-cd-foundations.yml` changed between 
 ## 8. Proof it is/ isn't Owner Mode / AI related
 **Not related.** The failing test reads a YAML file; it has nothing to do with Owner Mode or governed-AI code. `main` (`5e947ea`, the Owner Mode + AI merge) has the **original** `ci-cd-foundations.yml`, so this contract test **passes on `main`** and `main`'s `build-and-test` is green. The break exists **only** on this slice's branch, caused **only** by this slice's workflow edit.
 
-## 9. Minimal fix (proposed — pending confirmation)
-Keep the user-approved Option C (workflow without the redundant `test` job) and **update `ci-cd-foundations.test.ts` to assert the NEW intended structure**: drop the `test`-job assertions, change `branch-protection`/`deploy-staging` expectations to `needs: [verify]`, and drop the `Tests`/`needs.test.result` summary assertions. The test continues to validate the workflow comprehensively (metadata, concurrency, `verify` job's 6 steps, `branch-protection`, `deploy-staging`, best-practices, YAML validity). This is **not** weakening-to-game: it syncs a contract test to an intentional, approved change in the artifact it validates; no test is skipped/quarantined/deleted-wholesale, and the removed assertions describe a job that no longer exists by design.
-
-Alternative (if the contract must keep a test job): revert the workflow to original and instead make the original `Run Tests` job's non-DB `npm test` pass by gating the mislabeled DB suites (`*.service.test.ts` "DB-Backed Tests") — touches `vitest.config.ts` + renames several DB test files; leaves the contract test untouched but is more invasive.
+## 9. Minimal fix (APPLIED)
+Kept the user-approved Option C (workflow without the redundant `test` job) and **updated `ci-cd-foundations.test.ts` to assert the NEW intended structure**: dropped the `test`-job assertions, added one positive assertion that the redundant `test` job is absent, changed `branch-protection`/`deploy-staging` expectations to `needs: [verify]`, and dropped the `Tests`/`needs.test.result` summary assertions. The test still validates the workflow comprehensively (metadata, concurrency, the `verify` job's 6 steps, `branch-protection`, `deploy-staging`, best-practices, YAML validity) — 49 assertions. This is **not** weakening-to-game: it syncs a contract test to an intentional, approved change in the artifact it validates; no test is skipped/quarantined/deleted-wholesale, and the removed assertions describe a job that no longer exists by design.
 
 ## 10. Files changed
-None yet (investigation only). Proposed: `src/__tests__/workflows/ci-cd-foundations.test.ts` (+ the already-committed `ci-cd-foundations.yml`).
+- `src/__tests__/workflows/ci-cd-foundations.test.ts` — contract test synced to the new workflow (test-only).
+- `.github/workflows/ci-cd-foundations.yml` — redundant `test` job removed (committed earlier this slice).
 
 ## 11. Why tests were not weakened
 The contract test would still assert the full intended workflow structure; only assertions about a deliberately-removed job are dropped. No DB test, no product test, no assertion strength on retained jobs is changed.
 
 ## 12. Repeated-green evidence
-Pending the fix. Plan: contract test 3× locally (no DB needed), `tsc`, then ≥1 green `build-and-test` on the PR head (preferably repeated).
+- Local (no DB needed for this test): `ci-cd-foundations.test.ts` → **49 passed / 0 failed, 3/3 identical runs** (was 18 failed / 42 passed, also deterministic).
+- `tsc --noEmit`: **0 errors**.
+- Authoritative DB-lane proof: pending the CI `build-and-test` run on the new PR head (this contract test was the SOLE failing file, so the required lane is expected green). Will require ≥1 green `build-and-test` on the PR head before recommending merge.
 
 ## 13. Remaining risks
 - If branch protection considers the duplicate push-triggered `build-and-test` run, ensure both go green.
