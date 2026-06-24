@@ -63,7 +63,13 @@ PRESENT (in-memory, `copilot.ts`): every call recorded with task/risk/model/prov
 PRESENT + passing (AI-18, `eval-harness.ts`): scored coverage across `MOCK_AI_TESTED` / `GUARDRAIL_TESTED` / `PROMPT_INJECTION_TESTED` — 100% on the mock track.
 
 ## 14. Live AI test status
-`BLOCKED_NO_AI_PROVIDER` — `OPENAI_API_KEY` is absent (not in env, no `.env`, not a CI secret). **AI-17 was attempted, not faked.** A gated live-smoke suite is in place (`src/__tests__/services/ai/openai-live-smoke.test.ts`): it makes real OpenAI calls only when `RUN_LIVE_AI=true` AND `OPENAI_API_KEY` are set (synthetic data only; asserts the ledger never contains the key), and **skips cleanly** (5 cases skipped, never faked) otherwise. The blocker is now one step from cleared: provide the key + flag and the suite runs.
+`BLOCKED_WITH_EVIDENCE` — live smoke **attempted with a real key (2026-06-24), not faked, and could not complete because of an environment network-policy denial**, NOT a key or code defect.
+
+- A gated live-smoke suite exists (`src/__tests__/services/ai/openai-live-smoke.test.ts`): real OpenAI calls only under `RUN_LIVE_AI=true` + `OPENAI_API_KEY` (synthetic data only; asserts the ledger never contains the key); skips cleanly otherwise.
+- With a key supplied, the suite *ran* (no longer skipped) but **every live call returned `AI_UNAVAILABLE`**. Root cause (proven by `curl -v` via the proxy): the agent proxy returns `HTTP/1.1 403 Forbidden` to `CONNECT api.openai.com:443` — `api.openai.com` is **not on this environment's egress allowlist** (an organization network-policy denial; the README says to report 403/407 policy denials, not bypass them).
+- Therefore **no live OpenAI call succeeded** → `AI_LIVE_SMOKE_TESTED` is NOT claimed. The adapter behaved correctly and **fail-closed** (`AI_UNAVAILABLE`, never fabricated). The key could not even be validated (the 403 occurs at the proxy *before* the request reaches OpenAI).
+- Runtime note: Node's built-in `fetch` ignores `HTTPS_PROXY` unless `NODE_USE_ENV_PROXY=1` (Node ≥22.21) + `NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`; even with those set the host stays denied here, so this is infrastructure, not code.
+- **Security:** the key was shared in plaintext chat → it is exposed and must be **rotated/revoked**. It was never written to a file, committed, or logged; the ledger stores hashes only.
 
 ## 15. DB dependency status
 The AI mock foundation needs **no DB** (in-memory ledger). Persisting the ledger + `AIProposalSandbox` approval flow is DB-gated; the deterministic DB path is already green in CI when needed.
@@ -83,8 +89,9 @@ Always safe: every task's provider-unavailable / invalid / guardrail-rejected pa
 Mock-proven now: workspace-scoped context (fail-closed), missing-question generation, schema + hallucinated-evidence + injection rejection, advisory diagnosis-review (cannot finalize), advisory action red-team, outcome-review (cannot self-verify), AI-unavailable fallback, ledger records every call. **Requires live AI:** the end-to-end owner→messy-note→extract→confirm→live-review→approve→execute→outcome flow with a real model (steps gated by `OPENAI_API_KEY`).
 
 ## 20. Remaining blockers + exact next steps
-1. **Provide `OPENAI_API_KEY`** (owner decision: account with no-training/retention controls). → unblocks AI-17.
+1. **Network egress to `api.openai.com` is denied by this environment's proxy policy (CONNECT 403).** This is the actual live-AI blocker (a key was provided). Clear it by EITHER (a) allowlisting `api.openai.com` in the environment's network policy, OR (b) running the gated live smoke in an environment WITH OpenAI egress (a CI runner / dev machine with the key as a secret + `NODE_USE_ENV_PROXY=1` + `NODE_EXTRA_CA_CERTS` if proxied). Then:
 2. Run **AI-17 live smoke** on non-sensitive sample data (missing-question, diagnosis-review, action red-team, provider-failure fallback). Record model/latency/tokens/validator results.
+2a. **Rotate the exposed key** (it was shared in plaintext chat).
 3. Implement deferred task runners (AI-7/11/12/14/15) as needed (same governed pattern).
 4. Run **AI-19** owner-flow acceptance live; persist the ledger via AuditEvent if a DB-backed AI trial is wanted.
 5. Re-classify toward `AI_LIVE_SMOKE_TESTED` → `AI_OWNER_TRIAL_READY_WITH_RESTRICTIONS` only with live evidence.
