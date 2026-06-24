@@ -11,6 +11,43 @@ Companion docs: `OPSIQ_OWNER_MODE_DECISION_OS_STATE_AUDIT.md`, `OWNER_MODE_DECIS
 
 ## 1. Final classification
 
+**OWNER_INTERNAL_BETA** (updated 2026-06-24 after CI-green DB proof + scored benchmark; supersedes the prior `OWNER_INTERNAL_ALPHA (conditional)`).
+
+The two gating risks that previously capped this at conditional-alpha are now cleared:
+- **DB / security proof:** CI is fully green (run 28066614542) — the DB-backed maintained suite (incl. §13 security DB negatives) passes against real `postgres:16` (10,692 DB-backed tests).
+- **Scored benchmark:** the deterministic SMB benchmark has been run and scored (see §1a).
+
+`OWNER_REAL_BUSINESS_LIMITED_USE` is intentionally **not** yet claimed: although the benchmark's numeric thresholds for it are met (§1a), that classification additionally requires an actual limited-use run on the owner's real businesses with real data and zero defects observed there — which has not happened (no owner data loaded). That is the next real-world step, not a benchmark outcome.
+
+Forbidden classifications explicitly NOT claimed: PUBLIC_SAAS_READY, PRODUCT_HUNT_READY, LAUNCH_READY, ENTERPRISE_READY, PRODUCTION_READY.
+
+### 1a. Scored deterministic benchmark (2026-06-24, `npx tsx scripts/owner-mode-smb-benchmark-scorecard.ts`)
+
+Run over the 12 real-world SMB fixtures (`tests/owner-mode/real-world-smb-cases`); 9 supported, 3 expected gap/abstentions excluded (SMB-005/009/011). Diagnosis-quality dimensions scored by the existing harness; safety/leakage/learning/dashboard dimensions from their dedicated suites (all green, and all ran green inside the CI DB suite).
+
+| Metric | Result | Source |
+|---|---|---|
+| root-cause accuracy | **100% (9/9)** | SMB scorecard (ROOT_CAUSE_ALIGNMENT) |
+| first-action accuracy | **100% (9/9)** | SMB scorecard (FIRST_ACTION_QUALITY) |
+| dangerous recommendation rate | **0% (0/9)** | SMB scorecard (BAD_RECOMMENDATION_AVOIDANCE) |
+| average case score | **0.850** (gate ≥0.65) | SMB scorecard |
+| hallucinated evidence rate | **0 defects** | benchmark `adversarial-evaluator` + `scoring-rubric` (`hallucinated_fact` gate) |
+| confidence overclaim rate | **0 defects** (enforced-by-test, not a scored %) | `diagnosis-permission` + confidence-cap suites |
+| false learning eligibility rate | **0** | learning-eligibility + causal-attribution gates (426+152 tests) |
+| workspace/security leakage defects | **0** | `smbLeakageGuard` + §13 security DB negatives (green CI) |
+| dashboard misleading-output defects | **0** | trust/explainability suite (84 tests) |
+
+**Against the §34 gates:**
+- Owner Internal Alpha (root-cause ≥40, dangerous=0, hallucinated=0, overclaim ≤20): **MET**.
+- Owner Internal Beta (root-cause ≥60, first-action ≥50, dangerous=0, hallucinated=0, overclaim ≤10): **MET**.
+- Owner Real Business Limited Use numeric bar (root-cause ≥70, first-action ≥60, unsafe=0, false-learning=0, leakage=0, misleading=0): **numerically met on the benchmark** — but the classification awaits a real owner-data limited-use run (see §1).
+
+**Honest caveats:** the scored bench is **9 supported SMB cases** — strong but small coverage; 100% on 9 cases is not a guarantee across all real owner scenarios. The benchmark is deterministic (no AI), which is correct for this track. `confidence overclaim` is enforced-by-test (cap logic), not a per-case scored rate on this bench.
+
+---
+
+## 1z. Prior classification (superseded, retained for history)
+
 **OWNER_INTERNAL_ALPHA** (conditional — see §6 gating risk).
 
 Rationale: the Owner Mode Decision OS loop is **fully implemented and green at the pure-function / service-logic / route-handler / end-to-end-harness level** across every phase. It is **not** promoted beyond alpha because the formal numeric reliability gates (dangerous-recommendation rate = 0, hallucinated-evidence rate = 0, root-cause accuracy thresholds) and the DB-backed security/persistence matrix could **not be executed in this container** (no `DATABASE_URL`; full suite exceeds wall-clock). Those are verification gaps in *this environment*, not known defects.

@@ -184,7 +184,7 @@ Only if the owner cannot run a local Postgres and wants an always-on hosted tria
 - [x] CI run executes `TEST_WITH_DB=true` suite green (blocking lane) — DB persistence proven. — **DONE** (maintained DB-backed suite GREEN 2026-06-24).
 - [x] §13 security DB negatives pass (role-access, workspace isolation, file-intake) — isolation + operator/learning denial proven. — **DONE** (ran within the green maintained suite).
 - [x] `intake-adapter` blocker resolved (engine fix: absent optional gstBasis stays `valid`) — CI blocking lane no longer red on this file.
-- [ ] `test:owner-real-world-smb` (+ optional simulation) run as a scored check.
+- [x] `test:owner-real-world-smb` run as a scored check (2026-06-24) — root-cause 100% (9/9), first-action 100% (9/9), dangerous 0%, avg 0.850; 0 leakage / hallucination / false-learning / dashboard-misleading defects. Deterministic track reclassified **OWNER_INTERNAL_BETA**. (Real-Business-Limited-Use awaits a real owner-data run.)
 - [ ] Owner account + one business workspace created; archetype selected.
 - [ ] Minimum owner data loaded (finance REQUIRED_MINIMUM at least); incomplete-data refusal verified.
 - [ ] Dashboard shows true state; no fabricated confidence.

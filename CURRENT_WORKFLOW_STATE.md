@@ -14,6 +14,11 @@ Both jobs pass: **lint ✅** and **build-and-test ✅** — governance, typechec
 
 **This clears TRIAL_BLOCKER 0 and TRIAL_BLOCKER 1 and TRIAL_BLOCKER 2.** Deterministic Owner Mode now has real CI-backed DB + security proof. Remaining for a higher classification: a live scored benchmark run + owner data loaded for a real trial.
 
+### ✅ SCORED BENCHMARK RUN + RECLASSIFIED → OWNER_INTERNAL_BETA (2026-06-24)
+Ran `npx tsx scripts/owner-mode-smb-benchmark-scorecard.ts` (reuses the existing harness): 9 supported SMB cases (3 gap/abstentions excluded). **root-cause 100% (9/9) · first-action 100% (9/9) · dangerous 0% · avg 0.850 (gate ≥0.65)**; plus 0 hallucinated-evidence / 0 false-learning / 0 workspace-leakage / 0 dashboard-misleading defects from the dedicated suites (all green in CI). All §34 Alpha and Beta gates MET; Real-Business-Limited-Use numeric bar met but that classification awaits a real owner-data run. Deterministic Owner Mode reclassified **OWNER_INTERNAL_ALPHA (conditional) → OWNER_INTERNAL_BETA** (see `OWNER_MODE_DECISION_OS_RELIABILITY_REPORT.md §1/§1a`).
+
+**Next slice:** Owner Mode Governed AI Copilot — **AI-1 Mock Guardrail Foundation** (provider-agnostic boundary w/ OpenAI as first adapter, key-free mock-tested → `AI_MOCK_GUARDRAIL_TESTED`).
+
 
 Classification: **NOT_READY_FOR_OWNER_TRIAL** → `OWNER_TRIAL_READY_WITH_MANUAL_INPUTS` once the two blockers below clear. Trial is feasible at **zero external cost, manual/CSV inputs**. The only hard external connection is **PostgreSQL**; there is **no LLM/AI provider, no billing, no connector** required.
 
