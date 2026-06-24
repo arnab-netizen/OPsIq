@@ -59,11 +59,18 @@ The contract test would still assert the full intended workflow structure; only 
 ## 12. Repeated-green evidence
 - Local (no DB needed for this test): `ci-cd-foundations.test.ts` → **49 passed / 0 failed, 3/3 identical runs** (was 18 failed / 42 passed, also deterministic).
 - `tsc --noEmit`: **0 errors**.
-- Authoritative DB-lane proof: pending the CI `build-and-test` run on the new PR head (this contract test was the SOLE failing file, so the required lane is expected green). Will require ≥1 green `build-and-test` on the PR head before recommending merge.
+- Authoritative DB-lane proof (CONFIRMED): on PR #35 head `817be22`, **both** required `ci.yml` `build-and-test (20.x)` lanes ran the full suite (with postgres:16) and passed:
+  - run `28098539803`, job `83194076486` → **success** (PR/merge-ref lane)
+  - run `28098536773`, job `83194065833` → **success** (push lane)
+  - Companion `ci-cd-foundations` workflow on the same head: `Build + Type + Prisma Verify` job `83194076547` → **success**; `Enforce Branch Protection` job `83194641423` → **success**.
+  - All 14 check-runs on `817be22` completed green or expected-skip (no failures, none pending).
 
 ## 13. Remaining risks
 - If branch protection considers the duplicate push-triggered `build-and-test` run, ensure both go green.
 - The original `ci-cd-foundations "Run Tests"` red (DB tests without a DB) is what this slice set out to fix; Option C resolves it by removing the redundant job — but it requires the contract-test update above to land cleanly.
 
 ## 14. Merge recommendation for PR #35
-Do **not** merge until the contract test is updated and `build-and-test` is green (repeatedly). With the contract-test sync applied, PR #35 should make both ci-cd-foundations AND build-and-test green, achieving main-fully-green.
+**CLEARED TO MERGE.** Final classification: **`REQUIRED_LANE_STABILIZED`**. The contract-test sync landed on `817be22`; both required `build-and-test (20.x)` lanes are green (run IDs in §12), the companion `ci-cd-foundations` verify/branch-protection gates are green, and GitHub reports `mergeable_state: clean`. Merging PR #35 makes `main` fully green.
+
+## 15. Final classification
+**`REQUIRED_LANE_STABILIZED`** — the required `build-and-test` lane is deterministically green on the PR head; the failure was a workflow/contract-test desynchronization (now synced), not a flake, not a product/DB defect. No retries, skips, quarantines, or suppressions were added.
