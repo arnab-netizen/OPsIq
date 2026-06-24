@@ -66,6 +66,17 @@ Truth: there is **no AI provider, SDK, key, prompt, output schema, or LLM call**
 
 **Recommended next slice "AI-1 — Governed copilot foundation (mock track)":** provider boundary (port + Unavailable/Mock impls, no SDK), task registry + one LOW-risk task (`MISSING_QUESTION_GENERATION`) schema, post-AI validator (reject taxonomy), workspace-scoped context builder, in-memory ledger extension, and mock guardrail + prompt-injection + hallucinated-evidence + AI-unavailable-fallback tests. Buildable now with **zero cost / no key / no DB** → targets `AI_MOCK_GUARDRAIL_TESTED`; live AI deferred to the owner's provider choice.
 
+### ✅ AI TRACK (AI-1 → AI-18 mock + AI-16 adapter) — `AI_MOCK_GUARDRAIL_TESTED`; live `BLOCKED_NO_AI_PROVIDER` (2026-06-24)
+Governed AI copilot foundation built + mock-tested (6 AI test files / 50 tests), zero cost / no key. See `OWNER_MODE_AI_TRIAL_READINESS_REPORT.md` (Phase AI-20).
+- **AI-1** provider boundary + mock/unavailable + context builder + validator + ledger + MISSING_QUESTION task.
+- **AI-2** task registry (all 14 classes; `stateMutation:"none"`, audit required, HIGH_*→owner approval, learning gated on verified-outcome+attribution).
+- **AI-3** prompt-injection defense (5 canonical attacks; fixed a real verify-directive guardrail gap).
+- **AI-4/5/6** generic `runGovernedAiTask` orchestrator + reject taxonomy + in-memory audit ledger (hash, never raw/secrets).
+- **AI-9/10/13** advisory tasks: diagnosis-review (cannot finalize), owner-action red-team (advisory classification), outcome-review (cannot self-verify).
+- **AI-16** OpenAI adapter behind the port (fetch-based, no SDK, fail-closed AI_UNAVAILABLE without key).
+- **AI-18** scored eval harness — 100% mock guardrail coverage.
+- **Genuine blocker (stop condition):** **AI-17 live smoke + live AI-19 require `OPENAI_API_KEY`** (owner-supplied). Not faked. **Deferred (same pattern, no new safety):** AI-7/11/12/14/15 task runners. Deterministic Owner Mode unchanged at OWNER_INTERNAL_BETA; AI is strictly additive with a safe deterministic fallback.
+
 ### ✅ AI-1 DONE — Governed copilot mock guardrail foundation (2026-06-24)
 Implemented under `src/services/ai/`: `provider.ts` (provider-agnostic port + `UnavailableAiProvider` + deterministic `MockAiProvider`, no SDK/key/network), `schemas.ts` (Zod `MissingQuestionOutput`), `context-builder.ts` (workspace/business/task-scoped, fail-closed cross-workspace guard, untrusted-data labelling), `validator.ts` (post-AI guardrails + full reject taxonomy), `copilot.ts` (orchestrator + in-memory audit ledger storing hashes not raw text). Only the LOW-risk `MISSING_QUESTION_GENERATION` task is wired. AI output is advisory-only; never mutates state. Tests `src/__tests__/services/ai/ai-copilot.test.ts` (15) prove: accept happy-path, schema-invalid / hallucinated-evidence / unauthorized-action / prompt-injection / confidence-overclaim / unsupported-numbers rejections, AI-unavailable fallback, workspace-scope fail-closed, ledger records hash (not raw). tsc 0, lint-ratchet PASS, governance 0-new, owner-mode regression 37 files/1865 green. **AI track → `AI_MOCK_GUARDRAIL_TESTED`** (one task); live AI still `BLOCKED_NO_AI_PROVIDER`. Also fixed a tsc regression my earlier benchmark script caused (it imported excluded `tests/` helpers into the typecheck) by excluding the scorecard runner from tsc.
 
