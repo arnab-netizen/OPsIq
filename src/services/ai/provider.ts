@@ -81,6 +81,13 @@ export interface AiRequest {
   context: AiContext;
   promptVersion: string;
   schemaVersion: string;
+  /**
+   * Plain-language description of the exact JSON shape the model must return.
+   * The provider appends it to the prompt so structured output is schema-valid.
+   * It is a SHAPE hint only — it never carries business data or instructions to
+   * cross a governance boundary (the deterministic validator still adjudicates).
+   */
+  outputContract?: string;
   /** Model routing knobs; the boundary records them, providers honour them. */
   options: {
     modelTier: "cheap" | "strong";

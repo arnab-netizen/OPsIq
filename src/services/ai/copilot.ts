@@ -107,7 +107,7 @@ export async function runGovernedAiTask<T>(
   context: AiContext,
   schema: ZodType<T>,
   extract: (parsed: T) => { scannableText: string; citedEvidenceIds: string[] },
-  opts: RunTaskOptions & { promptVersion: string; schemaVersion: string }
+  opts: RunTaskOptions & { promptVersion: string; schemaVersion: string; outputContract?: string }
 ): Promise<AiCopilotResult<T>> {
   const now = (opts.clock ?? (() => new Date().toISOString()))();
   const base = {
@@ -125,6 +125,7 @@ export async function runGovernedAiTask<T>(
     context,
     promptVersion: opts.promptVersion,
     schemaVersion: opts.schemaVersion,
+    outputContract: opts.outputContract,
     options: {
       modelTier: opts.modelTier ?? "cheap",
       temperature: opts.temperature ?? 0,
@@ -171,6 +172,14 @@ export async function runGovernedAiTask<T>(
   };
 }
 
+/** JSON shape hint sent to the live model so structured output is schema-valid. */
+const MISSING_QUESTION_OUTPUT_CONTRACT =
+  `{ "taskType": "MISSING_QUESTION_GENERATION", "questions": [ { "question": string, ` +
+  `"whyItMatters": string, "confidenceCapAffected": boolean, "decisionUnlocked": string, ` +
+  `"roughEstimateAcceptable": boolean, "exampleAnswer": string, "priority": "high"|"medium"|"low" } ], ` +
+  `"citedEvidenceIds": string[], "notes": string }. ` +
+  `Ask 1-5 questions (prefer 3). Questions only — never assert a fact or a number.`;
+
 /**
  * MISSING_QUESTION_GENERATION (LOW_CONTENT). The only task implemented in AI-1.
  * Returns advisory questions; an AI_UNAVAILABLE/invalid/guardrail-rejected call
@@ -200,6 +209,7 @@ export async function runMissingQuestionTask(
     context,
     promptVersion,
     schemaVersion,
+    outputContract: MISSING_QUESTION_OUTPUT_CONTRACT,
     options: {
       modelTier: opts.modelTier ?? "cheap",
       temperature: opts.temperature ?? 0,

@@ -85,11 +85,58 @@ export const outcomeReviewOutputSchema = z.object({
 });
 export type OutcomeReviewOutput = z.infer<typeof outcomeReviewOutputSchema>;
 
+/**
+ * INTAKE_EXTRACT (AI-7): pull CANDIDATE (unverified) facts out of a messy owner note.
+ * Every candidate is unverified and needs owner confirmation; the model may not assert
+ * a fact as true, compute a metric, or state confidence.
+ */
+export const intakeCandidateFactSchema = z.object({
+  field: z.string().min(2),
+  rawValue: z.string().min(1),
+  unit: z.string().optional(),
+  /** How the value was expressed by the owner — never "verified". */
+  uncertainty: z.enum(["stated", "approximate", "inferred", "ambiguous"]),
+});
+export type IntakeCandidateFact = z.infer<typeof intakeCandidateFactSchema>;
+
+export const intakeExtractOutputSchema = z.object({
+  taskType: z.literal("INTAKE_EXTRACT"),
+  candidateFacts: z.array(intakeCandidateFactSchema).min(1).max(20),
+  unresolvedAmbiguities: z.array(z.string()).default([]),
+  /** Hard advisory marker: every candidate is UNVERIFIED until the owner confirms. */
+  allCandidatesUnverified: z.literal(true),
+  citedEvidenceIds: z.array(z.string()).default([]),
+});
+export type IntakeExtractOutput = z.infer<typeof intakeExtractOutputSchema>;
+
+/**
+ * OPERATOR_CHECKLIST (AI-12): operator-facing steps for an ALREADY OWNER-APPROVED
+ * action. Execution mechanics only — no strategy, no diagnosis, no approval/verify.
+ */
+export const operatorChecklistStepSchema = z.object({
+  step: z.string().min(4),
+  done: z.literal(false),
+});
+export type OperatorChecklistStep = z.infer<typeof operatorChecklistStepSchema>;
+
+export const operatorChecklistOutputSchema = z.object({
+  taskType: z.literal("OPERATOR_CHECKLIST"),
+  actionTitle: z.string().min(3),
+  steps: z.array(operatorChecklistStepSchema).min(1).max(12),
+  cautions: z.array(z.string()).default([]),
+  /** Operator guidance only; it cannot approve, verify, or change strategy. */
+  executionOnly: z.literal(true),
+  citedEvidenceIds: z.array(z.string()).default([]),
+});
+export type OperatorChecklistOutput = z.infer<typeof operatorChecklistOutputSchema>;
+
 /** Registry mapping a task type to its output schema (extended per phase). */
 export const AI_OUTPUT_SCHEMAS = {
+  INTAKE_EXTRACT: intakeExtractOutputSchema,
   MISSING_QUESTION_GENERATION: missingQuestionOutputSchema,
   DIAGNOSIS_REVIEW: diagnosisReviewOutputSchema,
   OWNER_PROPOSED_ACTION_REDTEAM: ownerActionRedTeamOutputSchema,
+  OPERATOR_CHECKLIST: operatorChecklistOutputSchema,
   OUTCOME_REVIEW: outcomeReviewOutputSchema,
 } as const;
 
