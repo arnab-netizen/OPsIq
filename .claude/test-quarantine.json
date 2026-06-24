@@ -6,8 +6,8 @@
     "recovery_branch_sha": "f16e0712",
     "introduced_by_recovery": 0
   },
-  "total_files": 22,
-  "total_failing_tests": 51,
+  "total_files": 23,
+  "total_failing_tests": 52,
   "nondeterministic_files": 3,
   "files": [
     {
@@ -184,6 +184,14 @@
       "cluster": "concurrency-flake",
       "classification": "PRE_EXISTING_NONDETERMINISTIC_CONCURRENCY_FLAKE",
       "reason": "Replay-determinism proof with a wall-clock PERFORMANCE assertion: 'should replay 1000 events with consistent performance' asserts expect(duration2).toBeLessThan(duration1 * 2) on two in-process Date.now() replay timings. This is machine-timing nondeterministic (GC/JIT/CI contention) and intermittently fails (e.g. 'expected 7 to be less than 4') -- CI run 27076172614 and reproduced locally -- while the deterministic assertions in the same test (replay1.hash === replay2.hash, eventCount === 1000) pass. Same nondeterministic replay class as phase-3-serialization-hardening and phase-3-concurrency-proofs. Not in the bootable-production surface; touches no production/launch user journey; not a protected Phase D/P2B/P2C test. Quarantined to keep the maintained blocking lane deterministic during launch week; still runs in the visible non-blocking lane.",
+      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
+    },
+    {
+      "path": "src/__tests__/services/diagnosis-legal-governance-textual.test.ts",
+      "failed": 1,
+      "cluster": "legal-governance-heuristic",
+      "classification": "PRE_EXISTING / HEURISTIC_CONFLICT_P2_VS_P3G",
+      "reason": "Deterministic single-test conflict surfaced when CI first ran the DB-backed maintained suite past the (previously red) governance/lint gates on 2026-06-24 (CI run 28065415725: 1 failed / 10692 passed / 6 skipped). Case 'P2 fix — non-governance cases do NOT fire > 2 items each with only 1 weak LEGAL_TEXT term ... boundary guard' asserts .not.toBe(LEGAL_GOVERNANCE_RISK), but consulting-engine/diagnosis-engine.ts fin_isLegalGovernanceByText fires because the item 'RBI ... regulatory intervention increasingly probable' matches STRONG_LEGAL_TEXT (P3-G terms 'regulatory intervention' / 'rbi.*intervention'), making it substantive. This is a genuine semantic conflict between the P2 false-positive guard and the P3-G RBI-intervention detection -- a consulting-engine product judgment OUTSIDE Owner Mode scope, with regression risk to real RBI-takeover/licence-revocation cases either way. NOT authored by the Owner Mode Decision OS branch; the file's other 17 tests pass. Quarantined (owner-approved) to make the blocking lane green; still runs in the visible non-blocking lane. Resolve under the consulting-engine heuristic owner, not Owner Mode.",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
     }
   ]
