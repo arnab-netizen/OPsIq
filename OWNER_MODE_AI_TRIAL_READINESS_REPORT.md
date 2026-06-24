@@ -11,22 +11,22 @@ Companion: `OWNER_MODE_AI_READINESS_AUDIT.md` (Phase A), `OWNER_MODE_DECISION_OS
 
 ## 1. Executive verdict
 
-The governed AI copilot **safety foundation is built and mock-tested end-to-end** with zero cost and no API key: a provider-agnostic boundary, a workspace-scoped context builder, schema-validated structured outputs, a post-AI guardrail validator with the full reject taxonomy, prompt-injection defense, an auditable call ledger, a task registry encoding the governance invariants, and a scored evaluation harness. A real **OpenAI adapter** is implemented behind the port (fetch-based, fail-closed) but **cannot be live-proven without `OPENAI_API_KEY`**.
+The governed AI copilot **safety foundation is built and mock-tested end-to-end**, and the live path is now **proven against a real OpenAI model**: a provider-agnostic boundary, a workspace-scoped context builder, schema-validated structured outputs, a post-AI guardrail validator with the full reject taxonomy, prompt-injection defense, an auditable call ledger, a task registry encoding the governance invariants, and a scored evaluation harness. The **OpenAI adapter** (fetch-based, fail-closed) ran the AI-17 live smoke on a GitHub runner with the owner-supplied key and passed all cases on synthetic data.
 
-- **AI track classification: `AI_MOCK_GUARDRAIL_TESTED`.**
-- **Live AI: `BLOCKED_NO_AI_PROVIDER`** (no `OPENAI_API_KEY`; AI-17 live smoke + the live parts of AI-19 cannot run — and must not be faked).
+- **AI track classification: `AI_LIVE_SMOKE_TESTED`.**
+- **Live AI: PASSED** — AI-17 live smoke ran real OpenAI calls on a GitHub runner (synthetic data only) and all 6 tests passed (workflow run #3, 2026-06-24). Not faked. The live parts of AI-19 (full owner-flow acceptance) remain before any trial-ready-with-AI claim.
 - **Deterministic Owner Mode (separate track): `OWNER_INTERNAL_BETA`** (unchanged; CI green, DB+security proof, scored benchmark).
 
 ## 2. Deterministic Owner Mode status
 `OWNER_INTERNAL_BETA` — CI fully green (DB-backed suite passes on `postgres:16`), §13 security DB negatives pass, scored SMB benchmark met all Alpha/Beta gates. See the reliability report.
 
 ## 3. AI Owner Mode status
-`AI_MOCK_GUARDRAIL_TESTED`. Architecture + guardrails proven on the mock track (6 AI test files / 50 tests). No live AI exercised.
+`AI_LIVE_SMOKE_TESTED`. Architecture + guardrails proven on the mock track (6 AI test files / 50 tests) AND on the live track — the AI-17 gated live smoke executed real OpenAI calls (synthetic data) and passed 6/6 on a GitHub runner. Full live owner-flow acceptance (AI-19) not yet run.
 
 ## 4. AI provider / config status
 - Provider boundary: PRESENT (`src/services/ai/provider.ts`) with `UnavailableAiProvider` (default) + deterministic `MockAiProvider`.
 - First live adapter: PRESENT (`src/services/ai/openai-provider.ts`, OpenAI, fetch-based, no SDK dep) — **provider-agnostic; OpenAI specifics isolated to that file**.
-- Config: `OPENAI_API_KEY` **absent** → adapter returns `AI_UNAVAILABLE` (fail-closed). Live disabled.
+- Config: `OPENAI_API_KEY` set as a **GitHub Actions repo secret** (not in the dev container). Live AI runs only via the gated `ai-live-smoke.yml` workflow on a runner; locally/keyless the adapter still returns `AI_UNAVAILABLE` (fail-closed).
 
 ## 5. Required AI external connections
 **Exactly one, owner-supplied:** an OpenAI API key (`OPENAI_API_KEY`). No other external connection. Data-privacy note: business context enters prompts — use an account/config with no-training/retention controls; the context builder already minimises + source-classifies + fences untrusted data.
@@ -63,13 +63,13 @@ PRESENT (in-memory, `copilot.ts`): every call recorded with task/risk/model/prov
 PRESENT + passing (AI-18, `eval-harness.ts`): scored coverage across `MOCK_AI_TESTED` / `GUARDRAIL_TESTED` / `PROMPT_INJECTION_TESTED` — 100% on the mock track.
 
 ## 14. Live AI test status
-`BLOCKED_WITH_EVIDENCE` — live smoke **attempted with a real key (2026-06-24), not faked, and could not complete because of an environment network-policy denial**, NOT a key or code defect.
+`PASSED` — the AI-17 gated live smoke ran **real OpenAI calls on a GitHub runner** (synthetic data only) and **all 6 tests passed**. Not faked.
 
-- A gated live-smoke suite exists (`src/__tests__/services/ai/openai-live-smoke.test.ts`): real OpenAI calls only under `RUN_LIVE_AI=true` + `OPENAI_API_KEY` (synthetic data only; asserts the ledger never contains the key); skips cleanly otherwise.
-- With a key supplied, the suite *ran* (no longer skipped) but **every live call returned `AI_UNAVAILABLE`**. Root cause (proven by `curl -v` via the proxy): the agent proxy returns `HTTP/1.1 403 Forbidden` to `CONNECT api.openai.com:443` — `api.openai.com` is **not on this environment's egress allowlist** (an organization network-policy denial; the README says to report 403/407 policy denials, not bypass them).
-- Therefore **no live OpenAI call succeeded** → `AI_LIVE_SMOKE_TESTED` is NOT claimed. The adapter behaved correctly and **fail-closed** (`AI_UNAVAILABLE`, never fabricated). The key could not even be validated (the 403 occurs at the proxy *before* the request reaches OpenAI).
-- Runtime note: Node's built-in `fetch` ignores `HTTPS_PROXY` unless `NODE_USE_ENV_PROXY=1` (Node ≥22.21) + `NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`; even with those set the host stays denied here, so this is infrastructure, not code.
-- **Security:** the key was shared in plaintext chat → it is exposed and must be **rotated/revoked**. It was never written to a file, committed, or logged; the ledger stores hashes only.
+- Run: workflow **AI Live Smoke (manual, gated)** run #3 (`d8a565d`, 2026-06-24), job `ai-live-smoke` green. The smoke step env shows `RUN_LIVE_AI: true` and `OPENAI_API_KEY: ***` (GitHub-masked) — the gate was active and the key present.
+- Result: `Test Files 1 passed (1)`, `Tests 6 passed (6)`. Real network latencies confirm live calls (a skip would be 0 ms): MISSING_QUESTION_GENERATION **1284 ms** (model `gpt-4o-mini`), DIAGNOSIS_REVIEW **403 ms** (model `gpt-4o`). The other live cases (OWNER_PROPOSED_ACTION_REDTEAM, prompt-injection-not-obeyed, provider-failure fail-closed) and the always-on gating guard all passed.
+- Governance proven live: DIAGNOSIS_REVIEW kept `requiresOwnerApproval: true`; the red-team returned an advisory classification, never an approval; the injection embedded in untrusted DATA was not obeyed; a bad-baseURL provider failed closed to `AI_UNAVAILABLE`. The `ledgerHasNoSecret()` assertion passed — the call ledger contained no `sk-` substring and no key.
+- Why on a runner, not here: this dev container cannot reach `api.openai.com` (the agent proxy returns `CONNECT … 403`, an org egress-policy denial — reported, not bypassed). GitHub-hosted runners have OpenAI egress, so the gated workflow is the supported live path. The same gating means the suite skips cleanly (never fakes) anywhere the key/flag is absent.
+- **Security:** a key was earlier shared in plaintext chat → that key is exposed and must be **rotated/revoked**; the live run used the repo Actions secret. No key was ever written to a file, committed, or logged; the ledger stores hashes only.
 
 ## 15. DB dependency status
 The AI mock foundation needs **no DB** (in-memory ledger). Persisting the ledger + `AIProposalSandbox` approval flow is DB-gated; the deterministic DB path is already green in CI when needed.
@@ -82,21 +82,22 @@ Always safe: every task's provider-unavailable / invalid / guardrail-rejected pa
 
 ## 18. Owner trial go / no-go with AI
 - **GO** for an AI-assisted trial **in mock/guardrail mode** (no live model) — the governed pipeline + deterministic path are proven.
-- **NO-GO** for a **live-AI** trial until: `OPENAI_API_KEY` is provided; AI-17 live smoke passes on non-sensitive sample data; and the full AI-19 owner-flow acceptance is run live. Until then live AI stays disabled (fail-closed).
+- **AI-17 live smoke: DONE** (`OPENAI_API_KEY` provided as a repo secret; live smoke passed 6/6 on synthetic data). Live AI is proven at the smoke level.
+- **NO-GO** for a full **live-AI owner trial** until the AI-19 end-to-end owner-flow acceptance is run live and the ledger is DB-persisted. Outside the gated workflow, live AI stays disabled (fail-closed).
 - **NO-GO** (out of scope) for any public-AI / autonomous / public-SaaS classification.
 
 ## 19. AI-19 acceptance scenario coverage (mock)
 Mock-proven now: workspace-scoped context (fail-closed), missing-question generation, schema + hallucinated-evidence + injection rejection, advisory diagnosis-review (cannot finalize), advisory action red-team, outcome-review (cannot self-verify), AI-unavailable fallback, ledger records every call. **Requires live AI:** the end-to-end owner→messy-note→extract→confirm→live-review→approve→execute→outcome flow with a real model (steps gated by `OPENAI_API_KEY`).
 
 ## 20. Remaining blockers + exact next steps
-1. **Network egress to `api.openai.com` is denied by this environment's proxy policy (CONNECT 403).** This is the actual live-AI blocker (a key was provided). Clear it by EITHER (a) allowlisting `api.openai.com` in the environment's network policy, OR (b) running the gated live smoke in an environment WITH OpenAI egress (a CI runner / dev machine with the key as a secret + `NODE_USE_ENV_PROXY=1` + `NODE_EXTRA_CA_CERTS` if proxied). Then:
-2. Run **AI-17 live smoke** on non-sensitive sample data (missing-question, diagnosis-review, action red-team, provider-failure fallback). Record model/latency/tokens/validator results.
-2a. **Rotate the exposed key** (it was shared in plaintext chat).
-3. Implement deferred task runners (AI-7/11/12/14/15) as needed (same governed pattern).
-4. Run **AI-19** owner-flow acceptance live; persist the ledger via AuditEvent if a DB-backed AI trial is wanted.
-5. Re-classify toward `AI_LIVE_SMOKE_TESTED` → `AI_OWNER_TRIAL_READY_WITH_RESTRICTIONS` only with live evidence.
+0. ✅ **DONE — egress + AI-17 live smoke.** `api.openai.com` egress is denied in the dev container (CONNECT 403), so the gated live smoke was run on a **GitHub runner** via `.github/workflows/ai-live-smoke.yml` (dispatched against the feature branch). All 6 cases passed on synthetic data (run #3, 2026-06-24).
+1. **Rotate the exposed key** (one was shared in plaintext chat earlier). The live run used the repo Actions secret; the chat-exposed key must be revoked regardless.
+2. Implement deferred task runners (AI-7/11/12/14/15) as needed (same governed pattern).
+3. Run **AI-19** owner-flow acceptance live (owner→messy-note→extract→confirm→live-review→approve→execute→outcome); persist the ledger via `AuditEvent`/`AIProposalSandbox` if a DB-backed AI trial is wanted.
+4. Land the AI module on `main` (or merge PR #33 / a focused subset) so the workflow runs from the default branch directly, and so the deterministic+AI tracks share one trunk.
+5. Re-classify `AI_LIVE_SMOKE_TESTED` → `AI_OWNER_TRIAL_READY_WITH_RESTRICTIONS` only after AI-19 live acceptance + ledger persistence.
 
 ---
 
 ### Hostile audit (AI track)
-- *Fake?* No live AI exists, so nothing AI-generated is presented as real; the adapter is fail-closed and the validator is advisory-until-accepted. *Overbuilt?* Generic orchestrator keeps each task minimal; deferred tasks not padded. *Leak?* Context builder is fail-closed on workspace scope; ledger stores hashes not raw/secrets. *Bypass owner approval / mutate state / verify outcome / unsafe learning?* Structurally impossible — registry `stateMutation: "none"`, schema advisory markers, validator rejects approval/verify directives. *Public SaaS touched?* No. *Live proof missing?* Yes — by design, gated on the key.
+- *Fake?* Live AI is now real but stays advisory — output is advisory-until-accepted, the adapter is fail-closed, and nothing AI-generated finalizes a decision. *Overbuilt?* Generic orchestrator keeps each task minimal; deferred tasks not padded. *Leak?* Context builder is fail-closed on workspace scope; ledger stores hashes not raw/secrets (asserted live — no `sk-` in the ledger). *Bypass owner approval / mutate state / verify outcome / unsafe learning?* Structurally impossible — registry `stateMutation: "none"`, schema advisory markers, validator rejects approval/verify directives; the live run confirmed `requiresOwnerApproval` stayed true and injection was not obeyed. *Public SaaS touched?* No. *Live proof?* Present — AI-17 smoke passed 6/6 against real OpenAI on synthetic data. *Full live owner-flow (AI-19)?* Not yet — correctly not claimed.
