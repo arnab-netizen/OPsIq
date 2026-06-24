@@ -19,7 +19,6 @@ export default defineConfig({
       ...(testWithDb ? [] : [
         "**/runtime-proof/**",
         "**/phase-*.test.ts", // Exclude phase tests (have implicit DB dependencies via enforceRequest)
-        "**/*.db.test.ts", // DB-backed suites run only under TEST_WITH_DB=true (postgres:16 lane); skip in non-DB lanes
       ]),
     ],
     testTimeout: 30000,

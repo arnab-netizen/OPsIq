@@ -60,10 +60,33 @@ jobs:
       pull-requests: write
       issues: write
 
+    # DB-backed tests in the maintained suite need a real database. Mirror the
+    # proven postgres:16 pattern from the green `ci.yml` build-and-test lane so the
+    # full suite runs WITH a DB (TEST_WITH_DB=true) instead of failing on the
+    # DB-backed tests it was running without one.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+          POSTGRES_INITDB_ARGS: "-c log_min_messages=warning"
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
     env:
       NODE_ENV: test
       SKIP_ENV_VALIDATION: "true"
-      TEST_WITH_DB: "false"
+      TEST_WITH_DB: "true"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
 
     steps:
       - name: Checkout code
@@ -80,18 +103,37 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Configure .env.local for CI PostgreSQL service
+        # prisma.config.ts loads .env.local with override:true; write the CI service
+        # URL before Prisma runs (mirrors ci.yml).
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          TEST_WITH_DB=true
+          EOF
+
+      - name: Prisma database migration
+        run: npx prisma migrate deploy
+
+      - name: Regenerate Prisma client after migrations
+        run: npx prisma generate
+
       - name: Run tests
         run: |
           set +e
-          npm test 2>&1 | tee run-tests.log
+          # Full maintained suite WITH a DB, excluding only the pre-existing
+          # quarantined files (identical policy to the green ci.yml lane).
+          EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
+          npx vitest run --maxWorkers 1 $EXCLUDES 2>&1 | tee run-tests.log
           GATE_EXIT_CODE=${PIPESTATUS[0]}
           set -e
 
           echo "## run-tests diagnostic summary" >> "$GITHUB_STEP_SUMMARY"
           echo "- exit_code: ${GATE_EXIT_CODE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- command: npm test" >> "$GITHUB_STEP_SUMMARY"
-          echo "- environment: TEST_WITH_DB=false, NODE_ENV=test" >> "$GITHUB_STEP_SUMMARY"
+          echo "- command: vitest run (quarantine-excluded)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- environment: TEST_WITH_DB=true (postgres:16), NODE_ENV=test" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$GATE_EXIT_CODE" -ne 0 ]; then
