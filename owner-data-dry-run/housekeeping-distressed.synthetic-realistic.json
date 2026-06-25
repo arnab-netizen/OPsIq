@@ -1,0 +1,144 @@
+{
+  "metadata": {
+    "dataMode": "SYNTHETIC_REALISTIC",
+    "dataTruthStatus": "NOT_REAL_OWNER_DATA",
+    "sourceBasis": "research-informed scenario assumptions",
+    "allowedUse": ["dry-run testing", "simulation", "workflow validation", "owner-mode behavior testing"],
+    "forbiddenUse": ["real learning database", "real employee performance judgment", "real financial decision without owner review", "public SaaS proof", "real employee pilot proof"]
+  },
+  "businessProfile": {
+    "businessName": "Synthetic Distressed Housekeeping Dry Run",
+    "industry": "housekeeping_commercial_cleaning",
+    "businessType": "housekeeping_commercial_cleaning",
+    "locationOrService": "urban service business with residential and commercial clients",
+    "locationContext": "urban service business with residential and commercial clients",
+    "ownerRole": "owner_operator",
+    "headcount": 13,
+    "businessHealth": "DISTRESSED"
+  },
+  "ownerGoals": {
+    "primaryGoal": "stop client loss, restore cash flow, modernize outdated operations, reduce complaints, and avoid collapse",
+    "topPainPoint": "commercial clients leaving while debt and overdue invoices climb",
+    "currentMonthlyRevenueBand": "5-10L",
+    "urgency": "critical"
+  },
+  "paymentCash": {
+    "cashRunwayMonths": 1,
+    "monthlyFixedCost": 540000,
+    "outstandingReceivables": 430000
+  },
+  "pricingBoundary": {
+    "maxDiscountPercent": 5,
+    "maxRefund": 0,
+    "refundPromiseAllowed": false,
+    "priceQuoteAllowed": false,
+    "allowedActions": ["call_customer", "send_whatsapp_template", "confirm_attendance", "dispatch_backup", "record_payment_followup"]
+  },
+  "employees": [
+    { "name": "Owner Deepak", "role": "owner", "designation": "Owner", "status": "active", "reliability": "medium", "isKeyPerson": true, "allowedTaskTypes": ["approve", "review_proof", "assign"], "authorityLimits": { "maxDiscountPercent": 100 }, "proofPermissions": ["review_high_risk"], "customerCommunication": true, "reportsTo": null, "note": "owner firefighting daily" },
+    { "name": "Ops Manager Rekha", "role": "operations_manager", "designation": "Operations Manager", "status": "active", "reliability": "medium", "isKeyPerson": true, "allowedTaskTypes": ["assign", "review_proof", "escalate"], "authorityLimits": { "maxDiscountPercent": 5 }, "proofPermissions": ["review_low_risk"], "customerCommunication": true, "reportsTo": "owner" },
+    { "name": "Supervisor Manoj", "role": "supervisor", "designation": "Supervisor", "status": "active", "reliability": "low", "isKeyPerson": true, "allowedTaskTypes": ["inspect", "assign", "escalate"], "authorityLimits": {}, "proofPermissions": ["review_low_risk"], "customerCommunication": false, "reportsTo": "operations_manager", "note": "overloaded supervisor" },
+    { "name": "Team Leader Salma", "role": "team_leader", "designation": "Team Leader", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["lead_team", "confirm_attendance"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "supervisor" },
+    { "name": "Cleaner Ramesh", "role": "cleaner_housekeeper", "designation": "Cleaner/Housekeeper", "status": "active", "reliability": "low", "isKeyPerson": false, "allowedTaskTypes": ["clean", "submit_proof"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "team_leader", "note": "unreliable cleaner with no-shows" },
+    { "name": "Deep Clean Specialist Farah", "role": "deep_cleaning_specialist", "designation": "Deep Cleaning Specialist", "status": "active", "reliability": "high", "isKeyPerson": false, "allowedTaskTypes": ["deep_clean", "submit_proof"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "team_leader" },
+    { "name": "Bath/Kitchen Specialist Gopal", "role": "bathroom_kitchen_specialist", "designation": "Bathroom/Kitchen Specialist", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["specialist_clean", "submit_proof"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "team_leader" },
+    { "name": "Field Coordinator Iqbal", "role": "runner_field_coordinator", "designation": "Runner/Field Coordinator", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["dispatch_backup", "coordinate"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": true, "reportsTo": "operations_manager" },
+    { "name": "Support Nisha", "role": "customer_support", "designation": "Customer Support", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["call_customer", "send_whatsapp_template"], "authorityLimits": { "maxDiscountPercent": 0 }, "proofPermissions": ["submit"], "customerCommunication": true, "reportsTo": "operations_manager" },
+    { "name": "Inventory Handler Suresh", "role": "inventory_supplies_handler", "designation": "Inventory/Supplies Handler", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["manage_stock"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "operations_manager" },
+    { "name": "Inspector Vikram", "role": "quality_inspector", "designation": "Quality Inspector", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["inspect", "flag_rework"], "authorityLimits": {}, "proofPermissions": ["submit", "review_low_risk"], "customerCommunication": false, "reportsTo": "supervisor" },
+    { "name": "Billing Staff Anjali", "role": "billing_collection_staff", "designation": "Billing/Collection Staff", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["bill", "payment_followup"], "authorityLimits": { "maxRefund": 0 }, "proofPermissions": ["submit"], "customerCommunication": true, "reportsTo": "operations_manager" },
+    { "name": "Trainee Pravin", "role": "cleaner_housekeeper", "designation": "New Trainee", "status": "active", "reliability": "low", "isKeyPerson": false, "allowedTaskTypes": ["clean_with_checklist"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "team_leader", "note": "needs checklist guidance" },
+    { "name": "Ex-Cleaner Dinesh", "role": "cleaner_housekeeper", "designation": "Suspended Cleaner", "status": "suspended", "reliability": "low", "isKeyPerson": false, "allowedTaskTypes": [], "authorityLimits": {}, "proofPermissions": [], "customerCommunication": false, "reportsTo": "team_leader", "note": "suspended; existing-session attack case" },
+    { "name": "Ex-Cleaner Sangeeta", "role": "cleaner_housekeeper", "designation": "Offboarded Cleaner", "status": "offboarded", "reliability": "low", "isKeyPerson": false, "allowedTaskTypes": [], "authorityLimits": {}, "proofPermissions": [], "customerCommunication": false, "reportsTo": "team_leader", "note": "offboarded; access must be denied" }
+  ],
+  "capacity": {
+    "dailyJobCapacity": 40,
+    "currentBacklog": 31,
+    "peakHours": ["06:00-10:00", "17:00-20:00"]
+  },
+  "customersOrders": [
+    { "customerSegment": "commercial", "orderValue": 18000, "channel": "recurring_contract", "date": "2026-06-20" },
+    { "customerSegment": "commercial", "orderValue": 22000, "channel": "recurring_contract", "date": "2026-06-18" },
+    { "customerSegment": "residential", "orderValue": 2500, "channel": "one_time", "date": "2026-06-17" },
+    { "customerSegment": "residential", "orderValue": 3200, "channel": "deep_clean", "date": "2026-06-15" },
+    { "customerSegment": "commercial", "orderValue": 15000, "channel": "recurring_contract", "date": "2026-06-12" },
+    { "customerSegment": "residential", "orderValue": 1800, "channel": "one_time", "date": "2026-06-10" }
+  ],
+  "sopInput": {
+    "taskType": "commercial_recurring_cleaning",
+    "currentSteps": ["owner assigns via WhatsApp", "team shows up", "no proof captured", "client complains later"]
+  },
+  "proofExamples": [
+    { "taskType": "deep_clean", "proofType": "before_after_image", "exampleDescription": "before/after of bathroom and kitchen, geo + time stamped" },
+    { "taskType": "attendance", "proofType": "checklist_completion", "exampleDescription": "site check-in with team roster confirmation" },
+    { "taskType": "rework", "proofType": "before_after_image", "exampleDescription": "re-clean evidence for complaint site" }
+  ],
+  "complaintHistory": [
+    { "issue": "missed corners and dust left after deep clean", "frequency": "weekly", "severity": "high" },
+    { "issue": "team arrived late / partial team", "frequency": "weekly", "severity": "high" },
+    { "issue": "no proof of completed work for commercial site", "frequency": "weekly", "severity": "high" },
+    { "issue": "rework required on bathrooms", "frequency": "weekly", "severity": "medium" }
+  ],
+  "marginTarget": 25,
+  "financials": {
+    "monthlyRevenue": 720000,
+    "monthlyDebtRepayment": 110000,
+    "monthlyPayroll": 430000,
+    "materialCost": 95000,
+    "travelCost": 70000,
+    "cashCollected": 410000,
+    "invoicesOverdue": 430000,
+    "grossMarginEstimate": 0.08,
+    "netCashShortfall": 130000,
+    "businessDebt": 1800000,
+    "clientChurnCost": 240000,
+    "reworkCost": 85000
+  },
+  "opsSignals": {
+    "revenueGrowing": false,
+    "repeatCustomersStrong": false,
+    "staffQualityStable": false,
+    "ownerFirefightingDaily": true,
+    "sopManagerLayerWorking": false,
+    "complaintsOrReworkRising": true,
+    "capacityStressed": true,
+    "profitImpactVerified": false,
+    "marginNotCostLinked": true,
+    "lostCommercialClients": 3,
+    "atRiskCommercialClients": 3,
+    "unknownSignals": ["true_gross_margin", "per_site_profitability"]
+  },
+  "processDefects": [
+    "no_digital_checklist", "no_before_after_proof", "no_site_specific_sop", "manual_whatsapp_assignment",
+    "no_escalation_sla", "no_proof_review_queue", "no_client_risk_score", "no_manager_dashboard",
+    "no_employee_task_dashboard", "no_payment_follow_up_rhythm", "no_rework_tracking", "no_contract_renewal_reminder"
+  ],
+  "datasetCounts": {
+    "commercialClients": 10, "residentialClients": 32, "recurringContracts": 8,
+    "lostCommercialClientsLast90d": 3, "atRiskCommercialClients": 3,
+    "complaints": 16, "reworkRecords": 12, "lateInvoices": 8, "attendanceFailures": 7, "missedOrDelayedJobs": 4,
+    "note": "counts are scenario parameters; the arrays above are representative samples that exercise each gate"
+  },
+  "scenarioExtensions": {
+    "lostClients": [
+      { "client": "TechPark Tower A", "reason": "quality + no proof", "monthlyValue": 60000 },
+      { "client": "Clinic Sunrise", "reason": "late team + complaints", "monthlyValue": 35000 },
+      { "client": "Cafe Chain (2 outlets)", "reason": "price not justified", "monthlyValue": 45000 }
+    ],
+    "atRiskClients": [
+      { "client": "Corporate Office Blue", "risk": "repeated complaints", "monthlyValue": 80000 },
+      { "client": "Gym FitZone", "risk": "missed SLA", "monthlyValue": 28000 },
+      { "client": "School Greenfield", "risk": "renewal due, no follow-up", "monthlyValue": 52000 }
+    ],
+    "lateInvoices": [
+      { "client": "Corporate Office Blue", "overdueDays": 65, "amount": 160000 },
+      { "client": "School Greenfield", "overdueDays": 50, "amount": 104000 }
+    ]
+  },
+  "requiredWorkflows": [
+    "commercial_client_loss_diagnosis", "daily_attendance_backup_dispatch", "standard_recurring_commercial_cleaning",
+    "deep_cleaning_before_after_proof", "complaint_and_rework", "late_invoice_payment_followup",
+    "staff_absence_escalation", "contract_renewal_at_risk_retention", "process_modernization_sop_update",
+    "business_progression_gate_under_stress"
+  ]
+}

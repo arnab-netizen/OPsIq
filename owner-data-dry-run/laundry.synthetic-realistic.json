@@ -1,0 +1,125 @@
+{
+  "metadata": {
+    "dataMode": "SYNTHETIC_REALISTIC",
+    "dataTruthStatus": "NOT_REAL_OWNER_DATA",
+    "sourceBasis": "research-informed scenario assumptions",
+    "allowedUse": ["dry-run testing", "simulation", "workflow validation", "owner-mode behavior testing"],
+    "forbiddenUse": ["real learning database", "real employee performance judgment", "real financial decision without owner review", "public SaaS proof", "real employee pilot proof"]
+  },
+  "businessProfile": {
+    "businessName": "Synthetic Laundry Owner Dry Run",
+    "industry": "laundry_dry_cleaning_pickup_delivery",
+    "businessType": "laundry_dry_cleaning_pickup_delivery",
+    "locationOrService": "urban Indian metro-style neighbourhood",
+    "locationContext": "urban Indian metro-style neighbourhood",
+    "ownerRole": "owner_operator",
+    "headcount": 12,
+    "businessModel": { "b2c": true, "b2b": true, "pickupDelivery": true, "walkIn": true }
+  },
+  "ownerGoals": {
+    "primaryGoal": "stabilize operations, improve repeat orders, reduce complaints, improve cash collection, and prepare controlled growth",
+    "topPainPoint": "inactive repeat customers and delivery/payment proof gaps",
+    "currentMonthlyRevenueBand": "5-10L",
+    "urgency": "medium"
+  },
+  "paymentCash": {
+    "cashRunwayMonths": 4,
+    "monthlyFixedCost": 420000,
+    "outstandingReceivables": 120000
+  },
+  "pricingBoundary": {
+    "maxDiscountPercent": 10,
+    "maxRefund": 0,
+    "refundPromiseAllowed": false,
+    "priceQuoteAllowed": false,
+    "allowedActions": ["call_customer", "send_whatsapp_template", "confirm_pickup", "confirm_delivery", "record_payment"]
+  },
+  "employees": [
+    { "name": "Owner Ravi", "role": "owner", "designation": "Owner", "status": "active", "reliability": "high", "isKeyPerson": true, "allowedTaskTypes": ["approve", "review_proof", "assign"], "authorityLimits": { "maxDiscountPercent": 100 }, "proofPermissions": ["review_high_risk"], "customerCommunication": true, "reportsTo": null },
+    { "name": "Manager Sunita", "role": "store_manager", "designation": "Store Manager", "status": "active", "reliability": "high", "isKeyPerson": true, "allowedTaskTypes": ["assign", "review_proof", "escalate"], "authorityLimits": { "maxDiscountPercent": 10 }, "proofPermissions": ["review_low_risk"], "customerCommunication": true, "reportsTo": "owner" },
+    { "name": "Counter Asha", "role": "counter_staff", "designation": "Counter Staff", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["call_customer", "record_intake"], "authorityLimits": { "maxDiscountPercent": 5 }, "proofPermissions": ["submit"], "customerCommunication": true, "reportsTo": "store_manager" },
+    { "name": "Telecaller Meena", "role": "telecaller", "designation": "Telecaller", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["call_customer", "send_whatsapp_template"], "authorityLimits": { "maxDiscountPercent": 5 }, "proofPermissions": ["submit"], "customerCommunication": true, "reportsTo": "store_manager" },
+    { "name": "Runner Imran", "role": "pickup_delivery_runner", "designation": "Pickup/Delivery Runner", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["confirm_pickup", "confirm_delivery", "record_payment"], "authorityLimits": { "maxRefund": 0 }, "proofPermissions": ["submit"], "customerCommunication": true, "reportsTo": "store_manager" },
+    { "name": "Sorter Babu", "role": "sorter_tagger", "designation": "Sorter/Tagger", "status": "active", "reliability": "high", "isKeyPerson": false, "allowedTaskTypes": ["sort", "tag"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "store_manager" },
+    { "name": "Washer Karim", "role": "washer", "designation": "Washer", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["wash"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "store_manager" },
+    { "name": "Dryer Operator Joy", "role": "dryer_operator", "designation": "Dryer Operator", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["dry"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "store_manager" },
+    { "name": "Presser Lata", "role": "presser_ironing", "designation": "Presser/Ironing Staff", "status": "active", "reliability": "high", "isKeyPerson": false, "allowedTaskTypes": ["press", "iron"], "authorityLimits": {}, "proofPermissions": ["submit"], "customerCommunication": false, "reportsTo": "store_manager" },
+    { "name": "QC Naveen", "role": "quality_checker", "designation": "Quality Checker", "status": "active", "reliability": "high", "isKeyPerson": false, "allowedTaskTypes": ["quality_check", "flag_rework"], "authorityLimits": {}, "proofPermissions": ["submit", "review_low_risk"], "customerCommunication": false, "reportsTo": "store_manager" },
+    { "name": "Cashier Pooja", "role": "cashier_billing", "designation": "Cashier/Billing Staff", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["bill", "record_payment"], "authorityLimits": { "maxRefund": 0 }, "proofPermissions": ["submit"], "customerCommunication": true, "reportsTo": "store_manager" },
+    { "name": "B2B Handler Vivek", "role": "b2b_account_handler", "designation": "B2B Account Handler", "status": "active", "reliability": "medium", "isKeyPerson": false, "allowedTaskTypes": ["call_customer", "manage_b2b_trial"], "authorityLimits": { "maxDiscountPercent": 8 }, "proofPermissions": ["submit"], "customerCommunication": true, "reportsTo": "owner" }
+  ],
+  "capacity": {
+    "dailyJobCapacity": 180,
+    "currentBacklog": 24,
+    "peakHours": ["08:00-11:00", "18:00-21:00"]
+  },
+  "customersOrders": [
+    { "customerSegment": "retail", "orderValue": 320, "channel": "walk_in", "date": "2026-06-20" },
+    { "customerSegment": "retail", "orderValue": 540, "channel": "pickup_delivery", "date": "2026-06-19" },
+    { "customerSegment": "retail", "orderValue": 210, "channel": "walk_in", "date": "2026-06-18" },
+    { "customerSegment": "b2b", "orderValue": 4200, "channel": "b2b_contract", "date": "2026-06-17" },
+    { "customerSegment": "retail", "orderValue": 380, "channel": "pickup_delivery", "date": "2026-06-16" },
+    { "customerSegment": "retail", "orderValue": 150, "channel": "walk_in", "date": "2026-06-15" },
+    { "customerSegment": "retail", "orderValue": 690, "channel": "pickup_delivery", "date": "2026-06-14" },
+    { "customerSegment": "b2b", "orderValue": 3100, "channel": "b2b_trial", "date": "2026-06-13" }
+  ],
+  "sopInput": {
+    "taskType": "inactive_customer_recovery",
+    "currentSteps": ["pull inactive list", "telecaller calls/WhatsApp", "log response", "tag re-activated"]
+  },
+  "proofExamples": [
+    { "taskType": "delivery", "proofType": "delivery_proof", "exampleDescription": "geo-tagged photo of handover + customer name tag" },
+    { "taskType": "payment", "proofType": "payment_confirmation", "exampleDescription": "UPI reference screenshot matching invoice amount" },
+    { "taskType": "rework", "proofType": "before_after_image", "exampleDescription": "stain before/after on flagged garment" }
+  ],
+  "complaintHistory": [
+    { "issue": "color bleed on white shirt", "frequency": "weekly", "severity": "medium" },
+    { "issue": "late delivery beyond promised slot", "frequency": "weekly", "severity": "medium" },
+    { "issue": "missing single sock", "frequency": "monthly", "severity": "low" }
+  ],
+  "marginTarget": 35,
+  "financials": {
+    "monthlyRevenue": 720000,
+    "monthlyDebtRepayment": 0,
+    "monthlyPayroll": 260000,
+    "materialCost": 110000,
+    "travelCost": 38000,
+    "cashCollected": 600000,
+    "invoicesOverdue": 120000,
+    "grossMarginEstimate": 0.35,
+    "netCashShortfall": -40000,
+    "averageOrderValue": 360,
+    "discountAmount": 22000,
+    "deliveryCost": 38000,
+    "refundComplaintCost": 9000
+  },
+  "opsSignals": {
+    "revenueGrowing": true,
+    "repeatCustomersStrong": true,
+    "staffQualityStable": true,
+    "ownerFirefightingDaily": false,
+    "sopManagerLayerWorking": true,
+    "complaintsOrReworkRising": false,
+    "capacityStressed": false,
+    "profitImpactVerified": true,
+    "marginNotCostLinked": false,
+    "lostCommercialClients": 0,
+    "atRiskCommercialClients": 0
+  },
+  "datasetCounts": {
+    "customers": 86, "orders": 168, "inactiveCustomers": 28, "repeatCustomers": 41,
+    "complaints": 11, "paymentPending": 7, "deliveryFailures": 4, "lostOrDamaged": 1,
+    "b2bTrials": 1, "machineDowntimeIncidents": 2,
+    "note": "counts are scenario parameters; the arrays above are representative samples that exercise each gate"
+  },
+  "scenarioExtensions": {
+    "lostOrDamaged": { "garment": "silk saree", "claimValue": 4500, "requiresOwnerEscalation": true },
+    "b2bTrial": { "account": "Hotel Marigold", "trialOrders": 3, "marginCheckRequired": true },
+    "machineDowntime": [{ "machine": "washer-2", "hours": 6 }, { "machine": "dryer-1", "hours": 3 }]
+  },
+  "requiredWorkflows": [
+    "inactive_customer_recovery", "delivery_payment_proof", "complaint_recovery",
+    "lost_damaged_escalation", "b2b_trial_account", "machine_downtime_capacity",
+    "rework_rewash", "daily_closing_report"
+  ]
+}
