@@ -20,6 +20,12 @@ interface RBIRow {
 }
 
 interface RBIDb {
+  clientAccount?: {
+    findUnique(args: {
+      where: { id: string };
+      select: { requireBusinessImpactAssessment: true };
+    }): Promise<{ requireBusinessImpactAssessment: boolean } | null>;
+  };
   recommendationBusinessImpact: {
     upsert(args: {
       where: { workspaceId_recommendationId: { workspaceId: string; recommendationId: string } };
@@ -101,4 +107,32 @@ export async function enforceBusinessImpactForPromotion(
 ): Promise<void> {
   const assessment = await getBusinessImpact(recommendationId, workspaceId, injected);
   assertBusinessImpactForPromotion(assessment, { recommendationId, workspaceId });
+}
+
+/** True when the workspace has opted into mandatory business-impact assessments. */
+export async function isBusinessImpactRequired(
+  workspaceId: string,
+  injected?: RBIDeps
+): Promise<boolean> {
+  const deps = injected ?? (await resolveDefaultDeps());
+  if (!deps.db.clientAccount) return false;
+  const row = await deps.db.clientAccount.findUnique({
+    where: { id: workspaceId },
+    select: { requireBusinessImpactAssessment: true },
+  });
+  return row?.requireBusinessImpactAssessment === true;
+}
+
+/**
+ * Backward-compatible promotion guard: enforces the gate ONLY when the workspace
+ * has opted in (default off → no behavior change for existing flows). Owner Mode
+ * workspaces enable the flag to get hard enforcement.
+ */
+export async function enforceBusinessImpactIfRequired(
+  recommendationId: string,
+  workspaceId: string,
+  injected?: RBIDeps
+): Promise<void> {
+  if (!(await isBusinessImpactRequired(workspaceId, injected))) return;
+  await enforceBusinessImpactForPromotion(recommendationId, workspaceId, injected);
 }

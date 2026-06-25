@@ -4,6 +4,8 @@ import {
   saveBusinessImpact,
   getBusinessImpact,
   enforceBusinessImpactForPromotion,
+  isBusinessImpactRequired,
+  enforceBusinessImpactIfRequired,
   type RBIDeps,
 } from "@/services/business-impact/recommendation-business-impact.service";
 import { composeBusinessImpact } from "@/domain/business-impact/business-impact-composer";
@@ -29,13 +31,19 @@ function assessment(recommendationId: string, workspaceId: string) {
 }
 
 /** In-memory store keyed by workspace+recommendation, enforcing the unique constraint. */
-function fakeDeps(): RBIDeps {
+function fakeDeps(requireFlagByWorkspace: Record<string, boolean> = {}): RBIDeps {
   const store = new Map<string, any>();
   const key = (w: string, r: string) => `${w}:${r}`;
   let n = 0;
   return {
     uuid: () => `uuid-${++n}`,
     db: {
+      clientAccount: {
+        findUnique: async (args: any) => {
+          const id = args.where.id;
+          return id in requireFlagByWorkspace ? { requireBusinessImpactAssessment: requireFlagByWorkspace[id] } : null;
+        },
+      },
       recommendationBusinessImpact: {
         upsert: async (args: any) => {
           const { workspaceId, recommendationId } = args.where.workspaceId_recommendationId;
@@ -77,6 +85,29 @@ describe("[module1] recommendation-business-impact service (DI, no DB)", () => {
   it("enforcement throws when no assessment is persisted", async () => {
     const deps = fakeDeps();
     await expect(enforceBusinessImpactForPromotion("rec-missing", "ws-1", deps)).rejects.toBeInstanceOf(BusinessImpactGateError);
+  });
+
+  it("isBusinessImpactRequired reflects the per-workspace flag (default off)", async () => {
+    expect(await isBusinessImpactRequired("ws-unset", fakeDeps())).toBe(false);
+    expect(await isBusinessImpactRequired("ws-off", fakeDeps({ "ws-off": false }))).toBe(false);
+    expect(await isBusinessImpactRequired("ws-on", fakeDeps({ "ws-on": true }))).toBe(true);
+  });
+
+  it("enforceBusinessImpactIfRequired is a NO-OP when the workspace has not opted in", async () => {
+    const deps = fakeDeps({ "ws-1": false });
+    // No assessment persisted, but flag off → promotion is not blocked.
+    await expect(enforceBusinessImpactIfRequired("rec-1", "ws-1", deps)).resolves.toBeUndefined();
+  });
+
+  it("enforceBusinessImpactIfRequired BLOCKS when opted in and no complete assessment exists", async () => {
+    const deps = fakeDeps({ "ws-1": true });
+    await expect(enforceBusinessImpactIfRequired("rec-missing", "ws-1", deps)).rejects.toBeInstanceOf(BusinessImpactGateError);
+  });
+
+  it("enforceBusinessImpactIfRequired PASSES when opted in and a complete assessment exists", async () => {
+    const deps = fakeDeps({ "ws-1": true });
+    await saveBusinessImpact(assessment("rec-1", "ws-1"), {}, deps);
+    await expect(enforceBusinessImpactIfRequired("rec-1", "ws-1", deps)).resolves.toBeUndefined();
   });
 
   it("upsert replaces the prior assessment (one per workspace+recommendation)", async () => {

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { enforceBusinessImpactIfRequired } from "@/services/business-impact/recommendation-business-impact.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -709,6 +710,11 @@ export async function updateRecommendationStatus(
   }
 
   if (input.status === "approved") {
+    // Module 1 governance gate: when the workspace opts in (default off), a
+    // complete, safe BusinessImpactAssessment must be persisted before a
+    // recommendation can be promoted. Fail-closed via BusinessImpactGateError.
+    await enforceBusinessImpactIfRequired(recommendationId, validatedWorkspaceId);
+
     const stateVerification = await verifyRecommendationState(
       recommendationId,
       userId,
