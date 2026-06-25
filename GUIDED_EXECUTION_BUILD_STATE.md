@@ -202,10 +202,21 @@ Last updated: 2026-06-25
   expired/wrong-scope templates, forbidden claims, unapproved AI drafts, and refund/discount
   promises unless boundary permits. 11 tests.
 
-## Next actions
-1. ✅ Slices 11/12/13/14/15/16/19/20 shipped; migration lane DB_PROVEN. cross-slice 3144 passing.
-2. Remaining: Slices 17/18 (laundry + housekeeping workflow libraries, 24+24 — content), UI routes,
-   Slices 21–27 (Business Context Intelligence, Progression Engine, trial pack, synthetic E2E).
+## Slices 17–23 notes
+- 17/18 (`workflow-library.ts`): 24 laundry + 24 housekeeping base templates with required fields;
+  validateWorkflowLibrary; personalize via Slice 16; never employee-visible directly.
+- 23 (`progression-engine.ts`): stages 0–10; classifyGrowth (revenue-only ≠ healthy; confidence +
+  missing data); evaluateProgressionRecommendation blocks expansion fail-closed on any weak gate.
+- 21 (`business-context.ts`): source trust tiers 1–5 + freshness; createBusinessOperatingContext;
+  KnowledgeUpdateCandidate never auto-promotes; assessComplianceClaim fails closed on missing
+  jurisdiction/source, blocks social-source regulation, caps stale confidence, requires review
+  warning for regulatory output.
+- 22 (`archetype-packs.ts`): laundry/housekeeping knowledge skeletons; missing data lowers
+  confidence; slot updates require a promoted candidate.
+
+## Status: Slices 3–23 implemented (domain/service), migration lane DB_PROVEN.
+Remaining: UI routes (presentation); Slices 24–27 (real-data trial pack, synthetic E2E, pilot
+readiness) — process/verification slices building on the now-complete governed-execution stack.
 2. UI routes (presentation): employee guidance route + owner/manager dashboard routes consuming the
    Slice 5 guards + guidance service.
 3. Slices 12–15 (outcome/quality/profit/attribution + unified learning gate) — verify/wire existing
