@@ -58,6 +58,8 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     });
 
     afterEach(async () => {
+      // FK-safe order: audit_events reference actor users, so remove them first.
+      await db.auditEvent.deleteMany({ where: { workspaceId } });
       await db.session.deleteMany({ where: { userId: { in: [employeeId, ownerId] } } });
       await db.workspaceMembership.deleteMany({ where: { workspaceId } });
       await db.user.deleteMany({ where: { id: { in: [employeeId, ownerId] } } });

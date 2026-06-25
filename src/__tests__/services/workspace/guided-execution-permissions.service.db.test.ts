@@ -41,6 +41,11 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)(
     });
 
     afterEach(async () => {
+      // FK-safe order: audit_events reference actor users; sessions reference users.
+      await db.auditEvent.deleteMany({ where: { workspaceId } });
+      await db.session.deleteMany({
+        where: { userId: { in: [ownerId, managerId] } },
+      });
       await db.userRoleAssignment.deleteMany({
         where: { userId: { in: [ownerId, managerId] } },
       });
