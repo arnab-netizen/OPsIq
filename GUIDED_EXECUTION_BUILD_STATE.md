@@ -83,8 +83,20 @@ Last updated: 2026-06-25
   (table needed; can't apply migration locally, P1001). FSM/service are the enforcement core the
   table + routes must use.
 
+## Slice 8 notes (proof system)
+- `proof.ts` (pure): 12-status proof FSM; fail-closed `planProofTransition` — assignee-only
+  submission, **human-reviewer-only** accept/reject/dispute (AI/system can only precheck or route
+  to NEEDS_HUMAN_REVIEW → AI can never final-accept), **rejection requires a reason**, owner-only
+  OVERRIDDEN_NOT_VERIFIED. `validateProofSubmission` (type match + required fields),
+  `isDuplicateFileHash`, `isProofClearedForCompletion` (completion gate: ACCEPTED/NOT_REQUIRED),
+  `requiresHumanReview` (high-risk types).
+- `proof.service.ts` (DI): `submitProof` (validate → authorize → tx status+audit, duplicate-flag),
+  `reviewProof` (authorize → tx status+audit guarded on status+workspace). **Failed proof-review
+  audit write prevents the final proof status update** (rule, DI-proven).
+- 24 local tests. tsc 0; eslint clean; cross-slice 3033 passing.
+- **MIGRATION_LANE_PENDING:** Prisma Proof table + [db] tests.
+
 ## Next actions
-1. Slice 8 — Proof Requirement / Submission / Review / Rejection / Resubmission: proof-status FSM
-   + duplicate-hash/required-field checks + reviewer authority (reuse Slice 4 PROOF_REVIEW_*),
-   pure + service; persistence MIGRATION_LANE_PENDING.
-2. Wire dashboard data sections + UI routes consuming the Slice 5 backbone once task/proof tables land.
+1. Wire dashboard data sections + UI routes consuming the Slice 5 backbone once task/proof tables land.
+2. Slice 9 (employee blocker/clarification/escalation) — escalation routing + SLA (pure + service).
+3. The big MIGRATION_LANE batch (Slices 3B/7/8 tables) when a DB-capable apply lane is available.

@@ -306,6 +306,10 @@ export const AUDIT_EVENTS = {
   TASK_ASSIGNED: "task.assigned",
   TASK_STATUS_CHANGED: "task.status_changed",
 
+  // Proof requirement / submission / review (Slice 8)
+  PROOF_SUBMITTED: "proof.submitted",
+  PROOF_REVIEWED: "proof.reviewed",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
