@@ -177,8 +177,20 @@ Last updated: 2026-06-25
   dependency. 16 local tests (incl. all Addendum G named scenarios). tsc 0; eslint clean; cross 3099.
 - The gate is the ONLY learning-candidate path (no UI/API/AI/job may bypass it).
 
+## Slices 12/13/14 notes (assessors feeding the learning gate)
+- `outcome-assessment.ts` (12): `assessOutcome` → `OutcomeStatus`. Task completion ALONE never
+  verifies (no owner verification → UNVERIFIED); window/data/dispute gates.
+- `quality-assessment.ts` (13): `assessImplementationQuality` → `ImplementationQualityStatus`.
+  Quality, NOT discipline (`EMITS_DISCIPLINARY_RECOMMENDATION = false`); boundary breach →
+  INVALID_EXECUTION; external blocker can lift a late-but-good execution.
+- `profit-assessment.ts` (14): `assessProfitImpact` → basis + `ProfitImpactConfidence`. No claim
+  without basis; revenue-only never treated as profit (net null); defaults disclosed + not
+  safe-for-learning; cash collected separate from cash pending/revenue; profit-negative flagged.
+- 17 local tests. tsc 0; eslint clean; cross-slice 3116 passing. These produce the exact inputs the
+  Slice 15 gate consumes — the outcome→quality→profit→attribution→learning chain is now complete.
+
 ## Next actions
-1. ✅ MIGRATION_LANE DB_PROVEN (CI 28150592285); Slice 10 proper + Slice 11 + Slice 15 shipped.
+1. ✅ Slices 11/12/13/14/15 shipped; migration lane DB_PROVEN.
 2. UI routes (presentation): employee guidance route + owner/manager dashboard routes consuming the
    Slice 5 guards + guidance service.
 3. Slices 12–15 (outcome/quality/profit/attribution + unified learning gate) — verify/wire existing
