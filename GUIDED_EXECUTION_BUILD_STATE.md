@@ -32,7 +32,15 @@ Last updated: 2026-06-25
   lacks `actions:write` (403). → GITHUB_WORKFLOW_DISPATCH_BLOCKED; push lane used instead.
 - First CI runs failed on (a) lint-ratchet (2 unused-var warnings — fixed in `5cf711d`) and
   (b) the blocking suite due to FK-unsafe cleanup in my authored [db] tests (fixed in `40023a7`).
-- **[db] proof: DB_TESTS_AUTHORED_CI_PENDING** — verifying on run for `40023a7`.
+- **[db] proof: DB_PROVEN_BY_GITHUB_POSTGRES_SERVICE** — CI run `28144620840` (commit `40023a7`),
+  job `build-and-test (20.x)`: tsc ✓, prisma validate ✓, `migrate deploy` ✓, build ✓, and the
+  maintained suite ran **10842 passed / 13 skipped** on real postgres:16. My Slice 3 + Slice 4
+  `[db]` tests are in the passing set (no employee-lifecycle/permissions/boundary failures).
+- The job's overall `failure` conclusion is **FAIL_UNRELATED_PREEXISTING**: the only failing test
+  is `src/__tests__/infra/load-testing/mock-load-tester.test.ts > "should simulate errors"`
+  (`expected 0 to be greater than 0`) — a randomized load-sim assertion (100 reqs @ ~5% error;
+  P(0 errors)=0.95^100≈0.6%/run), last touched in `4444508` (Module 12), unrelated to this build.
+  Not fixed here (out of scope, Rule 4); a re-run clears it ~99.4% of the time.
 
 ## Blocked
 - **Slice 3B (richer employee profile fields + invite/accept): MIGRATION_LANE_BLOCKED.**
