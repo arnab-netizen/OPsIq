@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { enforceBusinessImpactIfRequired } from "@/services/business-impact/recommendation-business-impact.service";
 import { enforceInputQualityIfRequired } from "@/services/owner-mode/recommendation-input-quality.service";
+import { enforceConfidenceIfRequired } from "@/services/decision-confidence/recommendation-confidence.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -721,6 +722,12 @@ export async function updateRecommendationStatus(
     // or missing evidence; compliance routes to professional review. Same opt-in
     // flag; fail-closed via InputQualityGateError.
     await enforceInputQualityIfRequired(recommendationId, validatedWorkspaceId);
+
+    // Module 3 governance gate: recommendation confidence. Composes the M1/M2
+    // governance signals into a confidence classification; low/very-low or unsafe
+    // recommendations cannot auto-promote. Same opt-in flag; fail-closed via
+    // ConfidenceGateError.
+    await enforceConfidenceIfRequired(recommendationId, validatedWorkspaceId);
 
     const stateVerification = await verifyRecommendationState(
       recommendationId,

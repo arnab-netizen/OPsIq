@@ -71,6 +71,22 @@ export function classifyRecommendationConfidence(input: ConfidenceGateInput): Co
   }
 }
 
+/**
+ * Derive a confidence level from a business-impact evidence-confidence label
+ * (Module 1). Lets the confidence gate reuse the governance evidence signal
+ * instead of fabricating engine inputs. Unknown → very_low (fail-closed).
+ */
+export function deriveConfidenceLevelFromEvidence(evidenceConfidence: string | null | undefined): ConfidenceLevel {
+  switch (evidenceConfidence) {
+    case "VERIFIED": return "very_high";
+    case "STRONG": return "high";
+    case "MODERATE": return "moderate";
+    case "WEAK": return "low";
+    case "INSUFFICIENT":
+    default: return "very_low";
+  }
+}
+
 /** Thrown when a recommendation's confidence is too low/unsafe to promote. */
 export class ConfidenceGateError extends Error {
   readonly code = "CONFIDENCE_GATE_BLOCKED";
