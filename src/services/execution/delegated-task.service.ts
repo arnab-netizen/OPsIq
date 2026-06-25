@@ -14,6 +14,7 @@
  */
 
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { v4 as uuid } from "uuid";
 import {
   DelegatedTask,
   DelegatedTaskStatus,
@@ -107,6 +108,7 @@ export async function applyTaskTransition(
     // change, so state never mutates without its audit record (Slice 7 rule 4).
     await tx.auditEvent.create({
       data: {
+        id: uuid(),
         workspaceId: task.workspaceId,
         eventName: AUDIT_EVENTS.TASK_STATUS_CHANGED,
         actorId,

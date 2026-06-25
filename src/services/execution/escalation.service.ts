@@ -9,6 +9,7 @@
  */
 
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { v4 as uuid } from "uuid";
 import {
   BlockerType,
   EscalationContext,
@@ -104,6 +105,7 @@ export async function raiseBlocker(
     });
     await tx.auditEvent.create({
       data: {
+        id: uuid(),
         workspaceId: command.workspaceId,
         eventName: AUDIT_EVENTS.ESCALATION_RAISED,
         actorId: command.createdByUserId,
@@ -170,6 +172,7 @@ export async function resolveEscalation(
     }
     await tx.auditEvent.create({
       data: {
+        id: uuid(),
         workspaceId: command.workspaceId,
         eventName: AUDIT_EVENTS.ESCALATION_RESOLVED,
         actorId: command.resolvedBy,

@@ -120,9 +120,26 @@ Last updated: 2026-06-25
 - Deferred (Slice 10 proper): actual AI guidance generation + AI-ledger write at the call site +
   owner guided-choice UI/routes (needs AI copilot wiring + frontend).
 
+## MIGRATION_LANE batch (Slices 3B/7/8/9 persistence)
+- Additive migration `20260625120000_owner_mode_execution_tables` (engine-generated via
+  `migrate diff`, idempotent `IF NOT EXISTS`): 11 new columns on `workspace_memberships` (3B
+  profile fields) + 6 new tables `work_orders`, `delegated_tasks`, `task_status_history`,
+  `proof_requirements`, `proofs`, `escalations`. No drops/renames; existing models untouched
+  except additive WorkspaceMembership columns.
+- Services bound to real tables (DI delegate names already match Prisma accessors:
+  `delegatedTask`/`proof`/`escalation`). Fixed latent bug: Slice 7/8/9 audit writes now set
+  `id: uuid()` (AuditEvent.id has no DB default). Lifecycle now stamps `suspendedAt`/`offboardedAt`.
+- `prisma validate` PASS; `prisma generate` OK; `migrate status` NOT_RUN (P1001, local DB
+  unreachable) → applied via CI `migrate deploy` on postgres:16.
+- `execution-persistence.db.test.ts`: 5 [db] tests covering the 12 required points (profile-field
+  persistence + isolation, suspend/offboard timestamps + unassignable, task boundary-binding
+  persistence + cross-employee access denial + isolation, proof submit/review/duplicate/
+  reject-needs-reason/resubmit, escalation routing/severity/SLA persistence + owner-queue + isolation).
+- Local: tsc 0, eslint clean, cross-slice 3061 passing ([db] skipped locally). **DB proof: pending
+  CI run for this commit.**
+
 ## Next actions
-1. The MIGRATION_LANE batch (Slices 3B/7/8/9 Prisma tables + [db] tests) when a DB-capable apply
-   lane is available (local DB is P1001-unreachable; CI postgres lane can apply migrations).
+1. Confirm CI `migrate deploy` + execution-persistence [db] tests green → DB_PROVEN.
 2. Wire `gateEmployeeGuidance` + `containUntrusted` into the governed AI copilot call site (Slice 10
    proper) so every generated employee instruction passes the gate and writes an AI-ledger record.
 3. Owner/manager/employee UI routes consuming the Slice 5 backbone; Slices 11–20 per the build plan.

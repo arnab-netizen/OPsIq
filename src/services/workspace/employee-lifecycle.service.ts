@@ -168,6 +168,9 @@ async function applyTransition(
   };
   if (plan.removedAt === "set") membershipData.removedAt = now;
   else if (plan.removedAt === "clear") membershipData.removedAt = null;
+  // Slice 3B lifecycle timestamps (additive columns).
+  if (action === EmployeeLifecycleAction.SUSPEND) membershipData.suspendedAt = now;
+  if (action === EmployeeLifecycleAction.OFFBOARD) membershipData.offboardedAt = now;
 
   // Atomic security pair: status change + (conditional) session revocation.
   const revokedSessionCount = await deps.db.$transaction(async (tx) => {

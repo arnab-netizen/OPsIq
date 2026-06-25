@@ -10,6 +10,7 @@
  */
 
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { v4 as uuid } from "uuid";
 import {
   ProofActor,
   ProofRequirement,
@@ -131,6 +132,7 @@ export async function submitProof(
     }
     await tx.auditEvent.create({
       data: {
+        id: uuid(),
         workspaceId: command.workspaceId,
         eventName: AUDIT_EVENTS.PROOF_SUBMITTED,
         actorId: submission.submittedByUserId,
@@ -199,6 +201,7 @@ export async function reviewProof(
     // proof status update (Slice 8 rule).
     await tx.auditEvent.create({
       data: {
+        id: uuid(),
         workspaceId: command.workspaceId,
         eventName: AUDIT_EVENTS.PROOF_REVIEWED,
         actorId: command.actorId,
