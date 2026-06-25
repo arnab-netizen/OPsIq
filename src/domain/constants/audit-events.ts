@@ -287,6 +287,11 @@ export const AUDIT_EVENTS = {
   // Governed AI Copilot (advisory-only; one event per accepted/rejected AI call)
   AI_CALL_RECORDED: "ai.call_recorded",
 
+  // Approved Execution Boundary v2 (owner-approved guided-execution envelope)
+  EXECUTION_BOUNDARY_CREATED: "execution.boundary_created",
+  EXECUTION_BOUNDARY_SUPERSEDED: "execution.boundary_superseded",
+  EXECUTION_BOUNDARY_VALIDATION_BLOCKED: "execution.boundary_validation_blocked",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
