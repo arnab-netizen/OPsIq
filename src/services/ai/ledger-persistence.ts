@@ -20,9 +20,10 @@
  */
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { logger } from "@/infra/logger";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { AiValidatorStatus } from "./validator";
-import type { AiCallLedgerEntry, AiCallLedgerSink } from "./copilot";
+import { setAiCallLedgerSink, type AiCallLedgerEntry, type AiCallLedgerSink } from "./copilot";
 
 export const AI_CALL_RECORDED_EVENT = AUDIT_EVENTS.AI_CALL_RECORDED;
 
@@ -165,8 +166,13 @@ const inFlight = new Set<Promise<unknown>>();
 export function createAuditEventLedgerSink(): AiCallLedgerSink {
   return (entry: AiCallLedgerEntry) => {
     const promise = persistAiCallLedgerEntry(entry).catch((error: unknown) => {
-      // Audit mirror: never break the advisory AI call because durable persistence failed.
-      console.error("AI ledger persistence failed:", error);
+      // Audit mirror, fail-safe: never break the advisory AI call because durable
+      // persistence failed. The failure (incl. a fail-closed secret-scan rejection)
+      // is recorded/observable via the governed logger, never silently dropped.
+      logger.error(
+        "AI ledger persistence failed",
+        error instanceof Error ? error : new Error(String(error))
+      );
     });
     inFlight.add(promise);
     void promise.finally(() => inFlight.delete(promise));
@@ -176,6 +182,18 @@ export function createAuditEventLedgerSink(): AiCallLedgerSink {
 /** Await all in-flight sink writes (graceful shutdown / test determinism). */
 export async function flushAiLedgerPersistence(): Promise<void> {
   await Promise.allSettled([...inFlight]);
+}
+
+/**
+ * Wire durable AI ledger persistence into the governed copilot. Called once by the
+ * server composition root (src/instrumentation.ts) at Node startup, so every governed
+ * AI call recorded thereafter is mirrored to the AuditEvent table. Idempotent — re-registers
+ * the same audit-event sink. The sink is fail-safe (a persistence failure is logged and
+ * observable but never breaks the advisory AI path) and fail-closed for secrets
+ * (assertNoSecrets blocks any credential before a write).
+ */
+export function registerAiLedgerPersistence(): void {
+  setAiCallLedgerSink(createAuditEventLedgerSink());
 }
 
 // ── Internal / owner-admin read paths (workspace-scoped; never operator-exposed) ──

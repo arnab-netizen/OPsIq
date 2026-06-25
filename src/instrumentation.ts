@@ -28,6 +28,19 @@ export async function register() {
       console.error(`✗ [INSTRUMENTATION] Startup failed: ${msg}`);
       // Don't exit - allow requests to fail gracefully
     }
+
+    // Wire durable AI ledger persistence (advisory copilot → AuditEvent) once, Node-only.
+    // Fail-open: a wiring hiccup must never block server boot. The sink itself is
+    // fail-safe (a persistence failure is logged, never breaks the advisory AI path)
+    // and fail-closed for secrets (assertNoSecrets blocks any credential before write).
+    try {
+      const { registerAiLedgerPersistence } = await import("@/services/ai/ledger-persistence");
+      registerAiLedgerPersistence();
+      console.log("✓ [INSTRUMENTATION] AI ledger persistence sink registered");
+    } catch (error) {
+      const msg = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage;
+      console.error(`✗ [INSTRUMENTATION] AI ledger sink registration failed: ${msg}`);
+    }
   }
 }
 

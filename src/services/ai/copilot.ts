@@ -74,6 +74,10 @@ let ledgerSink: AiCallLedgerSink | null = null;
 export function setAiCallLedgerSink(sink: AiCallLedgerSink | null): void {
   ledgerSink = sink;
 }
+/** Whether a durable persistence sink is currently registered (runtime introspection / tests). */
+export function hasAiCallLedgerSink(): boolean {
+  return ledgerSink !== null;
+}
 
 /** Deterministic FNV-1a hash so the ledger can reference output without storing it. */
 function hashPayload(value: unknown): string {
