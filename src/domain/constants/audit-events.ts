@@ -298,6 +298,10 @@ export const AUDIT_EVENTS = {
   EMPLOYEE_OFFBOARDED: "employee.offboarded",
   EMPLOYEE_SESSIONS_REVOKED: "employee.sessions_revoked",
 
+  // Explicit guided-execution permission grants (Slice 4)
+  PERMISSION_GRANTED: "permission.granted",
+  PERMISSION_REVOKED: "permission.revoked",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
