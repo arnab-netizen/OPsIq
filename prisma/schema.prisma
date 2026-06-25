@@ -4294,6 +4294,26 @@ model DelegatedTask {
   @@map("delegated_tasks")
 }
 
+/// Module 1 — persisted governance BusinessImpactAssessment for a recommendation.
+/// Additive, workspace-scoped, no FK (mirrors DelegatedTask). The full composed
+/// assessment is stored as JSON; lean_classification + evidence_confidence are
+/// extracted for queryability. One assessment per (workspace, recommendation).
+model RecommendationBusinessImpact {
+  id                 String   @id @db.Uuid
+  workspaceId        String   @db.Uuid @map("workspace_id")
+  recommendationId   String   @db.Uuid @map("recommendation_id")
+  leanClassification String   @map("lean_classification")
+  evidenceConfidence String   @map("evidence_confidence")
+  assessment         Json
+  createdByUserId    String?  @db.Uuid @map("created_by_user_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, recommendationId])
+  @@index([workspaceId])
+  @@map("recommendation_business_impacts")
+}
+
 model TaskStatusHistory {
   id          String   @id @db.Uuid
   workspaceId String   @db.Uuid @map("workspace_id")
