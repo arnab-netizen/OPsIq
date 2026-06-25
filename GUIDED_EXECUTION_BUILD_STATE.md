@@ -156,9 +156,23 @@ Last updated: 2026-06-25
   guards (`requireDashboardAccess`/`scopedResponse`/`requireTaskAccess`) + the guidance service.
   Backbone guards + call-site service are built and proven; routes are wiring.
 
+## Slice 11 notes (AI proof precheck)
+- `proof-precheck.ts` (pure): `computeProofPrecheck` (7 outcomes: PASS_PRELIMINARY / FAIL_MISSING /
+  FAIL_WRONG_FORMAT / FAIL_INCONSISTENT / NEEDS_OWNER_REVIEW / POSSIBLE_DUPLICATE /
+  POSSIBLE_TAMPER_RISK) from typed fields only (notes never consulted); `mapPrecheckToProofStatus`
+  codomain is strictly {AI_PRECHECK_PASSED, AI_PRECHECK_FAILED, NEEDS_HUMAN_REVIEW} — **ACCEPTED is
+  unreachable from a precheck**; high-risk types → NEEDS_HUMAN_REVIEW.
+- `proof-precheck.service.ts` (DI): `runProofPrecheck` advances SUBMITTED→target via a SYSTEM-role
+  transition (proof FSM forbids SYSTEM→ACCEPTED), tx-guarded, writing a durable AI-ledger record
+  (`ai_proof_precheck.recorded`, finalAccept:false). 15 local tests. tsc 0; eslint clean; cross 3083.
+
 ## Next actions
-1. ✅ Done: CI `migrate deploy` + execution-persistence [db] tests green → DB_PROVEN.
-2. Slice 10 proper guidance call-site shipped (this commit); CI verifies the guidance-ledger [db].
+1. ✅ MIGRATION_LANE DB_PROVEN (CI 28150592285); Slice 10 proper + Slice 11 shipped.
+2. UI routes (presentation): employee guidance route + owner/manager dashboard routes consuming the
+   Slice 5 guards + guidance service.
+3. Slices 12–15 (outcome/quality/profit/attribution + unified learning gate) — verify/wire existing
+   `src/domain/owner-mode/` learning-eligibility + outcome-tracking; Slices 16–20 (SOP/workflows/
+   capacity/comms).
 2. Wire `gateEmployeeGuidance` + `containUntrusted` into the governed AI copilot call site (Slice 10
    proper) so every generated employee instruction passes the gate and writes an AI-ledger record.
 3. Owner/manager/employee UI routes consuming the Slice 5 backbone; Slices 11–20 per the build plan.

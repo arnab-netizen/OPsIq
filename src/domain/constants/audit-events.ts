@@ -318,6 +318,9 @@ export const AUDIT_EVENTS = {
   EMPLOYEE_GUIDANCE_GENERATED: "employee_guidance.generated",
   EMPLOYEE_GUIDANCE_BLOCKED: "employee_guidance.blocked",
 
+  // AI proof precheck (Slice 11 — advisory only; never final-accepts)
+  AI_PROOF_PRECHECK_RECORDED: "ai_proof_precheck.recorded",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
