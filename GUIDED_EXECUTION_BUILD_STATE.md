@@ -189,8 +189,23 @@ Last updated: 2026-06-25
 - 17 local tests. tsc 0; eslint clean; cross-slice 3116 passing. These produce the exact inputs the
   Slice 15 gate consumes — the outcome→quality→profit→attribution→learning chain is now complete.
 
+## Slices 16/19/20 notes
+- Slice 16 (`sop.ts`): two-layer BaseWorkflowTemplate / PersonalizedWorkflowInstance;
+  `assessSopCompleteness` → SopConfidence (missing role/proof/escalation/outcome/trigger/boundary
+  ⇒ LOW_CONFIDENCE or NEEDS_OWNER_INPUT, never certain); `personalizeWorkflow`/`nextSopVersion`
+  (immutable versioning); `toEmployeeSopView` throws on base templates + excludes owner-only fields
+  (profit metric, business context, boundary id). 7 tests.
+- Slice 19 (`operational-capacity.ts`): GREEN/YELLOW/RED/UNKNOWN + burden levels; express allowed
+  only on GREEN or owner/manager exception (else approval required, fail-closed); proof burden
+  scales with risk (high-risk complaint/lost/payment → STRONG). 10 tests.
+- Slice 20 (`customer-comms.ts`): fail-closed message control; MVP TEMPLATE_ONLY; blocks
+  expired/wrong-scope templates, forbidden claims, unapproved AI drafts, and refund/discount
+  promises unless boundary permits. 11 tests.
+
 ## Next actions
-1. ✅ Slices 11/12/13/14/15 shipped; migration lane DB_PROVEN.
+1. ✅ Slices 11/12/13/14/15/16/19/20 shipped; migration lane DB_PROVEN. cross-slice 3144 passing.
+2. Remaining: Slices 17/18 (laundry + housekeeping workflow libraries, 24+24 — content), UI routes,
+   Slices 21–27 (Business Context Intelligence, Progression Engine, trial pack, synthetic E2E).
 2. UI routes (presentation): employee guidance route + owner/manager dashboard routes consuming the
    Slice 5 guards + guidance service.
 3. Slices 12–15 (outcome/quality/profit/attribution + unified learning gate) — verify/wire existing

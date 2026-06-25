@@ -325,6 +325,9 @@ export const AUDIT_EVENTS = {
   CUSTOMER_MESSAGE_SENT: "customer_message.sent",
   CUSTOMER_MESSAGE_BLOCKED: "customer_message.blocked",
 
+  // Personalized SOP / workflow engine (Slice 16)
+  SOP_VERSION_APPROVED: "sop.version_approved",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
