@@ -33,14 +33,24 @@ export interface AiCallLedgerEntry {
   modelName: string;
   promptVersion: string;
   schemaVersion: string;
+  /** Deterministic hash of the (workspace-scoped) input context — never the raw content. */
+  inputContextHash: string;
+  /** Closed set of evidence/source ids the call was allowed to cite — references only. */
+  sourceIds: string[];
   /** Hash of the raw model payload — never the raw content itself. */
   outputHash: string;
   validatorResult: AiValidatorStatus;
   accepted: boolean;
   latencyMs: number;
   tokensUsed?: number;
+  /** Provider cost estimate, when the provider reports it. */
+  costEstimate?: number;
   retryCount: number;
   failureReason?: string;
+  /** Governed-record references, set only when the call is tied to one (advisory linkage only). */
+  decisionId?: string;
+  actionId?: string;
+  outcomeId?: string;
   createdAt: string;
 }
 
@@ -50,6 +60,23 @@ export function getAiCallLedger(): ReadonlyArray<AiCallLedgerEntry> {
 }
 export function clearAiCallLedger(): void {
   LEDGER.length = 0;
+}
+
+/**
+ * Optional persistence sink. When registered (by the runtime/trial bootstrap), every
+ * recorded ledger entry is mirrored to durable storage (the AuditEvent table) for
+ * real-owner-data trial readiness. The advisory AI path NEVER blocks on or fails
+ * because of the sink — persistence is an audit mirror, not a gate. Unset by default
+ * so keyless unit tests stay DB-free.
+ */
+export type AiCallLedgerSink = (entry: AiCallLedgerEntry) => void;
+let ledgerSink: AiCallLedgerSink | null = null;
+export function setAiCallLedgerSink(sink: AiCallLedgerSink | null): void {
+  ledgerSink = sink;
+}
+/** Whether a durable persistence sink is currently registered (runtime introspection / tests). */
+export function hasAiCallLedgerSink(): boolean {
+  return ledgerSink !== null;
 }
 
 /** Deterministic FNV-1a hash so the ledger can reference output without storing it. */
@@ -92,6 +119,14 @@ export interface RunTaskOptions {
 
 function record(entry: AiCallLedgerEntry): AiCallLedgerEntry {
   LEDGER.push(entry);
+  if (ledgerSink) {
+    try {
+      ledgerSink(entry);
+    } catch {
+      // Persistence is an audit MIRROR; an advisory AI call must never fail because
+      // the sink threw. The in-memory ledger remains the authoritative in-process record.
+    }
+  }
   return entry;
 }
 
@@ -118,6 +153,8 @@ export async function runGovernedAiTask<T>(
     riskLevel: context.riskLevel,
     promptVersion: opts.promptVersion,
     schemaVersion: opts.schemaVersion,
+    inputContextHash: hashPayload(context),
+    sourceIds: [...context.allowedEvidenceIds],
     createdAt: now,
   };
 
@@ -202,6 +239,8 @@ export async function runMissingQuestionTask(
     riskLevel: context.riskLevel,
     promptVersion,
     schemaVersion,
+    inputContextHash: hashPayload(context),
+    sourceIds: [...context.allowedEvidenceIds],
     createdAt: now,
   };
 
