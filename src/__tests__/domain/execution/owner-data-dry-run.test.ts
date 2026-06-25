@@ -78,6 +78,28 @@ describe("[slice26] dry-run readiness — fail closed", () => {
     expect(r.uncoveredDimensions).toHaveLength(0);
   });
 
+  it("a structurally-present but BLANK pack is fail-closed BLOCKED (no false READY)", () => {
+    const blank: TrialPackInput = {
+      businessProfile: { businessName: "", industry: "", locationOrService: "", ownerRole: "", headcount: 0 },
+      ownerGoals: { primaryGoal: "", topPainPoint: "", currentMonthlyRevenueBand: "", urgency: "" },
+      paymentCash: { cashRunwayMonths: 0, monthlyFixedCost: 0, outstandingReceivables: 0 },
+      pricingBoundary: { maxDiscountPercent: 0, maxRefund: 0, refundPromiseAllowed: false, priceQuoteAllowed: false, allowedActions: [] },
+      employees: [{ name: "", role: "", reliability: "", isKeyPerson: false }],
+      capacity: { dailyJobCapacity: 0, currentBacklog: 0, peakHours: [] },
+    };
+    const r = assessDryRunReadiness(blank);
+    expect(r.ready).toBe(false);
+    // Empty strings/arrays in required fields are not satisfied; numeric 0 alone isn't enough.
+    expect(r.blockingGaps.map((g) => g.section)).toEqual(
+      expect.arrayContaining(["businessProfile", "ownerGoals", "pricingBoundary", "employees", "capacity"])
+    );
+  });
+
+  it("numeric zero counts as a provided value (0 is valid, not missing)", () => {
+    const r = assessDryRunReadiness(completeInput({ paymentCash: { cashRunwayMonths: 0, monthlyFixedCost: 0, outstandingReceivables: 0 } }));
+    expect(r.blockingGaps.map((g) => g.section)).not.toContain("paymentCash");
+  });
+
   it("a single missing blocking section blocks the dry run and flags its dimension", () => {
     const r = assessDryRunReadiness(completeInput({ pricingBoundary: undefined }));
     expect(r.ready).toBe(false);

@@ -175,12 +175,40 @@ export interface DryRunReadiness {
   nextActions: string[];
 }
 
-function isSectionPresent(input: TrialPackInput, section: keyof TrialPackInput): boolean {
-  const v = input[section];
+/** A single value counts as present if it is non-null and not an empty string/array. Numeric 0 is valid. */
+function valuePresent(v: unknown): boolean {
   if (v == null) return false;
   if (Array.isArray(v)) return v.length > 0;
-  if (typeof v === "string") return v.length > 0;
+  if (typeof v === "string") return v.trim().length > 0;
   return true;
+}
+
+/**
+ * Fail-closed section check: a section is satisfied only when it is present AND
+ * its named required fields are non-empty. A structurally-present-but-blank
+ * section (e.g. an intake template with empty strings) is NOT satisfied — so a
+ * blank pack can never report READY.
+ */
+function isSectionSatisfied(input: TrialPackInput, item: OwnerDataChecklistItem): boolean {
+  const v = input[item.section];
+  if (v == null) return false;
+
+  if (Array.isArray(v)) {
+    if (v.length === 0) return false;
+    return v.every(
+      (el) =>
+        el != null &&
+        typeof el === "object" &&
+        item.requiredFields.every((f) => valuePresent((el as Record<string, unknown>)[f]))
+    );
+  }
+
+  if (typeof v === "object") {
+    return item.requiredFields.every((f) => valuePresent((v as Record<string, unknown>)[f]));
+  }
+
+  // Scalar section (e.g. marginTarget): the value itself must be present.
+  return valuePresent(v);
 }
 
 /**
@@ -193,7 +221,7 @@ export function assessDryRunReadiness(input: TrialPackInput): DryRunReadiness {
   const nonBlockingGaps: OwnerDataChecklistItem[] = [];
 
   for (const item of OWNER_DATA_INTAKE_CHECKLIST) {
-    if (isSectionPresent(input, item.section)) continue;
+    if (isSectionSatisfied(input, item)) continue;
     if (item.blocking) blockingGaps.push(item);
     else nonBlockingGaps.push(item);
   }
@@ -204,7 +232,7 @@ export function assessDryRunReadiness(input: TrialPackInput): DryRunReadiness {
   );
   const coveredDimensions = new Set(
     OWNER_DATA_INTAKE_CHECKLIST.filter(
-      (i) => i.blocking && isSectionPresent(input, i.section)
+      (i) => i.blocking && isSectionSatisfied(input, i)
     ).map((i) => i.dimension)
   );
   const uncoveredDimensions = [...dimensionsNeedingBlocking].filter(
