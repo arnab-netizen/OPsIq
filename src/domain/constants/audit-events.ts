@@ -321,6 +321,10 @@ export const AUDIT_EVENTS = {
   // AI proof precheck (Slice 11 — advisory only; never final-accepts)
   AI_PROOF_PRECHECK_RECORDED: "ai_proof_precheck.recorded",
 
+  // Customer communication control (Slice 20)
+  CUSTOMER_MESSAGE_SENT: "customer_message.sent",
+  CUSTOMER_MESSAGE_BLOCKED: "customer_message.blocked",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
