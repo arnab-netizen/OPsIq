@@ -108,9 +108,21 @@ Last updated: 2026-06-25
   audit rolls back). 19 local tests. tsc 0; eslint clean; cross-slice 3052 passing.
 - **MIGRATION_LANE_PENDING:** Prisma Escalation table + [db] tests.
 
+## Slice 10 notes (guidance gating backbone — safety core)
+- `guidance-gating.ts` (pure): `gateEmployeeGuidance` makes the Slice 6 boundary validator the
+  enforceable gate — guidance shown ONLY on BOUNDARY_VALIDATION_PASSED; escalation statuses surface
+  a generic escalation message (never the unsafe instruction); everything else blocked.
+  `containUntrusted` structurally wraps employee/customer/proof/upload text as data (neutralizing
+  forged delimiters). **Decision depends only on typed boundary+instruction → prompt injection in
+  untrusted text cannot change the outcome** (proven). This addresses Addendum F + the Slice 6
+  DOMAIN_ONLY_NOT_RUNTIME_ENFORCED gap at the policy layer.
+- 9 local tests. tsc 0; eslint clean; cross-slice 3061 passing.
+- Deferred (Slice 10 proper): actual AI guidance generation + AI-ledger write at the call site +
+  owner guided-choice UI/routes (needs AI copilot wiring + frontend).
+
 ## Next actions
 1. The MIGRATION_LANE batch (Slices 3B/7/8/9 Prisma tables + [db] tests) when a DB-capable apply
    lane is available (local DB is P1001-unreachable; CI postgres lane can apply migrations).
-2. Wire dashboard data sections + owner/manager/employee UI routes consuming the Slice 5 backbone.
-3. Slices 10–20 (guided-choice flow UI, AI proof precheck, outcome/profit/attribution, SOP engine,
-   workflow libraries, capacity, customer-comms) per the build plan.
+2. Wire `gateEmployeeGuidance` + `containUntrusted` into the governed AI copilot call site (Slice 10
+   proper) so every generated employee instruction passes the gate and writes an AI-ledger record.
+3. Owner/manager/employee UI routes consuming the Slice 5 backbone; Slices 11–20 per the build plan.
