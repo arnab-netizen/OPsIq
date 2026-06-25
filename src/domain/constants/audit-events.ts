@@ -314,6 +314,10 @@ export const AUDIT_EVENTS = {
   ESCALATION_RAISED: "escalation.raised",
   ESCALATION_RESOLVED: "escalation.resolved",
 
+  // Employee guidance generation (Slice 10 — durable AI-guidance ledger at call site)
+  EMPLOYEE_GUIDANCE_GENERATED: "employee_guidance.generated",
+  EMPLOYEE_GUIDANCE_BLOCKED: "employee_guidance.blocked",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",

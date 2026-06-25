@@ -143,8 +143,22 @@ Last updated: 2026-06-25
   whole job green (the flaky mock-load-tester passed this run too).
 - Slices 3B/7/8/9 are now **persistable end-to-end with CI DB proof**.
 
+## Slice 10 proper notes (guidance call-site + AI-ledger)
+- `employee-guidance.service.ts`: `generateEmployeeGuidance` is the single employee-guidance path —
+  gated by `gateEmployeeGuidance` (guidance generated ONLY on BOUNDARY_VALIDATION_PASSED; escalation/
+  blocked return a safe message + NO guidance), untrusted text contained (injection-safe, never
+  influences the decision), and **every attempt writes a durable AI-guidance ledger record**
+  (AuditEvent `employee_guidance.generated`/`.blocked`). **Fail-closed: if the ledger write throws,
+  no guidance is returned** (no guidance without a durable record). The AI generator is injected
+  (production = governed copilot; default = deterministic boundary-derived builder that cannot leak
+  owner-only data). 7 local tests + 2 [db] (ledger persistence). tsc 0; eslint clean; cross-slice 3068.
+- Deferred (presentation only): owner/manager/employee Next.js UI routes consuming the Slice 5
+  guards (`requireDashboardAccess`/`scopedResponse`/`requireTaskAccess`) + the guidance service.
+  Backbone guards + call-site service are built and proven; routes are wiring.
+
 ## Next actions
 1. ✅ Done: CI `migrate deploy` + execution-persistence [db] tests green → DB_PROVEN.
+2. Slice 10 proper guidance call-site shipped (this commit); CI verifies the guidance-ledger [db].
 2. Wire `gateEmployeeGuidance` + `containUntrusted` into the governed AI copilot call site (Slice 10
    proper) so every generated employee instruction passes the gate and writes an AI-ledger record.
 3. Owner/manager/employee UI routes consuming the Slice 5 backbone; Slices 11–20 per the build plan.
