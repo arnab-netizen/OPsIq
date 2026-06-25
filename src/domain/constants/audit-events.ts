@@ -292,6 +292,12 @@ export const AUDIT_EVENTS = {
   EXECUTION_BOUNDARY_SUPERSEDED: "execution.boundary_superseded",
   EXECUTION_BOUNDARY_VALIDATION_BLOCKED: "execution.boundary_validation_blocked",
 
+  // Employee/manager account lifecycle (Owner Mode guided execution, Slice 3)
+  EMPLOYEE_SUSPENDED: "employee.suspended",
+  EMPLOYEE_REACTIVATED: "employee.reactivated",
+  EMPLOYEE_OFFBOARDED: "employee.offboarded",
+  EMPLOYEE_SESSIONS_REVOKED: "employee.sessions_revoked",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
