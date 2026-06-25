@@ -201,11 +201,12 @@ const VALIDATOR_SERVICE = "execution-boundary-validator@v2";
 export function computeBoundaryContentHash(
   boundary: ApprovedExecutionBoundaryDraft | ApprovedExecutionBoundary
 ): string {
-  const {
-    contentHash: _ignoredHash,
-    isActive: _ignoredActive,
-    ...semantic
-  } = boundary as ApprovedExecutionBoundary;
+  // Exclude the self hash and the mutable lifecycle flag from the content hash.
+  const semantic: Record<string, unknown> = {
+    ...(boundary as Record<string, unknown>),
+  };
+  delete semantic.contentHash;
+  delete semantic.isActive;
   const canonical = canonicalize(semantic);
   return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
 }
