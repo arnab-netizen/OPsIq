@@ -66,8 +66,25 @@ Last updated: 2026-06-25
   access/redaction backbone is proven now, the section payloads come with those slices.
 - UI routes (owner/manager/employee pages) deferred — backend guards ready for routes to call.
 
+## Slice 7 notes (delegated task FSM)
+- `delegated-task.ts` (pure): 15-status FSM with explicit `VALID_TASK_TRANSITIONS`; fail-closed
+  `planTaskTransition` authorizing by actor role/capability — **employee can never mark
+  APPROVED_COMPLETE** (owner, or manager with completion authority, only); reviewer-only
+  reject/dispute; assigner-only assign/cancel; system-only EXPIRE. Boundary binding via Slice 6:
+  `validateTaskGuidance` re-validates the task's `approvedBoundaryId/version/contentHash` →
+  hash/version mismatch or superseded boundary **fails closed (blocks guidance)**.
+- `delegated-task.service.ts` (DI): `applyTaskTransition` authorizes then applies the status
+  change + audit in ONE `$transaction` with a status+workspace guard (concurrency + isolation);
+  **failed audit write rolls back the state change** (rule 4, proven by DI test). Audit written
+  tx-atomically via `tx.auditEvent.create` (TASK_STATUS_CHANGED) — not hash-chained (tradeoff for
+  atomicity; audit_events has no append-only trigger).
+- 22 local tests (FSM + service DI incl. rule-4 rollback, concurrency, isolation).
+- **MIGRATION_LANE_PENDING:** the Prisma `DelegatedTask`/`WorkOrder` table + its [db] tests
+  (table needed; can't apply migration locally, P1001). FSM/service are the enforcement core the
+  table + routes must use.
+
 ## Next actions
-1. Slice 7 — Work Orders & Delegated Task State Machine: full task model + status FSM, bind tasks
-   to approvedBoundaryId/version/contentHash (Slice 6 validator), employee cannot mark
-   APPROVED_COMPLETE, reuse `canViewTask`/`assertEmployeeAssignable`, audit on transitions.
-2. Then Slice 8 (proof), and wire dashboard data sections + UI routes consuming the backbone.
+1. Slice 8 — Proof Requirement / Submission / Review / Rejection / Resubmission: proof-status FSM
+   + duplicate-hash/required-field checks + reviewer authority (reuse Slice 4 PROOF_REVIEW_*),
+   pure + service; persistence MIGRATION_LANE_PENDING.
+2. Wire dashboard data sections + UI routes consuming the Slice 5 backbone once task/proof tables land.

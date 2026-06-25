@@ -302,6 +302,10 @@ export const AUDIT_EVENTS = {
   PERMISSION_GRANTED: "permission.granted",
   PERMISSION_REVOKED: "permission.revoked",
 
+  // Delegated task / work-order state machine (Slice 7)
+  TASK_ASSIGNED: "task.assigned",
+  TASK_STATUS_CHANGED: "task.status_changed",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
