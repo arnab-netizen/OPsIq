@@ -214,9 +214,19 @@ Last updated: 2026-06-25
 - 22 (`archetype-packs.ts`): laundry/housekeeping knowledge skeletons; missing data lowers
   confidence; slot updates require a promoted candidate.
 
-## Status: Slices 3–23 implemented (domain/service), migration lane DB_PROVEN.
-Remaining: UI routes (presentation); Slices 24–27 (real-data trial pack, synthetic E2E, pilot
-readiness) — process/verification slices building on the now-complete governed-execution stack.
+## Slices 24/25 notes
+- 24 (`trial-pack.ts`): accepts incomplete owner data; `assessDataCompleteness` (score + missing +
+  confidence cap); `buildProvisionalTrialOutput` — safe provisional output, owner approval ALWAYS
+  required before execution.
+- 25 (`governed-execution-loop.test.ts`): synthetic end-to-end proof wiring boundary → guidance gate
+  → task FSM → proof submit/precheck/human-review → outcome/quality/profit → unified learning gate;
+  asserts every gate holds (employee can't self-approve, AI never final-accepts, injection contained,
+  override-only blocks learning).
+
+## Status: Slices 3–25 implemented (domain/service + synthetic E2E); migration lane DB_PROVEN.
+- All local: tsc 0, eslint clean, cross-slice 3182 passing (+18 [db] skipped locally, green in CI).
+Remaining (presentation/process, not new safety logic): UI routes; Slices 26–27 (real owner-data
+dry-run + limited employee pilot readiness — supervised process checklists building on this stack).
 2. UI routes (presentation): employee guidance route + owner/manager dashboard routes consuming the
    Slice 5 guards + guidance service.
 3. Slices 12–15 (outcome/quality/profit/attribution + unified learning gate) — verify/wire existing
