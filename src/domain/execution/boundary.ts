@@ -338,16 +338,35 @@ export function validateInstructionAgainstBoundary(
 
   const bId = boundary.boundaryId;
   const bVer = boundary.boundaryVersion;
+  const safeVer = Number.isInteger(bVer) ? bVer : null;
 
-  // 2. Boundary integrity & version pinning → fail closed on any mismatch.
+  // 2. Boundary self-integrity → fail closed if the boundary itself is malformed.
   if (!boundary.isActive) {
     return make(
       BoundaryValidationStatus.FAILED_INVALID_BOUNDARY_VERSION,
       "Boundary is not the active version (superseded or deactivated).",
       bId,
-      bVer
+      safeVer
     );
   }
+  if (safeVer == null || (safeVer as number) < 1) {
+    return make(
+      BoundaryValidationStatus.FAILED_INVALID_BOUNDARY_VERSION,
+      "Boundary has no valid boundaryVersion (unsealed or malformed).",
+      bId,
+      null
+    );
+  }
+  if (typeof boundary.contentHash !== "string" || boundary.contentHash.length === 0) {
+    return make(
+      BoundaryValidationStatus.FAILED_INVALID_BOUNDARY_VERSION,
+      "Boundary has no contentHash (unsealed or malformed).",
+      bId,
+      safeVer
+    );
+  }
+
+  // 3. Version pinning & tamper detection → fail closed on any mismatch.
   if (instruction.boundaryId && instruction.boundaryId !== bId) {
     return make(
       BoundaryValidationStatus.FAILED_INVALID_BOUNDARY_VERSION,
@@ -368,7 +387,7 @@ export function validateInstructionAgainstBoundary(
     );
   }
   const recomputed = computeBoundaryContentHash(boundary);
-  if (boundary.contentHash && boundary.contentHash !== recomputed) {
+  if (boundary.contentHash !== recomputed) {
     return make(
       BoundaryValidationStatus.FAILED_INVALID_BOUNDARY_VERSION,
       "Boundary content hash does not match its content (tamper detected).",
@@ -378,7 +397,7 @@ export function validateInstructionAgainstBoundary(
   }
   if (
     instruction.boundaryContentHash &&
-    instruction.boundaryContentHash !== (boundary.contentHash || recomputed)
+    instruction.boundaryContentHash !== boundary.contentHash
   ) {
     return make(
       BoundaryValidationStatus.FAILED_INVALID_BOUNDARY_VERSION,
@@ -388,8 +407,20 @@ export function validateInstructionAgainstBoundary(
     );
   }
 
-  // 3. Validity window & usage cap → expired/exhausted block.
-  if (now.getTime() < boundary.validFrom.getTime()) {
+  // 4. Validity window & usage cap → fail closed if window missing/invalid.
+  const validFromMs =
+    boundary.validFrom instanceof Date ? boundary.validFrom.getTime() : NaN;
+  const validUntilMs =
+    boundary.validUntil instanceof Date ? boundary.validUntil.getTime() : NaN;
+  if (Number.isNaN(validFromMs) || Number.isNaN(validUntilMs)) {
+    return make(
+      BoundaryValidationStatus.BLOCKED_EXPIRED,
+      "Boundary validity window (validFrom/validUntil) is missing or invalid.",
+      bId,
+      bVer
+    );
+  }
+  if (now.getTime() < validFromMs) {
     return make(
       BoundaryValidationStatus.BLOCKED_EXPIRED,
       "Boundary is not yet valid (before validFrom).",
@@ -397,7 +428,7 @@ export function validateInstructionAgainstBoundary(
       bVer
     );
   }
-  if (now.getTime() > boundary.validUntil.getTime()) {
+  if (now.getTime() > validUntilMs) {
     return make(
       BoundaryValidationStatus.BLOCKED_EXPIRED,
       "Boundary has expired (after validUntil).",
@@ -418,8 +449,8 @@ export function validateInstructionAgainstBoundary(
     );
   }
 
-  // 4. Role envelope.
-  if (boundary.forbiddenRoles.includes(instruction.role)) {
+  // 5. Role envelope (allow-list is mandatory; empty/missing = deny, fail closed).
+  if ((boundary.forbiddenRoles ?? []).includes(instruction.role)) {
     return make(
       BoundaryValidationStatus.BLOCKED_ROLE,
       `Role '${instruction.role}' is explicitly forbidden by the boundary.`,
@@ -428,19 +459,20 @@ export function validateInstructionAgainstBoundary(
     );
   }
   if (
-    boundary.allowedRoles.length > 0 &&
+    !Array.isArray(boundary.allowedRoles) ||
+    boundary.allowedRoles.length === 0 ||
     !boundary.allowedRoles.includes(instruction.role)
   ) {
     return make(
       BoundaryValidationStatus.BLOCKED_ROLE,
-      `Role '${instruction.role}' is not in the boundary's allowed roles.`,
+      `Role '${instruction.role}' is not in the boundary's allowed roles (empty or missing allow-list denies).`,
       bId,
       bVer
     );
   }
 
-  // 5. Action envelope.
-  if (boundary.forbiddenActions.includes(instruction.action)) {
+  // 6. Action envelope (allow-list is mandatory; empty/missing = deny, fail closed).
+  if ((boundary.forbiddenActions ?? []).includes(instruction.action)) {
     return make(
       BoundaryValidationStatus.BLOCKED_FORBIDDEN_ACTION,
       `Action '${instruction.action}' is explicitly forbidden.`,
@@ -449,12 +481,13 @@ export function validateInstructionAgainstBoundary(
     );
   }
   if (
-    boundary.allowedActions.length > 0 &&
+    !Array.isArray(boundary.allowedActions) ||
+    boundary.allowedActions.length === 0 ||
     !boundary.allowedActions.includes(instruction.action)
   ) {
     return make(
       BoundaryValidationStatus.BLOCKED_FORBIDDEN_ACTION,
-      `Action '${instruction.action}' is not in the boundary's allowed actions.`,
+      `Action '${instruction.action}' is not in the boundary's allowed actions (empty or missing allow-list denies).`,
       bId,
       bVer
     );
@@ -472,12 +505,13 @@ export function validateInstructionAgainstBoundary(
       );
     }
     if (
-      boundary.allowedCustomerSegments.length > 0 &&
+      !Array.isArray(boundary.allowedCustomerSegments) ||
+      boundary.allowedCustomerSegments.length === 0 ||
       !boundary.allowedCustomerSegments.includes(seg)
     ) {
       return make(
         BoundaryValidationStatus.BLOCKED_CUSTOMER_SEGMENT,
-        `Customer segment '${seg}' is not in the boundary's allowed segments.`,
+        `Customer segment '${seg}' is not in the boundary's allowed segments (empty allow-list denies).`,
         bId,
         bVer
       );
@@ -496,12 +530,13 @@ export function validateInstructionAgainstBoundary(
       );
     }
     if (
-      boundary.allowedCommunicationChannels.length > 0 &&
+      !Array.isArray(boundary.allowedCommunicationChannels) ||
+      boundary.allowedCommunicationChannels.length === 0 ||
       !boundary.allowedCommunicationChannels.includes(ch)
     ) {
       return make(
         BoundaryValidationStatus.BLOCKED_COMMUNICATION_CHANNEL,
-        `Communication channel '${ch}' is not in the boundary's allowed channels.`,
+        `Communication channel '${ch}' is not in the boundary's allowed channels (empty allow-list denies).`,
         bId,
         bVer
       );
@@ -630,15 +665,16 @@ export function validateInstructionAgainstBoundary(
     }
   }
 
-  // 12. Data access scope.
+  // 12. Data access scope (present scope requires an explicit allow-list entry).
   if (instruction.dataAccessScope) {
     if (
-      boundary.dataAccessBoundary.length > 0 &&
+      !Array.isArray(boundary.dataAccessBoundary) ||
+      boundary.dataAccessBoundary.length === 0 ||
       !boundary.dataAccessBoundary.includes(instruction.dataAccessScope)
     ) {
       return make(
         BoundaryValidationStatus.BLOCKED_DATA_ACCESS,
-        `Data access scope '${instruction.dataAccessScope}' is outside the boundary.`,
+        `Data access scope '${instruction.dataAccessScope}' is outside the boundary (empty allow-list denies).`,
         bId,
         bVer
       );

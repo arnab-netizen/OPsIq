@@ -165,3 +165,64 @@ escalation routing. Default on any ambiguity is BLOCK or ESCALATE — never PASS
   suspension/offboarding access revocation) — the next genuinely-missing foundational
   piece — then Slice 7 (delegated task state machine) and Slice 10 (guided flow that
   consumes this validator).
+
+---
+
+## SLICE 6 VERIFICATION ADDENDUM (2026-06-25)
+
+Requested before starting Slice 3. Findings + patches:
+
+1. **Enum values exactly match prompt.** 16/16 verified by extraction:
+   PASSED; BLOCKED_EXPIRED, _ROLE, _FORBIDDEN_ACTION, _DISCOUNT_LIMIT, _REFUND_PROMISE,
+   _SPEND_LIMIT, _CUSTOMER_PROMISE, _COMMUNICATION_CHANNEL, _CUSTOMER_SEGMENT,
+   _DATA_ACCESS, _CAPACITY; ESCALATE_OWNER_APPROVAL_REQUIRED,
+   ESCALATE_MANAGER_REVIEW_REQUIRED; FAILED_MISSING_BOUNDARY,
+   FAILED_INVALID_BOUNDARY_VERSION. No extra/missing members.
+
+2. **tsc command:** `npx tsc --noEmit` (whole project; `tsconfig.json` has
+   `noEmit: true`, `strict: true`). The changed files are type-checked by **direct
+   tsc**, not by the tests — vitest transpiles via esbuild and does **not** type-check.
+   Result: 0 errors attributable to `boundary.ts`, `boundary.test.ts`,
+   `audit-events.ts`. The 61 remaining project errors are pre-existing and
+   environmental (`Cannot find module '@/generated/prisma/client'` — the Prisma engine
+   download is blocked by the proxy here so the client isn't generated; CI generates it).
+
+3. **computeBoundaryContentHash covers every safety-relevant field.** It hashes the
+   whole boundary by **exclusion**: it strips only `contentHash` (self) and `isActive`
+   (mutable lifecycle), then canonicalizes (recursively sorted keys, Dates→ISO) and
+   sha256s everything else. So all envelopes/limits/flags/metadata
+   (roles, actions, segments, channels, maxDiscount/Refund/Spend/Overtime, promise
+   flags, capacity rule, dataAccess, escalation/legal/brand flags,
+   ownerOverrideRequiredFor, validity window, version, supersedes) are covered. Tests
+   assert the hash ignores `isActive` and changes on a semantic field.
+
+4. **sealBoundary prevents nested mutation.** `deepFreeze` recurses into every
+   object/array property and `Object.freeze`s each before freezing the root. Tests
+   assert both top-level assignment **and** `allowedActions.push(...)` throw.
+
+5. **Validation recomputes & compares contentHash, fail-closed on mismatch.** The
+   validator recomputes the hash and (a) blocks if stored `contentHash` ≠ recomputed
+   (tamper), and (b) blocks if the instruction's pinned `boundaryContentHash` ≠ the
+   boundary's. Both → `FAILED_INVALID_BOUNDARY_VERSION`. Tests cover both paths.
+
+6. **Ambiguity cases — fail closed (PATCHED where gaps existed):**
+   - missing `maxDiscount` when discount requested → BLOCKED_DISCOUNT_LIMIT (already)
+   - missing/false `refundPromiseAllowed` when refund requested → BLOCKED_REFUND_PROMISE (already)
+   - missing/false `sameDayPromiseAllowed` when same-day requested → BLOCKED_CUSTOMER_PROMISE (already)
+   - **missing/empty `allowedRoles`** → **PATCHED** to BLOCKED_ROLE (empty allow-list now denies)
+   - **missing/invalid `validUntil`/`validFrom`** → **PATCHED** to BLOCKED_EXPIRED (NaN/non-Date window denies)
+   - **missing `boundaryVersion`** → **PATCHED** to FAILED_INVALID_BOUNDARY_VERSION
+   - **missing `contentHash`** (unsealed) → **PATCHED** to FAILED_INVALID_BOUNDARY_VERSION
+   - Consistency hardening also applied to `allowedActions`, `allowedCustomerSegments`,
+     `allowedCommunicationChannels`, `dataAccessBoundary`: a present value with an empty
+     allow-list now denies. 7 new tests added (total 45, all passing).
+
+7. **Runtime integration: NONE.** `grep` confirms zero callers of
+   `validateInstructionAgainstBoundary` / `sealBoundary` / `ApprovedExecutionBoundary`
+   outside the module and its test. **Classification: DOMAIN_ONLY_NOT_RUNTIME_ENFORCED.**
+   Wiring into the guided-AI guidance path is **pending Slice 10** (the validator must
+   gate guidance display via `isBoundaryValidationPassed`; escalation statuses show an
+   escalation message, never the unsafe instruction).
+
+Re-run after patches: `boundary.test.ts` → **45 passed**; full domain suite still green;
+tsc unchanged (0 on changed files, 61 pre-existing/environmental).

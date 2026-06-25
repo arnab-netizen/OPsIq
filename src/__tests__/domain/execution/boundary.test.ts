@@ -389,7 +389,11 @@ describe("financial limits (ambiguous = fail closed)", () => {
 
 describe("customer promises + capacity", () => {
   it("B2B price quote rejected for unauthorized boundary", () => {
-    const b = sealedBase({ priceQuoteAllowed: false, allowedActions: [] });
+    // action is allowed, but price-quote promise is not permitted by the boundary
+    const b = sealedBase({
+      priceQuoteAllowed: false,
+      allowedActions: ["quote_b2b"],
+    });
     const r = validateInstructionAgainstBoundary(
       b,
       instr(b, { action: "quote_b2b", providesPriceQuote: true }),
@@ -493,6 +497,85 @@ describe("data access + escalation", () => {
     );
     expect(r.validationStatus).toBe(
       BoundaryValidationStatus.ESCALATE_MANAGER_REVIEW_REQUIRED
+    );
+  });
+});
+
+describe("fail-closed ambiguity hardening (verification addendum)", () => {
+  it("empty allowedRoles denies all employee guidance (fail closed)", () => {
+    const b = sealedBase({ allowedRoles: [] });
+    const r = validateInstructionAgainstBoundary(b, instr(b), { now: NOW });
+    expect(r.validationStatus).toBe(BoundaryValidationStatus.BLOCKED_ROLE);
+  });
+
+  it("empty allowedActions denies all actions (fail closed)", () => {
+    const b = sealedBase({ allowedActions: [] });
+    const r = validateInstructionAgainstBoundary(b, instr(b), { now: NOW });
+    expect(r.validationStatus).toBe(
+      BoundaryValidationStatus.BLOCKED_FORBIDDEN_ACTION
+    );
+  });
+
+  it("missing/invalid validUntil fails closed (no expiry can be evaluated)", () => {
+    // sealed so the contentHash matches; the window itself is invalid
+    const b = sealBoundary(
+      baseDraft({ validUntil: undefined as unknown as Date })
+    );
+    const r = validateInstructionAgainstBoundary(b, instr(b), { now: NOW });
+    expect(r.validationStatus).toBe(BoundaryValidationStatus.BLOCKED_EXPIRED);
+  });
+
+  it("missing boundaryVersion fails closed", () => {
+    const b = sealBoundary(
+      baseDraft({ boundaryVersion: undefined as unknown as number })
+    );
+    const r = validateInstructionAgainstBoundary(
+      b,
+      { action: "call_customer", role: "counter_staff" },
+      { now: NOW }
+    );
+    expect(r.validationStatus).toBe(
+      BoundaryValidationStatus.FAILED_INVALID_BOUNDARY_VERSION
+    );
+    expect(r.boundaryVersion).toBeNull();
+  });
+
+  it("missing contentHash (unsealed boundary) fails closed", () => {
+    const unsealed: ApprovedExecutionBoundary = {
+      ...sealedBase(),
+      contentHash: "",
+    };
+    const r = validateInstructionAgainstBoundary(
+      unsealed,
+      { action: "call_customer", role: "counter_staff" },
+      { now: NOW }
+    );
+    expect(r.validationStatus).toBe(
+      BoundaryValidationStatus.FAILED_INVALID_BOUNDARY_VERSION
+    );
+  });
+
+  it("customer segment present with empty allow-list fails closed", () => {
+    const b = sealedBase({ allowedCustomerSegments: [] });
+    const r = validateInstructionAgainstBoundary(
+      b,
+      instr(b, { customerSegment: "retail" }),
+      { now: NOW }
+    );
+    expect(r.validationStatus).toBe(
+      BoundaryValidationStatus.BLOCKED_CUSTOMER_SEGMENT
+    );
+  });
+
+  it("data access scope present with empty allow-list fails closed", () => {
+    const b = sealedBase({ dataAccessBoundary: [] });
+    const r = validateInstructionAgainstBoundary(
+      b,
+      instr(b, { dataAccessScope: "own_assigned_tasks" }),
+      { now: NOW }
+    );
+    expect(r.validationStatus).toBe(
+      BoundaryValidationStatus.BLOCKED_DATA_ACCESS
     );
   });
 });
