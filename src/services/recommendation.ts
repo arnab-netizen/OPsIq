@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { enforceBusinessImpactIfRequired } from "@/services/business-impact/recommendation-business-impact.service";
+import { enforceInputQualityIfRequired } from "@/services/owner-mode/recommendation-input-quality.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -714,6 +715,12 @@ export async function updateRecommendationStatus(
     // complete, safe BusinessImpactAssessment must be persisted before a
     // recommendation can be promoted. Fail-closed via BusinessImpactGateError.
     await enforceBusinessImpactIfRequired(recommendationId, validatedWorkspaceId);
+
+    // Module 2 governance gate: input-quality / evidence-confidence. Sensitive
+    // recommendations (finance/growth/pricing/hiring) cannot be promoted on weak
+    // or missing evidence; compliance routes to professional review. Same opt-in
+    // flag; fail-closed via InputQualityGateError.
+    await enforceInputQualityIfRequired(recommendationId, validatedWorkspaceId);
 
     const stateVerification = await verifyRecommendationState(
       recommendationId,

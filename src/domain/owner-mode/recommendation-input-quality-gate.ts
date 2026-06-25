@@ -102,6 +102,21 @@ export function evaluateInputQualityGate(
   return { outcome: InputQualityPromotionOutcome.ALLOWED, allowed: true, reason: "Input quality sufficient for a sensitive recommendation." };
 }
 
+/**
+ * Map a finding's impact area to a recommendation sensitivity (deterministic,
+ * conservative). Unknown areas default to GENERAL (least restrictive); the gate
+ * still blocks GENERAL on outright critical/conflicting evidence.
+ */
+export function mapImpactAreaToSensitivity(impactArea: string | null | undefined): RecommendationSensitivity {
+  const a = (impactArea ?? "").toLowerCase();
+  if (/(compliance|legal|tax|licen|regulat|insurance|labour|labor)/.test(a)) return RecommendationSensitivity.COMPLIANCE_SENSITIVE;
+  if (/(pricing|price|discount)/.test(a)) return RecommendationSensitivity.PRICING_SENSITIVE;
+  if (/(financ|cash|margin|profit|cost|debt|payroll|revenue)/.test(a)) return RecommendationSensitivity.FINANCE_SENSITIVE;
+  if (/(hir|headcount|recruit|staffing)/.test(a)) return RecommendationSensitivity.HIRING_SENSITIVE;
+  if (/(growth|expansion|scale|marketing|acquisition|sales|funnel)/.test(a)) return RecommendationSensitivity.GROWTH_SENSITIVE;
+  return RecommendationSensitivity.GENERAL;
+}
+
 /** Thrown when input quality is too weak to promote a sensitive recommendation. */
 export class InputQualityGateError extends Error {
   readonly code = "INPUT_QUALITY_GATE_BLOCKED";
