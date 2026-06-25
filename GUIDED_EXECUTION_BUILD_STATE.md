@@ -135,11 +135,16 @@ Last updated: 2026-06-25
   persistence + isolation, suspend/offboard timestamps + unassignable, task boundary-binding
   persistence + cross-employee access denial + isolation, proof submit/review/duplicate/
   reject-needs-reason/resubmit, escalation routing/severity/SLA persistence + owner-queue + isolation).
-- Local: tsc 0, eslint clean, cross-slice 3061 passing ([db] skipped locally). **DB proof: pending
-  CI run for this commit.**
+- Local: tsc 0, eslint clean, cross-slice 3061 passing ([db] skipped locally).
+- **DB_PROVEN_BY_GITHUB_POSTGRES_SERVICE** — CI run `28150592285` (commit `8a9a152`), job
+  `build-and-test (20.x)` conclusion **SUCCESS**: `prisma migrate deploy` applied the additive
+  migration on postgres:16, and the blocking maintained suite (incl. the 5 new
+  `execution-persistence.db.test.ts` tests) passed (06:13:29→06:24:32). lint job also SUCCESS;
+  whole job green (the flaky mock-load-tester passed this run too).
+- Slices 3B/7/8/9 are now **persistable end-to-end with CI DB proof**.
 
 ## Next actions
-1. Confirm CI `migrate deploy` + execution-persistence [db] tests green → DB_PROVEN.
+1. ✅ Done: CI `migrate deploy` + execution-persistence [db] tests green → DB_PROVEN.
 2. Wire `gateEmployeeGuidance` + `containUntrusted` into the governed AI copilot call site (Slice 10
    proper) so every generated employee instruction passes the gate and writes an AI-ledger record.
 3. Owner/manager/employee UI routes consuming the Slice 5 backbone; Slices 11–20 per the build plan.
