@@ -96,7 +96,21 @@ Last updated: 2026-06-25
 - 24 local tests. tsc 0; eslint clean; cross-slice 3033 passing.
 - **MIGRATION_LANE_PENDING:** Prisma Proof table + [db] tests.
 
+## Slice 9 notes (blocker / escalation)
+- `escalation.ts` (pure): blocker types, severity (incl. CRITICAL_OWNER_NOW), targets, status FSM;
+  deterministic `routeEscalation` (refund/discount-beyond-boundary/lost-damaged/safety → owner;
+  payment → manager or manager+owner; complaint by severity; staff-absent → supervisor unless
+  repeated) with per-severity SLA; `appearsInOwnerDashboard`; `planEscalationResolution` (cannot
+  silently close — note + resolver required); `classifyClarification` (outside boundary → escalate,
+  never answer).
+- `escalation.service.ts` (DI): `raiseBlocker` (route → persist OPEN → audit, SLA dueAt);
+  `resolveEscalation` (require note+resolver → tx status+audit, status+workspace guard; failed
+  audit rolls back). 19 local tests. tsc 0; eslint clean; cross-slice 3052 passing.
+- **MIGRATION_LANE_PENDING:** Prisma Escalation table + [db] tests.
+
 ## Next actions
-1. Wire dashboard data sections + UI routes consuming the Slice 5 backbone once task/proof tables land.
-2. Slice 9 (employee blocker/clarification/escalation) — escalation routing + SLA (pure + service).
-3. The big MIGRATION_LANE batch (Slices 3B/7/8 tables) when a DB-capable apply lane is available.
+1. The MIGRATION_LANE batch (Slices 3B/7/8/9 Prisma tables + [db] tests) when a DB-capable apply
+   lane is available (local DB is P1001-unreachable; CI postgres lane can apply migrations).
+2. Wire dashboard data sections + owner/manager/employee UI routes consuming the Slice 5 backbone.
+3. Slices 10–20 (guided-choice flow UI, AI proof precheck, outcome/profit/attribution, SOP engine,
+   workflow libraries, capacity, customer-comms) per the build plan.

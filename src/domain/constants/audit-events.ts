@@ -310,6 +310,10 @@ export const AUDIT_EVENTS = {
   PROOF_SUBMITTED: "proof.submitted",
   PROOF_REVIEWED: "proof.reviewed",
 
+  // Employee blocker / escalation (Slice 9)
+  ESCALATION_RAISED: "escalation.raised",
+  ESCALATION_RESOLVED: "escalation.resolved",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",
