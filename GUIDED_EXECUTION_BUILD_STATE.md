@@ -166,8 +166,19 @@ Last updated: 2026-06-25
   transition (proof FSM forbids SYSTEM→ACCEPTED), tx-guarded, writing a durable AI-ledger record
   (`ai_proof_precheck.recorded`, finalAccept:false). 15 local tests. tsc 0; eslint clean; cross 3083.
 
+## Slice 15 notes (unified learning gate — keystone, Addendum G)
+- `learning-gate.ts` (pure): defines the Slice 12/13/14/15 input enums (OutcomeStatus,
+  ImplementationQualityStatus, ProfitImpactConfidence, AttributionStatus, ProofGateStatus,
+  OwnerLearningApproval, AiMutationAttemptStatus) and the 12 LearningEligibilityStatus values.
+  `determineLearningEligibility` is THE single ordered fail-closed gate: AI-mutation → no-proof →
+  proof-rejected → disputed → owner-override-only → poor-execution → insufficient-outcome →
+  unclear-attribution → weak-profit → owner-rejected/pending → else map verified outcome to eligible.
+  `isLearningEligible` helper. Closes the proof OVERRIDDEN_NOT_VERIFIED → BLOCKED_OWNER_OVERRIDE_ONLY
+  dependency. 16 local tests (incl. all Addendum G named scenarios). tsc 0; eslint clean; cross 3099.
+- The gate is the ONLY learning-candidate path (no UI/API/AI/job may bypass it).
+
 ## Next actions
-1. ✅ MIGRATION_LANE DB_PROVEN (CI 28150592285); Slice 10 proper + Slice 11 shipped.
+1. ✅ MIGRATION_LANE DB_PROVEN (CI 28150592285); Slice 10 proper + Slice 11 + Slice 15 shipped.
 2. UI routes (presentation): employee guidance route + owner/manager dashboard routes consuming the
    Slice 5 guards + guidance service.
 3. Slices 12–15 (outcome/quality/profit/attribution + unified learning gate) — verify/wire existing
