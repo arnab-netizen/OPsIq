@@ -163,3 +163,65 @@ to the existing suite). The single promotion chokepoint is
 
 Public scope remains frozen throughout: no SaaS, billing, external integrations,
 cross-user learning, advanced forecasting, or launch work was added.
+
+## BUILD PROGRESS — Modules 12–40 pass
+Audit-first per module; existing modules reused (not duplicated). All new cores are
+pure, deterministic (no `Date.now()`/`Math.random()`), with unit + adversarial tests.
+
+### Already implemented — SKIPPED with evidence (no duplication)
+- **M12 SOP-Linked Action Object** — `domain/execution/sop.ts` + `domain/owner-sop/*`.
+- **M14 SOP & Process Control** — `domain/execution/sop.ts`, `domain/owner-sop/*`.
+- **M18 Customer Acquisition & Sales Funnel** — `domain/owner-sales/*` (leads,
+  qualifiedLeads, leadToSaleConversionPct, acquisitionPerDay, funnel metrics).
+- **M19 Marketing Experiment Ledger** — `domain/experiment/experiment.ts`
+  (hypothesis/rigor/status lifecycle) + `domain/owner-marketing/*`.
+- **M20 Retention & Win-back** — `domain/growth/growth-engines.ts` (retention/churn).
+- **M24 Business Risk & Compliance Guardrail** — `domain/owner-mode/*`
+  (harm-tracking, failure-adjudication, security-rules) + `domain/governance/*`.
+- **M26 Data Sensitivity / Privacy / Access Control** — `domain/workspace/access-policies.ts`,
+  `domain/workspace/dashboard-access.ts`, `domain/private-mode/role-config.ts`,
+  `domain/audit-export/audit-export-packet.ts`.
+- **M28 Adversarial Business Simulation Pack** — `domain/scenario/*`,
+  `domain/execution/trial-pack.ts`, `domain/execution/dry-run-diagnosis.ts`.
+- **M29 Archetype Registry / M30 Laundry Pack / M31 Housekeeping Pack** —
+  `domain/execution/archetype-packs.ts`.
+- **M36 Alternative Comparison** — `domain/decision/best-path-selection.ts`
+  (dominance proof across alternatives, rejected-path reasons).
+- **M38 Manual / CSV / Document Input Pack** — `domain/data-intake/*`,
+  `domain/file-intake/*`, `domain/data-parsers/*`.
+
+### Newly implemented cores (pure domain, unit + adversarial tests)
+- **M25 Business Continuity & Emergency** — `domain/execution/business-continuity.ts`
+  (`assessContinuityThreat`, `keyPersonRisk`, `emergencyReserveAdequacy`,
+  `prioritizeContinuityActions`, `assertContinuityReviewed`/`ContinuityRiskError`). 28 tests.
+- **M27 Outcome Causality Review** — `domain/execution/outcome-causality.ts`
+  (`assessCausality` CAUSAL_LIKELY/PLAUSIBLE/INSUFFICIENT/SPURIOUS_RISK,
+  `observedEffectSize`, `shouldCreditAction`, `assertCausalBeforeLearning` —
+  guards the learning loop against false attribution). 23 tests.
+- **M32 Local Home Services / Maintenance Operating Pack** —
+  `domain/execution/home-services-pack.ts` (`HOME_SERVICES_PACK_SLOTS`,
+  `createHomeServicesPack`, `assessDispatchEfficiency`, `firstTimeFixRate`;
+  reuses `createArchetypePack`/`assessPackConfidence`). 11 tests.
+- **M34 Negative Recommendation Engine** — `domain/execution/negative-recommendation.ts`
+  (do-not / stop / avoid-escalation / reverse; ADVISORY/STRONG/BLOCKING,
+  `rankNegativeRecommendations`, `assertNoBlockingNegative`). 11 tests.
+- **M35 Action WIP Limit** — `domain/execution/action-wip-limit.ts`
+  (`defaultWipPolicy`, `evaluateWipAdmission`, `wipUtilization`, `wipPressureBand`,
+  `assertWipAdmissible` — prevents owner overload / too many in-flight actions). 15 tests.
+- **M37 Time-Horizon Trade-off** — `domain/execution/time-horizon.ts`
+  (`horizonFromDays`, `assessTimeHorizonTradeoff` PROCEED/DEFER_UNTIL_STABLE/REJECT,
+  `benefitCostRatio`, `assertHorizonAffordable` — survival pressure defers long-payoff). 20 tests.
+- **M40 Public Scope Freeze Guard** — `domain/execution/public-scope-freeze.ts`
+  (`FrozenScopeArea`, `classifyScope`, `isOwnerModeAllowed`, `assertWithinOwnerScope`/
+  `PublicScopeFrozenError` — single chokepoint blocking SaaS/billing/launch/cross-user/
+  integrations/forecasting). 23 tests.
+
+### Deferred (frozen scope)
+- **M39 Integration Readiness Layer** — DEFERRED. Touches external integrations,
+  which are explicitly frozen in Owner Mode. No work done; recorded as out-of-scope.
+- **M33 Owner Command Center** — UI/orchestration surface. The Module-41 contracts
+  it would consume are deferred with Module 41 (not started per instruction); the
+  underlying owner-mode dashboard/briefing cores already exist
+  (`domain/owner-mode/owner-dashboard.ts`, `domain/owner-briefing/*`).
+
+131 new unit/adversarial tests added (all green); full typecheck clean; lint clean.
