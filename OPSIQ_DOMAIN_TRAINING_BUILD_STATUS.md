@@ -53,10 +53,21 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] D19 — what to do next: LEVEL_5 (21 scored cases)
 - [x] D20 — who (delegation / accountable assignment): LEVEL_5 (21 scored cases)
 - [x] D21 — how (execution method quality): LEVEL_5 (21 scored cases)
-- [ ] D22–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)  <-- NEXT: D22 (growth readiness)
+- [x] D22 — growth readiness: LEVEL_5 (21 scored cases)
+- [x] D23 — scale readiness: LEVEL_5 (21 scored cases)
+- [x] D24 — risk / compliance: LEVEL_5 (21 scored cases)
+
+## Coverage summary
+F0–F15 governance foundation + A1–A3 archetype models + D1–D24 all trained to
+LEVEL_5_OUTCOME_VERIFIED. 24 domains × ≥21 executable scored cases = 504+ cases,
+each covering all 10 scenario types, scored against the 100-point rubric with
+zero unsafe outputs. Scorer proven real (an injected unsafe response hard-fails).
+21 test files / 174 tests green. Additive wiring layer only — no existing source
+modified, no duplicate engines (all reuse F2/F4 confidence + the M1–M41 gates).
 
 ## Classification (honest, no overclaim)
-ECONOMIC_SURVIVAL_DOMAIN_TRAINING_COMPLETE (F0–F15 + A1–A3 + D1–D3 at LEVEL_5; D4–D24 NOT started).
+INDIVIDUAL_DOMAIN_TRAINING_FOUNDATION_COMPLETE
+(F0–F15 + A1–A3 + D1–D24 all at LEVEL_5_OUTCOME_VERIFIED).
 
 ## Continuation
 `/continue-domain-training-build`
