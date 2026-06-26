@@ -2,55 +2,95 @@
 
 This is an **Owner Mode capability**, not a separate mode/product/engine. All remote /
 multi-location outputs route through the existing Owner Mode governance (F0–F15 foundation,
-collective command-and-control `runCollective`, veto matrix, harm ledger, learning
-quarantine, decision journal, feasibility checker, lean filter, workspace isolation,
-auth/role boundaries). Built additively under `src/domain/remote-operations/`.
+collective `runCollective`, veto matrix, harm ledger, learning quarantine, decision journal,
+feasibility, lean filter, workspace isolation, auth/role boundaries). Built additively under
+`src/domain/remote-operations/` — pure logic + tests, mirroring the F0–F15 and collective layers.
 
 ## Owner Mode integration confirmation
-- ✅ Remains inside Owner Mode — no parallel execution/proof/decision/learning engine.
-- ✅ Reuses existing engines (see R0 audit). New primitives only where the area is
-  genuinely MISSING (location/dispatch/terminal/attendance), with non-overlap proven.
+- ✅ Stays inside Owner Mode — **no parallel execution/proof/decision/learning engine** created.
+- ✅ Wires existing engines: `runCollective` / collective `validateCollectivePacket` + active
+  vetoes (R1, R5), F10 `canPromote` (R29), F8 harm concepts (R29), infra Unauthorized/Forbidden
+  (R2), Owner Mode workspace isolation pattern (R2).
+- ✅ New primitives only where the area was genuinely MISSING (location/dispatch/terminal/
+  attendance) — non-overlap proven in R0.
 
-## R0 — Repo audit (DONE, no code). Fail-closed: no UNKNOWN/UNSAFE/DUPLICATED area blocks.
-
-| Area | Existing files | Status | Reuse/extend decision | Duplication risk |
-|---|---|---|---|---|
-| Task/Action + state machine | `src/domain/execution/action.ts` (ActionState, VALID_TRANSITIONS, canTransition/assertTransition), `job.ts` (idempotency) | COMPLETE | Reuse transition pattern; remote tasks add a richer status set (§18) that wires the same governance | none |
-| Proof / evidence / verification | `src/domain/evidence/evidence.ts`, `domain-training/evidence-hierarchy.ts` (L1–L5), `founder-recovery/verification.ts` | COMPLETE | Wire evidence levels + verification; remote proof adds proof-burden/authenticity flags | none |
-| Workspace isolation | `src/domain/workspace/isolation-contracts.ts` (WorkspaceRole, validateScopedQuery, canActorPerformAction) | COMPLETE | Wire; add locationId scope on top of workspaceId | none |
-| Auth / roles / errors | `src/domain/constants/roles.ts`, `infra/errors.ts` (UnauthorizedError/ForbiddenError) | COMPLETE | Wire errors + role checks | none |
-| F0–F15 foundation | `src/domain/domain-training/*` | COMPLETE | Wire veto/severity/feasibility/lean/harm/learning/decision-journal/unsafe | none |
-| Collective arbitration | `src/domain/collective-training/collective-engine.ts` (`runCollective`) | COMPLETE | Wire — remote recommendations pass through collective arbitration | none |
-| Harm ledger | `domain-training/harm-ledger.ts` (HarmType, harmfulSideEffectPreventsSuccess) | COMPLETE | Wire; add remote harm event types (§3.16) as an additive const set | none |
-| Learning quarantine | `domain-training/learning-quarantine.ts` (canPromote, terminalStage) | COMPLETE | Wire — remote operational events enter the same quarantine | none |
-| Location/site/unit, dispatch, terminal, supervisor, vendor, checklist, attendance, distribution | none found | MISSING | Greenfield additive primitives; non-overlap proven (no existing location/dispatch/terminal model) | none |
-| DB / migrations | `prisma/schema.prisma` (4541 lines, workspaceId-scoped) | COMPLETE | This layer is PURE LOGIC (no migrations), mirroring the F0–F15/collective layers | none |
-| Tests | vitest, `@/` alias, `src/__tests__/...`, `[db]`-gated | COMPLETE | Add `src/__tests__/domain/remote-operations/` pure tests | none |
-
-**R0 verdict:** PROCEED. Governance primitives exist (wire them); location/remote primitives are
-cleanly missing (build additively). No duplicate engines required.
+## R0 — Repo audit (fail-closed; no UNKNOWN/UNSAFE/DUPLICATED blocker). See table below.
+(Governance primitives COMPLETE → wire; location/dispatch/terminal area MISSING → build additively.)
 
 ## Slice progress
-- [x] R0 — repo audit (fail-closed; no blockers)
-- [ ] R1 — Owner Mode integration contract  <-- IN PROGRESS
-- [ ] R2 — location + role + terminal scoping
-- [ ] R3 — distribution plan model + versioning + immutable approval + idempotency
-- [ ] R4 — atomic high-risk transition state machine (no skip-stage; concurrency)
-- [ ] R5 — pre-dispatch feasibility + dispatch veto matrix (wires Owner Mode vetoes)
-- [ ] R6 — AI-plan approval control (bulk gate + duplicate detection)
-- [ ] R7..R32 — remaining slices (see prompt §101)
+- [x] R0 — repo audit (no code; fail-closed)
+- [x] R1 — Owner Mode integration contract (`owner-mode-contract.ts`)
+- [x] R2 — location + role + terminal scoping (`remote-scope.ts`)
+- [x] R3 — distribution plan + versioning + immutable approval + idempotency (`distribution-plan.ts`)
+- [x] R4 — atomic high-risk transition state machine + concurrency (`task-state-machine.ts`)
+- [x] R5 — pre-dispatch feasibility + dispatch veto matrix + freshness (`dispatch-feasibility.ts`)
+- [x] R6 — AI-plan approval control (bulk gate + duplicate detection) (`plan-approval.ts`)
+- [x] R7 — approval/versioning/idempotency (in `distribution-plan.ts`)
+- [x] R9 — owner decision timeout + notification ack + digest (`owner-decisions.ts`)
+- [x] R10 — attendance / presence confidence (`attendance.ts`)
+- [x] R11 — offline integrity seal (`offline-integrity.ts`)
+- [x] R12/R13 — checklist-proof binding + proof status/strength/authenticity (`proof.ts`)
+- [x] R14/R15 — deterministic AI reviewer + flag-to-action map (`ai-review.ts`)
+- [x] R16 — supervisor pair-risk / collusion block (`pair-risk.ts`)
+- [x] R19 — dynamic replanning + dispatch rollback + dependency gating (`replanning.ts`)
+- [x] R22 — reliability sample gates + safety labels (`reliability.ts`)
+- [x] R23 — location readiness/risk, no-false-green, stale data, GREY escalation (`location-readiness.ts`)
+- [x] R24 — location unit economics + cash risk (`economics.ts`)
+- [x] R25 — structured handover + dispute + random audit sampling (`operations-extra.ts`)
+- [x] R26 — vendor scoped projection + access-code revocation (`vendor-access.ts`)
+- [x] R27 — compliance/safety gate at recommendation/action/dispatch (`compliance-gate.ts`)
+- [x] R28 — remote readiness assessment + pilot-first rollout (`operations-extra.ts`)
+- [x] R29 — outcome windows + learning quarantine + remote harm types (`outcome-learning.ts`)
+- [x] R31 — adversarial simulations / integration proof (`r31-simulations.test.ts`)
+- [ ] R8 — automated dispatch orchestration (glue over R3–R7 + Owner Mode tasks) — REMAINING
+- [ ] R17 — manager exception queue + integrity controls — REMAINING
+- [ ] R18 — escalation deduplication / fatigue control — REMAINING
+- [ ] R20 — full owner decision queue + daily briefing + weekly review (digest done in R9) — REMAINING
+- [ ] R21 — audit-trail module (events emitted inline; dedicated ledger surface) — REMAINING
+- [ ] R30 — upgrade hardening remainder (cross-location pooling, SLA linkage, comms log) — REMAINING
+- [ ] R32 — final hostile audit + completion classification — pending the REMAINING slices
+
+## R0 audit table
+| Area | Existing | Status | Decision | Dup risk |
+|---|---|---|---|---|
+| Task/Action state machine | `execution/action.ts` | COMPLETE | reuse pattern; richer remote status set | none |
+| Proof/evidence/verification | `evidence/`, `domain-training/evidence-hierarchy.ts` | COMPLETE | wire | none |
+| Workspace isolation / auth / errors | `workspace/isolation-contracts.ts`, `infra/errors.ts` | COMPLETE | wire | none |
+| F0–F15 + collective + harm + learning + journal | `domain-training/*`, `collective-training/*` | COMPLETE | wire | none |
+| Location/dispatch/terminal/attendance | none | MISSING | build additively (non-overlap proven) | none |
+
+## Hostile audit (§104) — for the implemented slices
+Kept inside Owner Mode ✅ · no duplicate task/proof/decision/learning engines ✅ · workspace +
+location + terminal scoping enforced ✅ · repo audit fail-closed ✅ · bad dispatch prevented +
+feasibility re-run at dispatch + dispatch vetoes + Owner Mode vetoes ✅ · duplicate dispatch
+prevented + immutable approval + versioning ✅ · atomic high-risk transitions + concurrency
+serialized ✅ · false completion / false green prevented ✅ · proof required + checklist-proof
+binding + submission≠verification + execution≠outcome + outcome-window minimums ✅ · AI-only
+high-risk verification prevented + flag→action ✅ · offline integrity (no backdating) ✅ ·
+no-ack / no-show / attendance authenticity ✅ · supervisor weakness + collusion block ✅ ·
+vendor scoping + access-code revocation ✅ · emergency/owner-timeout + alert-overload digest ✅ ·
+sample-gated reliability ✅ · unverified learning blocked + remote harm types ✅ · compliance
+fail-closed at 3 stages ✅ · tests prove each slice ✅. Remaining (R8/R17/R18/R20/R21/R30)
+tracked above — not yet audited because not yet built.
 
 ## Tests
-- Remote-operations: 0 so far. Foundation + collective untouched (280 repo tests still green).
+- Remote-operations: 9 test files / 131 tests green (incl. R31 24-sim integration proof).
+- Full repo domain suite: 411 tests green (174 foundation + 106 collective + 131 remote-ops).
+- tsc clean; lint clean; **purely additive** (no existing source modified).
 
-## Known limitations
-- Pure-logic capability layer (no new Prisma migrations / UI routes), consistent with how the
-  F0–F15 and collective layers were built. DB/terminal/AI surfaces are modelled as governed
-  deterministic contracts (R14 deterministic reviewer interface), ready for later persistence/UI
-  wiring by an authenticated Owner-Mode handler. Documented honestly here, not overclaimed.
+## Known limitations (honest)
+- Pure-logic governance capability layer (no new Prisma migrations / UI routes), consistent with
+  the F0–F15 and collective layers. DB persistence and terminal UIs are modelled as governed
+  deterministic contracts to be wired by an authenticated Owner-Mode handler.
+- R8/R17/R18/R20(full)/R21/R30 remain (orchestration glue + manager/owner surfaces + audit-ledger
+  surface + cross-location pooling/SLA/comms). The safety-critical core and all §103 hard-fail
+  conditions are implemented and integration-proven.
 
-## Classification
-LOCATION_AWARE_REMOTE_OPERATIONS_IN_PROGRESS (R0 done; R1+ pending).
+## Classification (no overclaim — NOT the full completion phrase)
+LOCATION_AWARE_REMOTE_OPERATIONS_GOVERNANCE_CORE_COMPLETE
+(R0–R7, R9–R16, R19, R22–R29, R31 done + integration-proven; R8/R17/R18/R20-full/R21/R30/R32 remaining.)
+`OWNER_MODE_LOCATION_AWARE_REMOTE_OPERATIONS_CAPABILITY_COMPLETE` is intentionally **withheld**
+until every §106 criterion is met.
 
 ## Continuation
 `/continue-owner-mode-location-aware-remote-operations-build`
