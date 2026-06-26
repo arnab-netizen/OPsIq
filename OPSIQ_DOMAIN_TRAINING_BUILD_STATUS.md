@@ -28,14 +28,14 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] F10 — learning quarantine (wire learning-gate)
 - [x] F11 — recommendation quality validator (compose generic-output-guard + guidance-object)
 - [x] F12 — feasibility checker
-- [ ] F13 — owner-mode lean filter (wire lean-guardrail)  <-- NEXT
-- [ ] F14 — unsafe recommendation taxonomy
-- [ ] F15 — regression lock
-- [ ] A1–A3 — archetype operating models
+- [x] F13 — owner-mode lean filter (wire lean-guardrail)
+- [x] F14 — unsafe recommendation taxonomy
+- [x] F15 — regression lock
+- [ ] A1–A3 — archetype operating models  <-- NEXT (Phase 2)
 - [ ] D1–D24 — individual domains (each ≥21 scored cases, LEVEL_5)
 
 ## Classification (honest, no overclaim)
-PARTIAL — governance foundation in progress.
+DOMAIN_TRAINING_GOVERNANCE_FOUNDATION_COMPLETE (F0–F15 done; A1–A3 + D1–D24 NOT started).
 
 ## Continuation
 `/continue-domain-training-build`
