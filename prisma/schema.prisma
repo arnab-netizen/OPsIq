@@ -4341,6 +4341,33 @@ model OwnerServiceEconomics {
   @@map("owner_service_economics")
 }
 
+/// Module 8 — persisted employee workload snapshot (computed via the employee-
+/// workload domain). Additive, workspace-scoped, no FK.
+model OwnerEmployeeWorkloadSnapshot {
+  id              String   @id @db.Uuid
+  workspaceId     String   @db.Uuid @map("workspace_id")
+  employeeUserId  String?  @db.Uuid @map("employee_user_id")
+  employeeLabel   String?  @map("employee_label")
+  periodStart     DateTime? @map("period_start")
+  periodEnd       DateTime? @map("period_end")
+  shiftHours      Float    @map("shift_hours")
+  breakHours      Float    @default(0) @map("break_hours")
+  taskHours       Float    @default(0) @map("task_hours")
+  travelHours     Float    @default(0) @map("travel_hours")
+  reworkHours     Float    @default(0) @map("rework_hours")
+  overtimeHours   Float    @default(0) @map("overtime_hours")
+  utilization     Float
+  utilizationPct  Int      @map("utilization_pct")
+  band            String
+  overburdened    Boolean  @default(false)
+  fatigueRisk     Boolean  @default(false) @map("fatigue_risk")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, band])
+  @@map("owner_employee_workload_snapshots")
+}
+
 model TaskStatusHistory {
   id          String   @id @db.Uuid
   workspaceId String   @db.Uuid @map("workspace_id")
