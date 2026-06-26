@@ -4368,6 +4368,30 @@ model OwnerEmployeeWorkloadSnapshot {
   @@map("owner_employee_workload_snapshots")
 }
 
+/// Module 9 — persisted owner workload snapshot (computed via the owner-workload
+/// domain). Additive, workspace-scoped, no FK.
+model OwnerWorkloadSnapshot {
+  id                      String   @id @db.Uuid
+  workspaceId             String   @db.Uuid @map("workspace_id")
+  periodStart             DateTime? @map("period_start")
+  periodEnd               DateTime? @map("period_end")
+  ownerMinutesPerDay      Float    @map("owner_minutes_per_day")
+  sustainableMinutesPerDay Float   @map("sustainable_minutes_per_day")
+  ownerTasks              Int      @default(0) @map("owner_tasks")
+  ownerOnlyCriticalTasks  Int      @default(0) @map("owner_only_critical_tasks")
+  dailyLoad               Float    @map("daily_load")
+  dailyLoadPct            Int      @map("daily_load_pct")
+  band                    String
+  bottleneckRisk          Boolean  @default(false) @map("bottleneck_risk")
+  overloaded              Boolean  @default(false)
+  recommendedPath         String   @map("recommended_path")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, band])
+  @@map("owner_workload_snapshots")
+}
+
 model TaskStatusHistory {
   id          String   @id @db.Uuid
   workspaceId String   @db.Uuid @map("workspace_id")
