@@ -191,6 +191,10 @@ model ClientAccount {
   notes          String?
   version        Int            @default(1)
   visibility     String         @default("internal")
+  /// Module 1 — when true, a recommendation in this workspace cannot be promoted
+  /// without a complete, safe BusinessImpactAssessment (opt-in; default off keeps
+  /// existing flows unchanged). Owner Mode workspaces enable this.
+  requireBusinessImpactAssessment Boolean @default(false) @map("require_business_impact_assessment")
   createdBy      String?        @db.Uuid @map("created_by")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @map("updated_at")
@@ -1193,6 +1197,18 @@ model WorkspaceMembership {
   addedAt     DateTime  @default(now()) @map("added_at")
   removedAt   DateTime? @map("removed_at")
   isActive    Boolean   @default(true) @map("is_active")
+  // Slice 3B employee profile fields (additive, all optional / defaulted)
+  designation       String?
+  managerId         String?   @db.Uuid @map("manager_id")
+  allowedTaskTypes  String[]  @map("allowed_task_types")
+  authorityLimits   Json?     @map("authority_limits")
+  invitationStatus  String?   @default("NOT_SENT") @map("invitation_status")
+  primaryAuthMethod String?   @map("primary_auth_method")
+  invitedAt         DateTime? @map("invited_at")
+  acceptedAt        DateTime? @map("accepted_at")
+  suspendedAt       DateTime? @map("suspended_at")
+  offboardedAt      DateTime? @map("offboarded_at")
+  createdByOwnerId  String?   @db.Uuid @map("created_by_owner_id")
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -3724,7 +3740,7 @@ model OwnerValidationCriteria {
 
 model OwnerActionOutcome {
   id                       String    @id @default(cuid())
-  workspaceId              String
+  workspaceId              String    @db.Uuid
   businessId               String
   recommendationId         String?
   actionId                 String?
@@ -3832,7 +3848,7 @@ model OwnerCausalAttribution {
 
 model OwnerReassessmentEvent {
   id                           String   @id @default(cuid())
-  workspaceId                  String
+  workspaceId                  String   @db.Uuid
   businessId                   String
   recommendationId             String?
   actionId                     String?
@@ -4231,4 +4247,295 @@ model ControlledLearningAttributionReview {
   @@index([harmEventId])
   @@index([verdict])
   @@map("controlled_learning_attribution_reviews")
+}
+
+// ─── Owner Mode guided-execution persistence (Slices 7/8/9) ──────────────────
+// Additive models. Cross-aggregate references are plain scalar columns (no
+// @relation) to keep existing models untouched, matching the OperatorItem style.
+
+model WorkOrder {
+  id              String   @id @db.Uuid
+  workspaceId     String   @db.Uuid @map("workspace_id")
+  title           String
+  description     String?
+  status          String   @default("open")
+  createdByUserId String?  @db.Uuid @map("created_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+  @@index([workspaceId])
+  @@map("work_orders")
+}
+
+model DelegatedTask {
+  id                          String    @id @db.Uuid
+  workspaceId                 String    @db.Uuid @map("workspace_id")
+  workOrderId                 String?   @db.Uuid @map("work_order_id")
+  assignedUserId              String?   @db.Uuid @map("assigned_user_id")
+  assignedRole                String?   @map("assigned_role")
+  title                       String
+  description                 String?
+  status                      String    @default("DRAFT")
+  priority                    String?
+  dueAt                       DateTime? @map("due_at")
+  estimatedDurationMin        Int?      @map("estimated_duration_min")
+  effortLevel                 String?   @map("effort_level")
+  requiresTravel              Boolean   @default(false) @map("requires_travel")
+  requiresCustomerInteraction Boolean   @default(false) @map("requires_customer_interaction")
+  requiresManagerReview       Boolean   @default(false) @map("requires_manager_review")
+  approvedBoundaryId          String?   @db.Uuid @map("approved_boundary_id")
+  approvedBoundaryVersion     Int?      @map("approved_boundary_version")
+  boundaryContentHash         String?   @map("boundary_content_hash")
+  proofRequirementId          String?   @db.Uuid @map("proof_requirement_id")
+  expectedOutcomeId           String?   @db.Uuid @map("expected_outcome_id")
+  financialBoundaryId         String?   @db.Uuid @map("financial_boundary_id")
+  createdByUserId             String?   @db.Uuid @map("created_by_user_id")
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @default(now()) @map("updated_at")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, assignedUserId])
+  @@map("delegated_tasks")
+}
+
+/// Module 1 — persisted governance BusinessImpactAssessment for a recommendation.
+/// Additive, workspace-scoped, no FK (mirrors DelegatedTask). The full composed
+/// assessment is stored as JSON; lean_classification + evidence_confidence are
+/// extracted for queryability. One assessment per (workspace, recommendation).
+model RecommendationBusinessImpact {
+  id                 String   @id @db.Uuid
+  workspaceId        String   @db.Uuid @map("workspace_id")
+  recommendationId   String   @db.Uuid @map("recommendation_id")
+  leanClassification String   @map("lean_classification")
+  evidenceConfidence String   @map("evidence_confidence")
+  assessment         Json
+  createdByUserId    String?  @db.Uuid @map("created_by_user_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, recommendationId])
+  @@index([workspaceId])
+  @@map("recommendation_business_impacts")
+}
+
+/// Module 6 — persisted per-service/segment unit economics (computed via the
+/// owner-finance/unit-economics domain). Additive, workspace-scoped, no FK.
+model OwnerServiceEconomics {
+  id                    String   @id @db.Uuid
+  workspaceId           String   @db.Uuid @map("workspace_id")
+  businessId            String?  @db.Uuid @map("business_id")
+  serviceLine           String   @map("service_line")
+  segment               String?
+  revenue               Float
+  directCost            Float    @map("direct_cost")
+  contributionMargin    Float    @map("contribution_margin")
+  contributionMarginPct Float    @map("contribution_margin_pct")
+  profitPerLabourHour   Float?   @map("profit_per_labour_hour")
+  profitPerMachineHour  Float?   @map("profit_per_machine_hour")
+  lossMaking            Boolean  @default(false) @map("loss_making")
+  createdByUserId       String?  @db.Uuid @map("created_by_user_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, serviceLine])
+  @@map("owner_service_economics")
+}
+
+/// Module 8 — persisted employee workload snapshot (computed via the employee-
+/// workload domain). Additive, workspace-scoped, no FK.
+model OwnerEmployeeWorkloadSnapshot {
+  id              String   @id @db.Uuid
+  workspaceId     String   @db.Uuid @map("workspace_id")
+  employeeUserId  String?  @db.Uuid @map("employee_user_id")
+  employeeLabel   String?  @map("employee_label")
+  periodStart     DateTime? @map("period_start")
+  periodEnd       DateTime? @map("period_end")
+  shiftHours      Float    @map("shift_hours")
+  breakHours      Float    @default(0) @map("break_hours")
+  taskHours       Float    @default(0) @map("task_hours")
+  travelHours     Float    @default(0) @map("travel_hours")
+  reworkHours     Float    @default(0) @map("rework_hours")
+  overtimeHours   Float    @default(0) @map("overtime_hours")
+  utilization     Float
+  utilizationPct  Int      @map("utilization_pct")
+  band            String
+  overburdened    Boolean  @default(false)
+  fatigueRisk     Boolean  @default(false) @map("fatigue_risk")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, band])
+  @@map("owner_employee_workload_snapshots")
+}
+
+/// Module 9 — persisted owner workload snapshot (computed via the owner-workload
+/// domain). Additive, workspace-scoped, no FK.
+model OwnerWorkloadSnapshot {
+  id                      String   @id @db.Uuid
+  workspaceId             String   @db.Uuid @map("workspace_id")
+  periodStart             DateTime? @map("period_start")
+  periodEnd               DateTime? @map("period_end")
+  ownerMinutesPerDay      Float    @map("owner_minutes_per_day")
+  sustainableMinutesPerDay Float   @map("sustainable_minutes_per_day")
+  ownerTasks              Int      @default(0) @map("owner_tasks")
+  ownerOnlyCriticalTasks  Int      @default(0) @map("owner_only_critical_tasks")
+  dailyLoad               Float    @map("daily_load")
+  dailyLoadPct            Int      @map("daily_load_pct")
+  band                    String
+  bottleneckRisk          Boolean  @default(false) @map("bottleneck_risk")
+  overloaded              Boolean  @default(false)
+  recommendedPath         String   @map("recommended_path")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, band])
+  @@map("owner_workload_snapshots")
+}
+
+/// Module 10 — persisted capacity/bottleneck snapshot (computed via the
+/// capacity-ceiling domain). Additive, workspace-scoped, no FK.
+model OwnerCapacitySnapshot {
+  id                    String   @id @db.Uuid
+  workspaceId           String   @db.Uuid @map("workspace_id")
+  periodStart           DateTime? @map("period_start")
+  periodEnd             DateTime? @map("period_end")
+  currentRevenue        Float    @map("current_revenue")
+  safeUtilization       Float    @map("safe_utilization")
+  resources             Json
+  bottleneckResource    String?  @map("bottleneck_resource")
+  bottleneckUtilization Float    @map("bottleneck_utilization")
+  revenueCeiling        Float?   @map("revenue_ceiling")
+  safeRevenueCeiling    Float?   @map("safe_revenue_ceiling")
+  growthCapacityRevenue Float    @map("growth_capacity_revenue")
+  availableBuffer       Float    @map("available_buffer")
+  expansionTriggered    Boolean  @default(false) @map("expansion_triggered")
+  growthSafe            Boolean  @default(false) @map("growth_safe")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@map("owner_capacity_snapshots")
+}
+
+model OwnerGuidanceSnapshot {
+  id                         String   @id @db.Uuid
+  workspaceId                String   @db.Uuid @map("workspace_id")
+  businessId                 String?  @db.Uuid @map("business_id")
+  classification             String
+  cashSafe                   Boolean  @map("cash_safe")
+  growthGatePassed           Boolean  @map("growth_gate_passed")
+  staffOverloaded            Boolean  @map("staff_overloaded")
+  ownerOverloaded            Boolean  @map("owner_overloaded")
+  dataConfidence             String   @map("data_confidence")
+  topIssueCount              Int      @default(0) @map("top_issue_count")
+  missingDataCount           Int      @default(0) @map("missing_data_count")
+  // Comparable state for change-detection vs the previous snapshot.
+  cashRunwayDays             Float    @map("cash_runway_days")
+  netMarginPct               Float    @map("net_margin_pct")
+  complaintsCount            Int      @default(0) @map("complaints_count")
+  reworkCount                Int      @default(0) @map("rework_count")
+  capacityUtilizationPct     Float    @map("capacity_utilization_pct")
+  staffOverloadPct           Float    @map("staff_overload_pct")
+  ownerLoadPct               Float    @map("owner_load_pct")
+  churnRiskScore             Float    @map("churn_risk_score")
+  supplierInventoryRiskScore Float    @map("supplier_inventory_risk_score")
+  overdueProofCount          Int      @default(0) @map("overdue_proof_count")
+  outcomeChecksDue           Int      @default(0) @map("outcome_checks_due")
+  growthReadinessTier        String   @map("growth_readiness_tier")
+  // Full OwnerNowView payload for replay/audit.
+  payload                    Json
+  createdAt                  DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+  @@map("owner_guidance_snapshots")
+}
+
+model OwnerSupplierInventorySnapshot {
+  id                     String   @id @db.Uuid
+  workspaceId            String   @db.Uuid @map("workspace_id")
+  businessId             String?  @db.Uuid @map("business_id")
+  worstStockoutRisk      String   @map("worst_stockout_risk")
+  belowReorderCount      Int      @default(0) @map("below_reorder_count")
+  stockoutCount          Int      @default(0) @map("stockout_count")
+  unreliableSupplierCount Int     @default(0) @map("unreliable_supplier_count")
+  supplyCutoffRisk       Boolean  @default(false) @map("supply_cutoff_risk")
+  riskScore              Float    @map("risk_score")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+  @@map("owner_supplier_inventory_snapshots")
+}
+
+model TaskStatusHistory {
+  id          String   @id @db.Uuid
+  workspaceId String   @db.Uuid @map("workspace_id")
+  taskId      String   @db.Uuid @map("task_id")
+  fromStatus  String?  @map("from_status")
+  toStatus    String   @map("to_status")
+  actorId     String?  @db.Uuid @map("actor_id")
+  actorRole   String?  @map("actor_role")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId, taskId])
+  @@map("task_status_history")
+}
+
+model ProofRequirement {
+  id                   String   @id @db.Uuid
+  workspaceId          String   @db.Uuid @map("workspace_id")
+  taskId               String?  @db.Uuid @map("task_id")
+  proofType            String   @map("proof_type")
+  requiredFields       Json?    @map("required_fields")
+  riskLevel            String   @default("LOW") @map("risk_level")
+  reviewerRole         String?  @map("reviewer_role")
+  ownerOverrideAllowed Boolean  @default(false) @map("owner_override_allowed")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@map("proof_requirements")
+}
+
+model Proof {
+  id                  String    @id @db.Uuid
+  workspaceId         String    @db.Uuid @map("workspace_id")
+  taskId              String?   @db.Uuid @map("task_id")
+  proofRequirementId  String?   @db.Uuid @map("proof_requirement_id")
+  proofType           String    @map("proof_type")
+  status              String    @default("REQUIRED")
+  submittedByUserId   String?   @db.Uuid @map("submitted_by_user_id")
+  fileHash            String?   @map("file_hash")
+  duplicateFlagged    Boolean   @default(false) @map("duplicate_flagged")
+  submittedAt         DateTime? @map("submitted_at")
+  reviewReason        String?   @map("review_reason")
+  reviewedByUserId    String?   @db.Uuid @map("reviewed_by_user_id")
+  reviewedAt          DateTime? @map("reviewed_at")
+  resubmissionOfId    String?   @db.Uuid @map("resubmission_of_id")
+  ownerOverrideStatus String?   @map("owner_override_status")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @default(now()) @map("updated_at")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, fileHash])
+  @@map("proofs")
+}
+
+model Escalation {
+  id             String    @id @db.Uuid
+  workspaceId    String    @db.Uuid @map("workspace_id")
+  taskId         String?   @db.Uuid @map("task_id")
+  category       String
+  severity       String
+  assignedTarget String    @map("assigned_target")
+  status         String    @default("OPEN")
+  createdBy      String?   @db.Uuid @map("created_by")
+  dueAt          DateTime? @map("due_at")
+  resolutionNote String?   @map("resolution_note")
+  resolvedBy     String?   @db.Uuid @map("resolved_by")
+  resolvedAt     DateTime? @map("resolved_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, assignedTarget])
+  @@map("escalations")
 }

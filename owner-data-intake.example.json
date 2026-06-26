@@ -1,0 +1,49 @@
+{
+  "businessProfile": {
+    "businessName": "",
+    "industry": "",
+    "locationOrService": "",
+    "ownerRole": "",
+    "headcount": 0
+  },
+  "ownerGoals": {
+    "primaryGoal": "",
+    "topPainPoint": "",
+    "currentMonthlyRevenueBand": "",
+    "urgency": ""
+  },
+  "paymentCash": {
+    "cashRunwayMonths": 0,
+    "monthlyFixedCost": 0,
+    "outstandingReceivables": 0
+  },
+  "pricingBoundary": {
+    "maxDiscountPercent": 0,
+    "maxRefund": 0,
+    "refundPromiseAllowed": false,
+    "priceQuoteAllowed": false,
+    "allowedActions": []
+  },
+  "employees": [
+    { "name": "", "role": "", "reliability": "", "isKeyPerson": false }
+  ],
+  "capacity": {
+    "dailyJobCapacity": 0,
+    "currentBacklog": 0,
+    "peakHours": []
+  },
+  "customersOrders": [
+    { "customerSegment": "", "orderValue": 0, "channel": "", "date": "" }
+  ],
+  "sopInput": {
+    "taskType": "",
+    "currentSteps": []
+  },
+  "proofExamples": [
+    { "taskType": "", "proofType": "", "exampleDescription": "" }
+  ],
+  "complaintHistory": [
+    { "issue": "", "frequency": "", "severity": "" }
+  ],
+  "marginTarget": null
+}

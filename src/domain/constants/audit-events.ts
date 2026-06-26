@@ -287,6 +287,47 @@ export const AUDIT_EVENTS = {
   // Governed AI Copilot (advisory-only; one event per accepted/rejected AI call)
   AI_CALL_RECORDED: "ai.call_recorded",
 
+  // Approved Execution Boundary v2 (owner-approved guided-execution envelope)
+  EXECUTION_BOUNDARY_CREATED: "execution.boundary_created",
+  EXECUTION_BOUNDARY_SUPERSEDED: "execution.boundary_superseded",
+  EXECUTION_BOUNDARY_VALIDATION_BLOCKED: "execution.boundary_validation_blocked",
+
+  // Employee/manager account lifecycle (Owner Mode guided execution, Slice 3)
+  EMPLOYEE_SUSPENDED: "employee.suspended",
+  EMPLOYEE_REACTIVATED: "employee.reactivated",
+  EMPLOYEE_OFFBOARDED: "employee.offboarded",
+  EMPLOYEE_SESSIONS_REVOKED: "employee.sessions_revoked",
+
+  // Explicit guided-execution permission grants (Slice 4)
+  PERMISSION_GRANTED: "permission.granted",
+  PERMISSION_REVOKED: "permission.revoked",
+
+  // Delegated task / work-order state machine (Slice 7)
+  TASK_ASSIGNED: "task.assigned",
+  TASK_STATUS_CHANGED: "task.status_changed",
+
+  // Proof requirement / submission / review (Slice 8)
+  PROOF_SUBMITTED: "proof.submitted",
+  PROOF_REVIEWED: "proof.reviewed",
+
+  // Employee blocker / escalation (Slice 9)
+  ESCALATION_RAISED: "escalation.raised",
+  ESCALATION_RESOLVED: "escalation.resolved",
+
+  // Employee guidance generation (Slice 10 — durable AI-guidance ledger at call site)
+  EMPLOYEE_GUIDANCE_GENERATED: "employee_guidance.generated",
+  EMPLOYEE_GUIDANCE_BLOCKED: "employee_guidance.blocked",
+
+  // AI proof precheck (Slice 11 — advisory only; never final-accepts)
+  AI_PROOF_PRECHECK_RECORDED: "ai_proof_precheck.recorded",
+
+  // Customer communication control (Slice 20)
+  CUSTOMER_MESSAGE_SENT: "customer_message.sent",
+  CUSTOMER_MESSAGE_BLOCKED: "customer_message.blocked",
+
+  // Personalized SOP / workflow engine (Slice 16)
+  SOP_VERSION_APPROVED: "sop.version_approved",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",

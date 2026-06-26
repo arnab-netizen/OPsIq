@@ -1,4 +1,8 @@
 import { db } from "@/lib/db";
+import { enforceBusinessImpactIfRequired } from "@/services/business-impact/recommendation-business-impact.service";
+import { enforceInputQualityIfRequired } from "@/services/owner-mode/recommendation-input-quality.service";
+import { enforceConfidenceIfRequired } from "@/services/decision-confidence/recommendation-confidence.service";
+import { enforceCashSafetyIfRequired } from "@/services/owner-finance/recommendation-cash-safety.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -709,6 +713,28 @@ export async function updateRecommendationStatus(
   }
 
   if (input.status === "approved") {
+    // Module 1 governance gate: when the workspace opts in (default off), a
+    // complete, safe BusinessImpactAssessment must be persisted before a
+    // recommendation can be promoted. Fail-closed via BusinessImpactGateError.
+    await enforceBusinessImpactIfRequired(recommendationId, validatedWorkspaceId);
+
+    // Module 2 governance gate: input-quality / evidence-confidence. Sensitive
+    // recommendations (finance/growth/pricing/hiring) cannot be promoted on weak
+    // or missing evidence; compliance routes to professional review. Same opt-in
+    // flag; fail-closed via InputQualityGateError.
+    await enforceInputQualityIfRequired(recommendationId, validatedWorkspaceId);
+
+    // Module 3 governance gate: recommendation confidence. Composes the M1/M2
+    // governance signals into a confidence classification; low/very-low or unsafe
+    // recommendations cannot auto-promote. Same opt-in flag; fail-closed via
+    // ConfidenceGateError.
+    await enforceConfidenceIfRequired(recommendationId, validatedWorkspaceId);
+
+    // Modules 4/5 governance gate: cash/finance survival. No growth recommendation
+    // if cash survival is unsafe; no spend/finance/pricing/hiring action at critical
+    // or insolvent-risk. Same opt-in flag; fail-closed via CashSafetyGateError.
+    await enforceCashSafetyIfRequired(recommendationId, validatedWorkspaceId);
+
     const stateVerification = await verifyRecommendationState(
       recommendationId,
       userId,
