@@ -311,3 +311,19 @@ Output rules verified by tests: complaints/rework/churn outrank growth/marketing
 risk blocks growth; proof/outcome surface before learning; archetype changes wording;
 weak/missing caps confidence; top actions capped at 3 unless emergency.
 Classification (this slice): MODULE_41_USER_FACING_READY — full 360° live-signal coverage.
+
+### Outcome/reassessment migration gap CLOSED + hostile M1–M41 E2E proof
+- `OwnerActionOutcome` / `OwnerReassessmentEvent` were schema-only (no deploy migration),
+  so `owner_action_outcomes` / `owner_reassessment_events` were absent on the migrate-deploy
+  lane. Added additive idempotent migration `20260626160000_owner_outcome_reassessment_tables`
+  generated from Prisma's own DDL (`migrate diff --from-empty`), matching the models exactly
+  (camelCase columns, indexes, guarded FK → `client_accounts`). `[db]` test proves both tables
+  are now queryable (no P2021). The P2021 safeCount fallback is retained as defense-in-depth.
+- Hostile end-to-end proof `m1-m41-e2e-proof.test.ts` drives `getOwnerNowView` through all 8
+  required scenarios (laundry complaints/rework; laundry growth-vs-supplier; distressed
+  housekeeping cash+churn+overload; home-services capacity+proof-overdue; weak-data beginner;
+  growth-blocked-by-risk; outcome-due-before-learning; second-run what-changed) plus cross-cutting
+  safety: top-3 cap unless emergency, actions-to-avoid on risk, archetype-aware wording, beginner
+  plain-language, weak-data confidence cap, proof+rollback shown, no high-risk auto-approval, and
+  every step passes the generic-output guard (no generic advice). Route OWNER_VIEW + workspace
+  isolation proven in the route + `[db]` suites.
