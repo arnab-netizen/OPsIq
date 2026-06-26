@@ -32,7 +32,9 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] F14 — unsafe recommendation taxonomy
 - [x] F15 — regression lock
 - [x] A1–A3 — archetype operating models (universal, laundry, housekeeping)
-- [ ] D1–D3 — economic survival domains (cash, profit, pricing)  <-- NEXT (Phase 3)
+- [~] D1 — cash survival: LEVEL_5 (21 scored cases, harness, regression-locked) DONE
+- [ ] D2 — profit improvement  <-- NEXT
+- [ ] D3 — pricing decisions
 - [ ] D4–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)
 
 ## Classification (honest, no overclaim)
