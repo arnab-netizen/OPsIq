@@ -19,10 +19,10 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] F1 — domain training contract
 - [x] F2 — data confidence engine (wire EvidenceConfidenceLevel + input-quality)
 - [x] F3 — evidence hierarchy
-- [ ] F4 — confidence protocol (wire M3)  <-- NEXT
-- [ ] F5 — severity scoring
-- [ ] F6 — veto matrix (aggregate existing gates)
-- [ ] F7 — decision journal
+- [x] F4 — confidence protocol (wire M3)
+- [x] F5 — severity scoring
+- [x] F6 — veto matrix (aggregate existing gates)
+- [ ] F7 — decision journal  <-- NEXT
 - [ ] F8 — harm ledger (wire harm-tracking)
 - [ ] F9 — side-effect metric registry
 - [ ] F10 — learning quarantine (wire learning-gate)
