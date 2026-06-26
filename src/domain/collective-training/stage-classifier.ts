@@ -55,17 +55,22 @@ export function classifyBusinessStage(agg: AggregationResult): StageResult {
     return { stage: "profit_repair", reason: "profit/margin leakage" };
   }
 
-  // 5. Level-2 operating constraint red → stabilization.
-  const level2 = (["capacity", "staff-workload", "owner-workload", "customer-complaints", "supplier-inventory"] as DomainKey[]);
+  // 5. Level-2 operating constraint / compliance / demand-side condition red → stabilization.
+  const level2 = (["capacity", "staff-workload", "owner-workload", "customer-complaints",
+    "supplier-inventory", "risk-compliance", "retention", "marketing"] as DomainKey[]);
   if (level2.some((d) => red(agg, d))) {
     return { stage: "stabilization", reason: "operating constraint red" };
   }
 
-  // 6. Repeatable, owner-independent system ready → scale readiness.
-  if (green(agg, "scale-readiness")) return { stage: "scale_readiness", reason: "scale gates pass (repeatable, owner-independent)" };
+  // 6. Scale readiness: gates pass (green) OR being worked toward (red, not yet ready).
+  if (green(agg, "scale-readiness") || red(agg, "scale-readiness")) {
+    return { stage: "scale_readiness", reason: "scale-readiness in focus" };
+  }
 
-  // 7. Stable operations with growth signals → growth readiness.
-  if (green(agg, "growth-readiness")) return { stage: "growth_readiness", reason: "growth gates pass" };
+  // 7. Growth readiness: gates pass (green) OR being worked toward (red).
+  if (green(agg, "growth-readiness") || red(agg, "growth-readiness")) {
+    return { stage: "growth_readiness", reason: "growth-readiness in focus" };
+  }
 
   // 8. Otherwise mature optimization.
   return { stage: "mature_optimization", reason: "all condition domains stable" };
