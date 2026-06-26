@@ -14,11 +14,11 @@ duplicate decision/confidence/veto/learning/simulation engines.
 - [x] C1 — collective decision packet contract (`decision-packet.ts`)
 - [x] C2 — domain signal aggregator (`signal-aggregator.ts`)
 - [x] C3 — business stage classifier (`stage-classifier.ts`)
-- [ ] C4 — cross-domain priority engine  <-- NEXT
-- [ ] C5 — collective veto resolver (wire F6 evaluateVetoes)
-- [ ] C6 — contradiction resolver
-- [ ] C7 — what-not-to-do generator
-- [ ] C8 — primary next-action selector (wire F12 + F13)
+- [x] C4 — cross-domain priority engine (`priority-engine.ts`)
+- [x] C5 — collective veto resolver (wires F6 evaluateVetoes)
+- [x] C6 — contradiction resolver
+- [x] C7 — what-not-to-do generator
+- [ ] C8 — primary next-action selector (wire F12 + F13)  <-- NEXT
 - [ ] C9 — assignment resolver
 - [ ] C10 — guided execution composer
 - [ ] C11 — collective proof + verification composer (wire F8)
@@ -36,11 +36,11 @@ duplicate decision/confidence/veto/learning/simulation engines.
 - Collective cases added: 0 / 360 minimum (150 conflict + 120 scenario + 90 archetype).
 
 ## Tests
-- Collective: 1 file / 20 tests green (C1–C3). Foundation untouched (174 tests still green).
+- Collective: 2 files / 43 tests green (C1–C7). Foundation untouched (174 tests still green).
 - Unsafe outputs: 0.
 
 ## Classification
-COLLECTIVE_TRAINING_IN_PROGRESS (C0–C3 complete; C4–C20 pending).
+COLLECTIVE_TRAINING_IN_PROGRESS (C0–C7 complete; C8–C20 pending).
 
 ## Continuation
 `/continue-collective-training-build`
