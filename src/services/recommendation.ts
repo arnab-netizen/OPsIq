@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { enforceBusinessImpactIfRequired } from "@/services/business-impact/recommendation-business-impact.service";
 import { enforceInputQualityIfRequired } from "@/services/owner-mode/recommendation-input-quality.service";
 import { enforceConfidenceIfRequired } from "@/services/decision-confidence/recommendation-confidence.service";
+import { enforceCashSafetyIfRequired } from "@/services/owner-finance/recommendation-cash-safety.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -728,6 +729,11 @@ export async function updateRecommendationStatus(
     // recommendations cannot auto-promote. Same opt-in flag; fail-closed via
     // ConfidenceGateError.
     await enforceConfidenceIfRequired(recommendationId, validatedWorkspaceId);
+
+    // Modules 4/5 governance gate: cash/finance survival. No growth recommendation
+    // if cash survival is unsafe; no spend/finance/pricing/hiring action at critical
+    // or insolvent-risk. Same opt-in flag; fail-closed via CashSafetyGateError.
+    await enforceCashSafetyIfRequired(recommendationId, validatedWorkspaceId);
 
     const stateVerification = await verifyRecommendationState(
       recommendationId,
