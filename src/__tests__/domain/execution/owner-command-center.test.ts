@@ -9,7 +9,7 @@ import {
 
 const sig = (over: Partial<CommandCenterSignal> = {}): CommandCenterSignal => ({
   id: "s",
-  function: BusinessFunction.OPERATIONS,
+  function: BusinessFunction.CAPACITY,
   severity: "INFO",
   headline: "ok",
   requiresOwnerAction: false,

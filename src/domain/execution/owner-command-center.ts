@@ -17,18 +17,11 @@
  * Pure + deterministic: no Date.now(), no Math.random(), no input mutation.
  */
 
-/** The business function a signal pertains to (forward contract for Module 41). */
-export enum BusinessFunction {
-  FINANCE = "FINANCE",
-  CASHFLOW = "CASHFLOW",
-  SALES = "SALES",
-  MARKETING = "MARKETING",
-  OPERATIONS = "OPERATIONS",
-  PEOPLE = "PEOPLE",
-  CONTINUITY = "CONTINUITY",
-  GROWTH = "GROWTH",
-  GOVERNANCE = "GOVERNANCE",
-}
+// The canonical 360° BusinessFunction enum now lives in the Module 41 guidance
+// layer. The command center re-exports it so a single vocabulary is shared across
+// command-and-control signals and owner guidance.
+export { BusinessFunction } from "@/domain/owner-guidance/business-function";
+import { BusinessFunction } from "@/domain/owner-guidance/business-function";
 
 /** Severity of a command-center signal, in escalating order. */
 export type SignalSeverity = "INFO" | "ADVISORY" | "WARNING" | "URGENT" | "CRITICAL";
