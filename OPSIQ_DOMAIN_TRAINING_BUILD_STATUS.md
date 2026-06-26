@@ -35,7 +35,10 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] D1 — cash survival: LEVEL_5 (21 scored cases)
 - [x] D2 — profit improvement: LEVEL_5 (21 scored cases)
 - [x] D3 — pricing decisions: LEVEL_5 (21 scored cases)
-- [ ] D4–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)  <-- NEXT: D4 (what proof is required)
+- [x] D4 — what proof is required: LEVEL_5
+- [x] D5 — how to verify outcome: LEVEL_5
+- [x] D6 — when to stop/rollback/redesign: LEVEL_5
+- [ ] D7–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)  <-- NEXT: D7 (capacity)
 
 ## Classification (honest, no overclaim)
 ECONOMIC_SURVIVAL_DOMAIN_TRAINING_COMPLETE (F0–F15 + A1–A3 + D1–D3 at LEVEL_5; D4–D24 NOT started).
