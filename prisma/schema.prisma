@@ -4318,6 +4318,29 @@ model RecommendationBusinessImpact {
   @@map("recommendation_business_impacts")
 }
 
+/// Module 6 — persisted per-service/segment unit economics (computed via the
+/// owner-finance/unit-economics domain). Additive, workspace-scoped, no FK.
+model OwnerServiceEconomics {
+  id                    String   @id @db.Uuid
+  workspaceId           String   @db.Uuid @map("workspace_id")
+  businessId            String?  @db.Uuid @map("business_id")
+  serviceLine           String   @map("service_line")
+  segment               String?
+  revenue               Float
+  directCost            Float    @map("direct_cost")
+  contributionMargin    Float    @map("contribution_margin")
+  contributionMarginPct Float    @map("contribution_margin_pct")
+  profitPerLabourHour   Float?   @map("profit_per_labour_hour")
+  profitPerMachineHour  Float?   @map("profit_per_machine_hour")
+  lossMaking            Boolean  @default(false) @map("loss_making")
+  createdByUserId       String?  @db.Uuid @map("created_by_user_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, serviceLine])
+  @@map("owner_service_economics")
+}
+
 model TaskStatusHistory {
   id          String   @id @db.Uuid
   workspaceId String   @db.Uuid @map("workspace_id")
