@@ -229,3 +229,42 @@ pure, deterministic (no `Date.now()`/`Math.random()`), with unit + adversarial t
   which are explicitly frozen in Owner Mode. No work done; recorded as out-of-scope.
 
 145 new unit/adversarial tests added (all green); full typecheck clean; lint clean.
+
+## MODULE 41 — Real-Time 360° Owner Guidance Layer
+Implemented as pure domain cores under `src/domain/owner-guidance/` that ORCHESTRATE
+the command-and-control modules (M1–M40) — they do not replace finance, cash, unit-
+economics, workload, capacity, SOP, quality, customer, supplier, risk, or learning
+logic. 102 owner-guidance tests (unit + adversarial), typecheck + lint clean.
+
+- **business-function.ts** — canonical 27-value `BusinessFunction` enum (360° coverage);
+  `assertBusinessFunction` (every recommendation/action/command-center item/avoid must
+  map to ≥1 function); `requiresProfessionalReview` (compliance/payroll). M33 command
+  center now re-exports this single vocabulary.
+- **guidance-classification.ts** — the 9 `GUIDANCE_*` terminal states + actionability helpers.
+- **guidance-object.ts** — step-by-step `GuidanceObject` contract + `validateGuidanceObject`
+  hard rules (workspaceId, businessFunction, reasonNow, exactStep, proof-or-reason,
+  employee-facing boundary validation, professional-review for compliance/payroll, owner
+  approval for high-risk, weak-confidence-emergency guard). Reuses ProofType /
+  EvidenceConfidenceLevel / BoundaryValidationStatus.
+- **issue-priority.ts** — canonical 10-tier priority (cash > customer/service > overload >
+  profit > capacity > compliance > blocked > proof/outcome > growth > process);
+  `rankIssues`, `topIssues` (≤3 unless emergency).
+- **next-best-step.ts** — `deriveActionsToAvoid` (risk → forbidden moves) +
+  `selectNextBestSteps` (top owner actions + avoids + emergency flag).
+- **generic-output-guard.ts** — rejects "improve marketing"/"reduce costs"/etc unless
+  backed by concrete context+reason+role+step+proof+outcome+risk (8-flag specificity).
+- **change-detection.ts** — 15 `ChangeCategory` deltas between business-state snapshots
+  with owner alerts (cash worsened, complaints up, overload up, outcome check due,
+  growth-readiness downgrade with old→new reason).
+- **beginner-mode.ts** — plain-language explanation (why it matters, if ignored, do-first,
+  do-not, proof, how to verify), jargon replacement, weak-data confidence cap,
+  professional-review warning.
+- **guidance-orchestrator.ts** — `buildOwnerNowView` real-time loop: classify data quality
+  + cap confidence → rank risks → remove growth from top actions until gates pass →
+  top-3 actions + actions-to-avoid → per-function status surface → terminal
+  GuidanceClassification. 10 required adversarial simulations all pass.
+
+Classification: IMPLEMENTED_BACKEND_ONLY_UI_MISSING (pure domain + orchestration cores
+proven by tests; owner-facing route/UI surface is the next wiring step). Public scope
+frozen: no SaaS/billing/launch/cross-user/integrations/forecasting; near-real-time via
+refresh/event recompute only — no autonomous high-risk execution.
