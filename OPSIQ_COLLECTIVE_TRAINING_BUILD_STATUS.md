@@ -18,13 +18,13 @@ duplicate decision/confidence/veto/learning/simulation engines.
 - [x] C5 — collective veto resolver (wires F6 evaluateVetoes)
 - [x] C6 — contradiction resolver
 - [x] C7 — what-not-to-do generator
-- [ ] C8 — primary next-action selector (wire F12 + F13)  <-- NEXT
-- [ ] C9 — assignment resolver
-- [ ] C10 — guided execution composer
-- [ ] C11 — collective proof + verification composer (wire F8)
-- [ ] C12 — stop/rollback/redesign composer
-- [ ] C13 — collective learning admission controller (wire F10)
-- [ ] C14 — collective simulation framework (wire F14 unsafe + rubric)
+- [x] C8 — primary next-action selector (wires F12 + F13)
+- [x] C9 — assignment resolver
+- [x] C10 — guided execution composer
+- [x] C11 — collective proof + verification composer (wires F8)
+- [x] C12 — stop/rollback/redesign composer
+- [x] C13 — collective learning admission controller (wires F10)
+- [ ] C14 — collective simulation framework (wire F14 unsafe + rubric)  <-- NEXT
 - [ ] C15 — conflict pair case pack (≥150 cases)
 - [ ] C16 — multi-domain scenario packs (≥120 cases)
 - [ ] C17 — archetype collective simulations (≥90 cases)
@@ -36,11 +36,11 @@ duplicate decision/confidence/veto/learning/simulation engines.
 - Collective cases added: 0 / 360 minimum (150 conflict + 120 scenario + 90 archetype).
 
 ## Tests
-- Collective: 2 files / 43 tests green (C1–C7). Foundation untouched (174 tests still green).
+- Collective: 3 files / 73 tests green (C1–C13). Foundation untouched (174 tests still green).
 - Unsafe outputs: 0.
 
 ## Classification
-COLLECTIVE_TRAINING_IN_PROGRESS (C0–C7 complete; C8–C20 pending).
+COLLECTIVE_TRAINING_IN_PROGRESS (C0–C13 complete; C14–C20 pending).
 
 ## Continuation
 `/continue-collective-training-build`
