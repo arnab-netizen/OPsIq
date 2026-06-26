@@ -216,12 +216,16 @@ pure, deterministic (no `Date.now()`/`Math.random()`), with unit + adversarial t
   `PublicScopeFrozenError` — single chokepoint blocking SaaS/billing/launch/cross-user/
   integrations/forecasting). 23 tests.
 
+- **M33 Owner Command Center** — `domain/execution/owner-command-center.ts`
+  (pure aggregation core, no UI/real-time layer): `composeCommandCenter` orders
+  pre-computed module signals into a priority-ranked attention list,
+  `CommandCenterStatus` (STABLE/NEEDS_ATTENTION/ACTION_REQUIRED/CRISIS),
+  `topPrioritySignal`, `commandCenterRequiresOwnerAction`. Defines the minimal
+  forward contracts `BusinessFunction` + `CommandCenterSignal` that Module 41 will
+  reuse (permitted by the build rule); Module 41 itself remains NOT started. 14 tests.
+
 ### Deferred (frozen scope)
 - **M39 Integration Readiness Layer** — DEFERRED. Touches external integrations,
   which are explicitly frozen in Owner Mode. No work done; recorded as out-of-scope.
-- **M33 Owner Command Center** — UI/orchestration surface. The Module-41 contracts
-  it would consume are deferred with Module 41 (not started per instruction); the
-  underlying owner-mode dashboard/briefing cores already exist
-  (`domain/owner-mode/owner-dashboard.ts`, `domain/owner-briefing/*`).
 
-131 new unit/adversarial tests added (all green); full typecheck clean; lint clean.
+145 new unit/adversarial tests added (all green); full typecheck clean; lint clean.
