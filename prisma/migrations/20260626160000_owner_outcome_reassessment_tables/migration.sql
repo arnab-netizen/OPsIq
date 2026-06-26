@@ -6,7 +6,7 @@
 
 CREATE TABLE IF NOT EXISTS "owner_action_outcomes" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "businessId" TEXT NOT NULL,
     "recommendationId" TEXT,
     "actionId" TEXT,
@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS "owner_action_outcomes_outcomeStatus_idx" ON "owner_a
 
 CREATE TABLE IF NOT EXISTS "owner_reassessment_events" (
     "id" TEXT NOT NULL,
-    "workspaceId" TEXT NOT NULL,
+    "workspaceId" UUID NOT NULL,
     "businessId" TEXT NOT NULL,
     "recommendationId" TEXT,
     "actionId" TEXT,

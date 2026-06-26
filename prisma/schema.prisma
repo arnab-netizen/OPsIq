@@ -3740,7 +3740,7 @@ model OwnerValidationCriteria {
 
 model OwnerActionOutcome {
   id                       String    @id @default(cuid())
-  workspaceId              String
+  workspaceId              String    @db.Uuid
   businessId               String
   recommendationId         String?
   actionId                 String?
@@ -3848,7 +3848,7 @@ model OwnerCausalAttribution {
 
 model OwnerReassessmentEvent {
   id                           String   @id @default(cuid())
-  workspaceId                  String
+  workspaceId                  String   @db.Uuid
   businessId                   String
   recommendationId             String?
   actionId                     String?
