@@ -44,7 +44,10 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] D10 — quality: LEVEL_5 (21 scored cases)
 - [x] D11 — SOP / process execution: LEVEL_5 (21 scored cases)
 - [x] D12 — customer complaints: LEVEL_5 (21 scored cases)
-- [ ] D13–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)  <-- NEXT: D13 (retention)
+- [x] D13 — customer retention: LEVEL_5 (21 scored cases)
+- [x] D14 — marketing: LEVEL_5 (21 scored cases)
+- [x] D15 — supplier / inventory: LEVEL_5 (21 scored cases)
+- [ ] D16–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)  <-- NEXT: D16 (daily priorities)
 
 ## Classification (honest, no overclaim)
 ECONOMIC_SURVIVAL_DOMAIN_TRAINING_COMPLETE (F0–F15 + A1–A3 + D1–D3 at LEVEL_5; D4–D24 NOT started).
