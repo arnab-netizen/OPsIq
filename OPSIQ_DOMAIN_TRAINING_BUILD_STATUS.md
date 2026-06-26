@@ -1,0 +1,41 @@
+# OpsIQ Owner Mode — Individual Domain Training Build Status
+
+Owner Mode only. Additive wiring layer over the existing M1–M41 engines — **no duplicate engines**.
+
+## Preconditions (verified before start)
+- Branch: `claude/opsiq-owner-mode-build-219oib` @ `9d416fb` (= latest main, merged M1–M41).
+- Post-merge main CI green (run 28226550340).
+- Working tree clean; 3 owner migrations applied clean on CI; no forbidden-scope work active.
+
+## F0 — Repo audit (DONE, no code)
+Every foundation concept already has an engine (see audit table in build log). No existing
+`domain-training` module → foundation is built as a thin contract + harness that **wires**
+existing engines (M1 EvidenceConfidenceLevel, M2 input-quality, M3 confidence gate, cash-safety/
+growth-readiness/operational-safety vetoes, harm-tracking, learning-gate, generic-output-guard,
+lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
+
+## Slice progress
+- [x] F0 — repo audit
+- [x] F1 — domain training contract
+- [x] F2 — data confidence engine (wire EvidenceConfidenceLevel + input-quality)
+- [x] F3 — evidence hierarchy
+- [ ] F4 — confidence protocol (wire M3)  <-- NEXT
+- [ ] F5 — severity scoring
+- [ ] F6 — veto matrix (aggregate existing gates)
+- [ ] F7 — decision journal
+- [ ] F8 — harm ledger (wire harm-tracking)
+- [ ] F9 — side-effect metric registry
+- [ ] F10 — learning quarantine (wire learning-gate)
+- [ ] F11 — recommendation quality validator (compose generic-output-guard + guidance-object)
+- [ ] F12 — feasibility checker
+- [ ] F13 — owner-mode lean filter (wire lean-guardrail)
+- [ ] F14 — unsafe recommendation taxonomy
+- [ ] F15 — regression lock
+- [ ] A1–A3 — archetype operating models
+- [ ] D1–D24 — individual domains (each ≥21 scored cases, LEVEL_5)
+
+## Classification (honest, no overclaim)
+PARTIAL — governance foundation in progress.
+
+## Continuation
+`/continue-domain-training-build`
