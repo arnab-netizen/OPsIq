@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runCollective, type CollectiveInput } from "@/domain/collective-training/collective-engine";
+import { runCollective } from "@/domain/collective-training/collective-engine";
 import { scoreCollectiveCase, evaluateCollective, detectCollectiveUnsafe, type CollectiveCase } from "@/domain/collective-training/simulation/collective-scoring";
 import type { DomainSignalInput } from "@/domain/collective-training/collective-types";
 
