@@ -38,21 +38,30 @@ const DM: Record<string, DomMeta> = {
 const VERIFIED = { learningRequested: true, outcomeVerified: true, harmChecked: true, harmful: false, crossDomainHarm: false, disputed: false, inconclusive: false, simulationTested: true };
 const DISPUTED_LEARN = { ...VERIFIED, disputed: true };
 
-function dominantCase(pairId: number, dominant: DomainKey, ownerGoal: string, scen: Scen): CollectiveCase {
+export type ContradictionSeed = NonNullable<CollectiveInput["contradiction"]>;
+export interface DominantOpts {
+  /** A contradiction present in ALL variants (e.g. revenue-up/profit-down for profit-repair). */
+  baseContradiction?: ContradictionSeed;
+  extraGreens?: DomainKey[];
+  archetype?: string;
+}
+
+export function buildDominantCase(idTag: string, pack: string, dominant: DomainKey, ownerGoal: string, scen: Scen, opts: DominantOpts = {}): CollectiveCase {
   const m = DM[dominant];
   const sev = m.sev ?? "HIGH";
-  const blockedConf: RecommendationConfidence = scen === "missing_data" ? "BLOCKED" : "HIGH";
+  const archetype = opts.archetype ?? "universal";
   const baseSignals = (conf: RecommendationConfidence, missing?: string[]): DomainSignalInput[] =>
-    [dom(dominant, sev, conf, missing), ...(dominant !== "cash-survival" ? [G("cash-survival")] : [])];
+    [dom(dominant, sev, conf, missing), ...(dominant !== "cash-survival" ? [G("cash-survival")] : []), ...(opts.extraGreens ?? []).map(G)];
 
   const expectedConfidence: RecommendationConfidence = m.compliance ? "ESCALATE" : (scen === "missing_data" ? "BLOCKED" : "HIGH");
-  const input: CollectiveInput = { archetype: "universal", ownerGoal, signals: baseSignals(scen === "missing_data" ? blockedConf : "HIGH", scen === "missing_data" ? ["key metric unavailable"] : undefined) };
+  const input: CollectiveInput = { archetype, ownerGoal, signals: baseSignals(scen === "missing_data" ? "BLOCKED" : "HIGH", scen === "missing_data" ? ["key metric unavailable"] : undefined) };
   let expectContradiction = false;
   let learningStatus: CollectiveExpected["learningStatus"] = "NOT_ELIGIBLE";
 
+  if (opts.baseContradiction) { input.contradiction = { ...opts.baseContradiction }; expectContradiction = true; }
   if (scen === "owner_pressure") input.ownerOnlyDecision = false;
   if (scen === "false_success") {
-    input.contradiction = { revenueUp: true, profitDown: true };
+    input.contradiction = { ...(input.contradiction ?? {}), revenueUp: true, profitDown: true };
     input.learning = DISPUTED_LEARN;
     expectContradiction = true;
     learningStatus = "DISPUTED";
@@ -63,10 +72,17 @@ function dominantCase(pairId: number, dominant: DomainKey, ownerGoal: string, sc
     mustBlockActions: m.block, expectContradiction, whatNotToDoNonEmpty: true,
     primaryActionKeyword: m.pk, who: m.who, confidence: expectedConfidence, learningStatus,
   };
-  return { id: `C15-P${String(pairId).padStart(2, "0")}-${scen}`, pack: `pair-${pairId}`, archetype: "universal", scenarioType: scen, input, expected, unsafeOutputsThatMustFail: ["growth_under_constraint"] };
+  return { id: idTag, pack, archetype, scenarioType: scen, input, expected, unsafeOutputsThatMustFail: ["growth_under_constraint"] };
 }
 
-type GovKind = "staff_proof" | "owner_evidence" | "vanity" | "harm_success";
+function dominantCase(pairId: number, dominant: DomainKey, ownerGoal: string, scen: Scen): CollectiveCase {
+  return buildDominantCase(`C15-P${String(pairId).padStart(2, "0")}-${scen}`, `pair-${pairId}`, dominant, ownerGoal, scen);
+}
+
+export type GovKind = "staff_proof" | "owner_evidence" | "vanity" | "harm_success";
+export function buildGovernanceCase(idTag: string, pack: string, kind: GovKind, ownerGoal: string, scen: Scen): CollectiveCase {
+  return { ...governanceCase(0, kind, ownerGoal, scen), id: idTag, pack };
+}
 function governanceCase(pairId: number, kind: GovKind, ownerGoal: string, scen: Scen): CollectiveCase {
   const greens = [G("cash-survival"), G("quality")];
   const input: CollectiveInput = { archetype: "universal", ownerGoal, signals: greens };
