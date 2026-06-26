@@ -32,13 +32,13 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] F14 — unsafe recommendation taxonomy
 - [x] F15 — regression lock
 - [x] A1–A3 — archetype operating models (universal, laundry, housekeeping)
-- [~] D1 — cash survival: LEVEL_5 (21 scored cases, harness, regression-locked) DONE
-- [ ] D2 — profit improvement  <-- NEXT
-- [ ] D3 — pricing decisions
-- [ ] D4–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)
+- [x] D1 — cash survival: LEVEL_5 (21 scored cases)
+- [x] D2 — profit improvement: LEVEL_5 (21 scored cases)
+- [x] D3 — pricing decisions: LEVEL_5 (21 scored cases)
+- [ ] D4–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)  <-- NEXT: D4 (what proof is required)
 
 ## Classification (honest, no overclaim)
-DOMAIN_TRAINING_FOUNDATION_AND_ARCHETYPES_COMPLETE (F0–F15 + A1–A3 done; D1–D24 NOT started).
+ECONOMIC_SURVIVAL_DOMAIN_TRAINING_COMPLETE (F0–F15 + A1–A3 + D1–D3 at LEVEL_5; D4–D24 NOT started).
 
 ## Continuation
 `/continue-domain-training-build`
