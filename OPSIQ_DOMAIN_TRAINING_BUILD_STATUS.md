@@ -50,7 +50,10 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] D16 — daily priorities: LEVEL_5 (21 scored cases)
 - [x] D17 — review cadence (weekly/monthly): LEVEL_5 (21 scored cases)
 - [x] D18 — what not to do: LEVEL_5 (21 scored cases)
-- [ ] D19–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)  <-- NEXT: D19 (what to do next)
+- [x] D19 — what to do next: LEVEL_5 (21 scored cases)
+- [x] D20 — who (delegation / accountable assignment): LEVEL_5 (21 scored cases)
+- [x] D21 — how (execution method quality): LEVEL_5 (21 scored cases)
+- [ ] D22–D24 — remaining domains (each ≥21 scored cases, LEVEL_5)  <-- NEXT: D22 (growth readiness)
 
 ## Classification (honest, no overclaim)
 ECONOMIC_SURVIVAL_DOMAIN_TRAINING_COMPLETE (F0–F15 + A1–A3 + D1–D3 at LEVEL_5; D4–D24 NOT started).
