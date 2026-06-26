@@ -264,7 +264,27 @@ logic. 102 owner-guidance tests (unit + adversarial), typecheck + lint clean.
   top-3 actions + actions-to-avoid → per-function status surface → terminal
   GuidanceClassification. 10 required adversarial simulations all pass.
 
-Classification: IMPLEMENTED_BACKEND_ONLY_UI_MISSING (pure domain + orchestration cores
-proven by tests; owner-facing route/UI surface is the next wiring step). Public scope
-frozen: no SaaS/billing/launch/cross-user/integrations/forecasting; near-real-time via
+### M41 user-facing wiring (live runtime)
+- **Route:** `GET /api/owner/now-view?businessId=...` (`src/app/api/owner/now-view/route.ts`)
+  — `withCanonicalEnforcement` with `CAPABILITIES.OWNER_VIEW` + `requireWorkspace`;
+  workspace-scoped (never client-supplied).
+- **Service:** `src/services/owner-guidance/owner-now-view.service.ts` —
+  `assembleGuidanceContext` builds a live `GuidanceContext` from M4/M5 cash & finance
+  cycles, M8 employee + M9 owner workload, M10 capacity snapshots; `getOwnerNowView`
+  runs the orchestrator, diffs against the previous persisted snapshot for "what
+  changed", builds beginner explanation + concrete step-by-step guidance, persists.
+- **Persistence:** additive `OwnerGuidanceSnapshot` Prisma model + idempotent migration
+  `20260626140000_owner_guidance_snapshots` (no FK; mirrors owner_*_snapshots). Stores
+  the comparable state for change-detection + full payload. `[db]` test proves
+  round-trip + workspace isolation on the Postgres CI lane.
+- **UI:** `src/app/(authenticated)/owner/now/page.tsx` — minimal client surface
+  (follows the existing `/owner` command-center fetch pattern): status badges, top-3
+  actions with proof/role/deadline/rollback, actions-to-avoid, what-changed, missing
+  data, beginner explanation. No business/permission logic in the page.
+- **Tests:** route contract (capability + workspace isolation + businessId parsing),
+  service unit (DI, live assembly + change detection + persistence), `[db]` persistence.
+
+Classification: MODULE_41_USER_FACING_READY (route + live service + persistence + UI,
+all tested; `[db]` proof on the Postgres CI lane). Public scope frozen:
+no SaaS/billing/launch/cross-user/integrations/forecasting; near-real-time via
 refresh/event recompute only — no autonomous high-risk execution.

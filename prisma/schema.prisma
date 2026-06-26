@@ -4416,6 +4416,40 @@ model OwnerCapacitySnapshot {
   @@map("owner_capacity_snapshots")
 }
 
+model OwnerGuidanceSnapshot {
+  id                         String   @id @db.Uuid
+  workspaceId                String   @db.Uuid @map("workspace_id")
+  businessId                 String?  @db.Uuid @map("business_id")
+  classification             String
+  cashSafe                   Boolean  @map("cash_safe")
+  growthGatePassed           Boolean  @map("growth_gate_passed")
+  staffOverloaded            Boolean  @map("staff_overloaded")
+  ownerOverloaded            Boolean  @map("owner_overloaded")
+  dataConfidence             String   @map("data_confidence")
+  topIssueCount              Int      @default(0) @map("top_issue_count")
+  missingDataCount           Int      @default(0) @map("missing_data_count")
+  // Comparable state for change-detection vs the previous snapshot.
+  cashRunwayDays             Float    @map("cash_runway_days")
+  netMarginPct               Float    @map("net_margin_pct")
+  complaintsCount            Int      @default(0) @map("complaints_count")
+  reworkCount                Int      @default(0) @map("rework_count")
+  capacityUtilizationPct     Float    @map("capacity_utilization_pct")
+  staffOverloadPct           Float    @map("staff_overload_pct")
+  ownerLoadPct               Float    @map("owner_load_pct")
+  churnRiskScore             Float    @map("churn_risk_score")
+  supplierInventoryRiskScore Float    @map("supplier_inventory_risk_score")
+  overdueProofCount          Int      @default(0) @map("overdue_proof_count")
+  outcomeChecksDue           Int      @default(0) @map("outcome_checks_due")
+  growthReadinessTier        String   @map("growth_readiness_tier")
+  // Full OwnerNowView payload for replay/audit.
+  payload                    Json
+  createdAt                  DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+  @@map("owner_guidance_snapshots")
+}
+
 model TaskStatusHistory {
   id          String   @id @db.Uuid
   workspaceId String   @db.Uuid @map("workspace_id")
