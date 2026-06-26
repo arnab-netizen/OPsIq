@@ -25,10 +25,10 @@ lean-guardrail, negative-recommendation). Reuse-first; do not re-derive scoring.
 - [x] F7 — decision journal
 - [x] F8 — harm ledger (wire harm-tracking)
 - [x] F9 — side-effect metric registry
-- [ ] F10 — learning quarantine (wire learning-gate)  <-- NEXT
-- [ ] F11 — recommendation quality validator (compose generic-output-guard + guidance-object)
-- [ ] F12 — feasibility checker
-- [ ] F13 — owner-mode lean filter (wire lean-guardrail)
+- [x] F10 — learning quarantine (wire learning-gate)
+- [x] F11 — recommendation quality validator (compose generic-output-guard + guidance-object)
+- [x] F12 — feasibility checker
+- [ ] F13 — owner-mode lean filter (wire lean-guardrail)  <-- NEXT
 - [ ] F14 — unsafe recommendation taxonomy
 - [ ] F15 — regression lock
 - [ ] A1–A3 — archetype operating models
