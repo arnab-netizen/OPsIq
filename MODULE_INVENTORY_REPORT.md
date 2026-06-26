@@ -288,3 +288,26 @@ Classification: MODULE_41_USER_FACING_READY (route + live service + persistence 
 all tested; `[db]` proof on the Postgres CI lane). Public scope frozen:
 no SaaS/billing/launch/cross-user/integrations/forecasting; near-real-time via
 refresh/event recompute only — no autonomous high-risk execution.
+
+### M41 full 360° live-signal wiring
+All remaining live signals are now wired into `assembleGuidanceContext` (reuse-first,
+no parallel engines):
+- **Complaints / rework** → `OwnerMetricSnapshot.complaintCount`/`rewashCount` →
+  CUSTOMER_SERVICE_FAILURE issues (rework tagged QUALITY+SOP_PROCESS, reuses M15 CoPQ framing).
+- **Churn / retention** → derived from `OwnerMetricSnapshot` repeat/new ratio →
+  CUSTOMER_RETENTION issue + M20-style win-back step.
+- **Supplier / inventory** → new `OwnerSupplierInventorySnapshot` (wraps M23 domain) +
+  migration `20260626150000_owner_supplier_inventory_snapshots` + `[db]` test; high risk
+  blocks the growth gate.
+- **Proof overdue** → `Proof` FSM count (pending statuses past a 48h age) → PENDING_PROOF_OUTCOME.
+- **Outcome / reassessment due** → `OwnerActionOutcome` (too_early/measurement past due) +
+  `OwnerReassessmentEvent` (pending) → PENDING_PROOF_OUTCOME (surfaces before learning).
+- **Archetype** → `OwnerBusiness.businessType` → `archetype-guidance.ts` (laundry / housekeeping /
+  home_services / generic) → archetype-aware step wording (reuses pack vocabulary M29–M32).
+- **Runway/margin numerics** → only categorical state persisted; state→proxy retained (documented).
+- **Scheduled recompute** → deferred (no existing safe owner-snapshot scheduling pattern; on-demand only).
+Missing sources still emit smallest-useful-first named missing-data prompts (never generic).
+Output rules verified by tests: complaints/rework/churn outrank growth/marketing; supplier
+risk blocks growth; proof/outcome surface before learning; archetype changes wording;
+weak/missing caps confidence; top actions capped at 3 unless emergency.
+Classification (this slice): MODULE_41_USER_FACING_READY — full 360° live-signal coverage.

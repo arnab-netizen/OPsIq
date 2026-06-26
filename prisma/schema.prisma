@@ -4450,6 +4450,23 @@ model OwnerGuidanceSnapshot {
   @@map("owner_guidance_snapshots")
 }
 
+model OwnerSupplierInventorySnapshot {
+  id                     String   @id @db.Uuid
+  workspaceId            String   @db.Uuid @map("workspace_id")
+  businessId             String?  @db.Uuid @map("business_id")
+  worstStockoutRisk      String   @map("worst_stockout_risk")
+  belowReorderCount      Int      @default(0) @map("below_reorder_count")
+  stockoutCount          Int      @default(0) @map("stockout_count")
+  unreliableSupplierCount Int     @default(0) @map("unreliable_supplier_count")
+  supplyCutoffRisk       Boolean  @default(false) @map("supply_cutoff_risk")
+  riskScore              Float    @map("risk_score")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+  @@map("owner_supplier_inventory_snapshots")
+}
+
 model TaskStatusHistory {
   id          String   @id @db.Uuid
   workspaceId String   @db.Uuid @map("workspace_id")

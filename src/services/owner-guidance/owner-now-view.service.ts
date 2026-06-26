@@ -1,14 +1,20 @@
 /**
  * Module 41 — Owner Now View service (live wiring).
  *
- * Assembles a GuidanceContext from the LIVE command-and-control state (M4/M5 cash &
- * finance cycles, M8 employee workload, M9 owner workload, M10 capacity snapshots),
- * runs the pure guidance orchestrator, detects what changed versus the previous
- * persisted snapshot, builds a beginner explanation + concrete step-by-step guidance,
- * persists the new snapshot, and returns the owner-facing payload.
+ * Assembles a GuidanceContext from the LIVE command-and-control state and runs the
+ * pure guidance orchestrator. Live sources (all workspace-scoped):
+ *   - M4/M5 cash & finance survival  → ownerCashflowCycle / ownerFinanceCycle
+ *   - M8 employee + M9 owner workload → owner*WorkloadSnapshot
+ *   - M10 capacity                    → ownerCapacitySnapshot
+ *   - complaints / rework / churn     → ownerMetricSnapshot (M15 CoPQ, M17/M20 retention)
+ *   - supplier / inventory risk       → ownerSupplierInventorySnapshot (M23)
+ *   - proof overdue                   → proof (proof FSM)
+ *   - outcome / reassessment due      → ownerActionOutcome / ownerReassessmentEvent
+ *   - archetype                       → ownerBusiness.businessType (M29/30/31/32 packs)
  *
- * Dependency-injected (DI) so it is unit-testable without a database; the route uses
- * the default Prisma-backed deps. All reads are workspace-scoped.
+ * Detects what changed vs the previous persisted snapshot, builds a beginner
+ * explanation + concrete archetype-aware step-by-step guidance, persists, and
+ * returns the owner-facing payload. DI for unit-testability.
  */
 
 import {
@@ -25,48 +31,27 @@ import { IssueCategory, type BusinessIssue } from "@/domain/owner-guidance/issue
 import { BusinessFunction } from "@/domain/owner-guidance/business-function";
 import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation-business-impact";
 import { buildBeginnerExplanation, type BeginnerExplanation } from "@/domain/owner-guidance/beginner-mode";
+import { archetypeGuidance, type ArchetypeGuidance } from "@/domain/owner-guidance/archetype-guidance";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
+const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
+const OPEN_OUTCOME_STATUS = "too_early_to_judge";
+const PROOF_OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 
-// Deterministic proxies so change-detection has comparable numerics even when the
-// underlying cycles expose only a categorical state. State transitions drive the deltas.
 const RUNWAY_BY_STATE: Record<string, number> = { SAFE: 120, WATCH: 45, AT_RISK: 18, CRITICAL: 7, INSOLVENT_RISK: 2 };
 const MARGIN_BY_STATE: Record<string, number> = { SAFE: 20, WATCH: 10, AT_RISK: 3, CRITICAL: -2, INSOLVENT_RISK: -10 };
 
-interface CycleRow {
-  cashflowState?: string;
-  survivalState?: string;
-  dataConfidenceScore: number;
+interface CycleRow { cashflowState?: string; survivalState?: string; dataConfidenceScore: number }
+interface EmployeeRow { overburdened: boolean; utilizationPct: number }
+interface OwnerRow { overloaded: boolean; bottleneckRisk: boolean; dailyLoadPct: number }
+interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottleneckUtilization: number }
+interface MetricRow {
+  complaintCount: number | null; rewashCount: number | null; refundAmount: number | null;
+  newCustomers: number | null; repeatCustomers: number | null; revenue: number | null;
 }
-interface EmployeeRow {
-  overburdened: boolean;
-  utilizationPct: number;
-}
-interface OwnerRow {
-  overloaded: boolean;
-  bottleneckRisk: boolean;
-  dailyLoadPct: number;
-}
-interface CapacityRow {
-  growthSafe: boolean;
-  expansionTriggered: boolean;
-  bottleneckUtilization: number;
-}
-interface GuidanceSnapshotRow {
-  payload: unknown;
-  cashRunwayDays: number;
-  netMarginPct: number;
-  complaintsCount: number;
-  reworkCount: number;
-  capacityUtilizationPct: number;
-  staffOverloadPct: number;
-  ownerLoadPct: number;
-  churnRiskScore: number;
-  supplierInventoryRiskScore: number;
-  overdueProofCount: number;
-  outcomeChecksDue: number;
-  growthReadinessTier: string;
-}
+interface SupplierRow { worstStockoutRisk: string; riskScore: number; supplyCutoffRisk: boolean; belowReorderCount: number }
+interface BusinessRow { businessType: string }
+interface GuidanceSnapshotRow extends BusinessStateSnapshot { payload: unknown }
 
 interface GuidanceDb {
   ownerCashflowCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
@@ -74,6 +59,12 @@ interface GuidanceDb {
   ownerEmployeeWorkloadSnapshot: { findFirst(args: unknown): Promise<EmployeeRow | null> };
   ownerWorkloadSnapshot: { findFirst(args: unknown): Promise<OwnerRow | null> };
   ownerCapacitySnapshot: { findFirst(args: unknown): Promise<CapacityRow | null> };
+  ownerMetricSnapshot: { findFirst(args: unknown): Promise<MetricRow | null> };
+  ownerSupplierInventorySnapshot: { findFirst(args: unknown): Promise<SupplierRow | null> };
+  ownerBusiness: { findFirst(args: unknown): Promise<BusinessRow | null> };
+  proof: { count(args: unknown): Promise<number> };
+  ownerActionOutcome: { count(args: unknown): Promise<number> };
+  ownerReassessmentEvent: { count(args: unknown): Promise<number> };
   ownerGuidanceSnapshot: {
     findFirst(args: unknown): Promise<GuidanceSnapshotRow | null>;
     create(args: { data: Record<string, unknown> }): Promise<unknown>;
@@ -83,12 +74,13 @@ interface GuidanceDb {
 export interface GuidanceDeps {
   db: GuidanceDb;
   uuid: () => string;
+  now: () => number;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { db } = await import("@/lib/db");
   const { randomUUID } = await import("crypto");
-  return { db: db as unknown as GuidanceDb, uuid: () => randomUUID() };
+  return { db: db as unknown as GuidanceDb, uuid: () => randomUUID(), now: () => Date.now() };
 }
 
 function confidenceFromScore(score: number | null): EvidenceConfidenceLevel {
@@ -106,12 +98,8 @@ function cashSeverity(state: string | undefined): BusinessIssue["severity"] {
   return "MEDIUM";
 }
 
-export interface OwnerNowViewPayload {
-  view: OwnerNowView;
-  whatChanged: DetectedChange[];
-  beginnerExplanation: BeginnerExplanation;
-  stepByStep: GuidanceStep[];
-  generatedFromLiveData: boolean;
+function countSeverity(n: number, hi: number, med: number): BusinessIssue["severity"] {
+  return n >= hi ? "HIGH" : n >= med ? "MEDIUM" : "LOW";
 }
 
 export interface GuidanceStep {
@@ -128,217 +116,244 @@ export interface GuidanceStep {
   escalationRule: string;
 }
 
-// Concrete, non-generic step templates per issue category (pass the generic-output guard).
-const STEP_TEMPLATES: Record<IssueCategory, Omit<GuidanceStep, "issueId" | "businessFunction">> = {
-  [IssueCategory.CASH_DANGER]: {
-    reasonNow: "cash cover is thin and overdue receivables are the fastest recoverable cash",
-    exactStep: "Call each overdue customer today using the approved payment-follow-up script and log a promised payment date",
-    assignedRole: "Billing Staff",
-    proofRequired: true, proofType: "call_log",
-    deadline: "today",
-    expectedOutcome: "recover overdue cash or classify each account as a collection risk",
-    rollbackTrigger: "if a customer disputes service quality, pause collection and route to owner review",
-    escalationRule: "escalate to owner if payment slips beyond 48 hours or a dispute is raised",
-  },
-  [IssueCategory.CUSTOMER_SERVICE_FAILURE]: {
-    reasonNow: "complaints/rework are rising and will compound if demand grows",
-    exactStep: "Review the last 10 complaints, identify the top repeating failure, and fix that step in the delivery process",
-    assignedRole: "Operations Lead",
-    proofRequired: true, proofType: "checklist_completion",
-    deadline: "within 3 days",
-    expectedOutcome: "the top complaint cause is corrected and re-checked on the next 10 jobs",
-    rollbackTrigger: "if complaints keep rising after the fix, escalate to a full process redesign",
-    escalationRule: "escalate to owner if the same failure recurs after correction",
-  },
-  [IssueCategory.OVERLOAD]: {
-    reasonNow: "staff/owner are already overloaded and new load raises failure risk",
-    exactStep: "Move one non-critical recurring task off the overloaded person to a delegate or pause it this week",
-    assignedRole: "Owner",
-    proofRequired: true, proofType: "manager_confirmation",
-    deadline: "this week",
-    expectedOutcome: "the overloaded person's daily load returns below the sustainable threshold",
-    rollbackTrigger: "if delegation fails quality checks, reassign and retrain before re-delegating",
-    escalationRule: "escalate to owner if no task can be safely delegated",
-  },
-  [IssueCategory.PROFIT_LEAK]: {
-    reasonNow: "margin is below the viable level on at least one service or segment",
-    exactStep: "Identify the lowest-margin service line and either reprice it or stop discounting it this month",
-    assignedRole: "Owner",
-    proofRequired: true, proofType: "short_note",
-    deadline: "this month",
-    expectedOutcome: "the loss-making line is repriced or paused and margin recovers",
-    rollbackTrigger: "if repricing loses key customers, revisit cost structure instead",
-    escalationRule: "escalate to owner before changing prices for major accounts",
-  },
-  [IssueCategory.CAPACITY_BOTTLENECK]: {
-    reasonNow: "a capacity bottleneck means overcommitting will break delivery",
-    exactStep: "Cap intake at current safe capacity and schedule the bottleneck resource before accepting new work",
-    assignedRole: "Operations Lead",
-    proofRequired: true, proofType: "checklist_completion",
-    deadline: "before next intake",
-    expectedOutcome: "intake stays within the bottleneck's safe throughput",
-    rollbackTrigger: "if backlog grows, pause intake and add capacity before resuming",
-    escalationRule: "escalate to owner before committing to volume above safe capacity",
-  },
-  [IssueCategory.COMPLIANCE_SAFETY_RISK]: {
-    reasonNow: "a compliance/tax/legal-sensitive issue is active and carries outside risk",
-    exactStep: "Document the specific compliance concern and send it to your accountant/lawyer for review before acting",
-    assignedRole: "Owner",
-    proofRequired: true, proofType: "document",
-    deadline: "before the regulatory deadline",
-    expectedOutcome: "a qualified professional confirms the correct treatment",
-    rollbackTrigger: "if the professional flags exposure, halt the related action immediately",
-    escalationRule: "always route compliance/tax/legal decisions to a professional",
-  },
-  [IssueCategory.BLOCKED_EXECUTION]: {
-    reasonNow: "an action is blocked and is holding up the result it was meant to deliver",
-    exactStep: "Identify the specific blocker on the stalled action and assign the one person who can clear it today",
-    assignedRole: "Owner",
-    proofRequired: true, proofType: "manager_confirmation",
-    deadline: "today",
-    expectedOutcome: "the blocker is cleared and the action resumes",
-    rollbackTrigger: "if the blocker cannot be cleared, re-scope or cancel the action",
-    escalationRule: "escalate to owner if the blocker needs a decision or spend",
-  },
-  [IssueCategory.PENDING_PROOF_OUTCOME]: {
-    reasonNow: "proof or an outcome check is due and learning is blocked until it is verified",
-    exactStep: "Collect the outstanding proof for the completed action and record the verified outcome",
-    assignedRole: "Assigned Staff",
-    proofRequired: true, proofType: "before_after_image",
-    deadline: "within 2 days",
-    expectedOutcome: "the outcome is verified with proof and the loop can close",
-    rollbackTrigger: "if proof shows the action failed, trigger redesign instead of closing",
-    escalationRule: "escalate to owner if proof is missing past the due date",
-  },
-  [IssueCategory.GROWTH_OPPORTUNITY]: {
-    reasonNow: "a growth opportunity exists but is only safe once stabilization gates pass",
-    exactStep: "Confirm cash, margin, capacity, workload and quality gates all pass before committing any growth spend",
-    assignedRole: "Owner",
-    proofRequired: true, proofType: "short_note",
-    deadline: "after gates pass",
-    expectedOutcome: "growth proceeds only on a stable base",
-    rollbackTrigger: "if any gate fails after launch, pause growth and re-stabilize",
-    escalationRule: "growth always requires explicit owner approval",
-  },
-  [IssueCategory.PROCESS_IMPROVEMENT]: {
-    reasonNow: "a process improvement would reduce recurring friction",
-    exactStep: "Write the one missing SOP step for the most error-prone task and have staff follow it on the next job",
-    assignedRole: "Operations Lead",
-    proofRequired: true, proofType: "checklist_completion",
-    deadline: "within 1 week",
-    expectedOutcome: "the task is done to the documented standard and errors drop",
-    rollbackTrigger: "if the SOP step is impractical, revise it with the staff who do the work",
-    escalationRule: "escalate to owner only if the change affects customer commitments",
-  },
-};
+export interface OwnerNowViewPayload {
+  view: OwnerNowView;
+  whatChanged: DetectedChange[];
+  beginnerExplanation: BeginnerExplanation;
+  stepByStep: GuidanceStep[];
+  archetype: ArchetypeGuidance["archetype"];
+  generatedFromLiveData: boolean;
+}
+
+/** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
+function stepFor(issue: BusinessIssue, ag: ArchetypeGuidance): GuidanceStep {
+  const base = { issueId: issue.id, businessFunction: issue.businessFunction };
+  switch (issue.id) {
+    case "cash":
+      return { ...base,
+        reasonNow: "cash cover is thin and overdue receivables are the fastest recoverable cash",
+        exactStep: `Call each overdue ${ag.customerNoun} today using the approved payment-follow-up script and log a promised payment date`,
+        assignedRole: "Billing Staff", proofRequired: true, proofType: "call_log", deadline: "today",
+        expectedOutcome: "recover overdue cash or classify each account as a collection risk",
+        rollbackTrigger: "if a customer disputes service quality, pause collection and route to owner review",
+        escalationRule: "escalate to owner if payment slips beyond 48 hours or a dispute is raised" };
+    case "complaints":
+      return { ...base,
+        reasonNow: `complaints from ${ag.customerNoun} are rising and will compound if demand grows`,
+        exactStep: `Review the latest complaints, find the top repeating failure, and fix that step in the ${ag.workerNoun} delivery process`,
+        assignedRole: "Operations Lead", proofRequired: true, proofType: "checklist_completion", deadline: "within 3 days",
+        expectedOutcome: "the top complaint cause is corrected and re-checked on the next 10 jobs",
+        rollbackTrigger: "if complaints keep rising after the fix, escalate to a full process redesign",
+        escalationRule: "escalate to owner if the same failure recurs after correction" };
+    case "rework":
+      return { ...base,
+        reasonNow: "rework/redo is rising — this is cost of poor quality (CoPQ) and an SOP gap",
+        exactStep: `Identify the task causing the most rework and add/fix the SOP step so ${ag.workerNoun} get it right first time`,
+        assignedRole: "Operations Lead", proofRequired: true, proofType: "checklist_completion", deadline: "within 3 days",
+        expectedOutcome: "first-time-right improves and rework count falls on the next jobs",
+        rollbackTrigger: "if rework persists after the SOP fix, escalate to a process redesign",
+        escalationRule: "escalate to owner if rework cost stays above target" };
+    case "churn":
+      return { ...base,
+        reasonNow: `repeat business from ${ag.customerNoun} is weak — churn risk is rising`,
+        exactStep: `Send the approved win-back message to lapsed ${ag.customerNoun} with a specific reason to return`,
+        assignedRole: "Front Desk", proofRequired: true, proofType: "message_screenshot", deadline: "within 1 week",
+        expectedOutcome: "a measurable share of lapsed customers rebook within 14 days",
+        rollbackTrigger: "if win-back response is below 5%, switch message/offer before scaling",
+        escalationRule: "escalate to owner before discounting below the viable price" };
+    case "supplier":
+      return { ...base,
+        reasonNow: "supplier/inventory risk is high — a stockout would break delivery",
+        exactStep: "Reorder the at-risk items to the order-up-to level and confirm lead times with suppliers before taking new volume",
+        assignedRole: "Operations Lead", proofRequired: true, proofType: "document", deadline: "before next intake",
+        expectedOutcome: "stock is back above reorder point and supply is confirmed",
+        rollbackTrigger: "if a supplier cannot confirm supply, pause growth commitments",
+        escalationRule: "escalate to owner if an overdue payable risks a supply cutoff" };
+    case "proof":
+      return { ...base,
+        reasonNow: "proof for completed work is overdue — the result cannot be verified and learning is blocked",
+        exactStep: "Collect the outstanding proof for each overdue item and record it against the action",
+        assignedRole: "Assigned Staff", proofRequired: true, proofType: "before_after_image", deadline: "within 2 days",
+        expectedOutcome: "every overdue action has verifiable proof and the loop can close",
+        rollbackTrigger: "if proof shows the action failed, trigger redesign instead of closing",
+        escalationRule: "escalate to owner if proof stays missing past the due date" };
+    case "outcome":
+      return { ...base,
+        reasonNow: "an outcome check is due — verify the real result before any learning or new recommendation",
+        exactStep: "Record the measured before/after result for each due action and mark whether it worked",
+        assignedRole: "Owner", proofRequired: true, proofType: "short_note", deadline: "within 2 days",
+        expectedOutcome: "outcomes are verified with evidence so learning is based on truth, not assumption",
+        rollbackTrigger: "if the outcome made things worse, open a reassessment/redesign",
+        escalationRule: "always verify outcomes before promoting any learning" };
+    case "overload":
+      return { ...base,
+        reasonNow: "staff/owner are already overloaded and new load raises failure risk",
+        exactStep: `Move one non-critical recurring task off the overloaded ${ag.workerNoun}/owner or pause it this week`,
+        assignedRole: "Owner", proofRequired: true, proofType: "manager_confirmation", deadline: "this week",
+        expectedOutcome: "daily load returns below the sustainable threshold",
+        rollbackTrigger: "if delegation fails quality checks, reassign and retrain before re-delegating",
+        escalationRule: "escalate to owner if no task can be safely delegated" };
+    case "capacity":
+      return { ...base,
+        reasonNow: "a capacity bottleneck means overcommitting will break delivery",
+        exactStep: "Cap intake at current safe capacity and schedule the bottleneck resource before accepting new work",
+        assignedRole: "Operations Lead", proofRequired: true, proofType: "checklist_completion", deadline: "before next intake",
+        expectedOutcome: "intake stays within the bottleneck's safe throughput",
+        rollbackTrigger: "if backlog grows, pause intake and add capacity before resuming",
+        escalationRule: "escalate to owner before committing to volume above safe capacity" };
+    default: // margin / generic
+      return { ...base,
+        reasonNow: "margin is below a safe level on at least one service or segment",
+        exactStep: "Identify the lowest-margin service line and either reprice it or stop discounting it this month",
+        assignedRole: "Owner", proofRequired: true, proofType: "short_note", deadline: "this month",
+        expectedOutcome: "the loss-making line is repriced or paused and margin recovers",
+        rollbackTrigger: "if repricing loses key customers, revisit cost structure instead",
+        escalationRule: "escalate to owner before changing prices for major accounts" };
+  }
+}
 
 /** Build the live GuidanceContext + comparable state snapshot from persisted module data. */
 export async function assembleGuidanceContext(
   workspaceId: string,
   businessId: string | null,
   deps: GuidanceDeps
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance }> {
   const scope = businessId ? { workspaceId, businessId } : { workspaceId };
   const order = { createdAt: "desc" as const };
-  const [cash, fin, emp, own, cap] = await Promise.all([
+  const periodOrder = { periodEnd: "desc" as const };
+  const overdueBefore = new Date(deps.now() - PROOF_OVERDUE_AGE_MS);
+  const nowDate = new Date(deps.now());
+
+  const [cash, fin, emp, own, cap, metric, supplier, business, overdueProofCount, outcomeOpen, reassessOpen] = await Promise.all([
     deps.db.ownerCashflowCycle.findFirst({ where: scope, orderBy: order, select: { cashflowState: true, dataConfidenceScore: true } }),
     deps.db.ownerFinanceCycle.findFirst({ where: scope, orderBy: order, select: { survivalState: true, dataConfidenceScore: true } }),
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
     deps.db.ownerWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
     deps.db.ownerCapacitySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
+    deps.db.ownerMetricSnapshot.findFirst({ where: scope, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true } }),
+    deps.db.ownerSupplierInventorySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }),
+    businessId
+      ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: businessId }, select: { businessType: true } })
+      : deps.db.ownerBusiness.findFirst({ where: { workspaceId, isActive: true }, orderBy: order, select: { businessType: true } }),
+    deps.db.proof.count({ where: { workspaceId, status: { in: OVERDUE_PROOF_STATUSES }, createdAt: { lt: overdueBefore } } }),
+    deps.db.ownerActionOutcome.count({ where: { workspaceId, OR: [{ outcomeStatus: OPEN_OUTCOME_STATUS }, { measurementPeriodEnd: { lt: nowDate } }] } }),
+    deps.db.ownerReassessmentEvent.count({ where: { workspaceId, status: "pending" } }),
   ]);
 
+  const ag = archetypeGuidance(business?.businessType);
   const cashState = cash?.cashflowState;
   const finState = fin?.survivalState;
   const cashSafe = !!cashState && !!finState && SAFE_STATES.has(cashState) && SAFE_STATES.has(finState);
   const staffOverloaded = emp?.overburdened === true;
   const ownerOverloaded = own?.overloaded === true || own?.bottleneckRisk === true;
   const capacityGrowthSafe = cap?.growthSafe === true;
-  const growthGatePassed = cashSafe && capacityGrowthSafe;
+  const supplierRiskScore = supplier?.riskScore ?? 0;
+  const supplierRiskHigh = supplierRiskScore >= 0.5;
+  const growthGatePassed = cashSafe && capacityGrowthSafe && !supplierRiskHigh;
+
+  const complaints = Math.round(metric?.complaintCount ?? 0);
+  const rework = Math.round(metric?.rewashCount ?? 0);
+  const newC = metric?.newCustomers ?? 0;
+  const repeatC = metric?.repeatCustomers ?? 0;
+  const churnRiskScore = newC + repeatC > 0 ? Math.max(0, 1 - repeatC / (newC + repeatC)) : 0;
+  const outcomeChecksDue = outcomeOpen + reassessOpen;
 
   const confScore =
     cash && fin ? Math.min(cash.dataConfidenceScore, fin.dataConfidenceScore)
-      : cash ? cash.dataConfidenceScore
-      : fin ? fin.dataConfidenceScore
-      : null;
+      : cash ? cash.dataConfidenceScore : fin ? fin.dataConfidenceScore : null;
   const dataConfidence = confidenceFromScore(confScore);
 
   // Named, smallest-useful-first missing data — never a generic warning.
   const missingCriticalData: string[] = [];
   if (!cash) missingCriticalData.push("latest cash position (cash on hand + obligations)");
   if (!fin) missingCriticalData.push("latest profit/margin figures");
+  if (!metric) missingCriticalData.push("latest customer + complaint counts");
+  if (!supplier) missingCriticalData.push("supplier reliability + stock levels");
 
   const issues: BusinessIssue[] = [];
   if (!cashSafe && (cashState || finState)) {
     const sev = cashSeverity(cashState && !SAFE_STATES.has(cashState) ? cashState : finState);
-    issues.push({
-      id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
+    issues.push({ id: "cash", category: IssueCategory.CASH_DANGER, businessFunction: [BusinessFunction.CASH_FLOW],
       severity: sev, headline: `Cash survival is ${cashState ?? "unknown"} / finance ${finState ?? "unknown"}`,
-      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH",
-    });
+      requiresOwnerAction: sev === "CRITICAL" || sev === "HIGH" });
   }
   if (finState && !SAFE_STATES.has(finState)) {
-    issues.push({
-      id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
+    issues.push({ id: "margin", category: IssueCategory.PROFIT_LEAK, businessFunction: [BusinessFunction.PROFITABILITY],
       severity: finState === "CRITICAL" || finState === "INSOLVENT_RISK" ? "HIGH" : "MEDIUM",
-      headline: "Profit/margin is below a safe level", requiresOwnerAction: false,
-    });
+      headline: "Profit/margin is below a safe level", requiresOwnerAction: false });
   }
-  if (staffOverloaded || ownerOverloaded) {
-    issues.push({
-      id: "overload", category: IssueCategory.OVERLOAD,
-      businessFunction: [BusinessFunction.EMPLOYEE_WORKLOAD, BusinessFunction.OWNER_WORKLOAD],
-      severity: "HIGH", headline: "Staff/owner workload is over the sustainable limit",
-      requiresOwnerAction: ownerOverloaded,
-    });
+  if (complaints >= 1) {
+    issues.push({ id: "complaints", category: IssueCategory.CUSTOMER_SERVICE_FAILURE,
+      businessFunction: [BusinessFunction.QUALITY, BusinessFunction.CUSTOMER_COMPLAINTS],
+      severity: countSeverity(complaints, 10, 3), headline: `${complaints} customer complaints this period`,
+      requiresOwnerAction: complaints >= 10 });
+  }
+  if (rework >= 1) {
+    issues.push({ id: "rework", category: IssueCategory.CUSTOMER_SERVICE_FAILURE,
+      businessFunction: [BusinessFunction.QUALITY, BusinessFunction.SOP_PROCESS],
+      severity: countSeverity(rework, 10, 3), headline: `${rework} rework/redo jobs this period (cost of poor quality)`,
+      requiresOwnerAction: false });
+  }
+  if (churnRiskScore >= 0.4) {
+    issues.push({ id: "churn", category: IssueCategory.CUSTOMER_SERVICE_FAILURE,
+      businessFunction: [BusinessFunction.CUSTOMER_RETENTION],
+      severity: churnRiskScore >= 0.6 ? "HIGH" : "MEDIUM",
+      headline: `Repeat business is weak (churn risk ${Math.round(churnRiskScore * 100)}%)`, requiresOwnerAction: false });
+  }
+  if (supplierRiskHigh) {
+    issues.push({ id: "supplier", category: IssueCategory.CAPACITY_BOTTLENECK,
+      businessFunction: [BusinessFunction.SUPPLIER, BusinessFunction.INVENTORY],
+      severity: supplierRiskScore >= 0.75 ? "HIGH" : "MEDIUM",
+      headline: `Supplier/inventory risk (worst stockout: ${supplier?.worstStockoutRisk ?? "n/a"})`,
+      requiresOwnerAction: supplier?.supplyCutoffRisk === true });
+  }
+  if (overdueProofCount > 0) {
+    issues.push({ id: "proof", category: IssueCategory.PENDING_PROOF_OUTCOME, businessFunction: [BusinessFunction.EVIDENCE_PROOF],
+      severity: countSeverity(overdueProofCount, 5, 2), headline: `${overdueProofCount} proofs overdue`, requiresOwnerAction: false });
+  }
+  if (outcomeChecksDue > 0) {
+    issues.push({ id: "outcome", category: IssueCategory.PENDING_PROOF_OUTCOME, businessFunction: [BusinessFunction.OUTCOME_LEARNING],
+      severity: countSeverity(outcomeChecksDue, 5, 2), headline: `${outcomeChecksDue} outcome checks due`, requiresOwnerAction: false });
   }
   if (cap && (!cap.growthSafe || cap.expansionTriggered)) {
     const sev: BusinessIssue["severity"] = cap.bottleneckUtilization >= 0.95 ? "CRITICAL" : cap.bottleneckUtilization >= 0.85 ? "HIGH" : "MEDIUM";
-    issues.push({
-      id: "capacity", category: IssueCategory.CAPACITY_BOTTLENECK, businessFunction: [BusinessFunction.CAPACITY],
+    issues.push({ id: "capacity", category: IssueCategory.CAPACITY_BOTTLENECK, businessFunction: [BusinessFunction.CAPACITY],
       severity: sev, headline: `Capacity bottleneck at ${Math.round(cap.bottleneckUtilization * 100)}% utilization`,
-      requiresOwnerAction: sev === "CRITICAL",
-    });
+      requiresOwnerAction: sev === "CRITICAL" });
+  }
+  if (staffOverloaded || ownerOverloaded) {
+    issues.push({ id: "overload", category: IssueCategory.OVERLOAD,
+      businessFunction: [BusinessFunction.EMPLOYEE_WORKLOAD, BusinessFunction.OWNER_WORKLOAD],
+      severity: "HIGH", headline: "Staff/owner workload is over the sustainable limit", requiresOwnerAction: ownerOverloaded });
   }
 
   const ctx: GuidanceContext = {
-    workspaceId, businessId: businessId ?? "", archetype: null,
-    dataConfidence, missingCriticalData, issues,
-    changes: [], // filled after diffing against the previous snapshot
-    growthGatePassed, cashSafe, staffOverloaded, ownerOverloaded,
-    unsafeToGuide: false,
+    workspaceId, businessId: businessId ?? "", archetype: ag.archetype,
+    dataConfidence, missingCriticalData, issues, changes: [],
+    growthGatePassed, cashSafe, staffOverloaded, ownerOverloaded, unsafeToGuide: false,
   };
 
   const state: BusinessStateSnapshot = {
     cashRunwayDays: cashState ? RUNWAY_BY_STATE[cashState] ?? 0 : 0,
     netMarginPct: finState ? MARGIN_BY_STATE[finState] ?? 0 : 0,
-    complaintsCount: 0,
-    reworkCount: 0,
+    complaintsCount: complaints,
+    reworkCount: rework,
     capacityUtilizationPct: cap ? cap.bottleneckUtilization * 100 : 0,
     staffOverloadPct: emp?.utilizationPct ?? 0,
     ownerLoadPct: own?.dailyLoadPct ?? 0,
-    churnRiskScore: 0,
-    supplierInventoryRiskScore: 0,
-    overdueProofCount: 0,
-    outcomeChecksDue: 0,
+    churnRiskScore,
+    supplierInventoryRiskScore: supplierRiskScore,
+    overdueProofCount,
+    outcomeChecksDue,
     growthReadinessTier: growthGatePassed ? "GROWTH_READY" : "STABILIZE_FIRST",
   };
 
-  return { ctx, state };
+  return { ctx, state, ag };
 }
 
-function buildSteps(topIssues: BusinessIssue[]): GuidanceStep[] {
-  return topIssues.map((i) => {
-    const t = STEP_TEMPLATES[i.category];
-    return { issueId: i.id, businessFunction: i.businessFunction, ...t };
-  });
-}
-
-function buildBeginner(view: OwnerNowView): BeginnerExplanation {
+function buildBeginner(view: OwnerNowView, steps: GuidanceStep[]): BeginnerExplanation {
   const headline = view.topOwnerActions[0]?.headline ?? "Your business has no urgent issues right now";
-  const whatToDoFirst = view.topOwnerActions.length > 0
-    ? buildSteps(view.topOwnerActions).map((s) => s.exactStep)
-    : ["Keep tracking cash and complaints"];
+  const whatToDoFirst = steps.length > 0 ? steps.map((s) => s.exactStep) : ["Keep tracking cash and complaints"];
   const whatNotToDo = view.actionsToAvoid.length > 0
     ? view.actionsToAvoid.map((a) => a.avoid)
     : ["Do not take on risk you cannot measure yet"];
@@ -347,7 +362,7 @@ function buildBeginner(view: OwnerNowView): BeginnerExplanation {
     businessFunction: view.topOwnerActions[0]?.businessFunction ?? [BusinessFunction.CASH_FLOW],
     whatToDoFirst,
     whatNotToDo,
-    proofToCollect: buildSteps(view.topOwnerActions).map((s) => s.proofType),
+    proofToCollect: steps.map((s) => s.proofType),
     howToKnowItWorked: "the most urgent issue's status improves on the next check",
     ifIgnoredConsequence: view.cashDangerStatus === "CRITICAL"
       ? "you may run out of cash without warning"
@@ -356,19 +371,15 @@ function buildBeginner(view: OwnerNowView): BeginnerExplanation {
   });
 }
 
-/**
- * Produce the live Owner Now View: assemble context, diff against the previous
- * snapshot, run the orchestrator, build beginner + step-by-step guidance, persist.
- */
+/** Produce the live Owner Now View: assemble, diff vs prior snapshot, run orchestrator, persist. */
 export async function getOwnerNowView(
   workspaceId: string,
   businessId: string | null,
   injected?: GuidanceDeps
 ): Promise<OwnerNowViewPayload> {
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state } = await assembleGuidanceContext(workspaceId, businessId, deps);
+  const { ctx, state, ag } = await assembleGuidanceContext(workspaceId, businessId, deps);
 
-  // Diff against the previous persisted snapshot to populate "what changed".
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -376,54 +387,32 @@ export async function getOwnerNowView(
   const changes: DetectedChange[] = prev ? detectChanges(prevState(prev), state) : [];
 
   const view = buildOwnerNowView({ ...ctx, changes });
-  const stepByStep = buildSteps(view.topOwnerActions);
-  const beginnerExplanation = buildBeginner(view);
+  const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
+  const beginnerExplanation = buildBeginner(view, stepByStep);
 
   await deps.db.ownerGuidanceSnapshot.create({
     data: {
-      id: deps.uuid(),
-      workspaceId,
-      businessId: businessId ?? null,
-      classification: view.classification,
-      cashSafe: ctx.cashSafe,
-      growthGatePassed: ctx.growthGatePassed,
-      staffOverloaded: ctx.staffOverloaded,
-      ownerOverloaded: ctx.ownerOverloaded,
-      dataConfidence: ctx.dataConfidence,
-      topIssueCount: view.topOwnerActions.length,
-      missingDataCount: view.missingDataRequests.length,
-      cashRunwayDays: state.cashRunwayDays,
-      netMarginPct: state.netMarginPct,
-      complaintsCount: state.complaintsCount,
-      reworkCount: state.reworkCount,
-      capacityUtilizationPct: state.capacityUtilizationPct,
-      staffOverloadPct: state.staffOverloadPct,
-      ownerLoadPct: state.ownerLoadPct,
-      churnRiskScore: state.churnRiskScore,
-      supplierInventoryRiskScore: state.supplierInventoryRiskScore,
-      overdueProofCount: state.overdueProofCount,
-      outcomeChecksDue: state.outcomeChecksDue,
-      growthReadinessTier: state.growthReadinessTier,
-      payload: { view, whatChanged: changes, stepByStep, beginnerExplanation } as unknown as Record<string, unknown>,
+      id: deps.uuid(), workspaceId, businessId: businessId ?? null,
+      classification: view.classification, cashSafe: ctx.cashSafe, growthGatePassed: ctx.growthGatePassed,
+      staffOverloaded: ctx.staffOverloaded, ownerOverloaded: ctx.ownerOverloaded, dataConfidence: ctx.dataConfidence,
+      topIssueCount: view.topOwnerActions.length, missingDataCount: view.missingDataRequests.length,
+      cashRunwayDays: state.cashRunwayDays, netMarginPct: state.netMarginPct, complaintsCount: state.complaintsCount,
+      reworkCount: state.reworkCount, capacityUtilizationPct: state.capacityUtilizationPct,
+      staffOverloadPct: state.staffOverloadPct, ownerLoadPct: state.ownerLoadPct, churnRiskScore: state.churnRiskScore,
+      supplierInventoryRiskScore: state.supplierInventoryRiskScore, overdueProofCount: state.overdueProofCount,
+      outcomeChecksDue: state.outcomeChecksDue, growthReadinessTier: state.growthReadinessTier,
+      payload: { view, whatChanged: changes, stepByStep, beginnerExplanation, archetype: ag.archetype } as unknown as Record<string, unknown>,
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, generatedFromLiveData: true };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
   return {
-    cashRunwayDays: row.cashRunwayDays,
-    netMarginPct: row.netMarginPct,
-    complaintsCount: row.complaintsCount,
-    reworkCount: row.reworkCount,
-    capacityUtilizationPct: row.capacityUtilizationPct,
-    staffOverloadPct: row.staffOverloadPct,
-    ownerLoadPct: row.ownerLoadPct,
-    churnRiskScore: row.churnRiskScore,
-    supplierInventoryRiskScore: row.supplierInventoryRiskScore,
-    overdueProofCount: row.overdueProofCount,
-    outcomeChecksDue: row.outcomeChecksDue,
-    growthReadinessTier: row.growthReadinessTier,
+    cashRunwayDays: row.cashRunwayDays, netMarginPct: row.netMarginPct, complaintsCount: row.complaintsCount,
+    reworkCount: row.reworkCount, capacityUtilizationPct: row.capacityUtilizationPct, staffOverloadPct: row.staffOverloadPct,
+    ownerLoadPct: row.ownerLoadPct, churnRiskScore: row.churnRiskScore, supplierInventoryRiskScore: row.supplierInventoryRiskScore,
+    overdueProofCount: row.overdueProofCount, outcomeChecksDue: row.outcomeChecksDue, growthReadinessTier: row.growthReadinessTier,
   };
 }

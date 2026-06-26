@@ -74,6 +74,9 @@ export default function OwnerNowViewPage() {
         <Badge variant={STATUS_VARIANT(view.staffOverloadStatus)}>Staff load: {view.staffOverloadStatus}</Badge>
         <Badge variant={STATUS_VARIANT(view.ownerOverloadStatus)}>Owner load: {view.ownerOverloadStatus}</Badge>
         <Badge variant={STATUS_VARIANT(view.qualityFailureStatus)}>Quality: {view.qualityFailureStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.customerRetentionStatus)}>Retention: {view.customerRetentionStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.supplierInventoryStatus)}>Supply: {view.supplierInventoryStatus}</Badge>
+        <Badge variant={STATUS_VARIANT(view.growthReadinessStatus)}>Growth: {view.growthReadinessStatus}</Badge>
         <Badge variant="default">{view.classification}</Badge>
         {view.confidenceCapped && <Badge variant="warning">Low confidence ({view.confidence})</Badge>}
       </section>
