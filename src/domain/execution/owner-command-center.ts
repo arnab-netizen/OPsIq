@@ -12,7 +12,7 @@
  * This file also defines the minimal forward contracts (`BusinessFunction`,
  * `CommandCenterSignal`) that the later Real-Time 360° Owner Guidance Layer
  * (Module 41) will reuse — added here because Module 33 needs them now. Module 41
- * itself is intentionally NOT implemented.
+ * itself is intentionally deferred (out of scope for this slice).
  *
  * Pure + deterministic: no Date.now(), no Math.random(), no input mutation.
  */
