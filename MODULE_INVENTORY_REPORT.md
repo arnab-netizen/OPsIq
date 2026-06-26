@@ -97,3 +97,69 @@ This report classifies modules 0–40. Implementation may now begin with the
 highest-priority partial/missing module in Stage 1: **Module 1 —
 BusinessImpactAssessment** (persist + wire the promotion gate), re-verifying its
 exact current state before coding.
+
+## BUILD PROGRESS — completed slices (Owner Mode command-and-control)
+All slices below are additive and gated by the per-workspace opt-in flag
+`ClientAccount.requireBusinessImpactAssessment` (default **off** → zero regression
+to the existing suite). The single promotion chokepoint is
+`updateRecommendationStatus` in `src/services/recommendation.ts` (the
+`status === "approved"` block), which calls the M1→M5 enforcers in order.
+
+### Stage 1 — decision integrity (PROMOTION-GATING, wired + CI-proven)
+- **M1 Business Impact** — FULLY_IMPLEMENTED, WIRED. `domain/business-impact/*`
+  (`recommendation-business-impact.ts` gate, `business-impact-composer.ts`),
+  `services/business-impact/*` (persist + `enforceBusinessImpactIfRequired`),
+  Prisma `RecommendationBusinessImpact` + migration. Fail-closed.
+- **M2 Input Quality / Evidence Confidence** — FULLY_IMPLEMENTED, WIRED.
+  `domain/owner-mode/recommendation-input-quality-gate.ts` +
+  `services/owner-mode/recommendation-input-quality.service.ts`.
+- **M3 Decision Confidence** — FULLY_IMPLEMENTED, WIRED.
+  `domain/decision-confidence/*` + `services/decision-confidence/*` (composes
+  M1 evidence + M2 input-quality + finding compliance).
+
+### Stage 2 — finance survival (PROMOTION-GATING, wired + CI/DB-proven)
+- **M4 Finance Truth + M5 Cash Flow Survival** — FULLY_IMPLEMENTED, WIRED.
+  `domain/owner-finance/cash-safety-gate.ts` +
+  `services/owner-finance/recommendation-cash-safety.service.ts` reads latest
+  `ownerCashflowCycle.cashflowState` / `ownerFinanceCycle.survivalState`
+  (shared `SAFE|WATCH|AT_RISK|CRITICAL|INSOLVENT_RISK` scale). Growth blocked at
+  AT_RISK+, finance/pricing/hiring at CRITICAL+, all at INSOLVENT_RISK. Missing
+  cycle → AT_RISK (growth fail-closed).
+- **M6 Per-service / Unit Economics** — FULLY_IMPLEMENTED, PERSISTED.
+  `domain/owner-finance/unit-economics.ts` +
+  `services/owner-finance/service-economics.service.ts`
+  (Prisma `OwnerServiceEconomics` + migration, `[db]` test CI-proven).
+
+### Stage 3 — workload / capacity / lean (wired into M1 via the ops bridge)
+- **M7 Lean Guardrail, M11 False-Lean Detector** — `domain/execution/lean-guardrail.ts`,
+  `false-lean-detector.ts` (shared `LeanClassification` enum, no duplication).
+- **M8 Employee Workload** — `domain/execution/employee-workload.ts` +
+  `services/owner-operations/employee-workload-snapshot.service.ts`
+  (`OwnerEmployeeWorkloadSnapshot` + migration, `[db]` test CI-proven).
+- **M9 Owner Workload** — `domain/execution/owner-workload.ts` +
+  `services/owner-operations/owner-workload-snapshot.service.ts`
+  (`OwnerWorkloadSnapshot` + migration).
+- **M10 Capacity Ceiling / Bottleneck** — `domain/execution/capacity-ceiling.ts` +
+  `services/owner-operations/capacity-snapshot.service.ts`
+  (`OwnerCapacitySnapshot`, JSONB resources, + migration).
+- **Bridge:** `domain/business-impact/business-impact-from-ops.ts`
+  (`composeBusinessImpactFromOps`) maps the M7–M11 operational-safety verdict into
+  the M1 workload/capacity dimensions + proposed lean classification, so ops risk
+  flows through the M1 promotion gate (safety can only tighten).
+
+### Stages 4+ — governance cores (advisory inputs / guards)
+- **M13 Role Accountability / RACI** — `domain/workspace/raci.ts`
+  (exactly one ACCOUNTABLE + ≥1 RESPONSIBLE).
+- **M15 Quality Economics (CoPQ)** — `domain/execution/quality-economics.ts`.
+- **M16 Operating Cadence** — `domain/execution/operating-cadence.ts`
+  (clock injected; no `Date.now()`).
+- **M17 Customer Profitability** — `domain/execution/customer-profitability.ts`.
+- **M21 Growth Readiness Gate** — `domain/execution/growth-readiness.ts`
+  (delegates to the proven progression engine; no parallel growth engine).
+- **M22 Scale Readiness Gate** — `domain/execution/scale-readiness.ts`
+  (builds on M21 + management-layer + repeatable-ops prerequisites).
+- **M23 Supplier & Inventory Control** — `domain/execution/supplier-inventory.ts`
+  (reorder point, days-of-cover, stockout risk, supplier reliability, PO suggestion).
+
+Public scope remains frozen throughout: no SaaS, billing, external integrations,
+cross-user learning, advanced forecasting, or launch work was added.
