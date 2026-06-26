@@ -25,22 +25,22 @@ duplicate decision/confidence/veto/learning/simulation engines.
 - [x] C12 — stop/rollback/redesign composer
 - [x] C13 — collective learning admission controller (wires F10)
 - [x] C14 — collective simulation framework (wires F14 unsafe + 100-pt rubric)
-- [ ] C15 — conflict pair case pack (≥150 cases)  <-- NEXT
-- [ ] C16 — multi-domain scenario packs (≥120 cases)
+- [x] C15 — conflict pair case pack (150 cases, 30 pairs × 5 scenario types)
+- [ ] C16 — multi-domain scenario packs (≥120 cases)  <-- NEXT
 - [ ] C17 — archetype collective simulations (≥90 cases)
 - [x] C18 — end-to-end collective owner decision flow (collective-engine.ts; journal wiring in C18b)
 - [ ] C19 — UI/API integration audit + minimal safe wiring
 - [ ] C20 — final collective regression suite
 
 ## Case counts
-- Collective cases added: 0 / 360 minimum (150 conflict + 120 scenario + 90 archetype).
+- Collective cases added: 150 / 360 minimum (150 conflict-pair done; 120 scenario + 90 archetype pending).
 
 ## Tests
-- Collective: 4 files / 80 tests green (C1–C14 + C18 engine). Foundation untouched (174 tests still green).
+- Collective: 5 files / 84 tests green (C1–C15, incl. 150 scored conflict cases). Foundation untouched.
 - Unsafe outputs: 0.
 
 ## Classification
-COLLECTIVE_TRAINING_IN_PROGRESS (C0–C14 + C18 engine complete; case packs C15–C17, C19–C20 pending).
+COLLECTIVE_TRAINING_IN_PROGRESS (C0–C15 + C18 engine complete; C16–C17, C19–C20 pending).
 
 ## Continuation
 `/continue-collective-training-build`

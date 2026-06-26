@@ -81,8 +81,11 @@ export function runCollective(input: CollectiveInput): CollectiveDecisionPacket 
   const complianceUncertain = veto.context.complianceOrSafetyUncertain;
 
   const redDomains = agg.presentDomains.filter((d) => { const s = agg.byDomain.get(d)!; return isRed(s.status, s.severity); });
+  // What-not-to-do reflects ALL active vetoes: the F6 global gates AND the per-domain
+  // registry vetoes (e.g. sop-process/complaints that F6 does not gate globally).
+  const allBlocked = [...new Set([...veto.blockedActions, ...veto.activeVetoes.flatMap((v) => v.blockedActions)])];
   const whatNotToDo = generateWhatNotToDo({
-    blockedActions: veto.blockedActions, context: veto.context,
+    blockedActions: allBlocked, context: veto.context,
     lowDataConfidence: input.lowDataConfidence === true, hasContradiction, redDomains,
   });
 
