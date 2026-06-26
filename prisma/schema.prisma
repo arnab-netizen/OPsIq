@@ -4392,6 +4392,30 @@ model OwnerWorkloadSnapshot {
   @@map("owner_workload_snapshots")
 }
 
+/// Module 10 — persisted capacity/bottleneck snapshot (computed via the
+/// capacity-ceiling domain). Additive, workspace-scoped, no FK.
+model OwnerCapacitySnapshot {
+  id                    String   @id @db.Uuid
+  workspaceId           String   @db.Uuid @map("workspace_id")
+  periodStart           DateTime? @map("period_start")
+  periodEnd             DateTime? @map("period_end")
+  currentRevenue        Float    @map("current_revenue")
+  safeUtilization       Float    @map("safe_utilization")
+  resources             Json
+  bottleneckResource    String?  @map("bottleneck_resource")
+  bottleneckUtilization Float    @map("bottleneck_utilization")
+  revenueCeiling        Float?   @map("revenue_ceiling")
+  safeRevenueCeiling    Float?   @map("safe_revenue_ceiling")
+  growthCapacityRevenue Float    @map("growth_capacity_revenue")
+  availableBuffer       Float    @map("available_buffer")
+  expansionTriggered    Boolean  @default(false) @map("expansion_triggered")
+  growthSafe            Boolean  @default(false) @map("growth_safe")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@map("owner_capacity_snapshots")
+}
+
 model TaskStatusHistory {
   id          String   @id @db.Uuid
   workspaceId String   @db.Uuid @map("workspace_id")
