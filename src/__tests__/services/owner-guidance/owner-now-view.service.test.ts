@@ -149,4 +149,23 @@ describe("[module41] full payload + persistence", () => {
     const out = await getOwnerNowView("ws1", "biz1", deps);
     expect(out.whatChanged).toHaveLength(0);
   });
+
+  it("tolerates an absent optional-signal table (Prisma P2021) → treats count as 0", async () => {
+    const { deps } = fakeDeps(healthy);
+    // Simulate the outcome table not existing in this environment.
+    deps.db.ownerActionOutcome.count = async () => {
+      throw Object.assign(new Error("table does not exist"), { code: "P2021" });
+    };
+    const out = await getOwnerNowView("ws1", "biz1", deps);
+    expect(out.generatedFromLiveData).toBe(true);
+    expect(out.view.topOwnerActions.some((i) => i.id === "outcome")).toBe(false);
+  });
+
+  it("rethrows a non-P2021 db error (real fault is not swallowed)", async () => {
+    const { deps } = fakeDeps(healthy);
+    deps.db.ownerReassessmentEvent.count = async () => {
+      throw Object.assign(new Error("connection reset"), { code: "P1001" });
+    };
+    await expect(getOwnerNowView("ws1", "biz1", deps)).rejects.toThrow("connection reset");
+  });
 });

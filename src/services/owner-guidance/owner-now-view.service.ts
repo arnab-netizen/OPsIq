@@ -83,6 +83,21 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   return { db: db as unknown as GuidanceDb, uuid: () => randomUUID(), now: () => Date.now() };
 }
 
+/**
+ * Count an OPTIONAL live signal whose backing table may not exist in every
+ * environment (e.g. schema-only models without a deploy migration). A missing
+ * table (Prisma P2021) means "signal unavailable" → contribute 0; any other error
+ * is a real fault and is rethrown.
+ */
+async function safeCount(p: Promise<number>): Promise<number> {
+  try {
+    return await p;
+  } catch (e) {
+    if (e && typeof e === "object" && (e as { code?: string }).code === "P2021") return 0;
+    throw e;
+  }
+}
+
 function confidenceFromScore(score: number | null): EvidenceConfidenceLevel {
   if (score === null) return EvidenceConfidenceLevel.INSUFFICIENT;
   if (score >= 0.85) return EvidenceConfidenceLevel.VERIFIED;
@@ -235,9 +250,9 @@ export async function assembleGuidanceContext(
     businessId
       ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: businessId }, select: { businessType: true } })
       : deps.db.ownerBusiness.findFirst({ where: { workspaceId, isActive: true }, orderBy: order, select: { businessType: true } }),
-    deps.db.proof.count({ where: { workspaceId, status: { in: OVERDUE_PROOF_STATUSES }, createdAt: { lt: overdueBefore } } }),
-    deps.db.ownerActionOutcome.count({ where: { workspaceId, OR: [{ outcomeStatus: OPEN_OUTCOME_STATUS }, { measurementPeriodEnd: { lt: nowDate } }] } }),
-    deps.db.ownerReassessmentEvent.count({ where: { workspaceId, status: "pending" } }),
+    safeCount(deps.db.proof.count({ where: { workspaceId, status: { in: OVERDUE_PROOF_STATUSES }, createdAt: { lt: overdueBefore } } })),
+    safeCount(deps.db.ownerActionOutcome.count({ where: { workspaceId, OR: [{ outcomeStatus: OPEN_OUTCOME_STATUS }, { measurementPeriodEnd: { lt: nowDate } }] } })),
+    safeCount(deps.db.ownerReassessmentEvent.count({ where: { workspaceId, status: "pending" } })),
   ]);
 
   const ag = archetypeGuidance(business?.businessType);
