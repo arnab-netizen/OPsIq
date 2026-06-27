@@ -11,6 +11,7 @@
  * no usable metrics remain the archetype pack falls back to `archetype_data_insufficient`.
  */
 import type { LaundryArchetypeSignals, HousekeepingArchetypeSignals } from "@/domain/owner-budget/archetype-packs";
+import { isStaleSource } from "@/domain/owner-budget/import-source";
 
 /** Laundry metric types (storable). The starred subset maps to pack signal inputs. */
 export const LAUNDRY_METRIC_TYPES = [
@@ -110,16 +111,16 @@ export function deriveArchetypeSignalsFromMetrics(
   const result: DerivedArchetypeSignals = { stale: false, used: 0 };
   if (archetype !== "laundry" && archetype !== "housekeeping") return result;
 
-  const cutoff = ms(asOf) - staleAfterDays * 86_400_000;
   const map = archetype === "laundry" ? LAUNDRY_MAP : HOUSEKEEPING_MAP;
 
   // Latest value per metricType (only the consumed subset), tracking staleness.
+  // Staleness uses the shared import-source classifier (manual/import-ready data).
   const latest = new Map<string, { value: number; t: number }>();
   for (const m of metrics) {
     if (!(m.metricType in map)) continue;
     const t = ms(m.metricDate);
     if (Number.isNaN(t)) continue;
-    if (t < cutoff) { result.stale = true; continue; } // stale → excluded
+    if (isStaleSource(m.metricDate, asOf, staleAfterDays)) { result.stale = true; continue; } // stale → excluded
     const prev = latest.get(m.metricType);
     if (!prev || t > prev.t) latest.set(m.metricType, { value: m.value, t });
   }

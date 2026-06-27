@@ -192,6 +192,14 @@ entry form, and honest "manual/import-ready, not a live feed" labelling distinct
 governed recommendation. Proven by 4 component + 5 runtime-RBAC route tests; 199/199
 regression. Browser/E2E deferred (component+route proven, not browser-proven).
 
+Added in Manual/Import-Ready Data Input Layer (`DYNAMIC_BUDGET_IMPORT_READINESS_DB_PROVEN`):
+a single pure source-confidence classifier (`import-source.ts`) unifying how the manual/
+import-ready surfaces (spend entries, working-capital items, archetype metrics) are judged —
+MANUAL/IMPORT ≤ PARTIAL, only RECONCILED → VERIFIED, stale downgrades, missing/unknown →
+data-insufficient; reused by the archetype-metric derivation for staleness. No new table (a
+broad source registry would duplicate the per-domain models). Proven by 8 unit + existing
+`[db]` reuse; 201/201 regression. No live-feed overclaim.
+
 Not satisfied (blocks READY): live revenue-assurance / quote-benchmark source feeds
 (POS/gateway/external/bank), archetype-metric entry UI form, the OWNER_VIEW-without-
 OWNER_MANAGE RBAC gradient actor, a home-services budget pack, and Browser/E2E proof.
