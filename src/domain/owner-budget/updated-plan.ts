@@ -24,6 +24,7 @@ import { detectRevenueLeakage } from "@/domain/owner-budget/revenue-assurance";
 import { assessVendorControl } from "@/domain/owner-budget/vendor-control";
 import { detectUnderinvestment } from "@/domain/owner-budget/underinvestment";
 import { assessArchetypePack, resolveBudgetArchetype } from "@/domain/owner-budget/archetype-packs";
+import { assessArchetypeWorkingCapital } from "@/domain/owner-budget/archetype-working-capital";
 import { detectCollusionRisk } from "@/domain/owner-budget/collusion";
 import { runCollective } from "@/domain/collective-training/collective-engine";
 import type {
@@ -92,11 +93,22 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     laundry: input.assessment.archetypeSignals?.laundry ?? null,
     housekeeping: input.assessment.archetypeSignals?.housekeeping ?? null,
   });
-  // A hard archetype constraint (negative delivery economics, high travel time, …)
-  // defers offensive (growth/scale/experiment) candidates through the EXISTING
-  // allocation result, so the existing growth-blocked signal + blocked-candidate
-  // action loop fire naturally — no bypass of the confidence gate or a new ranker.
-  if (archetypePack.growthBlocked) {
+  // Working-capital × archetype cross-integration: combine the ageing assessment
+  // (PR #45) with the archetype pack so cash-cycle guidance is business-specific
+  // (e.g. profitable B2B laundry contract that is cash-negative due to overdue
+  // receivables). Empty when ageing or a specific archetype is absent.
+  const archetypeWc = assessArchetypeWorkingCapital({
+    archetype: archetypePack.archetype,
+    ageing: input.assessment.workingCapital?.ageing ?? null,
+    laundry: input.assessment.archetypeSignals?.laundry ?? null,
+    housekeeping: input.assessment.archetypeSignals?.housekeeping ?? null,
+  });
+  // A hard archetype OR combined cash-cycle constraint (negative delivery economics,
+  // high travel time, profitable-but-cash-trapped B2B/recurring work) defers offensive
+  // (growth/scale/experiment) candidates through the EXISTING allocation result, so the
+  // existing growth-blocked signal + blocked-candidate action loop fire naturally — no
+  // bypass of the confidence gate or a new ranker.
+  if (archetypePack.growthBlocked || archetypeWc.growthBlocked) {
     let fundedTotal = 0;
     for (const r of allocation.ranked) {
       const offensive =
@@ -106,7 +118,7 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
       if (offensive && (r.decision === "FUND" || r.decision === "PARTIAL_FUND")) {
         r.decision = "DEFER";
         r.fundedAmount = 0;
-        r.reason = `Deferred by ${archetypePack.archetype} working-economics gate: ${archetypePack.signals[0]?.message ?? "archetype scale gate not met"}`;
+        r.reason = `Deferred by ${archetypePack.archetype} working-economics / cash-cycle gate: ${archetypeWc.reasons[0] ?? archetypePack.signals[0]?.message ?? "archetype scale gate not met"}`;
       }
       fundedTotal += r.fundedAmount;
     }
@@ -351,11 +363,11 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     });
   }
 
-  // ---- Merge the archetype pack into the plan (computed above) ----
-  signals.push(...archetypePack.signals);
-  extraActions.push(...archetypePack.actions);
-  extraRestrictions.push(...archetypePack.spendRestrictions);
-  extraWhatNotToDo.push(...archetypePack.whatNotToDo, ...archetypePack.scaleBlocks);
+  // ---- Merge the archetype pack + working-capital×archetype cross-integration ----
+  signals.push(...archetypePack.signals, ...archetypeWc.signals);
+  extraActions.push(...archetypePack.actions, ...archetypeWc.actions);
+  extraRestrictions.push(...archetypePack.spendRestrictions, ...archetypeWc.spendRestrictions);
+  extraWhatNotToDo.push(...archetypePack.whatNotToDo, ...archetypePack.scaleBlocks, ...archetypeWc.whatNotToDo);
 
   // ---- Restrictions ----
   const spendRestrictions: string[] = [];

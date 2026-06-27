@@ -163,11 +163,21 @@ engine). Generic falls back safely; a specific archetype with no operational met
 `archetype_data_insufficient` (no fabricated advice). Proven by 18 deterministic logic +
 plan-integration tests; generic-plan regression unchanged. No schema; archetype operational
 metrics are manual/import-ready and not yet persisted (deferred).
+Added in Working-Capital × Archetype Cross-Integration
+(`DYNAMIC_BUDGET_WC_ARCHETYPE_INTEGRATION_LOGIC_PROVEN`): a pure helper
+(`archetype-working-capital.ts`) combines the ageing assessment with the archetype packs for
+business-specific cash-cycle guidance — laundry B2B profit-but-cash-negative / low-margin +
+delayed receivable / delivery + severe ageing / downtime-reserve protection; housekeeping
+recurring-contract cash risk / payroll-collection conflict / travel + slow collection /
+underpriced-recurring repricing. 5 new signals; growth deferred through the EXISTING
+allocation; generic stays safe; each side unchanged when the other input is absent. Proven by
+15 deterministic plan-integration tests; 166/166 owner-budget regression. No schema. Full
+reassessBudget DB proof of the combined path awaits persisted archetype metrics (next slice).
 
 Not satisfied (blocks READY): live revenue-assurance / quote-benchmark source feeds
 (POS/gateway/external/bank), full owner UI (incl. working-capital + archetype-metric entry),
 persisted archetype operational metrics, the OWNER_VIEW-without-OWNER_MANAGE RBAC gradient
-actor, a home-services budget pack, and working-capital × archetype cross-integration.
+actor, and a home-services budget pack.
 
 ## Verification
 
