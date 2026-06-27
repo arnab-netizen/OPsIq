@@ -48,6 +48,7 @@ function mockFetch() {
     if (url.includes("/api/owner/budget/snapshots")) return json([{ id: "s2", isCurrent: true, version: 2, plan: PLAN }]);
     if (url.includes("/api/owner/budget/forecast")) return json({ hasData: true, startingCash: 40000, reserveRequired: 50000, sevenDayCash: 35000, thirtyDayCash: 10000, ninetyDayCash: -50000, nextCriticalDueInDays: 5, scenarios: [{ name: "base", weeklyEndingCash: [], endingCash: -50000, minCash: -60000, reserveBreachWeek: 3 }] });
     if (url.includes("/api/owner/budget/authority")) return json([{ id: "a1", subjectRole: "manager", scopeCategory: "growth_roi", status: "OWNER_APPROVAL_REQUIRED", reason: "Repeated unverified spend" }]);
+    if (url.includes("/api/owner/budget/actions")) return json([{ id: "t1", workspaceId: "w1", businessId: "b1", sourceKey: "BLOCK|protect cash: freeze discretionary spend", title: "Protect cash: freeze discretionary spend", decisionType: "BLOCK", accountableRole: "owner", status: "proposed", dueAt: "2026-06-29T00:00:00Z", reviewInDays: 2, requiredProof: "Updated cash position", expectedFinancialImpact: "Preserve reserve", verificationMethod: "Owner verifies against required proof: Updated cash position", escalationPath: "Escalate to owner if not actioned by the 2-day review date." }]);
     return json({});
   });
 }
@@ -76,8 +77,25 @@ describe("Owner Budget & Profit Plan page", () => {
     await waitFor(() => expect(container.textContent ?? "").toContain("Generated actions"));
     const text = container.textContent ?? "";
     expect(text).toContain("DYNAMIC_BUDGET_MODULE_INTEGRATED_PARTIAL");
-    expect(text).toMatch(/Advisory recommendations — these are NOT yet persisted execution tasks/i);
+    // Generated actions are honestly labelled as the advisory plan snapshot.
+    expect(text).toMatch(/advisory plan snapshot/i);
+    expect(text).toMatch(/advisory recommendations from the current plan snapshot/i);
     expect(text).toContain("Override this plan"); // owner override control present
+  });
+
+  it("shows persisted execution tasks as a distinct, governed section (not merely advisory)", async () => {
+    mockFetch();
+    const { container } = render(<OwnerBudgetPlanPage />);
+    await waitFor(() => expect(container.textContent ?? "").toContain("Execution tasks"));
+    const text = container.textContent ?? "";
+    // The persisted execution-task section is present and labelled distinctly from advisory.
+    expect(text).toMatch(/Execution tasks/);
+    expect(text).toMatch(/persisted/i);
+    // The persisted task and its governed fields are surfaced honestly.
+    expect(text).toContain("Protect cash: freeze discretionary spend");
+    expect(text).toMatch(/proposed/i); // shared owner action lifecycle status
+    expect(text).toMatch(/Verification:/);
+    expect(text).toMatch(/Escalation:/);
   });
 
   it("does not present unverified confidence as verified", async () => {
