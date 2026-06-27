@@ -19,6 +19,8 @@ import {
   addBudgetLine,
   recordSpendEntry,
   updateBudgetLineAmount,
+  updateSpendReconciliation,
+  getBudgetForecast,
   reassessBudget,
   getBudgetGuidance,
   listBudgetSnapshots,
@@ -181,6 +183,28 @@ describe("[db] Owner Budget service", () => {
     );
     expect(plan.signals.some((s) => s.type === "vendor_control_risk")).toBe(true);
     expect(plan.spendRestrictions.some((r) => r.toLowerCase().includes("hold vendor payment"))).toBe(true);
+  });
+
+  it("[db] a disputed reconciliation surfaces reconciliation_exception in the plan", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    await seedHealthyFinance(workspaceId, businessId);
+    const period = await createBudgetPeriod(businessId, { label: "P", periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", approvedBudget: 100000 }, actor, workspaceId);
+    const { spend } = await recordSpendEntry(businessId, { periodId: period.id, label: "Spend", category: "essential_operations", amount: 5000, state: "committed", requestedByUserId: actor, ownerApprovalThreshold: 50000 }, actor, workspaceId);
+    const { plan, reconciliation } = await updateSpendReconciliation(businessId, spend.id, { contradicted: true }, actor, workspaceId);
+    expect(reconciliation.mismatch).toBe(true);
+    expect(plan.signals.some((s) => s.type === "reconciliation_exception")).toBe(true);
+  });
+
+  it("[db] produces a rolling 13-week forecast across scenarios", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    await seedHealthyFinance(workspaceId, businessId);
+    await createBudgetPeriod(businessId, { label: "P", periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", statutoryReserveRequired: 50000 }, actor, workspaceId);
+    const f = await getBudgetForecast(workspaceId, businessId);
+    expect(f.hasData).toBe(true);
+    expect(f.scenarios).toHaveLength(3);
+    expect(f.scenarios.every((s) => s.weeklyEndingCash.length === 13)).toBe(true);
   });
 
   it("[db] a budget line amount change triggers reassessment through the real mutation path", async () => {

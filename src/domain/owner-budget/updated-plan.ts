@@ -219,6 +219,12 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     }
   }
 
+  // ---- Reconciliation exceptions (Section 21) ----
+  if ((input.assessment.reconciliationExceptionCount ?? 0) > 0) {
+    signals.push({ type: "reconciliation_exception", severity: "MEDIUM", message: `${input.assessment.reconciliationExceptionCount} spend(s) unreconciled/disputed — actuals partly unverified.` });
+    extraRestrictions.push("Recommendations rely partly on unreconciled spend; verify before irreversible decisions.");
+  }
+
   signals.push({ type: "updated_plan_ready", severity: "INFO", message: `Updated plan generated in ${mode.primaryMode} mode.` });
 
   // ---- Decision + next best action ----

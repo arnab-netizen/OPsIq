@@ -20,6 +20,11 @@ import {
   composeUpdatedPlan,
   evaluateSpend,
   classifyMaterialChange,
+  evaluateReconciliation,
+  reconciliationToSpendState,
+  computeCashForecast,
+  type ReconciliationInput,
+  type ForecastResult,
   type AllocationCandidate,
   type AllocationCategory,
   type BudgetAssessmentInput,
@@ -270,6 +275,69 @@ export async function updateSpendProofStatus(
   return spend;
 }
 
+/**
+ * Advance a spend through reconciliation. A receipt alone is never "verified";
+ * full reconciliation requires proof + invoice + payment + bank match. Mismatches
+ * become disputed and surface a reconciliation exception in the next plan.
+ */
+export async function updateSpendReconciliation(
+  businessId: string,
+  spendId: string,
+  signals: ReconciliationInput,
+  actorId: string,
+  workspaceId: string
+) {
+  await getBusiness(businessId, workspaceId);
+  const existing = await db.spendEntry.findFirst({ where: { id: spendId, workspaceId, businessId } });
+  if (!existing) throw new Error("Spend entry not found in workspace.");
+
+  const recon = evaluateReconciliation(signals);
+  const spend = await db.spendEntry.update({
+    where: { id: spendId },
+    data: {
+      state: reconciliationToSpendState(recon.status),
+      proofStatus: recon.status === "RECONCILED" ? "reconciled" : recon.mismatch ? "disputed" : existing.proofStatus,
+      updatedAt: new Date(),
+    },
+  });
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OWNER_BUDGET_SPEND_PROOF_UPDATED,
+    actorId, workspaceId, entityType: "SpendEntry", entityId: spendId,
+    payload: { businessId, reconciliation: recon.status, mismatch: recon.mismatch },
+  });
+  const plan = await reassessBudget(businessId, workspaceId, {
+    actorId, kind: "reconciliation_changed", triggerEventId: `recon:${spendId}:${recon.status}`,
+    change: { field: "spendEntry.reconciliation", newValue: recon.status },
+  });
+  return { spend, reconciliation: recon, plan };
+}
+
+/** Rolling 13-week cash forecast (base / downside / cash-stress) for the business. */
+export async function getBudgetForecast(workspaceId: string, businessId: string): Promise<ForecastResult & { hasData: boolean }> {
+  await getBusiness(businessId, workspaceId);
+  const period = await db.budgetPeriod.findFirst({ where: { workspaceId, businessId, status: "active" }, orderBy: { createdAt: "desc" } });
+  const snap = await db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } });
+  const committed = await db.spendEntry.findMany({
+    where: { workspaceId, businessId, voidedAt: null, state: { in: ["committed", "approved", "requested"] }, dueInDays: { not: null } },
+  });
+  const obligations = committed.map((s: any) => ({ label: s.label, amount: s.amount, dueInDays: s.dueInDays as number, kind: (s.obligationKind as any) ?? "other" }));
+
+  const WEEKS_PER_MONTH = 4.345;
+  const cashOnHand = snap?.cashOnHand ?? 0;
+  const monthlyRevenue = snap?.revenue ?? 0;
+  const monthlyOutflow = (snap?.costOfGoods ?? 0) + (snap?.fixedCosts ?? 0) + (snap?.variableCosts ?? 0);
+  const reserveRequired = Math.max(0, period?.statutoryReserveRequired ?? 0, period?.cashReserveTarget ?? 0);
+
+  const forecast = computeCashForecast({
+    cashOnHand,
+    weeklyRevenue: monthlyRevenue / WEEKS_PER_MONTH,
+    weeklyOutflow: monthlyOutflow / WEEKS_PER_MONTH,
+    obligations,
+    reserveRequired,
+  });
+  return { ...forecast, hasData: snap !== null };
+}
+
 // ---------------------------------------------------------------------------
 // Reassessment (atomic, idempotent, snapshot-versioned)
 // ---------------------------------------------------------------------------
@@ -381,6 +449,14 @@ async function assembleAssessment(
         }
       : undefined;
 
+  // Reconciliation exceptions: disputed/mismatched spend that cannot be counted as verified.
+  const reconciliationExceptionCount = await db.spendEntry.count({
+    where: {
+      workspaceId, businessId, voidedAt: null,
+      OR: [{ state: "disputed" }, { proofStatus: "disputed" }],
+    },
+  });
+
   const assessment: BudgetAssessmentInput = {
     finance,
     cashReserveTarget: period?.cashReserveTarget ?? null,
@@ -389,6 +465,7 @@ async function assembleAssessment(
     ownerGoal: (period?.ownerGoal as BudgetAssessmentInput["ownerGoal"]) ?? undefined,
     criticalMissingInputs: criticalMissingInputs.length ? criticalMissingInputs : undefined,
     vendorControl,
+    reconciliationExceptionCount: reconciliationExceptionCount || undefined,
   };
 
   return { assessment, candidates, periodId: period?.id ?? null, approvedBudget: period?.approvedBudget ?? null };

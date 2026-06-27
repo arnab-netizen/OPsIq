@@ -82,6 +82,8 @@ export interface BudgetAssessmentInput {
   underinvestment?: Omit<UnderinvestmentInput, "cashSafe"> & { cashSafe?: boolean };
   /** Collusion/fraud pattern counts for the period. */
   collusion?: CollusionInput;
+  /** Count of unreconciled/disputed/mismatched spends in the period. */
+  reconciliationExceptionCount?: number;
 }
 
 export interface CashPosture {

@@ -20,7 +20,11 @@ remain PARTIAL/MISSING, so this is **NOT** OWNER_MODE_READY. Owner Mode is not r
   OWNER_APPROVAL_REQUIRED→SUSPENDED_FOR_CATEGORY→RESTORED) with lawful-action
   guardrails, and OWNER_MANAGE write routes (spend / override / authority) with Zod
   validation + enforcement tests + `[db]` governance tests.
-- Slice 5 (this slice): underinvestment detection (§24 — harmful vs good-savings vs
+- Slice 6 (this slice): bank/payment reconciliation evaluator (§21 — a receipt alone
+  is not verification; full match required; mismatch→disputed→`reconciliation_exception`)
+  and rolling 13-week cash forecast / scenario engine (§28 — base/downside/cash-stress,
+  reserve-breach week) with `updateSpendReconciliation` + `getBudgetForecast` + read route.
+- Slice 5: underinvestment detection (§24 — harmful vs good-savings vs
   cash-preservation classification) and collusion/fraud risk indicators (§25 —
   self-approval, split-spend clusters, approver concentration, refund/discount
   clustering; "requires review" language, never accusations), wired into the plan
@@ -76,6 +80,10 @@ remain PARTIAL/MISSING, so this is **NOT** OWNER_MODE_READY. Owner Mode is not r
 - Collusion/fraud risk indicators: self-approval, split-spend cluster, approver
   concentration, refund/discount clustering, delivery-without-payment — review-only
   language. (unit + integration-tested)
+- Reconciliation evaluator: receipt≠verified, full proof+invoice+payment+bank match,
+  mismatch/disputed handling → reconciliation_exception. (unit + integration + `[db]`-tested)
+- Rolling 13-week cash forecast: base/downside/cash-stress scenarios with reserve-breach
+  week + 7/30/90-day views + read route. (unit + `[db]`-tested)
 - All 7 documentation files.
 
 ## PARTIAL (interface/foundation present; not fully operational)
@@ -93,9 +101,8 @@ remain PARTIAL/MISSING, so this is **NOT** OWNER_MODE_READY. Owner Mode is not r
 
 ## MISSING / NOT CLAIMED
 
-- Deep reconciliation state machine; rolling 13-week
-  scenario forecast; archetype-specific hostile packs beyond the generic set.
-  Explicitly not claimed (no false "complete").
+- Multi-currency consolidation; live bank-feed auto-ingestion; archetype-specific
+  hostile packs beyond the generic set. Explicitly not claimed (no false "complete").
 
 ## OWNER_MODE_READY gate (Section 48) — NOT satisfied
 
@@ -113,6 +120,7 @@ engines (wired + tested), funded-initiative outcome classifier.
 Added in Slice 4: vendor master + invoice-hash duplicate detection + bank-verification
 hold (persisted, `[db]`-proven), funded-initiative outcome persistence.
 Added in Slice 5: underinvestment detection + collusion/fraud risk indicators (wired).
+Added in Slice 6: reconciliation evaluator + rolling 13-week forecast/scenarios.
 
 Not satisfied (blocks READY): working-capital ageing buckets, live revenue-assurance /
 quote-benchmark source feeds (POS/gateway/external), full owner UI, and runtime
@@ -126,7 +134,7 @@ npx prisma validate                     # valid
 npx prisma migrate status               # up to date (local PostgreSQL 16)
 npx tsc --noEmit                        # 0 errors
 TEST_WITH_DB=true npx vitest run \
-  src/__tests__/owner-budget src/__tests__/services/owner-budget  # 70 passed (incl. db proofs)
+  src/__tests__/owner-budget src/__tests__/services/owner-budget  # 78 passed (incl. db proofs)
 ```
 
 DB proof is genuine PostgreSQL (local `opsiq_dev`, all migrations incl. the new

@@ -12,7 +12,7 @@ import * as path from "path";
 
 const base = path.resolve(__dirname, "../../app/api/owner/budget");
 const read = (rel: string) => fs.readFileSync(path.join(base, rel), "utf8");
-const ROUTES = ["guidance/route.ts", "snapshots/route.ts"];
+const ROUTES = ["guidance/route.ts", "snapshots/route.ts", "forecast/route.ts"];
 const WRITE_ROUTES = ["spend/route.ts", "override/route.ts", "authority/route.ts"];
 
 describe("Owner Budget route enforcement", () => {
