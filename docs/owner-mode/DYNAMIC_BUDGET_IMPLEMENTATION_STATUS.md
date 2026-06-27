@@ -183,9 +183,18 @@ recurring guidance); missing or stale metrics fall back to `archetype_data_insuf
 6 unit + 7 `[db]` + 6 runtime-RBAC route tests; 186/186 regression. Live feeds still deferred
 (manual/import-ready, confidence never VERIFIED).
 
+Added in Working-Capital Route/UI + Manual Entry (`DYNAMIC_BUDGET_WORKING_CAPITAL_ENTRY_UI_OWNER_VISIBLE`):
+`GET/POST /api/owner/budget/working-capital` (OWNER_VIEW/OWNER_MANAGE, canonical-enforced,
+reusing the PR #45 service) + a `/owner/budget` working-capital section showing receivable/
+payable ageing buckets (computed client-side via the same pure ageing engine), collection-
+first / vendor-pressure / growth-blocked warnings, highest-risk counterparties, a manual
+entry form, and honest "manual/import-ready, not a live feed" labelling distinct from the
+governed recommendation. Proven by 4 component + 5 runtime-RBAC route tests; 199/199
+regression. Browser/E2E deferred (component+route proven, not browser-proven).
+
 Not satisfied (blocks READY): live revenue-assurance / quote-benchmark source feeds
-(POS/gateway/external/bank), owner entry UI (working-capital + archetype-metric forms),
-the OWNER_VIEW-without-OWNER_MANAGE RBAC gradient actor, and a home-services budget pack.
+(POS/gateway/external/bank), archetype-metric entry UI form, the OWNER_VIEW-without-
+OWNER_MANAGE RBAC gradient actor, a home-services budget pack, and Browser/E2E proof.
 
 ## Verification
 

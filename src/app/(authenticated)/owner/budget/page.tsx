@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Input, Select } from "@/ui/primitives";
+import { assessWorkingCapitalAgeing } from "@/domain/owner-budget/working-capital-ageing";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic budget plan payloads are untyped; load() fetch-on-mount is intentional */
 
@@ -78,10 +79,12 @@ export default function OwnerBudgetPlanPage() {
   const [forecast, setForecast] = useState<any | null>(null);
   const [authorities, setAuthorities] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [wcItems, setWcItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showOverride, setShowOverride] = useState(false);
+  const [showWcForm, setShowWcForm] = useState(false);
 
   const load = useCallback(async (businessId?: string | null) => {
     setLoading(true);
@@ -94,15 +97,16 @@ export default function OwnerBudgetPlanPage() {
       }
       const bid = businessId ?? selected ?? (Array.isArray(list) && list[0] ? list[0].id : null);
       setSelected(bid);
-      if (!bid) { setGuidance(null); setPlan(null); setForecast(null); setAuthorities([]); setTasks([]); return; }
+      if (!bid) { setGuidance(null); setPlan(null); setForecast(null); setAuthorities([]); setTasks([]); setWcItems([]); return; }
 
       const qs = `?businessId=${bid}`;
-      const [g, snaps, fc, auth, tk] = await Promise.all([
+      const [g, snaps, fc, auth, tk, wc] = await Promise.all([
         api(`/api/owner/budget/guidance${qs}`).catch(() => null),
         api(`/api/owner/budget/snapshots${qs}`).catch(() => []),
         api(`/api/owner/budget/forecast${qs}`).catch(() => null),
         api(`/api/owner/budget/authority${qs}`).catch(() => []),
         api(`/api/owner/budget/actions${qs}`).catch(() => []),
+        api(`/api/owner/budget/working-capital${qs}`).catch(() => []),
       ]);
       setGuidance(g);
       const current = Array.isArray(snaps) ? (snaps.find((s: any) => s.isCurrent) ?? snaps[0] ?? null) : null;
@@ -110,6 +114,7 @@ export default function OwnerBudgetPlanPage() {
       setForecast(fc);
       setAuthorities(Array.isArray(auth) ? auth : []);
       setTasks(Array.isArray(tk) ? tk : []);
+      setWcItems(Array.isArray(wc) ? wc : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load budget plan");
     } finally {
@@ -172,6 +177,35 @@ export default function OwnerBudgetPlanPage() {
     }
   }
 
+  async function submitWcItem(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    const fd = new FormData(e.currentTarget);
+    try {
+      const dueRaw = String(fd.get("dueDate") || "");
+      await api("/api/owner/budget/working-capital", {
+        method: "POST",
+        body: JSON.stringify({
+          businessId: selected,
+          kind: fd.get("kind"),
+          counterparty: fd.get("counterparty"),
+          amount: Number(fd.get("amount")),
+          dueDate: dueRaw ? new Date(dueRaw).toISOString() : null,
+          status: "open",
+          sourceType: "MANUAL",
+        }),
+      });
+      setShowWcForm(false);
+      await load(selected);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to record working-capital item");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) return <div className="p-8">Loading Budget &amp; Profit Plan…</div>;
 
   const list: any[] = businesses ?? [];
@@ -179,6 +213,18 @@ export default function OwnerBudgetPlanPage() {
   const confidence = guidance?.confidence ?? plan?.confidence ?? null;
   const signals: any[] = plan?.signals ?? guidance?.signals ?? [];
   const actions: any[] = plan?.generatedActions ?? guidance?.generatedActions ?? [];
+  // Owner-entered (manual / import-ready) working-capital ageing — computed client-side
+  // from the entered items via the SAME pure ageing engine the backend uses. This is
+  // owner-entered data, distinct from the governed budget recommendation above.
+  const wcAgeing: any = wcItems.length > 0
+    ? assessWorkingCapitalAgeing({
+        asOf: new Date(),
+        items: wcItems.map((i: any) => ({ kind: i.kind, amount: i.amount, dueDate: i.dueDate, counterparty: i.counterparty, status: i.status, sourceType: i.sourceType, updatedAt: i.updatedAt })),
+      })
+    : null;
+  const wcBuckets = (b: any) => b
+    ? [["not due", b.current], ["0–30", b.d0_30], ["31–60", b.d31_60], ["61–90", b.d61_90], ["90+", b.d90_plus]]
+    : [];
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
@@ -426,6 +472,71 @@ export default function OwnerBudgetPlanPage() {
                   </ul>
                 </section>
               )}
+
+              {/* 9c: Working-capital ageing — owner-entered (manual / import-ready) */}
+              <section className="border rounded-lg p-4 bg-white">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold">Working capital — receivables &amp; payables ageing</h2>
+                  <Button onClick={() => setShowWcForm((s) => !s)}>{showWcForm ? "Cancel" : "Add receivable/payable"}</Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ⚠ Owner-entered, <strong>manual / import-ready</strong> data — NOT a live bank/accounting feed and not verified. This is your entered ledger, distinct from the governed budget recommendation above.
+                </p>
+                {!wcAgeing ? (
+                  <p className="text-sm text-muted-foreground mt-2">No receivables/payables entered yet. Add items to see ageing buckets and collection/vendor warnings.</p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {wcAgeing.collectionFirstRequired && (
+                      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-sm text-destructive">
+                        Collection-first: receivables 90+ days overdue — collect before new discretionary/growth spend.
+                      </div>
+                    )}
+                    {wcAgeing.vendorPressureRisk && (
+                      <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-sm">
+                        Vendor pressure: overdue payables create supply risk — negotiate terms or stage critical payments.
+                      </div>
+                    )}
+                    {wcAgeing.growthBlockedByWorkingCapital && (
+                      <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-sm">
+                        Growth blocked by working capital — profit is not free cash while receivables are overdue.
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-xs uppercase text-muted-foreground mb-1">Receivables ageing</div>
+                        <div className="flex flex-wrap gap-1">
+                          {wcBuckets(wcAgeing.receivables).map(([label, amt]: any) => (
+                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive" : "muted"}>{label}: {Math.round(amt)}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase text-muted-foreground mb-1">Payables ageing</div>
+                        <div className="flex flex-wrap gap-1">
+                          {wcBuckets(wcAgeing.payables).map(([label, amt]: any) => (
+                            <Badge key={label} variant={label === "90+" && amt > 0 ? "destructive" : "muted"}>{label}: {Math.round(amt)}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {Array.isArray(wcAgeing.collectionPriority) && wcAgeing.collectionPriority.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Highest-risk to collect: {wcAgeing.collectionPriority.slice(0, 3).map((c: any) => `${c.counterparty} (${Math.round(c.amount)}, ${c.bucket})`).join("; ")}
+                      </div>
+                    )}
+                    <div className="text-xs text-muted-foreground">Data confidence: {wcAgeing.confidence} (manual/import — never auto-verified).</div>
+                  </div>
+                )}
+                {showWcForm && (
+                  <form onSubmit={submitWcItem} className="mt-3 space-y-3">
+                    <Select name="kind" label="Type" options={[{ value: "receivable", label: "Receivable (owed to you)" }, { value: "payable", label: "Payable (you owe)" }]} />
+                    <Input name="counterparty" label="Customer / vendor" required />
+                    <Input name="amount" label="Amount" type="number" required />
+                    <Input name="dueDate" label="Due date" type="date" />
+                    <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save item"}</Button>
+                  </form>
+                )}
+              </section>
 
               {/* 10: Owner override */}
               <section className="border rounded-lg p-4 bg-white">
