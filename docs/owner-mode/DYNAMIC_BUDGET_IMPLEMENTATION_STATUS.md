@@ -174,10 +174,18 @@ allocation; generic stays safe; each side unchanged when the other input is abse
 15 deterministic plan-integration tests; 166/166 owner-budget regression. No schema. Full
 reassessBudget DB proof of the combined path awaits persisted archetype metrics (next slice).
 
+Added in Persisted Archetype Operational Metrics (`DYNAMIC_BUDGET_ARCHETYPE_METRICS_RUNTIME_PROVEN`):
+workspace-scoped `OwnerArchetypeMetric` table + service + `GET/POST /api/owner/budget/archetype-metrics`
+routes (OWNER_VIEW/OWNER_MANAGE, canonical-enforced). Persisted manual/import-ready metrics derive
+the archetype-pack signal inputs and feed the REAL reassessment, so laundry/housekeeping packs +
+working-capital × archetype cross-integration now run DB-driven (chemical/B2B/downtime, travel/
+recurring guidance); missing or stale metrics fall back to `archetype_data_insufficient`. Proven by
+6 unit + 7 `[db]` + 6 runtime-RBAC route tests; 186/186 regression. Live feeds still deferred
+(manual/import-ready, confidence never VERIFIED).
+
 Not satisfied (blocks READY): live revenue-assurance / quote-benchmark source feeds
-(POS/gateway/external/bank), full owner UI (incl. working-capital + archetype-metric entry),
-persisted archetype operational metrics, the OWNER_VIEW-without-OWNER_MANAGE RBAC gradient
-actor, and a home-services budget pack.
+(POS/gateway/external/bank), owner entry UI (working-capital + archetype-metric forms),
+the OWNER_VIEW-without-OWNER_MANAGE RBAC gradient actor, and a home-services budget pack.
 
 ## Verification
 

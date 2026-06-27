@@ -1369,6 +1369,7 @@ model OwnerBusiness {
   financeActions          OwnerFinanceAction[]
   budgetActions           OwnerBudgetAction[]
   workingCapitalItems     OwnerWorkingCapitalItem[]
+  archetypeMetrics        OwnerArchetypeMetric[]
   financeVerifications    OwnerFinanceVerification[]
   cashflowSnapshots       OwnerCashflowSnapshot[]
   cashflowCycles          OwnerCashflowCycle[]
@@ -4823,4 +4824,32 @@ model OwnerWorkingCapitalItem {
   @@index([workspaceId, businessId])
   @@index([workspaceId, businessId, kind])
   @@map("owner_working_capital_items")
+}
+
+/// Owner archetype operational metric (Dynamic Budget archetype-metrics slice).
+/// Manual / import-ready operational figures (chemical cost, load count, travel time,
+/// recurring contract terms, …) that feed the archetype budget packs through
+/// reassessment. NOT a live feed. Workspace-scoped; cascades with the business.
+model OwnerArchetypeMetric {
+  id              String        @id @db.Uuid
+  workspaceId     String        @map("workspace_id") @db.Uuid
+  businessId      String        @map("business_id") @db.Uuid
+  archetype       String // "laundry" | "housekeeping" | "generic"
+  metricType      String        @map("metric_type")
+  metricDate      DateTime      @map("metric_date")
+  value           Float
+  unit            String?
+  sourceType      String        @default("MANUAL") @map("source_type") // MANUAL | IMPORT (never live feed)
+  sourceRef       String?       @map("source_ref")
+  confidenceState String        @default("unverified") @map("confidence_state")
+  createdBy       String?       @map("created_by") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  business        OwnerBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, businessId, archetype])
+  @@index([metricType])
+  @@map("owner_archetype_metrics")
 }
