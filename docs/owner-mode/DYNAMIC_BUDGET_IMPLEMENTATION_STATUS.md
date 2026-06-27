@@ -97,7 +97,14 @@ remain PARTIAL/MISSING, so this is **NOT** OWNER_MODE_READY. Owner Mode is not r
 - **Revenue assurance live source wiring**: detection logic + signals are implemented
   and tested; live order/invoice/deposit feeds beyond finance aggregates are supplied
   per assessment, not auto-pulled from a POS/gateway. PARTIAL.
-- **Full owner UI**: read adapter + read/write routes only. UI PARTIAL by design (Section 34).
+- **Owner UI (Budget & Profit Plan)**: OWNER_VISIBLE / PARTIAL. A client page
+  (`src/app/(authenticated)/owner/budget/page.tsx`) consumes the existing routes and
+  surfaces mode, confidence, what-changed, next best action, cash forecast, fund
+  allocation, spend governance, accountability/authority, advisory actions, what-not-
+  to-do, and owner override — with honest PARTIAL labels (advisory ≠ persisted task;
+  confidence warnings; live-feed limits). Component-proven via RTL
+  (`src/__tests__/components/owner-budget-plan.test.tsx`); **NOT browser-proven** (no
+  live Playwright run executed here). Status: DYNAMIC_BUDGET_UI_OWNER_VISIBLE.
 
 ## MISSING / NOT CLAIMED
 
