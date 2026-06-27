@@ -146,6 +146,59 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     signals.push({ type: "working_capital_risk", severity: "MEDIUM", message: wc.reasons.join(" ") || "Working-capital pressure present." });
   }
 
+  // ---- Working-capital ageing (ageing-aware guidance; reuses the ageing engine
+  // assessment computed upstream from persisted manual/import-ready items) ----
+  const ageing = input.assessment.workingCapital?.ageing;
+  if (ageing) {
+    const ageingSeverity = (s: string): BudgetSignal["severity"] =>
+      s === "collection_first_required" || s === "profitable_but_cash_negative" ||
+      s === "vendor_pressure_risk" || s === "growth_blocked_by_working_capital"
+        ? "HIGH"
+        : "MEDIUM";
+    const ageingMessage: Record<string, string> = {
+      receivables_ageing_risk: `Overdue receivables ${Math.round(ageing.receivablesOverdue)} (90+: ${Math.round(ageing.receivables.d90_plus)}).`,
+      payables_ageing_risk: `Overdue payables ${Math.round(ageing.payablesOverdue)} (90+: ${Math.round(ageing.payables.d90_plus)}).`,
+      collection_first_required: "Receivables 90+ days overdue — collect first before new discretionary/growth spend.",
+      vendor_pressure_risk: "Overdue payables create vendor/supply risk — negotiate terms or stage critical payments.",
+      cash_conversion_risk: "Cash conversion impaired — booked profit is not yet spendable cash.",
+      profitable_but_cash_negative: "Profitable on the books but free cash is non-positive — cash is trapped in overdue receivables.",
+      growth_blocked_by_working_capital: "Growth/scale spend blocked until collections improve and reserve survives the collection gap.",
+      working_capital_data_stale: "Manual working-capital data is stale — refresh before irreversible decisions.",
+      working_capital_data_insufficient: "Some balances have no due date — ageing cannot be classified confidently.",
+    };
+    for (const sig of ageing.signals) {
+      signals.push({ type: sig, severity: ageingSeverity(sig), message: ageingMessage[sig] ?? sig });
+    }
+    if (ageing.collectionFirstRequired) {
+      extraActions.push({
+        title: "Collection-first: recover 90+ day overdue receivables",
+        accountableRole: "owner",
+        decisionType: "INVESTIGATE",
+        requiredProof: "Updated receivables ageing + collection commitments/dates",
+        reviewInDays: 7,
+        expectedFinancialImpact: "Convert trapped receivables into spendable cash before any growth spend",
+        killRule: "Escalate accounts unpaid after one collection cycle to formal recovery.",
+      });
+      extraRestrictions.push("Collect 90+ day overdue receivables before approving new discretionary/growth spend.");
+    }
+    if (ageing.vendorPressureRisk) {
+      extraActions.push({
+        title: "Negotiate / stage overdue payables to protect supply",
+        accountableRole: "owner",
+        decisionType: "INVESTIGATE",
+        requiredProof: "Vendor payment plan + prioritised critical-supplier list",
+        reviewInDays: 5,
+        expectedFinancialImpact: "Prevent supply disruption and late penalties without breaching reserve",
+        killRule: "Do not skip payroll/tax/rent to clear a non-critical vendor.",
+      });
+      extraRestrictions.push("Stage overdue payables against the reserve; protect payroll/rent/tax obligations first.");
+    }
+    if (ageing.growthBlockedByWorkingCapital) {
+      extraRestrictions.push("Block new growth/scale spend until overdue collections improve and the reserve survives the collection gap.");
+      extraWhatNotToDo.push("Treat booked B2B profit as available cash — it is trapped in overdue receivables; profit is not free cash.");
+    }
+  }
+
   if (ra.hasLeakage) {
     const top = ra.exceptions.find((e) => e.severity === "HIGH") ?? ra.exceptions[0];
     signals.push({ type: "revenue_leakage_risk", severity: top.severity === "HIGH" ? "HIGH" : "MEDIUM", message: top.message });

@@ -16,6 +16,7 @@ export * from "@/domain/owner-budget/updated-plan";
 export * from "@/domain/owner-budget/owner-override";
 export * from "@/domain/owner-budget/budget-authority";
 export * from "@/domain/owner-budget/working-capital";
+export * from "@/domain/owner-budget/working-capital-ageing";
 export * from "@/domain/owner-budget/revenue-assurance";
 export * from "@/domain/owner-budget/vendor-control";
 export * from "@/domain/owner-budget/underinvestment";

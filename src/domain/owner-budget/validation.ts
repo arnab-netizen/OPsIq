@@ -69,3 +69,15 @@ export const budgetActionUpdateSchema = z.object({
   completionEvidence: z.array(z.string().min(1)).nullish(),
 });
 export type BudgetActionUpdateBody = z.infer<typeof budgetActionUpdateSchema>;
+
+export const workingCapitalItemCreateSchema = z.object({
+  businessId: z.string().uuid(),
+  kind: z.enum(["receivable", "payable"]),
+  counterparty: z.string().min(1).max(200),
+  amount: z.number().finite().nonnegative(),
+  dueDate: z.string().datetime().nullish(),
+  status: z.enum(["open", "outstanding", "partial", "disputed", "collected", "paid", "written_off"]).optional(),
+  sourceType: z.enum(["MANUAL", "IMPORT"]).optional(),
+  sourceRef: z.string().min(1).max(200).nullish(),
+});
+export type WorkingCapitalItemCreateBody = z.infer<typeof workingCapitalItemCreateSchema>;

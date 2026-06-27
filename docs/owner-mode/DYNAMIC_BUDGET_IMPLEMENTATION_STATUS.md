@@ -139,11 +139,24 @@ closed); completion runs the shared FSM with required evidence and records a
 (OWNER_MANAGE); `/owner/budget` UI shows persisted execution tasks distinct from advisory
 actions. Proven by 8 `[db]` tests + 17 non-DB tests (mapping/idempotency/route/reuse);
 100/100 owner-budget + owner-finance regression green. Browser/E2E remains deferred.
+Added in Runtime RBAC proof (`DYNAMIC_BUDGET_RBAC_RUNTIME_PARTIAL`, PR #44): runtime
+authorization is proven through the real route → canonical wrapper for both allowed and
+denied actors (unauthenticated, no-membership, no-OWNER_VIEW read, no-OWNER_MANAGE write,
+authorized read/write, cross-workspace) — PARTIAL only because no role grants OWNER_VIEW
+without OWNER_MANAGE (gradient actor not expressible).
+Added in Working-Capital Ageing (`DYNAMIC_BUDGET_WORKING_CAPITAL_DB_PROVEN`): receivable/
+payable ageing buckets (current/0-30/31-60/61-90/90+) via a pure engine + a minimal
+manual/import-ready `OwnerWorkingCapitalItem` table, fed into the EXISTING reassessment
+(overdue payables → real obligation → mode/allocation react; collection gap → gap-survival
+engine; ageing signals/actions/restrictions in the plan). Emits receivables/payables ageing
+risk, collection_first_required, vendor_pressure_risk, cash_conversion_risk,
+profitable_but_cash_negative, growth_blocked_by_working_capital, and data stale/insufficient
+signals. Proven by 16 unit + 7 `[db]` tests; no-items regression unchanged. Live feeds still
+deferred (manual/import-ready, confidence never VERIFIED).
 
-Not satisfied (blocks READY): working-capital ageing buckets, live revenue-assurance /
-quote-benchmark source feeds (POS/gateway/external), full owner UI, and runtime
-least-privilege RBAC denial tests for write paths (currently proven by static
-enforcement wiring + service-layer workspace-isolation, mirroring repo convention).
+Not satisfied (blocks READY): live revenue-assurance / quote-benchmark source feeds
+(POS/gateway/external/bank), full owner UI (incl. a working-capital route/UI), the
+OWNER_VIEW-without-OWNER_MANAGE RBAC gradient actor, and archetype-specific hostile packs.
 
 ## Verification
 
