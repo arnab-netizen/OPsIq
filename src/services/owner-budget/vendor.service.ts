@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Prisma `db` proxy rows are untyped at the persistence boundary */
 /**
  * Owner Budget vendor master + funded-initiative outcome persistence (Sections 20, 44).
  * Workspace-scoped. Vendor bank changes are held until independently verified; funded

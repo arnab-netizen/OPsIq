@@ -106,7 +106,7 @@ describe("[db] Owner Budget governance service", () => {
     }
 
     const list = await getBudgetAuthorities(workspaceId, businessId);
-    expect(list.some((a: any) => a.subjectUserId === subjectUserId && a.status === "OWNER_APPROVAL_REQUIRED")).toBe(true);
+    expect(list.some((a) => a.subjectUserId === subjectUserId && a.status === "OWNER_APPROVAL_REQUIRED")).toBe(true);
   });
 
   it("[db] enforces workspace isolation on governance reads", async () => {

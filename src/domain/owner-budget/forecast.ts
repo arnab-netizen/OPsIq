@@ -44,8 +44,7 @@ function project(
   start: number,
   weeklyRevenue: number,
   weeklyOutflow: number,
-  obligations: CashObligation[],
-  reserve: number
+  obligations: CashObligation[]
 ): ScenarioProjection["weeklyEndingCash"] {
   const weekly: number[] = [];
   let cash = start;
@@ -80,9 +79,9 @@ export function computeCashForecast(i: ForecastInput): ForecastResult {
   const out = Math.max(0, i.weeklyOutflow ?? 0);
   const obligations = i.obligations ?? [];
 
-  const base = project(start, rev, out, obligations, reserve);
-  const downside = project(start, rev * 0.7, out, obligations, reserve);
-  const cashStress = project(start, rev * 0.5, out * 1.1, obligations, reserve);
+  const base = project(start, rev, out, obligations);
+  const downside = project(start, rev * 0.7, out, obligations);
+  const cashStress = project(start, rev * 0.5, out * 1.1, obligations);
 
   // Day views from the base weekly trajectory (week 1 ≈ 7 days, etc.).
   const sevenDayCash = base[0];

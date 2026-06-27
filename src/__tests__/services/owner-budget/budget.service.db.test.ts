@@ -123,8 +123,8 @@ describe("[db] Owner Budget service", () => {
     // Previous plan snapshot is preserved (immutable history): v1 GROW still present.
     const snaps = await listBudgetSnapshots(workspaceId, businessId);
     expect(snaps.length).toBeGreaterThanOrEqual(2);
-    expect(snaps.some((s: any) => s.mode === "GROW" && s.isCurrent === false)).toBe(true);
-    expect(snaps.filter((s: any) => s.isCurrent === true).length).toBe(1);
+    expect(snaps.some((s) => s.mode === "GROW" && s.isCurrent === false)).toBe(true);
+    expect(snaps.filter((s) => s.isCurrent === true).length).toBe(1);
   });
 
   it("[db] reassessment is idempotent for the same trigger event", async () => {

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- Prisma `db` proxy rows are untyped at the persistence boundary */
 /**
  * Owner Budget governance service — owner override + employee/manager budget
  * authority lifecycle (Sections 23, 26). DB-backed, workspace-scoped.

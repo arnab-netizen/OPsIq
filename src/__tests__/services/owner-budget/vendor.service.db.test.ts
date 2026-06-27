@@ -95,7 +95,7 @@ describe("[db] Owner Budget vendor master + duplicate invoice + initiative", () 
     expect(record.safeForLearning).toBe(true);
 
     const list = await getInitiativeOutcomes(workspaceId, businessId);
-    expect(list.some((o: any) => o.initiativeLabel === "Referral campaign" && o.outcome === "FAILED")).toBe(true);
+    expect(list.some((o) => o.initiativeLabel === "Referral campaign" && o.outcome === "FAILED")).toBe(true);
 
     // Workspace isolation.
     await expect(getInitiativeOutcomes(ws(), businessId)).rejects.toThrow();
