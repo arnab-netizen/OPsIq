@@ -23,6 +23,7 @@ import { assessWorkingCapital } from "@/domain/owner-budget/working-capital";
 import { detectRevenueLeakage } from "@/domain/owner-budget/revenue-assurance";
 import { assessVendorControl } from "@/domain/owner-budget/vendor-control";
 import { detectUnderinvestment } from "@/domain/owner-budget/underinvestment";
+import { assessArchetypePack, resolveBudgetArchetype } from "@/domain/owner-budget/archetype-packs";
 import { detectCollusionRisk } from "@/domain/owner-budget/collusion";
 import { runCollective } from "@/domain/collective-training/collective-engine";
 import type {
@@ -81,6 +82,37 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     mode: mode.primaryMode,
     confidence: conf,
   });
+
+  // ---- Archetype-specific budget pack (laundry / housekeeping / generic fallback) ----
+  // Reasons with the business type's cost structure / leakage / levers instead of
+  // generic advice. Reuses the existing plan pipeline (signals + extra actions /
+  // restrictions / what-not-to-do); it is NOT a parallel budget or action engine.
+  const archetypePack = assessArchetypePack({
+    archetype: resolveBudgetArchetype(input.assessment.finance.industryTemplate),
+    laundry: input.assessment.archetypeSignals?.laundry ?? null,
+    housekeeping: input.assessment.archetypeSignals?.housekeeping ?? null,
+  });
+  // A hard archetype constraint (negative delivery economics, high travel time, …)
+  // defers offensive (growth/scale/experiment) candidates through the EXISTING
+  // allocation result, so the existing growth-blocked signal + blocked-candidate
+  // action loop fire naturally — no bypass of the confidence gate or a new ranker.
+  if (archetypePack.growthBlocked) {
+    let fundedTotal = 0;
+    for (const r of allocation.ranked) {
+      const offensive =
+        r.candidate.category === "growth_roi" ||
+        r.candidate.category === "scale_after_readiness" ||
+        r.candidate.category === "strategic_experiment";
+      if (offensive && (r.decision === "FUND" || r.decision === "PARTIAL_FUND")) {
+        r.decision = "DEFER";
+        r.fundedAmount = 0;
+        r.reason = `Deferred by ${archetypePack.archetype} working-economics gate: ${archetypePack.signals[0]?.message ?? "archetype scale gate not met"}`;
+      }
+      fundedTotal += r.fundedAmount;
+    }
+    allocation.fundedTotal = fundedTotal;
+    allocation.blockedCount = allocation.ranked.filter((r) => r.decision === "BLOCK" || r.decision === "DEFER").length;
+  }
 
   // ---- Cross-domain "what not to do" via the reused collective engine ----
   const signalsForCollective = buildDomainSignals(input.assessment, mode.netMarginPct, cash.runwayDays, conf);
@@ -318,6 +350,12 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
       killRule: "No high-risk spend approved until data confidence reaches OPERATIONAL.",
     });
   }
+
+  // ---- Merge the archetype pack into the plan (computed above) ----
+  signals.push(...archetypePack.signals);
+  extraActions.push(...archetypePack.actions);
+  extraRestrictions.push(...archetypePack.spendRestrictions);
+  extraWhatNotToDo.push(...archetypePack.whatNotToDo, ...archetypePack.scaleBlocks);
 
   // ---- Restrictions ----
   const spendRestrictions: string[] = [];
