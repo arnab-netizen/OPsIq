@@ -25,5 +25,6 @@ export * from "@/domain/owner-budget/reconciliation";
 export * from "@/domain/owner-budget/forecast";
 export * from "@/domain/owner-budget/action-mapping";
 export * from "@/domain/owner-budget/archetype-packs";
+export * from "@/domain/owner-budget/archetype-working-capital";
 export * from "@/domain/owner-budget/initiative-outcome";
 export * from "@/domain/owner-budget/validation";

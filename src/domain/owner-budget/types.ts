@@ -267,7 +267,11 @@ export type BudgetSignalType =
   | "laundry_machine_downtime_risk" | "laundry_discount_contribution_risk"
   | "housekeeping_travel_inefficiency" | "housekeeping_overtime_without_output"
   | "housekeeping_contract_underpriced" | "housekeeping_supplies_variance"
-  | "archetype_data_insufficient";
+  | "archetype_data_insufficient"
+  // Working-capital × archetype cross-integration
+  | "laundry_b2b_cash_conversion_risk" | "laundry_b2b_payment_terms_risk"
+  | "laundry_reserve_protected_by_downtime_and_receivables"
+  | "housekeeping_recurring_contract_cash_risk" | "housekeeping_payroll_collection_conflict";
 
 export interface BudgetSignal {
   type: BudgetSignalType;
