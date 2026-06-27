@@ -89,6 +89,13 @@ export interface BudgetAssessmentInput {
   collusion?: CollusionInput;
   /** Count of unreconciled/disputed/mismatched spends in the period. */
   reconciliationExceptionCount?: number;
+  /** Archetype-specific operational metrics (manual / import-ready) for the budget
+   *  pack (laundry / housekeeping). The archetype identity is resolved from
+   *  `finance.industryTemplate`; this carries the per-load/per-job operational inputs. */
+  archetypeSignals?: {
+    laundry?: import("@/domain/owner-budget/archetype-packs").LaundryArchetypeSignals | null;
+    housekeeping?: import("@/domain/owner-budget/archetype-packs").HousekeepingArchetypeSignals | null;
+  };
 }
 
 export interface CashPosture {
@@ -254,7 +261,13 @@ export type BudgetSignalType =
   | "receivables_ageing_risk" | "payables_ageing_risk" | "collection_first_required"
   | "vendor_pressure_risk" | "cash_conversion_risk" | "profitable_but_cash_negative"
   | "growth_blocked_by_working_capital" | "working_capital_data_stale"
-  | "working_capital_data_insufficient";
+  | "working_capital_data_insufficient"
+  // Archetype-specific budget packs (laundry / housekeeping)
+  | "laundry_consumable_leakage" | "laundry_delivery_uneconomic" | "laundry_b2b_margin_risk"
+  | "laundry_machine_downtime_risk" | "laundry_discount_contribution_risk"
+  | "housekeeping_travel_inefficiency" | "housekeeping_overtime_without_output"
+  | "housekeeping_contract_underpriced" | "housekeeping_supplies_variance"
+  | "archetype_data_insufficient";
 
 export interface BudgetSignal {
   type: BudgetSignalType;

@@ -144,7 +144,7 @@ authorization is proven through the real route → canonical wrapper for both al
 denied actors (unauthenticated, no-membership, no-OWNER_VIEW read, no-OWNER_MANAGE write,
 authorized read/write, cross-workspace) — PARTIAL only because no role grants OWNER_VIEW
 without OWNER_MANAGE (gradient actor not expressible).
-Added in Working-Capital Ageing (`DYNAMIC_BUDGET_WORKING_CAPITAL_DB_PROVEN`): receivable/
+Added in Working-Capital Ageing (`DYNAMIC_BUDGET_WORKING_CAPITAL_DB_PROVEN`, PR #45): receivable/
 payable ageing buckets (current/0-30/31-60/61-90/90+) via a pure engine + a minimal
 manual/import-ready `OwnerWorkingCapitalItem` table, fed into the EXISTING reassessment
 (overdue payables → real obligation → mode/allocation react; collection gap → gap-survival
@@ -153,10 +153,21 @@ risk, collection_first_required, vendor_pressure_risk, cash_conversion_risk,
 profitable_but_cash_negative, growth_blocked_by_working_capital, and data stale/insufficient
 signals. Proven by 16 unit + 7 `[db]` tests; no-items regression unchanged. Live feeds still
 deferred (manual/import-ready, confidence never VERIFIED).
+Added in Archetype Budget Packs (`DYNAMIC_BUDGET_ARCHETYPE_PACKS_LOGIC_PROVEN`, PR #46): laundry /
+housekeeping / generic-fallback budget packs (`archetype-packs.ts`) that reason with the
+business type's cost drivers, leakage patterns, growth levers and scale gates. The packs
+emit archetype-specific signals + generated actions + restrictions + what-not-to-do via the
+existing `composeUpdatedPlan` pipeline, and a hard economics gate (laundry delivery / HK
+travel) defers offensive candidates through the EXISTING allocation result (no parallel
+engine). Generic falls back safely; a specific archetype with no operational metrics emits
+`archetype_data_insufficient` (no fabricated advice). Proven by 18 deterministic logic +
+plan-integration tests; generic-plan regression unchanged. No schema; archetype operational
+metrics are manual/import-ready and not yet persisted (deferred).
 
 Not satisfied (blocks READY): live revenue-assurance / quote-benchmark source feeds
-(POS/gateway/external/bank), full owner UI (incl. a working-capital route/UI), the
-OWNER_VIEW-without-OWNER_MANAGE RBAC gradient actor, and archetype-specific hostile packs.
+(POS/gateway/external/bank), full owner UI (incl. working-capital + archetype-metric entry),
+persisted archetype operational metrics, the OWNER_VIEW-without-OWNER_MANAGE RBAC gradient
+actor, a home-services budget pack, and working-capital × archetype cross-integration.
 
 ## Verification
 
