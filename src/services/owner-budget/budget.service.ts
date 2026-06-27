@@ -37,6 +37,7 @@ import {
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import { syncBudgetActions } from "@/services/owner-budget/action-link.service";
 import { deriveAgeingForReassessment } from "@/services/owner-budget/working-capital.service";
+import { deriveArchetypeSignalsForReassessment } from "@/services/owner-budget/archetype-metrics.service";
 
 const ALLOCATION_CATEGORIES: ReadonlySet<string> = new Set<AllocationCategory>([
   "statutory_payroll_tax", "cash_survival", "critical_fixed_obligations",
@@ -485,6 +486,14 @@ async function assembleAssessment(
     };
   }
 
+  // Archetype operational metrics (archetype-metrics slice): derive the archetype-pack
+  // signal inputs from persisted manual/import-ready metrics so the archetype packs +
+  // working-capital × archetype cross-integration run through real reassessment. Null
+  // when generic / no usable metrics ⇒ packs fall back to archetype_data_insufficient.
+  const archetypeSignals = await deriveArchetypeSignalsForReassessment(
+    workspaceId, businessId, finance.industryTemplate, new Date()
+  );
+
   const assessment: BudgetAssessmentInput = {
     finance,
     cashReserveTarget: period?.cashReserveTarget ?? null,
@@ -495,6 +504,7 @@ async function assembleAssessment(
     vendorControl,
     reconciliationExceptionCount: reconciliationExceptionCount || undefined,
     workingCapital,
+    archetypeSignals: archetypeSignals ?? undefined,
   };
 
   return { assessment, candidates, periodId: period?.id ?? null, approvedBudget: period?.approvedBudget ?? null };

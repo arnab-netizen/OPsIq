@@ -81,3 +81,15 @@ export const workingCapitalItemCreateSchema = z.object({
   sourceRef: z.string().min(1).max(200).nullish(),
 });
 export type WorkingCapitalItemCreateBody = z.infer<typeof workingCapitalItemCreateSchema>;
+
+export const archetypeMetricCreateSchema = z.object({
+  businessId: z.string().uuid(),
+  archetype: z.enum(["laundry", "housekeeping", "generic"]),
+  metricType: z.string().min(1).max(64),
+  metricDate: z.string().datetime(),
+  value: z.number().finite(),
+  unit: z.string().min(1).max(32).nullish(),
+  sourceType: z.enum(["MANUAL", "IMPORT"]).optional(),
+  sourceRef: z.string().min(1).max(200).nullish(),
+});
+export type ArchetypeMetricCreateBody = z.infer<typeof archetypeMetricCreateSchema>;
