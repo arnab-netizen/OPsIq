@@ -166,6 +166,23 @@ describe("[db] Owner Budget service", () => {
     expect(guidance.pendingDecisions.some((d) => d.startsWith("COLLECT_EVIDENCE"))).toBe(true);
   });
 
+  it("[db] a vendor-bank-change spend surfaces vendor_control_risk in the persisted plan", async () => {
+    const workspaceId = ws();
+    const businessId = await newBusiness(workspaceId);
+    await seedHealthyFinance(workspaceId, businessId);
+    const period = await createBudgetPeriod(businessId, { label: "P", periodStart: "2026-05-01", periodEnd: "2026-05-31", currency: "INR", approvedBudget: 100000 }, actor, workspaceId);
+    const { plan } = await recordSpendEntry(
+      businessId,
+      {
+        periodId: period.id, label: "Vendor payment", category: "essential_operations", amount: 8000,
+        state: "committed", requestedByUserId: actor, ownerApprovalThreshold: 50000, vendorBankChanged: true,
+      },
+      actor, workspaceId
+    );
+    expect(plan.signals.some((s) => s.type === "vendor_control_risk")).toBe(true);
+    expect(plan.spendRestrictions.some((r) => r.toLowerCase().includes("hold vendor payment"))).toBe(true);
+  });
+
   it("[db] a budget line amount change triggers reassessment through the real mutation path", async () => {
     const workspaceId = ws();
     const businessId = await newBusiness(workspaceId);

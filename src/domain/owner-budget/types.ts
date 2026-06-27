@@ -8,6 +8,9 @@
  */
 
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
+import type { WorkingCapitalInput } from "@/domain/owner-budget/working-capital";
+import type { RevenueAssuranceInput } from "@/domain/owner-budget/revenue-assurance";
+import type { VendorControlInput } from "@/domain/owner-budget/vendor-control";
 
 /** Business budget mode (Section 5). Multiple may be active → HYBRID. */
 export type BudgetMode =
@@ -67,6 +70,12 @@ export interface BudgetAssessmentInput {
   criticalMissingInputs?: string[];
   /** Planning horizon in days for obligation/free-cash math (default 30). */
   horizonDays?: number;
+  /** Working-capital terms (collection gap, pending receipt) beyond finance aggregates. */
+  workingCapital?: Pick<WorkingCapitalInput, "collectionGapDays" | "pendingReceiptValue">;
+  /** Revenue-assurance counts (orders/invoices/deposits) beyond finance aggregates. */
+  revenueAssurance?: RevenueAssuranceInput;
+  /** Aggregated vendor/procurement control signal for the period's spend. */
+  vendorControl?: VendorControlInput;
 }
 
 export interface CashPosture {
@@ -227,7 +236,7 @@ export type BudgetSignalType =
   | "spend_proof_missing" | "reconciliation_exception" | "revenue_leakage_risk"
   | "unit_economics_negative" | "manager_budget_violation" | "approval_bypass_risk"
   | "vendor_control_risk" | "owner_override_recorded" | "reassessment_required"
-  | "updated_plan_ready";
+  | "working_capital_risk" | "updated_plan_ready";
 
 export interface BudgetSignal {
   type: BudgetSignalType;

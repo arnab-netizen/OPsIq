@@ -337,6 +337,22 @@ async function assembleAssessment(
     accountableRole: l.ownerRole ?? undefined,
   }));
 
+  // Vendor/procurement control signal aggregated from flagged spend entries.
+  const riskyVendorSpend = await db.spendEntry.findFirst({
+    where: {
+      workspaceId, businessId, voidedAt: null,
+      OR: [{ vendorBankChanged: true }, { isNewVendor: true }],
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const vendorControl = riskyVendorSpend
+    ? {
+        isNewVendor: riskyVendorSpend.isNewVendor,
+        vendorBankChanged: riskyVendorSpend.vendorBankChanged,
+        vendorBankVerified: riskyVendorSpend.proofStatus === "reconciled",
+      }
+    : undefined;
+
   const assessment: BudgetAssessmentInput = {
     finance,
     cashReserveTarget: period?.cashReserveTarget ?? null,
@@ -344,6 +360,7 @@ async function assembleAssessment(
     obligations,
     ownerGoal: (period?.ownerGoal as BudgetAssessmentInput["ownerGoal"]) ?? undefined,
     criticalMissingInputs: criticalMissingInputs.length ? criticalMissingInputs : undefined,
+    vendorControl,
   };
 
   return { assessment, candidates, periodId: period?.id ?? null, approvedBudget: period?.approvedBudget ?? null };

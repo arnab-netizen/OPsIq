@@ -19,6 +19,9 @@ import {
 } from "@/domain/owner-budget/types";
 import { classifyBudgetMode } from "@/domain/owner-budget/mode-classifier";
 import { rankCapitalAllocation } from "@/domain/owner-budget/capital-allocation";
+import { assessWorkingCapital } from "@/domain/owner-budget/working-capital";
+import { detectRevenueLeakage } from "@/domain/owner-budget/revenue-assurance";
+import { assessVendorControl } from "@/domain/owner-budget/vendor-control";
 import { runCollective } from "@/domain/collective-training/collective-engine";
 import type {
   DomainSignalInput,
@@ -108,6 +111,68 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
   } else if (allocation.ranked.some((r) => r.candidate.category === "scale_after_readiness")) {
     signals.push({ type: "scale_budget_blocked", severity: "MEDIUM", message: "Scale budget blocked until readiness/confidence proven." });
   }
+  // ---- Working capital / revenue assurance / vendor control (Sections 12, 20, 22) ----
+  const f = input.assessment.finance;
+  const wc = assessWorkingCapital({
+    cashOnHand: f.cashOnHand ?? null,
+    receivables: f.receivables ?? null,
+    receivablesOverdue: f.receivablesOverdue ?? null,
+    payables: f.payables ?? null,
+    payablesOverdue: f.payablesOverdue ?? null,
+    inventoryStockCashLock: f.inventoryStockCashLock ?? null,
+    reserveRequired: cash.statutoryReserveRequired,
+    collectionGapDays: input.assessment.workingCapital?.collectionGapDays ?? null,
+    pendingReceiptValue: input.assessment.workingCapital?.pendingReceiptValue ?? null,
+  });
+  const ra = detectRevenueLeakage({
+    revenue: f.revenue ?? null,
+    discountAmount: f.discountAmount ?? null,
+    refundAmount: f.refundAmount ?? null,
+    ...(input.assessment.revenueAssurance ?? {}),
+  });
+  const vc = input.assessment.vendorControl ? assessVendorControl(input.assessment.vendorControl) : null;
+
+  const extraRestrictions: string[] = [];
+  const extraActions: BudgetGeneratedAction[] = [];
+  const extraWhatNotToDo: string[] = [];
+
+  if (wc.collectionGapRisk && !wc.canFundGrowthGivenGap) {
+    signals.push({ type: "working_capital_risk", severity: "HIGH", message: wc.reasons.join(" ") });
+    extraRestrictions.push("Do not fund growth/scale on uncollected receipts — cash reserve cannot survive the collection gap.");
+    extraWhatNotToDo.push("Approve growth spend that depends on a delayed (e.g. 45-day) receipt.");
+  } else if (wc.receivablesPressure === "HIGH" || wc.payablesPressure === "HIGH") {
+    signals.push({ type: "working_capital_risk", severity: "MEDIUM", message: wc.reasons.join(" ") || "Working-capital pressure present." });
+  }
+
+  if (ra.hasLeakage) {
+    const top = ra.exceptions.find((e) => e.severity === "HIGH") ?? ra.exceptions[0];
+    signals.push({ type: "revenue_leakage_risk", severity: top.severity === "HIGH" ? "HIGH" : "MEDIUM", message: top.message });
+    extraActions.push({
+      title: `Investigate revenue leakage: ${ra.exceptions.map((e) => e.type).join(", ")}`,
+      accountableRole: "owner",
+      decisionType: "INVESTIGATE",
+      requiredProof: "Order/invoice/cash/deposit reconciliation",
+      reviewInDays: 7,
+      expectedFinancialImpact: "Recover leaked revenue before any cost-cut or growth spend",
+      killRule: "Escalate if leakage persists after one reconciliation cycle.",
+    });
+    extraWhatNotToDo.push("Cut costs or add growth spend before closing revenue leakage.");
+  }
+
+  if (vc && vc.flags.length > 0) {
+    signals.push({ type: "vendor_control_risk", severity: vc.riskLevel === "CRITICAL" ? "CRITICAL" : vc.riskLevel === "HIGH" ? "HIGH" : "MEDIUM", message: vc.flags[0] });
+    if (vc.blockPayment) extraRestrictions.push("Hold vendor payment until control flags are cleared (bank verification / duplicate check).");
+    extraActions.push({
+      title: `Resolve vendor/procurement control flags (${vc.riskLevel})`,
+      accountableRole: "owner",
+      decisionType: vc.blockPayment ? "BLOCK" : "INVESTIGATE",
+      requiredProof: vc.requiredActions.join("; ") || "Vendor verification evidence",
+      reviewInDays: 5,
+      expectedFinancialImpact: "Prevent overpayment / fraud leakage",
+      killRule: "Do not release payment while a CRITICAL vendor flag is open.",
+    });
+  }
+
   signals.push({ type: "updated_plan_ready", severity: "INFO", message: `Updated plan generated in ${mode.primaryMode} mode.` });
 
   // ---- Decision + next best action ----
@@ -158,6 +223,8 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     spendRestrictions.push("Irreversible spend (hiring, capex, new branch, major marketing) blocked below VERIFIED confidence.");
   }
   if (cash.reserveBreached) spendRestrictions.push("All non-essential payments require owner approval until reserve restored.");
+  spendRestrictions.push(...extraRestrictions);
+  generatedActions.push(...extraActions);
 
   const accountableRoles = [...new Set([
     "owner",
@@ -194,7 +261,7 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     reviewInDays,
     killRule: "Reassess on any material budget/spend/revenue/proof/cash change.",
     signals,
-    whatNotToDo,
+    whatNotToDo: [...whatNotToDo, ...extraWhatNotToDo],
     highRiskBlocked: mode.primaryMode === "DATA_INSUFFICIENT",
   };
 }

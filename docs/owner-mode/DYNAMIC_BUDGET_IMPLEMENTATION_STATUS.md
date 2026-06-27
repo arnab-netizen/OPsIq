@@ -14,11 +14,17 @@ so this is **NOT** OWNER_MODE_READY. Owner Mode is not runtime-complete.
 
 - Slice 1: inventory, min-code, pure engine core, schema, DB reassessment service,
   mandatory dynamic proof, read routes, hostile fixtures, docs.
-- Slice 2 (this slice): owner override (persistence + 8-class outcome classification +
+- Slice 2: owner override (persistence + 8-class outcome classification +
   hard-block refusal), budget-authority lifecycle (NORMAL→WATCH→RESTRICTED→
   OWNER_APPROVAL_REQUIRED→SUSPENDED_FOR_CATEGORY→RESTORED) with lawful-action
   guardrails, and OWNER_MANAGE write routes (spend / override / authority) with Zod
   validation + enforcement tests + `[db]` governance tests.
+- Slice 3 (this slice): working-capital engine (collection-gap survival, receivables/
+  payables pressure), revenue-assurance signals (completed-not-paid, undeposited cash,
+  excessive discount, refund spike, order/invoice mismatch), vendor/procurement
+  controls (bank-change hold, quotes/benchmark/duplicate/related-party/equipment-
+  payback), and funded-initiative outcome learning — all wired into the updated plan
+  (+ `working_capital_risk` signal) and surfaced through persisted reassessments.
 
 ## COMPLETE (implemented + tested)
 
@@ -46,20 +52,31 @@ so this is **NOT** OWNER_MODE_READY. Owner Mode is not runtime-complete.
   persisted + audited. (unit + db-tested)
 - Write API routes: POST spend / override / authority — OWNER_MANAGE, workspace-
   scoped, Zod-validated, enforcement-tested.
+- Working-capital engine: collection-gap survival gate (B2B 45-day case),
+  receivables/payables pressure, inventory cash-lock. (unit + integration-tested)
+- Revenue-assurance signals: completed-orders-without-payment, undeposited cash,
+  excessive discount, refund spike, order/invoice mismatch. (unit + integration-tested)
+- Vendor/procurement controls: unverified-bank-change payment hold, insufficient
+  quotes, price-above-benchmark, duplicate invoice, related-party, equipment-without-
+  payback. (unit + integration + `[db]` tested via persisted plan signal)
+- Funded-initiative outcome learning: 7-class outcome + next-step + safe-for-learning
+  flag (unverified never treated as success). (unit-tested)
 - All 7 documentation files.
 
 ## PARTIAL (interface/foundation present; not fully operational)
 
-- **Working capital line items** (receivables/payables ageing, cash-conversion): the
-  engine accepts obligations + reserves and reuses finance aggregates, but per-line
-  ageing models are not added. Classified PARTIAL.
-- **Vendor/procurement controls**: spend governance flags new-vendor and vendor-bank-
-  change; full vendor master/quote/benchmark/duplicate detection is not built (reuses
-  existing `remote-operations/vendor-access`/`reliability` signals only). PARTIAL.
-- **Revenue assurance** (order↔invoice↔deposit matching): not built; interface only. PARTIAL.
+- **Working-capital per-line ageing buckets**: the engine computes collection-gap
+  survival + receivables/payables pressure from finance aggregates and owner terms;
+  detailed ageing-bucket models (0–30/30–60/60–90) are not persisted. PARTIAL.
+- **Vendor/procurement master data**: control logic (bank-change/quotes/benchmark/
+  duplicate/related-party/equipment-payback) is implemented and wired, but a persisted
+  vendor master + invoice-hash store is not added (inputs supplied per assessment). PARTIAL.
+- **Revenue assurance live source wiring**: detection logic + signals are implemented
+  and tested; live order/invoice/deposit feeds beyond finance aggregates are supplied
+  per assessment, not auto-pulled from a POS/gateway. PARTIAL.
+- **Funded-initiative outcome learning persistence**: the classifier is implemented +
+  tested; persisting closures into the learning store is not wired. PARTIAL.
 - **Full owner UI**: read adapter + read/write routes only. UI PARTIAL by design (Section 34).
-- **Funded-initiative outcome learning** (Section 44): reuses learning-admission
-  vocabulary but closure recording not wired. PARTIAL.
 
 ## MISSING / NOT CLAIMED
 
@@ -78,11 +95,14 @@ dynamic proof, atomic/idempotent writes, documentation.
 
 Added in Slice 2: owner-override persistence + outcome classification, employee
 authority lifecycle, OWNER_MANAGE write routes.
+Added in Slice 3: working-capital, revenue-assurance, vendor/procurement control
+engines (wired + tested), funded-initiative outcome classifier.
 
-Not satisfied (blocks READY): working-capital line items, vendor/procurement controls,
-revenue assurance, full owner UI, funded-initiative outcome learning closure, and
-runtime least-privilege RBAC denial tests for write paths (currently proven by static
-enforcement wiring + service-layer workspace-isolation, mirroring repo convention).
+Not satisfied (blocks READY): persisted vendor master + invoice-hash store,
+working-capital ageing buckets, live revenue-assurance source feeds, funded-initiative
+outcome-learning persistence, full owner UI, and runtime least-privilege RBAC denial
+tests for write paths (currently proven by static enforcement wiring + service-layer
+workspace-isolation, mirroring repo convention).
 
 ## Verification
 
@@ -90,9 +110,8 @@ enforcement wiring + service-layer workspace-isolation, mirroring repo conventio
 npx prisma validate                     # valid
 npx prisma migrate status               # up to date (local PostgreSQL 16)
 npx tsc --noEmit                        # 0 errors
-npx vitest run src/__tests__/owner-budget/                    # 35 passed (engine+governance+routes, non-db)
 TEST_WITH_DB=true npx vitest run \
-  src/__tests__/owner-budget src/__tests__/services/owner-budget  # 44 passed (incl. db proofs)
+  src/__tests__/owner-budget src/__tests__/services/owner-budget  # 58 passed (incl. db proofs)
 ```
 
 DB proof is genuine PostgreSQL (local `opsiq_dev`, all migrations incl. the new

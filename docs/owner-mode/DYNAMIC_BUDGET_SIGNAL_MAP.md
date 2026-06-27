@@ -15,7 +15,14 @@ Defined in `src/domain/owner-budget/types.ts` (`BudgetSignalType`) and produced 
 | growth_budget_blocked | a growth line is blocked/deferred by mode/confidence |
 | scale_budget_ready | a scale line clears readiness + confidence gates |
 | scale_budget_blocked | a scale line is blocked until readiness/confidence proven |
+| working_capital_risk | collection-gap cannot be survived, or high receivables/payables pressure |
+| revenue_leakage_risk | revenue-assurance exception (completed-not-paid, undeposited cash, excessive discount/refund, order/invoice mismatch) |
+| vendor_control_risk | vendor/procurement control flag (bank-change/quotes/benchmark/duplicate/related-party/equipment-payback) |
 | updated_plan_ready | a new plan was produced (always) |
+
+Slice 3 wired `working_capital_risk`, `revenue_leakage_risk`, and `vendor_control_risk`
+into `composeUpdatedPlan`; `vendor_control_risk` is also proven through a persisted
+reassessment in the `[db]` test.
 
 Additional signal types are reserved in `BudgetSignalType` for spend-proof,
 reconciliation, revenue-leakage, manager-violation, approval-bypass, vendor-control,
