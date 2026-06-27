@@ -35,6 +35,7 @@ import {
   type MaterialChangeKind,
 } from "@/domain/owner-budget";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
+import { syncBudgetActions } from "@/services/owner-budget/action-link.service";
 
 const ALLOCATION_CATEGORIES: ReadonlySet<string> = new Set<AllocationCategory>([
   "statutory_payroll_tax", "cash_survival", "critical_fixed_obligations",
@@ -507,6 +508,8 @@ export async function reassessBudget(
 
   // Persist atomically: new immutable snapshot, prior marked non-current,
   // reassessment row recorded (unique trigger guards against duplicates).
+  let reassessmentId = "";
+  let snapshotId = "";
   await db.$transaction(async (tx: any) => {
     const current = await tx.budgetPlanSnapshot.findFirst({
       where: { workspaceId, businessId, isCurrent: true },
@@ -529,7 +532,8 @@ export async function reassessBudget(
         plan: plan as unknown as object,
       },
     });
-    await tx.budgetPlanSnapshot.create({
+    reassessmentId = reassessment.id;
+    const snapshot = await tx.budgetPlanSnapshot.create({
       data: {
         id: randomUUID(),
         workspaceId, businessId, periodId,
@@ -540,12 +544,19 @@ export async function reassessBudget(
         plan: plan as unknown as object,
       },
     });
+    snapshotId = snapshot.id;
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_BUDGET_REASSESSED,
     actorId: opts.actorId, workspaceId, entityType: "BudgetPlanSnapshot", entityId: businessId,
     payload: { businessId, mode: plan.mode, trigger: opts.kind, decision: plan.decisionType },
+  });
+
+  // Deep action linkage: persist/link the plan's advisory actions as owner
+  // execution tasks (idempotent by sourceKey — no duplicate open tasks).
+  await syncBudgetActions(businessId, workspaceId, {
+    plan, reassessmentId, planSnapshotId: snapshotId, periodId, actorId: opts.actorId,
   });
 
   return plan;

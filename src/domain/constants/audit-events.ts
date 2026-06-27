@@ -252,6 +252,9 @@ export const AUDIT_EVENTS = {
   OWNER_BUDGET_VENDOR_CREATED: "owner.budget_vendor_created",
   OWNER_BUDGET_VENDOR_BANK_VERIFIED: "owner.budget_vendor_bank_verified",
   OWNER_BUDGET_INITIATIVE_CLOSED: "owner.budget_initiative_closed",
+  OWNER_BUDGET_ACTION_CREATED: "owner.budget_action_created",
+  OWNER_BUDGET_ACTION_LINKED: "owner.budget_action_linked",
+  OWNER_BUDGET_ACTION_UPDATED: "owner.budget_action_updated",
 
   // Owner Cashflow (Module 5)
   OWNER_CASHFLOW_SNAPSHOT_RECORDED: "owner.cashflow_snapshot_recorded",

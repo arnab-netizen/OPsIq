@@ -12,7 +12,7 @@ import * as path from "path";
 
 const base = path.resolve(__dirname, "../../app/api/owner/budget");
 const read = (rel: string) => fs.readFileSync(path.join(base, rel), "utf8");
-const ROUTES = ["guidance/route.ts", "snapshots/route.ts", "forecast/route.ts"];
+const ROUTES = ["guidance/route.ts", "snapshots/route.ts", "forecast/route.ts", "actions/route.ts"];
 const WRITE_ROUTES = ["spend/route.ts", "override/route.ts", "authority/route.ts"];
 
 describe("Owner Budget route enforcement", () => {
@@ -45,5 +45,18 @@ describe("Owner Budget route enforcement", () => {
       expect(src, `${f} must derive workspace server-side`).toContain("ctx.verifiedWorkspaceId");
       expect(src).not.toMatch(/searchParams\.get\(["']workspaceId["']\)/);
     }
+  });
+
+  it("execution-task PATCH route gates on OWNER_MANAGE, validates the uuid param + body, and stays workspace-scoped", () => {
+    const src = read("actions/[actionId]/route.ts");
+    expect(src).toContain("withCanonicalEnforcement");
+    expect(src).toContain("requireWorkspace: true");
+    expect(src).toMatch(/requireCapabilities:\s*\[CAPABILITIES\.OWNER_MANAGE\]/);
+    expect(src, "must validate the action id param").toMatch(/parseOrThrow\(uuidSchema,\s*params\.actionId\)/);
+    expect(src, "must validate the body via Zod").toContain("budgetActionUpdateSchema");
+    expect(src).toContain("parseRequestBody");
+    expect(src).toContain("ctx.verifiedWorkspaceId");
+    expect(src).toContain("ctx.verifiedActorId");
+    expect(src).not.toMatch(/from\s+["']@\/lib\/db["']/);
   });
 });

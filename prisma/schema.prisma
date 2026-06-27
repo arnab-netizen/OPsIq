@@ -1367,6 +1367,7 @@ model OwnerBusiness {
   financeCycles           OwnerFinanceCycle[]
   financeFindings         OwnerFinanceFinding[]
   financeActions          OwnerFinanceAction[]
+  budgetActions           OwnerBudgetAction[]
   financeVerifications    OwnerFinanceVerification[]
   cashflowSnapshots       OwnerCashflowSnapshot[]
   cashflowCycles          OwnerCashflowCycle[]
@@ -4622,7 +4623,7 @@ model SpendEntry {
   approvedByUserId  String?   @map("approved_by_user_id") @db.Uuid
   isNewVendor       Boolean   @default(false) @map("is_new_vendor")
   vendorBankChanged Boolean   @default(false) @map("vendor_bank_changed")
-  vendorId          String?   @db.Uuid @map("vendor_id")
+  vendorId          String?   @map("vendor_id") @db.Uuid
   invoiceHash       String?   @map("invoice_hash")
   proofStatus       String?   @map("proof_status")
   riskLevel         String?   @map("risk_level")
@@ -4759,4 +4760,40 @@ model FundedInitiativeOutcome {
   @@index([workspaceId])
   @@index([workspaceId, businessId])
   @@map("funded_initiative_outcomes")
+}
+
+model OwnerBudgetAction {
+  id                      String        @id @db.Uuid
+  workspaceId             String        @map("workspace_id") @db.Uuid
+  businessId              String        @map("business_id") @db.Uuid
+  periodId                String?       @map("period_id") @db.Uuid
+  reassessmentId          String?       @map("reassessment_id") @db.Uuid
+  planSnapshotId          String?       @map("plan_snapshot_id") @db.Uuid
+  sourceKey               String        @map("source_key")
+  title                   String
+  decisionType            String        @map("decision_type")
+  accountableRole         String        @map("accountable_role")
+  assignedTo              String?       @map("assigned_to") @db.Uuid
+  dueAt                   DateTime?     @map("due_at")
+  reviewInDays            Int           @map("review_in_days")
+  requiredProof           String        @map("required_proof")
+  expectedFinancialImpact String        @map("expected_financial_impact")
+  verificationMethod      String        @map("verification_method")
+  escalationPath          String        @map("escalation_path")
+  killRule                String?       @map("kill_rule")
+  status                  String        @default("proposed")
+  completedAt             DateTime?     @map("completed_at")
+  completionNotes         String?       @map("completion_notes")
+  completionEvidence      Json?         @map("completion_evidence")
+  outcomeClass            String?       @map("outcome_class")
+  createdBy               String?       @map("created_by") @db.Uuid
+  createdAt               DateTime      @default(now()) @map("created_at")
+  updatedAt               DateTime      @updatedAt @map("updated_at")
+  business                OwnerBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, businessId, sourceKey])
+  @@index([workspaceId])
+  @@index([workspaceId, businessId])
+  @@index([status])
+  @@map("owner_budget_actions")
 }
