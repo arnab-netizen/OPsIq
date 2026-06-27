@@ -11,6 +11,8 @@ import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import type { WorkingCapitalInput } from "@/domain/owner-budget/working-capital";
 import type { RevenueAssuranceInput } from "@/domain/owner-budget/revenue-assurance";
 import type { VendorControlInput } from "@/domain/owner-budget/vendor-control";
+import type { UnderinvestmentInput } from "@/domain/owner-budget/underinvestment";
+import type { CollusionInput } from "@/domain/owner-budget/collusion";
 
 /** Business budget mode (Section 5). Multiple may be active → HYBRID. */
 export type BudgetMode =
@@ -76,6 +78,10 @@ export interface BudgetAssessmentInput {
   revenueAssurance?: RevenueAssuranceInput;
   /** Aggregated vendor/procurement control signal for the period's spend. */
   vendorControl?: VendorControlInput;
+  /** Underinvestment signals (underfunded areas + adverse trends). */
+  underinvestment?: Omit<UnderinvestmentInput, "cashSafe"> & { cashSafe?: boolean };
+  /** Collusion/fraud pattern counts for the period. */
+  collusion?: CollusionInput;
 }
 
 export interface CashPosture {

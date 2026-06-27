@@ -22,7 +22,8 @@ Defined in `src/domain/owner-budget/types.ts` (`BudgetSignalType`) and produced 
 
 Slice 3 wired `working_capital_risk`, `revenue_leakage_risk`, and `vendor_control_risk`
 into `composeUpdatedPlan`; `vendor_control_risk` is also proven through a persisted
-reassessment in the `[db]` test.
+reassessment in the `[db]` test. Slice 5 wired `underinvestment_detected`,
+`approval_bypass_risk`, and `manager_budget_violation` (underinvestment + collusion engines).
 
 Additional signal types are reserved in `BudgetSignalType` for spend-proof,
 reconciliation, revenue-leakage, manager-violation, approval-bypass, vendor-control,

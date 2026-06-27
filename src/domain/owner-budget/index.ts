@@ -18,5 +18,7 @@ export * from "@/domain/owner-budget/budget-authority";
 export * from "@/domain/owner-budget/working-capital";
 export * from "@/domain/owner-budget/revenue-assurance";
 export * from "@/domain/owner-budget/vendor-control";
+export * from "@/domain/owner-budget/underinvestment";
+export * from "@/domain/owner-budget/collusion";
 export * from "@/domain/owner-budget/initiative-outcome";
 export * from "@/domain/owner-budget/validation";

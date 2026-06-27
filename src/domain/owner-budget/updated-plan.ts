@@ -22,6 +22,8 @@ import { rankCapitalAllocation } from "@/domain/owner-budget/capital-allocation"
 import { assessWorkingCapital } from "@/domain/owner-budget/working-capital";
 import { detectRevenueLeakage } from "@/domain/owner-budget/revenue-assurance";
 import { assessVendorControl } from "@/domain/owner-budget/vendor-control";
+import { detectUnderinvestment } from "@/domain/owner-budget/underinvestment";
+import { detectCollusionRisk } from "@/domain/owner-budget/collusion";
 import { runCollective } from "@/domain/collective-training/collective-engine";
 import type {
   DomainSignalInput,
@@ -171,6 +173,50 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
       expectedFinancialImpact: "Prevent overpayment / fraud leakage",
       killRule: "Do not release payment while a CRITICAL vendor flag is open.",
     });
+  }
+
+  // ---- Underinvestment detection (Section 24) ----
+  if (input.assessment.underinvestment) {
+    const cashSafeForInvest =
+      input.assessment.underinvestment.cashSafe ??
+      (mode.primaryMode === "GROW" || mode.primaryMode === "SCALE" || mode.primaryMode === "PROFIT_INCREASE");
+    const ui = detectUnderinvestment({ ...input.assessment.underinvestment, cashSafe: cashSafeForInvest });
+    for (const finding of ui.findings.filter((x) => x.classification === "harmful_underinvestment" || x.classification === "delayed_necessary_spend")) {
+      signals.push({ type: "underinvestment_detected", severity: finding.severity === "HIGH" ? "HIGH" : "MEDIUM", message: finding.message });
+      extraActions.push({
+        title: `Address underinvestment in ${finding.area}`,
+        accountableRole: "owner",
+        decisionType: "INCREASE",
+        requiredProof: "Trend evidence (downtime/rework/churn/refund/pipeline) + spend baseline",
+        reviewInDays: 14,
+        expectedFinancialImpact: finding.recommendedAction,
+        killRule: "Stop if the adverse trend does not improve within two review cycles.",
+      });
+    }
+  }
+
+  // ---- Collusion / fraud risk (Section 25) ----
+  if (input.assessment.collusion) {
+    const col = detectCollusionRisk(input.assessment.collusion);
+    for (const finding of col.findings) {
+      signals.push({
+        type: finding.pattern === "self_approval_pattern" || finding.pattern === "repeated_override_pair" ? "approval_bypass_risk" : "manager_budget_violation",
+        severity: finding.severity === "HIGH" ? "HIGH" : "MEDIUM",
+        message: finding.message,
+      });
+    }
+    if (col.requiresOwnerReview) {
+      extraRestrictions.push("Elevated control risk detected — owner review required before further discretionary spend.");
+      extraActions.push({
+        title: "Investigate control-risk pattern (requires owner review)",
+        accountableRole: "owner",
+        decisionType: "INVESTIGATE",
+        requiredProof: "Approval/refund/discount logs for the flagged actors",
+        reviewInDays: 5,
+        expectedFinancialImpact: "Prevent leakage/fraud; no accusation — review only",
+        killRule: "Escalate if the pattern persists after review.",
+      });
+    }
   }
 
   signals.push({ type: "updated_plan_ready", severity: "INFO", message: `Updated plan generated in ${mode.primaryMode} mode.` });

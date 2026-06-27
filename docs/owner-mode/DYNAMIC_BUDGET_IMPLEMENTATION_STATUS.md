@@ -20,7 +20,12 @@ remain PARTIAL/MISSING, so this is **NOT** OWNER_MODE_READY. Owner Mode is not r
   OWNER_APPROVAL_REQUIRED→SUSPENDED_FOR_CATEGORY→RESTORED) with lawful-action
   guardrails, and OWNER_MANAGE write routes (spend / override / authority) with Zod
   validation + enforcement tests + `[db]` governance tests.
-- Slice 4 (this slice): persistence + live wiring — vendor master (`VendorRecord`) with
+- Slice 5 (this slice): underinvestment detection (§24 — harmful vs good-savings vs
+  cash-preservation classification) and collusion/fraud risk indicators (§25 —
+  self-approval, split-spend clusters, approver concentration, refund/discount
+  clustering; "requires review" language, never accusations), wired into the plan
+  (`underinvestment_detected` / `approval_bypass_risk` / `manager_budget_violation`).
+- Slice 4: persistence + live wiring — vendor master (`VendorRecord`) with
   bank-change hold + independent verification, invoice-hash duplicate detection feeding
   `vendor_control_risk` in persisted plans, and funded-initiative outcome persistence
   (`FundedInitiativeOutcome`) with learning-safe classification. `[db]`-proven.
@@ -66,6 +71,11 @@ remain PARTIAL/MISSING, so this is **NOT** OWNER_MODE_READY. Owner Mode is not r
   payback. (unit + integration + `[db]` tested via persisted plan signal)
 - Funded-initiative outcome learning: 7-class outcome + next-step + safe-for-learning
   flag (unverified never treated as success). (unit-tested)
+- Underinvestment detection: harmful vs delayed vs good-savings vs cash-preservation
+  across marketing/maintenance/training/staffing/service/QC/sales. (unit + integration-tested)
+- Collusion/fraud risk indicators: self-approval, split-spend cluster, approver
+  concentration, refund/discount clustering, delivery-without-payment — review-only
+  language. (unit + integration-tested)
 - All 7 documentation files.
 
 ## PARTIAL (interface/foundation present; not fully operational)
@@ -83,7 +93,7 @@ remain PARTIAL/MISSING, so this is **NOT** OWNER_MODE_READY. Owner Mode is not r
 
 ## MISSING / NOT CLAIMED
 
-- Collusion-pair clustering; deep reconciliation state machine; rolling 13-week
+- Deep reconciliation state machine; rolling 13-week
   scenario forecast; archetype-specific hostile packs beyond the generic set.
   Explicitly not claimed (no false "complete").
 
@@ -102,6 +112,7 @@ Added in Slice 3: working-capital, revenue-assurance, vendor/procurement control
 engines (wired + tested), funded-initiative outcome classifier.
 Added in Slice 4: vendor master + invoice-hash duplicate detection + bank-verification
 hold (persisted, `[db]`-proven), funded-initiative outcome persistence.
+Added in Slice 5: underinvestment detection + collusion/fraud risk indicators (wired).
 
 Not satisfied (blocks READY): working-capital ageing buckets, live revenue-assurance /
 quote-benchmark source feeds (POS/gateway/external), full owner UI, and runtime
@@ -115,7 +126,7 @@ npx prisma validate                     # valid
 npx prisma migrate status               # up to date (local PostgreSQL 16)
 npx tsc --noEmit                        # 0 errors
 TEST_WITH_DB=true npx vitest run \
-  src/__tests__/owner-budget src/__tests__/services/owner-budget  # 62 passed (incl. db proofs)
+  src/__tests__/owner-budget src/__tests__/services/owner-budget  # 70 passed (incl. db proofs)
 ```
 
 DB proof is genuine PostgreSQL (local `opsiq_dev`, all migrations incl. the new
