@@ -248,6 +248,7 @@ export const AUDIT_EVENTS = {
   OWNER_BUDGET_SPEND_PROOF_UPDATED: "owner.budget_spend_proof_updated",
   OWNER_BUDGET_REASSESSED: "owner.budget_reassessed",
   OWNER_BUDGET_OVERRIDE_RECORDED: "owner.budget_override_recorded",
+  OWNER_BUDGET_AUTHORITY_CHANGED: "owner.budget_authority_changed",
 
   // Owner Cashflow (Module 5)
   OWNER_CASHFLOW_SNAPSHOT_RECORDED: "owner.cashflow_snapshot_recorded",

@@ -4676,3 +4676,47 @@ model BudgetPlanSnapshot {
   @@index([workspaceId, businessId, isCurrent])
   @@map("budget_plan_snapshots")
 }
+
+model OwnerBudgetOverride {
+  id                     String    @id @db.Uuid
+  workspaceId            String    @map("workspace_id") @db.Uuid
+  businessId             String    @map("business_id") @db.Uuid
+  reassessmentId         String?   @map("reassessment_id") @db.Uuid
+  originalRecommendation String    @map("original_recommendation")
+  riskWarning            String    @map("risk_warning")
+  reason                 String
+  affectedLines          Json      @default("[]") @map("affected_lines")
+  expectedConsequence    String    @map("expected_consequence")
+  reviewDate             DateTime? @map("review_date")
+  actualOutcome          String?   @map("actual_outcome")
+  outcomeClass           String?   @map("outcome_class")
+  outcomeNote            String?   @map("outcome_note")
+  createdBy              String?   @map("created_by") @db.Uuid
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, businessId])
+  @@map("owner_budget_overrides")
+}
+
+model BudgetAuthority {
+  id                  String    @id @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String    @map("business_id") @db.Uuid
+  subjectUserId       String?   @map("subject_user_id") @db.Uuid
+  subjectRole         String?   @map("subject_role")
+  scopeCategory       String?   @map("scope_category")
+  status              String    @default("NORMAL")
+  reason              String?
+  triggeringEvidence  Json      @default("{}") @map("triggering_evidence")
+  reviewDate          DateTime? @map("review_date")
+  restorationCriteria String?   @map("restoration_criteria")
+  createdBy           String?   @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, businessId])
+  @@map("budget_authorities")
+}

@@ -13,6 +13,7 @@ import * as path from "path";
 const base = path.resolve(__dirname, "../../app/api/owner/budget");
 const read = (rel: string) => fs.readFileSync(path.join(base, rel), "utf8");
 const ROUTES = ["guidance/route.ts", "snapshots/route.ts"];
+const WRITE_ROUTES = ["spend/route.ts", "override/route.ts", "authority/route.ts"];
 
 describe("Owner Budget route enforcement", () => {
   it("every budget route uses canonical enforcement + requires workspace + OWNER_VIEW", () => {
@@ -30,6 +31,18 @@ describe("Owner Budget route enforcement", () => {
       expect(src).toContain("ctx.verifiedWorkspaceId");
       expect(src).not.toMatch(/from\s+["']@\/lib\/db["']/);
       expect(src).not.toContain("composeUpdatedPlan");
+      expect(src).not.toMatch(/searchParams\.get\(["']workspaceId["']\)/);
+    }
+  });
+
+  it("write routes gate POST on OWNER_MANAGE, require workspace, and validate input via Zod", () => {
+    for (const f of WRITE_ROUTES) {
+      const src = read(f);
+      expect(src, `${f} must use canonical enforcement`).toContain("withCanonicalEnforcement");
+      expect(src, `${f} must require workspace`).toContain("requireWorkspace: true");
+      expect(src, `${f} POST must gate on OWNER_MANAGE`).toMatch(/requireCapabilities:\s*\[CAPABILITIES\.OWNER_MANAGE\]/);
+      expect(src, `${f} must validate input`).toContain("parseRequestBody");
+      expect(src, `${f} must derive workspace server-side`).toContain("ctx.verifiedWorkspaceId");
       expect(src).not.toMatch(/searchParams\.get\(["']workspaceId["']\)/);
     }
   });

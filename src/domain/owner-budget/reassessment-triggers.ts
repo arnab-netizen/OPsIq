@@ -34,6 +34,8 @@ export type MaterialChangeKind =
   | "proof_compliance_changed"
   // G. external/planning
   | "seasonality_changed" | "vendor_price_changed" | "supplier_bank_changed"
+  // H. owner governance
+  | "owner_override_recorded" | "budget_authority_changed"
   // non-material
   | "note_edited" | "label_renamed";
 
@@ -82,6 +84,9 @@ const TRIGGER_MAP: Record<MaterialChangeKind, ReassessmentTriggerClass> = {
   seasonality_changed: "EXTERNAL_PLANNING",
   vendor_price_changed: "EXTERNAL_PLANNING",
   supplier_bank_changed: "EXTERNAL_PLANNING",
+
+  owner_override_recorded: "BUDGET_STRUCTURE",
+  budget_authority_changed: "EMPLOYEE_GOVERNANCE",
 
   note_edited: "NONE",
   label_renamed: "NONE",

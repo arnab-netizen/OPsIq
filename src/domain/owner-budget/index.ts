@@ -13,3 +13,6 @@ export * from "@/domain/owner-budget/capital-allocation";
 export * from "@/domain/owner-budget/spend-governance";
 export * from "@/domain/owner-budget/reassessment-triggers";
 export * from "@/domain/owner-budget/updated-plan";
+export * from "@/domain/owner-budget/owner-override";
+export * from "@/domain/owner-budget/budget-authority";
+export * from "@/domain/owner-budget/validation";
