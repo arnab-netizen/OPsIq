@@ -29,4 +29,5 @@ export * from "@/domain/owner-budget/archetype-working-capital";
 export * from "@/domain/owner-budget/archetype-metrics";
 export * from "@/domain/owner-budget/import-source";
 export * from "@/domain/owner-budget/initiative-outcome";
+export * from "@/domain/owner-budget/outcome-learning";
 export * from "@/domain/owner-budget/validation";
