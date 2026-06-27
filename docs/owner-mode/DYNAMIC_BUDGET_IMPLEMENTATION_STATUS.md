@@ -128,6 +128,17 @@ Added in Slice 4: vendor master + invoice-hash duplicate detection + bank-verifi
 hold (persisted, `[db]`-proven), funded-initiative outcome persistence.
 Added in Slice 5: underinvestment detection + collusion/fraud risk indicators (wired).
 Added in Slice 6: reconciliation evaluator + rolling 13-week forecast/scenarios.
+Added in Deep Action-System Linkage (`DYNAMIC_BUDGET_ACTION_LINKAGE_DB_PROVEN`): advisory
+budget `generatedActions` are now persisted/linked as governed owner execution tasks
+(`OwnerBudgetAction`) reusing the SHARED owner action FSM
+(`@/domain/founder-recovery/action-status`) — no parallel engine. Reassessment upserts by
+`(workspaceId, businessId, sourceKey)` (create/link, never duplicate, never reopen
+closed); completion runs the shared FSM with required evidence and records a
+`FundedInitiativeOutcome` (budget learning). New routes
+`GET /api/owner/budget/actions` (OWNER_VIEW) + `PATCH /api/owner/budget/actions/[actionId]`
+(OWNER_MANAGE); `/owner/budget` UI shows persisted execution tasks distinct from advisory
+actions. Proven by 8 `[db]` tests + 17 non-DB tests (mapping/idempotency/route/reuse);
+100/100 owner-budget + owner-finance regression green. Browser/E2E remains deferred.
 
 Not satisfied (blocks READY): working-capital ageing buckets, live revenue-assurance /
 quote-benchmark source feeds (POS/gateway/external), full owner UI, and runtime
@@ -141,7 +152,8 @@ npx prisma validate                     # valid
 npx prisma migrate status               # up to date (local PostgreSQL 16)
 npx tsc --noEmit                        # 0 errors
 TEST_WITH_DB=true npx vitest run \
-  src/__tests__/owner-budget src/__tests__/services/owner-budget  # 78 passed (incl. db proofs)
+  src/__tests__/owner-budget src/__tests__/services/owner-budget  # all passed (incl. db proofs + action linkage)
+npm run lint:ratchet                    # LINT_RATCHET_PASS (no new debt)
 ```
 
 DB proof is genuine PostgreSQL (local `opsiq_dev`, all migrations incl. the new

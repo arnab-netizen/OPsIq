@@ -61,3 +61,11 @@ export const budgetAuthorityChangeSchema = z.object({
   reviewInDays: z.number().int().positive().max(365).default(14),
 });
 export type BudgetAuthorityChangeBody = z.infer<typeof budgetAuthorityChangeSchema>;
+
+export const budgetActionUpdateSchema = z.object({
+  status: z.enum(["proposed", "assigned", "in_progress", "blocked", "completed", "cancelled"]).optional(),
+  assignedTo: z.string().uuid().nullish(),
+  completionNotes: z.string().min(1).max(2000).nullish(),
+  completionEvidence: z.array(z.string().min(1)).nullish(),
+});
+export type BudgetActionUpdateBody = z.infer<typeof budgetActionUpdateSchema>;

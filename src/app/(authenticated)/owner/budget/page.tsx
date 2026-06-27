@@ -46,10 +46,19 @@ const SIGNAL_VARIANT: Record<string, "default" | "success" | "warning" | "destru
 
 const PARTIAL_LIMITATIONS = [
   "Owner UI is new — backend governance is DB/CI-proven, but live operational feeds are not yet wired.",
-  "Generated actions below are ADVISORY recommendations, not persisted execution tasks (deep action-system linkage is PARTIAL).",
+  "Generated actions are the advisory plan snapshot; persisted execution tasks (real, governed owner action records) are shown separately below and reuse the shared owner action lifecycle.",
   "Revenue-assurance / working-capital ageing / vendor benchmarks rely on entered data — live POS/gateway/bank feeds are not connected.",
   "Runtime least-privilege RBAC denial is enforced by the server wrapper but not yet proven by an automated runtime test.",
 ];
+
+const TASK_STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  proposed: "muted",
+  assigned: "default",
+  in_progress: "warning",
+  blocked: "destructive",
+  completed: "success",
+  cancelled: "muted",
+};
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -68,6 +77,7 @@ export default function OwnerBudgetPlanPage() {
   const [plan, setPlan] = useState<any | null>(null);
   const [forecast, setForecast] = useState<any | null>(null);
   const [authorities, setAuthorities] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,20 +94,22 @@ export default function OwnerBudgetPlanPage() {
       }
       const bid = businessId ?? selected ?? (Array.isArray(list) && list[0] ? list[0].id : null);
       setSelected(bid);
-      if (!bid) { setGuidance(null); setPlan(null); setForecast(null); setAuthorities([]); return; }
+      if (!bid) { setGuidance(null); setPlan(null); setForecast(null); setAuthorities([]); setTasks([]); return; }
 
       const qs = `?businessId=${bid}`;
-      const [g, snaps, fc, auth] = await Promise.all([
+      const [g, snaps, fc, auth, tk] = await Promise.all([
         api(`/api/owner/budget/guidance${qs}`).catch(() => null),
         api(`/api/owner/budget/snapshots${qs}`).catch(() => []),
         api(`/api/owner/budget/forecast${qs}`).catch(() => null),
         api(`/api/owner/budget/authority${qs}`).catch(() => []),
+        api(`/api/owner/budget/actions${qs}`).catch(() => []),
       ]);
       setGuidance(g);
       const current = Array.isArray(snaps) ? (snaps.find((s: any) => s.isCurrent) ?? snaps[0] ?? null) : null;
       setPlan(current?.plan ?? null);
       setForecast(fc);
       setAuthorities(Array.isArray(auth) ? auth : []);
+      setTasks(Array.isArray(tk) ? tk : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load budget plan");
     } finally {
@@ -132,6 +144,29 @@ export default function OwnerBudgetPlanPage() {
       // The server refuses illegal/unsafe overrides (vendor-bank-unverified, statutory
       // reserve, unlawful action) — surface that refusal honestly.
       setError(e instanceof Error ? e.message : "Override rejected");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function updateTask(actionId: string, status: string) {
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const body: Record<string, unknown> = { status };
+      if (status === "completed") {
+        const notes = window.prompt("Completion notes (required to close an execution task):");
+        if (!notes) { setBusy(false); return; }
+        const evidence = window.prompt("Completion evidence (required) — comma-separated references:");
+        if (!evidence) { setBusy(false); return; }
+        body.completionNotes = notes;
+        body.completionEvidence = evidence.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      await api(`/api/owner/budget/actions/${actionId}`, { method: "PATCH", body: JSON.stringify(body) });
+      await load(selected);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update execution task");
     } finally {
       setBusy(false);
     }
@@ -319,10 +354,10 @@ export default function OwnerBudgetPlanPage() {
                 ) : <p className="text-xs text-muted-foreground mt-1">No budget-authority restrictions recorded.</p>}
               </section>
 
-              {/* 9: Linked actions (advisory, not persisted tasks) */}
+              {/* 9: Generated actions (advisory plan snapshot) */}
               <section className="border rounded-lg p-4 bg-white">
-                <h2 className="font-bold mb-1">Generated actions</h2>
-                <p className="text-xs text-muted-foreground mb-2">⚠ Advisory recommendations — these are NOT yet persisted execution tasks (deep action-system linkage is PARTIAL).</p>
+                <h2 className="font-bold mb-1">Generated actions <span className="text-xs font-normal text-muted-foreground">(advisory plan snapshot)</span></h2>
+                <p className="text-xs text-muted-foreground mb-2">These are the advisory recommendations from the current plan snapshot. On reassessment they are persisted/linked as governed execution tasks — shown separately below.</p>
                 {actions.length === 0 ? <p className="text-sm text-muted-foreground">No actions generated.</p> : (
                   <div className="space-y-2">
                     {actions.map((a: any, i: number) => (
@@ -338,6 +373,46 @@ export default function OwnerBudgetPlanPage() {
                         {a.killRule && <div className="text-xs text-muted-foreground">Kill rule: {a.killRule}</div>}
                       </div>
                     ))}
+                  </div>
+                )}
+              </section>
+
+              {/* 9b: Execution tasks (persisted, governed owner action records) */}
+              <section className="border-2 border-foreground/10 rounded-lg p-4 bg-white">
+                <h2 className="font-bold mb-1">Execution tasks <span className="text-xs font-normal text-muted-foreground">(persisted · governed)</span></h2>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Real persisted owner action records linked from the advisory actions above. These use the shared owner action lifecycle (proposed → assigned → in&nbsp;progress → completed), are workspace-scoped and audited, and completing one feeds budget learning. Reassessment links existing open tasks instead of duplicating them.
+                </p>
+                {tasks.length === 0 ? <p className="text-sm text-muted-foreground">No persisted execution tasks yet. They are created/linked when the plan is reassessed.</p> : (
+                  <div className="space-y-2">
+                    {tasks.map((t: any) => {
+                      const open = t.status === "proposed" || t.status === "assigned" || t.status === "in_progress" || t.status === "blocked";
+                      return (
+                        <div key={t.id} className="border rounded p-3">
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="font-semibold">{t.title}</span>
+                            <Badge variant={TASK_STATUS_VARIANT[t.status] ?? "muted"}>{String(t.status).replace("_", " ")}</Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {t.accountableRole} · {t.decisionType}
+                            {t.dueAt && <> · due {new Date(t.dueAt).toLocaleDateString()}</>}
+                            {t.expectedFinancialImpact && <> · impact: {t.expectedFinancialImpact}</>}
+                          </div>
+                          {t.requiredProof && <div className="text-xs text-muted-foreground">Proof: {t.requiredProof}</div>}
+                          <div className="text-xs text-muted-foreground">Verification: {t.verificationMethod}</div>
+                          <div className="text-xs text-muted-foreground">Escalation: {t.escalationPath}</div>
+                          {t.outcomeClass && <div className="text-xs text-muted-foreground">Outcome: {t.outcomeClass}</div>}
+                          {open && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {t.status === "proposed" && <Button onClick={() => updateTask(t.id, "assigned")} disabled={busy}>Assign</Button>}
+                              {t.status === "assigned" && <Button onClick={() => updateTask(t.id, "in_progress")} disabled={busy}>Start</Button>}
+                              {(t.status === "assigned" || t.status === "in_progress" || t.status === "blocked") && <Button onClick={() => updateTask(t.id, "completed")} disabled={busy}>Complete</Button>}
+                              <Button onClick={() => updateTask(t.id, "cancelled")} disabled={busy}>Cancel</Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </section>
