@@ -1,0 +1,36 @@
+/**
+ * Owner Budget route enforcement wiring proof (no server).
+ *
+ * Proves the budget read routes are canonically enforced: use
+ * withCanonicalEnforcement, require a workspace, gate on OWNER_VIEW, read only the
+ * verified workspace scope, and contain no business logic / DB access in the route.
+ * Mirrors the proven owner-mode route-wiring proofs.
+ */
+import { describe, it, expect } from "vitest";
+import * as fs from "fs";
+import * as path from "path";
+
+const base = path.resolve(__dirname, "../../app/api/owner/budget");
+const read = (rel: string) => fs.readFileSync(path.join(base, rel), "utf8");
+const ROUTES = ["guidance/route.ts", "snapshots/route.ts"];
+
+describe("Owner Budget route enforcement", () => {
+  it("every budget route uses canonical enforcement + requires workspace + OWNER_VIEW", () => {
+    for (const f of ROUTES) {
+      const src = read(f);
+      expect(src, `${f} must use withCanonicalEnforcement`).toContain("withCanonicalEnforcement");
+      expect(src, `${f} must require workspace`).toContain("requireWorkspace: true");
+      expect(src, `${f} must gate on OWNER_VIEW`).toMatch(/requireCapabilities:\s*\[CAPABILITIES\.OWNER_VIEW\]/);
+    }
+  });
+
+  it("routes read only the verified workspace scope and contain no DB/engine logic", () => {
+    for (const f of ROUTES) {
+      const src = read(f);
+      expect(src).toContain("ctx.verifiedWorkspaceId");
+      expect(src).not.toMatch(/from\s+["']@\/lib\/db["']/);
+      expect(src).not.toContain("composeUpdatedPlan");
+      expect(src).not.toMatch(/searchParams\.get\(["']workspaceId["']\)/);
+    }
+  });
+});

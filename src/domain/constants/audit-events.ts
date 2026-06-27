@@ -241,6 +241,14 @@ export const AUDIT_EVENTS = {
   OWNER_FINANCE_REASSESSMENT_TRIGGERED: "owner.finance_reassessment_triggered",
   OWNER_FINANCE_OUTCOME_VERIFIED: "owner.finance_outcome_verified",
 
+  // Owner Budget (Dynamic Budget, Capital Allocation & Profit Governance)
+  OWNER_BUDGET_PERIOD_CREATED: "owner.budget_period_created",
+  OWNER_BUDGET_LINE_CHANGED: "owner.budget_line_changed",
+  OWNER_BUDGET_SPEND_RECORDED: "owner.budget_spend_recorded",
+  OWNER_BUDGET_SPEND_PROOF_UPDATED: "owner.budget_spend_proof_updated",
+  OWNER_BUDGET_REASSESSED: "owner.budget_reassessed",
+  OWNER_BUDGET_OVERRIDE_RECORDED: "owner.budget_override_recorded",
+
   // Owner Cashflow (Module 5)
   OWNER_CASHFLOW_SNAPSHOT_RECORDED: "owner.cashflow_snapshot_recorded",
   OWNER_CASHFLOW_DIAGNOSIS_RUN: "owner.cashflow_diagnosis_run",
