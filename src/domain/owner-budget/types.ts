@@ -9,6 +9,7 @@
 
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import type { WorkingCapitalInput } from "@/domain/owner-budget/working-capital";
+import type { WorkingCapitalAgeingResult } from "@/domain/owner-budget/working-capital-ageing";
 import type { RevenueAssuranceInput } from "@/domain/owner-budget/revenue-assurance";
 import type { VendorControlInput } from "@/domain/owner-budget/vendor-control";
 import type { UnderinvestmentInput } from "@/domain/owner-budget/underinvestment";
@@ -72,8 +73,12 @@ export interface BudgetAssessmentInput {
   criticalMissingInputs?: string[];
   /** Planning horizon in days for obligation/free-cash math (default 30). */
   horizonDays?: number;
-  /** Working-capital terms (collection gap, pending receipt) beyond finance aggregates. */
-  workingCapital?: Pick<WorkingCapitalInput, "collectionGapDays" | "pendingReceiptValue">;
+  /** Working-capital terms (collection gap, pending receipt) beyond finance aggregates.
+   *  `ageing` carries a precomputed ageing assessment (the composer stays pure — it
+   *  consumes the assessment, it does not load DB). */
+  workingCapital?: Pick<WorkingCapitalInput, "collectionGapDays" | "pendingReceiptValue"> & {
+    ageing?: WorkingCapitalAgeingResult;
+  };
   /** Revenue-assurance counts (orders/invoices/deposits) beyond finance aggregates. */
   revenueAssurance?: RevenueAssuranceInput;
   /** Aggregated vendor/procurement control signal for the period's spend. */
@@ -244,7 +249,12 @@ export type BudgetSignalType =
   | "spend_proof_missing" | "reconciliation_exception" | "revenue_leakage_risk"
   | "unit_economics_negative" | "manager_budget_violation" | "approval_bypass_risk"
   | "vendor_control_risk" | "owner_override_recorded" | "reassessment_required"
-  | "working_capital_risk" | "updated_plan_ready";
+  | "working_capital_risk" | "updated_plan_ready"
+  // Working-capital ageing (Dynamic Budget ageing slice)
+  | "receivables_ageing_risk" | "payables_ageing_risk" | "collection_first_required"
+  | "vendor_pressure_risk" | "cash_conversion_risk" | "profitable_but_cash_negative"
+  | "growth_blocked_by_working_capital" | "working_capital_data_stale"
+  | "working_capital_data_insufficient";
 
 export interface BudgetSignal {
   type: BudgetSignalType;

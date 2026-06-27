@@ -36,6 +36,7 @@ import {
 } from "@/domain/owner-budget";
 import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import { syncBudgetActions } from "@/services/owner-budget/action-link.service";
+import { deriveAgeingForReassessment } from "@/services/owner-budget/working-capital.service";
 
 const ALLOCATION_CATEGORIES: ReadonlySet<string> = new Set<AllocationCategory>([
   "statutory_payroll_tax", "cash_survival", "critical_fixed_obligations",
@@ -458,6 +459,32 @@ async function assembleAssessment(
     },
   });
 
+  // Working-capital ageing (Dynamic Budget ageing slice): derive ageing from
+  // persisted manual/import-ready items and feed the EXISTING engines — overdue
+  // payables become a real cash obligation (so mode/allocation react), the
+  // collection gap drives the existing gap-survival check, and the ageing result
+  // is attached for the plan composer to emit ageing signals/actions. No new
+  // reassessment engine is introduced.
+  let workingCapital: BudgetAssessmentInput["workingCapital"];
+  const ageingForReassessment = await deriveAgeingForReassessment(
+    workspaceId, businessId, finance, period?.statutoryReserveRequired ?? null, new Date()
+  );
+  if (ageingForReassessment) {
+    if (ageingForReassessment.overduePayables > 0) {
+      obligations.push({
+        label: "Overdue payables (working-capital ageing)",
+        amount: ageingForReassessment.overduePayables,
+        dueInDays: 0,
+        kind: "vendor",
+      });
+    }
+    workingCapital = {
+      collectionGapDays: ageingForReassessment.collectionGapDays,
+      pendingReceiptValue: ageingForReassessment.pendingReceiptValue,
+      ageing: ageingForReassessment.ageing,
+    };
+  }
+
   const assessment: BudgetAssessmentInput = {
     finance,
     cashReserveTarget: period?.cashReserveTarget ?? null,
@@ -467,6 +494,7 @@ async function assembleAssessment(
     criticalMissingInputs: criticalMissingInputs.length ? criticalMissingInputs : undefined,
     vendorControl,
     reconciliationExceptionCount: reconciliationExceptionCount || undefined,
+    workingCapital,
   };
 
   return { assessment, candidates, periodId: period?.id ?? null, approvedBudget: period?.approvedBudget ?? null };

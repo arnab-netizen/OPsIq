@@ -1368,6 +1368,7 @@ model OwnerBusiness {
   financeFindings         OwnerFinanceFinding[]
   financeActions          OwnerFinanceAction[]
   budgetActions           OwnerBudgetAction[]
+  workingCapitalItems     OwnerWorkingCapitalItem[]
   financeVerifications    OwnerFinanceVerification[]
   cashflowSnapshots       OwnerCashflowSnapshot[]
   cashflowCycles          OwnerCashflowCycle[]
@@ -4796,4 +4797,30 @@ model OwnerBudgetAction {
   @@index([workspaceId, businessId])
   @@index([status])
   @@map("owner_budget_actions")
+}
+
+/// Owner working-capital ageing line item (Dynamic Budget ageing slice).
+/// Manual / import-ready source data (NOT a live bank/accounting feed). Drives
+/// receivable/payable ageing buckets feeding Dynamic Budget reassessment.
+model OwnerWorkingCapitalItem {
+  id              String        @id @db.Uuid
+  workspaceId     String        @map("workspace_id") @db.Uuid
+  businessId      String        @map("business_id") @db.Uuid
+  kind            String // "receivable" | "payable"
+  counterparty    String // customer (receivable) or vendor (payable) label
+  amount          Float
+  dueDate         DateTime?     @map("due_date")
+  status          String        @default("open")
+  sourceType      String        @default("MANUAL") @map("source_type") // MANUAL | IMPORT (never live feed)
+  sourceRef       String?       @map("source_ref")
+  confidenceState String        @default("unverified") @map("confidence_state")
+  createdBy       String?       @map("created_by") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  business        OwnerBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, businessId])
+  @@index([workspaceId, businessId, kind])
+  @@map("owner_working_capital_items")
 }
