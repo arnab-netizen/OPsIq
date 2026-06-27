@@ -1,0 +1,15 @@
+/**
+ * Dynamic Budget, Capital Allocation & Profit Governance — public engine surface.
+ *
+ * Pure domain logic only (no DB/API/UI). Reuses owner-finance metrics and the
+ * collective decision engine; does not duplicate financial math or the decision
+ * system. The DB-backed service layer (src/services/owner-budget/) wires these
+ * engines to persistence, audit, actions, and the owner guidance adapter.
+ */
+export * from "@/domain/owner-budget/types";
+export * from "@/domain/owner-budget/mode-classifier";
+export * from "@/domain/owner-budget/confidence-gate";
+export * from "@/domain/owner-budget/capital-allocation";
+export * from "@/domain/owner-budget/spend-governance";
+export * from "@/domain/owner-budget/reassessment-triggers";
+export * from "@/domain/owner-budget/updated-plan";
