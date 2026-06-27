@@ -257,6 +257,8 @@ export const AUDIT_EVENTS = {
   OWNER_BUDGET_ACTION_UPDATED: "owner.budget_action_updated",
   OWNER_BUDGET_WORKING_CAPITAL_ITEM_RECORDED: "owner.budget_working_capital_item_recorded",
   OWNER_BUDGET_ARCHETYPE_METRIC_RECORDED: "owner.budget_archetype_metric_recorded",
+  OWNER_BUDGET_SIGNAL_ROUTED: "owner.budget_signal_routed",
+  OWNER_BUDGET_CROSS_MODULE_REASSESSMENT_TRIGGERED: "owner.budget_cross_module_reassessment_triggered",
 
   // Owner Cashflow (Module 5)
   OWNER_CASHFLOW_SNAPSHOT_RECORDED: "owner.cashflow_snapshot_recorded",

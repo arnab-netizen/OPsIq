@@ -38,6 +38,7 @@ import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import { syncBudgetActions } from "@/services/owner-budget/action-link.service";
 import { deriveAgeingForReassessment } from "@/services/owner-budget/working-capital.service";
 import { deriveArchetypeSignalsForReassessment } from "@/services/owner-budget/archetype-metrics.service";
+import { routeReassessmentSignals } from "@/services/owner-budget/signal-router.service";
 
 const ALLOCATION_CATEGORIES: ReadonlySet<string> = new Set<AllocationCategory>([
   "statutory_payroll_tax", "cash_survival", "critical_fixed_obligations",
@@ -595,6 +596,14 @@ export async function reassessBudget(
   // execution tasks (idempotent by sourceKey — no duplicate open tasks).
   await syncBudgetActions(businessId, workspaceId, {
     plan, reassessmentId, planSnapshotId: snapshotId, periodId, actorId: opts.actorId,
+  });
+
+  // Cross-module signal wiring (Slice 6): deliver the plan's signals to real
+  // consumers (audit/owner-risk ledger + finance re-diagnosis for financially
+  // material signals). Advisory — never fails the reassessment.
+  await routeReassessmentSignals({
+    businessId, workspaceId, actorId: opts.actorId,
+    reassessmentId, signals: plan.signals,
   });
 
   return plan;

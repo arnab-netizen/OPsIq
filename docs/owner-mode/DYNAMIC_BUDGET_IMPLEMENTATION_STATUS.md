@@ -209,10 +209,23 @@ missing data → lower DATA confidence; owner-override/external → not the reco
 repeated failure → block (not blindly repeated); no-evidence completion refused. Proven by 9
 unit + 8 `[db]` tests; 218/218 regression. No schema; reuses action-linkage (no duplicate engine).
 
+Added in Cross-Module Signal Wiring (`DYNAMIC_BUDGET_CROSS_MODULE_SIGNALS_PARTIAL`): a pure
+routing map (`signal-routing.ts`) maps every `BudgetSignalType` to a consumption decision
+(compile-time exhaustive via `satisfies Record<…>`), and a router service
+(`signal-router.service.ts`, wired into `reassessBudget`) delivers them — financially-material
+signals trigger a real finance re-diagnosis (latest snapshot, lazy import, reusing the finance
+precedent) whose refreshed cycle feeds business-condition/health; governance/override/data-
+quality signals are consumed by the audit ledger; all pull-model domains (sales, operations,
+marketing, staffing, scale readiness, external procurement) get a safe budget-side audit signal
+with the consumption gap recorded (not faked). Idempotent (no duplicate signals per
+reassessment), workspace-scoped, advisory (never fails reassessment), loop-safe. Proven by 7
+unit + 7 `[db]` tests; 232/232 regression. No schema, no new module. **PARTIAL** because only
+the finance/health path is a real push consumer; the rest are documented gaps.
+
 Not satisfied (blocks READY): live revenue-assurance / quote-benchmark source feeds
 (POS/gateway/external/bank), archetype-metric entry UI form, the OWNER_VIEW-without-
-OWNER_MANAGE RBAC gradient actor, a home-services budget pack, cross-module budget signal
-wiring, and Browser/E2E proof.
+OWNER_MANAGE RBAC gradient actor, a home-services budget pack, push-consumption interfaces in
+the pull-model domains (sales/operations/marketing/staffing/scale), and Browser/E2E proof.
 
 ## Verification
 
