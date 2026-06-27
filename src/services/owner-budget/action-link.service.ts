@@ -21,7 +21,7 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
-import { mapPlanActionToRow, OPEN_BUDGET_ACTION_STATUSES, classifyInitiativeOutcome } from "@/domain/owner-budget";
+import { mapPlanActionToRow, OPEN_BUDGET_ACTION_STATUSES, classifyBudgetOutcome } from "@/domain/owner-budget";
 import type { UpdatedOwnerPlan } from "@/domain/owner-budget";
 
 export interface SyncBudgetActionsInput {
@@ -128,6 +128,11 @@ export interface UpdateBudgetActionInput {
   assignedTo?: string | null;
   completionNotes?: string | null;
   completionEvidence?: string[] | null;
+  /** Outcome-learning inputs (recorded on completion). */
+  expectedImpact?: number | null;
+  actualImpact?: number | null;
+  externalFactor?: boolean | null;
+  ownerOverridden?: boolean | null;
 }
 
 /**
@@ -169,27 +174,41 @@ export async function updateBudgetAction(
 
   let updated = await db.ownerBudgetAction.update({ where: { id: actionId }, data });
 
-  // Feed budget learning/outcome on completion: classify (pure) + persist a
-  // FundedInitiativeOutcome (same store Slice 4 uses) and stamp the action.
+  // Feed the budget OUTCOME LEARNING LOOP on completion: compare expected vs actual,
+  // classify outcome + cause + disposition + confidence impact (pure), persist a
+  // FundedInitiativeOutcome (same store), stamp the action, and audit. A recommendation
+  // that has failed before is escalated/blocked, not blindly repeated.
   if (completedNow) {
-    const classification = classifyInitiativeOutcome({
-      outcomeVerified: true, expectedImpact: null, actualImpact: null,
+    const label = `budget-action:${action.title}`;
+    const priorFailures = await db.fundedInitiativeOutcome.count({
+      where: { workspaceId, businessId: action.businessId, initiativeLabel: label, outcome: "FAILED" },
+    });
+    const expectedImpact = typeof input.expectedImpact === "number" ? input.expectedImpact : null;
+    const actualImpact = typeof input.actualImpact === "number" ? input.actualImpact : null;
+    const learning = classifyBudgetOutcome({
+      outcomeVerified: actualImpact !== null,
+      expectedImpact,
+      actualImpact,
+      overridden: input.ownerOverridden === true,
+      externalFactor: input.externalFactor === true,
+      priorFailures,
     });
     await db.fundedInitiativeOutcome.create({
       data: {
         id: randomUUID(), workspaceId, businessId: action.businessId,
-        initiativeLabel: `budget-action:${action.title}`,
-        outcome: classification.outcome, nextStep: classification.nextStep,
-        safeForLearning: classification.safeForLearning,
-        expectedImpact: null, actualImpact: null,
-        note: input.completionNotes ?? null, createdBy: actorId, updatedAt: new Date(),
+        initiativeLabel: label,
+        outcome: learning.outcome, nextStep: learning.nextStep,
+        safeForLearning: learning.safeForLearning,
+        expectedImpact, actualImpact,
+        note: JSON.stringify({ disposition: learning.disposition, confidenceImpact: learning.confidenceImpact, priorFailures, reason: learning.reason, completionNotes: input.completionNotes ?? null }),
+        createdBy: actorId, updatedAt: new Date(),
       },
     });
-    updated = await db.ownerBudgetAction.update({ where: { id: actionId }, data: { outcomeClass: classification.outcome } });
+    updated = await db.ownerBudgetAction.update({ where: { id: actionId }, data: { outcomeClass: learning.outcome } });
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_BUDGET_INITIATIVE_CLOSED,
       actorId, workspaceId, entityType: "OwnerBudgetAction", entityId: actionId,
-      payload: { businessId: action.businessId, outcome: classification.outcome },
+      payload: { businessId: action.businessId, outcome: learning.outcome, disposition: learning.disposition, confidenceImpact: learning.confidenceImpact },
     });
   }
 

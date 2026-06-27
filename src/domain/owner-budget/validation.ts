@@ -67,6 +67,11 @@ export const budgetActionUpdateSchema = z.object({
   assignedTo: z.string().uuid().nullish(),
   completionNotes: z.string().min(1).max(2000).nullish(),
   completionEvidence: z.array(z.string().min(1)).nullish(),
+  // Outcome-learning inputs (recorded on completion).
+  expectedImpact: z.number().finite().nullish(),
+  actualImpact: z.number().finite().nullish(),
+  externalFactor: z.boolean().nullish(),
+  ownerOverridden: z.boolean().nullish(),
 });
 export type BudgetActionUpdateBody = z.infer<typeof budgetActionUpdateSchema>;
 

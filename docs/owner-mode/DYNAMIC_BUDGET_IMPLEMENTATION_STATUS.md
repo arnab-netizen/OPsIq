@@ -200,9 +200,19 @@ data-insufficient; reused by the archetype-metric derivation for staleness. No n
 broad source registry would duplicate the per-domain models). Proven by 8 unit + existing
 `[db]` reuse; 201/201 regression. No live-feed overclaim.
 
+Added in Outcome Learning Loop (`DYNAMIC_BUDGET_OUTCOME_LEARNING_DB_PROVEN`): a pure
+`classifyBudgetOutcome` (wrapping the existing initiative-outcome classifier) adds disposition
+(repeat/modify/escalate/block) + confidence impact (raise/maintain/lower_recommendation/
+lower_data) with prior-failure awareness, wired into the real `updateBudgetAction` completion
+to record outcome/cause/disposition into FundedInitiativeOutcome + audit. Honest attribution:
+missing data → lower DATA confidence; owner-override/external → not the recommendation's fault;
+repeated failure → block (not blindly repeated); no-evidence completion refused. Proven by 9
+unit + 8 `[db]` tests; 218/218 regression. No schema; reuses action-linkage (no duplicate engine).
+
 Not satisfied (blocks READY): live revenue-assurance / quote-benchmark source feeds
 (POS/gateway/external/bank), archetype-metric entry UI form, the OWNER_VIEW-without-
-OWNER_MANAGE RBAC gradient actor, a home-services budget pack, and Browser/E2E proof.
+OWNER_MANAGE RBAC gradient actor, a home-services budget pack, cross-module budget signal
+wiring, and Browser/E2E proof.
 
 ## Verification
 
