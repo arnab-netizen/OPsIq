@@ -129,6 +129,7 @@ export default function OwnerCommandCenterPage() {
           {[
             { label: "Home", href: "/owner/home", domain: null },
             { label: "Finance", href: "/owner/finance", domain: "finance" },
+            { label: "Budget & Profit Plan", href: "/owner/budget", domain: null },
             { label: "Cashflow", href: "/owner/cashflow", domain: "cashflow" },
             { label: "Sales", href: "/owner/sales", domain: "sales" },
             { label: "Operations", href: "/owner/operations", domain: "operations" },
