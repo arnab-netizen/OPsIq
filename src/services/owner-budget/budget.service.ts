@@ -170,6 +170,9 @@ export interface RecordSpendInput {
   approvedByUserId?: string | null;
   isNewVendor?: boolean;
   vendorBankChanged?: boolean;
+  vendorId?: string | null;
+  /** Invoice content hash for duplicate-invoice detection. */
+  invoiceHash?: string | null;
   ownerApprovalThreshold: number;
   recentSameCategoryAmounts?: number[];
   emergency?: boolean;
@@ -217,6 +220,8 @@ export async function recordSpendEntry(
       approvedByUserId: input.approvedByUserId ?? null,
       isNewVendor: input.isNewVendor ?? false,
       vendorBankChanged: input.vendorBankChanged ?? false,
+      vendorId: input.vendorId ?? null,
+      invoiceHash: input.invoiceHash ?? null,
       proofStatus: "missing",
       riskLevel: governance.riskLevel,
       updatedAt: new Date(),
@@ -337,7 +342,8 @@ async function assembleAssessment(
     accountableRole: l.ownerRole ?? undefined,
   }));
 
-  // Vendor/procurement control signal aggregated from flagged spend entries.
+  // Vendor/procurement control signal aggregated from flagged spend entries +
+  // the vendor master + invoice-hash duplicate detection.
   const riskyVendorSpend = await db.spendEntry.findFirst({
     where: {
       workspaceId, businessId, voidedAt: null,
@@ -345,13 +351,35 @@ async function assembleAssessment(
     },
     orderBy: { createdAt: "desc" },
   });
-  const vendorControl = riskyVendorSpend
-    ? {
-        isNewVendor: riskyVendorSpend.isNewVendor,
-        vendorBankChanged: riskyVendorSpend.vendorBankChanged,
-        vendorBankVerified: riskyVendorSpend.proofStatus === "reconciled",
-      }
-    : undefined;
+
+  // Duplicate invoice: any invoice hash appearing on >1 non-voided spend.
+  const hashed = await db.spendEntry.findMany({
+    where: { workspaceId, businessId, voidedAt: null, invoiceHash: { not: null } },
+    select: { invoiceHash: true },
+  });
+  const hashCounts = new Map<string, number>();
+  for (const r of hashed) {
+    const h = r.invoiceHash as string;
+    hashCounts.set(h, (hashCounts.get(h) ?? 0) + 1);
+  }
+  const duplicateInvoiceSuspected = [...hashCounts.values()].some((c) => c > 1);
+
+  // Resolve bank verification from the vendor master when the spend is linked.
+  let bankVerified = riskyVendorSpend?.proofStatus === "reconciled";
+  if (riskyVendorSpend?.vendorId) {
+    const vendor = await db.vendorRecord.findFirst({ where: { id: riskyVendorSpend.vendorId, workspaceId, businessId } });
+    if (vendor) bankVerified = vendor.bankVerified;
+  }
+
+  const vendorControl =
+    riskyVendorSpend || duplicateInvoiceSuspected
+      ? {
+          isNewVendor: riskyVendorSpend?.isNewVendor ?? false,
+          vendorBankChanged: riskyVendorSpend?.vendorBankChanged ?? false,
+          vendorBankVerified: bankVerified,
+          duplicateInvoiceSuspected,
+        }
+      : undefined;
 
   const assessment: BudgetAssessmentInput = {
     finance,

@@ -4622,6 +4622,8 @@ model SpendEntry {
   approvedByUserId  String?   @map("approved_by_user_id") @db.Uuid
   isNewVendor       Boolean   @default(false) @map("is_new_vendor")
   vendorBankChanged Boolean   @default(false) @map("vendor_bank_changed")
+  vendorId          String?   @db.Uuid @map("vendor_id")
+  invoiceHash       String?   @map("invoice_hash")
   proofStatus       String?   @map("proof_status")
   riskLevel         String?   @map("risk_level")
   voidedAt          DateTime? @map("voided_at")
@@ -4719,4 +4721,42 @@ model BudgetAuthority {
   @@index([workspaceId])
   @@index([workspaceId, businessId])
   @@map("budget_authorities")
+}
+
+model VendorRecord {
+  id             String    @id @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  businessId     String    @map("business_id") @db.Uuid
+  name           String
+  bankAccountRef String?   @map("bank_account_ref")
+  bankVerified   Boolean   @default(false) @map("bank_verified")
+  bankChangedAt  DateTime? @map("bank_changed_at")
+  relatedParty   Boolean   @default(false) @map("related_party")
+  createdBy      String?   @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, businessId])
+  @@map("vendor_records")
+}
+
+model FundedInitiativeOutcome {
+  id              String   @id @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  businessId      String   @map("business_id") @db.Uuid
+  initiativeLabel String   @map("initiative_label")
+  outcome         String
+  nextStep        String   @map("next_step")
+  safeForLearning Boolean  @map("safe_for_learning")
+  expectedImpact  Float?   @map("expected_impact")
+  actualImpact    Float?   @map("actual_impact")
+  note            String?
+  createdBy       String?  @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, businessId])
+  @@map("funded_initiative_outcomes")
 }
