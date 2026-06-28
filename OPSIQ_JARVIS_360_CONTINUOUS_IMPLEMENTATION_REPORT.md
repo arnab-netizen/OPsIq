@@ -312,7 +312,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 9 | Command center & guided execution wiring | COMPLETE_LOCAL |
 | 10 | Decision arbitration baseline | COMPLETE_LOCAL |
 | 11 | Marketing/opportunity/contract guardrails | COMPLETE_LOCAL |
-| 12 | Business memory & do-not-repeat | NOT_STARTED |
+| 12 | Business memory & do-not-repeat | COMPLETE_LOCAL |
 | 13 | Self-evaluation loop baseline | NOT_STARTED |
 | 14 | Compliance/professional-review boundary | NOT_STARTED |
 | 15 | Adversarial simulation & E2E proof | NOT_STARTED |
@@ -432,3 +432,11 @@ for DB/migration confirmation.
 - **Behavior:** `screenOpportunity` rejects below-margin / low-fit and defers on saturated capacity or high payment risk; `screenContractQuote` rejects quotes below the margin-floor price, defers on long payment terms / blocked capacity, and flags owner approval for long-dated deals; `shouldRunMarketing` blocks marketing when cash is unsafe, capacity is blocked, or quality/reputation is red, and requires a stop-loss when it does run. These REJECT/DEFER, not just flag.
 - **Files:** `domain/owner-mode/opportunity-contract-guardrails.ts`, `app/api/owner/guardrails/screen/route.ts`, `__tests__/owner-mode/opportunity-contract-guardrails.test.ts` (9 tests).
 - **Tests:** 9 passed. **Limitations:** auto-pulling live cash/capacity/quality state into the screen (vs caller-supplied) and a contract entity are follow-ons.
+
+---
+
+## SLICE 12 — BUSINESS MEMORY / DO-NOT-REPEAT — **COMPLETE_LOCAL**
+- **Reuse/new:** reuses the existing `OwnerDecisionMemory` model (do_not_repeat / blocksRepetition), adding only a `memoryKey` column for deterministic matching; pure `domain/owner-mode/do-not-repeat.ts`; DI service wired into the promotion policy; record route.
+- **Behavior:** at recommendation promotion the policy derives a key from the recommendation's finding code, looks up an active `do_not_repeat` memory, and **blocks** promotion (audited `owner.do_not_repeat_blocked`) unless the memory carries an explicit changed-context explanation. Closes the audit gap that do_not_repeat memories were persisted but never enforced.
+- **Files:** `OwnerDecisionMemory.memoryKey` + `migrations/20260628170000_decision_memory_key`, `domain/owner-mode/do-not-repeat.ts`, `services/owner-mode/do-not-repeat.service.ts` (+ wired into `gate-enforcement-policy.ts`), `app/api/owner/do-not-repeat/route.ts`, `__tests__/owner-mode/do-not-repeat.test.ts` (10 tests).
+- **Tests:** 10 + policy regression 9 = 19 passed. **Limitations:** positive memory (worked_before / preferred vendor) reuse is a follow-on.

@@ -4109,6 +4109,9 @@ model OwnerDecisionMemory {
   workspaceId               String
   businessId                String
   category                  String // owner_goal | owner_constraint | accepted_recommendation | rejected_recommendation | successful_action | failed_action | invalid_test | corrected_diagnosis | repeated_execution_issue | do_not_repeat | owner_preference | business_specific_rule
+  /// Jarvis 360 Slice 12 — deterministic key (e.g. finding code) for runtime
+  /// do-not-repeat matching at recommendation promotion.
+  memoryKey                 String?       @map("memory_key")
   recommendationId          String?
   actionId                  String?
   outcomeId                 String?

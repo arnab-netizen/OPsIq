@@ -28,6 +28,7 @@ import { enforceConfidenceForPromotion } from "@/services/decision-confidence/re
 import { enforceCashSafetyForPromotion } from "@/services/owner-finance/recommendation-cash-safety.service";
 import { enforceMarginSafetyForPromotion } from "@/services/owner-finance/recommendation-margin-safety.service";
 import { enforceCapacitySafetyForPromotion } from "@/services/owner-mode/recommendation-capacity-safety.service";
+import { enforceDoNotRepeatForPromotion } from "@/services/owner-mode/do-not-repeat.service";
 
 export type OwnerGateMode = "OPTED_OUT" | "STRICT" | "DEFAULT_ON";
 
@@ -128,6 +129,8 @@ export async function enforceOwnerGatesForPromotion(
     await enforceMarginSafetyForPromotion(recommendationId, workspaceId);
     // Slice 7: block growth recs when equipment capacity is saturated/down/overdue.
     await enforceCapacitySafetyForPromotion(recommendationId, workspaceId);
+    // Slice 12: block a recommendation an active do-not-repeat rule forbids.
+    await enforceDoNotRepeatForPromotion(recommendationId, workspaceId);
   } catch (err) {
     const code = (err as { code?: string })?.code ?? "GATE_BLOCKED";
     const message = err instanceof Error ? err.message : String(err);
