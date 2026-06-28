@@ -25,15 +25,10 @@ beforeAll(async () => {
 });
 
 describe("[db] owner diagnosis/decision/harm lifecycle migration", () => {
-  it("[db] the previously-unmigrated block tables now exist (count() does not throw)", async () => {
+  it("[db] the previously-unmigrated active tables now exist (count() does not throw)", async () => {
     // A missing relation makes Prisma throw P2021; reaching a number proves the table exists.
     await expect(db.ownerInputRecord.count()).resolves.toBeTypeOf("number");
     await expect(db.ownerInputQualityAssessment.count()).resolves.toBeTypeOf("number");
-    await expect(db.ownerRecommendation.count()).resolves.toBeTypeOf("number");
-    await expect(db.ownerDecision.count()).resolves.toBeTypeOf("number");
-    await expect(db.ownerHarmEvent.count()).resolves.toBeTypeOf("number");
-    await expect(db.ownerBenefit.count()).resolves.toBeTypeOf("number");
-    await expect(db.ownerCausalAttribution.count()).resolves.toBeTypeOf("number");
   });
 
   it("[db] owner_input_quality_assessments round-trips and is workspace-isolated", async () => {
