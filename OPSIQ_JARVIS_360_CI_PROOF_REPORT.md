@@ -64,10 +64,72 @@ LINT_RATCHET_FAIL — Warning count increased: 1263 → 1265
 - `tsc --noEmit` → ✅ clean on all changed source files.
 - Targeted vitest (adversarial + gate policy) → ✅ 32 passed.
 
-## DB / migration proof — STATUS: ⏳ PENDING (run 28313726348 in progress)
-The 10 new migrations (all additive: new tables + nullable columns) and the DB-backed
-test suite will be exercised by `ci.yml` run `28313726348` now that the governance gate
-passes. Result to be recorded below.
+## Round 2 — run 28313726348 (`d425dae`): lint GREEN; migrate FAILED
+- **`lint` job: ✅ success** — both `eslint` and `lint:ratchet` now pass (fixes confirmed in CI).
+- **`build-and-test` job: ❌ failure at step 10 `prisma migrate deploy`.** Governance ✅, TypeScript ✅,
+  Prisma validate ✅ all passed first. Migration error:
+  ```
+  ERROR: relation "owner_decision_memories" does not exist
+  STATEMENT: ALTER TABLE "owner_decision_memories" ADD COLUMN ... "memory_key"
+  ```
+- **Root cause (pre-existing repo gap, surfaced by this branch):** the `OwnerDecisionMemory`
+  model is **schema-only** — no migration in the repo creates `owner_decision_memories`
+  (`grep -rl CREATE TABLE … owner_decision_memories prisma/migrations` → none; base CI passes
+  only because nothing else references it). The Slice 12 migration was the first to `ALTER` it.
+- **Fix (`0e462a8`, safe + self-contained):** dropped the `memoryKey` column on the orphaned model;
+  replaced the migration with a `CREATE TABLE "owner_do_not_repeat_rule"` (a dedicated, fully-migrated
+  table). `do-not-repeat.service.ts` + test updated to use it. Behavior unchanged. Verified the only
+  other `ALTER TABLE` in the branch targets `client_accounts`, which IS migration-backed
+  (`20260415_000000_init`). do-not-repeat tests 7/7, `tsc` clean.
 
-## Final classification — (interim) **CI_FAILED_BRANCH_CAUSED → fixes pushed; DB proof pending**
-Updated to the terminal value once run `28313726348` completes.
+## Round 3 — run 28313889699 (`0e462a8`): ✅ FULLY GREEN
+Run conclusion: **success** (run_number 2303, ~19 min, 06:31→06:51 UTC).
+[https://github.com/arnab-netizen/OPsIq/actions/runs/28313889699](https://github.com/arnab-netizen/OPsIq/actions/runs/28313889699)
+
+`build-and-test (20.x)` — every step ✅:
+| Step | Result |
+|---|---|
+| Governance compliance scan (`governance:scan:strict`) | ✅ success |
+| TypeScript type checking (`tsc --noEmit`) | ✅ success |
+| Prisma schema validation (`prisma validate`) | ✅ success |
+| **Prisma database migration (`prisma migrate deploy`)** | ✅ **success — all 10 new migrations applied to a fresh postgres:16** |
+| Regenerate Prisma client (`prisma generate`) | ✅ success |
+| Build project (`next build`) | ✅ success |
+| Wrapped-handlers ratchet | ✅ success |
+| **Run maintained test suite (DB-backed, `TEST_WITH_DB=true`, quarantine excluded)** | ✅ **success** |
+| Quarantined pre-existing tests (non-blocking) | ✅ ran |
+
+`lint (20.x)` — ✅ success (`eslint` + `lint:ratchet`).
+
+### Proof results
+- **DB / migration:** ✅ **CI-PROVEN.** `prisma migrate deploy` applied all 10 additive migrations
+  cleanly to a throwaway `postgres:16`; `prisma validate` + `prisma generate` + `next build` all passed.
+- **`.db.test.ts` / DB-backed suite:** ✅ **CI-PROVEN.** The full maintained vitest suite ran with
+  `TEST_WITH_DB=true` against the migrated DB and passed (this is exactly the lane that could not run
+  locally). This includes the new owner-mode tests + the adversarial integration suite + all
+  pre-existing non-quarantined tests.
+- **Owner-flow / adversarial:** ✅ exercised in the green vitest lane.
+- **Playwright / E2E:** ⚠️ NOT run — `ci.yml` does not execute the `tests/browser/*` Playwright lane
+  (it is not wired into the auto CI run, and `db-verification.yml` LANE_B could not be dispatched: 403).
+- **No branch-caused CI failures remain.**
+
+## Fixes made during proof (all branch-caused, all verified green in CI)
+| Commit | Fix |
+|---|---|
+| `d425dae` | governance: gate-enforcement-policy no longer records raw `err.message` (records code + error name + mode); removed 2 unused test imports for `lint:ratchet`. |
+| `0e462a8` | migration: replaced the `ALTER` of the orphaned (schema-only, never-migrated) `owner_decision_memories` table with a dedicated, fully-migrated `OwnerDoNotRepeatRule` table; service + test updated. |
+
+## Remaining unproven areas
+- Playwright/browser E2E (not in the auto CI lane).
+- `db-verification.yml` LANE_B / LANE_A (Neon) could not be dispatched by this integration (403).
+  `ci.yml` already covers migrate-deploy + the DB suite, so this is redundant, not a gap.
+
+## Final classification — **ALL_SLICES_IMPLEMENTED_CI_PROVEN**
+Migrations apply cleanly in CI ✅, DB-backed tests pass in CI ✅, adversarial/owner-mode tests pass in
+the CI DB lane ✅, no branch-caused CI failures remain ✅. Not claiming
+`OWNER_OPERATING_COPILOT_READY_FOR_SIMULATION` because the Playwright/browser E2E lane was not executed
+in CI; everything that *is* wired into CI is green.
+
+## PR
+Opened ready-for-review (not merged). See chat for URL.
+
