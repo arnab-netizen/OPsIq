@@ -20,6 +20,7 @@ function deps(opts: {
   equipment?: Array<{ name: string; utilization: number | null; downtimeState: string; maintenanceDueAt: Date | null; status: string }>;
   survivalState?: string | null;
   cashflowState?: string | null;
+  snapshot?: { revenue: number | null; costOfGoods: number | null } | null;
 }) {
   const now = new Date("2026-06-28T00:00:00.000Z");
   return {
@@ -36,6 +37,7 @@ function deps(opts: {
       ownerEquipment: { findMany: vi.fn(async () => opts.equipment ?? []) },
       ownerFinanceCycle: { findFirst: vi.fn(async () => (opts.survivalState !== undefined ? (opts.survivalState ? { survivalState: opts.survivalState } : null) : null)) },
       ownerCashflowCycle: { findFirst: vi.fn(async () => (opts.cashflowState !== undefined ? (opts.cashflowState ? { cashflowState: opts.cashflowState } : null) : null)) },
+      ownerFinancialSnapshot: { findFirst: vi.fn(async () => opts.snapshot ?? null) },
     },
     now: () => now,
   };
@@ -98,5 +100,27 @@ describe("enforceOwnerActionGates", () => {
   it("does not block on absent cash data (no finance/cashflow cycle yet)", async () => {
     const d = deps({ survivalState: null, cashflowState: null });
     await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
+  });
+
+  it("blocks a sales/marketing action when gross margin is known below the floor", async () => {
+    // revenue 100, COGS 95 → 5% gross margin < 15% floor
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 95 } });
+    await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_promotion_blocked" }));
+  });
+
+  it("allows when gross margin clears the floor", async () => {
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 50 } }); // 50% margin
+    await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
+  });
+
+  it("does not block on unknown margin (no snapshot) — deferred, not a false block", async () => {
+    const d = deps({ snapshot: null });
+    await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
+  });
+
+  it("does not apply the margin gate to non-margin domains (operations)", async () => {
+    const d = deps({ snapshot: { revenue: 100, costOfGoods: 95 } });
+    await expect(enforceOwnerActionGates({ ...base, domain: "operations", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
   });
 });

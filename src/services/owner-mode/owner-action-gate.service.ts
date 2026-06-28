@@ -26,6 +26,7 @@ import {
   evaluateCashSafetyGate,
   type FinancialHealthState,
 } from "@/domain/owner-finance/cash-safety-gate";
+import { evaluateMarginSafety, grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT } from "@/domain/owner-finance/margin-safety-gate";
 import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 
 /** Material owner-action transitions that must pass the gate. */
@@ -56,7 +57,13 @@ interface ActionGateDb {
   ownerCashflowCycle: {
     findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { cashflowState: true } }): Promise<{ cashflowState: string } | null>;
   };
+  ownerFinancialSnapshot: {
+    findFirst(args: { where: { workspaceId: string }; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
+  };
 }
+
+/** Domains where pushing an action while gross margin is below the floor scales a loss. */
+const MARGIN_SENSITIVE_DOMAINS: ReadonlySet<string> = new Set(["sales", "marketing", "finance"]);
 
 /** Map an owner domain to the recommendation sensitivity the cash gate keys on. */
 const DOMAIN_SENSITIVITY: Record<string, RecommendationSensitivity> = {
@@ -158,6 +165,22 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
       const result = evaluateCashSafetyGate(asState(cashCycle?.cashflowState), asState(finCycle?.survivalState), sensitivity);
       if (!result.allowed) {
         await block(input, `${result.reason} Resolve cash/finance survival before advancing this ${input.domain} action.`, "CASH_SAFETY_BLOCKED");
+      }
+    }
+
+    // 4. Margin safety — for pricing/growth-relevant domains, block when KNOWN gross margin
+    //    is below the floor (scaling a money-losing operation). Unknown margin is allowed
+    //    (no false block; deferred to the input-quality path), reusing evaluateMarginSafety.
+    if (MARGIN_SENSITIVE_DOMAINS.has(input.domain)) {
+      const snap = await deps.db.ownerFinancialSnapshot.findFirst({
+        where: { workspaceId: input.workspaceId },
+        orderBy: { createdAt: "desc" },
+        select: { revenue: true, costOfGoods: true },
+      });
+      const grossMargin = grossMarginPctFrom(snap?.revenue ?? null, snap?.costOfGoods ?? null);
+      const margin = evaluateMarginSafety(grossMargin, RecommendationSensitivity.PRICING_SENSITIVE, DEFAULT_MARGIN_FLOOR_PCT);
+      if (!margin.allowed) {
+        await block(input, `${margin.reason} Restore margin above the floor before advancing this ${input.domain} action.`, "MARGIN_SAFETY_BLOCKED");
       }
     }
   }
