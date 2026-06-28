@@ -27,7 +27,7 @@ interface QueryArgs {
 }
 interface ProofDelegate {
   updateMany(args: QueryArgs): Promise<{ count: number }>;
-  findFirst(args: { where: Record<string, unknown>; select?: Record<string, boolean> }): Promise<{ submittedByUserId: string | null } | null>;
+  findFirst(args: { where: Record<string, unknown>; select?: Record<string, boolean> }): Promise<{ submittedByUserId: string | null; duplicateFlagged?: boolean } | null>;
 }
 interface AuditCreateDelegate {
   create(args: { data: Record<string, unknown> }): Promise<unknown>;
@@ -75,6 +75,14 @@ export class ProofConflictError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ProofConflictError";
+  }
+}
+/** Jarvis 360 (EH-11) — a duplicate-flagged proof can never be accepted at review. */
+export class ProofDuplicateRejectedError extends Error {
+  readonly code = "PROOF_DUPLICATE_REJECTED";
+  constructor(proofId: string) {
+    super(`Proof ${proofId} duplicates a prior submission and cannot be accepted; require a fresh proof.`);
+    this.name = "ProofDuplicateRejectedError";
   }
 }
 
@@ -192,10 +200,15 @@ export async function reviewProof(
     // (workspace-scoped read; fail-closed inside the same transaction as the update).
     const existing = await tx.proof.findFirst({
       where: { id: command.proofId, workspaceId: command.workspaceId },
-      select: { submittedByUserId: true },
+      select: { submittedByUserId: true, duplicateFlagged: true },
     });
     if (existing?.submittedByUserId && existing.submittedByUserId === command.actorId) {
       throw new ProofSelfReviewError(command.proofId);
+    }
+    // EH-11 — a duplicate-flagged proof can never be ACCEPTED (reject/resubmit only), so a
+    // reused artifact cannot be approved at review, not merely blocked later at completion.
+    if (command.to === ProofStatus.ACCEPTED && existing?.duplicateFlagged) {
+      throw new ProofDuplicateRejectedError(command.proofId);
     }
 
     const updated = await tx.proof.updateMany({
