@@ -209,6 +209,16 @@ missing data → lower DATA confidence; owner-override/external → not the reco
 repeated failure → block (not blindly repeated); no-evidence completion refused. Proven by 9
 unit + 8 `[db]` tests; 218/218 regression. No schema; reuses action-linkage (no duplicate engine).
 
+Added in Final Hostile Audit (`DYNAMIC_BUDGET_OWNER_PILOT_READY_HEADLESS`): a deterministic
+20-scenario adversarial `[db]` suite (`dynamic-budget-hostile-audit.db.test.ts`) probing the
+whole module through real service paths — tenancy isolation, reassessment idempotency +
+concurrency safety, override hard-blocks, evidence-gated completion, authority-transition
+legality, adaptive mode flips, spend-governance thresholds, outcome-learning block-on-repeat,
+data-confidence honesty, archetype input validation, audit emission, advisory cross-module
+routing. 20/20 pass; 252/252 regression; `tsc` 0; `lint:ratchet` PASS. No source/schema change
+(verification-only). See `DYNAMIC_BUDGET_FINAL_HOSTILE_AUDIT.md` and
+`DYNAMIC_BUDGET_COMPLETION_CLOSEOUT.md`. **Pilot-ready headless only — NOT OWNER_MODE_READY.**
+
 Added in Cross-Module Signal Wiring (`DYNAMIC_BUDGET_CROSS_MODULE_SIGNALS_PARTIAL`): a pure
 routing map (`signal-routing.ts`) maps every `BudgetSignalType` to a consumption decision
 (compile-time exhaustive via `satisfies Record<…>`), and a router service
