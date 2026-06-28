@@ -1325,6 +1325,31 @@ model OwnerApprovalMemory {
 /// Jarvis 360 Slice 4 — owner standing instruction. An owner-defined rule that
 /// auto-allows or forbids a class of actions within a scope (and optional amount
 /// ceiling), so routine actions need not be re-approved.
+/// Jarvis 360 Slice 8 — process inventory + review. Each process has an owner role,
+/// a linked SOP, a metric/target, and a review cadence; reviews fire on schedule or
+/// on a failure signal so processes become living controls.
+model OwnerProcess {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String?   @map("business_id") @db.Uuid
+  name                String
+  processType         String    @map("process_type")
+  ownerRole           String    @map("owner_role")
+  sopId               String?   @map("sop_id") @db.Uuid
+  metric              String
+  target              String?
+  reviewFrequencyDays Int       @default(30) @map("review_frequency_days")
+  lastReviewAt        DateTime? @map("last_review_at")
+  nextReviewAt        DateTime? @map("next_review_at")
+  status              String    @default("active")
+  createdByUserId     String    @map("created_by_user_id") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, processType])
+  @@map("owner_process")
+}
+
 /// Jarvis 360 Slice 7 — equipment / capacity / maintenance. Minimal rated/practical
 /// capacity + utilization + maintenance/downtime so growth decisions can be gated.
 model OwnerEquipment {

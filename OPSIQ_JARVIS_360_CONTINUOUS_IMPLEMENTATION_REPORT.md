@@ -308,7 +308,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 5 | SOP & checklist lifecycle baseline | COMPLETE_LOCAL |
 | 6 | Staff training & skills matrix baseline | COMPLETE_LOCAL |
 | 7 | Equipment/capacity/maintenance baseline | COMPLETE_LOCAL |
-| 8 | Process review & continuous improvement | NOT_STARTED |
+| 8 | Process review & continuous improvement | COMPLETE_LOCAL |
 | 9 | Command center & guided execution wiring | NOT_STARTED |
 | 10 | Decision arbitration baseline | NOT_STARTED |
 | 11 | Marketing/opportunity/contract guardrails | NOT_STARTED |
@@ -400,3 +400,11 @@ for DB/migration confirmation.
 - **Behavior:** equipment carries rated/practical capacity, utilization, status, downtime, maintenance-due. `assessFleetCapacity` takes the worst machine; a GROWTH-sensitive recommendation is **blocked** when capacity is high_risk/blocked (down, maintenance overdue, or utilization ≥95%). Equipment-free workspaces and non-growth recs are unaffected. Audited.
 - **Files:** `OwnerEquipment` model + `migrations/20260628150000_owner_equipment`, `domain/owner-mode/equipment-capacity.ts`, `services/owner-mode/recommendation-capacity-safety.service.ts` (+ wired into `gate-enforcement-policy.ts`), `services/owner-mode/equipment.service.ts`, `app/api/owner/equipment/route.ts`, `__tests__/owner-mode/equipment-capacity.test.ts` (12 tests).
 - **Tests:** 12 + policy regression 9 = 21 passed. **Limitations:** archetype-aware "missing capacity data must block equipment-heavy growth" uses present-equipment only (no archetype detection here); maintenance/downtime cost modeling is a follow-on.
+
+---
+
+## SLICE 8 — PROCESS REVIEW & CONTINUOUS IMPROVEMENT — **COMPLETE_LOCAL**
+- **Reuse/new:** new `OwnerProcess` model (process inventory); pure `domain/owner-mode/process-review.ts`; DI service + route.
+- **Behavior:** each process carries an owner role, linked SOP, metric/target, and a review cadence. `evaluateProcessReview` fires on schedule OR on a failure signal (repeated failure, complaint spike, quality decline, missed checklist, training failure, equipment issue, goal change); when due, the next review date advances and an audit event is emitted. Material updates (SOP/cost/risk/customer-promise) are flagged owner-approval-required; minor ones are not.
+- **Files:** `OwnerProcess` model + `migrations/20260628160000_owner_process`, `domain/owner-mode/process-review.ts`, `services/owner-mode/process-review.service.ts`, `app/api/owner/processes/route.ts`, `__tests__/owner-mode/process-review.test.ts` (8 tests).
+- **Tests:** 8 passed. **Limitations:** auto-deriving the failure signals from the diagnosis/quality layers (vs explicit input) is a follow-on.
