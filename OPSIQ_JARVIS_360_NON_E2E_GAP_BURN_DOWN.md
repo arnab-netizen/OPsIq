@@ -4,7 +4,7 @@ Live burn-down of remaining non-E2E gaps. Base HEAD `8e31704`. EH-23 (browser E2
 
 | Gap | Status (start) | Exact closure required | Target files | Test required | Final status | Commit |
 |-----|----------------|------------------------|--------------|---------------|--------------|--------|
-| EH-01 (margin) | PARTIAL | margin gate in owner-action gate for growth/pricing domains; block known-below-floor | owner-action-gate.service.ts | below-margin block / unknown allow | CLOSED_TESTED | Slice 3 |
+| EH-01 (margin) | **CLOSED_TESTED** | margin gate added; owner-mode gate now complete (opt-out+do-not-repeat+capacity+cash+margin) | owner-action-gate.service.ts | below-margin block / unknown allow (15/15 gate tests) | **CLOSED_TESTED** | Slice 3 (this turn) |
 | EH-14 | OPEN | bind owner completion to proof FSM; legacy verify cannot complete proof-required | task-completion + action services | proof-gated completion route + DB | OPEN | — |
 | EH-05 | OPEN | persist + surface arbitration verdict | recommendation gen + schema + UI | verdict persisted/visible | OPEN | — |
 | EH-22/EH-06 | OPEN | runtime seed/import route + DB owner loop | new seed route + [db] test | DB loop | OPEN | — |
@@ -23,3 +23,16 @@ Honest constraint recorded up-front: DB-backed proofs (EH-22 seed persistence, E
 Slice-13 DB owner loop) can be **authored** here but can only be **executed/proven in CI** — there is no
 local Postgres in this container (TEST_WITH_DB needs a running DB; the Prisma engine download is also
 network-blocked). That is not a hard blocker for authoring, but DB *proof* depends on the CI run.
+
+## Progress this turn
+- **EH-01 CLOSED_TESTED** (Slice 3, commit on top of `8e31704`): the owner-mode safety gate is now
+  complete — opt-out + do-not-repeat (scope) + capacity (growth domains) + cash (survival/cashflow
+  state) + margin (known-below-floor for sales/marketing/finance), all enforced on every material
+  owner-domain action transition, audited, with 15 DI tests + the 11-path bypass regression.
+
+## Remaining (honest)
+EH-14, EH-05, EH-22/06, EH-03/04, EH-07/08, EH-15, EH-17, EH-20/21, EH-28/29/30 remain OPEN/PARTIAL.
+These require schema migrations (proof-requirement link on owner actions; arbitration-verdict
+persistence), owner UI work, runtime seed persistence across ~10 owner models, and DB-backed loop proof
+that can only execute in CI. They are **multi-session** and were **not** completed this turn. They are
+not closed and are not represented as closed.
