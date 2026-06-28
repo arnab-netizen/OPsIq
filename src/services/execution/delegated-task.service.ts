@@ -66,8 +66,13 @@ export interface TaskTransitionCommand {
   task: DelegatedTask;
   to: DelegatedTaskStatus;
   actor: TaskActor;
-  /** The acting user id (for audit). */
+  /** The acting user id (for audit + Slice 3 separation-of-duty). */
   actorId: string;
+  /** Slice 3 — proof-to-completion gate inputs (supplied when known). */
+  proofRequired?: boolean;
+  proofCleared?: boolean;
+  /** Explicit, audited owner emergency override of the Slice 3 anti-gaming gates. */
+  ownerOverride?: boolean;
 }
 
 /**
@@ -83,7 +88,13 @@ export async function applyTaskTransition(
   const deps = injected ?? (await resolveDefaultDeps());
   const { task, to, actor, actorId } = command;
 
-  const decision = planTaskTransition(task.status, to, actor);
+  const decision = planTaskTransition(task.status, to, actor, {
+    actorUserId: actorId,
+    performerUserId: task.assignedUserId,
+    proofRequired: command.proofRequired,
+    proofCleared: command.proofCleared,
+    ownerOverride: command.ownerOverride,
+  });
   if (!decision.allowed) {
     throw new TaskTransitionNotAllowedError(decision.reason);
   }

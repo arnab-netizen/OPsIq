@@ -191,6 +191,62 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 
 ---
 
+## SLICE 3 — PROOF ANTI-GAMING & COMPLETION GATE — **COMPLETE_LOCAL**
+
+### Reuse decision
+- **Inspected:** `src/services/execution/proof.service.ts` (`reviewProof`),
+  `src/domain/execution/proof.ts` (`isProofClearedForCompletion`, statuses),
+  `src/domain/execution/delegated-task.ts` (`planTaskTransition` FSM),
+  `src/services/execution/delegated-task.service.ts` (`applyTaskTransition`).
+- **Reused:** the existing proof FSM, the existing task transition FSM + service, the
+  existing audit-in-transaction pattern. No new proof engine — the FSM is untouched
+  except for additive restrictions.
+- **New code (why):** an optional `TaskTransitionContext` on the pure FSM and a
+  `ProofSelfReviewError` — required because no separation-of-duty or proof-to-completion
+  check existed. Additive only.
+- **Duplicate engines avoided:** yes.
+- **Runtime path enforced:** `reviewProof` (POST /api/proof/review) now blocks a submitter
+  reviewing their own proof; `applyTaskTransition` now passes performer/actor + proof
+  context into `planTaskTransition`, which denies `APPROVED_COMPLETE` on self-approval or
+  uncleared required proof.
+
+### What changed (behavior)
+- **Separation of duty (submitter ≠ reviewer):** `reviewProof` loads the proof's
+  `submittedByUserId` inside the same transaction and throws `ProofSelfReviewError` if it
+  equals the reviewer — closing the audit's "manager can submit-by-proxy and approve" hole.
+- **Completion separation of duty:** `planTaskTransition` denies `APPROVED_COMPLETE` when the
+  approver is the task's performer (`assignedUserId`), enforced at runtime via
+  `applyTaskTransition` (always active — no extra data needed).
+- **Proof-to-completion gate:** `APPROVED_COMPLETE` is denied when `proofRequired && !proofCleared`,
+  applied BEFORE the owner-final authority, so even an owner cannot rubber-stamp without proof;
+  an explicit `ownerOverride` (emergency) bypasses. Additive: callers that pass no context are
+  unaffected.
+
+### Files
+- `src/domain/execution/delegated-task.ts` — `TaskTransitionContext` + additive denials.
+- `src/services/execution/delegated-task.service.ts` — thread performer/proof context.
+- `src/services/execution/proof.service.ts` — `ProofSelfReviewError` + SoD read in `reviewProof`.
+- `src/__tests__/execution/task-completion-gate.test.ts` — **new** 7 tests.
+- `src/__tests__/services/execution/proof.service.test.ts` — +1 self-review test, mock `findFirst`.
+- 2 existing proof mocks (`guided-execution-handlers`, `owner-mode-hostile-e2e-audit`) given `findFirst`.
+
+### Tests
+- New/updated: proof service (incl. self-review) + completion-gate = 17 passed; full affected
+  execution set (handlers, delegated-task service, governed-loop, hostile-e2e, proof domain) =
+  **63 passed**. `tsc` clean on changed source files.
+
+### Remaining limitations (honest)
+- The completion proof-clearance gate is **plumbed** (FSM + service accept `proofRequired`/
+  `proofCleared`); the handler that fetches a task's live proof status to populate them is tied
+  to the `Proof` table lane (`MIGRATION_LANE_PENDING` per the service header) and is a follow-on.
+  The performer≠approver SoD is fully active at runtime now.
+- Proof freshness and duplicate-proof *rejection* (vs the existing duplicate-flag) are not in
+  this slice; documented for a follow-on. Submitter-SoD + completion SoD are the critical fixes.
+
+### Next slice started automatically: **Slice 4 — owner load reduction baseline.**
+
+---
+
 ## Slice completion table
 
 | Slice | Title | Status |
@@ -198,8 +254,8 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 0 | Default-on safety gates | COMPLETE_LOCAL |
 | 1 | Data sufficiency & evidence disclosure | COMPLETE_LOCAL |
 | 2 | Finance/cash/margin guardrails | COMPLETE_LOCAL |
-| 3 | Proof anti-gaming & completion gate | IN_PROGRESS |
-| 4 | Owner load reduction baseline | NOT_STARTED |
+| 3 | Proof anti-gaming & completion gate | COMPLETE_LOCAL |
+| 4 | Owner load reduction baseline | IN_PROGRESS |
 | 5 | SOP & checklist lifecycle baseline | NOT_STARTED |
 | 6 | Staff training & skills matrix baseline | NOT_STARTED |
 | 7 | Equipment/capacity/maintenance baseline | NOT_STARTED |

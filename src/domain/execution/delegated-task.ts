@@ -110,6 +110,21 @@ export interface TaskTransitionDecision {
   reason: string;
 }
 
+/**
+ * Jarvis 360 Slice 3 — optional anti-gaming context. When omitted, behavior is
+ * identical to before (purely additive restrictions). Supplying it enforces:
+ *  - a proof-to-completion gate (APPROVED_COMPLETE requires cleared proof), and
+ *  - separation of duty (the performer cannot approve their own completion).
+ * An explicit, audited owner emergency override bypasses both.
+ */
+export interface TaskTransitionContext {
+  proofRequired?: boolean;
+  proofCleared?: boolean;
+  actorUserId?: string | null;
+  performerUserId?: string | null;
+  ownerOverride?: boolean;
+}
+
 function deny(reason: string): TaskTransitionDecision {
   return { allowed: false, reason };
 }
@@ -122,11 +137,29 @@ const ALLOW: TaskTransitionDecision = { allowed: true, reason: "ok" };
 export function planTaskTransition(
   from: DelegatedTaskStatus,
   to: DelegatedTaskStatus,
-  actor: TaskActor
+  actor: TaskActor,
+  context: TaskTransitionContext = {}
 ): TaskTransitionDecision {
   if (from === to) return deny(`No-op transition (${from}).`);
   if (!VALID_TASK_TRANSITIONS[from].includes(to)) {
     return deny(`Invalid transition ${from} → ${to}.`);
+  }
+
+  // Slice 3 anti-gaming gates — checked BEFORE role logic (incl. owner-final), so
+  // even an owner cannot approve completion without cleared proof / on their own
+  // work unless an explicit, audited emergency override is supplied. Additive:
+  // with no context these conditions are never met.
+  if (to === S.APPROVED_COMPLETE && !context.ownerOverride) {
+    if (context.proofRequired === true && context.proofCleared !== true) {
+      return deny("Cannot approve completion: required proof is not cleared.");
+    }
+    if (
+      context.actorUserId != null &&
+      context.performerUserId != null &&
+      context.actorUserId === context.performerUserId
+    ) {
+      return deny("Separation of duty: the performer cannot approve their own task completion.");
+    }
   }
 
   // Owner authority is final: any graph-valid transition is permitted.

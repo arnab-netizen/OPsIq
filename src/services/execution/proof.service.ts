@@ -27,6 +27,7 @@ interface QueryArgs {
 }
 interface ProofDelegate {
   updateMany(args: QueryArgs): Promise<{ count: number }>;
+  findFirst(args: { where: Record<string, unknown>; select?: Record<string, boolean> }): Promise<{ submittedByUserId: string | null } | null>;
 }
 interface AuditCreateDelegate {
   create(args: { data: Record<string, unknown> }): Promise<unknown>;
@@ -60,6 +61,14 @@ export class ProofTransitionNotAllowedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ProofTransitionNotAllowedError";
+  }
+}
+/** Jarvis 360 Slice 3 — the submitter of a proof may never review/approve it. */
+export class ProofSelfReviewError extends Error {
+  readonly code = "PROOF_SELF_REVIEW_BLOCKED";
+  constructor(proofId: string) {
+    super(`Proof ${proofId} cannot be reviewed by the same user who submitted it (separation of duty).`);
+    this.name = "ProofSelfReviewError";
   }
 }
 export class ProofConflictError extends Error {
@@ -179,6 +188,16 @@ export async function reviewProof(
 
   const now = deps.now();
   await deps.db.$transaction(async (tx) => {
+    // Slice 3 — separation of duty: the submitter can never review their own proof
+    // (workspace-scoped read; fail-closed inside the same transaction as the update).
+    const existing = await tx.proof.findFirst({
+      where: { id: command.proofId, workspaceId: command.workspaceId },
+      select: { submittedByUserId: true },
+    });
+    if (existing?.submittedByUserId && existing.submittedByUserId === command.actorId) {
+      throw new ProofSelfReviewError(command.proofId);
+    }
+
     const updated = await tx.proof.updateMany({
       where: {
         id: command.proofId,
