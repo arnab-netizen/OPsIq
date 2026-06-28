@@ -337,7 +337,7 @@ model Engagement {
   isBlocked                 Boolean                    @default(false) @map("is_blocked")
   blockerReason             String?                    @map("blocker_reason")
   blockedAt                 DateTime?                  @map("blocked_at")
-  workspaceId               String?                    @map("workspace_id") @db.Uuid
+  workspaceId               String                     @map("workspace_id") @db.Uuid
   actions                   Action[]
   businessConditionProfiles BusinessConditionProfile[]
   decisionSnapshots         DecisionSnapshot[]
@@ -346,7 +346,7 @@ model Engagement {
   clientAccount             ClientAccount              @relation(fields: [clientId], references: [id])
   parentEngagement          Engagement?                @relation("engagementsToengagements", fields: [parentEngagementId], references: [id], onDelete: Restrict)
   childEngagements          Engagement[]               @relation("engagementsToengagements")
-  workspace                 Workspace?                 @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  workspace                 Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   evidence                  Evidence[]
   evidenceBundles           EvidenceBundle[]
   evidenceItems             EvidenceItem[]
@@ -364,6 +364,7 @@ model Engagement {
   @@index([ownerId])
   @@index([parentEngagementId])
   @@index([status])
+  @@index([workspaceId])
   @@map("engagements")
 }
 
@@ -1968,8 +1969,8 @@ model OwnerFinanceVerification {
   verifiedAt         DateTime?          @map("verified_at")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
-  business           OwnerBusiness      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  action             OwnerFinanceAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  business           OwnerBusiness      @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action             OwnerFinanceAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2136,8 +2137,8 @@ model OwnerCashflowVerification {
   verifiedAt         DateTime?           @map("verified_at")
   createdAt          DateTime            @default(now()) @map("created_at")
   updatedAt          DateTime            @updatedAt @map("updated_at")
-  business           OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  action             OwnerCashflowAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  business           OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action             OwnerCashflowAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2307,8 +2308,8 @@ model OwnerSalesVerification {
   verifiedAt         DateTime?        @map("verified_at")
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
-  business           OwnerBusiness    @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  action             OwnerSalesAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  business           OwnerBusiness    @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action             OwnerSalesAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2476,8 +2477,8 @@ model OwnerOperationsVerification {
   verifiedAt         DateTime?             @map("verified_at")
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
-  business           OwnerBusiness         @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  action             OwnerOperationsAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  business           OwnerBusiness         @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action             OwnerOperationsAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2640,8 +2641,8 @@ model OwnerSopVerification {
   verifiedAt         DateTime?      @map("verified_at")
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
-  business           OwnerBusiness  @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  action             OwnerSopAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  business           OwnerBusiness  @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action             OwnerSopAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2807,8 +2808,8 @@ model OwnerMarketingVerification {
   verifiedAt         DateTime?            @map("verified_at")
   createdAt          DateTime             @default(now()) @map("created_at")
   updatedAt          DateTime             @updatedAt @map("updated_at")
-  business           OwnerBusiness        @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  action             OwnerMarketingAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  business           OwnerBusiness        @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action             OwnerMarketingAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])
@@ -2971,8 +2972,8 @@ model OwnerStrategyVerification {
   verifiedAt         DateTime?           @map("verified_at")
   createdAt          DateTime            @default(now()) @map("created_at")
   updatedAt          DateTime            @updatedAt @map("updated_at")
-  business           OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  action             OwnerStrategyAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  business           OwnerBusiness       @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  action             OwnerStrategyAction @relation(fields: [actionId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId])
   @@index([businessId])

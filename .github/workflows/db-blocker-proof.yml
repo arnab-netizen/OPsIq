@@ -57,11 +57,15 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
       - name: Prisma generate
         run: npx prisma generate
-      - name: Run GAP-DB-01 [db] proof + owner-loop [db] test
+      - name: Run stable DB proof — owner schema + owner-loop + owner-budget [db] tests
         run: |
           npx vitest run --maxWorkers 1 \
             src/__tests__/owner-mode/owner-diagnosis-lifecycle.db.test.ts \
-            src/__tests__/owner-mode/owner-loop.db.test.ts
+            src/__tests__/owner-mode/owner-loop.db.test.ts \
+            src/__tests__/owner-mode/schema-hardening.test.ts \
+            src/__tests__/services/owner-budget/action-link.service.db.test.ts \
+            src/__tests__/services/owner-budget/governance.service.db.test.ts \
+            src/__tests__/services/owner-budget/budget.service.db.test.ts
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
           DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
