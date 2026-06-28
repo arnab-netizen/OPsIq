@@ -44,10 +44,10 @@ describe("getOwnerBlockMetrics", () => {
   });
 
   it("scopes the query to the workspace and a recent window", async () => {
-    const captured: { where?: any } = {};
+    const captured: { where?: { workspaceId: string; occurredAt: { gte: Date } } } = {};
     await getOwnerBlockMetrics("ws-iso", { ...depsWith([], captured), windowDays: 7 });
-    expect(captured.where.workspaceId).toBe("ws-iso");
-    expect(captured.where.occurredAt.gte).toEqual(new Date("2026-06-21T00:00:00.000Z"));
+    expect(captured.where?.workspaceId).toBe("ws-iso");
+    expect(captured.where?.occurredAt.gte).toEqual(new Date("2026-06-21T00:00:00.000Z"));
   });
 
   it("returns zeros when there are no block events", async () => {
