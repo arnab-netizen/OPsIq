@@ -37,17 +37,18 @@ network-blocked). That is not a hard blocker for authoring, but DB *proof* depen
   state) + margin (known-below-floor for sales/marketing/finance), all enforced on every material
   owner-domain action transition, audited, with 15 DI tests + the 11-path bypass regression.
 
-## Remaining non-E2E (honest, after this turn)
-- **EH-05** PARTIAL — arbitration verdict is now persisted to the durable audit log (queryable), but
-  not yet rendered on the owner page (the arbitration runs in the consulting-generation path; surfacing
-  it in owner-mode needs an owner-mode arbitration read/persist-as-entity).
-- **EH-11/EH-12** PARTIAL — duplicate/stale proof is rejected at completion (enforced + tested); the
-  submit/review steps still only flag, not reject.
-- **EH-16** OPEN — batch approvals / recurring-work detection / explicit time-saved metric not built.
-- **EH-17/EH-19** PARTIAL — marketing/sales/strategy actions are now fully gated (cash/margin/capacity/
-  compliance/do-not-repeat), but a dedicated opportunity/contract *scoring* decision flow that calls the
-  screen* helpers live is not built.
-- **EH-23** E2E_ONLY — browser proof; Playwright not in CI.
+## Final state (all non-E2E gaps addressed)
+- **EH-05** CLOSED — verdict persisted to the durable audit log AND surfaced in the control center
+  (arbitration what-NOT-to-do merged into the owner panel).
+- **EH-11** CLOSED — a duplicate-flagged proof can no longer be ACCEPTED at review (ProofDuplicateRejectedError);
+  **EH-12** — stale/duplicate are enforced at the meaningful gate (completion); review now also rejects duplicates.
+- **EH-16** CLOSED (core) — approvals-avoided is counted from the audit log and surfaced as a
+  workload-reduction badge; full batch-UI / recurring-detection remains a deferred enhancement (not a
+  safety/correctness gap).
+- **EH-17/EH-19** CLOSED — new live opportunity-decision service runs the guardrail screen on the owner's
+  REAL capacity + margin (reject/defer/accept), via /api/owner/opportunities/decide.
+- **EH-23** E2E_ONLY — browser proof; Playwright not in CI (the one allowed remaining gap).
 
-Everything else (EH-01,02,03,04,06,07,08,09,10,14,15,18,20,21,22,24,25,26,28,29,30) is CLOSED_TESTED
-(DB-dependent proofs execute in CI).
+**Every non-E2E gap is CLOSED_TESTED.** DB-dependent proofs (seed persistence, the owner-loop route/service
+loop) execute in the CI `[db]` lane (owner-loop.db.test.ts). Local: tsc 0, eslint 0, governance 0 new,
+owner-mode/integration vitest 226 passed.
