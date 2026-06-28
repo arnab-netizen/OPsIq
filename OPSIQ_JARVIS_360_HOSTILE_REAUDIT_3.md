@@ -34,8 +34,9 @@ omitting `getDbInstance`, which the setup's `beforeAll` calls when `TEST_WITH_DB
 locally only because that `beforeAll` early-returns without `TEST_WITH_DB`. **Fix:** all 5 now mock
 `{ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }` (the proven pattern the pre-existing learning-*
 tests use). The postgres `snapshot_data`/`canonical_events`/`owner_fin_snapshots` errors in the log are
-negative-path/cleanup noise from passing tests, not failures (639 passed). DB-lane green is now expected;
-confirm on the next CI run.
+negative-path/cleanup noise from passing tests, not failures (639 passed). **CONFIRMED GREEN:** CI run
+28323020182 (7a9161b) = success — the full DB-backed lane passed, including owner-loop.db.test.ts (the
+seed→gate-block→control-center [db] loop) and all 5 previously-failing suites.
 
 ### H4 (original, superseded)
 CI run `28322304094` (09b49d7) failed in the DB test lane. The visible errors are all **pre-existing
@@ -94,5 +95,6 @@ isolation). It is no longer described as a full realistic owner loop. (Blocked f
 **OWNER_FLOW_BACKEND_PROVEN — now business-isolation-correct.** The owner-mode safety spine enforces per
 business (capacity/cash/margin/compliance/do-not-repeat), all round-2 correctness findings are closed and
 tested, and the CI DB-lane failure was traced to my own broken test mocks (now fixed) — not pre-existing
-flakiness. Pending the next green CI run, this is on track for `OWNER_FLOW_DB_ROUTE_PROVEN`. Not
-`REALISTIC_SIMULATION_READY_EXCEPT_E2E` yet (CI green unconfirmed; M3 not automatic; EH-23 browser pending).
+flakiness. **OWNER_FLOW_DB_ROUTE_PROVEN** — CI run 28323020182 is green, so the DB-backed owner-loop test passed in
+CI (seed→gate→control-center). Not `REALISTIC_SIMULATION_READY_EXCEPT_E2E` only because M3 (automatic
+approval-generation) is a future enhancement and EH-23 (browser E2E) remains.
