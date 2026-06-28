@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { enforceOwnerGatesForPromotion } from "@/services/owner-mode/gate-enforcement-policy";
+import { arbitrateInterventions } from "@/services/owner-mode/intervention-arbitration.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -1358,6 +1359,11 @@ export async function createRecommendationsFromInterventions(
   if (!interventions || interventions.length === 0) {
     return [];
   }
+
+  // G15 — arbitrate the candidate interventions before generating recommendations so the
+  // chosen action, rejected alternatives, and what-NOT-to-do are decided + audited at
+  // runtime (not only reachable via the standalone arbitrate route).
+  await arbitrateInterventions(validatedWorkspaceId, interventions);
 
   const recommendations = [];
 
