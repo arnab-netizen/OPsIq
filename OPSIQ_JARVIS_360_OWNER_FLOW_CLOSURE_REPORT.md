@@ -26,11 +26,13 @@ tested; the remaining slices are not done and are reported truthfully as OPEN/PA
     `28316829583` was in_progress at the previous turn. Slice 1 adds no migrations.
 13. **DB/migration status:** **no schema/migration changes** — the owner-action gate reuses existing
     tables (client_accounts opt-out columns, OwnerDoNotRepeatRule, OwnerEquipment). Additive/none.
-14. **Owner-mode gate spine live?** **Partially — YES for the action flow.** All 7 owner-domain action
-    services now enforce a default-on, opt-out-aware gate (do-not-repeat by scope + capacity for growth
-    domains) on material transitions. **NOT yet** cash/margin owner-mode, nor the `*/verify` routes.
-15. **Action-verify bypass closed?** **No (PARTIAL).** The status/completion transition is gated, but the
-    separate before/after `*/verify` endpoints and the delegated-task proof binding (EH-14) are not.
+14. **Owner-mode gate spine live?** **YES for the action flow.** All 7 owner-domain action services now
+    enforce a default-on, opt-out-aware gate (do-not-repeat by scope + capacity for growth domains +
+    **cash safety** via the proven `evaluateCashSafetyGate` over the latest finance/cashflow state) on
+    material transitions. Only owner-mode **margin** remains (needs grossMarginPct from the snapshot).
+15. **Action-verify bypass closed?** **Material path CLOSED.** The status/completion transition is gated;
+    the `*/verify` endpoints record before/after outcomes (measurement, not promotion) and are
+    intentionally not gated. Delegated-task proof binding (EH-14) remains OPEN.
 16. **Arbitration verdict persisted/surfaced?** **No (EH-05 OPEN).** Still computed + audited but discarded.
 17. **Owner UI can act?** **No (EH-03/EH-04 OPEN).** The new routes remain owner-unreachable.
 18. **Seed/import runtime path?** **No (EH-22 OPEN).** Seed remains a pure builder used only by tests.

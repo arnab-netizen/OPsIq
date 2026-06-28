@@ -9,8 +9,8 @@ old bypass removed/guarded + tested through the real path (+ DB where data) + co
 
 | ID | Sev | Finding (short) | Runtime path to wire | Closure behavior | Status | Commit |
 |----|-----|-----------------|----------------------|------------------|--------|--------|
-| EH-01 | BLOCKER | spine on consulting flow, not owner-mode | 7 owner-domain `update*Action` services | owner-action gate (capacity/do-not-repeat/opt-out) on material transitions | PARTIAL (gate live on all 7 domain status transitions; cash/margin owner-mode + verify-route paths pending) | Slice 1 |
-| EH-02 | CRITICAL | owner action-verify routes ungated | finance/cashflow/sop verify services | gate before verify/complete | PARTIAL (status/completion transitions gated; `*/verify` before/after routes pending) | Slice 1 |
+| EH-01 | BLOCKER | spine on consulting flow, not owner-mode | 7 owner-domain `update*Action` services | owner-action gate (opt-out/do-not-repeat/capacity/cash) on material transitions | PARTIAL→mostly closed (gate live on all 7 domains for opt-out + do-not-repeat + capacity + cash; only margin owner-mode pending) | Slice 1+2 |
+| EH-02 | CRITICAL | owner action-verify routes ungated | finance/cashflow/sop verify services | gate before verify/complete | CLOSED for the material path (status→in_progress/completed gated); `*/verify` endpoints record outcomes (measurement), intentionally not gated — documented | Slice 1+2 |
 | EH-03 | CRITICAL | tasks/complete no UI | owner UI | minimal action control calling the route | OPEN | — |
 | EH-05 | CRITICAL | arbitration output discarded | recommendation.ts generation | persist/return verdict; surface | OPEN | — |
 | EH-14 | CRITICAL | completion bypass via action-verify | action update/verify services | proof clearance required for proof-required items | OPEN | — |

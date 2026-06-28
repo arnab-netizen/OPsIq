@@ -5,19 +5,25 @@ Re-audit after the owner-flow closure pass. Honest, hostile, per-gap. Only **Sli
 (not stubbed — see §Scope note). HEAD at audit: `162442b` + Slice 1 commit.
 
 ## Scope note (transparency)
-This session implemented the highest-value blocker — **moving the safety gate onto the owner's actual
-runtime flow (EH-01/EH-02)** — across all 7 owner-domain action services, with tests and a bypass
-regression. The remaining criticals (EH-05 arbitration persistence, EH-14 proof-binding to owner actions,
-EH-22 runtime seed/import, EH-03/EH-04 owner UI) each require **schema and/or substantial UI work**;
-rather than ship stubs/advisory shims (which CLAUDE.md and this prompt both forbid), they are left
+Two slices were implemented to a genuine, tested standard: **Slice 1** (owner-mode safety gate wired into
+all 7 owner-domain action services — opt-out + do-not-repeat + capacity) and **Slice 2** (cash-safety
+breadth — the gate now also enforces the proven `evaluateCashSafetyGate` over the owner's latest finance
+survival + cashflow state). The remaining criticals (EH-05 arbitration persistence, EH-14 proof-binding to
+owner actions, EH-22 runtime seed/import, EH-03/EH-04 owner UI) each require **schema and/or substantial UI
+work**; rather than ship stubs/advisory shims (which CLAUDE.md and this prompt both forbid), they are left
 explicitly OPEN with a concrete plan. This is an honest partial closure, not a completed one.
+
+**Verify routes:** the `*/verify` endpoints RECORD before/after outcomes (measuring reality), not promote
+risky actions — gating outcome-recording would be incorrect. The material gate correctly lives on the
+status→in_progress/completed transition (gated in Slice 1+2). EH-02 is therefore CLOSED for the material
+path; only owner-mode **margin** enforcement remains for EH-01.
 
 ## Per-gap verdicts
 
 | Gap | Original finding | Closure (this session) | Runtime path now | Tests | Remaining bypass | Status |
 |-----|------------------|------------------------|------------------|-------|------------------|--------|
-| EH-01 | spine on consulting flow | owner-action gate (opt-out + do-not-repeat-by-scope + capacity) wired into all 7 owner-domain `update*Action` services | owner action PATCH status→in_progress/completed → `enforceOwnerActionGates` | `owner-action-gate.test.ts` (7) + registry (11) | cash/margin owner-mode not yet enforced; `*/verify` before/after routes not gated | **PARTIAL** |
-| EH-02 | action-verify routes ungated | the action status/completion path is now gated | as above | as above | the separate `recordFinanceVerification`-style verify endpoints still ungated | **PARTIAL** |
+| EH-01 | spine on consulting flow | owner-action gate (opt-out + do-not-repeat-by-scope + capacity + **cash safety**) wired into all 7 owner-domain `update*Action` services | owner action PATCH status→in_progress/completed → `enforceOwnerActionGates` | `owner-action-gate.test.ts` (11) + registry (11) | owner-mode **margin** not yet enforced | **PARTIAL (mostly closed)** |
+| EH-02 | action-verify routes ungated | the action status/completion path is now gated; verify endpoints record outcomes (not promotions) by design | as above | as above | none for the material path | **CLOSED (material path)** |
 | EH-09 | do-not-repeat one path | owner-action gate consults do-not-repeat by `scope:<domain>` | owner action → gate → rule lookup | gate test (scope block + override) | — | **CLOSED** (owner-mode path) |
 | EH-18 | capacity gate one path | capacity gate now enforced on all growth-sensitive owner domains (marketing/sales/strategy/operations) | owner action → gate → `assessFleetCapacity` | gate test (capacity block) | marketing/contract *decision* (opportunity scoring) still separate | **CLOSED** (action path) |
 | EH-03 | tasks/complete no UI | — | — | — | unchanged | **OPEN** |
