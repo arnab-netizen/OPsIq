@@ -219,3 +219,36 @@ export function isDuplicateFileHash(
 export function isProofClearedForCompletion(status: ProofStatus): boolean {
   return status === ProofStatus.ACCEPTED || status === ProofStatus.NOT_REQUIRED;
 }
+
+export interface ProofClearanceContext {
+  /** When the proof was accepted (for freshness). */
+  acceptedAt?: Date | null;
+  /** True when the proof's file hash duplicates a prior submission. */
+  duplicateFlagged?: boolean;
+  now?: Date;
+  /** Max age (days) an accepted proof stays valid for completion; null = no limit. */
+  maxAgeDays?: number | null;
+}
+
+export interface ProofClearanceResult {
+  cleared: boolean;
+  /** Machine reason when not cleared (proof_not_accepted | duplicate_proof | proof_stale). */
+  reason: "proof_not_accepted" | "duplicate_proof" | "proof_stale" | null;
+}
+
+/**
+ * Strict clearance for completion. Extends isProofClearedForCompletion with:
+ *  - duplicate rejection (a duplicate-flagged proof can never clear), and
+ *  - freshness (an accepted proof older than maxAgeDays is stale → not cleared).
+ * Closes strict re-audit loopholes 3 (no freshness) and 4 (duplicate flagged-not-rejected).
+ */
+export function evaluateProofClearance(status: ProofStatus, ctx: ProofClearanceContext = {}): ProofClearanceResult {
+  if (status === ProofStatus.NOT_REQUIRED) return { cleared: true, reason: null };
+  if (status !== ProofStatus.ACCEPTED) return { cleared: false, reason: "proof_not_accepted" };
+  if (ctx.duplicateFlagged) return { cleared: false, reason: "duplicate_proof" };
+  if (ctx.maxAgeDays != null && ctx.acceptedAt) {
+    const ageMs = (ctx.now ?? new Date()).getTime() - ctx.acceptedAt.getTime();
+    if (ageMs > ctx.maxAgeDays * 24 * 60 * 60 * 1000) return { cleared: false, reason: "proof_stale" };
+  }
+  return { cleared: true, reason: null };
+}
