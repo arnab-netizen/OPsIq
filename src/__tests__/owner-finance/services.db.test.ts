@@ -11,6 +11,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { teardownOwnerBusiness } from "../test-helpers/owner-business-teardown";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { createFinancialSnapshot, getFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import {
@@ -82,7 +83,7 @@ describe("[db] Owner Finance services", () => {
     expect(dash.domainScore?.domain).toBe("finance");
     expect(dash.recommendedNextAction).not.toBeNull();
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 
   it("[db] executes an action transition and rejects an invalid one", async () => {
@@ -100,7 +101,7 @@ describe("[db] Owner Finance services", () => {
       updateFinanceAction(action.id, { status: "completed" }, actor, workspaceId)
     ).rejects.toThrow(/transition/i);
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 
   it("[db] records a before/after verification with a real status", async () => {
@@ -119,7 +120,7 @@ describe("[db] Owner Finance services", () => {
     expect(verification.id).toBeTruthy();
     expect(["verified_improved", "verified_not_improved", "inconclusive", "disputed"]).toContain(result.status);
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 
   it("[db] enforces workspace isolation (cross-workspace snapshot read is NotFound)", async () => {
@@ -129,6 +130,6 @@ describe("[db] Owner Finance services", () => {
 
     await expect(getFinancialSnapshot(snap.id, ws())).rejects.toThrow();
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 });

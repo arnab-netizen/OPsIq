@@ -14,6 +14,7 @@
 import { describe, it, expect } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { teardownOwnerBusiness } from "../test-helpers/owner-business-teardown";
 
 async function makeBusiness(workspaceId: string) {
   const id = randomUUID();
@@ -122,7 +123,7 @@ describe("[db] Module 2 finance persistence", () => {
     expect(actionWithVerifs.finding.id).toBe(finding.id);
 
     // Cleanup (cascade from business removes finance children).
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 
   it("[db] enforces the unique [businessId, periodStart, periodEnd] constraint", async () => {
@@ -134,7 +135,7 @@ describe("[db] Module 2 finance persistence", () => {
       db.ownerFinancialSnapshot.create({ data: snapshotData(workspaceId, businessId) })
     ).rejects.toThrow();
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 
   it("[db] cascades finance rows when the business is deleted", async () => {
@@ -142,7 +143,7 @@ describe("[db] Module 2 finance persistence", () => {
     const businessId = await makeBusiness(workspaceId);
     const snap = await db.ownerFinancialSnapshot.create({ data: snapshotData(workspaceId, businessId) });
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
     const after = await db.ownerFinancialSnapshot.findUnique({ where: { id: snap.id } });
     expect(after).toBeNull();
   });

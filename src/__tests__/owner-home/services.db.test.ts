@@ -12,6 +12,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
+import { teardownOwnerBusiness } from "../test-helpers/owner-business-teardown";
 import { createBusiness } from "@/services/founder-recovery/business.service";
 import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
 import { runFinanceDiagnosis } from "@/services/owner-finance/diagnosis.service";
@@ -69,7 +70,7 @@ describe("[db] Owner Home service", () => {
     expect(s.requiredActions.length).toBeLessThanOrEqual(5);
     expect(s.lastVerifiedImprovement).toBeNull();
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 
   it("[db] surfaces the last verified improvement after a verified action", async () => {
@@ -95,7 +96,7 @@ describe("[db] Owner Home service", () => {
     expect(last!.beforeValue).toBe(15);
     expect(last!.afterValue).toBe(8);
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 
   it("[db] empty business has no summary (nothing invented)", async () => {
@@ -104,7 +105,7 @@ describe("[db] Owner Home service", () => {
     const home = await getOwnerHome(workspaceId, businessId);
     expect(home.hasData).toBe(false);
     expect(home.summary).toBeNull();
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 
   it("[db] enforces workspace isolation (cross-workspace business is NotFound)", async () => {
@@ -119,6 +120,6 @@ describe("[db] Owner Home service", () => {
     expect(foreign.selectedBusinessId).toBeNull();
     expect(foreign.hasData).toBe(false);
 
-    await db.ownerBusiness.delete({ where: { id: businessId } });
+    await teardownOwnerBusiness(businessId);
   });
 });
