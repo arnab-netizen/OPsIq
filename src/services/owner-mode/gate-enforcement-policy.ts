@@ -114,11 +114,27 @@ export async function enforceOwnerGatesForPromotion(
 
   const missingInputQualityDefault = mode === "STRICT" ? "critical_missing" : "data_limited";
 
-  // Order mirrors the prior recommendation.ts promotion order. Any block throws.
-  await enforceBusinessImpactForPromotion(recommendationId, workspaceId);
-  await enforceInputQualityForPromotion(recommendationId, workspaceId, undefined, missingInputQualityDefault);
-  await enforceConfidenceForPromotion(recommendationId, workspaceId);
-  await enforceCashSafetyForPromotion(recommendationId, workspaceId);
+  // Order mirrors the prior recommendation.ts promotion order. Any block throws a
+  // typed *GateError; we record an auditable block event (Slice 1) then rethrow so
+  // the caller's behavior is unchanged.
+  try {
+    await enforceBusinessImpactForPromotion(recommendationId, workspaceId);
+    await enforceInputQualityForPromotion(recommendationId, workspaceId, undefined, missingInputQualityDefault);
+    await enforceConfidenceForPromotion(recommendationId, workspaceId);
+    await enforceCashSafetyForPromotion(recommendationId, workspaceId);
+  } catch (err) {
+    const code = (err as { code?: string })?.code ?? "GATE_BLOCKED";
+    const message = err instanceof Error ? err.message : String(err);
+    await emitAuditEvent({
+      workspaceId,
+      eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED,
+      actorType: "system",
+      entityType: "recommendation",
+      entityId: recommendationId,
+      payload: { code, message, mode },
+    });
+    throw err;
+  }
 }
 
 /** Thrown when a non-owner attempts to record a gate opt-out. */

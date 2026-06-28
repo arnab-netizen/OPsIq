@@ -64,6 +64,18 @@ export interface VerifiedImprovement {
   verifiedAt: Date;
 }
 
+/**
+ * Jarvis 360 Slice 1 — owner-facing data-sufficiency disclosure surfaced on the
+ * command-center home. Uses the WORST domain confidence so a single stale/missing
+ * domain is never averaged away.
+ */
+export interface OwnerHomeDataSufficiency {
+  status: "sufficient" | "caution" | "insufficient";
+  lowestDataConfidenceScore: number; // 0..100 (worst domain)
+  lowConfidenceDomains: string[];
+  missingCriticalData: string[];
+}
+
 /** The complete §19 owner-home summary (deterministic; nothing invented). */
 export interface OwnerHomeSummary {
   businessHealthScore: number; // 0..100
@@ -75,5 +87,6 @@ export interface OwnerHomeSummary {
   top3Opportunities: OwnerHomeOpportunity[];
   requiredActions: RequiredAction[];
   lastVerifiedImprovement: VerifiedImprovement | null;
+  dataSufficiency: OwnerHomeDataSufficiency;
   generatedAt: Date;
 }

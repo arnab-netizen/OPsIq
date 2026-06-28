@@ -163,6 +163,14 @@ export const businessConditionProfileSchema = z.object({
   growthOpportunityScore: scoreSchema,
   executionRiskScore: scoreSchema,
   dataConfidenceScore: scoreSchema,
+  /**
+   * Jarvis 360 Slice 1 — the WORST domain data-confidence (not the average), so a
+   * single stale/missing domain can never be hidden by the rollup. Plus a coarse
+   * sufficiency status surfaced to the owner command center.
+   */
+  lowestDataConfidenceScore: scoreSchema.optional(),
+  dataSufficiencyStatus: z.enum(["sufficient", "caution", "insufficient"]).optional(),
+  lowConfidenceDomains: z.array(ownerDomainSchema).default([]),
   domainScores: z.array(domainScoreSchema).default([]),
   topFindings: z.array(ownerFindingSchema).default([]),
   topActions: z.array(ownerActionSchema).default([]),
@@ -173,6 +181,10 @@ export const businessConditionProfileSchema = z.object({
 export type BusinessConditionProfile = z.infer<typeof businessConditionProfileSchema>;
 
 // --- Deterministic helpers ---------------------------------------------------
+
+/** Slice 1 — data-confidence thresholds for the command-center sufficiency status. */
+export const DATA_CONFIDENCE_CAUTION = 70;
+export const DATA_CONFIDENCE_INSUFFICIENT = 40;
 
 /**
  * Clamp any number to an integer score in [0, 100]. Non-finite / missing values
@@ -308,6 +320,21 @@ export function buildBusinessConditionProfile(
   );
   const dataConfidenceScore = clampScore(average(scores.map((s) => s.dataConfidenceScore)));
 
+  // Slice 1: surface the WORST domain confidence so a single stale/missing domain
+  // is never averaged away. A coarse status drives the command-center caution flag.
+  const confidenceValues = scores.map((s) => s.dataConfidenceScore);
+  const lowestDataConfidenceScore = clampScore(confidenceValues.length > 0 ? Math.min(...confidenceValues) : 0);
+  const lowConfidenceDomains = scores
+    .filter((s) => s.dataConfidenceScore < DATA_CONFIDENCE_CAUTION)
+    .map((s) => s.domain);
+  const hasMissingCriticalData = (input.missingCriticalData ?? []).length > 0;
+  const dataSufficiencyStatus: "sufficient" | "caution" | "insufficient" =
+    lowestDataConfidenceScore < DATA_CONFIDENCE_INSUFFICIENT || hasMissingCriticalData
+      ? "insufficient"
+      : lowestDataConfidenceScore < DATA_CONFIDENCE_CAUTION
+        ? "caution"
+        : "sufficient";
+
   const topActions = input.topActions ?? [];
   const ranked = rankOwnerActions(topActions);
   const recommendedNextAction = ranked.length > 0 ? ranked[0] : undefined;
@@ -325,6 +352,9 @@ export function buildBusinessConditionProfile(
     growthOpportunityScore,
     executionRiskScore,
     dataConfidenceScore,
+    lowestDataConfidenceScore,
+    dataSufficiencyStatus,
+    lowConfidenceDomains,
     domainScores: scores,
     topFindings: input.topFindings ?? [],
     topActions,

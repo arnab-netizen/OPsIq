@@ -87,13 +87,73 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 
 ---
 
+## SLICE 1 — DATA SUFFICIENCY & EVIDENCE DISCLOSURE — **COMPLETE_LOCAL**
+
+### Reuse decision
+- **Inspected:** `src/domain/owner-mode/input-quality.ts` (status taxonomy, stale/missing
+  detection), `src/domain/owner-mode/recommendation-input-quality-gate.ts`,
+  `src/domain/owner-finance/cash-safety-gate.ts`, `src/domain/owner-spine/contracts.ts`
+  (`buildBusinessConditionProfile` rollup), `src/domain/owner-home/summary.ts`
+  (`buildOwnerHomeSummary`), `src/services/owner-home/home.service.ts`.
+- **Reused:** the two proven gate evaluators (`evaluateInputQualityGate`,
+  `evaluateCashSafetyGate`) — the disclosure adds NO new advisory/scoring logic, only a
+  combined status + presentation. Reused the existing profile/home builders.
+- **New code (why):** `evidence-disclosure.ts` (a thin composition of the two gates) and
+  additive sufficiency fields on the profile + home summary. No duplicate confidence/
+  data-quality engine.
+- **Duplicate engines avoided:** yes.
+- **Runtime path enforced:** the owner command-center home (`home.service.ts:207` →
+  `buildOwnerHomeSummary`) now returns `dataSufficiency`; the cross-domain rollup
+  (`buildBusinessConditionProfile`, behind `/api/owner/command-center`) now exposes
+  `lowestDataConfidenceScore` + `dataSufficiencyStatus` + `lowConfidenceDomains`.
+  Block/downgrade on weak data is enforced by the Slice 0 gates.
+
+### What changed (behavior)
+- The rollup previously **averaged** domain data-confidence, so a single stale/missing
+  domain was hidden. Now the WORST domain confidence is surfaced and a coarse
+  `dataSufficiencyStatus` (sufficient/caution/insufficient) is computed; any
+  missing-critical-data forces `insufficient` even at high confidence.
+- New owner-facing `buildEvidenceDisclosure` composes input-quality + cash-safety into a
+  single status ladder (allowed/caution/high_risk/blocked) with prominent stale-data flag,
+  data sources, missing inputs, assumptions, confidence, and reasons.
+- The gate policy now emits an auditable `owner.gate_promotion_blocked` event whenever a
+  promotion gate blocks (previously a silent throw).
+
+### Files
+- `src/domain/owner-spine/contracts.ts` — profile schema + builder gain
+  `lowestDataConfidenceScore`, `dataSufficiencyStatus`, `lowConfidenceDomains`; new
+  `DATA_CONFIDENCE_CAUTION/INSUFFICIENT` constants.
+- `src/domain/owner-mode/evidence-disclosure.ts` — **new** pure disclosure composer.
+- `src/domain/owner-home/types.ts` + `summary.ts` — `OwnerHomeSummary.dataSufficiency`.
+- `src/services/owner-mode/gate-enforcement-policy.ts` — block-audit on gate error.
+- `src/__tests__/owner-mode/evidence-disclosure.test.ts` — **new** 8 tests.
+
+### Tests
+- New: 8 passed (disclosure allow/caution/high_risk/blocked, stale prominence,
+  rollup worst-not-average, missing-critical forces insufficient).
+- Regression: owner-spine consumer suites (strategy/operations/marketing/home) = 73 passed;
+  combined Slice 0+1 = 28 passed. `tsc` clean on changed files.
+
+### Remaining limitations (honest)
+- `missingCriticalData` into the home summary currently defaults to `[]` (the worst-confidence
+  signal fully drives the status); wiring the per-workspace `OwnerMissingDataFlag` query is a
+  follow-on, not required for the disclosure to function.
+- `services.db.test.ts` and other `*.db.test.ts` cannot run locally (no generated Prisma
+  client — `prisma generate` hits `ECONNRESET`); environmental, pre-existing, CI-covered.
+- `buildEvidenceDisclosure` is consumed by command-center surfaces; deeper per-recommendation
+  surfacing is wired further in Slice 9.
+
+### Next slice started automatically: **Slice 2 — finance/cash/margin guardrails.**
+
+---
+
 ## Slice completion table
 
 | Slice | Title | Status |
 |---|---|---|
 | 0 | Default-on safety gates | COMPLETE_LOCAL |
-| 1 | Data sufficiency & evidence disclosure | IN_PROGRESS |
-| 2 | Finance/cash/margin guardrails | NOT_STARTED |
+| 1 | Data sufficiency & evidence disclosure | COMPLETE_LOCAL |
+| 2 | Finance/cash/margin guardrails | IN_PROGRESS |
 | 3 | Proof anti-gaming & completion gate | NOT_STARTED |
 | 4 | Owner load reduction baseline | NOT_STARTED |
 | 5 | SOP & checklist lifecycle baseline | NOT_STARTED |
