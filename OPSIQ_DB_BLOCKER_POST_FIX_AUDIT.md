@@ -6,8 +6,8 @@ ephemeral `postgres:16` service (no secret needed; the configured secret DB is f
 
 | DB blocker | Original finding | Fix commit | Migration file | Schema file | DB test | GH Actions run | Result |
 |---|---|---|---|---|---|---|---|
-| GAP-DB-01 | ~28 owner decision/harm models declared but never migrated; `owner_input_quality_assessments` actively read by the recommendation promotion gate against a missing table | `242bf5f` | `20260628200000_owner_diagnosis_decision_harm_lifecycle/migration.sql` | `prisma/schema.prisma` (26 dead models removed) | `owner-diagnosis-lifecycle.db.test.ts` | run `28336952996` (`242bf5f`) — **migrate deploy step: success** | **CLOSED_CI_PROVEN** (migrate deploy green; suite confirms) |
-| GAP-DB-05 | `migration_lock.toml` absent | `90deb54` | `prisma/migrations/migration_lock.toml` | — | n/a (migrate deploy uses it) | run `28336952996` | **CLOSED_CI_PROVEN** |
+| GAP-DB-01 | ~28 owner decision/harm models declared but never migrated; `owner_input_quality_assessments` actively read by the recommendation promotion gate against a missing table | `242bf5f` | `20260628200000_owner_diagnosis_decision_harm_lifecycle/migration.sql` | `prisma/schema.prisma` (26 dead models removed) | `owner-diagnosis-lifecycle.db.test.ts` | **run `28337363604` (`8b112ce`) — `DB Blocker Proof` workflow GREEN**: migrate deploy + the `[db]` round-trip test + owner-loop `[db]` test all pass | **CLOSED_CI_PROVEN** |
+| GAP-DB-05 | `migration_lock.toml` absent | `90deb54` | `prisma/migrations/migration_lock.toml` | — | n/a (migrate deploy uses it) | run `28337363604` | **CLOSED_CI_PROVEN** |
 | GAP-DB-02 | unsafe `onDelete: Cascade` over governed records (latent — no runtime delete path) | — | — | — | — | — | **OPEN (separate slice)** — latent; addressed next |
 | GAP-ISO-02 | `Engagement.workspaceId` nullable + unindexed | — | — | — | — | — | **OPEN (separate slice)** — needs backfill+index migration |
 
