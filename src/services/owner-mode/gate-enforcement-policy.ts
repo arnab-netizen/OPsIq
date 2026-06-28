@@ -132,15 +132,17 @@ export async function enforceOwnerGatesForPromotion(
     // Slice 12: block a recommendation an active do-not-repeat rule forbids.
     await enforceDoNotRepeatForPromotion(recommendationId, workspaceId);
   } catch (err) {
+    // Record only the structured gate code + error name (never the raw error
+    // message) so the audit payload cannot leak internal detail.
     const code = (err as { code?: string })?.code ?? "GATE_BLOCKED";
-    const message = err instanceof Error ? err.message : String(err);
+    const errorName = err instanceof Error ? err.name : "Error";
     await emitAuditEvent({
       workspaceId,
       eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED,
       actorType: "system",
       entityType: "recommendation",
       entityId: recommendationId,
-      payload: { code, message, mode },
+      payload: { code, errorName, mode },
     });
     throw err;
   }

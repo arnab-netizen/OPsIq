@@ -7,7 +7,7 @@
  * composition is covered by CI). Each test proves a control produces the SAFE
  * outcome under a hostile input.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 import { evaluateInputQualityGate, RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 import { evaluateCashSafetyGate } from "@/domain/owner-finance/cash-safety-gate";
@@ -17,7 +17,7 @@ import { planTaskTransition, DelegatedTaskStatus as S, TaskActorRole, type TaskA
 import { hashSopContent, isMaterialSopChange } from "@/domain/owner-mode/sop-document";
 import { evaluateTrainingNeed } from "@/domain/owner-mode/staff-training";
 import { evaluateProcessReview } from "@/domain/owner-mode/process-review";
-import { screenOpportunity, screenContractQuote, shouldRunMarketing } from "@/domain/owner-mode/opportunity-contract-guardrails";
+import { screenOpportunity, shouldRunMarketing } from "@/domain/owner-mode/opportunity-contract-guardrails";
 import { evaluateDoNotRepeat } from "@/domain/owner-mode/do-not-repeat";
 import { arbitrate } from "@/domain/owner-mode/decision-arbitration";
 import { classifyOutcome } from "@/domain/owner-mode/self-evaluation";
