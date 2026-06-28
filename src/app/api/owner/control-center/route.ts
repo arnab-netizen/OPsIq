@@ -34,7 +34,6 @@ export const GET = withCanonicalEnforcement(
       financeBlocked: blocks.financeBlocked,
       ownerApprovalsRequired: 0,
       approvalsAvoided: blocks.approvalsAvoided,
-      arbitrationWhatNotToDo: blocks.arbitrationWhatNotToDo,
       nextBestAction: profile?.recommendedNextAction?.title ?? null,
     });
     return canonicalJson(panel, { status: 200 });

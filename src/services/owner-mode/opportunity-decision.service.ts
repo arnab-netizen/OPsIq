@@ -17,8 +17,8 @@ import { grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT } from "@/domain/owner-fin
 import { screenOpportunity, type ScreenVerdict } from "@/domain/owner-mode/opportunity-contract-guardrails";
 
 interface OppDb {
-  ownerEquipment: { findMany(args: { where: { workspaceId: string }; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>> };
-  ownerFinancialSnapshot: { findFirst(args: { where: { workspaceId: string }; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null> };
+  ownerEquipment: { findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>> };
+  ownerFinancialSnapshot: { findFirst(args: { where: Record<string, unknown>; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null> };
 }
 
 export interface OpportunityDecisionDeps {
@@ -59,8 +59,9 @@ export async function decideOpportunity(input: DecideOpportunityInput, injected?
   const deps = injected ?? (await resolveDefaultDeps());
   const now = (deps.now ?? (() => new Date()))();
 
+  // H2 — scope capacity + margin to THIS business (or workspace-wide), never another business's.
   const fleet = await deps.db.ownerEquipment.findMany({
-    where: { workspaceId: input.workspaceId },
+    where: { workspaceId: input.workspaceId, OR: [{ businessId: input.businessId }, { businessId: null }] },
     select: { name: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true },
   });
   const capacity = assessFleetCapacity(fleet, now);
@@ -68,7 +69,7 @@ export async function decideOpportunity(input: DecideOpportunityInput, injected?
   let marginPct = input.marginPct ?? null;
   if (marginPct == null) {
     const snap = await deps.db.ownerFinancialSnapshot.findFirst({
-      where: { workspaceId: input.workspaceId },
+      where: { workspaceId: input.workspaceId, businessId: input.businessId },
       orderBy: { createdAt: "desc" },
       select: { revenue: true, costOfGoods: true },
     });

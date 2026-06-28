@@ -24,7 +24,6 @@ function inputs(over: Partial<ControlCenterInputs> = {}): ControlCenterInputs {
     ownerApprovalsRequired: 0,
     reassessmentsDue: 0,
     approvalsAvoided: 0,
-    arbitrationWhatNotToDo: [],
     nextBestAction: null,
     ...over,
   };

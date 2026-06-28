@@ -15,11 +15,6 @@ interface BlockMetricsDb {
       where: { workspaceId: string; eventName: { in: string[] }; occurredAt: { gte: Date } };
       select: { eventName: true; payload: true };
     }): Promise<Array<{ eventName: string; payload: unknown }>>;
-    findFirst(args: {
-      where: { workspaceId: string; eventName: string };
-      orderBy: { occurredAt: "desc" };
-      select: { payload: true };
-    }): Promise<{ payload: unknown } | null>;
   };
 }
 
@@ -39,8 +34,6 @@ export interface OwnerBlockMetrics {
   proofBlocked: number;
   /** EH-16 — approvals OpsIQ auto-handled (memory/standing instruction) in the window. */
   approvalsAvoided: number;
-  /** EH-05 — the most recent arbitration's what-NOT-to-do list (surfaced to the owner). */
-  arbitrationWhatNotToDo: string[];
 }
 
 /** Finance-domain gate errors/codes whose blocks count as finance/cash/margin blocks. */
@@ -63,29 +56,21 @@ export async function getOwnerBlockMetrics(
   const windowDays = injected?.windowDays ?? DEFAULT_WINDOW_DAYS;
   const since = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
-  const [events, latestArbitration] = await Promise.all([
-    deps.db.auditEvent.findMany({
-      where: {
-        workspaceId,
-        eventName: {
-          in: [
-            AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED,
-            AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_BLOCKED,
-            AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED,
-            AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED,
-          ],
-        },
-        occurredAt: { gte: since },
+  const events = await deps.db.auditEvent.findMany({
+    where: {
+      workspaceId,
+      eventName: {
+        in: [
+          AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED,
+          AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_BLOCKED,
+          AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED,
+          AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED,
+        ],
       },
-      select: { eventName: true, payload: true },
-    }),
-    // EH-05 — the most recent arbitration verdict's what-not-to-do (persisted to audit).
-    deps.db.auditEvent.findFirst({
-      where: { workspaceId, eventName: AUDIT_EVENTS.OWNER_ARBITRATION_RESOLVED },
-      orderBy: { occurredAt: "desc" },
-      select: { payload: true },
-    }),
-  ]);
+      occurredAt: { gte: since },
+    },
+    select: { eventName: true, payload: true },
+  });
 
   let blockedRecommendations = 0;
   let financeBlocked = 0;
@@ -115,8 +100,5 @@ export async function getOwnerBlockMetrics(
     }
   }
 
-  const arbPayload = (latestArbitration?.payload && typeof latestArbitration.payload === "object" ? latestArbitration.payload : {}) as Record<string, unknown>;
-  const arbitrationWhatNotToDo = Array.isArray(arbPayload.whatNotToDo) ? (arbPayload.whatNotToDo as string[]) : [];
-
-  return { blockedRecommendations, financeBlocked, proofBlocked, approvalsAvoided, arbitrationWhatNotToDo };
+  return { blockedRecommendations, financeBlocked, proofBlocked, approvalsAvoided };
 }

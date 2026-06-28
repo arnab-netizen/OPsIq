@@ -9,7 +9,7 @@
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { classifyOutcome, type OutcomeSignals, type EvaluationVerdict, type FailureReason } from "@/domain/owner-mode/self-evaluation";
-import { recordDoNotRepeat, type RecordDoNotRepeatInput } from "@/services/owner-mode/do-not-repeat.service";
+import { recordDoNotRepeat, scopeKeyForImpactArea, type RecordDoNotRepeatInput } from "@/services/owner-mode/do-not-repeat.service";
 import { deriveTrainingFromObservedFailure, type DeriveTrainingInput, type RuntimeFailureSignal } from "@/services/owner-mode/staff-training.service";
 import { triggerProcessReviewOnRepeatedFailure } from "@/services/owner-mode/process-review.service";
 
@@ -54,6 +54,11 @@ export interface RecordSelfEvaluationInput {
    */
   businessId?: string | null;
   memoryKey?: string | null;
+  /**
+   * Owner domain (M1): a FAILED outcome with a domain auto-writes a scope:<domain>
+   * do-not-repeat memory, so the owner-action gate blocks repeating that decision class.
+   */
+  domain?: string | null;
   /**
    * Live training/process triggers (EH-07/EH-08): when a FAILED outcome is attributed to
    * execution/proof and these are supplied, OpsIQ auto-derives an evidence-backed training
@@ -130,6 +135,27 @@ export async function recordSelfEvaluation(input: RecordSelfEvaluationInput, inj
     });
     cautionRecorded = true;
     cautionBlocks = blocks;
+  }
+
+  // M1 — a FAILED outcome with a domain writes a scope:<domain> do-not-repeat memory, giving
+  // the owner-action gate's scope check a real writer (block = the rec itself was bad).
+  if (verdict.result === "failed" && input.domain && input.businessId) {
+    const scopeKey = scopeKeyForImpactArea(input.domain);
+    if (scopeKey) {
+      const record = deps.recordCaution ?? recordDoNotRepeat;
+      await record({
+        workspaceId: input.workspaceId,
+        businessId: input.businessId,
+        memoryKey: scopeKey,
+        summary: `Self-evaluation failed for ${input.domain} (${verdict.failureReason ?? "unknown"}).`,
+        reason: `Outcome did not meet expectation: ${input.expectedOutcome}`,
+        recommendationId: input.recommendationId ?? null,
+        blocksRepetition: verdict.failureReason === "bad_recommendation",
+        actorId: input.actorId ?? null,
+      });
+      cautionRecorded = true;
+      if (verdict.failureReason === "bad_recommendation") cautionBlocks = true;
+    }
   }
 
   // EH-07 — a FAILED outcome attributed to execution/proof auto-derives evidence-backed

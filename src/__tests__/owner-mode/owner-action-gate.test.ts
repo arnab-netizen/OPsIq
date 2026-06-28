@@ -126,6 +126,30 @@ describe("enforceOwnerActionGates", () => {
     await expect(enforceOwnerActionGates({ ...base, domain: "operations", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
   });
 
+  it("H1 — scopes capacity/compliance/do-not-repeat/margin reads to the action's business (or workspace-wide)", async () => {
+    const captured: Record<string, Record<string, unknown>> = {};
+    const cap = (k: string) => async (args: { where: unknown }) => { captured[k] = args.where as Record<string, unknown>; return []; };
+    const d = {
+      db: {
+        clientAccount: { findUnique: vi.fn(async () => ({ requireBusinessImpactAssessment: false, ownerGateOptOutAt: null, ownerGateOptOutExpiresAt: null })), update: vi.fn() },
+        ownerDoNotRepeatRule: { findFirst: vi.fn(async (a: { where: unknown }) => { captured.dnr = a.where as Record<string, unknown>; return null; }) },
+        ownerEquipment: { findMany: vi.fn(cap("equipment")) },
+        ownerFinanceCycle: { findFirst: vi.fn(async () => null) },
+        ownerCashflowCycle: { findFirst: vi.fn(async () => null) },
+        ownerFinancialSnapshot: { findFirst: vi.fn(async (a: { where: unknown }) => { captured.snapshot = a.where; return null; }) },
+        ownerComplianceItem: { findMany: vi.fn(cap("compliance")) },
+      },
+      now: () => new Date("2026-06-28T00:00:00.000Z"),
+    };
+    await enforceOwnerActionGates({ workspaceId: "ws1", businessId: "bizA", actionId: "a1", domain: "marketing", toStatus: "completed" }, d as never);
+    // business-or-workspace-wide for the nullable-business models
+    expect(captured.equipment).toEqual({ workspaceId: "ws1", OR: [{ businessId: "bizA" }, { businessId: null }] });
+    expect(captured.compliance).toEqual({ workspaceId: "ws1", OR: [{ businessId: "bizA" }, { businessId: null }], status: "active" });
+    expect(captured.dnr.OR).toEqual([{ businessId: "bizA" }, { businessId: null }]);
+    // snapshot business is required → scoped directly to the business
+    expect(captured.snapshot).toEqual({ workspaceId: "ws1", businessId: "bizA" });
+  });
+
   it("blocks any material action when a compliance item is expired (professional review)", async () => {
     const d = deps({ compliance: [{ kind: "insurance", name: "Liability policy", expiresAt: new Date("2026-01-01T00:00:00.000Z") }] });
     await expect(enforceOwnerActionGates({ ...base, domain: "operations", toStatus: "completed" }, d as never)).rejects.toBeInstanceOf(ConflictError);

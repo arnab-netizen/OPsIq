@@ -45,12 +45,12 @@ interface ActionGateDb {
   clientAccount: PolicyDeps["db"]["clientAccount"];
   ownerDoNotRepeatRule: {
     findFirst(args: {
-      where: { workspaceId: string; memoryKey: { in: string[] }; blocksRepetition: boolean; active: boolean };
+      where: Record<string, unknown>;
       orderBy: { createdAt: "desc" };
     }): Promise<{ changedContextExplanation: string | null } | null>;
   };
   ownerEquipment: {
-    findMany(args: { where: { workspaceId: string }; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>>;
+    findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>>;
   };
   ownerFinanceCycle: {
     findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { survivalState: true } }): Promise<{ survivalState: string } | null>;
@@ -59,15 +59,27 @@ interface ActionGateDb {
     findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { cashflowState: true } }): Promise<{ cashflowState: string } | null>;
   };
   ownerFinancialSnapshot: {
-    findFirst(args: { where: { workspaceId: string }; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
+    findFirst(args: { where: Record<string, unknown>; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
   };
   ownerComplianceItem: {
-    findMany(args: { where: { workspaceId: string; status: string }; select: { kind: true; name: true; expiresAt: true } }): Promise<Array<{ kind: string; name: string; expiresAt: Date | null }>>;
+    findMany(args: { where: Record<string, unknown>; select: { kind: true; name: true; expiresAt: true } }): Promise<Array<{ kind: string; name: string; expiresAt: Date | null }>>;
   };
 }
 
-/** Domains where pushing an action while gross margin is below the floor scales a loss. */
-const MARGIN_SENSITIVE_DOMAINS: ReadonlySet<string> = new Set(["sales", "marketing", "finance"]);
+/**
+ * Business-scoped where (H1/H2 isolation): match rows for THIS business OR workspace-wide
+ * (null business), so one business's data never blocks another. Falls back to workspace-only
+ * when no businessId is supplied.
+ */
+function bizScope(workspaceId: string, businessId: string | null, extra: Record<string, unknown> = {}): Record<string, unknown> {
+  return businessId
+    ? { workspaceId, OR: [{ businessId }, { businessId: null }], ...extra }
+    : { workspaceId, ...extra };
+}
+
+/** Domains where pushing an action while gross margin is below the floor scales a loss.
+ *  (Pricing/growth concentrate in sales/marketing; finance actions are not inherently pricing — L3.) */
+const MARGIN_SENSITIVE_DOMAINS: ReadonlySet<string> = new Set(["sales", "marketing"]);
 
 /** Map an owner domain to the recommendation sensitivity the cash gate keys on. */
 const DOMAIN_SENSITIVITY: Record<string, RecommendationSensitivity> = {
@@ -132,7 +144,7 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
 
   // 1. Do-not-repeat by domain scope (a failed-before decision class the owner marked).
   const rule = await deps.db.ownerDoNotRepeatRule.findFirst({
-    where: { workspaceId: input.workspaceId, memoryKey: { in: [`scope:${input.domain}`] }, blocksRepetition: true, active: true },
+    where: bizScope(input.workspaceId, input.businessId, { memoryKey: { in: [`scope:${input.domain}`] }, blocksRepetition: true, active: true }),
     orderBy: { createdAt: "desc" },
   });
   if (rule && !(rule.changedContextExplanation && rule.changedContextExplanation.trim())) {
@@ -142,7 +154,7 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
   // 2. Capacity for growth-sensitive domains (don't act on growth while capacity is unsafe).
   if (CAPACITY_SENSITIVE_DOMAINS.has(input.domain)) {
     const fleet = await deps.db.ownerEquipment.findMany({
-      where: { workspaceId: input.workspaceId },
+      where: bizScope(input.workspaceId, input.businessId),
       select: { name: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true },
     });
     const capacity = assessFleetCapacity(fleet, now);
@@ -177,7 +189,7 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
     //    (no false block; deferred to the input-quality path), reusing evaluateMarginSafety.
     if (MARGIN_SENSITIVE_DOMAINS.has(input.domain)) {
       const snap = await deps.db.ownerFinancialSnapshot.findFirst({
-        where: { workspaceId: input.workspaceId },
+        where: { workspaceId: input.workspaceId, businessId: input.businessId },
         orderBy: { createdAt: "desc" },
         select: { revenue: true, costOfGoods: true },
       });
@@ -193,7 +205,7 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
   //    professional-review hard stop: defer material actions until it is renewed. (Owner
   //    may override via the audited gate opt-out.) Reuses the pure isExpired rule.
   const complianceItems = await deps.db.ownerComplianceItem.findMany({
-    where: { workspaceId: input.workspaceId, status: "active" },
+    where: bizScope(input.workspaceId, input.businessId, { status: "active" }),
     select: { kind: true, name: true, expiresAt: true },
   });
   const expired = complianceItems.find((c) => isExpired(c.expiresAt, now));

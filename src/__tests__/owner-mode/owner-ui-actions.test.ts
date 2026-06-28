@@ -29,13 +29,17 @@ describe("EH-03/EH-04 — owner UI actionability", () => {
     expect(page).toMatch(/apiPost\(\s*["'`]\/api\/owner\/approvals\/resolve/);
   });
 
+  it("calls the live opportunity-decision route from the UI (M2)", () => {
+    expect(page).toMatch(/apiPost\(\s*["'`]\/api\/owner\/opportunities\/decide/);
+  });
+
   it("surfaces the blocked/gate reason to the owner (not just success)", () => {
     expect(page).toMatch(/blocked/i);
     expect(page).toMatch(/reason/i);
   });
 
   it("both action routes enforce OWNER_MANAGE server-side", () => {
-    for (const route of ["app/api/owner/tasks/complete/route.ts", "app/api/owner/approvals/resolve/route.ts"]) {
+    for (const route of ["app/api/owner/tasks/complete/route.ts", "app/api/owner/approvals/resolve/route.ts", "app/api/owner/opportunities/decide/route.ts"]) {
       const src = read(route);
       expect(src).toContain("withCanonicalEnforcement");
       expect(src).toContain("CAPABILITIES.OWNER_MANAGE");

@@ -76,6 +76,19 @@ describe("recordSelfEvaluation loop closure", () => {
     expect(recordCaution).not.toHaveBeenCalled();
   });
 
+  it("M1 — a failed outcome with a domain writes a scope:<domain> do-not-repeat memory (gate writer)", async () => {
+    const { deps: d, recordCaution } = deps();
+    const r = await recordSelfEvaluation(
+      {
+        workspaceId: "ws1", businessId: "biz1", domain: "marketing",
+        expectedOutcome: "leads up", signals: { executed: true, metExpectation: false }, // bad_recommendation
+      },
+      d
+    );
+    expect(r.result).toBe("failed");
+    expect(recordCaution).toHaveBeenCalledWith(expect.objectContaining({ memoryKey: "scope:marketing", blocksRepetition: true }));
+  });
+
   it("does not record a caution when no memoryKey/businessId is supplied", async () => {
     const { deps: d, recordCaution } = deps();
     const r = await recordSelfEvaluation(

@@ -16,6 +16,10 @@ export const runtime = "nodejs";
 const schema = z.object({
   recommendationId: z.string().uuid().optional(),
   actionId: z.string().uuid().optional(),
+  businessId: z.string().uuid().optional(),
+  /** Owner domain (finance/marketing/...) — a failed outcome writes a scope:<domain>
+   *  do-not-repeat memory so the owner-action gate blocks repeating it (M1). */
+  domain: z.string().trim().min(1).optional(),
   expectedOutcome: z.string().trim().min(1),
   actualOutcome: z.string().optional(),
   ownerWorkloadImpact: z.string().optional(),

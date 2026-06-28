@@ -85,7 +85,7 @@ const DOMAIN_LINK: Record<string, string> = {
  * complete a proof-gated task and resolve an approval. Calls the secured POST routes;
  * the server enforces every gate, and the gate/proof reason is surfaced here.
  */
-function OwnerActions() {
+function OwnerActions({ businessId }: { businessId: string | null }) {
   const [taskId, setTaskId] = useState("");
   const [ownerOverride, setOwnerOverride] = useState(false);
   const [taskResult, setTaskResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -97,6 +97,26 @@ function OwnerActions() {
   const [content, setContent] = useState("");
   const [apprResult, setApprResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [apprBusy, setApprBusy] = useState(false);
+
+  const [fitScore, setFitScore] = useState("0.7");
+  const [paymentRisk, setPaymentRisk] = useState("low");
+  const [oppResult, setOppResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [oppBusy, setOppBusy] = useState(false);
+
+  const decideOpportunity = async () => {
+    if (!businessId) return;
+    const fit = Number(fitScore);
+    if (!Number.isFinite(fit) || fit < 0 || fit > 1) {
+      setOppResult({ ok: false, text: "Fit score must be between 0 and 1." });
+      return;
+    }
+    setOppBusy(true);
+    setOppResult(null);
+    const r = await apiPost("/api/owner/opportunities/decide", { businessId, fitScore: fit, paymentRisk });
+    if (r.ok) setOppResult({ ok: r.data.verdict === "accept", text: `${r.data.verdict.toUpperCase()} — ${r.data.reasons?.[0] ?? ""} ${r.data.nextAction ?? ""}` });
+    else setOppResult({ ok: false, text: r.data?.error?.message || r.data?.error || `Failed (${r.status}).` });
+    setOppBusy(false);
+  };
 
   const completeTask = async () => {
     if (!taskId.trim()) return;
@@ -124,7 +144,7 @@ function OwnerActions() {
   return (
     <section className="border rounded-lg p-4 bg-white" data-testid="owner-actions">
       <div className="text-xs uppercase text-muted-foreground mb-3">Owner actions</div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2">
           <div className="text-sm font-medium">Complete a proof-gated task</div>
           <input
@@ -162,6 +182,25 @@ function OwnerActions() {
           </Button>
           {apprResult && (
             <p className={`text-xs ${apprResult.ok ? "text-success" : "text-muted-foreground"}`}>{apprResult.text}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Decide an opportunity</div>
+          <p className="text-xs text-muted-foreground">OpsIQ uses this business&apos;s real capacity + margin.</p>
+          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Fit score 0–1" value={fitScore} onChange={(e) => setFitScore(e.target.value)} />
+          <Select
+            name="paymentRisk"
+            label="Payment risk"
+            value={paymentRisk}
+            onChange={(e: any) => setPaymentRisk(e.target.value)}
+            options={["low", "medium", "high"].map((r) => ({ value: r, label: r }))}
+          />
+          <Button className="min-h-[44px]" disabled={oppBusy || !businessId} onClick={decideOpportunity}>
+            {oppBusy ? "Deciding…" : "Decide"}
+          </Button>
+          {oppResult && (
+            <p className={`text-xs ${oppResult.ok ? "text-success" : "text-muted-foreground"}`}>{oppResult.text}</p>
           )}
         </div>
       </div>
@@ -384,7 +423,7 @@ export default function OwnerCommandCenterPage() {
                     </div>
                   )}
 
-                  <div className="mb-3"><OwnerActions /></div>
+                  <div className="mb-3"><OwnerActions businessId={selected} /></div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     {[
