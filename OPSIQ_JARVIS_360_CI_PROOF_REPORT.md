@@ -131,5 +131,5 @@ the CI DB lane ✅, no branch-caused CI failures remain ✅. Not claiming
 in CI; everything that *is* wired into CI is green.
 
 ## PR
-Opened ready-for-review (not merged). See chat for URL.
+Opened **ready for review** (not merged): https://github.com/arnab-netizen/OPsIq/pull/54
 
