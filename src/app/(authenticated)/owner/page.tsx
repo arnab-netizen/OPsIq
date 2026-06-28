@@ -59,6 +59,7 @@ const DOMAIN_LINK: Record<string, string> = {
 
 export default function OwnerCommandCenterPage() {
   const [data, setData] = useState<any | null>(null);
+  const [control, setControl] = useState<any | null>(null);
   const [businesses, setBusinesses] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -73,6 +74,12 @@ export default function OwnerCommandCenterPage() {
       const res = await api(`/api/owner/command-center${qs}`);
       setData(res);
       setSelected(res.selectedBusinessId);
+      // Owner control center (safety/blocked/attention/what-not-to-do). Non-fatal if it fails.
+      try {
+        setControl(await api(`/api/owner/control-center${qs}`));
+      } catch {
+        setControl(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -227,6 +234,64 @@ export default function OwnerCommandCenterPage() {
                   Domains wired: {(data.domainsWired ?? []).join(", ") || "none"}
                 </div>
               </section>
+
+              {control && (
+                <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white" data-testid="owner-control-center">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs uppercase text-muted-foreground">OpsIQ control center</div>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant={control.needsOwnerAttention ? "warning" : "success"}>
+                        {control.ownerActionsToday} owner action{control.ownerActionsToday === 1 ? "" : "s"} today
+                      </Badge>
+                      <Badge variant="muted">{control.handledByOpsIQ} handled by OpsIQ</Badge>
+                    </div>
+                  </div>
+
+                  {control.criticalAlerts?.length > 0 && (
+                    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm space-y-1 mb-3">
+                      <strong className="text-destructive">Critical:</strong>
+                      <ul className="list-disc ml-5">
+                        {control.criticalAlerts.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {control.whatNotToDo?.length > 0 && (
+                    <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm space-y-1 mb-3">
+                      <strong>What NOT to do now:</strong>
+                      <ul className="list-disc ml-5">
+                        {control.whatNotToDo.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {control.nextBestAction && (
+                    <div className="text-sm mb-3">
+                      <span className="font-medium">Next best action:</span> {control.nextBestAction}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    {[
+                      { label: "Blocked recs", value: control.sections?.blockedRecommendations, warn: true },
+                      { label: "Finance blocked", value: control.sections?.financeBlocked, warn: true },
+                      { label: "Proof blocked", value: control.sections?.proofBlocked, warn: true },
+                      { label: "Equipment bottlenecks", value: control.sections?.equipmentBottlenecks, warn: true },
+                      { label: "SOPs to review", value: control.sections?.sopsNeedingReview, warn: false },
+                      { label: "Training items", value: control.sections?.trainingRecommendations, warn: false },
+                      { label: "Process reviews due", value: control.sections?.processReviewsDue, warn: false },
+                      { label: "Owner decisions", value: control.attention?.ownerDecisionsRequired, warn: false },
+                    ].map((s) => (
+                      <div key={s.label} className="border rounded p-2 flex flex-col">
+                        <span className={`text-lg font-semibold ${s.warn && (s.value ?? 0) > 0 ? "text-destructive" : ""}`}>
+                          {s.value ?? 0}
+                        </span>
+                        <span className="text-muted-foreground">{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {data.isStaleData && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm flex items-center justify-between">
