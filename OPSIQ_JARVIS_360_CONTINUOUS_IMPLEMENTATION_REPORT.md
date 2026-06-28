@@ -309,7 +309,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 6 | Staff training & skills matrix baseline | COMPLETE_LOCAL |
 | 7 | Equipment/capacity/maintenance baseline | COMPLETE_LOCAL |
 | 8 | Process review & continuous improvement | COMPLETE_LOCAL |
-| 9 | Command center & guided execution wiring | NOT_STARTED |
+| 9 | Command center & guided execution wiring | COMPLETE_LOCAL |
 | 10 | Decision arbitration baseline | NOT_STARTED |
 | 11 | Marketing/opportunity/contract guardrails | NOT_STARTED |
 | 12 | Business memory & do-not-repeat | NOT_STARTED |
@@ -408,3 +408,11 @@ for DB/migration confirmation.
 - **Behavior:** each process carries an owner role, linked SOP, metric/target, and a review cadence. `evaluateProcessReview` fires on schedule OR on a failure signal (repeated failure, complaint spike, quality decline, missed checklist, training failure, equipment issue, goal change); when due, the next review date advances and an audit event is emitted. Material updates (SOP/cost/risk/customer-promise) are flagged owner-approval-required; minor ones are not.
 - **Files:** `OwnerProcess` model + `migrations/20260628160000_owner_process`, `domain/owner-mode/process-review.ts`, `services/owner-mode/process-review.service.ts`, `app/api/owner/processes/route.ts`, `__tests__/owner-mode/process-review.test.ts` (8 tests).
 - **Tests:** 8 passed. **Limitations:** auto-deriving the failure signals from the diagnosis/quality layers (vs explicit input) is a follow-on.
+
+---
+
+## SLICE 9 — OWNER COMMAND CENTER WIRING — **COMPLETE_LOCAL**
+- **Reuse/new:** reuses the existing `getBusinessCondition` profile (Slice 1 data-sufficiency + next action), the fleet capacity assessor (Slice 7), and the attention summarizer (Slice 4); new pure `owner-control-center.ts` composer + DI service + `GET /api/owner/control-center`.
+- **Behavior:** one owner panel surfacing data insufficiency, finance/capacity/proof blocks, SOPs needing review, training recommendations, equipment bottlenecks, processes due for review, owner-actions-today count, what-OpsIQ-handled, what-NOT-to-do, attention budget, and next best action.
+- **Files:** `domain/owner-mode/owner-control-center.ts`, `services/owner-mode/owner-control-center.service.ts`, `app/api/owner/control-center/route.ts`, `__tests__/owner-mode/owner-control-center.test.ts` (4 tests).
+- **Tests:** 4 passed. **Limitations:** live aggregation of blocked-recommendation / proof-blocked / approvals-required counts (currently surfaced via audit events + defaulted to 0 in the route) is a follow-on; no UI page added (API/service surface only, per slice guidance).
