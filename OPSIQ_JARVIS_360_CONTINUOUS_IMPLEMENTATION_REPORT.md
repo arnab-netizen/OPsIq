@@ -147,14 +147,58 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 
 ---
 
+## SLICE 2 — FINANCE/CASH/MARGIN GUARDRAILS — **COMPLETE_LOCAL**
+
+### Reuse decision
+- **Inspected:** `src/domain/owner-finance/unit-economics.ts` (`assessDiscountSafety`,
+  `marginFloorPrice` — present but uncalled), `src/domain/owner-finance/metrics.ts`
+  (`grossMarginPct`), `OwnerFinancialSnapshot` (revenue/costOfGoods/discountAmount),
+  `SpendEntry` (category+amount only — no per-unit price), `spend-governance.ts`.
+- **Reused:** the existing gross-margin formula + `RecommendationSensitivity` taxonomy +
+  the persisted finance snapshot + the Slice 0 promotion policy.
+- **New code (why):** a pure `margin-safety-gate.ts` + a DI enforcement service, because no
+  gate actually *blocked* below-margin pricing. No new finance engine.
+- **Duplicate engines avoided:** yes.
+- **Runtime path enforced:** added as a 5th gate inside `enforceOwnerGatesForPromotion`
+  (the same default-on promotion path), so PRICING-sensitive recs are blocked when the
+  latest snapshot gross margin is below the floor.
+
+### What changed (behavior)
+- Cash-critical already blocks spend/growth/marketing recs via the Slice 0 cash-safety gate
+  (growth blocked at AT_RISK, spend/pricing/hiring at CRITICAL) — now default-on.
+- **New:** a pricing/discount recommendation is BLOCKED when current gross margin is below a
+  15% floor (`DEFAULT_MARGIN_FLOOR_PCT`); unknown margin is deferred to the input-quality gate
+  to avoid double-blocking; non-pricing recs are untouched. Owner override is the audited
+  workspace opt-out (Slice 0). Blocks emit `owner.gate_promotion_blocked`.
+
+### Files
+- `src/domain/owner-finance/margin-safety-gate.ts` — **new** pure gate + `grossMarginPctFrom`.
+- `src/services/owner-finance/recommendation-margin-safety.service.ts` — **new** DI enforcement.
+- `src/services/owner-mode/gate-enforcement-policy.ts` — margin gate added to the gate set.
+- `src/__tests__/owner-finance/margin-safety-gate.test.ts` — **new** 9 tests.
+
+### Tests
+- New: 9 passed (below-floor block, at/above allow, non-pricing skip, unknown-margin defer,
+  DI service block/allow/skip-snapshot-read). Policy regression: 12 passed. `tsc` clean.
+
+### Remaining limitations (honest)
+- The margin floor is a constant (15%); per-business/threshold-config floor is a follow-on.
+- There is no Quote/Contract entity yet, so quote-level margin gating arrives in Slice 11;
+  this slice gates pricing/discount *recommendations* against the business's actual margin.
+- Per-recommendation owner override (vs the workspace-level audited opt-out) is a follow-on.
+
+### Next slice started automatically: **Slice 3 — proof anti-gaming & completion gate.**
+
+---
+
 ## Slice completion table
 
 | Slice | Title | Status |
 |---|---|---|
 | 0 | Default-on safety gates | COMPLETE_LOCAL |
 | 1 | Data sufficiency & evidence disclosure | COMPLETE_LOCAL |
-| 2 | Finance/cash/margin guardrails | IN_PROGRESS |
-| 3 | Proof anti-gaming & completion gate | NOT_STARTED |
+| 2 | Finance/cash/margin guardrails | COMPLETE_LOCAL |
+| 3 | Proof anti-gaming & completion gate | IN_PROGRESS |
 | 4 | Owner load reduction baseline | NOT_STARTED |
 | 5 | SOP & checklist lifecycle baseline | NOT_STARTED |
 | 6 | Staff training & skills matrix baseline | NOT_STARTED |
