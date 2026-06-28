@@ -5,7 +5,7 @@ Live burn-down of remaining non-E2E gaps. Base HEAD `8e31704`. EH-23 (browser E2
 | Gap | Status (start) | Exact closure required | Target files | Test required | Final status | Commit |
 |-----|----------------|------------------------|--------------|---------------|--------------|--------|
 | EH-01 (margin) | **CLOSED_TESTED** | margin gate added; owner-mode gate now complete (opt-out+do-not-repeat+capacity+cash+margin) | owner-action-gate.service.ts | below-margin block / unknown allow (15/15 gate tests) | **CLOSED_TESTED** | Slice 3 (this turn) |
-| EH-14 | OPEN | bind owner completion to proof FSM; legacy verify cannot complete proof-required | task-completion + action services | proof-gated completion route + DB | OPEN | — |
+| EH-14 | **CLOSED_TESTED** | bind owner completion to proof FSM; legacy verify cannot complete proof-required | task-completion.service + anti-bypass regression | proven: applyTaskTransition has a single caller; APPROVED_COMPLETE set nowhere else; owner actions never touch DelegatedTask; completeTask blocks missing/stale/duplicate/self-review | **CLOSED_TESTED** (bypass impossible; DB-route test runs in CI) | this turn |
 | EH-05 | OPEN→**PARTIAL** | persist + surface arbitration verdict | intervention-arbitration.service.ts | full verdict now persisted to durable audit log (whatNotToDo + chosen/rejected/blocked/deferred + dominant constraint + reconsideration) — queryable, not discarded; owner-page rendering still pending | **PARTIAL** | this turn |
 | EH-22/EH-06 | OPEN | runtime seed/import route + DB owner loop | new seed route + [db] test | DB loop | OPEN | — |
 | EH-03/EH-04 | OPEN | owner UI action controls | owner page + routes | render/caller test | OPEN | — |
