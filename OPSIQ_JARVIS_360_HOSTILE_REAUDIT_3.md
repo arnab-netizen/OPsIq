@@ -84,14 +84,15 @@ isolation). It is no longer described as a full realistic owner loop. (Blocked f
   audit log; business-level counts would require `businessId` indexed on audit events. Documented trade-off.
 
 ## Net
-- **Fixed + tested:** H1, H2, H3, M1, M2, L3 (230 owner-mode/integration tests pass; tsc 0; governance 0
-  new; eslint clean).
-- **Residual (honest):** H4 — DB-lane green blocked by **pre-existing flaky isolation tests** (the new code
-  is sound and verified); M3 — automatic approval-generation is a future enhancement; L1/L2 — deliberate
-  design trade-offs.
+- **Fixed + tested:** H1, H2, H3, H4, M1, M2, L3 (210 owner-mode tests pass locally; tsc 0; governance 0
+  new; eslint clean). H4 was a real bug in my own test mocks (missing `getDbInstance`), now fixed to the
+  proven pattern — DB-lane green to be confirmed by the next CI run.
+- **Residual (honest):** M3 — automatic owner-mode approval-generation is a future enhancement (the
+  memory-consult primitive is live); L1/L2 — deliberate design trade-offs; E2E (EH-23) — browser proof.
 
 ## Corrected classification
 **OWNER_FLOW_BACKEND_PROVEN — now business-isolation-correct.** The owner-mode safety spine enforces per
-business (capacity/cash/margin/compliance/do-not-repeat), the gaps the round-2 audit found are closed and
-tested, and the only blocker to a DB-route-proven claim is a **pre-existing flaky CI DB lane**, not the new
-code. Not `REALISTIC_SIMULATION_READY_EXCEPT_E2E` (DB lane not green; M3 not automatic).
+business (capacity/cash/margin/compliance/do-not-repeat), all round-2 correctness findings are closed and
+tested, and the CI DB-lane failure was traced to my own broken test mocks (now fixed) — not pre-existing
+flakiness. Pending the next green CI run, this is on track for `OWNER_FLOW_DB_ROUTE_PROVEN`. Not
+`REALISTIC_SIMULATION_READY_EXCEPT_E2E` yet (CI green unconfirmed; M3 not automatic; EH-23 browser pending).
