@@ -18,6 +18,8 @@ function deps(opts: {
   optOut?: boolean;
   dnrRule?: { changedContextExplanation: string | null } | null;
   equipment?: Array<{ name: string; utilization: number | null; downtimeState: string; maintenanceDueAt: Date | null; status: string }>;
+  survivalState?: string | null;
+  cashflowState?: string | null;
 }) {
   const now = new Date("2026-06-28T00:00:00.000Z");
   return {
@@ -32,6 +34,8 @@ function deps(opts: {
       },
       ownerDoNotRepeatRule: { findFirst: vi.fn(async () => opts.dnrRule ?? null) },
       ownerEquipment: { findMany: vi.fn(async () => opts.equipment ?? []) },
+      ownerFinanceCycle: { findFirst: vi.fn(async () => (opts.survivalState !== undefined ? (opts.survivalState ? { survivalState: opts.survivalState } : null) : null)) },
+      ownerCashflowCycle: { findFirst: vi.fn(async () => (opts.cashflowState !== undefined ? (opts.cashflowState ? { cashflowState: opts.cashflowState } : null) : null)) },
     },
     now: () => now,
   };
@@ -73,5 +77,26 @@ describe("enforceOwnerActionGates", () => {
   it("allows a growth-domain action when capacity is safe", async () => {
     const d = deps({ equipment: [{ name: "Washer", utilization: 0.4, downtimeState: "up", maintenanceDueAt: new Date("2026-12-01"), status: "operational" }] });
     await expect(enforceOwnerActionGates({ ...base, domain: "marketing", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
+  });
+
+  it("blocks a growth action when cash survival is AT_RISK (cash safety)", async () => {
+    const d = deps({ survivalState: "AT_RISK" });
+    await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "in_progress" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_promotion_blocked" }));
+  });
+
+  it("blocks a finance/spend action when cashflow is CRITICAL", async () => {
+    const d = deps({ cashflowState: "CRITICAL" });
+    await expect(enforceOwnerActionGates({ ...base, domain: "finance", toStatus: "completed" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("allows a growth action when cash is SAFE", async () => {
+    const d = deps({ survivalState: "SAFE", cashflowState: "SAFE" });
+    await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
+  });
+
+  it("does not block on absent cash data (no finance/cashflow cycle yet)", async () => {
+    const d = deps({ survivalState: null, cashflowState: null });
+    await expect(enforceOwnerActionGates({ ...base, domain: "sales", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
   });
 });

@@ -22,6 +22,11 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { resolveOwnerGateMode, type PolicyDeps } from "@/services/owner-mode/gate-enforcement-policy";
 import { assessFleetCapacity, type EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
+import {
+  evaluateCashSafetyGate,
+  type FinancialHealthState,
+} from "@/domain/owner-finance/cash-safety-gate";
+import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
 
 /** Material owner-action transitions that must pass the gate. */
 export const MATERIAL_ACTION_STATUSES: ReadonlySet<string> = new Set(["in_progress", "completed"]);
@@ -45,6 +50,28 @@ interface ActionGateDb {
   ownerEquipment: {
     findMany(args: { where: { workspaceId: string }; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>>;
   };
+  ownerFinanceCycle: {
+    findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { survivalState: true } }): Promise<{ survivalState: string } | null>;
+  };
+  ownerCashflowCycle: {
+    findFirst(args: { where: { workspaceId: string; businessId: string }; orderBy: { createdAt: "desc" }; select: { cashflowState: true } }): Promise<{ cashflowState: string } | null>;
+  };
+}
+
+/** Map an owner domain to the recommendation sensitivity the cash gate keys on. */
+const DOMAIN_SENSITIVITY: Record<string, RecommendationSensitivity> = {
+  finance: RecommendationSensitivity.FINANCE_SENSITIVE,
+  cashflow: RecommendationSensitivity.FINANCE_SENSITIVE,
+  marketing: RecommendationSensitivity.GROWTH_SENSITIVE,
+  sales: RecommendationSensitivity.GROWTH_SENSITIVE,
+  strategy: RecommendationSensitivity.GROWTH_SENSITIVE,
+  operations: RecommendationSensitivity.GROWTH_SENSITIVE,
+  sop: RecommendationSensitivity.GENERAL,
+};
+
+const VALID_STATES: ReadonlySet<string> = new Set(["SAFE", "WATCH", "AT_RISK", "CRITICAL", "INSOLVENT_RISK"]);
+function asState(v: string | null | undefined): FinancialHealthState {
+  return v && VALID_STATES.has(v) ? (v as FinancialHealthState) : "SAFE";
 }
 
 export interface OwnerActionGateDeps {
@@ -114,6 +141,24 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
         `Capacity is unsafe (${capacity.reason}${capacity.bottlenecks.length ? `: ${capacity.bottlenecks.join(", ")}` : ""}). Clear the bottleneck before advancing this ${input.domain} action.`,
         "CAPACITY_BLOCKED"
       );
+    }
+  }
+
+  // 3. Cash safety — block growth while cash is at-risk, and finance/spend actions while
+  //    cash is critical (reuses the proven evaluateCashSafetyGate on the owner's latest
+  //    finance survival + cashflow state for this business).
+  if (input.businessId) {
+    const sensitivity = DOMAIN_SENSITIVITY[input.domain] ?? RecommendationSensitivity.GENERAL;
+    const [finCycle, cashCycle] = await Promise.all([
+      deps.db.ownerFinanceCycle.findFirst({ where: { workspaceId: input.workspaceId, businessId: input.businessId }, orderBy: { createdAt: "desc" }, select: { survivalState: true } }),
+      deps.db.ownerCashflowCycle.findFirst({ where: { workspaceId: input.workspaceId, businessId: input.businessId }, orderBy: { createdAt: "desc" }, select: { cashflowState: true } }),
+    ]);
+    // Only enforce when we actually have a measured state (avoid blocking on absent data).
+    if (finCycle || cashCycle) {
+      const result = evaluateCashSafetyGate(asState(cashCycle?.cashflowState), asState(finCycle?.survivalState), sensitivity);
+      if (!result.allowed) {
+        await block(input, `${result.reason} Resolve cash/finance survival before advancing this ${input.domain} action.`, "CASH_SAFETY_BLOCKED");
+      }
     }
   }
 }
