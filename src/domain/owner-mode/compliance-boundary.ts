@@ -61,7 +61,7 @@ export function classifyComplianceRisk(s: ComplianceTopicSignals): ComplianceBou
   return {
     classification,
     professionalReviewRequired: ORDER[classification] >= ORDER.professional_review_required,
-    blocked: classification === "blocked_until_review",
+    blocked: ORDER[classification] >= ORDER.blocked_until_review,
     reasons,
     disclaimer: COMPLIANCE_DISCLAIMER,
   };

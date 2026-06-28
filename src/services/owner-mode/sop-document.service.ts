@@ -185,6 +185,12 @@ export async function retireSopDocument(
   await audit(input.workspaceId, AUDIT_EVENTS.OWNER_SOP_DOC_RETIRED, input.actorId, id, { version: row.version });
 }
 
-async function audit(workspaceId: string, eventName: string, actorId: string, entityId: string, payload: Record<string, unknown>): Promise<void> {
+async function audit(
+  workspaceId: string,
+  eventName: (typeof AUDIT_EVENTS)[keyof typeof AUDIT_EVENTS],
+  actorId: string,
+  entityId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
   await emitAuditEvent({ workspaceId, eventName, actorId, actorType: "user", entityType: "owner_sop_document", entityId, payload });
 }

@@ -315,7 +315,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 12 | Business memory & do-not-repeat | COMPLETE_LOCAL |
 | 13 | Self-evaluation loop baseline | COMPLETE_LOCAL |
 | 14 | Compliance/professional-review boundary | COMPLETE_LOCAL |
-| 15 | Adversarial simulation & E2E proof | NOT_STARTED |
+| 15 | Adversarial simulation & E2E proof | COMPLETE_LOCAL |
 
 ---
 
@@ -456,3 +456,41 @@ for DB/migration confirmation.
 - **Behavior:** classifies a topic into informational / caution / professional_review_required / blocked_until_review WITHOUT definitive legal/tax advice (every result carries a not-a-professional disclaimer): expired licence/permit → blocked; contract/tax/staff-sensitive → professional review; advertising/privacy/expiring-soon → caution. Compliance items (licence/permit/insurance/tax) track expiry; expired → blocked, expiring-soon → caution. Audited.
 - **Files:** `OwnerComplianceItem` model + `migrations/20260628190000_owner_compliance_item`, `domain/owner-mode/compliance-boundary.ts`, `services/owner-mode/compliance.service.ts`, `app/api/owner/compliance/route.ts`, `__tests__/owner-mode/compliance-boundary.test.ts` (7 tests).
 - **Tests:** 7 passed.
+
+---
+
+## SLICE 15 — ADVERSARIAL SIMULATION & E2E PROOF — **COMPLETE_LOCAL**
+- **Reuse/new:** new `__tests__/integration/jarvis-360-adversarial.test.ts` composing the Slice 0–14 controls; reuses the existing vitest harness (Playwright not run — no browser/DB in this sandbox; covered by CI).
+- **Behavior:** 16 hostile scenarios + a compliance bonus + 3 integrated flows, all proving SAFE outcomes: missing-data block, stale-domain not hidden, no-proof completion block, self-approval block, duplicate-proof flag, cash-critical blocks marketing, below-margin block, capacity-red blocks growth, material-SOP re-approval, observed-gap training only, process review on repeated failure, below-margin opportunity reject, do-not-repeat block, conflict arbitration (safety dominates), failed→self-evaluation+reassessment, attention budget. Integrated: (A) data+finance+capacity+arbitration→command center; (B) proof anti-gaming+completion+command center; (C) attention+SOP+owner-load→owner-actions-today.
+- **Files:** `src/__tests__/integration/jarvis-360-adversarial.test.ts` (20 tests).
+- **Tests:** 20 passed.
+
+---
+
+## FINAL SESSION SUMMARY (all authorized slices)
+
+- **Branch:** `claude/opsiq-jarvis-360-audit-m8jro7` · **Base HEAD:** `6e281f6`.
+- **All 16 slices (0–15) implemented, runtime-wired, targeted-tested locally, and committed.**
+- **New tests this continuation: ~160+** (gate-policy 12, disclosure 8, margin 9, completion-gate 7,
+  proof self-review +1, approval-memory 13, owner-load 11, sop-document 10, staff-training 8,
+  equipment-capacity 12, process-review 8, control-center 4, decision-arbitration 5,
+  opportunity-contract 9, do-not-repeat 10, self-evaluation 6, compliance 7, adversarial 20),
+  all passing. Regression suites green; `tsc --noEmit` clean on every changed source file.
+- **Default-on promotion gate now composes:** business-impact → input-quality → confidence →
+  cash-safety → margin (S2) → capacity (S7) → do-not-repeat (S12), with an audited owner opt-out.
+- **New owner surfaces:** gates/opt-out, approvals/memory, sop-documents, staff-training, equipment,
+  processes, control-center, arbitrate, guardrails/screen, do-not-repeat, self-evaluation, compliance.
+
+### Tests/checks NOT run (environmental, non-blocking, per prompt §2.10)
+- `*.db.test.ts` and anything importing the generated Prisma client cannot run locally:
+  `npm install` and `prisma generate` hit `ECONNRESET` to egress-blocked prisma-engines hosts
+  (workaround: `npm install --ignore-scripts`; all slice tests are DI/pure). Playwright not run
+  (no browser/DB). 8 new migrations are written but applied only by CI. None of these are §2 hard
+  blockers; they are explicitly carved out as environmental.
+
+### Final classification
+**ALL_SLICES_IMPLEMENTED_TARGETED_TESTED** — every authorized slice (0–15) is implemented,
+runtime-wired with server-side enforcement, audited, targeted-tested locally (DI/pure), reported,
+and committed. CI is required to confirm the DB-backed composition + migrations
+(**CI_PENDING** for the database/migration layer). Not claiming OWNER_OPERATING_COPILOT_READY:
+that requires the DB-backed adversarial + owner-flow E2E to be green in CI.

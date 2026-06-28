@@ -20,17 +20,17 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
     const businessId = url.searchParams.get("businessId");
-    const profile = await getBusinessCondition(ctx.verifiedWorkspaceId, businessId);
+    const { profile } = await getBusinessCondition(ctx.verifiedWorkspaceId, businessId);
     const panel = await getOwnerControlCenter(ctx.verifiedWorkspaceId, {
-      dataSufficiencyStatus: profile.dataSufficiencyStatus ?? "caution",
-      lowConfidenceDomains: profile.lowConfidenceDomains ?? [],
+      dataSufficiencyStatus: profile?.dataSufficiencyStatus ?? "caution",
+      lowConfidenceDomains: profile?.lowConfidenceDomains ?? [],
       // Blocked counts are surfaced via audit events (owner.gate_promotion_blocked) and
       // proof/completion gates; their live aggregation is a follow-on. Default 0 here.
       blockedRecommendations: 0,
       proofBlocked: 0,
       financeBlocked: 0,
       ownerApprovalsRequired: 0,
-      nextBestAction: profile.recommendedNextAction?.title ?? null,
+      nextBestAction: profile?.recommendedNextAction?.title ?? null,
     });
     return canonicalJson(panel, { status: 200 });
   },

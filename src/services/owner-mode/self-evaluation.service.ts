@@ -64,7 +64,7 @@ export async function recordSelfEvaluation(input: RecordSelfEvaluationInput, inj
   await emitAuditEvent({
     workspaceId: input.workspaceId,
     eventName: AUDIT_EVENTS.OWNER_SELF_EVALUATION_RECORDED,
-    actorId: input.actorId ?? null,
+    actorId: input.actorId ?? undefined,
     actorType: input.actorId ? "user" : "system",
     entityType: "owner_self_evaluation",
     entityId: created.id,

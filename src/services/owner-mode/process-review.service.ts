@@ -108,7 +108,7 @@ export async function triggerProcessReviewIfDue(
     await emitAuditEvent({
       workspaceId: input.workspaceId,
       eventName: AUDIT_EVENTS.OWNER_PROCESS_REVIEW_TRIGGERED,
-      actorId: input.actorId ?? null,
+      actorId: input.actorId ?? undefined,
       actorType: input.actorId ? "user" : "system",
       entityType: "owner_process",
       entityId: id,
