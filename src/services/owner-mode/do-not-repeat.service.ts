@@ -16,15 +16,22 @@ interface DnrDb {
     findUnique(args: { where: { id: string; workspaceId: string }; select: { findingId: true } }): Promise<{ findingId: string | null } | null>;
   };
   finding: {
-    findUnique(args: { where: { id: string; workspaceId: string }; select: { code: true } }): Promise<{ code: string | null } | null>;
+    findUnique(args: { where: { id: string; workspaceId: string }; select: { code: true; impactArea: true } }): Promise<{ code: string | null; impactArea: string | null } | null>;
   };
   ownerDoNotRepeatRule: {
     findFirst(args: {
-      where: { workspaceId: string; memoryKey: string; blocksRepetition: boolean; active: boolean };
+      where: { workspaceId: string; memoryKey: { in: string[] }; blocksRepetition: boolean; active: boolean };
       orderBy: { createdAt: "desc" };
     }): Promise<{ blocksRepetition: boolean; changedContextExplanation: string | null } | null>;
     create(args: { data: Record<string, unknown> }): Promise<{ id: string }>;
   };
+}
+
+/** Stable scope token for an impact area, e.g. impactArea "operations" → "scope:operations". */
+export function scopeKeyForImpactArea(impactArea: string | null | undefined): string | null {
+  if (!impactArea) return null;
+  const norm = impactArea.trim().toLowerCase();
+  return norm ? `scope:${norm}` : null;
 }
 
 export interface DnrDeps {
@@ -44,25 +51,35 @@ export class DoNotRepeatBlockedError extends Error {
   }
 }
 
-async function memoryKeyFor(recommendationId: string, workspaceId: string, deps: DnrDeps): Promise<string | null> {
+/**
+ * Resolve the set of do-not-repeat keys a recommendation matches against: its finding
+ * code AND a scope token derived from the finding's impact area. This is what makes
+ * matching more than exact-code: a rule recorded by category/scope still blocks a repeat
+ * even when the finding code differs (strict re-audit G17/G18).
+ */
+async function memoryKeysFor(recommendationId: string, workspaceId: string, deps: DnrDeps): Promise<string[]> {
   const rec = await deps.db.recommendation.findUnique({ where: { id: recommendationId, workspaceId }, select: { findingId: true } });
-  if (!rec?.findingId) return null;
-  const finding = await deps.db.finding.findUnique({ where: { id: rec.findingId, workspaceId }, select: { code: true } });
-  return finding?.code ?? null;
+  if (!rec?.findingId) return [];
+  const finding = await deps.db.finding.findUnique({ where: { id: rec.findingId, workspaceId }, select: { code: true, impactArea: true } });
+  const keys = new Set<string>();
+  if (finding?.code) keys.add(finding.code);
+  const scopeKey = scopeKeyForImpactArea(finding?.impactArea);
+  if (scopeKey) keys.add(scopeKey);
+  return [...keys];
 }
 
-/** Block promotion when an active do_not_repeat memory matches the recommendation's key. */
+/** Block promotion when an active do_not_repeat memory matches the recommendation's code or scope. */
 export async function enforceDoNotRepeatForPromotion(recommendationId: string, workspaceId: string, injected?: DnrDeps): Promise<void> {
   const deps = injected ?? (await resolveDefaultDeps());
-  const key = await memoryKeyFor(recommendationId, workspaceId, deps);
-  if (!key) return;
+  const keys = await memoryKeysFor(recommendationId, workspaceId, deps);
+  if (keys.length === 0) return;
   const rule = await deps.db.ownerDoNotRepeatRule.findFirst({
-    where: { workspaceId, memoryKey: key, blocksRepetition: true, active: true },
+    where: { workspaceId, memoryKey: { in: keys }, blocksRepetition: true, active: true },
     orderBy: { createdAt: "desc" },
   });
   // Adapt the dedicated rule row to the pure evaluator's shape (category is implicit).
   const memory: DoNotRepeatMemory | null = rule
-    ? { category: "do_not_repeat", blocksRepetition: rule.blocksRepetition, memoryKey: key }
+    ? { category: "do_not_repeat", blocksRepetition: rule.blocksRepetition, memoryKey: keys[0] }
     : null;
   const decision = evaluateDoNotRepeat(memory, rule?.changedContextExplanation ?? null);
   if (decision.blocked) {
@@ -72,7 +89,7 @@ export async function enforceDoNotRepeatForPromotion(recommendationId: string, w
       actorType: "system",
       entityType: "recommendation",
       entityId: recommendationId,
-      payload: { memoryKey: key },
+      payload: { matchedKeys: keys },
     });
     throw new DoNotRepeatBlockedError(recommendationId, decision.reason ?? "blocked");
   }
@@ -85,11 +102,18 @@ export interface RecordDoNotRepeatInput {
   summary: string;
   reason: string;
   recommendationId?: string | null;
+  /**
+   * When true (default) the rule hard-blocks future matching promotions. When false it
+   * is a non-blocking caution (e.g. a failure attributed to execution, not the rec).
+   */
+  blocksRepetition?: boolean;
+  actorId?: string | null;
 }
 
-/** Record a do_not_repeat memory so future matching recommendations are blocked. */
+/** Record a do_not_repeat / caution memory so future matching recommendations are blocked or cautioned. */
 export async function recordDoNotRepeat(input: RecordDoNotRepeatInput, injected?: DnrDeps): Promise<string> {
   const deps = injected ?? (await resolveDefaultDeps());
+  const blocks = input.blocksRepetition ?? true;
   const created = await deps.db.ownerDoNotRepeatRule.create({
     data: {
       workspaceId: input.workspaceId,
@@ -98,9 +122,18 @@ export async function recordDoNotRepeat(input: RecordDoNotRepeatInput, injected?
       recommendationId: input.recommendationId ?? null,
       summary: input.summary,
       reason: input.reason,
-      blocksRepetition: true,
+      blocksRepetition: blocks,
       active: true,
     },
+  });
+  await emitAuditEvent({
+    workspaceId: input.workspaceId,
+    eventName: AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_RECORDED,
+    actorId: input.actorId ?? undefined,
+    actorType: input.actorId ? "user" : "system",
+    entityType: "owner_do_not_repeat_rule",
+    entityId: created.id,
+    payload: { memoryKey: input.memoryKey, blocksRepetition: blocks },
   });
   return created.id;
 }
