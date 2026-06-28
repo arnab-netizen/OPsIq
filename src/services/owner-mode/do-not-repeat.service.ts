@@ -18,11 +18,11 @@ interface DnrDb {
   finding: {
     findUnique(args: { where: { id: string; workspaceId: string }; select: { code: true } }): Promise<{ code: string | null } | null>;
   };
-  ownerDecisionMemory: {
+  ownerDoNotRepeatRule: {
     findFirst(args: {
-      where: { workspaceId: string; memoryKey: string; category: string; blocksRepetition: boolean };
+      where: { workspaceId: string; memoryKey: string; blocksRepetition: boolean; active: boolean };
       orderBy: { createdAt: "desc" };
-    }): Promise<(DoNotRepeatMemory & { changedContextExplanation: string | null }) | null>;
+    }): Promise<{ blocksRepetition: boolean; changedContextExplanation: string | null } | null>;
     create(args: { data: Record<string, unknown> }): Promise<{ id: string }>;
   };
 }
@@ -56,11 +56,15 @@ export async function enforceDoNotRepeatForPromotion(recommendationId: string, w
   const deps = injected ?? (await resolveDefaultDeps());
   const key = await memoryKeyFor(recommendationId, workspaceId, deps);
   if (!key) return;
-  const memory = await deps.db.ownerDecisionMemory.findFirst({
-    where: { workspaceId, memoryKey: key, category: "do_not_repeat", blocksRepetition: true },
+  const rule = await deps.db.ownerDoNotRepeatRule.findFirst({
+    where: { workspaceId, memoryKey: key, blocksRepetition: true, active: true },
     orderBy: { createdAt: "desc" },
   });
-  const decision = evaluateDoNotRepeat(memory, memory?.changedContextExplanation ?? null);
+  // Adapt the dedicated rule row to the pure evaluator's shape (category is implicit).
+  const memory: DoNotRepeatMemory | null = rule
+    ? { category: "do_not_repeat", blocksRepetition: rule.blocksRepetition, memoryKey: key }
+    : null;
+  const decision = evaluateDoNotRepeat(memory, rule?.changedContextExplanation ?? null);
   if (decision.blocked) {
     await emitAuditEvent({
       workspaceId,
@@ -86,19 +90,16 @@ export interface RecordDoNotRepeatInput {
 /** Record a do_not_repeat memory so future matching recommendations are blocked. */
 export async function recordDoNotRepeat(input: RecordDoNotRepeatInput, injected?: DnrDeps): Promise<string> {
   const deps = injected ?? (await resolveDefaultDeps());
-  const created = await deps.db.ownerDecisionMemory.create({
+  const created = await deps.db.ownerDoNotRepeatRule.create({
     data: {
       workspaceId: input.workspaceId,
       businessId: input.businessId,
-      category: "do_not_repeat",
       memoryKey: input.memoryKey,
       recommendationId: input.recommendationId ?? null,
       summary: input.summary,
-      contextSnapshot: input.summary,
-      carriesLearningSignal: true,
+      reason: input.reason,
       blocksRepetition: true,
-      isRepeatAttempt: false,
-      doNotRepeatReason: input.reason,
+      active: true,
     },
   });
   return created.id;

@@ -1344,6 +1344,28 @@ model OwnerComplianceItem {
   @@map("owner_compliance_item")
 }
 
+/// Jarvis 360 Slice 12 — do-not-repeat rule. A dedicated, fully-migrated store for
+/// "do not repeat this" rules keyed by a deterministic memory key (e.g. finding code),
+/// checked at recommendation promotion. (Self-contained — does not depend on the
+/// schema-only OwnerDecisionMemory model, which has no creating migration.)
+model OwnerDoNotRepeatRule {
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId               String   @map("workspace_id") @db.Uuid
+  businessId                String?  @map("business_id") @db.Uuid
+  memoryKey                 String   @map("memory_key")
+  summary                   String
+  reason                    String
+  blocksRepetition          Boolean  @default(true) @map("blocks_repetition")
+  changedContextExplanation String?  @map("changed_context_explanation")
+  recommendationId          String?  @map("recommendation_id") @db.Uuid
+  active                    Boolean  @default(true)
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId, memoryKey])
+  @@map("owner_do_not_repeat_rule")
+}
+
 /// Jarvis 360 Slice 13 — OpsIQ self-evaluation. Records whether a recommendation/
 /// action worked, and when it failed, why (closing the modeled-but-open loop).
 model OwnerSelfEvaluation {
@@ -4148,9 +4170,6 @@ model OwnerDecisionMemory {
   workspaceId               String
   businessId                String
   category                  String // owner_goal | owner_constraint | accepted_recommendation | rejected_recommendation | successful_action | failed_action | invalid_test | corrected_diagnosis | repeated_execution_issue | do_not_repeat | owner_preference | business_specific_rule
-  /// Jarvis 360 Slice 12 — deterministic key (e.g. finding code) for runtime
-  /// do-not-repeat matching at recommendation promotion.
-  memoryKey                 String?       @map("memory_key")
   recommendationId          String?
   actionId                  String?
   outcomeId                 String?

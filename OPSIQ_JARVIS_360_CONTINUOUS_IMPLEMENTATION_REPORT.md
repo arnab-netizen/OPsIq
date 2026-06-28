@@ -443,6 +443,16 @@ for DB/migration confirmation.
 
 ---
 
+
+
+> **CI fix (migration):** Slice 12 originally added a `memoryKey` column to the pre-existing
+> `OwnerDecisionMemory` model — but that model has **no creating migration** in the repo (it is
+> schema-only), so `ALTER TABLE owner_decision_memories` failed in CI's migration-built DB. Fixed
+> by switching to a dedicated, fully-migrated `OwnerDoNotRepeatRule` table (no dependency on the
+> orphaned model). Service + tests updated; behavior unchanged.
+
+---
+
 ## SLICE 13 — SELF-EVALUATION LOOP — **COMPLETE_LOCAL**
 - **Reuse/new:** new `OwnerSelfEvaluation` model + pure `domain/owner-mode/self-evaluation.ts` classifier; DI service + route.
 - **Behavior:** on completion/verification the outcome is classified worked / failed / unknown; failures are attributed (insufficient proof > external factor > weak data > owner override > poor execution > bad recommendation) and schedule a reassessment date. Owner-workload impact captured. Audited. Closes the modeled-but-open self-evaluation loop.
