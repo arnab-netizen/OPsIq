@@ -79,9 +79,19 @@ jobs:
           if [ -z "$up" ]; then echo "app failed to start"; tail -80 /tmp/app.log; exit 1; fi
       - name: Run owner-flow browser test
         run: npx playwright test tests/browser/06-owner-control-center.spec.ts --project=chromium
-      - name: App log on failure
-        if: failure()
-        run: tail -100 /tmp/app.log || true
+      - name: Print Playwright failures + app log
+        if: always()
+        run: |
+          echo "PWFAIL_BEGIN"
+          node -e '
+            try {
+              const r=require("./test-results/results.json");
+              const walk=(s)=>{ (s.suites||[]).forEach(walk); for(const sp of (s.specs||[])){ for(const t of (sp.tests||[])){ for(const res of (t.results||[])){ if(res.status!=="passed"){ const err=(res.error&&res.error.message)||""; console.log("PWFAIL "+sp.title+" :: "+res.status+" :: "+String(err).replace(/\s+/g," ").slice(0,500)); } } } } };
+              (r.suites||[]).forEach(walk);
+            } catch(e){ console.log("PWFAIL_NOJSON "+e.message); }
+          ' 2>&1 | head -60
+          echo "PWFAIL_END"
+          echo "APPLOG_BEGIN"; tail -40 /tmp/app.log || true; echo "APPLOG_END"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

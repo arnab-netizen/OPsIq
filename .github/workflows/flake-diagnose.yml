@@ -59,7 +59,10 @@ jobs:
         run: |
           set +e
           # Only the DB-touching test population (the flake families live here), not all ~750 files.
-          FILES=$(node -e "const {execSync}=require('child_process'); const out=execSync('grep -rl \"\\\\[db\\\\]\\\\|TEST_WITH_DB\\\\|db.\\\\|snapshot_data\\\\|canonicalEvent\\\\|ownerFinancialSnapshot\\\\|snapshotData' src/__tests__ --include=*.test.ts -l').toString(); console.log(out.split('\n').filter(Boolean).join(' '))" 2>/dev/null)
+          # Only the [db]-tagged / .db.test.ts population + the event-sourcing families that show
+          # the flake errors — a few dozen files, fast.
+          FILES=$(ls src/__tests__/**/*.db.test.ts src/__tests__/*.db.test.ts 2>/dev/null | tr '\n' ' ')
+          FILES="$FILES $(grep -rl '\[db\]\|canonicalEvent\|snapshot_data\|snapshotData\|ownerFinancialSnapshot' src/__tests__ --include=*.test.ts 2>/dev/null | grep -v '.db.test.ts' | tr '\n' ' ')"
           echo "FLAKEDIAG_NFILES $(echo $FILES | wc -w)"
           npx vitest run --maxWorkers 1 --reporter=json --outputFile=/tmp/res.json $FILES >/tmp/run.log 2>&1
           echo "FLAKEDIAG_BEGIN"
