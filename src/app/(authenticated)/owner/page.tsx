@@ -355,6 +355,7 @@ export default function OwnerCommandCenterPage() {
                         {control.ownerActionsToday} owner action{control.ownerActionsToday === 1 ? "" : "s"} today
                       </Badge>
                       <Badge variant="muted">{control.handledByOpsIQ} handled by OpsIQ</Badge>
+                      <Badge variant="success">{control.approvalsAvoided ?? 0} approvals avoided</Badge>
                     </div>
                   </div>
 

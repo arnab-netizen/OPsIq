@@ -22,6 +22,10 @@ export interface ControlCenterInputs {
   ownerApprovalsRequired: number;
   /** Failed self-evaluations whose reassessment is now due (EH-21). */
   reassessmentsDue: number;
+  /** Approvals OpsIQ auto-handled in the window (EH-16 workload reduction). */
+  approvalsAvoided: number;
+  /** Latest arbitration's what-NOT-to-do list, merged into the panel (EH-05). */
+  arbitrationWhatNotToDo: string[];
   nextBestAction?: string | null;
 }
 
@@ -31,6 +35,8 @@ export interface OwnerControlCenter {
   whatNotToDo: string[];
   ownerActionsToday: number;
   handledByOpsIQ: number;
+  /** Approvals OpsIQ auto-handled (workload reduction, EH-16). */
+  approvalsAvoided: number;
   needsOwnerAttention: boolean;
   nextBestAction: string | null;
   sections: {
@@ -73,6 +79,9 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
     whatNotToDo.push("Do not re-run a failed approach until its reassessment is complete.");
   }
 
+  // EH-05 — merge the latest arbitration's what-not-to-do into the owner panel.
+  for (const w of i.arbitrationWhatNotToDo) whatNotToDo.push(w);
+
   const ownerActionsToday = i.ownerApprovalsRequired + i.attention.ownerDecisionsRequired + i.sopsNeedingReview + i.processReviewsDue + i.reassessmentsDue;
   const needsOwnerAttention = ownerActionsToday > 0 || criticalAlerts.length > 0;
 
@@ -82,6 +91,7 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
     whatNotToDo,
     ownerActionsToday,
     handledByOpsIQ: i.attention.handledByOpsIQ,
+    approvalsAvoided: i.approvalsAvoided,
     needsOwnerAttention,
     nextBestAction: i.nextBestAction ?? null,
     sections: {

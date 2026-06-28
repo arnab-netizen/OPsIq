@@ -13,6 +13,7 @@ function depsWith(events: Array<{ eventName: string; payload: unknown }>, captur
           if (captured) captured.where = args.where;
           return events;
         }),
+        findFirst: vi.fn(async () => null),
       },
     },
     now: () => new Date("2026-06-28T00:00:00.000Z"),
@@ -52,6 +53,21 @@ describe("getOwnerBlockMetrics", () => {
 
   it("returns zeros when there are no block events", async () => {
     const m = await getOwnerBlockMetrics("ws1", depsWith([]));
-    expect(m).toEqual({ blockedRecommendations: 0, financeBlocked: 0, proofBlocked: 0 });
+    expect(m).toEqual({ blockedRecommendations: 0, financeBlocked: 0, proofBlocked: 0, approvalsAvoided: 0, arbitrationWhatNotToDo: [] });
+  });
+
+  it("counts auto-handled approvals as approvalsAvoided (EH-16) and surfaces arbitration what-not-to-do (EH-05)", async () => {
+    const events = [
+      { eventName: AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED, payload: { reason: "approval_memory" } },
+      { eventName: AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED, payload: { reason: "standing_instruction_allow" } },
+      { eventName: AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED, payload: { code: "CASH_SAFETY_BLOCKED", errorName: "OwnerActionGateError" } },
+    ];
+    const d = depsWith(events);
+    d.db.auditEvent.findFirst = vi.fn(async () => ({ payload: { whatNotToDo: ['Do not pursue "Expensive bet" now'] } }));
+    const m = await getOwnerBlockMetrics("ws1", d);
+    expect(m.approvalsAvoided).toBe(2);
+    expect(m.blockedRecommendations).toBe(1);
+    expect(m.financeBlocked).toBe(1); // matched by owner-action gate code
+    expect(m.arbitrationWhatNotToDo).toEqual(['Do not pursue "Expensive bet" now']);
   });
 });

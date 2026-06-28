@@ -15,6 +15,11 @@ interface BlockMetricsDb {
       where: { workspaceId: string; eventName: { in: string[] }; occurredAt: { gte: Date } };
       select: { eventName: true; payload: true };
     }): Promise<Array<{ eventName: string; payload: unknown }>>;
+    findFirst(args: {
+      where: { workspaceId: string; eventName: string };
+      orderBy: { occurredAt: "desc" };
+      select: { payload: true };
+    }): Promise<{ payload: unknown } | null>;
   };
 }
 
@@ -32,10 +37,15 @@ export interface OwnerBlockMetrics {
   blockedRecommendations: number;
   financeBlocked: number;
   proofBlocked: number;
+  /** EH-16 — approvals OpsIQ auto-handled (memory/standing instruction) in the window. */
+  approvalsAvoided: number;
+  /** EH-05 — the most recent arbitration's what-NOT-to-do list (surfaced to the owner). */
+  arbitrationWhatNotToDo: string[];
 }
 
-/** Finance-domain gate errors whose blocks count as finance/cash/margin blocks. */
+/** Finance-domain gate errors/codes whose blocks count as finance/cash/margin blocks. */
 const FINANCE_GATE_ERRORS = new Set(["CashSafetyGateError", "MarginSafetyGateError"]);
+const FINANCE_GATE_CODES = new Set(["CASH_SAFETY_BLOCKED", "MARGIN_SAFETY_BLOCKED"]);
 
 const DEFAULT_WINDOW_DAYS = 30;
 
@@ -53,41 +63,60 @@ export async function getOwnerBlockMetrics(
   const windowDays = injected?.windowDays ?? DEFAULT_WINDOW_DAYS;
   const since = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
-  const events = await deps.db.auditEvent.findMany({
-    where: {
-      workspaceId,
-      eventName: {
-        in: [
-          AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED,
-          AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_BLOCKED,
-          AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED,
-        ],
+  const [events, latestArbitration] = await Promise.all([
+    deps.db.auditEvent.findMany({
+      where: {
+        workspaceId,
+        eventName: {
+          in: [
+            AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED,
+            AUDIT_EVENTS.OWNER_DO_NOT_REPEAT_BLOCKED,
+            AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED,
+            AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED,
+          ],
+        },
+        occurredAt: { gte: since },
       },
-      occurredAt: { gte: since },
-    },
-    select: { eventName: true, payload: true },
-  });
+      select: { eventName: true, payload: true },
+    }),
+    // EH-05 — the most recent arbitration verdict's what-not-to-do (persisted to audit).
+    deps.db.auditEvent.findFirst({
+      where: { workspaceId, eventName: AUDIT_EVENTS.OWNER_ARBITRATION_RESOLVED },
+      orderBy: { occurredAt: "desc" },
+      select: { payload: true },
+    }),
+  ]);
 
   let blockedRecommendations = 0;
   let financeBlocked = 0;
   let proofBlocked = 0;
+  let approvalsAvoided = 0;
 
   for (const e of events) {
     if (e.eventName === AUDIT_EVENTS.OWNER_TASK_COMPLETION_BLOCKED) {
       proofBlocked += 1;
       continue;
     }
+    if (e.eventName === AUDIT_EVENTS.OWNER_APPROVAL_AUTO_HANDLED) {
+      approvalsAvoided += 1;
+      continue;
+    }
     blockedRecommendations += 1;
     if (e.eventName === AUDIT_EVENTS.OWNER_GATE_PROMOTION_BLOCKED) {
-      const errorName =
-        e.payload && typeof e.payload === "object"
-          ? (e.payload as Record<string, unknown>).errorName
-          : undefined;
-      if (typeof errorName === "string" && FINANCE_GATE_ERRORS.has(errorName)) {
+      const payload = (e.payload && typeof e.payload === "object" ? e.payload : {}) as Record<string, unknown>;
+      const errorName = payload.errorName;
+      const code = payload.code;
+      if (
+        (typeof errorName === "string" && FINANCE_GATE_ERRORS.has(errorName)) ||
+        (typeof code === "string" && FINANCE_GATE_CODES.has(code))
+      ) {
         financeBlocked += 1;
       }
     }
   }
 
-  return { blockedRecommendations, financeBlocked, proofBlocked };
+  const arbPayload = (latestArbitration?.payload && typeof latestArbitration.payload === "object" ? latestArbitration.payload : {}) as Record<string, unknown>;
+  const arbitrationWhatNotToDo = Array.isArray(arbPayload.whatNotToDo) ? (arbPayload.whatNotToDo as string[]) : [];
+
+  return { blockedRecommendations, financeBlocked, proofBlocked, approvalsAvoided, arbitrationWhatNotToDo };
 }

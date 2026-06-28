@@ -35,6 +35,8 @@ export interface ControlCenterContext {
   proofBlocked: number;
   financeBlocked: number;
   ownerApprovalsRequired: number;
+  approvalsAvoided?: number;
+  arbitrationWhatNotToDo?: string[];
   nextBestAction?: string | null;
 }
 
@@ -77,6 +79,8 @@ export async function getOwnerControlCenter(
     processReviewsDue,
     ownerApprovalsRequired: ctx.ownerApprovalsRequired,
     reassessmentsDue,
+    approvalsAvoided: ctx.approvalsAvoided ?? 0,
+    arbitrationWhatNotToDo: ctx.arbitrationWhatNotToDo ?? [],
     nextBestAction: ctx.nextBestAction ?? null,
   });
 }
