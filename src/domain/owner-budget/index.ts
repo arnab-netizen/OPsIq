@@ -30,4 +30,5 @@ export * from "@/domain/owner-budget/archetype-metrics";
 export * from "@/domain/owner-budget/import-source";
 export * from "@/domain/owner-budget/initiative-outcome";
 export * from "@/domain/owner-budget/outcome-learning";
+export * from "@/domain/owner-budget/signal-routing";
 export * from "@/domain/owner-budget/validation";
