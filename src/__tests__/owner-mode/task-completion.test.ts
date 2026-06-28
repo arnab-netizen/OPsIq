@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const emitAuditEvent = vi.fn(async () => "audit-id");
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: (...a: unknown[]) => emitAuditEvent(...a) }));
-vi.mock("@/lib/db", () => ({ db: {} }));
+vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
 
 import { evaluateProofClearance, ProofStatus } from "@/domain/execution/proof";
 import { TaskActorRole } from "@/domain/execution/delegated-task";

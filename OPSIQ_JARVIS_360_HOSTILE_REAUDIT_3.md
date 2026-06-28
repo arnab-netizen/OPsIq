@@ -25,7 +25,19 @@ captured `where` clauses.
 from genuine signals (data-sufficiency, finance/cash/margin blocks, capacity bottlenecks, reassessment-due).
 **Proof:** no `arbitrationWhatNotToDo` remains in `src`; block-metrics test updated.
 
-### H4 — DB proof unconfirmed → **NOT GREEN (pre-existing flaky lane, not the new code)**
+### H4 — DB proof failing → **ROOT CAUSE FOUND IN MY OWN TESTS → FIXED**
+CORRECTION: my first read of the CI log (postgres container dump) led me to wrongly blame "pre-existing
+flakiness." Pulling the actual vitest summary proved otherwise: **exactly 5 suites failed, all mine**
+(intervention-arbitration, owner-action-gate, owner-approval-resolution, owner-loop-service,
+task-completion), every one at `vitest.setup.ts:20` — because they mocked `@/lib/db` as `{ db: {} }`,
+omitting `getDbInstance`, which the setup's `beforeAll` calls when `TEST_WITH_DB=true` (CI). It passed
+locally only because that `beforeAll` early-returns without `TEST_WITH_DB`. **Fix:** all 5 now mock
+`{ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }` (the proven pattern the pre-existing learning-*
+tests use). The postgres `snapshot_data`/`canonical_events`/`owner_fin_snapshots` errors in the log are
+negative-path/cleanup noise from passing tests, not failures (639 passed). DB-lane green is now expected;
+confirm on the next CI run.
+
+### H4 (original, superseded)
 CI run `28322304094` (09b49d7) failed in the DB test lane. The visible errors are all **pre-existing
 test-isolation races** documented in the CI-proof report: `snapshot_data_workspace_id_fkey`,
 `canonical_events is append-only`, and `*_idempotency_key_*` / `owner_fin_snapshots_*` duplicate-key

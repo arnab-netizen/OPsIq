@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("@/lib/db", () => ({ db: {} }));
+vi.mock("@/lib/db", () => ({ db: {}, getDbInstance: vi.fn().mockResolvedValue({}) }));
 vi.mock("@/infra/audit", () => ({ emitAuditEvent: vi.fn(async () => "audit-id") }));
 
 import {
