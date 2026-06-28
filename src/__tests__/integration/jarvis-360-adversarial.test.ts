@@ -141,6 +141,7 @@ describe("Jarvis 360 — integrated flows", () => {
       equipmentBottlenecks: fleet.bottlenecks,
       processReviewsDue: 0,
       ownerApprovalsRequired: 0,
+      reassessmentsDue: 0,
       nextBestAction: "Restore cash runway before growth",
     });
     expect(arb.recommended).toBeNull(); // growth blocked
@@ -157,7 +158,7 @@ describe("Jarvis 360 — integrated flows", () => {
     const cc = buildOwnerControlCenter({
       dataSufficiencyStatus: "sufficient", lowConfidenceDomains: [], attention: summarizeOwnerAttention([]),
       blockedRecommendations: 0, proofBlocked: 2, financeBlocked: 0, sopsNeedingReview: 0,
-      trainingRecommendations: 0, equipmentBottlenecks: [], processReviewsDue: 0, ownerApprovalsRequired: 0,
+      trainingRecommendations: 0, equipmentBottlenecks: [], processReviewsDue: 0, ownerApprovalsRequired: 0, reassessmentsDue: 0,
     });
     expect(cc.sections.proofBlocked).toBe(2);
     expect(cc.criticalAlerts.some((a) => /proof/i.test(a))).toBe(true);
@@ -168,7 +169,7 @@ describe("Jarvis 360 — integrated flows", () => {
     const cc = buildOwnerControlCenter({
       dataSufficiencyStatus: "caution", lowConfidenceDomains: [], attention,
       blockedRecommendations: 0, proofBlocked: 0, financeBlocked: 0, sopsNeedingReview: 2,
-      trainingRecommendations: 1, equipmentBottlenecks: [], processReviewsDue: 1, ownerApprovalsRequired: 1,
+      trainingRecommendations: 1, equipmentBottlenecks: [], processReviewsDue: 1, ownerApprovalsRequired: 1, reassessmentsDue: 0,
     });
     // 1 owner-decision + 1 approval + 2 SOP reviews + 1 process review = 5
     expect(cc.ownerActionsToday).toBe(5);

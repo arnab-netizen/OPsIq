@@ -15,6 +15,7 @@ interface ControlCenterDb {
   ownerSopDocument: { count(args: { where: Record<string, unknown> }): Promise<number> };
   ownerTrainingRecommendation: { count(args: { where: Record<string, unknown> }): Promise<number> };
   ownerProcess: { count(args: { where: Record<string, unknown> }): Promise<number> };
+  ownerSelfEvaluation: { count(args: { where: Record<string, unknown> }): Promise<number> };
 }
 
 export interface ControlCenterDeps {
@@ -50,12 +51,14 @@ export async function getOwnerControlCenter(
   const deps = injected ?? (await resolveDefaultDeps());
   const now = (deps.now ?? (() => new Date()))();
 
-  const [fleet, attentionEvents, sopsNeedingReview, trainingRecommendations, processReviewsDue] = await Promise.all([
+  const [fleet, attentionEvents, sopsNeedingReview, trainingRecommendations, processReviewsDue, reassessmentsDue] = await Promise.all([
     deps.db.ownerEquipment.findMany({ where: { workspaceId }, select: { name: true, utilization: true, downtimeState: true, maintenanceDueAt: true, status: true } }),
     deps.db.ownerAttentionEvent.findMany({ where: { workspaceId }, select: { disposition: true, ownerDecisionRequired: true, handledByOpsIQ: true } }),
     deps.db.ownerSopDocument.count({ where: { workspaceId, status: "draft" } }),
     deps.db.ownerTrainingRecommendation.count({ where: { workspaceId, status: "recommended" } }),
     deps.db.ownerProcess.count({ where: { workspaceId, status: "active", nextReviewAt: { lte: now } } }),
+    // EH-21 — failed self-evaluations whose reassessment is now due.
+    deps.db.ownerSelfEvaluation.count({ where: { workspaceId, reassessmentRequired: true, nextReassessmentAt: { lte: now } } }),
   ]);
 
   const capacity = assessFleetCapacity(fleet, now);
@@ -73,6 +76,7 @@ export async function getOwnerControlCenter(
     equipmentBottlenecks: capacity.bottlenecks,
     processReviewsDue,
     ownerApprovalsRequired: ctx.ownerApprovalsRequired,
+    reassessmentsDue,
     nextBestAction: ctx.nextBestAction ?? null,
   });
 }

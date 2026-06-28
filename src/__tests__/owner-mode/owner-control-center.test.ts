@@ -22,6 +22,7 @@ function inputs(over: Partial<ControlCenterInputs> = {}): ControlCenterInputs {
     equipmentBottlenecks: [],
     processReviewsDue: 0,
     ownerApprovalsRequired: 0,
+    reassessmentsDue: 0,
     nextBestAction: null,
     ...over,
   };
@@ -56,12 +57,14 @@ describe("getOwnerControlCenter (DI)", () => {
         ownerSopDocument: { count: vi.fn(async () => 2) },
         ownerTrainingRecommendation: { count: vi.fn(async () => 1) },
         ownerProcess: { count: vi.fn(async () => 3) },
+        ownerSelfEvaluation: { count: vi.fn(async () => 2) },
       },
     };
     const cc = await getOwnerControlCenter("ws1", { dataSufficiencyStatus: "caution", lowConfidenceDomains: [], blockedRecommendations: 1, proofBlocked: 0, financeBlocked: 0, ownerApprovalsRequired: 0 }, deps);
     expect(cc.sections.sopsNeedingReview).toBe(2);
     expect(cc.sections.trainingRecommendations).toBe(1);
     expect(cc.sections.processReviewsDue).toBe(3);
+    expect(cc.sections.reassessmentsDue).toBe(2);
     expect(cc.sections.equipmentBottlenecks).toBe(1); // press at 99%
     expect(cc.ownerActionsToday).toBeGreaterThanOrEqual(1 + 2 + 3); // decision + sop + process
   });

@@ -393,6 +393,7 @@ export default function OwnerCommandCenterPage() {
                       { label: "SOPs to review", value: control.sections?.sopsNeedingReview, warn: false },
                       { label: "Training items", value: control.sections?.trainingRecommendations, warn: false },
                       { label: "Process reviews due", value: control.sections?.processReviewsDue, warn: false },
+                      { label: "Reassessments due", value: control.sections?.reassessmentsDue, warn: true },
                       { label: "Owner decisions", value: control.attention?.ownerDecisionsRequired, warn: false },
                     ].map((s) => (
                       <div key={s.label} className="border rounded p-2 flex flex-col">

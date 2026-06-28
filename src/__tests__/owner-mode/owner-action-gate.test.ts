@@ -21,6 +21,7 @@ function deps(opts: {
   survivalState?: string | null;
   cashflowState?: string | null;
   snapshot?: { revenue: number | null; costOfGoods: number | null } | null;
+  compliance?: Array<{ kind: string; name: string; expiresAt: Date | null }>;
 }) {
   const now = new Date("2026-06-28T00:00:00.000Z");
   return {
@@ -38,6 +39,7 @@ function deps(opts: {
       ownerFinanceCycle: { findFirst: vi.fn(async () => (opts.survivalState !== undefined ? (opts.survivalState ? { survivalState: opts.survivalState } : null) : null)) },
       ownerCashflowCycle: { findFirst: vi.fn(async () => (opts.cashflowState !== undefined ? (opts.cashflowState ? { cashflowState: opts.cashflowState } : null) : null)) },
       ownerFinancialSnapshot: { findFirst: vi.fn(async () => opts.snapshot ?? null) },
+      ownerComplianceItem: { findMany: vi.fn(async () => opts.compliance ?? []) },
     },
     now: () => now,
   };
@@ -121,6 +123,17 @@ describe("enforceOwnerActionGates", () => {
 
   it("does not apply the margin gate to non-margin domains (operations)", async () => {
     const d = deps({ snapshot: { revenue: 100, costOfGoods: 95 } });
+    await expect(enforceOwnerActionGates({ ...base, domain: "operations", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
+  });
+
+  it("blocks any material action when a compliance item is expired (professional review)", async () => {
+    const d = deps({ compliance: [{ kind: "insurance", name: "Liability policy", expiresAt: new Date("2026-01-01T00:00:00.000Z") }] });
+    await expect(enforceOwnerActionGates({ ...base, domain: "operations", toStatus: "completed" }, d as never)).rejects.toBeInstanceOf(ConflictError);
+    expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.gate_promotion_blocked", payload: expect.objectContaining({ code: "COMPLIANCE_BLOCKED" }) }));
+  });
+
+  it("allows when compliance items are present but not expired", async () => {
+    const d = deps({ compliance: [{ kind: "licence", name: "Trade licence", expiresAt: new Date("2027-01-01T00:00:00.000Z") }] });
     await expect(enforceOwnerActionGates({ ...base, domain: "operations", toStatus: "completed" }, d as never)).resolves.toBeUndefined();
   });
 });

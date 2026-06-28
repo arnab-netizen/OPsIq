@@ -28,6 +28,7 @@ import {
 } from "@/domain/owner-finance/cash-safety-gate";
 import { evaluateMarginSafety, grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT } from "@/domain/owner-finance/margin-safety-gate";
 import { RecommendationSensitivity } from "@/domain/owner-mode/recommendation-input-quality-gate";
+import { isExpired } from "@/domain/owner-mode/compliance-boundary";
 
 /** Material owner-action transitions that must pass the gate. */
 export const MATERIAL_ACTION_STATUSES: ReadonlySet<string> = new Set(["in_progress", "completed"]);
@@ -59,6 +60,9 @@ interface ActionGateDb {
   };
   ownerFinancialSnapshot: {
     findFirst(args: { where: { workspaceId: string }; orderBy: { createdAt: "desc" }; select: { revenue: true; costOfGoods: true } }): Promise<{ revenue: number | null; costOfGoods: number | null } | null>;
+  };
+  ownerComplianceItem: {
+    findMany(args: { where: { workspaceId: string; status: string }; select: { kind: true; name: true; expiresAt: true } }): Promise<Array<{ kind: string; name: string; expiresAt: Date | null }>>;
   };
 }
 
@@ -183,5 +187,21 @@ export async function enforceOwnerActionGates(input: OwnerActionGateInput, injec
         await block(input, `${margin.reason} Restore margin above the floor before advancing this ${input.domain} action.`, "MARGIN_SAFETY_BLOCKED");
       }
     }
+  }
+
+  // 5. Compliance boundary (EH-20) — an EXPIRED licence/permit/insurance/tax item is a
+  //    professional-review hard stop: defer material actions until it is renewed. (Owner
+  //    may override via the audited gate opt-out.) Reuses the pure isExpired rule.
+  const complianceItems = await deps.db.ownerComplianceItem.findMany({
+    where: { workspaceId: input.workspaceId, status: "active" },
+    select: { kind: true, name: true, expiresAt: true },
+  });
+  const expired = complianceItems.find((c) => isExpired(c.expiresAt, now));
+  if (expired) {
+    await block(
+      input,
+      `Professional-review required: "${expired.name}" (${expired.kind}) is expired. Renew it (or seek professional review) before advancing this ${input.domain} action.`,
+      "COMPLIANCE_BLOCKED"
+    );
   }
 }

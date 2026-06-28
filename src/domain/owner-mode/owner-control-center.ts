@@ -20,6 +20,8 @@ export interface ControlCenterInputs {
   equipmentBottlenecks: string[];
   processReviewsDue: number;
   ownerApprovalsRequired: number;
+  /** Failed self-evaluations whose reassessment is now due (EH-21). */
+  reassessmentsDue: number;
   nextBestAction?: string | null;
 }
 
@@ -39,6 +41,7 @@ export interface OwnerControlCenter {
     trainingRecommendations: number;
     equipmentBottlenecks: number;
     processReviewsDue: number;
+    reassessmentsDue: number;
   };
 }
 
@@ -65,8 +68,12 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
   if (i.attention.criticalUnresolved > 0) {
     criticalAlerts.push(`${i.attention.criticalUnresolved} critical item(s) unresolved.`);
   }
+  if (i.reassessmentsDue > 0) {
+    criticalAlerts.push(`${i.reassessmentsDue} failed outcome(s) are due for reassessment.`);
+    whatNotToDo.push("Do not re-run a failed approach until its reassessment is complete.");
+  }
 
-  const ownerActionsToday = i.ownerApprovalsRequired + i.attention.ownerDecisionsRequired + i.sopsNeedingReview + i.processReviewsDue;
+  const ownerActionsToday = i.ownerApprovalsRequired + i.attention.ownerDecisionsRequired + i.sopsNeedingReview + i.processReviewsDue + i.reassessmentsDue;
   const needsOwnerAttention = ownerActionsToday > 0 || criticalAlerts.length > 0;
 
   return {
@@ -85,6 +92,7 @@ export function buildOwnerControlCenter(i: ControlCenterInputs): OwnerControlCen
       trainingRecommendations: i.trainingRecommendations,
       equipmentBottlenecks: i.equipmentBottlenecks.length,
       processReviewsDue: i.processReviewsDue,
+      reassessmentsDue: i.reassessmentsDue,
     },
   };
 }

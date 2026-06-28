@@ -13,7 +13,8 @@ Live burn-down of remaining non-E2E gaps. Base HEAD `8e31704`. EH-23 (browser E2
 | EH-15 | PARTIAL | live approval memory in a real owner approval path | approval flow + caller | reuse test | OPEN | — |
 | EH-10/EH-19/EH-25 | PARTIAL | memory/self-eval consequences surfaced; live opportunity guardrails | gate + control center | suppress/surface tests | PARTIAL | — |
 | EH-17 | OPEN | live marketing/opportunity/contract guardrails | decision flow | reject/defer tests | OPEN | — |
-| EH-20/EH-21 | OPEN | compliance boundary runtime + reassessment surfaced | gate + control center | defer tests | OPEN | — |
+| EH-20 | **CLOSED_TESTED** | compliance boundary runtime | owner-action-gate.service.ts | expired licence/permit/insurance/tax blocks material actions (professional-review reason); owner-override via audited opt-out | **CLOSED_TESTED** | this turn |
+| EH-21 | **CLOSED_TESTED** | reassessment surfaced | control-center composer/service + owner page | reassessment-due count (failed self-evals due) shown in control center + counted in owner actions | **CLOSED_TESTED** | this turn |
 | EH-28 | OPEN | completion audit inside tx | task-completion.service | — | OPEN | — |
 | EH-29 | OPEN | block-metrics window param/documented | owner-block-metrics | — | OPEN | — |
 | EH-30 | **CLOSED_TESTED** | override high-visibility event | task-completion.service.ts | distinct client-visible owner.task_override_used when proof gate bypassed | **CLOSED_TESTED** | this turn |
