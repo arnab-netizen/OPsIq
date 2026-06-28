@@ -314,7 +314,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 11 | Marketing/opportunity/contract guardrails | COMPLETE_LOCAL |
 | 12 | Business memory & do-not-repeat | COMPLETE_LOCAL |
 | 13 | Self-evaluation loop baseline | COMPLETE_LOCAL |
-| 14 | Compliance/professional-review boundary | NOT_STARTED |
+| 14 | Compliance/professional-review boundary | COMPLETE_LOCAL |
 | 15 | Adversarial simulation & E2E proof | NOT_STARTED |
 
 ---
@@ -448,3 +448,11 @@ for DB/migration confirmation.
 - **Behavior:** on completion/verification the outcome is classified worked / failed / unknown; failures are attributed (insufficient proof > external factor > weak data > owner override > poor execution > bad recommendation) and schedule a reassessment date. Owner-workload impact captured. Audited. Closes the modeled-but-open self-evaluation loop.
 - **Files:** `OwnerSelfEvaluation` model + `migrations/20260628180000_owner_self_evaluation`, `domain/owner-mode/self-evaluation.ts`, `services/owner-mode/self-evaluation.service.ts`, `app/api/owner/self-evaluation/route.ts`, `__tests__/owner-mode/self-evaluation.test.ts` (6 tests).
 - **Tests:** 6 passed. **Limitations:** auto-feeding failures into do_not_repeat memory + a full reassessment-event record (vs the scheduled flag) are follow-ons.
+
+---
+
+## SLICE 14 — COMPLIANCE / PROFESSIONAL-REVIEW BOUNDARY — **COMPLETE_LOCAL**
+- **Reuse/new:** new `OwnerComplianceItem` model + pure `domain/owner-mode/compliance-boundary.ts`; DI service + route. (COMPLIANCE-sensitive recommendations are already routed to professional review / blocked at promotion by the Slice 0 input-quality gate.)
+- **Behavior:** classifies a topic into informational / caution / professional_review_required / blocked_until_review WITHOUT definitive legal/tax advice (every result carries a not-a-professional disclaimer): expired licence/permit → blocked; contract/tax/staff-sensitive → professional review; advertising/privacy/expiring-soon → caution. Compliance items (licence/permit/insurance/tax) track expiry; expired → blocked, expiring-soon → caution. Audited.
+- **Files:** `OwnerComplianceItem` model + `migrations/20260628190000_owner_compliance_item`, `domain/owner-mode/compliance-boundary.ts`, `services/owner-mode/compliance.service.ts`, `app/api/owner/compliance/route.ts`, `__tests__/owner-mode/compliance-boundary.test.ts` (7 tests).
+- **Tests:** 7 passed.

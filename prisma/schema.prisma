@@ -1325,6 +1325,25 @@ model OwnerApprovalMemory {
 /// Jarvis 360 Slice 4 — owner standing instruction. An owner-defined rule that
 /// auto-allows or forbids a class of actions within a scope (and optional amount
 /// ceiling), so routine actions need not be re-approved.
+/// Jarvis 360 Slice 14 — compliance item (licence/permit/insurance/tax) with expiry,
+/// so OpsIQ can flag professional-review boundaries without giving definitive advice.
+model OwnerComplianceItem {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  businessId  String?   @map("business_id") @db.Uuid
+  kind        String
+  name        String
+  reference   String?
+  expiresAt   DateTime? @map("expires_at")
+  status      String    @default("active")
+  createdByUserId String @map("created_by_user_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, kind])
+  @@map("owner_compliance_item")
+}
+
 /// Jarvis 360 Slice 13 — OpsIQ self-evaluation. Records whether a recommendation/
 /// action worked, and when it failed, why (closing the modeled-but-open loop).
 model OwnerSelfEvaluation {
