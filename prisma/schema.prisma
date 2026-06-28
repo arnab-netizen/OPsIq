@@ -1325,6 +1325,34 @@ model OwnerApprovalMemory {
 /// Jarvis 360 Slice 4 — owner standing instruction. An owner-defined rule that
 /// auto-allows or forbids a class of actions within a scope (and optional amount
 /// ceiling), so routine actions need not be re-approved.
+/// Jarvis 360 Slice 5 — SOP document lifecycle. A first-class, versioned, owner-
+/// approved SOP/checklist (steps + proof requirements), distinct from the Module-7
+/// SOP *diagnosis* (which stays as the measurement layer). A material change forks
+/// a new draft version that needs re-approval; stale (past review date) triggers review.
+model OwnerSopDocument {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  businessId        String?   @map("business_id") @db.Uuid
+  process           String
+  role              String?
+  title             String
+  steps             String[]
+  proofRequirements String[]  @map("proof_requirements")
+  version           Int       @default(1)
+  status            String    @default("draft")
+  contentHash       String    @map("content_hash")
+  approvedByUserId  String?   @map("approved_by_user_id") @db.Uuid
+  effectiveDate     DateTime? @map("effective_date")
+  reviewDate        DateTime? @map("review_date")
+  supersedesId      String?   @map("supersedes_id") @db.Uuid
+  createdByUserId   String    @map("created_by_user_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, process, status])
+  @@map("owner_sop_document")
+}
+
 model OwnerStandingInstruction {
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId          String    @map("workspace_id") @db.Uuid

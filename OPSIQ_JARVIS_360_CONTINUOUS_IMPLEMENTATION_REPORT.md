@@ -305,7 +305,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 2 | Finance/cash/margin guardrails | COMPLETE_LOCAL |
 | 3 | Proof anti-gaming & completion gate | COMPLETE_LOCAL |
 | 4 | Owner load reduction baseline | COMPLETE_LOCAL |
-| 5 | SOP & checklist lifecycle baseline | NOT_STARTED |
+| 5 | SOP & checklist lifecycle baseline | COMPLETE_LOCAL |
 | 6 | Staff training & skills matrix baseline | NOT_STARTED |
 | 7 | Equipment/capacity/maintenance baseline | NOT_STARTED |
 | 8 | Process review & continuous improvement | NOT_STARTED |
@@ -376,3 +376,11 @@ for DB/migration confirmation.
 - **Behavior:** owner standing instructions auto-allow/forbid a class of actions in a scope under an amount ceiling (owner-only, audited); `classifyAttention`/`summarizeOwnerAttention` give an owner attention budget with fatigue-risk; `batchByStandingInstructions` partitions pending items into auto/forbidden/needs-approval so only true decisions reach the owner.
 - **Files:** `prisma/schema.prisma` (+2 models), `migrations/20260628120000_owner_load_reduction`, `domain/owner-mode/owner-load.ts`, `services/owner-mode/owner-load.service.ts`, `__tests__/owner-mode/owner-load.test.ts` (11 tests).
 - **Tests:** 11 passed. **Limitations:** auto-suppressing re-asks inside the legacy `requestApproval` flow + an owner-facing attention dashboard surface are follow-ons (Slice 9).
+
+---
+
+## SLICE 5 — SOP & CHECKLIST LIFECYCLE — **COMPLETE_LOCAL**
+- **Reuse/new:** new `OwnerSopDocument` model (first-class versioned SOP/checklist); pure lifecycle `domain/owner-mode/sop-document.ts` reusing the canonical content hash; DI service. The Module-7 SOP *diagnosis* stays untouched as the measurement layer (no duplicate).
+- **Behavior:** draft → owner-approved → retired; approved+non-stale SOPs reuse without re-approval; a material change (content hash differs) forks a NEW draft version requiring re-approval; past-review-date = stale → review. Approve/retire owner-only; all mutations audited.
+- **Files:** `OwnerSopDocument` model + `migrations/20260628130000_owner_sop_document`, `domain/owner-mode/sop-document.ts`, `services/owner-mode/sop-document.service.ts`, `app/api/owner/sop-documents/route.ts`, `__tests__/owner-mode/sop-document.test.ts` (10 tests).
+- **Tests:** 10 passed. **Limitations:** deploy-to-recurring-task + checklist-step check-in + training linkage are follow-ons (Slices 6/8).
