@@ -36,8 +36,15 @@ have `started_at` 20:14:52 and `completed_at` **20:14:53 — a 1-second duration
 `runner_id: 0`, empty `runner_name`, and **zero steps executed** (no checkout, no `npm ci`). The job
 log endpoint returns HTTP 404 because no log was ever produced. This is a GitHub Actions runner-
 provisioning failure (no runner assigned), not a regression in the merged code. An API re-run was
-attempted and refused (`403 Resource not accessible by integration`); re-triggering by pushing to
-main would move HEAD off the audited merge commit, which this audit must not do.
+attempted and refused (`403 Resource not accessible by integration`).
+
+**Reproduced on a docs-only commit — proving the code is not the cause.** The commit carrying this
+audit report (`ab95175`, which changes only this markdown file) triggered CI run `28334829907`. Both
+jobs aborted identically: `runner_id: 0`, empty `runner_name`, **2–3 second duration, zero steps**. A
+documentation-only commit failing exactly like the merge commit is conclusive evidence that the OpsIQ
+repository's GitHub Actions currently cannot provision a runner (runner unavailability / minutes
+exhaustion), entirely independent of the merged code. Further pushes only repeat the infrastructure
+abort, so no additional re-trigger was attempted.
 
 Because the merge-commit DB lane never ran, **a fully-green post-merge CI has not yet been observed.**
 This is recorded as the single open verification item (see §10). The substantive proof below is from
