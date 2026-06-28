@@ -310,7 +310,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 7 | Equipment/capacity/maintenance baseline | COMPLETE_LOCAL |
 | 8 | Process review & continuous improvement | COMPLETE_LOCAL |
 | 9 | Command center & guided execution wiring | COMPLETE_LOCAL |
-| 10 | Decision arbitration baseline | NOT_STARTED |
+| 10 | Decision arbitration baseline | COMPLETE_LOCAL |
 | 11 | Marketing/opportunity/contract guardrails | NOT_STARTED |
 | 12 | Business memory & do-not-repeat | NOT_STARTED |
 | 13 | Self-evaluation loop baseline | NOT_STARTED |
@@ -416,3 +416,11 @@ for DB/migration confirmation.
 - **Behavior:** one owner panel surfacing data insufficiency, finance/capacity/proof blocks, SOPs needing review, training recommendations, equipment bottlenecks, processes due for review, owner-actions-today count, what-OpsIQ-handled, what-NOT-to-do, attention budget, and next best action.
 - **Files:** `domain/owner-mode/owner-control-center.ts`, `services/owner-mode/owner-control-center.service.ts`, `app/api/owner/control-center/route.ts`, `__tests__/owner-mode/owner-control-center.test.ts` (4 tests).
 - **Tests:** 4 passed. **Limitations:** live aggregation of blocked-recommendation / proof-blocked / approvals-required counts (currently surfaced via audit events + defaulted to 0 in the route) is a follow-on; no UI page added (API/service surface only, per slice guidance).
+
+---
+
+## SLICE 10 — DECISION ARBITRATION — **COMPLETE_LOCAL**
+- **Reuse/new:** new pure `domain/owner-mode/decision-arbitration.ts` that COMPLEMENTS the existing `best-path-selector`/`conflict-engine` (value ranking) by letting safety constraints dominate. Route surface.
+- **Behavior:** candidates annotated with their hard blocks (legal/security → proof → cash → margin → data → capacity → quality/reputation, in priority order) and risk signals are arbitrated into one recommended decision + rejected/blocked/deferred alternatives, each with reasons, the dominant constraint, and reconsideration conditions. Urgency (risk of inaction) defers an otherwise-blocked option; reversibility + confidence + owner-goal alignment break ties; irreversible/high-risk winners require owner approval.
+- **Files:** `domain/owner-mode/decision-arbitration.ts`, `app/api/owner/arbitrate/route.ts`, `__tests__/owner-mode/decision-arbitration.test.ts` (5 tests).
+- **Tests:** 5 passed. **Limitations:** auto-assembling candidates from live recommendations (vs caller-provided) wires to the recommendation layer as a follow-on.
