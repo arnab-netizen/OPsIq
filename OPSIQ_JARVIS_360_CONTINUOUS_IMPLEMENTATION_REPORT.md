@@ -307,7 +307,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 4 | Owner load reduction baseline | COMPLETE_LOCAL |
 | 5 | SOP & checklist lifecycle baseline | COMPLETE_LOCAL |
 | 6 | Staff training & skills matrix baseline | COMPLETE_LOCAL |
-| 7 | Equipment/capacity/maintenance baseline | NOT_STARTED |
+| 7 | Equipment/capacity/maintenance baseline | COMPLETE_LOCAL |
 | 8 | Process review & continuous improvement | NOT_STARTED |
 | 9 | Command center & guided execution wiring | NOT_STARTED |
 | 10 | Decision arbitration baseline | NOT_STARTED |
@@ -392,3 +392,11 @@ for DB/migration confirmation.
 - **Behavior:** every training recommendation must cite ≥1 observed gap (repeated error / complaint / rework / missed checklist / equipment misuse / poor proof / quality issue / new SOP-equipment) — generic requests are rejected server-side (`GenericTrainingRejectedError`). Skills matrix tracks proven skills + SOP trained on; equipment is authorized **only when the relevant skill is proven** (`EquipmentAuthorizationDeniedError`). Effectiveness recheck date carried. Audited.
 - **Files:** 2 models + `migrations/20260628140000_owner_staff_training`, `domain/owner-mode/staff-training.ts`, `services/owner-mode/staff-training.service.ts`, `app/api/owner/staff-training/route.ts`, `__tests__/owner-mode/staff-training.test.ts` (8 tests).
 - **Tests:** 8 passed. **Limitations:** auto-deriving observed evidence from proof/quality history is a follow-on (wires to Slices 8/13).
+
+---
+
+## SLICE 7 — EQUIPMENT / CAPACITY / MAINTENANCE — **COMPLETE_LOCAL**
+- **Reuse/new:** new `OwnerEquipment` model; pure `domain/owner-mode/equipment-capacity.ts`; a new capacity gate **wired into the same default-on promotion policy** as Slices 0/2.
+- **Behavior:** equipment carries rated/practical capacity, utilization, status, downtime, maintenance-due. `assessFleetCapacity` takes the worst machine; a GROWTH-sensitive recommendation is **blocked** when capacity is high_risk/blocked (down, maintenance overdue, or utilization ≥95%). Equipment-free workspaces and non-growth recs are unaffected. Audited.
+- **Files:** `OwnerEquipment` model + `migrations/20260628150000_owner_equipment`, `domain/owner-mode/equipment-capacity.ts`, `services/owner-mode/recommendation-capacity-safety.service.ts` (+ wired into `gate-enforcement-policy.ts`), `services/owner-mode/equipment.service.ts`, `app/api/owner/equipment/route.ts`, `__tests__/owner-mode/equipment-capacity.test.ts` (12 tests).
+- **Tests:** 12 + policy regression 9 = 21 passed. **Limitations:** archetype-aware "missing capacity data must block equipment-heavy growth" uses present-equipment only (no archetype detection here); maintenance/downtime cost modeling is a follow-on.
