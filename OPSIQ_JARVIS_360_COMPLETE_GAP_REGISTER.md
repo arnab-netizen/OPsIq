@@ -293,3 +293,46 @@ Status legend: `OPEN` · `IN_PROGRESS` · `CLOSED_TESTED` · `HARD_BLOCKED` · `
 
 Statuses above are the planned end-states; the post-fix re-audit
 (`OPSIQ_JARVIS_360_POST_FIX_REAUDIT_REPORT.md`) records the verified final status per gap.
+
+---
+
+## Verified final status (post-fix re-audit)
+
+| Gap | Final status | Closure commit area |
+|-----|--------------|---------------------|
+| G01 | CLOSED_TESTED | Slice A (control-center render) |
+| G02 | CLOSED_TESTED | Slice A |
+| G03 | CLOSED_TESTED | Slice A (block-metrics) |
+| G04 | PARTIAL | Slice B (registry+regression); spine breadth pending |
+| G05 | PARTIAL | Slices B/C/D/E (owner surfaces gated); model-promotion breadth pending |
+| G06 | CLOSED_TESTED | Slice B |
+| G07 | CLOSED_TESTED | Slice C |
+| G08 | CLOSED_TESTED | Slice C |
+| G09 | CLOSED_TESTED | Slices A/C |
+| G10 | CLOSED_TESTED | Slice C |
+| G11 | CLOSED_TESTED | Slice D |
+| G12 | CLOSED_TESTED | Slice D |
+| G13 | CLOSED_TESTED | Slice D |
+| G14 | CLOSED_TESTED | Slice D |
+| G15 | CLOSED_TESTED | Slice E |
+| G16 | CLOSED_TESTED | Slice G |
+| G17 | CLOSED_TESTED | Slice F |
+| G18 | PARTIAL | Slice F (matching closed; single-path caveat) |
+| G19 | PARTIAL | review surfaced; SOP→task/proof binding pending |
+| G20 | PARTIAL | Slice I (derivation closed+tested; auto-invocation pending) |
+| G21 | PARTIAL | Slice N (seed closed); equipment otherwise entered |
+| G22 | PARTIAL | growth gate + arbitration risk; marketing/contract pending |
+| G23 | PARTIAL | Slice K (threshold fn closed+tested; auto-invocation pending) |
+| G24 | PARTIAL | pre-existing routing only |
+| G25 | PARTIAL | arbitration covers prioritization; screens query-only |
+| G26 | CLOSED_TESTED | Slice N |
+| G27 | CLOSED_TESTED | Slice N |
+| G28 | CLOSED_TESTED | Slice O (service loop) |
+| G29 | CLOSED_TESTED | Slice A |
+| G30 | OUT_OF_SCOPE_E2E_ONLY | Slice P (spec added, not run here) |
+| G31 | CLOSED_TESTED | all new tests DI/in-memory |
+
+**Totals:** 31 gaps — **19 CLOSED_TESTED**, **11 PARTIAL**, **0 STILL_OPEN (untouched)**,
+**1 OUT_OF_SCOPE_E2E_ONLY**. (G20/G23 counted PARTIAL because the derivation/threshold logic is
+CLOSED+tested but auto-invocation from live sources remains; G21 PARTIAL because the seed is CLOSED
+but broader equipment entry remains.)
