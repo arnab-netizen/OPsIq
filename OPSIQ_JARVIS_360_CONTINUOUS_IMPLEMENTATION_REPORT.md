@@ -311,7 +311,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 8 | Process review & continuous improvement | COMPLETE_LOCAL |
 | 9 | Command center & guided execution wiring | COMPLETE_LOCAL |
 | 10 | Decision arbitration baseline | COMPLETE_LOCAL |
-| 11 | Marketing/opportunity/contract guardrails | NOT_STARTED |
+| 11 | Marketing/opportunity/contract guardrails | COMPLETE_LOCAL |
 | 12 | Business memory & do-not-repeat | NOT_STARTED |
 | 13 | Self-evaluation loop baseline | NOT_STARTED |
 | 14 | Compliance/professional-review boundary | NOT_STARTED |
@@ -424,3 +424,11 @@ for DB/migration confirmation.
 - **Behavior:** candidates annotated with their hard blocks (legal/security → proof → cash → margin → data → capacity → quality/reputation, in priority order) and risk signals are arbitrated into one recommended decision + rejected/blocked/deferred alternatives, each with reasons, the dominant constraint, and reconsideration conditions. Urgency (risk of inaction) defers an otherwise-blocked option; reversibility + confidence + owner-goal alignment break ties; irreversible/high-risk winners require owner approval.
 - **Files:** `domain/owner-mode/decision-arbitration.ts`, `app/api/owner/arbitrate/route.ts`, `__tests__/owner-mode/decision-arbitration.test.ts` (5 tests).
 - **Tests:** 5 passed. **Limitations:** auto-assembling candidates from live recommendations (vs caller-provided) wires to the recommendation layer as a follow-on.
+
+---
+
+## SLICE 11 — MARKETING / OPPORTUNITY / CONTRACT GUARDRAILS — **COMPLETE_LOCAL**
+- **Reuse/new:** new pure `domain/owner-mode/opportunity-contract-guardrails.ts` reusing the margin floor (`unit-economics`), capacity status (Slice 7), and cash-safety state (Slice 0). Route surface. (Marketing/growth recs are additionally gated at promotion by the cash + capacity gates.)
+- **Behavior:** `screenOpportunity` rejects below-margin / low-fit and defers on saturated capacity or high payment risk; `screenContractQuote` rejects quotes below the margin-floor price, defers on long payment terms / blocked capacity, and flags owner approval for long-dated deals; `shouldRunMarketing` blocks marketing when cash is unsafe, capacity is blocked, or quality/reputation is red, and requires a stop-loss when it does run. These REJECT/DEFER, not just flag.
+- **Files:** `domain/owner-mode/opportunity-contract-guardrails.ts`, `app/api/owner/guardrails/screen/route.ts`, `__tests__/owner-mode/opportunity-contract-guardrails.test.ts` (9 tests).
+- **Tests:** 9 passed. **Limitations:** auto-pulling live cash/capacity/quality state into the screen (vs caller-supplied) and a contract entity are follow-ons.
