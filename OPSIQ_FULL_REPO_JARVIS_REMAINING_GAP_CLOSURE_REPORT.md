@@ -54,3 +54,22 @@ GAP-CI-FLAKE-01 so `ci.yml` is end-to-end green, (2) land the owner-e2e lane (GA
 ## Remaining blockers
 1. GAP-CI-FLAKE-01 (MEDIUM) — pre-existing flaky full DB suite (red on main; unrelated to Jarvis).
 2. GAP-E2E-01 (MEDIUM) — browser owner-flow lane (planned).
+
+---
+
+## FINAL CLOSURE PASS UPDATE (no-deferral push)
+
+- **Cascade audit (GAP-DB-02 broader sweep): CLOSED** — full classification in
+  `OPSIQ_FULL_REPO_JARVIS_CASCADE_AUDIT.md`; proof/audit/event records protected (verification RESTRICT,
+  canonical_events append-only trigger, snapshot_data FK-block, AuditEvent.actor Restrict); operational
+  cascades classified safe; `schema-hardening.test.ts` (7) regression-guards it; migrate deploy GREEN
+  (run `28338068307`).
+- **GAP-CI-FLAKE-01: OPEN** — `flake-diagnose.yml` lane added to extract the exact failing tests; the
+  single-worker full DB suite is extremely slow (20+ min) and did not yield a clean failure list this pass.
+  Failure classes + remediation are precisely documented. Pre-existing on main.
+- **GAP-E2E-01: OPEN (lane implemented, not yet green)** — `owner-e2e.yml` + `scripts/seed-e2e-owner.ts`
+  added. The app BUILDS, SEEDS, and BOOTS in CI (`next-server` running); the Playwright owner-control-center
+  test step fails (login/render assertion) and needs 1–2 more iterations. Runs `28338712533`, `28338771459`.
+- **Final classification: REMAINING_GAPS_OPEN.** Behavioral validation may NOT start (full DB suite + browser
+  E2E not yet green). All BLOCKER/CRITICAL/HIGH code/schema gaps are CI-proven closed; the residual is
+  test-suite flakiness (pre-existing) + E2E lane stabilization.
