@@ -1325,6 +1325,26 @@ model OwnerApprovalMemory {
 /// Jarvis 360 Slice 4 — owner standing instruction. An owner-defined rule that
 /// auto-allows or forbids a class of actions within a scope (and optional amount
 /// ceiling), so routine actions need not be re-approved.
+/// Jarvis 360 Slice 13 — OpsIQ self-evaluation. Records whether a recommendation/
+/// action worked, and when it failed, why (closing the modeled-but-open loop).
+model OwnerSelfEvaluation {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  recommendationId     String?   @map("recommendation_id") @db.Uuid
+  actionId             String?   @map("action_id") @db.Uuid
+  expectedOutcome      String    @map("expected_outcome")
+  actualOutcome        String?   @map("actual_outcome")
+  result               String
+  failureReason        String?   @map("failure_reason")
+  ownerWorkloadImpact  String?   @map("owner_workload_impact")
+  reassessmentRequired Boolean   @default(false) @map("reassessment_required")
+  nextReassessmentAt   DateTime? @map("next_reassessment_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId, result])
+  @@map("owner_self_evaluation")
+}
+
 /// Jarvis 360 Slice 8 — process inventory + review. Each process has an owner role,
 /// a linked SOP, a metric/target, and a review cadence; reviews fire on schedule or
 /// on a failure signal so processes become living controls.

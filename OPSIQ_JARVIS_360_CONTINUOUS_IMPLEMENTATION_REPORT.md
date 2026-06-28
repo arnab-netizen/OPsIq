@@ -313,7 +313,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 10 | Decision arbitration baseline | COMPLETE_LOCAL |
 | 11 | Marketing/opportunity/contract guardrails | COMPLETE_LOCAL |
 | 12 | Business memory & do-not-repeat | COMPLETE_LOCAL |
-| 13 | Self-evaluation loop baseline | NOT_STARTED |
+| 13 | Self-evaluation loop baseline | COMPLETE_LOCAL |
 | 14 | Compliance/professional-review boundary | NOT_STARTED |
 | 15 | Adversarial simulation & E2E proof | NOT_STARTED |
 
@@ -440,3 +440,11 @@ for DB/migration confirmation.
 - **Behavior:** at recommendation promotion the policy derives a key from the recommendation's finding code, looks up an active `do_not_repeat` memory, and **blocks** promotion (audited `owner.do_not_repeat_blocked`) unless the memory carries an explicit changed-context explanation. Closes the audit gap that do_not_repeat memories were persisted but never enforced.
 - **Files:** `OwnerDecisionMemory.memoryKey` + `migrations/20260628170000_decision_memory_key`, `domain/owner-mode/do-not-repeat.ts`, `services/owner-mode/do-not-repeat.service.ts` (+ wired into `gate-enforcement-policy.ts`), `app/api/owner/do-not-repeat/route.ts`, `__tests__/owner-mode/do-not-repeat.test.ts` (10 tests).
 - **Tests:** 10 + policy regression 9 = 19 passed. **Limitations:** positive memory (worked_before / preferred vendor) reuse is a follow-on.
+
+---
+
+## SLICE 13 — SELF-EVALUATION LOOP — **COMPLETE_LOCAL**
+- **Reuse/new:** new `OwnerSelfEvaluation` model + pure `domain/owner-mode/self-evaluation.ts` classifier; DI service + route.
+- **Behavior:** on completion/verification the outcome is classified worked / failed / unknown; failures are attributed (insufficient proof > external factor > weak data > owner override > poor execution > bad recommendation) and schedule a reassessment date. Owner-workload impact captured. Audited. Closes the modeled-but-open self-evaluation loop.
+- **Files:** `OwnerSelfEvaluation` model + `migrations/20260628180000_owner_self_evaluation`, `domain/owner-mode/self-evaluation.ts`, `services/owner-mode/self-evaluation.service.ts`, `app/api/owner/self-evaluation/route.ts`, `__tests__/owner-mode/self-evaluation.test.ts` (6 tests).
+- **Tests:** 6 passed. **Limitations:** auto-feeding failures into do_not_repeat memory + a full reassessment-event record (vs the scheduled flag) are follow-ons.
