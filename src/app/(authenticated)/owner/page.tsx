@@ -46,6 +46,28 @@ async function api(path: string) {
   }
 }
 
+// POST helper — owner ACTS through secured routes (server still enforces every gate).
+// Returns { ok, status, data } so the caller can render the gate/proof/arbitration reason.
+async function apiPost(path: string, body: unknown): Promise<{ ok: boolean; status: number; data: any }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") return { ok: false, status: 0, data: { error: "Request timed out." } };
+    return { ok: false, status: 0, data: { error: e instanceof Error ? e.message : "Request failed." } };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const DOMAIN_LINK: Record<string, string> = {
   finance: "/owner/finance",
   cashflow: "/owner/cashflow",
@@ -56,6 +78,95 @@ const DOMAIN_LINK: Record<string, string> = {
   strategy: "/owner/strategy",
   recovery: "/owner/recovery",
 };
+
+/**
+ * EH-03/EH-04 — minimal owner action controls. The owner can ACT (not just read):
+ * complete a proof-gated task and resolve an approval. Calls the secured POST routes;
+ * the server enforces every gate, and the gate/proof reason is surfaced here.
+ */
+function OwnerActions() {
+  const [taskId, setTaskId] = useState("");
+  const [ownerOverride, setOwnerOverride] = useState(false);
+  const [taskResult, setTaskResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [taskBusy, setTaskBusy] = useState(false);
+
+  const [scope, setScope] = useState("");
+  const [actionType, setActionType] = useState("");
+  const [riskClass, setRiskClass] = useState("medium");
+  const [content, setContent] = useState("");
+  const [apprResult, setApprResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [apprBusy, setApprBusy] = useState(false);
+
+  const completeTask = async () => {
+    if (!taskId.trim()) return;
+    setTaskBusy(true);
+    setTaskResult(null);
+    const r = await apiPost("/api/owner/tasks/complete", { taskId: taskId.trim(), ownerOverride });
+    if (r.ok) setTaskResult({ ok: true, text: `Completed — status ${r.data.status}.` });
+    else if (r.status === 409 && r.data?.blocked) setTaskResult({ ok: false, text: `Blocked: ${r.data.reason}.` });
+    else setTaskResult({ ok: false, text: r.data?.error?.message || r.data?.error || `Failed (${r.status}).` });
+    setTaskBusy(false);
+  };
+
+  const resolveApproval = async () => {
+    if (!scope.trim() || !actionType.trim() || !content.trim()) return;
+    setApprBusy(true);
+    setApprResult(null);
+    const r = await apiPost("/api/owner/approvals/resolve", { scope: scope.trim(), actionType: actionType.trim(), riskClass, content: { note: content.trim() } });
+    if (r.ok) {
+      const handled = r.data.handledByOpsIQ ? "OpsIQ handled this" : "owner decision required";
+      setApprResult({ ok: r.data.handledByOpsIQ, text: `${r.data.outcome} (${handled}).` });
+    } else setApprResult({ ok: false, text: r.data?.error?.message || r.data?.error || `Failed (${r.status}).` });
+    setApprBusy(false);
+  };
+
+  return (
+    <section className="border rounded-lg p-4 bg-white" data-testid="owner-actions">
+      <div className="text-xs uppercase text-muted-foreground mb-3">Owner actions</div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Complete a proof-gated task</div>
+          <input
+            className="w-full border rounded px-2 py-2 text-sm min-h-[44px]"
+            placeholder="Task ID"
+            value={taskId}
+            onChange={(e) => setTaskId(e.target.value)}
+          />
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={ownerOverride} onChange={(e) => setOwnerOverride(e.target.checked)} />
+            Owner override (audited; bypasses proof gate)
+          </label>
+          <Button className="min-h-[44px]" disabled={taskBusy || !taskId.trim()} onClick={completeTask}>
+            {taskBusy ? "Completing…" : "Complete task"}
+          </Button>
+          {taskResult && (
+            <p className={`text-xs ${taskResult.ok ? "text-success" : "text-destructive"}`}>{taskResult.text}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Resolve an approval</div>
+          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Scope (e.g. pricing.discount)" value={scope} onChange={(e) => setScope(e.target.value)} />
+          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Action type (e.g. apply_discount)" value={actionType} onChange={(e) => setActionType(e.target.value)} />
+          <Select
+            name="riskClass"
+            label="Risk class"
+            value={riskClass}
+            onChange={(e: any) => setRiskClass(e.target.value)}
+            options={["low", "medium", "high", "critical"].map((r) => ({ value: r, label: r }))}
+          />
+          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Decision summary" value={content} onChange={(e) => setContent(e.target.value)} />
+          <Button className="min-h-[44px]" disabled={apprBusy || !scope.trim() || !actionType.trim() || !content.trim()} onClick={resolveApproval}>
+            {apprBusy ? "Resolving…" : "Resolve approval"}
+          </Button>
+          {apprResult && (
+            <p className={`text-xs ${apprResult.ok ? "text-success" : "text-muted-foreground"}`}>{apprResult.text}</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function OwnerCommandCenterPage() {
   const [data, setData] = useState<any | null>(null);
@@ -270,6 +381,8 @@ export default function OwnerCommandCenterPage() {
                       <span className="font-medium">Next best action:</span> {control.nextBestAction}
                     </div>
                   )}
+
+                  <div className="mb-3"><OwnerActions /></div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     {[
