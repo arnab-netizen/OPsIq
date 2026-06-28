@@ -50,4 +50,15 @@ export const MATERIAL_GATE_PATHS: readonly MaterialGatePath[] = [
     enforcingSymbol: "resolveOwnerApproval",
     rationale: "High-impact approvals must consult standing instructions + approval memory before re-asking the owner.",
   },
+  // EH-01/EH-02 — every owner-mode domain action service must pass material transitions
+  // through the owner-mode gate (default-on, opt-out aware). Adding a new owner-domain
+  // action service without this call is the regression we guard against.
+  ...(
+    ["finance", "cashflow", "sales", "marketing", "operations", "sop", "strategy"].map((d) => ({
+      id: `owner.${d}.action`,
+      file: `src/services/owner-${d}/action.service.ts`,
+      enforcingSymbol: "enforceOwnerActionGates",
+      rationale: `Owner ${d} action transitions (in_progress/completed) must pass the owner-mode safety gate.`,
+    }))
+  ),
 ] as const;
