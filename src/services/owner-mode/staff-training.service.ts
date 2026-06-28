@@ -100,6 +100,69 @@ export async function recordObservedTrainingNeed(input: RecordTrainingInput, inj
   return created.id;
 }
 
+/**
+ * Runtime failure signals that justify evidence-backed training (G20). These come from
+ * observed events (a rejected/duplicate proof, a customer complaint, a checklist miss,
+ * equipment misuse, rework) — never a generic "train everyone" request.
+ */
+export type RuntimeFailureSignal =
+  | "proof_failure"
+  | "duplicate_proof"
+  | "customer_complaint"
+  | "rework"
+  | "missed_checklist"
+  | "equipment_misuse"
+  | "quality_issue";
+
+const SIGNAL_TO_GAP: Record<RuntimeFailureSignal, ObservedGapCode> = {
+  proof_failure: "poor_proof_compliance",
+  duplicate_proof: "poor_proof_compliance",
+  customer_complaint: "customer_complaint",
+  rework: "rework",
+  missed_checklist: "missed_checklist",
+  equipment_misuse: "equipment_misuse",
+  quality_issue: "quality_issue",
+};
+
+export interface DeriveTrainingInput {
+  workspaceId: string;
+  staffRef: string;
+  signal: RuntimeFailureSignal;
+  /** How many times the failure was observed (must be ≥ 1 to trigger). */
+  occurrences: number;
+  evidenceRef?: string;
+  processAffected: string;
+  metric: string;
+  expectedImprovement: string;
+  recheckDate?: Date;
+  actorId: string;
+}
+
+/**
+ * Auto-derive an evidence-backed training recommendation from an OBSERVED runtime failure
+ * (proof failure, complaint, checklist miss, equipment misuse, rework). Returns the created
+ * recommendation id, or null when the signal carries no occurrences (no generic training).
+ * This is the trigger the strict re-audit found missing — training is produced from evidence,
+ * linked to the staff member, the affected process, the expected metric, and a recheck date.
+ */
+export async function deriveTrainingFromObservedFailure(input: DeriveTrainingInput, injected?: TrainingDeps): Promise<string | null> {
+  if (input.occurrences < 1) return null;
+  const evidence: ObservedEvidence[] = [{ code: SIGNAL_TO_GAP[input.signal], occurrences: input.occurrences, evidenceRef: input.evidenceRef }];
+  return recordObservedTrainingNeed(
+    {
+      workspaceId: input.workspaceId,
+      staffRef: input.staffRef,
+      evidence,
+      processAffected: input.processAffected,
+      metric: input.metric,
+      expectedImprovement: input.expectedImprovement,
+      recheckDate: input.recheckDate,
+      actorId: input.actorId,
+    },
+    injected
+  );
+}
+
 /** Mark training complete with proof and schedule an effectiveness recheck. */
 export async function completeTraining(
   id: string,

@@ -118,6 +118,35 @@ export async function triggerProcessReviewIfDue(
   return decision;
 }
 
+export const DEFAULT_REPEATED_FAILURE_THRESHOLD = 3;
+
+/**
+ * Connect repeated runtime failures to a process review (G23). When the observed failure
+ * count for a process crosses the threshold, mark it as a repeated-failure review trigger
+ * and run the review. Below threshold, nothing is triggered (a single failure is noise).
+ * Returns the review decision (with `due` + triggers).
+ */
+export async function triggerProcessReviewOnRepeatedFailure(
+  id: string,
+  input: {
+    workspaceId: string;
+    failureCount: number;
+    threshold?: number;
+    /** Optional extra signals observed alongside the failures. */
+    extraSignals?: ProcessReviewSignals;
+    actorId?: string;
+  },
+  injected?: ProcessDeps
+): Promise<ReviewDecision> {
+  const threshold = input.threshold ?? DEFAULT_REPEATED_FAILURE_THRESHOLD;
+  const repeatedFailure = input.failureCount >= threshold;
+  return triggerProcessReviewIfDue(
+    id,
+    { workspaceId: input.workspaceId, signals: { ...input.extraSignals, repeatedFailure }, actorId: input.actorId },
+    injected
+  );
+}
+
 /** Whether a proposed process update is material (owner approval required). */
 export function updateNeedsOwnerApproval(kind: ProcessUpdateKind): boolean {
   return processUpdateRequiresOwnerApproval(kind);
