@@ -195,6 +195,15 @@ model ClientAccount {
   /// without a complete, safe BusinessImpactAssessment (opt-in; default off keeps
   /// existing flows unchanged). Owner Mode workspaces enable this.
   requireBusinessImpactAssessment               Boolean                                 @default(false) @map("require_business_impact_assessment")
+  /// Jarvis 360 Slice 0 — owner safety gates are DEFAULT-ON. These fields record an
+  /// explicit, audited owner opt-out (never silent). When ownerGateOptOutAt is set
+  /// and not past ownerGateOptOutExpiresAt, gate enforcement is skipped for the
+  /// workspace. Cleared by setting ownerGateOptOutAt back to null.
+  ownerGateOptOutAt                             DateTime?                               @map("owner_gate_opt_out_at")
+  ownerGateOptOutReason                         String?                                 @map("owner_gate_opt_out_reason")
+  ownerGateOptOutBy                             String?                                 @map("owner_gate_opt_out_by") @db.Uuid
+  ownerGateOptOutRisk                           String?                                 @map("owner_gate_opt_out_risk")
+  ownerGateOptOutExpiresAt                      DateTime?                               @map("owner_gate_opt_out_expires_at")
   createdBy                                     String?                                 @map("created_by") @db.Uuid
   createdAt                                     DateTime                                @default(now()) @map("created_at")
   updatedAt                                     DateTime                                @map("updated_at")
@@ -1289,6 +1298,244 @@ enum evidence_visibility {
   INTERNAL
   CLIENT_VISIBLE
   RESTRICTED
+}
+
+/// Jarvis 360 Slice 4 — owner approval memory. Records an owner's approval of a
+/// content-hashed decision/rule so it can be reused WITHOUT re-asking, but only
+/// when workspace + scope + content hash match and the requested risk is the same
+/// or lower. A material change (different content hash) forces re-approval.
+model OwnerApprovalMemory {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  scope            String
+  contentHash      String    @map("content_hash")
+  version          Int       @default(1)
+  riskClass        String    @map("risk_class")
+  approvalStatus   String    @default("approved") @map("approval_status")
+  approvedByUserId String    @map("approved_by_user_id") @db.Uuid
+  validUntil       DateTime? @map("valid_until")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, scope, contentHash])
+  @@index([workspaceId, scope])
+  @@map("owner_approval_memory")
+}
+
+/// Jarvis 360 Slice 4 — owner standing instruction. An owner-defined rule that
+/// auto-allows or forbids a class of actions within a scope (and optional amount
+/// ceiling), so routine actions need not be re-approved.
+/// Jarvis 360 Slice 14 — compliance item (licence/permit/insurance/tax) with expiry,
+/// so OpsIQ can flag professional-review boundaries without giving definitive advice.
+model OwnerComplianceItem {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  businessId  String?   @map("business_id") @db.Uuid
+  kind        String
+  name        String
+  reference   String?
+  expiresAt   DateTime? @map("expires_at")
+  status      String    @default("active")
+  createdByUserId String @map("created_by_user_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, kind])
+  @@map("owner_compliance_item")
+}
+
+/// Jarvis 360 Slice 12 — do-not-repeat rule. A dedicated, fully-migrated store for
+/// "do not repeat this" rules keyed by a deterministic memory key (e.g. finding code),
+/// checked at recommendation promotion. (Self-contained — does not depend on the
+/// schema-only OwnerDecisionMemory model, which has no creating migration.)
+model OwnerDoNotRepeatRule {
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId               String   @map("workspace_id") @db.Uuid
+  businessId                String?  @map("business_id") @db.Uuid
+  memoryKey                 String   @map("memory_key")
+  summary                   String
+  reason                    String
+  blocksRepetition          Boolean  @default(true) @map("blocks_repetition")
+  changedContextExplanation String?  @map("changed_context_explanation")
+  recommendationId          String?  @map("recommendation_id") @db.Uuid
+  active                    Boolean  @default(true)
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId, memoryKey])
+  @@map("owner_do_not_repeat_rule")
+}
+
+/// Jarvis 360 Slice 13 — OpsIQ self-evaluation. Records whether a recommendation/
+/// action worked, and when it failed, why (closing the modeled-but-open loop).
+model OwnerSelfEvaluation {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  recommendationId     String?   @map("recommendation_id") @db.Uuid
+  actionId             String?   @map("action_id") @db.Uuid
+  expectedOutcome      String    @map("expected_outcome")
+  actualOutcome        String?   @map("actual_outcome")
+  result               String
+  failureReason        String?   @map("failure_reason")
+  ownerWorkloadImpact  String?   @map("owner_workload_impact")
+  reassessmentRequired Boolean   @default(false) @map("reassessment_required")
+  nextReassessmentAt   DateTime? @map("next_reassessment_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId, result])
+  @@map("owner_self_evaluation")
+}
+
+/// Jarvis 360 Slice 8 — process inventory + review. Each process has an owner role,
+/// a linked SOP, a metric/target, and a review cadence; reviews fire on schedule or
+/// on a failure signal so processes become living controls.
+model OwnerProcess {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String?   @map("business_id") @db.Uuid
+  name                String
+  processType         String    @map("process_type")
+  ownerRole           String    @map("owner_role")
+  sopId               String?   @map("sop_id") @db.Uuid
+  metric              String
+  target              String?
+  reviewFrequencyDays Int       @default(30) @map("review_frequency_days")
+  lastReviewAt        DateTime? @map("last_review_at")
+  nextReviewAt        DateTime? @map("next_review_at")
+  status              String    @default("active")
+  createdByUserId     String    @map("created_by_user_id") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, processType])
+  @@map("owner_process")
+}
+
+/// Jarvis 360 Slice 7 — equipment / capacity / maintenance. Minimal rated/practical
+/// capacity + utilization + maintenance/downtime so growth decisions can be gated.
+model OwnerEquipment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  businessId        String?   @map("business_id") @db.Uuid
+  equipmentType     String    @map("equipment_type")
+  name              String
+  ratedCapacity     Float?    @map("rated_capacity")
+  practicalCapacity Float?    @map("practical_capacity")
+  unit              String?
+  utilization       Float?
+  status            String    @default("operational")
+  downtimeState     String    @default("up") @map("downtime_state")
+  maintenanceDueAt  DateTime? @map("maintenance_due_at")
+  operatorSkill     String?   @map("operator_skill")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, businessId])
+  @@map("owner_equipment")
+}
+
+/// Jarvis 360 Slice 6 — staff skills matrix. Tracks which skills a staff member has
+/// proven, the SOP they were trained on, and whether equipment use is authorized.
+model OwnerStaffSkill {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String   @map("workspace_id") @db.Uuid
+  staffRef            String   @map("staff_ref")
+  role                String?
+  skill               String
+  proven              Boolean  @default(false)
+  sopId               String?  @map("sop_id") @db.Uuid
+  equipmentAuthorized Boolean  @default(false) @map("equipment_authorized")
+  lastProvenAt        DateTime? @map("last_proven_at")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, staffRef, skill])
+  @@index([workspaceId, staffRef])
+  @@map("owner_staff_skill")
+}
+
+/// Jarvis 360 Slice 6 — observed-gap training recommendation. Every recommendation
+/// must cite observed evidence (no generic training); effectiveness is rechecked.
+model OwnerTrainingRecommendation {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  staffRef            String    @map("staff_ref")
+  reasonCode          String    @map("reason_code")
+  evidenceRef         String?   @map("evidence_ref")
+  processAffected     String    @map("process_affected")
+  metric              String
+  expectedImprovement String    @map("expected_improvement")
+  status              String    @default("recommended")
+  proofOfCompletion   String?   @map("proof_of_completion")
+  recheckDate         DateTime? @map("recheck_date")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, staffRef])
+  @@map("owner_training_recommendation")
+}
+
+/// Jarvis 360 Slice 5 — SOP document lifecycle. A first-class, versioned, owner-
+/// approved SOP/checklist (steps + proof requirements), distinct from the Module-7
+/// SOP *diagnosis* (which stays as the measurement layer). A material change forks
+/// a new draft version that needs re-approval; stale (past review date) triggers review.
+model OwnerSopDocument {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  businessId        String?   @map("business_id") @db.Uuid
+  process           String
+  role              String?
+  title             String
+  steps             String[]
+  proofRequirements String[]  @map("proof_requirements")
+  version           Int       @default(1)
+  status            String    @default("draft")
+  contentHash       String    @map("content_hash")
+  approvedByUserId  String?   @map("approved_by_user_id") @db.Uuid
+  effectiveDate     DateTime? @map("effective_date")
+  reviewDate        DateTime? @map("review_date")
+  supersedesId      String?   @map("supersedes_id") @db.Uuid
+  createdByUserId   String    @map("created_by_user_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, process, status])
+  @@map("owner_sop_document")
+}
+
+model OwnerStandingInstruction {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  scope                String
+  allowedActionTypes   String[]  @map("allowed_action_types")
+  forbiddenActionTypes String[]  @map("forbidden_action_types")
+  maxAmount            Float?    @map("max_amount")
+  riskClass            String    @map("risk_class")
+  status               String    @default("active")
+  createdByUserId      String    @map("created_by_user_id") @db.Uuid
+  validUntil           DateTime? @map("valid_until")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, scope])
+  @@map("owner_standing_instruction")
+}
+
+/// Jarvis 360 Slice 4 — owner attention event. Records each alert/approval/escalation
+/// with its disposition so OpsIQ can protect owner attention and report load saved.
+model OwnerAttentionEvent {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String   @map("workspace_id") @db.Uuid
+  eventType            String   @map("event_type")
+  severity             String
+  disposition          String
+  ownerDecisionRequired Boolean @default(false) @map("owner_decision_required")
+  handledByOpsIQ       Boolean  @default(false) @map("handled_by_opsiq")
+  sourceRef            String?  @map("source_ref")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId, createdAt])
+  @@map("owner_attention_event")
 }
 
 model ApprovalRequest {

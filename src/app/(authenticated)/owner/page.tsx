@@ -46,6 +46,29 @@ async function api(path: string) {
   }
 }
 
+// POST helper — owner ACTS through secured routes (server still enforces every gate).
+// Returns { ok, status, data } so the caller can render the gate/proof/arbitration reason.
+async function apiPost(path: string, body: unknown): Promise<{ ok: boolean; status: number; data: any }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    // Never surface a raw error string (operator-error governance). Generic, safe copy only.
+    const timedOut = e instanceof Error && e.name === "AbortError";
+    return { ok: false, status: 0, data: { error: timedOut ? "Request timed out. Check your connection and try again." : "Could not reach the server. Try again." } };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const DOMAIN_LINK: Record<string, string> = {
   finance: "/owner/finance",
   cashflow: "/owner/cashflow",
@@ -57,8 +80,137 @@ const DOMAIN_LINK: Record<string, string> = {
   recovery: "/owner/recovery",
 };
 
+/**
+ * EH-03/EH-04 — minimal owner action controls. The owner can ACT (not just read):
+ * complete a proof-gated task and resolve an approval. Calls the secured POST routes;
+ * the server enforces every gate, and the gate/proof reason is surfaced here.
+ */
+function OwnerActions({ businessId }: { businessId: string | null }) {
+  const [taskId, setTaskId] = useState("");
+  const [ownerOverride, setOwnerOverride] = useState(false);
+  const [taskResult, setTaskResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [taskBusy, setTaskBusy] = useState(false);
+
+  const [scope, setScope] = useState("");
+  const [actionType, setActionType] = useState("");
+  const [riskClass, setRiskClass] = useState("medium");
+  const [content, setContent] = useState("");
+  const [apprResult, setApprResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [apprBusy, setApprBusy] = useState(false);
+
+  const [fitScore, setFitScore] = useState("0.7");
+  const [paymentRisk, setPaymentRisk] = useState("low");
+  const [oppResult, setOppResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [oppBusy, setOppBusy] = useState(false);
+
+  const decideOpportunity = async () => {
+    if (!businessId) return;
+    const fit = Number(fitScore);
+    if (!Number.isFinite(fit) || fit < 0 || fit > 1) {
+      setOppResult({ ok: false, text: "Fit score must be between 0 and 1." });
+      return;
+    }
+    setOppBusy(true);
+    setOppResult(null);
+    const r = await apiPost("/api/owner/opportunities/decide", { businessId, fitScore: fit, paymentRisk });
+    if (r.ok) setOppResult({ ok: r.data.verdict === "accept", text: `${r.data.verdict.toUpperCase()} — ${r.data.reasons?.[0] ?? ""} ${r.data.nextAction ?? ""}` });
+    else setOppResult({ ok: false, text: r.data?.error?.message || r.data?.error || `Failed (${r.status}).` });
+    setOppBusy(false);
+  };
+
+  const completeTask = async () => {
+    if (!taskId.trim()) return;
+    setTaskBusy(true);
+    setTaskResult(null);
+    const r = await apiPost("/api/owner/tasks/complete", { taskId: taskId.trim(), ownerOverride });
+    if (r.ok) setTaskResult({ ok: true, text: `Completed — status ${r.data.status}.` });
+    else if (r.status === 409 && r.data?.blocked) setTaskResult({ ok: false, text: `Blocked: ${r.data.reason}.` });
+    else setTaskResult({ ok: false, text: r.data?.error?.message || r.data?.error || `Failed (${r.status}).` });
+    setTaskBusy(false);
+  };
+
+  const resolveApproval = async () => {
+    if (!scope.trim() || !actionType.trim() || !content.trim()) return;
+    setApprBusy(true);
+    setApprResult(null);
+    const r = await apiPost("/api/owner/approvals/resolve", { scope: scope.trim(), actionType: actionType.trim(), riskClass, content: { note: content.trim() } });
+    if (r.ok) {
+      const handled = r.data.handledByOpsIQ ? "OpsIQ handled this" : "owner decision required";
+      setApprResult({ ok: r.data.handledByOpsIQ, text: `${r.data.outcome} (${handled}).` });
+    } else setApprResult({ ok: false, text: r.data?.error?.message || r.data?.error || `Failed (${r.status}).` });
+    setApprBusy(false);
+  };
+
+  return (
+    <section className="border rounded-lg p-4 bg-white" data-testid="owner-actions">
+      <div className="text-xs uppercase text-muted-foreground mb-3">Owner actions</div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Complete a proof-gated task</div>
+          <input
+            className="w-full border rounded px-2 py-2 text-sm min-h-[44px]"
+            placeholder="Task ID"
+            value={taskId}
+            onChange={(e) => setTaskId(e.target.value)}
+          />
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={ownerOverride} onChange={(e) => setOwnerOverride(e.target.checked)} />
+            Owner override (audited; bypasses proof gate)
+          </label>
+          <Button className="min-h-[44px]" disabled={taskBusy || !taskId.trim()} onClick={completeTask}>
+            {taskBusy ? "Completing…" : "Complete task"}
+          </Button>
+          {taskResult && (
+            <p className={`text-xs ${taskResult.ok ? "text-success" : "text-destructive"}`}>{taskResult.text}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Resolve an approval</div>
+          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Scope (e.g. pricing.discount)" value={scope} onChange={(e) => setScope(e.target.value)} />
+          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Action type (e.g. apply_discount)" value={actionType} onChange={(e) => setActionType(e.target.value)} />
+          <Select
+            name="riskClass"
+            label="Risk class"
+            value={riskClass}
+            onChange={(e: any) => setRiskClass(e.target.value)}
+            options={["low", "medium", "high", "critical"].map((r) => ({ value: r, label: r }))}
+          />
+          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Decision summary" value={content} onChange={(e) => setContent(e.target.value)} />
+          <Button className="min-h-[44px]" disabled={apprBusy || !scope.trim() || !actionType.trim() || !content.trim()} onClick={resolveApproval}>
+            {apprBusy ? "Resolving…" : "Resolve approval"}
+          </Button>
+          {apprResult && (
+            <p className={`text-xs ${apprResult.ok ? "text-success" : "text-muted-foreground"}`}>{apprResult.text}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Decide an opportunity</div>
+          <p className="text-xs text-muted-foreground">OpsIQ uses this business&apos;s real capacity + margin.</p>
+          <input className="w-full border rounded px-2 py-2 text-sm min-h-[44px]" placeholder="Fit score 0–1" value={fitScore} onChange={(e) => setFitScore(e.target.value)} />
+          <Select
+            name="paymentRisk"
+            label="Payment risk"
+            value={paymentRisk}
+            onChange={(e: any) => setPaymentRisk(e.target.value)}
+            options={["low", "medium", "high"].map((r) => ({ value: r, label: r }))}
+          />
+          <Button className="min-h-[44px]" disabled={oppBusy || !businessId} onClick={decideOpportunity}>
+            {oppBusy ? "Deciding…" : "Decide"}
+          </Button>
+          {oppResult && (
+            <p className={`text-xs ${oppResult.ok ? "text-success" : "text-muted-foreground"}`}>{oppResult.text}</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function OwnerCommandCenterPage() {
   const [data, setData] = useState<any | null>(null);
+  const [control, setControl] = useState<any | null>(null);
   const [businesses, setBusinesses] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -73,6 +225,12 @@ export default function OwnerCommandCenterPage() {
       const res = await api(`/api/owner/command-center${qs}`);
       setData(res);
       setSelected(res.selectedBusinessId);
+      // Owner control center (safety/blocked/attention/what-not-to-do). Non-fatal if it fails.
+      try {
+        setControl(await api(`/api/owner/control-center${qs}`));
+      } catch {
+        setControl(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -227,6 +385,68 @@ export default function OwnerCommandCenterPage() {
                   Domains wired: {(data.domainsWired ?? []).join(", ") || "none"}
                 </div>
               </section>
+
+              {control && (
+                <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white" data-testid="owner-control-center">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs uppercase text-muted-foreground">OpsIQ control center</div>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant={control.needsOwnerAttention ? "warning" : "success"}>
+                        {control.ownerActionsToday} owner action{control.ownerActionsToday === 1 ? "" : "s"} today
+                      </Badge>
+                      <Badge variant="muted">{control.handledByOpsIQ} handled by OpsIQ</Badge>
+                      <Badge variant="success">{control.approvalsAvoided ?? 0} approvals avoided</Badge>
+                    </div>
+                  </div>
+
+                  {control.criticalAlerts?.length > 0 && (
+                    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm space-y-1 mb-3">
+                      <strong className="text-destructive">Critical:</strong>
+                      <ul className="list-disc ml-5">
+                        {control.criticalAlerts.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {control.whatNotToDo?.length > 0 && (
+                    <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm space-y-1 mb-3">
+                      <strong>What NOT to do now:</strong>
+                      <ul className="list-disc ml-5">
+                        {control.whatNotToDo.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  {control.nextBestAction && (
+                    <div className="text-sm mb-3">
+                      <span className="font-medium">Next best action:</span> {control.nextBestAction}
+                    </div>
+                  )}
+
+                  <div className="mb-3"><OwnerActions businessId={selected} /></div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    {[
+                      { label: "Blocked recs", value: control.sections?.blockedRecommendations, warn: true },
+                      { label: "Finance blocked", value: control.sections?.financeBlocked, warn: true },
+                      { label: "Proof blocked", value: control.sections?.proofBlocked, warn: true },
+                      { label: "Equipment bottlenecks", value: control.sections?.equipmentBottlenecks, warn: true },
+                      { label: "SOPs to review", value: control.sections?.sopsNeedingReview, warn: false },
+                      { label: "Training items", value: control.sections?.trainingRecommendations, warn: false },
+                      { label: "Process reviews due", value: control.sections?.processReviewsDue, warn: false },
+                      { label: "Reassessments due", value: control.sections?.reassessmentsDue, warn: true },
+                      { label: "Owner decisions", value: control.attention?.ownerDecisionsRequired, warn: false },
+                    ].map((s) => (
+                      <div key={s.label} className="border rounded p-2 flex flex-col">
+                        <span className={`text-lg font-semibold ${s.warn && (s.value ?? 0) > 0 ? "text-destructive" : ""}`}>
+                          {s.value ?? 0}
+                        </span>
+                        <span className="text-muted-foreground">{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {data.isStaleData && (
                 <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm flex items-center justify-between">

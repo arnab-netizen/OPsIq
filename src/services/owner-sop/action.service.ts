@@ -16,6 +16,7 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
+import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
 import type { SopActionUpdateInput } from "@/domain/owner-sop/validation";
 
 export async function updateSopAction(
@@ -41,6 +42,9 @@ export async function updateSopAction(
       throw new ValidationError(`Invalid execution action transition: ${from} → ${input.status}`);
     }
     const to = input.status;
+
+    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition.
+    await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "sop", toStatus: to });
 
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;

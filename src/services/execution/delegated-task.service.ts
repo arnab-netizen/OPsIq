@@ -66,8 +66,23 @@ export interface TaskTransitionCommand {
   task: DelegatedTask;
   to: DelegatedTaskStatus;
   actor: TaskActor;
-  /** The acting user id (for audit). */
+  /** The acting user id (for audit + Slice 3 separation-of-duty). */
   actorId: string;
+  /** Slice 3 — proof-to-completion gate inputs (supplied when known). */
+  proofRequired?: boolean;
+  proofCleared?: boolean;
+  /** Explicit, audited owner emergency override of the Slice 3 anti-gaming gates. */
+  ownerOverride?: boolean;
+  /**
+   * Additional audit events to write INSIDE the same transaction as the state change
+   * (EH-28). Lets callers record completion/override markers atomically so a completion
+   * can never be left un-audited if the process dies after commit.
+   */
+  extraAuditEvents?: Array<{
+    eventName: string;
+    payload?: Record<string, unknown>;
+    visibility?: string;
+  }>;
 }
 
 /**
@@ -83,7 +98,13 @@ export async function applyTaskTransition(
   const deps = injected ?? (await resolveDefaultDeps());
   const { task, to, actor, actorId } = command;
 
-  const decision = planTaskTransition(task.status, to, actor);
+  const decision = planTaskTransition(task.status, to, actor, {
+    actorUserId: actorId,
+    performerUserId: task.assignedUserId,
+    proofRequired: command.proofRequired,
+    proofCleared: command.proofCleared,
+    ownerOverride: command.ownerOverride,
+  });
   if (!decision.allowed) {
     throw new TaskTransitionNotAllowedError(decision.reason);
   }
@@ -124,6 +145,23 @@ export async function applyTaskTransition(
         occurredAt: now,
       },
     });
+    // EH-28 — caller-supplied completion/override markers, atomic with the state change.
+    for (const ev of command.extraAuditEvents ?? []) {
+      await tx.auditEvent.create({
+        data: {
+          id: uuid(),
+          workspaceId: task.workspaceId,
+          eventName: ev.eventName,
+          actorId,
+          actorType: "user",
+          entityType: "delegated_task",
+          entityId: task.taskId,
+          payload: ev.payload ?? {},
+          visibility: ev.visibility ?? "internal",
+          occurredAt: now,
+        },
+      });
+    }
   });
 
   return to;

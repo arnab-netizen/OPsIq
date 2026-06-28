@@ -16,6 +16,7 @@ import {
   requiresCompletionEvidence,
   type RecoveryActionStatus,
 } from "@/domain/founder-recovery/action-status";
+import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
 import type { FinanceActionUpdateInput } from "@/domain/owner-finance/validation";
 
 export async function updateFinanceAction(
@@ -41,6 +42,9 @@ export async function updateFinanceAction(
       throw new ValidationError(`Invalid finance action transition: ${from} → ${input.status}`);
     }
     const to = input.status;
+
+    // EH-01/EH-02 — owner-mode safety gate (default-on, opt-out aware) before a material transition.
+    await enforceOwnerActionGates({ workspaceId, businessId: action.businessId, actionId, domain: "finance", toStatus: to });
 
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;

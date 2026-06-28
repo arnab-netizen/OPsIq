@@ -3,6 +3,8 @@ import {
   ProofValidationError,
   ProofTransitionNotAllowedError,
   ProofConflictError,
+  ProofSelfReviewError,
+  ProofDuplicateRejectedError,
   type ProofDeps,
   type ProofTx,
   type ProofDb,
@@ -32,12 +34,13 @@ const reviewer: ProofActor = {
   canReviewProof: true,
 };
 
-function makeDeps(opts: { committedStatus: PS; auditThrows?: boolean }) {
+function makeDeps(opts: { committedStatus: PS; auditThrows?: boolean; submittedByUserId?: string; duplicateFlagged?: boolean }) {
   const committed = { status: opts.committedStatus };
   let pending = { status: opts.committedStatus };
   const calls = { updates: 0, audits: 0 };
   const tx: ProofTx = {
     proof: {
+      findFirst: async () => ({ submittedByUserId: opts.submittedByUserId ?? "emp-1", duplicateFlagged: opts.duplicateFlagged ?? false }),
       updateMany: async (args) => {
         calls.updates += 1;
         const w = args.where as { status: PS; workspaceId: string };
@@ -202,6 +205,40 @@ describe("reviewProof", () => {
     ).rejects.toThrow(/audit write failed/);
     expect(committed.status).toBe(PS.NEEDS_HUMAN_REVIEW); // rolled back
     expect(calls.updates).toBe(1);
+  });
+
+  it("blocks self-review: the submitter cannot review/approve their own proof (Slice 3 SoD)", async () => {
+    // A manager who is ALSO the submitter (mgr-1) attempts to approve their own proof.
+    const { deps, committed, calls } = makeDeps({ committedStatus: PS.NEEDS_HUMAN_REVIEW, submittedByUserId: "mgr-1" });
+    await expect(
+      reviewProof(
+        { proofId: "p1", workspaceId: WS, fromStatus: PS.NEEDS_HUMAN_REVIEW, to: PS.ACCEPTED, actor: reviewer, actorId: "mgr-1" },
+        deps
+      )
+    ).rejects.toBeInstanceOf(ProofSelfReviewError);
+    expect(committed.status).toBe(PS.NEEDS_HUMAN_REVIEW); // never applied
+    expect(calls.updates).toBe(0);
+  });
+
+  it("EH-11 — a duplicate-flagged proof cannot be ACCEPTED at review", async () => {
+    const { deps, committed, calls } = makeDeps({ committedStatus: PS.NEEDS_HUMAN_REVIEW, duplicateFlagged: true });
+    await expect(
+      reviewProof(
+        { proofId: "p1", workspaceId: WS, fromStatus: PS.NEEDS_HUMAN_REVIEW, to: PS.ACCEPTED, actor: reviewer, actorId: "mgr-1" },
+        deps
+      )
+    ).rejects.toBeInstanceOf(ProofDuplicateRejectedError);
+    expect(committed.status).toBe(PS.NEEDS_HUMAN_REVIEW); // never accepted
+    expect(calls.updates).toBe(0);
+  });
+
+  it("EH-11 — a duplicate-flagged proof CAN still be rejected (resubmission path)", async () => {
+    const { deps } = makeDeps({ committedStatus: PS.NEEDS_HUMAN_REVIEW, duplicateFlagged: true });
+    const r = await reviewProof(
+      { proofId: "p1", workspaceId: WS, fromStatus: PS.NEEDS_HUMAN_REVIEW, to: PS.REJECTED, actor: reviewer, actorId: "mgr-1", reason: "duplicate artifact" },
+      deps
+    );
+    expect(r).toBe(PS.REJECTED);
   });
 
   it("fails closed on a stale current status (concurrency guard)", async () => {

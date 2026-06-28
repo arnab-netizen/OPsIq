@@ -12,6 +12,8 @@
  * improvement is a real recorded verification — nothing is invented.
  */
 import {
+  DATA_CONFIDENCE_CAUTION,
+  DATA_CONFIDENCE_INSUFFICIENT,
   EXECUTION_DOMAINS,
   clampConfidence,
   clampScore,
@@ -56,6 +58,8 @@ export interface OwnerHomeSummaryInput {
   findings: OwnerFinding[];
   actions: OwnerAction[];
   verifications: OwnerHomeVerificationInput[];
+  /** Slice 1 — missing-critical-data carried from the diagnosis layer (never invented). */
+  missingCriticalData?: string[];
   /** Injectable clock for deterministic output; defaults to now. */
   now?: Date;
 }
@@ -185,6 +189,26 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
         }
       : null;
 
+  // Slice 1 — data-sufficiency disclosure (worst domain confidence, never averaged
+  // away). A missing-critical-data entry forces 'insufficient' even at high confidence.
+  const confidences = input.domainScores.map((s) => clampScore(s.dataConfidenceScore));
+  const lowestDataConfidenceScore = confidences.length > 0 ? Math.min(...confidences) : 0;
+  const lowConfidenceDomains = input.domainScores
+    .filter((s) => clampScore(s.dataConfidenceScore) < DATA_CONFIDENCE_CAUTION)
+    .map((s) => s.domain);
+  const missingCriticalData = Array.from(new Set(input.missingCriticalData ?? []));
+  const dataSufficiency: OwnerHomeSummary["dataSufficiency"] = {
+    status:
+      lowestDataConfidenceScore < DATA_CONFIDENCE_INSUFFICIENT || missingCriticalData.length > 0
+        ? "insufficient"
+        : lowestDataConfidenceScore < DATA_CONFIDENCE_CAUTION
+          ? "caution"
+          : "sufficient",
+    lowestDataConfidenceScore,
+    lowConfidenceDomains,
+    missingCriticalData,
+  };
+
   return {
     businessHealthScore,
     cashDanger: dangerForDomain(scoreByDomain, "cashflow"),
@@ -195,6 +219,7 @@ export function buildOwnerHomeSummary(input: OwnerHomeSummaryInput): OwnerHomeSu
     top3Opportunities,
     requiredActions,
     lastVerifiedImprovement,
+    dataSufficiency,
     generatedAt: input.now ?? new Date(),
   };
 }

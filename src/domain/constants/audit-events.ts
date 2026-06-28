@@ -224,6 +224,36 @@ export const AUDIT_EVENTS = {
   OWNER_DASHBOARD_VIEWED: "owner.dashboard_viewed",
   OWNER_CONFIG_UPDATED: "owner.config_updated",
 
+  // Jarvis 360 — owner safety-gate governance (Slice 0)
+  OWNER_GATE_OPT_OUT_RECORDED: "owner.gate_opt_out_recorded",
+  OWNER_GATE_OPT_OUT_CLEARED: "owner.gate_opt_out_cleared",
+  OWNER_GATE_PROMOTION_BLOCKED: "owner.gate_promotion_blocked",
+  // Jarvis 360 Slice 4 — owner load reduction / approval memory
+  OWNER_APPROVAL_MEMORY_RECORDED: "owner.approval_memory_recorded",
+  OWNER_APPROVAL_MEMORY_REUSED: "owner.approval_memory_reused",
+  OWNER_STANDING_INSTRUCTION_RECORDED: "owner.standing_instruction_recorded",
+  OWNER_ATTENTION_EVENT_RECORDED: "owner.attention_event_recorded",
+  // Jarvis 360 Slice 5–8 — SOP/process/training/equipment lifecycle
+  OWNER_SOP_DOC_CREATED: "owner.sop_doc_created",
+  OWNER_SOP_DOC_APPROVED: "owner.sop_doc_approved",
+  OWNER_SOP_DOC_REVISED: "owner.sop_doc_revised",
+  OWNER_SOP_DOC_RETIRED: "owner.sop_doc_retired",
+  OWNER_TRAINING_RECOMMENDED: "owner.training_recommended",
+  OWNER_EQUIPMENT_RECORDED: "owner.equipment_recorded",
+  OWNER_PROCESS_REVIEW_TRIGGERED: "owner.process_review_triggered",
+  // Jarvis 360 Slice 12–14 — memory / self-eval / compliance
+  OWNER_DO_NOT_REPEAT_BLOCKED: "owner.do_not_repeat_blocked",
+  OWNER_DO_NOT_REPEAT_RECORDED: "owner.do_not_repeat_recorded",
+  OWNER_SELF_EVALUATION_RECORDED: "owner.self_evaluation_recorded",
+  OWNER_COMPLIANCE_REVIEW_REQUIRED: "owner.compliance_review_required",
+  // Jarvis 360 gap-closure — live owner-loop wiring
+  OWNER_TASK_COMPLETION_BLOCKED: "owner.task_completion_blocked",
+  OWNER_TASK_COMPLETED: "owner.task_completed",
+  OWNER_TASK_OVERRIDE_USED: "owner.task_override_used",
+  OWNER_APPROVAL_AUTO_HANDLED: "owner.approval_auto_handled",
+  OWNER_ARBITRATION_RESOLVED: "owner.arbitration_resolved",
+  OWNER_OPPORTUNITY_DECIDED: "owner.opportunity_decided",
+
   // Owner-Only Recovery Mode
   OWNER_BUSINESS_CREATED: "owner.business_created",
   OWNER_BUSINESS_UPDATED: "owner.business_updated",

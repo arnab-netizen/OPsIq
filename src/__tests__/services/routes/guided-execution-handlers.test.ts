@@ -50,7 +50,7 @@ function wsDb(members: Record<string, Member>, grants: Record<string, Set<string
     },
     auditEvent: { create: async (a: any) => { audits.push(a.data); return {}; } },
     $transaction: async (fn: any) => fn(db),
-    proof: { updateMany: async () => ({ count: 1 }) },
+    proof: { updateMany: async () => ({ count: 1 }), findFirst: async () => ({ submittedByUserId: null }) },
     escalation: { create: async () => ({}), updateMany: async () => ({ count: 1 }) },
   };
   return { db, audits };

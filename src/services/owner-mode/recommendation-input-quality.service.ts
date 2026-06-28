@@ -72,7 +72,14 @@ async function resolveSensitivity(recommendationId: string, workspaceId: string,
 export async function enforceInputQualityForPromotion(
   recommendationId: string,
   workspaceId: string,
-  injected?: IQDeps
+  injected?: IQDeps,
+  /**
+   * Status assumed when the workspace has no input-quality assessment on record.
+   * STRICT (opt-in) callers keep "critical_missing" (hard fail-closed). The
+   * default-on policy passes "data_limited" so only MATERIAL/sensitive recs are
+   * blocked/downgraded while low-risk GENERAL recs proceed with caution.
+   */
+  missingDefault: InputQualityStatus = "critical_missing"
 ): Promise<void> {
   const deps = injected ?? (await resolveDefaultDeps());
   const sensitivity = await resolveSensitivity(recommendationId, workspaceId, deps);
@@ -81,8 +88,8 @@ export async function enforceInputQualityForPromotion(
     orderBy: { assessedAt: "desc" },
     select: { qualityStatus: true },
   });
-  // No assessment on record → treat as critical_missing (fail-closed for sensitive recs).
-  const status = (latest?.qualityStatus as InputQualityStatus | undefined) ?? "critical_missing";
+  // No assessment on record → fail-closed using the caller-supplied default.
+  const status = (latest?.qualityStatus as InputQualityStatus | undefined) ?? missingDefault;
   assertInputQualityForPromotion(status, sensitivity, recommendationId);
 }
 
