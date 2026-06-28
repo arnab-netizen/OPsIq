@@ -50,7 +50,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
       - run: npx prisma generate
-      - name: Run DB suite (JSON reporter) and print failing files
+      - name: Run only DB-relevant tests (fast) and print failing files
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
           DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
@@ -58,19 +58,23 @@ jobs:
           NODE_ENV: test
         run: |
           set +e
-          EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
-          npx vitest run --maxWorkers 1 $EXCLUDES --reporter=json --outputFile=/tmp/res.json >/tmp/run.log 2>&1
+          # Only the DB-touching test population (the flake families live here), not all ~750 files.
+          FILES=$(node -e "const {execSync}=require('child_process'); const out=execSync('grep -rl \"\\\\[db\\\\]\\\\|TEST_WITH_DB\\\\|db.\\\\|snapshot_data\\\\|canonicalEvent\\\\|ownerFinancialSnapshot\\\\|snapshotData' src/__tests__ --include=*.test.ts -l').toString(); console.log(out.split('\n').filter(Boolean).join(' '))" 2>/dev/null)
+          echo "FLAKEDIAG_NFILES $(echo $FILES | wc -w)"
+          npx vitest run --maxWorkers 1 --reporter=json --outputFile=/tmp/res.json $FILES >/tmp/run.log 2>&1
           echo "FLAKEDIAG_BEGIN"
           node -e '
-            const r=require("/tmp/res.json");
-            const failed=(r.testResults||[]).filter(t=>t.status!=="passed");
-            for(const f of failed){
-              console.log("FLAKEDIAG_FILE "+f.name+" :: "+f.status);
-              for(const a of (f.assertionResults||[]).filter(x=>x.status!=="passed")){
-                console.log("FLAKEDIAG_CASE   "+a.fullName+" :: "+a.status);
+            try {
+              const r=require("/tmp/res.json");
+              const failed=(r.testResults||[]).filter(t=>t.status!=="passed");
+              for(const f of failed){
+                console.log("FLAKEDIAG_FILE "+f.name+" :: "+f.status);
+                for(const a of (f.assertionResults||[]).filter(x=>x.status!=="passed")){
+                  console.log("FLAKEDIAG_CASE   "+a.fullName+" :: "+(a.failureMessages?a.failureMessages.join(" | ").slice(0,300):a.status));
+                }
               }
-            }
-            console.log("FLAKEDIAG_TOTAL failed_files="+failed.length);
+              console.log("FLAKEDIAG_TOTAL failed_files="+failed.length);
+            } catch(e){ console.log("FLAKEDIAG_NOJSON "+e.message); }
           ' 2>&1 | head -300
           echo "FLAKEDIAG_END"
           exit 0
