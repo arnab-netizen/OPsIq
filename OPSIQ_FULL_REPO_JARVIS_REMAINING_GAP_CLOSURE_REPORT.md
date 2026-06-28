@@ -15,7 +15,7 @@
 13. **GitHub Actions run IDs:**
     - `28337363604` — `db-blocker-proof` GREEN (GAP-DB-01 + GAP-DB-05).
     - `28337934043` — migrate deploy of GAP-DB-02 + GAP-ISO-02 migrations **GREEN** (step 8); the owner-budget `[db]` tests added to that run's test step failed (flaky population) → reverted to the stable set.
-    - `<final db-blocker-proof run>` — stable lane GREEN (migrate deploy of all migrations + owner-diagnosis + owner-loop + schema-hardening).
+    - `28338068307` — stable lane GREEN (migrate deploy of all migrations + owner-diagnosis + owner-loop + schema-hardening).
     - Baseline `28336343760` (main `2c79c5e`) — full `ci.yml` DB suite red (proves GAP-CI-FLAKE-01 is pre-existing).
 14. **DB migration status:** **GREEN** — all migrations incl. GAP-DB-01/02 + ISO-02 deploy on a fresh PostgreSQL.
 15. **Full DB suite status:** **RED (pre-existing, unrelated)** — same `snapshot_data`/`canonical_events`/`owner_financial_snapshots` isolation races on main and branch; migrate-deploy/tsc/build green. Authoritative stable DB proof (`db-blocker-proof.yml`) is GREEN.
