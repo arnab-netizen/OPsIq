@@ -252,6 +252,7 @@ export const AUDIT_EVENTS = {
   OWNER_TASK_OVERRIDE_USED: "owner.task_override_used",
   OWNER_APPROVAL_AUTO_HANDLED: "owner.approval_auto_handled",
   OWNER_ARBITRATION_RESOLVED: "owner.arbitration_resolved",
+  OWNER_OPPORTUNITY_DECIDED: "owner.opportunity_decided",
 
   // Owner-Only Recovery Mode
   OWNER_BUSINESS_CREATED: "owner.business_created",
