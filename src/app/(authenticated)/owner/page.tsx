@@ -61,8 +61,9 @@ async function apiPost(path: string, body: unknown): Promise<{ ok: boolean; stat
     const data = await res.json().catch(() => ({}));
     return { ok: res.ok, status: res.status, data };
   } catch (e) {
-    if (e instanceof Error && e.name === "AbortError") return { ok: false, status: 0, data: { error: "Request timed out." } };
-    return { ok: false, status: 0, data: { error: e instanceof Error ? e.message : "Request failed." } };
+    // Never surface a raw error string (operator-error governance). Generic, safe copy only.
+    const timedOut = e instanceof Error && e.name === "AbortError";
+    return { ok: false, status: 0, data: { error: timedOut ? "Request timed out. Check your connection and try again." : "Could not reach the server. Try again." } };
   } finally {
     clearTimeout(timer);
   }
