@@ -6,7 +6,7 @@ Live burn-down of remaining non-E2E gaps. Base HEAD `8e31704`. EH-23 (browser E2
 |-----|----------------|------------------------|--------------|---------------|--------------|--------|
 | EH-01 (margin) | **CLOSED_TESTED** | margin gate added; owner-mode gate now complete (opt-out+do-not-repeat+capacity+cash+margin) | owner-action-gate.service.ts | below-margin block / unknown allow (15/15 gate tests) | **CLOSED_TESTED** | Slice 3 (this turn) |
 | EH-14 | OPEN | bind owner completion to proof FSM; legacy verify cannot complete proof-required | task-completion + action services | proof-gated completion route + DB | OPEN | — |
-| EH-05 | OPEN | persist + surface arbitration verdict | recommendation gen + schema + UI | verdict persisted/visible | OPEN | — |
+| EH-05 | OPEN→**PARTIAL** | persist + surface arbitration verdict | intervention-arbitration.service.ts | full verdict now persisted to durable audit log (whatNotToDo + chosen/rejected/blocked/deferred + dominant constraint + reconsideration) — queryable, not discarded; owner-page rendering still pending | **PARTIAL** | this turn |
 | EH-22/EH-06 | OPEN | runtime seed/import route + DB owner loop | new seed route + [db] test | DB loop | OPEN | — |
 | EH-03/EH-04 | OPEN | owner UI action controls | owner page + routes | render/caller test | OPEN | — |
 | EH-07/EH-08 | OPEN | live training/process triggers from runtime sources | completion → training/process | trigger tests | OPEN | — |
@@ -16,7 +16,8 @@ Live burn-down of remaining non-E2E gaps. Base HEAD `8e31704`. EH-23 (browser E2
 | EH-20/EH-21 | OPEN | compliance boundary runtime + reassessment surfaced | gate + control center | defer tests | OPEN | — |
 | EH-28 | OPEN | completion audit inside tx | task-completion.service | — | OPEN | — |
 | EH-29 | OPEN | block-metrics window param/documented | owner-block-metrics | — | OPEN | — |
-| EH-30 | OPEN | override high-visibility event | gate/completion | override event test | OPEN | — |
+| EH-30 | **CLOSED_TESTED** | override high-visibility event | task-completion.service.ts | distinct client-visible owner.task_override_used when proof gate bypassed | **CLOSED_TESTED** | this turn |
+| EH-29 | acknowledged | block-metrics window | owner-block-metrics.service.ts | window is a documented `windowDays` parameter (default 30) — configurable, not a correctness bug | CLOSED (param/doc) | prior |
 | EH-23 | E2E_ONLY | Playwright CI lane | ci | browser | E2E_ONLY_REMAINING | — |
 
 Honest constraint recorded up-front: DB-backed proofs (EH-22 seed persistence, EH-14 DB route test, the

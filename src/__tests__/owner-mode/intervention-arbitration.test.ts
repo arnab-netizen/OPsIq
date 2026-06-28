@@ -66,6 +66,13 @@ describe("arbitrateInterventions", () => {
     expect(emitAudit).toHaveBeenCalledWith(
       expect.objectContaining({ eventName: "owner.arbitration_resolved", payload: expect.objectContaining({ recommendedId: "safe", candidateCount: 2 }) })
     );
+    // EH-05 — the full verdict (not just counts) is persisted to the audit payload.
+    const payload = emitAudit.mock.calls[0][0].payload;
+    expect(Array.isArray(payload.whatNotToDo)).toBe(true);
+    expect(payload.whatNotToDo.length).toBe(1);
+    expect(Array.isArray(payload.verdict)).toBe(true);
+    expect(payload.verdict.find((v: { id: string }) => v.id === "safe").verdict).toBe("recommended");
+    expect(payload.verdict.find((v: { id: string }) => v.id === "risky").verdict).toBe("rejected");
   });
 
   it("handles a single candidate (recommended, nothing to avoid)", async () => {

@@ -82,6 +82,9 @@ export async function arbitrateInterventions(
       return `Do not pursue "${title}" now: ${d.reasons[0] ?? d.verdict}${when}`;
     });
 
+  // EH-05 — persist the FULL verdict (not just counts) to the durable audit log so the
+  // chosen action, rejected/blocked/deferred alternatives, dominant constraint,
+  // reconsideration conditions, and what-not-to-do are queryable, not discarded.
   await emit({
     workspaceId,
     eventName: AUDIT_EVENTS.OWNER_ARBITRATION_RESOLVED,
@@ -94,6 +97,15 @@ export async function arbitrateInterventions(
       rejected: result.decisions.filter((d) => d.verdict === "rejected").length,
       blocked: result.decisions.filter((d) => d.verdict === "blocked").length,
       deferred: result.decisions.filter((d) => d.verdict === "deferred").length,
+      whatNotToDo,
+      verdict: result.decisions.map((d) => ({
+        id: d.id,
+        title: titleById.get(d.id) ?? d.id,
+        verdict: d.verdict,
+        reason: d.reasons[0] ?? null,
+        dominantConstraint: d.dominantConstraint,
+        reconsiderWhen: d.reconsiderWhen,
+      })),
     },
   });
 

@@ -117,12 +117,16 @@ describe("completeTask", () => {
     expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.task_completed" }));
   });
 
-  it("allows an audited owner override to bypass the proof gate", async () => {
+  it("allows an audited owner override to bypass the proof gate and records a high-visibility override event", async () => {
     const d = deps({
       task: { assignedUserId: "emp1", status: "COMPLETED_PENDING_REVIEW", proofRequirementId: "pr1" },
       proof: { status: ProofStatus.SUBMITTED, duplicateFlagged: false, reviewedAt: null },
     });
     const status = await completeTask({ ...base, ownerOverride: true }, d as never);
     expect(status).toBe("APPROVED_COMPLETE");
+    // EH-30 — the proof-gate bypass is recorded as a distinct, client-visible event.
+    expect(emitAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ eventName: "owner.task_override_used", visibility: "client_visible" })
+    );
   });
 });

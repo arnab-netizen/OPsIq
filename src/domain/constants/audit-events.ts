@@ -249,6 +249,7 @@ export const AUDIT_EVENTS = {
   // Jarvis 360 gap-closure — live owner-loop wiring
   OWNER_TASK_COMPLETION_BLOCKED: "owner.task_completion_blocked",
   OWNER_TASK_COMPLETED: "owner.task_completed",
+  OWNER_TASK_OVERRIDE_USED: "owner.task_override_used",
   OWNER_APPROVAL_AUTO_HANDLED: "owner.approval_auto_handled",
   OWNER_ARBITRATION_RESOLVED: "owner.arbitration_resolved",
 
