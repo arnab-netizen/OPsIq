@@ -23,6 +23,7 @@ import {
 } from "@/domain/founder-recovery/action-status";
 import { mapPlanActionToRow, OPEN_BUDGET_ACTION_STATUSES, classifyBudgetOutcome } from "@/domain/owner-budget";
 import type { UpdatedOwnerPlan } from "@/domain/owner-budget";
+import { enforceOwnerActionGates } from "@/services/owner-mode/owner-action-gate.service";
 
 export interface SyncBudgetActionsInput {
   plan: UpdatedOwnerPlan;
@@ -157,6 +158,21 @@ export async function updateBudgetAction(
     const from = action.status as RecoveryActionStatus;
     const to = input.status as RecoveryActionStatus;
     if (!canTransition(from, to)) throw new ValidationError(`Invalid budget action transition: ${from} → ${to}`);
+
+    // GAP-BUDGET-01 — a budget action is a material owner-domain (finance/spend) decision.
+    // It MUST pass the centralized owner-action safety gate before a material transition
+    // (in_progress/completed): cash safety, cashflow, compliance/professional-review and
+    // do-not-repeat. Without this a budget action could be completed while the Jarvis gate
+    // would 409-block the same transition on the owner-finance service. Registered in
+    // material-gate-registry.ts so dropping this call fails CI.
+    await enforceOwnerActionGates({
+      workspaceId,
+      businessId: action.businessId,
+      actionId,
+      domain: "finance",
+      toStatus: to,
+    });
+
     if (requiresCompletionEvidence(to)) {
       const notes = input.completionNotes ?? action.completionNotes;
       const evidence = input.completionEvidence ?? (Array.isArray(action.completionEvidence) ? action.completionEvidence : null);

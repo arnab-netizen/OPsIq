@@ -185,6 +185,12 @@ export interface RecordSpendInput {
   ownerApprovalThreshold: number;
   recentSameCategoryAmounts?: number[];
   emergency?: boolean;
+  /**
+   * GAP-BUDGET-02 — explicit, audited owner override for a governance HOLD /
+   * REQUIRE_OWNER_APPROVAL decision. Without it, a blocked spend is persisted in a
+   * non-committed (blocked / pending_owner_approval) state and never treated as committed.
+   */
+  ownerOverrideReason?: string | null;
 }
 
 export interface RecordSpendResult {
@@ -214,6 +220,22 @@ export async function recordSpendEntry(
     emergency: input.emergency,
   });
 
+  // GAP-BUDGET-02 — enforce the governance decision as a real barrier. A HOLD or
+  // REQUIRE_OWNER_APPROVAL spend cannot be persisted as a committed payment: it is forced
+  // into a non-committed state (blocked / pending_owner_approval) and audited as blocked,
+  // unless the owner supplies an explicit override reason (which is itself audited). This
+  // makes the spend-governance decision consume into the persisted state instead of being
+  // advisory-only.
+  const overridden = !!(input.ownerOverrideReason && input.ownerOverrideReason.trim());
+  const isBlockingDecision =
+    governance.decision === "HOLD" || governance.decision === "REQUIRE_OWNER_APPROVAL";
+  const blocked = isBlockingDecision && !overridden;
+  const effectiveState = blocked
+    ? governance.decision === "HOLD"
+      ? "blocked"
+      : "pending_owner_approval"
+    : input.state ?? "requested";
+
   const spend = await db.spendEntry.create({
     data: {
       id: randomUUID(),
@@ -221,7 +243,7 @@ export async function recordSpendEntry(
       periodId: input.periodId ?? null,
       budgetLineId: input.budgetLineId ?? null,
       label: input.label, category: input.category, amount: input.amount,
-      state: input.state ?? "requested",
+      state: effectiveState,
       sourceType: input.sourceType ?? "MANUAL",
       obligationKind: input.obligationKind ?? null,
       dueInDays: input.dueInDays ?? null,
@@ -240,8 +262,22 @@ export async function recordSpendEntry(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_BUDGET_SPEND_RECORDED,
     actorId, workspaceId, entityType: "SpendEntry", entityId: spend.id,
-    payload: { businessId, amount: input.amount, risk: governance.riskLevel, decision: governance.decision },
+    payload: { businessId, amount: input.amount, risk: governance.riskLevel, decision: governance.decision, state: effectiveState, overridden },
   });
+
+  if (blocked) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_BUDGET_SPEND_BLOCKED,
+      actorId, workspaceId, entityType: "SpendEntry", entityId: spend.id,
+      payload: { businessId, amount: input.amount, decision: governance.decision, state: effectiveState, flags: governance.flags },
+    });
+  } else if (overridden && isBlockingDecision) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OWNER_BUDGET_OVERRIDE_RECORDED,
+      actorId, workspaceId, entityType: "SpendEntry", entityId: spend.id,
+      payload: { businessId, amount: input.amount, decision: governance.decision, reason: input.ownerOverrideReason },
+    });
+  }
 
   const plan = await reassessBudget(businessId, workspaceId, {
     actorId, kind: "spend_entry_added", triggerEventId: `spend:${spend.id}`,

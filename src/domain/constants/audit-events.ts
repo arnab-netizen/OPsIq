@@ -275,6 +275,7 @@ export const AUDIT_EVENTS = {
   OWNER_BUDGET_PERIOD_CREATED: "owner.budget_period_created",
   OWNER_BUDGET_LINE_CHANGED: "owner.budget_line_changed",
   OWNER_BUDGET_SPEND_RECORDED: "owner.budget_spend_recorded",
+  OWNER_BUDGET_SPEND_BLOCKED: "owner.budget_spend_blocked",
   OWNER_BUDGET_SPEND_PROOF_UPDATED: "owner.budget_spend_proof_updated",
   OWNER_BUDGET_REASSESSED: "owner.budget_reassessed",
   OWNER_BUDGET_OVERRIDE_RECORDED: "owner.budget_override_recorded",

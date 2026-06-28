@@ -61,4 +61,12 @@ export const MATERIAL_GATE_PATHS: readonly MaterialGatePath[] = [
       rationale: `Owner ${d} action transitions (in_progress/completed) must pass the owner-mode safety gate.`,
     }))
   ),
+  // GAP-BUDGET-01 — budget actions commit money-relevant state through the shared owner FSM;
+  // completing/promoting one is a material finance decision and must pass the same gate.
+  {
+    id: "owner.budget.action",
+    file: "src/services/owner-budget/action-link.service.ts",
+    enforcingSymbol: "enforceOwnerActionGates",
+    rationale: "Budget action transitions (in_progress/completed) must pass the owner-mode safety gate (cash/cashflow/compliance/do-not-repeat).",
+  },
 ] as const;
