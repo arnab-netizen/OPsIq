@@ -1,8 +1,5 @@
 import { db } from "@/lib/db";
-import { enforceBusinessImpactIfRequired } from "@/services/business-impact/recommendation-business-impact.service";
-import { enforceInputQualityIfRequired } from "@/services/owner-mode/recommendation-input-quality.service";
-import { enforceConfidenceIfRequired } from "@/services/decision-confidence/recommendation-confidence.service";
-import { enforceCashSafetyIfRequired } from "@/services/owner-finance/recommendation-cash-safety.service";
+import { enforceOwnerGatesForPromotion } from "@/services/owner-mode/gate-enforcement-policy";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -713,27 +710,13 @@ export async function updateRecommendationStatus(
   }
 
   if (input.status === "approved") {
-    // Module 1 governance gate: when the workspace opts in (default off), a
-    // complete, safe BusinessImpactAssessment must be persisted before a
-    // recommendation can be promoted. Fail-closed via BusinessImpactGateError.
-    await enforceBusinessImpactIfRequired(recommendationId, validatedWorkspaceId);
-
-    // Module 2 governance gate: input-quality / evidence-confidence. Sensitive
-    // recommendations (finance/growth/pricing/hiring) cannot be promoted on weak
-    // or missing evidence; compliance routes to professional review. Same opt-in
-    // flag; fail-closed via InputQualityGateError.
-    await enforceInputQualityIfRequired(recommendationId, validatedWorkspaceId);
-
-    // Module 3 governance gate: recommendation confidence. Composes the M1/M2
-    // governance signals into a confidence classification; low/very-low or unsafe
-    // recommendations cannot auto-promote. Same opt-in flag; fail-closed via
-    // ConfidenceGateError.
-    await enforceConfidenceIfRequired(recommendationId, validatedWorkspaceId);
-
-    // Modules 4/5 governance gate: cash/finance survival. No growth recommendation
-    // if cash survival is unsafe; no spend/finance/pricing/hiring action at critical
-    // or insolvent-risk. Same opt-in flag; fail-closed via CashSafetyGateError.
-    await enforceCashSafetyIfRequired(recommendationId, validatedWorkspaceId);
+    // Jarvis 360 Slice 0: owner safety gates are now DEFAULT-ON. The central policy
+    // runs all four proven promotion gates (business-impact, input-quality,
+    // confidence, cash-safety) unless the workspace has an explicit, audited owner
+    // opt-out. STRICT (legacy opt-in) keeps hard fail-closed; DEFAULT_ON blocks/
+    // downgrades only MATERIAL recs on absent data while low-risk recs proceed with
+    // caution. Each gate is fail-closed and throws its typed *GateError on block.
+    await enforceOwnerGatesForPromotion(recommendationId, validatedWorkspaceId);
 
     const stateVerification = await verifyRecommendationState(
       recommendationId,

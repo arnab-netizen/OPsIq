@@ -224,6 +224,11 @@ export const AUDIT_EVENTS = {
   OWNER_DASHBOARD_VIEWED: "owner.dashboard_viewed",
   OWNER_CONFIG_UPDATED: "owner.config_updated",
 
+  // Jarvis 360 — owner safety-gate governance (Slice 0)
+  OWNER_GATE_OPT_OUT_RECORDED: "owner.gate_opt_out_recorded",
+  OWNER_GATE_OPT_OUT_CLEARED: "owner.gate_opt_out_cleared",
+  OWNER_GATE_PROMOTION_BLOCKED: "owner.gate_promotion_blocked",
+
   // Owner-Only Recovery Mode
   OWNER_BUSINESS_CREATED: "owner.business_created",
   OWNER_BUSINESS_UPDATED: "owner.business_updated",

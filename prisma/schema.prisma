@@ -195,6 +195,15 @@ model ClientAccount {
   /// without a complete, safe BusinessImpactAssessment (opt-in; default off keeps
   /// existing flows unchanged). Owner Mode workspaces enable this.
   requireBusinessImpactAssessment               Boolean                                 @default(false) @map("require_business_impact_assessment")
+  /// Jarvis 360 Slice 0 — owner safety gates are DEFAULT-ON. These fields record an
+  /// explicit, audited owner opt-out (never silent). When ownerGateOptOutAt is set
+  /// and not past ownerGateOptOutExpiresAt, gate enforcement is skipped for the
+  /// workspace. Cleared by setting ownerGateOptOutAt back to null.
+  ownerGateOptOutAt                             DateTime?                               @map("owner_gate_opt_out_at")
+  ownerGateOptOutReason                         String?                                 @map("owner_gate_opt_out_reason")
+  ownerGateOptOutBy                             String?                                 @map("owner_gate_opt_out_by") @db.Uuid
+  ownerGateOptOutRisk                           String?                                 @map("owner_gate_opt_out_risk")
+  ownerGateOptOutExpiresAt                      DateTime?                               @map("owner_gate_opt_out_expires_at")
   createdBy                                     String?                                 @map("created_by") @db.Uuid
   createdAt                                     DateTime                                @default(now()) @map("created_at")
   updatedAt                                     DateTime                                @map("updated_at")
