@@ -176,6 +176,14 @@ export async function completeTask(command: CompleteTaskCommand, injected?: Task
   };
 
   try {
+    // EH-28 — completion + override markers are written atomically with the state change.
+    const extraAuditEvents: NonNullable<Parameters<typeof applyTaskTransition>[0]["extraAuditEvents"]> = [
+      { eventName: AUDIT_EVENTS.OWNER_TASK_COMPLETED, payload: { proofRequired, ownerOverride: command.ownerOverride ?? false } },
+    ];
+    // EH-30 — a proof-gate bypass is recorded as a distinct, client-visible override event.
+    if (command.ownerOverride && proofRequired) {
+      extraAuditEvents.push({ eventName: AUDIT_EVENTS.OWNER_TASK_OVERRIDE_USED, visibility: "client_visible", payload: { bypassed: "proof_gate" } });
+    }
     const result = await applyTaskTransition(
       {
         task,
@@ -185,32 +193,10 @@ export async function completeTask(command: CompleteTaskCommand, injected?: Task
         proofRequired,
         proofCleared,
         ownerOverride: command.ownerOverride,
+        extraAuditEvents,
       },
       { db: deps.db, now: () => now }
     );
-    await emitAuditEvent({
-      workspaceId: command.workspaceId,
-      eventName: AUDIT_EVENTS.OWNER_TASK_COMPLETED,
-      actorId: command.actorId,
-      actorType: "user",
-      entityType: "delegated_task",
-      entityId: command.taskId,
-      payload: { proofRequired, ownerOverride: command.ownerOverride ?? false },
-    });
-    // EH-30 — when an owner override actually bypassed the proof gate, record a distinct,
-    // high-visibility (client-visible) override event so the bypass is never buried.
-    if (command.ownerOverride && proofRequired) {
-      await emitAuditEvent({
-        workspaceId: command.workspaceId,
-        eventName: AUDIT_EVENTS.OWNER_TASK_OVERRIDE_USED,
-        actorId: command.actorId,
-        actorType: "user",
-        entityType: "delegated_task",
-        entityId: command.taskId,
-        visibility: "client_visible",
-        payload: { bypassed: "proof_gate" },
-      });
-    }
     return result;
   } catch (err) {
     if (err instanceof TaskTransitionNotAllowedError) {

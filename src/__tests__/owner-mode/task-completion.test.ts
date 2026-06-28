@@ -68,6 +68,7 @@ function deps(opts: {
         }),
     },
     now: () => new Date("2026-06-28T00:00:00.000Z"),
+    auditCreate,
   };
 }
 
@@ -114,7 +115,10 @@ describe("completeTask", () => {
     });
     const status = await completeTask(base, d as never);
     expect(status).toBe("APPROVED_COMPLETE");
-    expect(emitAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ eventName: "owner.task_completed" }));
+    // EH-28 — the completion marker is written atomically (in-tx auditEvent.create).
+    expect(d.auditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ eventName: "owner.task_completed" }) })
+    );
   });
 
   it("allows an audited owner override to bypass the proof gate and records a high-visibility override event", async () => {
@@ -124,9 +128,10 @@ describe("completeTask", () => {
     });
     const status = await completeTask({ ...base, ownerOverride: true }, d as never);
     expect(status).toBe("APPROVED_COMPLETE");
-    // EH-30 — the proof-gate bypass is recorded as a distinct, client-visible event.
-    expect(emitAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ eventName: "owner.task_override_used", visibility: "client_visible" })
+    // EH-30/EH-28 — the proof-gate bypass is recorded as a distinct, client-visible event,
+    // atomically with the state change (in-tx).
+    expect(d.auditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ eventName: "owner.task_override_used", visibility: "client_visible" }) })
     );
   });
 });

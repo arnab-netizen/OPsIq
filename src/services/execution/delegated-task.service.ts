@@ -73,6 +73,16 @@ export interface TaskTransitionCommand {
   proofCleared?: boolean;
   /** Explicit, audited owner emergency override of the Slice 3 anti-gaming gates. */
   ownerOverride?: boolean;
+  /**
+   * Additional audit events to write INSIDE the same transaction as the state change
+   * (EH-28). Lets callers record completion/override markers atomically so a completion
+   * can never be left un-audited if the process dies after commit.
+   */
+  extraAuditEvents?: Array<{
+    eventName: string;
+    payload?: Record<string, unknown>;
+    visibility?: string;
+  }>;
 }
 
 /**
@@ -135,6 +145,23 @@ export async function applyTaskTransition(
         occurredAt: now,
       },
     });
+    // EH-28 — caller-supplied completion/override markers, atomic with the state change.
+    for (const ev of command.extraAuditEvents ?? []) {
+      await tx.auditEvent.create({
+        data: {
+          id: uuid(),
+          workspaceId: task.workspaceId,
+          eventName: ev.eventName,
+          actorId,
+          actorType: "user",
+          entityType: "delegated_task",
+          entityId: task.taskId,
+          payload: ev.payload ?? {},
+          visibility: ev.visibility ?? "internal",
+          occurredAt: now,
+        },
+      });
+    }
   });
 
   return to;
