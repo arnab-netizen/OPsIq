@@ -1,5 +1,10 @@
 import { db } from "@/lib/db";
 import type { ApprovalRequest } from "@/generated/prisma/client";
+import {
+  resolveOwnerApproval,
+  type ResolveOwnerApprovalInput,
+  type OwnerApprovalResolutionDeps,
+} from "@/services/owner-mode/owner-approval-resolution.service";
 
 export interface ApprovalStatus {
   approved: boolean;
@@ -155,11 +160,21 @@ export async function enforceApprovalRequirement(
   operatorItemId: string,
   impactExpected: number,
   requestedBy: string,
-  approverId: string
+  approverId: string,
+  /**
+   * Owner-mode context. When supplied, OpsIQ first consults the owner's standing
+   * instructions + recorded approval memory (Slice 4) and auto-handles the approval
+   * when allowed/remembered — avoiding a redundant re-ask (real workload reduction).
+   * Omitted by the legacy operator path, which keeps its existing behavior.
+   */
+  ownerContext?: ResolveOwnerApprovalInput,
+  injectedOwnerDeps?: OwnerApprovalResolutionDeps
 ): Promise<{
   requiresApproval: boolean;
   approvalCreated: boolean;
   approvalRequestId?: string;
+  autoHandled?: boolean;
+  autoHandledReason?: string;
 }> {
   const needsApproval = await requiresApproval(impactExpected);
 
@@ -168,6 +183,20 @@ export async function enforceApprovalRequirement(
       requiresApproval: false,
       approvalCreated: false,
     };
+  }
+
+  if (ownerContext) {
+    const resolution = await resolveOwnerApproval(ownerContext, injectedOwnerDeps);
+    if (!resolution.ownerActionRequired) {
+      // OpsIQ handled it (standing-instruction allow/forbid or remembered approval);
+      // no approval request is created and the owner is not re-asked.
+      return {
+        requiresApproval: true,
+        approvalCreated: false,
+        autoHandled: true,
+        autoHandledReason: resolution.reason,
+      };
+    }
   }
 
   const approval = await requestApproval(operatorItemId, requestedBy, approverId);
