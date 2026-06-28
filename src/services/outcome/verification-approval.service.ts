@@ -60,6 +60,20 @@ export async function approveOutcomeVerification(
     );
   }
 
+  // GAP-PROOF-01 — separation of duties: the actor who executed/completed the decision
+  // cannot also mark its outcome "verified". Self-verification of a positive outcome by the
+  // executor is the segregation-of-duties hole the proof FSM forbids; the outcome-verification
+  // path must enforce the same bar. (Disputing one's own outcome is still allowed.)
+  if (
+    input.verificationStatus === "verified" &&
+    decision.completedBy &&
+    decision.completedBy === actorId
+  ) {
+    throw new UnauthorizedError(
+      "Separation of duties: the actor who executed this decision cannot verify its own outcome. A different reviewer must verify it."
+    );
+  }
+
   const currentStatus = decision.verificationStatus || "unverified";
 
   // Validate state transition

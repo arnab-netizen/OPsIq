@@ -165,13 +165,17 @@ export async function submitDecision(
 export async function approveDecision(
   decisionId: string,
   workspaceId: string,
-  actorId: string
+  actorId: string,
+  reason?: string | null
 ): Promise<{ id: string; status: string }> {
+  // GAP-UI-04 — an approval (including an owner override of a blocked decision) may carry a
+  // justification. It is persisted via the transition reason so the override is auditable
+  // instead of being silently dropped.
   return transitionDecisionState(
     decisionId,
     workspaceId,
     "APPROVED",
-    undefined,
+    reason ?? undefined,
     actorId
   );
 }

@@ -777,10 +777,19 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
             estimatedImpact: null,
             workspaceId: validatedWorkspaceId,
             createdBy: actorId,
-            evidenceValidationScore: 75,
-            reliabilityLevel: "medium",
-            kpiHealthScore: 75,
-            kpiRiskLevel: "medium",
+            // GAP-REC-01 — diagnosis recommendations are auto-generated, un-arbitrated
+            // template advice. They must NOT be persisted as validated, medium-reliability,
+            // owner-actionable output (the previous hardcoded 75 / "medium" mislabelled raw
+            // advice as validated). They are marked as AI proposals with low/unverified
+            // reliability and left in the default non-actionable "pending" status; becoming
+            // owner-actionable requires the gated promotion path (updateRecommendationStatus
+            // → enforceOwnerGatesForPromotion: data-sufficiency, confidence, cash, business
+            // impact). Raw advice cannot bypass that gate by being born "validated".
+            isAiProposal: true,
+            evidenceValidationScore: 0,
+            reliabilityLevel: "low",
+            kpiHealthScore: 0,
+            kpiRiskLevel: "unknown",
             updatedAt: new Date(),
           },
         })

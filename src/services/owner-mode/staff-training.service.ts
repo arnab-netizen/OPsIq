@@ -8,6 +8,7 @@
 
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { NotFoundError } from "@/infra/errors";
 import {
   evaluateTrainingNeed,
   canAuthorizeEquipment,
@@ -24,6 +25,7 @@ interface TrainingDb {
   ownerTrainingRecommendation: {
     create(args: { data: Record<string, unknown> }): Promise<{ id: string }>;
     update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<unknown>;
+    updateMany(args: { where: { id: string; workspaceId: string }; data: Record<string, unknown> }): Promise<{ count: number }>;
   };
   ownerStaffSkill: {
     upsert(args: { where: Record<string, unknown>; create: Record<string, unknown>; update: Record<string, unknown> }): Promise<SkillRow>;
@@ -163,16 +165,30 @@ export async function deriveTrainingFromObservedFailure(input: DeriveTrainingInp
   );
 }
 
-/** Mark training complete with proof and schedule an effectiveness recheck. */
+/**
+ * Mark training complete with proof and schedule an effectiveness recheck.
+ * GAP-ISO-03 — the update is workspace-scoped (where: { id, workspaceId }) so a known id
+ * cannot be completed across workspace boundaries, the mutation is rejected if nothing
+ * matched in this workspace, and it emits a governed audit event.
+ */
 export async function completeTraining(
   id: string,
-  input: { workspaceId: string; proofOfCompletion: string; recheckDate: Date },
+  input: { workspaceId: string; proofOfCompletion: string; recheckDate: Date; actorId: string },
   injected?: TrainingDeps
 ): Promise<void> {
   const deps = injected ?? (await resolveDefaultDeps());
-  await deps.db.ownerTrainingRecommendation.update({
-    where: { id },
+  const result = await deps.db.ownerTrainingRecommendation.updateMany({
+    where: { id, workspaceId: input.workspaceId },
     data: { status: "completed", proofOfCompletion: input.proofOfCompletion, recheckDate: input.recheckDate, updatedAt: (deps.now ?? (() => new Date()))() },
+  });
+  if (result.count === 0) throw new NotFoundError("OwnerTrainingRecommendation", id);
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OWNER_TRAINING_COMPLETED,
+    actorId: input.actorId,
+    workspaceId: input.workspaceId,
+    entityType: "OwnerTrainingRecommendation",
+    entityId: id,
+    payload: { proofOfCompletion: input.proofOfCompletion },
   });
 }
 

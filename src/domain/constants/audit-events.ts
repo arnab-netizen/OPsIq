@@ -239,6 +239,7 @@ export const AUDIT_EVENTS = {
   OWNER_SOP_DOC_REVISED: "owner.sop_doc_revised",
   OWNER_SOP_DOC_RETIRED: "owner.sop_doc_retired",
   OWNER_TRAINING_RECOMMENDED: "owner.training_recommended",
+  OWNER_TRAINING_COMPLETED: "owner.training_completed",
   OWNER_EQUIPMENT_RECORDED: "owner.equipment_recorded",
   OWNER_PROCESS_REVIEW_TRIGGERED: "owner.process_review_triggered",
   // Jarvis 360 Slice 12–14 — memory / self-eval / compliance

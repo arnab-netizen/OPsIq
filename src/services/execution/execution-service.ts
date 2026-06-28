@@ -79,6 +79,13 @@ export async function markSuccess(
   userId: string,
   outcomeValue: number
 ) {
+  // GAP-PROOF-02 — fail-closed. This legacy writer marked a decision "success" with a
+  // self-supplied outcome and no proof / separation-of-duties / authorization. It has no
+  // runtime callers. It must not be silently re-wired: the governed outcome path is
+  // recordDecisionOutcome (decision-lifecycle) + approveOutcomeVerification (with SoD).
+  throw new Error(
+    "markSuccess is retired and ungoverned. Use recordDecisionOutcome + approveOutcomeVerification (proof/SoD-gated) instead."
+  );
   const decision = await db.operatorItem.findFirst({
     where: { id: decisionId, workspaceId },
   });
@@ -171,6 +178,11 @@ export async function markFailure(
   userId: string,
   reason: string
 ) {
+  // GAP-PROOF-02 — fail-closed (see markSuccess). Retired ungoverned writer with no callers;
+  // the governed failure path is recordDecisionOutcome / the decision `fail` route.
+  throw new Error(
+    "markFailure is retired and ungoverned. Use the governed decision outcome/fail path instead."
+  );
   if (!reason.trim()) {
     throw new Error("Failure reason is required");
   }

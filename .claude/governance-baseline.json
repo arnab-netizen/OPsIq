@@ -1,6 +1,6 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 36,
+  "total_frozen": 32,
   "findings": [
     {
       "type": "raw-error-message",
@@ -285,46 +285,10 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/services/outcome/verification-approval.service.ts",
-      "line": 117,
+      "line": 131,
       "severity": "error",
       "code": "error: error instanceof Error ? error.message : String(error),",
       "reason": "outcome service internal validation/log message; not operator-rendered"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/services/external-systems/sync-manager.service.ts",
-      "line": 233,
-      "severity": "error",
-      "code": "error instanceof Error ? error.message : \"Unknown sync error\"",
-      "reason": "sync service internal token-error classification (checks for 401/403/unauthorized/invalid_grant); errorMessage passed to handleSyncFailure for routing logic, not operator-rendered"
-    },
-    {
-      "type": "unsafe-metric",
-      "category": "UNSAFE METRIC",
-      "file": "src/domain/business-facts/contradiction-resolver.ts",
-      "line": 148,
-      "severity": "error",
-      "code": "return `${severity}: ${metric} (${sources}) = [${values}]`;",
-      "reason": "false positive — TypeScript template literal string, not JSX metric display; internal contradiction description builder, not operator-rendered UI"
-    },
-    {
-      "type": "unsafe-metric",
-      "category": "UNSAFE METRIC",
-      "file": "src/domain/business-facts/contradiction-resolver.ts",
-      "line": 196,
-      "severity": "error",
-      "code": "description,",
-      "reason": "false positive — internal contradiction record field, not JSX metric display; used in non-rendered data structure"
-    },
-    {
-      "type": "unsafe-error-render",
-      "category": "UNSAFE ERROR RENDER",
-      "file": "src/generated/prisma/internal/class.ts",
-      "line": 40,
-      "severity": "error",
-      "code": "strings: JSON.parse(\"[\\\"where\\\",\\\"orderBy\\\",\\\"cursor\\\",\\\"actions\\\",\\\"e",
-      "reason": "Prisma auto-generated file — cannot be modified; governance scan pattern matched JSON field name 'actions' in generated runtime data, not real error rendering"
     }
   ]
 }

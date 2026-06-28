@@ -145,10 +145,12 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
+          // GAP-UI-04 — send the justification as `reason` (the field the route accepts and
+          // persists). The previous `override_reason`/`override_approved_at` keys were stripped
+          // by the route schema, dropping the override justification entirely.
           body: JSON.stringify({
             status: "approved",
-            override_reason: overrideReason,
-            override_approved_at: new Date().toISOString(),
+            reason: overrideReason,
           }),
         }
       );
@@ -214,12 +216,14 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
 
     try {
       const wsId = getWorkspaceId();
+      // GAP-UI-03 — the real outcome-recording route is `record-outcome` (there is no
+      // `/success` route). Body matches RecordOutcomeSchema (actualOutcomeValue).
       const res = await fetch(
-        `/api/decisions/${decision.id}/success?workspaceId=${wsId}`,
+        `/api/decisions/${decision.id}/record-outcome?workspaceId=${wsId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ outcomeValue: value }),
+          body: JSON.stringify({ actualOutcome: "success", actualOutcomeValue: value }),
         }
       );
 
@@ -255,8 +259,9 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
 
     try {
       const wsId = getWorkspaceId();
+      // GAP-UI-03 — the real failure route is `fail` (there is no `/failure` route).
       const res = await fetch(
-        `/api/decisions/${decision.id}/failure?workspaceId=${wsId}`,
+        `/api/decisions/${decision.id}/fail?workspaceId=${wsId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -73,7 +73,7 @@ export const PATCH = withEnforcementFull(
       // Route through lifecycle service
       let updated;
       if (input.status === "approved") {
-        updated = await approveDecision(decisionId, workspaceId, userId);
+        updated = await approveDecision(decisionId, workspaceId, userId, input.reason);
       } else {
         if (!input.reason?.trim()) {
           throw new Error("Rejection reason is required");

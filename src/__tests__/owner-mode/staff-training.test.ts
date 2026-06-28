@@ -10,6 +10,7 @@ import { evaluateTrainingNeed, canAuthorizeEquipment } from "@/domain/owner-mode
 import {
   recordObservedTrainingNeed,
   authorizeEquipmentForSkill,
+  completeTraining,
   GenericTrainingRejectedError,
   EquipmentAuthorizationDeniedError,
   type TrainingDeps,
@@ -75,6 +76,38 @@ describe("recordObservedTrainingNeed (DI)", () => {
     expect(id).toBe("tr1");
     expect(create).toHaveBeenCalledTimes(1);
     expect(emitAuditEvent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("completeTraining (DI) — GAP-ISO-03 workspace isolation + audit", () => {
+  function deps(count: number) {
+    const updateMany = vi.fn(async () => ({ count }));
+    const d: TrainingDeps = {
+      now: () => NOW,
+      db: {
+        ownerTrainingRecommendation: { create: vi.fn(async () => ({ id: "tr1" })), update: vi.fn(async () => ({})), updateMany },
+        ownerStaffSkill: { upsert: vi.fn(async () => ({ id: "s1", proven: true })), findFirst: vi.fn(async () => null), update: vi.fn(async () => ({})) },
+      },
+    };
+    return { d, updateMany };
+  }
+
+  it("scopes the update by { id, workspaceId } and audits a workspace-scoped completion", async () => {
+    const { d, updateMany } = deps(1);
+    await completeTraining("tr1", { workspaceId: "ws1", proofOfCompletion: "photo", recheckDate: NOW, actorId: "u1" }, d);
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany.mock.calls[0][0].where).toEqual({ id: "tr1", workspaceId: "ws1" });
+    expect(emitAuditEvent).toHaveBeenCalledTimes(1);
+    expect(emitAuditEvent.mock.calls[0][0].eventName).toBe("owner.training_completed");
+    expect(emitAuditEvent.mock.calls[0][0].workspaceId).toBe("ws1");
+  });
+
+  it("rejects (NotFoundError) when the id is not in this workspace — no cross-workspace completion, no audit", async () => {
+    const { d } = deps(0); // updateMany matched nothing in this workspace
+    await expect(
+      completeTraining("tr1", { workspaceId: "ws-other", proofOfCompletion: "x", recheckDate: NOW, actorId: "u1" }, d)
+    ).rejects.toThrow(/not found/i);
+    expect(emitAuditEvent).not.toHaveBeenCalled();
   });
 });
 
