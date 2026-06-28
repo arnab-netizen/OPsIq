@@ -228,6 +228,9 @@ export const AUDIT_EVENTS = {
   OWNER_GATE_OPT_OUT_RECORDED: "owner.gate_opt_out_recorded",
   OWNER_GATE_OPT_OUT_CLEARED: "owner.gate_opt_out_cleared",
   OWNER_GATE_PROMOTION_BLOCKED: "owner.gate_promotion_blocked",
+  // Jarvis 360 Slice 4 — owner load reduction / approval memory
+  OWNER_APPROVAL_MEMORY_RECORDED: "owner.approval_memory_recorded",
+  OWNER_APPROVAL_MEMORY_REUSED: "owner.approval_memory_reused",
 
   // Owner-Only Recovery Mode
   OWNER_BUSINESS_CREATED: "owner.business_created",

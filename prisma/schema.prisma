@@ -1300,6 +1300,28 @@ enum evidence_visibility {
   RESTRICTED
 }
 
+/// Jarvis 360 Slice 4 — owner approval memory. Records an owner's approval of a
+/// content-hashed decision/rule so it can be reused WITHOUT re-asking, but only
+/// when workspace + scope + content hash match and the requested risk is the same
+/// or lower. A material change (different content hash) forces re-approval.
+model OwnerApprovalMemory {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  scope            String
+  contentHash      String    @map("content_hash")
+  version          Int       @default(1)
+  riskClass        String    @map("risk_class")
+  approvalStatus   String    @default("approved") @map("approval_status")
+  approvedByUserId String    @map("approved_by_user_id") @db.Uuid
+  validUntil       DateTime? @map("valid_until")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, scope, contentHash])
+  @@index([workspaceId, scope])
+  @@map("owner_approval_memory")
+}
+
 model ApprovalRequest {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   operatorItemId   String       @map("operator_item_id") @db.Uuid
