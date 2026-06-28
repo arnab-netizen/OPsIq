@@ -9,7 +9,7 @@ Live burn-down of remaining non-E2E gaps. Base HEAD `8e31704`. EH-23 (browser E2
 | EH-05 | OPEN→**PARTIAL** | persist + surface arbitration verdict | intervention-arbitration.service.ts | full verdict now persisted to durable audit log (whatNotToDo + chosen/rejected/blocked/deferred + dominant constraint + reconsideration) — queryable, not discarded; owner-page rendering still pending | **PARTIAL** | this turn |
 | EH-22/EH-06 | OPEN | runtime seed/import route + DB owner loop | new seed route + [db] test | DB loop | OPEN | — |
 | EH-03/EH-04 | **CLOSED_TESTED** | owner UI action controls | owner/page.tsx (OwnerActions) + secured routes | caller-presence + server-enforcement regression (owner-ui-actions.test.ts); routes require OWNER_MANAGE; blocked reason surfaced | **CLOSED_TESTED** (backend/UI-service; browser interaction is EH-23) | this turn |
-| EH-07/EH-08 | OPEN | live training/process triggers from runtime sources | completion → training/process | trigger tests | OPEN | — |
+| EH-07/EH-08 | **CLOSED_TESTED** | live training/process triggers from runtime sources | self-evaluation.service.ts | failed self-eval (proof/execution) auto-derives training (staff+process+metric+recheck) + escalates to process review on repeated failure; control center already counts both | **CLOSED_TESTED** | this turn |
 | EH-15 | PARTIAL | live approval memory in a real owner approval path | approval flow + caller | reuse test | OPEN | — |
 | EH-10/EH-19/EH-25 | PARTIAL | memory/self-eval consequences surfaced; live opportunity guardrails | gate + control center | suppress/surface tests | PARTIAL | — |
 | EH-17 | OPEN | live marketing/opportunity/contract guardrails | decision flow | reject/defer tests | OPEN | — |

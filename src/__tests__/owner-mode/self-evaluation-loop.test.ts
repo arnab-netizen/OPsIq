@@ -87,3 +87,70 @@ describe("recordSelfEvaluation loop closure", () => {
     expect(recordCaution).not.toHaveBeenCalled();
   });
 });
+
+describe("recordSelfEvaluation live training/process triggers (EH-07/EH-08)", () => {
+  function triggerDeps() {
+    const deriveTraining = vi.fn(async () => "training-1");
+    const triggerProcessReview = vi.fn(async () => ({ due: true, triggers: ["repeated_failure"] }));
+    return {
+      deriveTraining,
+      triggerProcessReview,
+      deps: {
+        db: { ownerSelfEvaluation: { create: vi.fn(async () => ({ id: "se1" })) } },
+        now: () => new Date("2026-06-28T00:00:00.000Z"),
+        deriveTraining,
+        triggerProcessReview,
+      },
+    };
+  }
+
+  it("auto-derives training from a proof-attributed failure with staff/process context", async () => {
+    const { deps: d, deriveTraining } = triggerDeps();
+    const r = await recordSelfEvaluation(
+      {
+        workspaceId: "ws1", actorId: "owner1", staffRef: "emp1", processAffected: "wash-handling", expectedMetric: "rework_rate",
+        expectedOutcome: "rework down 20%",
+        signals: { executed: true, metExpectation: false, insufficientProof: true }, // → insufficient_proof
+      },
+      d
+    );
+    expect(r.trainingTriggered).toBe(true);
+    expect(deriveTraining).toHaveBeenCalledWith(expect.objectContaining({ signal: "proof_failure", staffRef: "emp1", processAffected: "wash-handling" }));
+  });
+
+  it("escalates to a process review on repeated failure", async () => {
+    const { deps: d, triggerProcessReview } = triggerDeps();
+    const r = await recordSelfEvaluation(
+      {
+        workspaceId: "ws1", actorId: "owner1", processId: "proc1", priorFailureCount: 2,
+        expectedOutcome: "throughput up", signals: { executed: true, metExpectation: false, poorExecution: true },
+      },
+      d
+    );
+    expect(r.processReviewTriggered).toBe(true);
+    expect(triggerProcessReview).toHaveBeenCalledWith("proc1", expect.objectContaining({ failureCount: 3 }));
+  });
+
+  it("does not trigger training/process without the required context", async () => {
+    const { deps: d, deriveTraining, triggerProcessReview } = triggerDeps();
+    const r = await recordSelfEvaluation(
+      { workspaceId: "ws1", actorId: "owner1", expectedOutcome: "x", signals: { executed: true, metExpectation: false, poorExecution: true } },
+      d
+    );
+    expect(r.trainingTriggered).toBe(false);
+    expect(r.processReviewTriggered).toBe(false);
+    expect(deriveTraining).not.toHaveBeenCalled();
+    expect(triggerProcessReview).not.toHaveBeenCalled();
+  });
+
+  it("does not trigger on a successful outcome", async () => {
+    const { deps: d, deriveTraining } = triggerDeps();
+    const r = await recordSelfEvaluation(
+      { workspaceId: "ws1", actorId: "owner1", staffRef: "emp1", processAffected: "p", processId: "proc1", expectedOutcome: "x", signals: { executed: true, metExpectation: true } },
+      d
+    );
+    expect(r.result).toBe("worked");
+    expect(r.trainingTriggered).toBe(false);
+    expect(deriveTraining).not.toHaveBeenCalled();
+  });
+});

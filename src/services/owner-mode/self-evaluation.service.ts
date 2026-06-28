@@ -8,8 +8,10 @@
 
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { classifyOutcome, type OutcomeSignals, type EvaluationVerdict } from "@/domain/owner-mode/self-evaluation";
+import { classifyOutcome, type OutcomeSignals, type EvaluationVerdict, type FailureReason } from "@/domain/owner-mode/self-evaluation";
 import { recordDoNotRepeat, type RecordDoNotRepeatInput } from "@/services/owner-mode/do-not-repeat.service";
+import { deriveTrainingFromObservedFailure, type DeriveTrainingInput, type RuntimeFailureSignal } from "@/services/owner-mode/staff-training.service";
+import { triggerProcessReviewOnRepeatedFailure } from "@/services/owner-mode/process-review.service";
 
 interface SelfEvalDb {
   ownerSelfEvaluation: { create(args: { data: Record<string, unknown> }): Promise<{ id: string }> };
@@ -19,7 +21,16 @@ export interface SelfEvalDeps {
   now?: () => Date;
   /** Injectable for tests; defaults to the real do-not-repeat recorder. */
   recordCaution?: (input: RecordDoNotRepeatInput) => Promise<string>;
+  /** Injectable for tests; defaults to the real training/process triggers. */
+  deriveTraining?: (input: DeriveTrainingInput) => Promise<string | null>;
+  triggerProcessReview?: (id: string, input: { workspaceId: string; failureCount: number; actorId?: string }) => Promise<unknown>;
 }
+
+/** A failure attributed to execution/proof maps to an observed training signal. */
+const FAILURE_TO_TRAINING_SIGNAL: Partial<Record<FailureReason, RuntimeFailureSignal>> = {
+  insufficient_proof: "proof_failure",
+  poor_execution: "rework",
+};
 async function resolveDefaultDeps(): Promise<SelfEvalDeps> {
   const { db } = await import("@/lib/db");
   return { db: db as unknown as SelfEvalDb };
@@ -43,6 +54,17 @@ export interface RecordSelfEvaluationInput {
    */
   businessId?: string | null;
   memoryKey?: string | null;
+  /**
+   * Live training/process triggers (EH-07/EH-08): when a FAILED outcome is attributed to
+   * execution/proof and these are supplied, OpsIQ auto-derives an evidence-backed training
+   * need and (when a process is given) escalates to a process review on repeated failure.
+   */
+  staffRef?: string | null;
+  processAffected?: string | null;
+  expectedMetric?: string | null;
+  processId?: string | null;
+  /** Prior consecutive failures for this process (the new failure is added to it). */
+  priorFailureCount?: number;
 }
 
 export interface RecordSelfEvaluationResult extends EvaluationVerdict {
@@ -50,6 +72,10 @@ export interface RecordSelfEvaluationResult extends EvaluationVerdict {
   /** True when a do-not-repeat/caution memory was created from a failed outcome. */
   cautionRecorded: boolean;
   cautionBlocks: boolean;
+  /** True when an evidence-backed training need was auto-derived. */
+  trainingTriggered: boolean;
+  /** True when repeated failure escalated to a process review. */
+  processReviewTriggered: boolean;
 }
 
 /** Classify + persist a self-evaluation; failed → reassessment scheduled + caution memory. */
@@ -106,5 +132,41 @@ export async function recordSelfEvaluation(input: RecordSelfEvaluationInput, inj
     cautionBlocks = blocks;
   }
 
-  return { ...verdict, id: created.id, cautionRecorded, cautionBlocks };
+  // EH-07 — a FAILED outcome attributed to execution/proof auto-derives evidence-backed
+  // training (linked to staff + process + metric + recheck). Only when the caller supplies
+  // the staff/process context and an acting user (training mutations are user-audited).
+  let trainingTriggered = false;
+  const trainingSignal = verdict.failureReason ? FAILURE_TO_TRAINING_SIGNAL[verdict.failureReason] : undefined;
+  if (verdict.result === "failed" && trainingSignal && input.staffRef && input.processAffected && input.actorId) {
+    const derive = deps.deriveTraining ?? deriveTrainingFromObservedFailure;
+    const recheck = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const id = await derive({
+      workspaceId: input.workspaceId,
+      staffRef: input.staffRef,
+      signal: trainingSignal,
+      occurrences: (input.priorFailureCount ?? 0) + 1,
+      evidenceRef: input.recommendationId ?? input.actionId ?? undefined,
+      processAffected: input.processAffected,
+      metric: input.expectedMetric ?? input.expectedOutcome,
+      expectedImprovement: `Resolve: ${input.expectedOutcome}`,
+      recheckDate: recheck,
+      actorId: input.actorId,
+    });
+    trainingTriggered = id != null;
+  }
+
+  // EH-08 — repeated failure on a process escalates to a process review (threshold inside
+  // the process-review service); a single failure is noise and does not trigger.
+  let processReviewTriggered = false;
+  if (verdict.result === "failed" && input.processId) {
+    const trigger = deps.triggerProcessReview ?? triggerProcessReviewOnRepeatedFailure;
+    const decision = (await trigger(input.processId, {
+      workspaceId: input.workspaceId,
+      failureCount: (input.priorFailureCount ?? 0) + 1,
+      actorId: input.actorId ?? undefined,
+    })) as { due?: boolean };
+    processReviewTriggered = decision?.due === true;
+  }
+
+  return { ...verdict, id: created.id, cautionRecorded, cautionBlocks, trainingTriggered, processReviewTriggered };
 }
