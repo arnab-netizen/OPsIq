@@ -1,0 +1,76 @@
+name: Flake Diagnose (temporary)
+
+# Temporary diagnostic lane: runs the full maintained DB suite (quarantine excluded, same as
+# ci.yml) and prints the failing test files/cases with a grep-able marker so the exact flaky
+# tests can be identified (the postgres service teardown log otherwise masks the vitest summary).
+# Non-blocking (exit 0). Removed once the flakes are fixed.
+
+on:
+  push:
+    branches: ["claude/full-repo-jarvis-db-blocker-closure"]
+  workflow_dispatch:
+
+jobs:
+  flake-diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TEST_WITH_DB: "true"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - name: Configure .env.local
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          TEST_WITH_DB=true
+          EOF
+      - name: Migrate deploy
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+      - run: npx prisma generate
+      - name: Run DB suite (JSON reporter) and print failing files
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          TEST_WITH_DB: "true"
+          NODE_ENV: test
+        run: |
+          set +e
+          EXCLUDES=$(node -e "const q=require('./.claude/test-quarantine.json'); console.log(q.files.map(f=>'--exclude '+f.path).join(' '))")
+          npx vitest run --maxWorkers 1 $EXCLUDES --reporter=json --outputFile=/tmp/res.json >/tmp/run.log 2>&1
+          echo "FLAKEDIAG_BEGIN"
+          node -e '
+            const r=require("/tmp/res.json");
+            const failed=(r.testResults||[]).filter(t=>t.status!=="passed");
+            for(const f of failed){
+              console.log("FLAKEDIAG_FILE "+f.name+" :: "+f.status);
+              for(const a of (f.assertionResults||[]).filter(x=>x.status!=="passed")){
+                console.log("FLAKEDIAG_CASE   "+a.fullName+" :: "+a.status);
+              }
+            }
+            console.log("FLAKEDIAG_TOTAL failed_files="+failed.length);
+          ' 2>&1 | head -300
+          echo "FLAKEDIAG_END"
+          exit 0
