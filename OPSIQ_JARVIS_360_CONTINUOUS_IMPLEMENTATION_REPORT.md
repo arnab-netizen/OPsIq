@@ -304,7 +304,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 1 | Data sufficiency & evidence disclosure | COMPLETE_LOCAL |
 | 2 | Finance/cash/margin guardrails | COMPLETE_LOCAL |
 | 3 | Proof anti-gaming & completion gate | COMPLETE_LOCAL |
-| 4 | Owner load reduction baseline | PARTIAL (approval memory COMPLETE_LOCAL; standing-instructions/batch/attention-budget remaining) |
+| 4 | Owner load reduction baseline | COMPLETE_LOCAL |
 | 5 | SOP & checklist lifecycle baseline | NOT_STARTED |
 | 6 | Staff training & skills matrix baseline | NOT_STARTED |
 | 7 | Equipment/capacity/maintenance baseline | NOT_STARTED |
@@ -368,3 +368,11 @@ slices done or a hard-blocker stop; neither holds. Closest factual descriptor: a
 subset is implemented + targeted-tested locally; remaining slices are simply not yet built.)
 Per-completed-slice level: **ALL COMPLETED SLICES = TARGETED_TESTED / COMPLETE_LOCAL**, CI pending
 for DB/migration confirmation.
+
+---
+
+## SLICE 4 REMAINDER — STANDING INSTRUCTIONS / ATTENTION BUDGET / BATCH — **COMPLETE_LOCAL**
+- **Reuse/new:** new `OwnerStandingInstruction` + `OwnerAttentionEvent` models (no equivalent existed); pure rules in `domain/owner-mode/owner-load.ts`; DI service `owner-load.service.ts`. No autonomy added (no auto-send/spend).
+- **Behavior:** owner standing instructions auto-allow/forbid a class of actions in a scope under an amount ceiling (owner-only, audited); `classifyAttention`/`summarizeOwnerAttention` give an owner attention budget with fatigue-risk; `batchByStandingInstructions` partitions pending items into auto/forbidden/needs-approval so only true decisions reach the owner.
+- **Files:** `prisma/schema.prisma` (+2 models), `migrations/20260628120000_owner_load_reduction`, `domain/owner-mode/owner-load.ts`, `services/owner-mode/owner-load.service.ts`, `__tests__/owner-mode/owner-load.test.ts` (11 tests).
+- **Tests:** 11 passed. **Limitations:** auto-suppressing re-asks inside the legacy `requestApproval` flow + an owner-facing attention dashboard surface are follow-ons (Slice 9).

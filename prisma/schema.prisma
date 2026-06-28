@@ -1322,6 +1322,44 @@ model OwnerApprovalMemory {
   @@map("owner_approval_memory")
 }
 
+/// Jarvis 360 Slice 4 — owner standing instruction. An owner-defined rule that
+/// auto-allows or forbids a class of actions within a scope (and optional amount
+/// ceiling), so routine actions need not be re-approved.
+model OwnerStandingInstruction {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  scope                String
+  allowedActionTypes   String[]  @map("allowed_action_types")
+  forbiddenActionTypes String[]  @map("forbidden_action_types")
+  maxAmount            Float?    @map("max_amount")
+  riskClass            String    @map("risk_class")
+  status               String    @default("active")
+  createdByUserId      String    @map("created_by_user_id") @db.Uuid
+  validUntil           DateTime? @map("valid_until")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId, scope])
+  @@map("owner_standing_instruction")
+}
+
+/// Jarvis 360 Slice 4 — owner attention event. Records each alert/approval/escalation
+/// with its disposition so OpsIQ can protect owner attention and report load saved.
+model OwnerAttentionEvent {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId          String   @map("workspace_id") @db.Uuid
+  eventType            String   @map("event_type")
+  severity             String
+  disposition          String
+  ownerDecisionRequired Boolean @default(false) @map("owner_decision_required")
+  handledByOpsIQ       Boolean  @default(false) @map("handled_by_opsiq")
+  sourceRef            String?  @map("source_ref")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId, createdAt])
+  @@map("owner_attention_event")
+}
+
 model ApprovalRequest {
   id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   operatorItemId   String       @map("operator_item_id") @db.Uuid

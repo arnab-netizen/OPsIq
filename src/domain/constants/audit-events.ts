@@ -231,6 +231,20 @@ export const AUDIT_EVENTS = {
   // Jarvis 360 Slice 4 — owner load reduction / approval memory
   OWNER_APPROVAL_MEMORY_RECORDED: "owner.approval_memory_recorded",
   OWNER_APPROVAL_MEMORY_REUSED: "owner.approval_memory_reused",
+  OWNER_STANDING_INSTRUCTION_RECORDED: "owner.standing_instruction_recorded",
+  OWNER_ATTENTION_EVENT_RECORDED: "owner.attention_event_recorded",
+  // Jarvis 360 Slice 5–8 — SOP/process/training/equipment lifecycle
+  OWNER_SOP_DOC_CREATED: "owner.sop_doc_created",
+  OWNER_SOP_DOC_APPROVED: "owner.sop_doc_approved",
+  OWNER_SOP_DOC_REVISED: "owner.sop_doc_revised",
+  OWNER_SOP_DOC_RETIRED: "owner.sop_doc_retired",
+  OWNER_TRAINING_RECOMMENDED: "owner.training_recommended",
+  OWNER_EQUIPMENT_RECORDED: "owner.equipment_recorded",
+  OWNER_PROCESS_REVIEW_TRIGGERED: "owner.process_review_triggered",
+  // Jarvis 360 Slice 12–14 — memory / self-eval / compliance
+  OWNER_DO_NOT_REPEAT_BLOCKED: "owner.do_not_repeat_blocked",
+  OWNER_SELF_EVALUATION_RECORDED: "owner.self_evaluation_recorded",
+  OWNER_COMPLIANCE_REVIEW_REQUIRED: "owner.compliance_review_required",
 
   // Owner-Only Recovery Mode
   OWNER_BUSINESS_CREATED: "owner.business_created",
