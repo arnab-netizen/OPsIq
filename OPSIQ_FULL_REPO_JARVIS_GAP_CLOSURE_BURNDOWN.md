@@ -39,3 +39,29 @@ rather than pushed as an unverifiable migration.
 | GAP-CI-04 | MEDIUM | DI-only blind spots (budget/UI) | new route/service tests via this closure | tests | added in slices 2-7 | IN_PROGRESS |
 
 Closure commits and evidence are appended to `OPSIQ_FULL_REPO_JARVIS_GAP_CLOSURE_REPORT.md`.
+
+---
+
+## FINAL STATUS (post-closure)
+
+| Gap | Final status | Closure commit | Evidence |
+|---|---|---|---|
+| GAP-BUDGET-01 | CLOSED_TESTED | 5d7ac1a | material-gate-registry test asserts the gate symbol in action-link.service; 371 owner suites green |
+| GAP-BUDGET-02 | CLOSED_TESTED (DB runtime CI-pending) | 5d7ac1a | HOLD→non-committed state + OWNER_BUDGET_SPEND_BLOCKED audit; tsc |
+| GAP-UI-01 | CLOSED_TESTED | 53fd3ad | mock page redirects to canonical route; build compiles |
+| GAP-UI-02 | CLOSED_TESTED | 53fd3ad | broken panel unreachable (sole caller redirected) |
+| GAP-UI-03 | CLOSED_TESTED | 53fd3ad | posts to record-outcome/fail (real routes); build compiles |
+| GAP-UI-04 | CLOSED_TESTED | 53fd3ad | reason threaded approveDecision→transition; decision suite green |
+| GAP-ISO-03 | CLOSED_TESTED | 53fd3ad | DI tests: workspace-scoped where + NotFoundError + audit |
+| GAP-PROOF-01 | CLOSED_TESTED | 53fd3ad | executor cannot self-verify; tsc + outcome suite green |
+| GAP-PROOF-02 | CLOSED_TESTED | 53fd3ad | markSuccess/markFailure fail-closed; zero callers |
+| GAP-REC-01 | CLOSED_TESTED | 53fd3ad | diagnosis recs advisory/non-actionable; diagnosis suite green |
+| GAP-DB-01 | HARD_BLOCKED (env: no DB) | — | verified drift + active missing-table; remediation in post-fix audit |
+| GAP-DB-02 | HARD_BLOCKED (env: no DB) | — | latent cascade (no runtime delete path) |
+| GAP-ISO-02 | HARD_BLOCKED (env: no DB) | — | nullable+unindexed; needs migration |
+| GAP-CI-01 | CI_INFRA_ONLY | — | runner-starved abort reproduced; not repo-fixable |
+| GAP-ISO-01, GAP-DB-03/04/05, GAP-REC-02/03/04, GAP-PROOF-03/04, GAP-CI-03 | DEFERRED_NOT_BLOCKING | — | classified in post-fix audit |
+
+**Final classification: CRITICALS_CLOSED_HIGHS_OPEN** — all locally-provable code-level CRITICAL/HIGH
+safety gaps closed + tested; remaining open items are the DB-migration class + CI infra, HARD_BLOCKED by
+environment. Behavioral validation must NOT start until the DB blocker is closed in a DB-enabled env.
