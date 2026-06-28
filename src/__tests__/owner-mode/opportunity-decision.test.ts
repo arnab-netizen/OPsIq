@@ -45,6 +45,20 @@ describe("decideOpportunity", () => {
     expect(r.verdict).toBe("defer");
   });
 
+  it("H2 — scopes capacity + margin reads to the action's business (not workspace-wide)", async () => {
+    const captured: Record<string, Record<string, unknown>> = {};
+    const d = {
+      db: {
+        ownerEquipment: { findMany: vi.fn(async (a: { where: unknown }) => { captured.equip = a.where as Record<string, unknown>; return []; }) },
+        ownerFinancialSnapshot: { findFirst: vi.fn(async (a: { where: unknown }) => { captured.snap = a.where as Record<string, unknown>; return null; }) },
+      },
+      now: () => new Date("2026-06-28T00:00:00.000Z"),
+    };
+    await decideOpportunity({ workspaceId: "ws1", businessId: "bizA", fitScore: 0.9, paymentRisk: "low" }, d as never);
+    expect(captured.equip).toEqual({ workspaceId: "ws1", OR: [{ businessId: "bizA" }, { businessId: null }] });
+    expect(captured.snap).toEqual({ workspaceId: "ws1", businessId: "bizA" });
+  });
+
   it("ACCEPTS a profitable, fulfillable, low-risk opportunity", async () => {
     const d = deps({ snapshot: { revenue: 100, costOfGoods: 50 }, equipment: [{ name: "Washer", utilization: 0.4, downtimeState: "up", maintenanceDueAt: new Date("2027-01-01"), status: "operational" }] });
     const r = await decideOpportunity({ ...base, fitScore: 0.9 }, d);
