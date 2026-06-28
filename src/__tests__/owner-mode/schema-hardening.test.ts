@@ -57,6 +57,32 @@ describe("GAP-DB-02 — governed verification (proof) records are delete-protect
   });
 });
 
+describe("GAP-DB-02 broader — audit/event/snapshot records stay delete-protected", () => {
+  it("snapshot_data → workspace is NOT onDelete: Cascade (delete is blocked, protecting state)", () => {
+    const block = modelBlock("SnapshotData");
+    const rel = block.split("\n").find((l) => l.includes("workspace") && l.includes("@relation"));
+    expect(rel).toBeTruthy();
+    expect(rel).not.toContain("onDelete: Cascade");
+  });
+
+  it("AuditEvent.actor is onDelete: Restrict (audit records survive user delete)", () => {
+    const block = modelBlock("AuditEvent");
+    const rel = block.split("\n").find((l) => l.trim().startsWith("actor") && l.includes("@relation"));
+    expect(rel).toContain("onDelete: Restrict");
+    expect(rel).not.toContain("onDelete: Cascade");
+  });
+
+  it("canonical_events is append-only (DB trigger forbids DELETE)", () => {
+    const migDir = resolve(ROOT, "prisma/migrations");
+    const found = readdirSync(migDir)
+      .map((d) => {
+        try { return readFileSync(resolve(migDir, d, "migration.sql"), "utf8"); } catch { return ""; }
+      })
+      .some((sql) => /prevent_canonical_event_delete|append-only/.test(sql));
+    expect(found).toBe(true);
+  });
+});
+
 describe("GAP-ISO-02 — Engagement is workspace-scoped (non-null + indexed)", () => {
   it("Engagement.workspaceId is non-null and indexed in the schema", () => {
     const block = modelBlock("Engagement");
