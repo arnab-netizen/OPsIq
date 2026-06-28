@@ -306,7 +306,7 @@ risk class, and emits `owner.gate_opt_out_recorded`.
 | 3 | Proof anti-gaming & completion gate | COMPLETE_LOCAL |
 | 4 | Owner load reduction baseline | COMPLETE_LOCAL |
 | 5 | SOP & checklist lifecycle baseline | COMPLETE_LOCAL |
-| 6 | Staff training & skills matrix baseline | NOT_STARTED |
+| 6 | Staff training & skills matrix baseline | COMPLETE_LOCAL |
 | 7 | Equipment/capacity/maintenance baseline | NOT_STARTED |
 | 8 | Process review & continuous improvement | NOT_STARTED |
 | 9 | Command center & guided execution wiring | NOT_STARTED |
@@ -384,3 +384,11 @@ for DB/migration confirmation.
 - **Behavior:** draft → owner-approved → retired; approved+non-stale SOPs reuse without re-approval; a material change (content hash differs) forks a NEW draft version requiring re-approval; past-review-date = stale → review. Approve/retire owner-only; all mutations audited.
 - **Files:** `OwnerSopDocument` model + `migrations/20260628130000_owner_sop_document`, `domain/owner-mode/sop-document.ts`, `services/owner-mode/sop-document.service.ts`, `app/api/owner/sop-documents/route.ts`, `__tests__/owner-mode/sop-document.test.ts` (10 tests).
 - **Tests:** 10 passed. **Limitations:** deploy-to-recurring-task + checklist-step check-in + training linkage are follow-ons (Slices 6/8).
+
+---
+
+## SLICE 6 — STAFF TRAINING & SKILLS MATRIX — **COMPLETE_LOCAL**
+- **Reuse/new:** new `OwnerStaffSkill` + `OwnerTrainingRecommendation` models (none existed); pure `domain/owner-mode/staff-training.ts`; DI service; route.
+- **Behavior:** every training recommendation must cite ≥1 observed gap (repeated error / complaint / rework / missed checklist / equipment misuse / poor proof / quality issue / new SOP-equipment) — generic requests are rejected server-side (`GenericTrainingRejectedError`). Skills matrix tracks proven skills + SOP trained on; equipment is authorized **only when the relevant skill is proven** (`EquipmentAuthorizationDeniedError`). Effectiveness recheck date carried. Audited.
+- **Files:** 2 models + `migrations/20260628140000_owner_staff_training`, `domain/owner-mode/staff-training.ts`, `services/owner-mode/staff-training.service.ts`, `app/api/owner/staff-training/route.ts`, `__tests__/owner-mode/staff-training.test.ts` (8 tests).
+- **Tests:** 8 passed. **Limitations:** auto-deriving observed evidence from proof/quality history is a follow-on (wires to Slices 8/13).
