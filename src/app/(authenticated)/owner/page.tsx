@@ -356,10 +356,14 @@ export default function OwnerCommandCenterPage() {
               <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                 <div className="text-xs uppercase text-muted-foreground">Whole-business plan (live runtime)</div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={wbp.data.criticalDomainsRealProviderBacked ? "success" : "warning"} data-testid="wbp-provider-status">
-                    {wbp.data.criticalDomainsRealProviderBacked ? "Provider-backed data" : "Partial data"}
-                  </Badge>
-                  <Badge variant="muted" data-testid="wbp-confidence">Confidence: {wbp.data.overallConfidence}</Badge>
+                  <span data-testid="wbp-provider-status">
+                    <Badge variant={wbp.data.criticalDomainsRealProviderBacked ? "success" : "warning"}>
+                      {wbp.data.criticalDomainsRealProviderBacked ? "Provider-backed data" : "Partial data"}
+                    </Badge>
+                  </span>
+                  <span data-testid="wbp-confidence">
+                    <Badge variant="muted">Confidence: {wbp.data.overallConfidence}</Badge>
+                  </span>
                   <Badge variant="muted">Plan score {Math.round(wbp.collectiveScore)}/100</Badge>
                   <Badge variant="muted">Stage: {String(wbp.stage).replace(/_/g, " ")}</Badge>
                 </div>
