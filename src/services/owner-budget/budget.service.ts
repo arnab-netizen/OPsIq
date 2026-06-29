@@ -38,6 +38,19 @@ import type { FinancialSnapshotInput } from "@/domain/owner-finance/types";
 import { syncBudgetActions } from "@/services/owner-budget/action-link.service";
 import { deriveAgeingForReassessment } from "@/services/owner-budget/working-capital.service";
 import { deriveArchetypeSignalsForReassessment } from "@/services/owner-budget/archetype-metrics.service";
+
+/**
+ * Spend-entry states that represent a real future cash outflow (an obligation) for
+ * survival-risk and forecasting. A dated obligation the owner has not yet approved
+ * (`pending_owner_approval`) is STILL money owed — a committed statutory payroll due
+ * in days does not stop being a cash obligation because it is awaiting approval. The
+ * approval barrier (GAP-BUDGET-02) governs whether to *pay* a discretionary spend; it
+ * must not erase a liability from cash-risk assessment, or the mode classifier would
+ * understate imminent cash danger and (unsafely) keep recommending growth. `voided`
+ * is excluded (cancelled); `blocked`/`disputed` HOLDs are excluded (held suspicious
+ * payments, not confirmed outflows).
+ */
+const CASH_OBLIGATION_STATES = ["committed", "approved", "requested", "pending_owner_approval"] as const;
 import { routeReassessmentSignals } from "@/services/owner-budget/signal-router.service";
 
 const ALLOCATION_CATEGORIES: ReadonlySet<string> = new Set<AllocationCategory>([
@@ -358,7 +371,7 @@ export async function getBudgetForecast(workspaceId: string, businessId: string)
   const period = await db.budgetPeriod.findFirst({ where: { workspaceId, businessId, status: "active" }, orderBy: { createdAt: "desc" } });
   const snap = await db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } });
   const committed = await db.spendEntry.findMany({
-    where: { workspaceId, businessId, voidedAt: null, state: { in: ["committed", "approved", "requested"] }, dueInDays: { not: null } },
+    where: { workspaceId, businessId, voidedAt: null, state: { in: [...CASH_OBLIGATION_STATES] }, dueInDays: { not: null } },
   });
   const obligations = committed.map((s: any) => ({ label: s.label, amount: s.amount, dueInDays: s.dueInDays as number, kind: (s.obligationKind as any) ?? "other" }));
 
@@ -422,11 +435,13 @@ async function assembleAssessment(
     }
   }
 
-  // Obligations from committed/approved spend entries that carry a due date.
+  // Obligations from committed/approved/pending spend entries that carry a due date.
+  // pending_owner_approval is included: an unapproved dated obligation is still a real
+  // future cash outflow for survival-risk (see CASH_OBLIGATION_STATES).
   const committed = await db.spendEntry.findMany({
     where: {
       workspaceId, businessId, voidedAt: null,
-      state: { in: ["committed", "approved", "requested"] },
+      state: { in: [...CASH_OBLIGATION_STATES] },
       dueInDays: { not: null },
     },
   });

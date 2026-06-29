@@ -18,8 +18,8 @@ export async function authenticateUser(
 ): Promise<{ sessionToken: string; timestamp: string }> {
   const startTime = new Date().toISOString();
 
-  // Navigate to login page
-  await page.goto('/auth/login', { waitUntil: 'networkidle' });
+  // Navigate to login page (the route is /login, not /auth/login)
+  await page.goto('/login', { waitUntil: 'networkidle' });
 
   // Verify page loaded
   await page.waitForSelector('input[type="email"]', { timeout: 10000 });
