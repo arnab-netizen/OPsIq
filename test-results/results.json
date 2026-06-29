@@ -1,0 +1,340 @@
+{
+  "config": {
+    "configFile": "/home/user/OPsIq/playwright.config.ts",
+    "rootDir": "/home/user/OPsIq/tests/browser",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 3600000,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/user/OPsIq/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/user/OPsIq/tests/browser",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "test-results/html"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ],
+      [
+        "list",
+        null
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3001",
+      "reuseExistingServer": true,
+      "timeout": 120000
+    }
+  },
+  "suites": [
+    {
+      "title": "06-owner-control-center.spec.ts",
+      "file": "06-owner-control-center.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "A — Owner control center (real data, server-enforced)",
+          "file": "06-owner-control-center.spec.ts",
+          "line": 13,
+          "column": 6,
+          "specs": [
+            {
+              "title": "renders the control center with safety state, next action, what-not-to-do, attention",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9a0e672373d160838e74-ad77502a871bf8cf8a74",
+              "file": "06-owner-control-center.spec.ts",
+              "line": 14,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "07-owner-server-rejection.spec.ts",
+      "file": "07-owner-server-rejection.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "B — Server rejection visible (proof gate)",
+          "file": "07-owner-server-rejection.spec.ts",
+          "line": 13,
+          "column": 6,
+          "specs": [
+            {
+              "title": "proof-required completion without proof is rejected; UI shows the reason, no fake success",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "369d9d6cdc60505b8d39-81530fce2ef026cb0ccb",
+              "file": "07-owner-server-rejection.spec.ts",
+              "line": 14,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "08-owner-finance-budget-safety.spec.ts",
+      "file": "08-owner-finance-budget-safety.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "C — Finance/budget safety visible",
+          "file": "08-owner-finance-budget-safety.spec.ts",
+          "line": 13,
+          "column": 6,
+          "specs": [
+            {
+              "title": "budget shows EMERGENCY cash-risk, blocks growth spend, and shows the reason",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "041537249304c240d918-8a725ff2e97ce1985dfc",
+              "file": "08-owner-finance-budget-safety.spec.ts",
+              "line": 14,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "09-owner-indicators.spec.ts",
+      "file": "09-owner-indicators.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "D — Owner indicators (capacity, SOP, opportunity)",
+          "file": "09-owner-indicators.spec.ts",
+          "line": 17,
+          "column": 6,
+          "specs": [
+            {
+              "title": "capacity bottleneck + SOP review indicators render from real seeded data",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d281fb8d54b45f2b708-80cadcf9d3933fe2bab2",
+              "file": "09-owner-indicators.spec.ts",
+              "line": 18,
+              "column": 7
+            },
+            {
+              "title": "owner decides an opportunity through the real route and sees a verdict + reason",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6d281fb8d54b45f2b708-6feba6163c744f2ba208",
+              "file": "09-owner-indicators.spec.ts",
+              "line": 36,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "10-rbac-workspace.spec.ts",
+      "file": "10-rbac-workspace.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "E — RBAC / workspace enforcement",
+          "file": "10-rbac-workspace.spec.ts",
+          "line": 12,
+          "column": 6,
+          "specs": [
+            {
+              "title": "a non-owner member is denied owner data (403) and sees no control center",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d100e8af450f22a762b3-bd7757af1f35519aaf07",
+              "file": "10-rbac-workspace.spec.ts",
+              "line": 13,
+              "column": 7
+            },
+            {
+              "title": "unauthenticated direct navigation to /owner is redirected to /login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d100e8af450f22a762b3-b0a15d5f09b745b56909",
+              "file": "10-rbac-workspace.spec.ts",
+              "line": 27,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "11-legacy-ui-safety.spec.ts",
+      "file": "11-legacy-ui-safety.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "F — Legacy UI safety",
+          "file": "11-legacy-ui-safety.spec.ts",
+          "line": 16,
+          "column": 6,
+          "specs": [
+            {
+              "title": "the legacy mock governance page redirects away to the canonical surface",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "bda92aff6d943a4dcda0-54e0b405b708123e1b89",
+              "file": "11-legacy-ui-safety.spec.ts",
+              "line": 17,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-06-29T01:48:06.540Z",
+    "duration": 198.49,
+    "expected": 0,
+    "skipped": 8,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

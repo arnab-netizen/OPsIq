@@ -77,8 +77,18 @@ jobs:
             sleep 2
           done
           if [ -z "$up" ]; then echo "app failed to start"; tail -80 /tmp/app.log; exit 1; fi
-      - name: Run owner-flow browser test
-        run: npx playwright test tests/browser/06-owner-control-center.spec.ts --project=chromium
+      - name: Run owner-flow browser tests (A–F)
+        # A: control center · B: server rejection · C: finance/budget safety ·
+        # D: indicators/opportunity · E: RBAC/workspace · F: legacy UI safety.
+        run: >-
+          npx playwright test
+          tests/browser/06-owner-control-center.spec.ts
+          tests/browser/07-owner-server-rejection.spec.ts
+          tests/browser/08-owner-finance-budget-safety.spec.ts
+          tests/browser/09-owner-indicators.spec.ts
+          tests/browser/10-rbac-workspace.spec.ts
+          tests/browser/11-legacy-ui-safety.spec.ts
+          --project=chromium
       - name: Print Playwright failures + app log
         if: always()
         run: |
