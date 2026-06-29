@@ -14,6 +14,7 @@ import { scoreAdvice } from "../scorer";
 import { caseToContext } from "../whole-business/production-runner";
 import { runOwnerAdvice, type OwnerAdviceResult } from "@/services/owner-mode/owner-advice-runtime.service";
 import { PUBLIC_CORPUS } from "./library";
+import { CRITICAL_DOMAIN_SET } from "./domains";
 import type { PublicCase } from "./schema";
 import type { Split } from "./schema";
 
@@ -74,6 +75,7 @@ export interface PublicScoreReport {
   byDomain: Record<string, number>;
   weakCategories: string[];
   weakDomains: string[];
+  weakCriticalDomains: string[];
   weakSeverities: string[];
 }
 
@@ -119,6 +121,7 @@ export async function scorePublicCorpus(opts: { stride?: number } = {}): Promise
     bySeverity, byCategory, byDomain,
     weakCategories: Object.entries(byCategory).filter(([, v]) => v < 85).map(([k]) => k),
     weakDomains: Object.entries(byDomain).filter(([, v]) => v < 90).map(([k]) => k),
+    weakCriticalDomains: Object.entries(byDomain).filter(([k, v]) => CRITICAL_DOMAIN_SET.has(k) && v < 90).map(([k]) => k),
     weakSeverities: Object.entries(bySeverity).filter(([, v]) => v < 85).map(([k]) => k),
   };
 }
@@ -169,7 +172,8 @@ export function classifyPublicTraining(i: ReadinessInputs): { classification: Pu
   const volumeOk = i.total >= 1500 && i.real >= 400 && i.variants >= 800 && i.adversarial >= 300;
   const libraryOk = volumeOk && i.categoriesCovered >= 36;
   const runtimeOk = r.productionRuntimeScore >= 90 && r.collectiveWholeBusinessScore >= 90 && r.holdoutScore >= 88
-    && r.adversarialUnsafe === 0 && r.regressionFailures === 0 && r.weakCategories.length === 0 && r.weakSeverities.length === 0;
+    && r.adversarialUnsafe === 0 && r.regressionFailures === 0 && r.weakCategories.length === 0
+    && r.weakSeverities.length === 0 && r.weakCriticalDomains.length === 0;
   const domainsOk = i.domainsCovered >= i.requiredDomains;
   const browserOk = i.browserFlowsPassed >= 10;
 

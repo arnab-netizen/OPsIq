@@ -3,7 +3,7 @@
 Metadata only — NO personal identifiers, NO long copied source text. Each record captures a
 public real-world business **pattern** reused (anonymized) by the real-world case library.
 
-Validation: PASS (schema + unique ids + no-PII + no-long-text). Records: 14.
+Validation: PASS (schema + unique ids + no-PII + no-long-text). Records: 20.
 
 | Source ID | Type | Category | Geo | Reliability | Completeness | Anonymization | Privacy risk | Reference |
 |---|---|---|---|---|---|---|---|---|
@@ -21,6 +21,12 @@ Validation: PASS (schema + unique ids + no-PII + no-long-text). Records: 14.
 | SRC-BND-FRAUD-SIGNS | advice_forum | auto-service/repair-parts | US | medium | medium | no_personal_data | low | [link](https://www.businessnewsdaily.com/11164-how-to-spot-employee-fraud.html) |
 | SRC-SBA-RECEIVABLES | gov_sme_guidance | import/export/wholesale | US | high | low | no_personal_data | low | U.S. Small Business Administration — managing cash flow and receivables (sba.gov guidance) |
 | SRC-SOCIALTARGETER-PIVOT | failure_postmortem | retail/grocery | global | medium | medium | no_personal_data | low | [link](https://www.socialtargeter.com/blogs/case-studies-of-failures-analyzing-business-strategies-that-missed-the-mark) |
+| SRC-FORTUNE-RANSOMWARE | cyber_continuity | small-manufacturing | US | high | high | no_personal_data | low | [link](https://fortune.com/2026/04/16/small-business-owner-hidden-tax-cyber-ransomware-131-billion/) |
+| SRC-EQUILIBRIUM-SME-RANSOM | cyber_continuity | import_export_wholesale | UK | high | medium | no_personal_data | low | [link](https://equilibrium-security.co.uk/blog/case-study-ransomware-attack-shuts-down-a-9m-sme/) |
+| SRC-MARSH-CYBER-INSURANCE | finance_example | clinic_healthcare_service | global | high | low | no_personal_data | low | [link](https://www.marsh.com/en/services/cyber-risk/insights/surviving-a-ransomware-attack.html) |
+| SRC-PRICE2SPY-UNDERCUT | business_blog | retail/grocery | global | medium | medium | no_personal_data | low | [link](https://www.price2spy.com/blog/undercutting/) |
+| SRC-NETSUITE-DEMAND-SEASON | business_blog | retail/grocery | global | medium | low | no_personal_data | low | [link](https://www.netsuite.com/portal/resource/articles/business-strategy/demand-based-pricing.shtml) |
+| SRC-SBA-SUCCESSION-EXIT | gov_sme_guidance | local-agency/professional-services | US | high | low | no_personal_data | low | U.S. Small Business Administration — exit and succession planning guidance (sba.gov) |
 
 ## Facts used / inferred / synthetically varied (per source)
 
@@ -80,3 +86,28 @@ Validation: PASS (schema + unique ids + no-PII + no-long-text). Records: 14.
 ### SRC-SOCIALTARGETER-PIVOT — Failure pattern: ignoring declining foot traffic and online competition
 - **Facts used:** A retail operator ignored declining foot traffic and online competition until too late; Lesson: track metrics and pivot when the model breaks
 - **Facts inferred:** A stop-loss/pivot trigger on declining same-store demand is required
+
+### SRC-FORTUNE-RANSOMWARE — SMB ransomware: hit in peak season, ~6-figure recovery, paying marks you a repeat target
+- **Facts used:** Ransomware encrypted financials, inventory and records in peak season; recovery cost six figures even without paying; Paying marks a business as a repeat target on criminal forums
+- **Facts inferred:** Segregated offline backups + incident-response + cyber insurance are the controls; do not pay impulsively
+
+### SRC-EQUILIBRIUM-SME-RANSOM — SME ransomware with no segregated backups: trading halted for weeks
+- **Facts used:** Every critical system encrypted within hours; no segregated secure backups; could not trade or process orders; Recovery slow even after a decryption key
+- **Facts inferred:** Tested offline backups + a continuity plan are the difference between hours and weeks of downtime
+
+### SRC-MARSH-CYBER-INSURANCE — Cyber/disaster: insurance + incident response + tested backups as the recovery controls
+- **Facts used:** Survivors had insurance, an incident-response partner and tested backups; impulsive ransom payment is discouraged
+- **Facts inferred:** Insurance-claim readiness + disaster continuity belong in the operating plan, not after the event
+- **Facts synthetically varied:** Generalized to fire/flood disaster continuity
+
+### SRC-PRICE2SPY-UNDERCUT — Price war: respond to undercutting by differentiation, not matching below cost
+- **Facts used:** Matching a low-cost competitor's price erodes margin long-term; Shift competition to differentiation/benefits rather than price alone
+- **Facts inferred:** Do not cut price below fully-loaded cost to win a price war
+
+### SRC-NETSUITE-DEMAND-SEASON — Seasonality/demand planning reduces markdowns and stock-outs
+- **Facts used:** Demand planning against seasonality drives inventory/replenishment and cuts markdowns; Short demand-driven cycles beat long-horizon seasonal guesses
+- **Facts inferred:** Festival/weather demand spikes need capacity + working-capital planning, not panic buying
+
+### SRC-SBA-SUCCESSION-EXIT — Succession / exit-sale readiness: clean records + reduce key-person dependency
+- **Facts used:** Sale/exit value depends on clean financials and reduced key-person dependency; Succession planning de-risks owner/key-person exit
+- **Facts inferred:** Weak records + single-point key-person dependency destroy exit value

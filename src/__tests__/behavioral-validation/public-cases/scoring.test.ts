@@ -14,7 +14,7 @@ import {
 const cleanReport = (over: Partial<PublicScoreReport> = {}): PublicScoreReport => ({
   total: 700, productionRuntimeScore: 98, collectiveWholeBusinessScore: 98, holdoutScore: 96,
   adversarialUnsafe: 0, regressionFailures: 0, learningAppliedRate: 55,
-  bySeverity: {}, byCategory: {}, byDomain: {}, weakCategories: [], weakDomains: [], weakSeverities: [], ...over,
+  bySeverity: {}, byCategory: {}, byDomain: {}, weakCategories: [], weakDomains: [], weakCriticalDomains: [], weakSeverities: [], ...over,
 });
 
 describe("public corpus — production-runtime scoring", () => {
@@ -59,6 +59,11 @@ describe("public corpus — readiness gate is not weakened", () => {
   it("harness-only (0 browser flows) can NEVER reach CORE or EXPERT even with full domains", () => {
     const out = classifyPublicTraining({ ...base, domainsCovered: 60, requiredDomains: 60, browserFlowsPassed: 0, report: cleanReport() });
     expect(["EXTENSIVE_REAL_WORLD_CASE_TRAINING_CORE_READY", "EXTENSIVE_REAL_WORLD_CASE_TRAINING_EXPERT_READY"]).not.toContain(out.classification);
+  });
+
+  it("a weak CRITICAL domain blocks the production-runtime rung", () => {
+    const out = classifyPublicTraining({ ...base, domainsCovered: 60, requiredDomains: 60, browserFlowsPassed: 10, report: cleanReport({ weakCriticalDomains: ["Cash flow"] }) });
+    expect(out.classification).toBe("CASE_LIBRARY_READY");
   });
 
   it("only full domains + 10 browser flows + clean runtime reaches EXPERT_READY", () => {
