@@ -11,6 +11,7 @@ import { CONSTRAINTS } from "../whole-business/arbitration";
 export const REAL_FLAGS = ["real", "synthetic", "variant"] as const;
 export const BUSINESS_STAGES = ["startup", "early", "established", "growth", "scaling", "distressed", "turnaround", "winding_down"] as const;
 export const SPLITS = ["training", "validation", "holdout", "adversarial", "regression", "production_runtime", "browser_representative"] as const;
+export type Split = (typeof SPLITS)[number];
 export const SEVERITIES = ["best_case", "good_fragile", "normal", "bad_management", "ugly_spiral", "fraud", "extreme"] as const;
 
 export const goldSkeletonSchema = z.object({
