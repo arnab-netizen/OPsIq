@@ -6,7 +6,7 @@ name: Owner Pre-Training Baseline (Kolkata laundry)
 
 on:
   push:
-    branches: ["claude/pretraining-baseline-hardening"]
+    branches: ["claude/main-baseline-confirm"]
   workflow_dispatch:
 
 jobs:
