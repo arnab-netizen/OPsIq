@@ -117,6 +117,10 @@ export const adviceOutputSchema = z.object({
   ownerWorkloadReduction: z.string().optional(),
   // Calculation trace — shown whenever finance materially affects the decision (slice 4).
   calculationTrace: z.array(z.string()).optional(),
+  // Risk / FMEA analysis — required for high-risk recommendations (slice 11).
+  riskAnalysis: z.string().optional(),
+  // Learning/memory note — what OpsIQ will remember if this fails (slice 11).
+  learningMemoryNote: z.string().optional(),
   // Provenance: which stored learning artifacts shaped this output (proves learning is read).
   learningNotesApplied: z.array(z.string()).optional(), // artifact IDs
   blockedActions: z.array(z.string()).optional(), // actions OpsIQ actively blocked

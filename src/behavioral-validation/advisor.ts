@@ -152,7 +152,7 @@ export function baseAdvise(c: BehavioralCase): AdviceOutput {
     expectedOutcome:
       "Cash and contribution margin stabilise, the real constraint is fixed with measured proof, and no unsafe spend or commitment is made before the checks pass.",
     reassessmentTrigger: reassessment(c),
-    saferAlternative: high && !c.flags.ownerEmotional
+    saferAlternative: high
       ? "If the owner still wants to move, run a small capped pilot with proof gates instead of a full commitment."
       : undefined,
     professionalReview: c.flags.complianceRisk
@@ -164,11 +164,18 @@ export function baseAdvise(c: BehavioralCase): AdviceOutput {
     // Executable SOP: who does what, by when, and the stop-condition (drives actionability).
     processSopUpdate:
       "Assign a named supervisor to own each step with a daily checklist; deadline 7 days; stop immediately if margin, cash or complaint/rework metrics worsen.",
+    // Risk / FMEA for high-risk recommendations.
+    riskAnalysis: high
+      ? `Failure modes: (1) the assumed lever is wrong — mitigate with a capped pilot and proof gates; (2) cash/margin worsens — mitigate with the spend block and a 7-day cash checkpoint; (3) capacity/quality breaks under load — mitigate by capping volume to reliable throughput. Severity is high while ${c.flags.cashRisk ? "cash" : c.flags.complianceRisk ? "compliance" : c.flags.capacityRisk ? "capacity" : "the constraint"} is unresolved.`
+      : undefined,
+    // Learning/memory note — what is recorded if this fails its checkpoint.
+    learningMemoryNote:
+      "If this action fails its outcome checkpoint, record a do-not-repeat rule and re-diagnose before retrying.",
     // Bounded blind spots (closed by learning): no ownerWorkloadReduction; thin marketing guidance.
     marketingOpportunityGuidance:
       c.decisionCategory === "marketing_opportunity_contract" ? "Review the opportunity before spending." : undefined,
-    // Calculation trace whenever finance materially drives the decision (slice 4).
-    calculationTrace: financeMaterial(c) ? deriveCalcs(c).trace : undefined,
+    // Calculation trace whenever finance materially drives the decision and numbers permit it (slice 4).
+    calculationTrace: financeMaterial(c) && deriveCalcs(c).trace.length > 0 ? deriveCalcs(c).trace : undefined,
     learningNotesApplied: [],
   };
   return advice;
