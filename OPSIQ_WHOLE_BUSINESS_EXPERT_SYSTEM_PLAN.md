@@ -55,13 +55,13 @@ the runtime is a composition foundation, not full DB-wired production. Will repo
 
 | # | Slice | Files | Status |
 |---|---|---|---|
-| A | Domain competency matrix (36 domains) | `whole-business/domains.ts` | pending |
-| B | Cross-domain arbitration engine | `whole-business/arbitration.ts` | pending |
-| C | Profitability/efficiency + growth-scale gates + business stages | `whole-business/{profitability,growth-gates,stages}.ts` | pending |
-| D | Whole-business operating plan + collective outcome scorer | `whole-business/{whole-plan,collective-scorer}.ts` | pending |
-| E | Collective case library (≥100 cross-domain cases) | `whole-business/collective-cases.ts` | pending |
-| F | Production owner-advice runtime + production validation modes | `services/owner-mode/owner-advice-runtime.service.ts`, `whole-business/production-runner.ts` | pending |
-| G | Report | `OPSIQ_WHOLE_BUSINESS_EXPERT_SYSTEM_REPORT.md` | pending |
+| A | Domain competency matrix (36 domains) | `whole-business/domains.ts` | done |
+| B | Cross-domain arbitration engine | `whole-business/arbitration.ts` | done |
+| C | Profitability/efficiency + growth-scale gates + business stages | `whole-business/{profitability,growth-gates,stages}.ts` | done |
+| D | Whole-business operating plan + collective outcome scorer | `whole-business/{whole-plan,collective-scorer}.ts` | done |
+| E | Collective case library (≥100 cross-domain cases) | `whole-business/collective-cases.ts` | done |
+| F | Production owner-advice runtime + production validation modes | `services/owner-mode/owner-advice-runtime.service.ts`, `whole-business/production-runner.ts` | done |
+| G | Report | `OPSIQ_WHOLE_BUSINESS_EXPERT_SYSTEM_REPORT.md` | done |
 
 ## Prohibitions
 No public SaaS/billing/launch surface. No duplicate engines. Preserve gates/proof/arbitration/
