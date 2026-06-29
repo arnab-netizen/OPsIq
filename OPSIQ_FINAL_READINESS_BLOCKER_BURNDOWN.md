@@ -44,6 +44,30 @@ Branch `claude/full-repo-jarvis-db-blocker-closure`. Two blockers to green.
 - **Status:** FIX_PUSHED — awaiting ci.yml blocking-lane green.
 - **Run IDs:** 28339662068 (diagnostic with exact list), `<new ci.yml>`.
 
+## A2. GAP-CI-FLAKE-01 — full-suite owner-budget failures (round 2)
+- **Authoritative ci.yml run 28340198880 (commit 4931475):** blocking lane = **3 failed / 643 passed / 1 skipped**
+  files. The 9 owner-module teardown fixes PASSED in the full suite (confirmed). The only remaining
+  failures are 3 owner-budget DB files:
+  `services/owner-budget/{action-link.service,budget.service,dynamic-budget-hostile-audit}.db.test.ts`.
+  (These were never in the flake-diagnose set: its `src/__tests__/**/*.db.test.ts` glob did not match the
+  two-levels-deep `services/owner-budget/` path — so they were deterministic failures the diagnostic missed,
+  not order-dependent flakes.)
+- **Root cause (deterministic):** all three record a 420000 committed statutory-payroll obligation
+  (`dueInDays: 5`, `ownerApprovalThreshold: 50000`). `evaluateSpend` → over-threshold →
+  REQUIRE_OWNER_APPROVAL → `recordSpendEntry` (GAP-BUDGET-02 barrier) persists it as
+  `pending_owner_approval` (not `committed`). `assembleAssessment`/`getBudgetForecast` then counted only
+  `committed/approved/requested` obligations, so the payroll was dropped → free cash looked positive →
+  mode stayed GROW → no cash-protection actions. That UNDERSTATES imminent cash danger (the system would
+  tell an owner to keep growing while payroll is about to bounce) — an unsafe violation of the mandatory
+  adaptive rule.
+- **Fix:** a dated obligation awaiting approval is still a real future cash outflow. Added
+  `CASH_OBLIGATION_STATES = [committed, approved, requested, pending_owner_approval]` and used it in both
+  obligation queries (forecast + reassessment). `voided`/`blocked`/`disputed` stay excluded. The approval
+  barrier still governs *payment*; the liability now correctly counts for *risk*. Only 3 tests record a
+  dated over-threshold spend (exactly these) — no other dated-obligation test expects GROW, so no
+  regression. 158 pure budget/domain tests still pass; tsc clean.
+- **Status:** FIX_PUSHED — awaiting ci.yml fully green.
+
 ## Attempted fixes log
 1. e2e health-check `-f` removal — pushed.
 2. flake-diagnose retargeted to DB-relevant files with fast failure capture — pushed; yielded exact list.
