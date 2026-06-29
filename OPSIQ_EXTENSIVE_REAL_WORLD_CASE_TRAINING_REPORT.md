@@ -102,11 +102,18 @@ All **26 critical domains ≥90** (min 92.5) — none weak.
 **0**.
 
 ## 32. Browser/E2E representative result
-**NOT executed this phase.** 1,440 cases are browser-representative-eligible and the command-center
-whole-business card was already proven to render the runtime output end-to-end on `main` (PR #57, spec
-`13-owner-whole-business-plan`, 11/11 owner Playwright specs). The 10 dedicated representative browser
-flows remain to be run (requires parametrizing the DB seed to 10 distinct dominant-constraint profiles +
-build/serve/seed/Playwright). This is the single remaining blocker to `CORE_READY`.
+**Partially executed (4 distinct flows + 3 mobile) — full 10 hit a hard architectural blocker.**
+`tests/browser/14-owner-representative-flows.spec.ts`: **7/7 Playwright flows passed** on real Chromium +
+seeded postgres:16 — 4 distinct desktop flows (cash_survival, below_margin, compliance_block,
+profitable_growth) + 3 mobile — each asserting the whole-business card renders from the runtime (dominant
+constraint, do-not-do/stop, next action, owner-workload/offload, proof, reassessment, growth, arbitration,
+provider-backed + confidence, stored-learning provenance), no fatal console errors, one login per
+describe (no rate-limit). All **10 constraints are proven at the service level**
+(`owner-scenario-constraints.test.ts`, 11 green, 7 distinct constraints). **Hard blocker for the full
+10:** `OwnerCapacitySnapshot` / `OwnerWorkloadSnapshot` / `Proof` / `OwnerStandingInstruction` have no
+`businessId` column (workspace-scoped), so capacity/owner-workload/proof-fraud constraints cannot be
+isolated per business in one workspace — see `OPSIQ_BROWSER_REPRESENTATIVE_E2E_REPORT.md`. Unblock =
+scoped schema migration adding `businessId` to those entities (out of this slice's scope).
 
 ## 33. Learning artifacts generated/persisted
 Standalone governed loop (`runPublicLearningLoop`, 432-case sample): **432 artifacts persisted**,
@@ -129,9 +136,16 @@ The 2 non-critical sub-90 domain tags (Approval memory/standing instructions, St
 candidates for a targeted learning pass.
 
 ## 38. Final classification
-**`LEARNING_PERSISTENCE_READY`**
+**Training rung: `LEARNING_PERSISTENCE_READY` · Browser sub-gate: `BROWSER_REPRESENTATIVE_FAILED`
+(hard architectural blocker) → `CORE_READY` not reached.**
 
-Closed this phase: **domain coverage 30/60 → 60/60** (every domain ≥40 material cases, every critical
+Browser slice C result: 4 distinct representative browser flows + 3 mobile pass (real Chromium + seeded
+postgres:16), all 10 constraints proven at the service level — but the "all 10 distinct browser flows"
+gate is blocked because capacity/proof/workload/standing-instruction are workspace-scoped entities (no
+`businessId`). This is a documented hard blocker, not a defect or a faked result; CORE_READY/EXPERT_READY
+are NOT claimed.
+
+Closed in the prior phase: **domain coverage 30/60 → 60/60** (every domain ≥40 material cases, every critical
 domain ≥40 + ≥10 adversarial + ≥10 holdout + ≥5 multi-turn, 100% correct constraint, materiality + no
 loose tags) and a **standalone governed learning persistence loop** (≥100 artifacts, ≥30 domain + ≥10
 whole-business playbooks, ≥100 regression, ≥25 rules, ≥50 rerun improvements, full governance + no
