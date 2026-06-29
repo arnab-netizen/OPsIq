@@ -29,10 +29,9 @@ export interface Scenario {
   label: string;
   expectedConstraint: Constraint;
   mobile: boolean;
-  /** True when the constraint is driven by BUSINESS-scoped rows (cashflow/finance/compliance/working-
-   *  capital) so it renders distinctly per-business in one workspace. Constraints driven by WORKSPACE-
-   *  scoped entities (capacity/proof/workload — no businessId column) cannot be isolated per business in
-   *  one workspace, so those flows are proven at the service level (scenario unit tests) only. */
+  /** Since the businessId migration (capacity/workload/proof/standing instruction are now business-scoped
+   *  alongside cashflow/finance/compliance/working-capital), EVERY scenario renders distinctly per-business
+   *  inside one workspace. Kept as an explicit flag so the browser suite iterates the full set. */
   browserDistinguishable: boolean;
   knobs: ScenarioKnobs;
 }
@@ -43,32 +42,33 @@ const HEALTHY: ScenarioKnobs = {
   complianceExpired: false, proofDuplicate: false, proofUnsubmitted: false, workloadOverloaded: false,
 };
 
-/** The 10 representative flows. */
+/** The 10 representative flows. All are business-scoped → all render distinctly in one workspace. */
 export const SCENARIOS: Scenario[] = [
   { id: "cash_crisis", label: "Cash crisis", expectedConstraint: "cash_survival", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, cashInHand: 0, receivablesOverdue: 80000, overdueWcReceivable: true } },
   { id: "bad_contract", label: "Bad contract / opportunity (below margin)", expectedConstraint: "below_margin", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, revenue: 200000, costOfGoods: 240000 } },
-  { id: "marketing_blocked", label: "Marketing blocked by capacity/quality", expectedConstraint: "capacity_feasibility", mobile: false, browserDistinguishable: false,
+  { id: "marketing_blocked", label: "Marketing blocked by capacity/quality", expectedConstraint: "capacity_feasibility", mobile: false, browserDistinguishable: true,
     knobs: { ...HEALTHY, bottleneckUtilization: 1.2, growthSafe: false } },
-  { id: "owner_overload", label: "Owner workload overload", expectedConstraint: "owner_workload", mobile: false, browserDistinguishable: false,
+  { id: "owner_overload", label: "Owner workload overload", expectedConstraint: "owner_workload", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, workloadOverloaded: true } },
-  { id: "proof_fraud", label: "Proof / fake completion risk", expectedConstraint: "proof_fraud_block", mobile: false, browserDistinguishable: false,
+  { id: "proof_fraud", label: "Proof / fake completion risk", expectedConstraint: "proof_fraud_block", mobile: false, browserDistinguishable: true,
     knobs: { ...HEALTHY, proofDuplicate: true } },
   { id: "vendor_compliance", label: "Vendor / supplier compliance issue", expectedConstraint: "compliance_block", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, complianceExpired: true } },
-  { id: "delivery_capacity", label: "Delivery / logistics capacity issue", expectedConstraint: "capacity_feasibility", mobile: false, browserDistinguishable: false,
+  { id: "delivery_capacity", label: "Delivery / logistics capacity issue", expectedConstraint: "capacity_feasibility", mobile: false, browserDistinguishable: true,
     knobs: { ...HEALTHY, bottleneckUtilization: 1.3, growthSafe: false } },
   { id: "growth_scale", label: "Growth / scale decision (healthy)", expectedConstraint: "profitable_growth", mobile: false, browserDistinguishable: true,
     knobs: { ...HEALTHY } },
-  { id: "shutdown_pivot", label: "Shutdown / pivot / stop-loss", expectedConstraint: "cash_survival", mobile: false, browserDistinguishable: false,
+  { id: "shutdown_pivot", label: "Shutdown / pivot / stop-loss", expectedConstraint: "cash_survival", mobile: false, browserDistinguishable: true,
     knobs: { ...HEALTHY, cashInHand: 0, receivablesOverdue: 120000, overdueWcReceivable: true } },
-  { id: "multi_location_remote", label: "Multi-location / remote-owner control", expectedConstraint: "owner_workload", mobile: false, browserDistinguishable: false,
+  { id: "multi_location_remote", label: "Multi-location / remote-owner control", expectedConstraint: "owner_workload", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, workloadOverloaded: true } },
 ];
 
-/** Flows whose constraint is business-scoped → render distinctly in the browser within one workspace. */
+/** All 10 flows are business-scoped → render distinctly in the browser within one workspace. */
 export const BROWSER_SCENARIOS = SCENARIOS.filter((s) => s.browserDistinguishable);
+/** Mobile-viewport subset (≥3; spans cash_survival, below_margin, owner_workload, compliance_block). */
 export const MOBILE_SCENARIOS = BROWSER_SCENARIOS.filter((s) => s.mobile);
 
 /** Deterministic business id per scenario (shared by the DB seed + the Playwright spec). */

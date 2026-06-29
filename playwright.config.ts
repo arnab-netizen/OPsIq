@@ -28,7 +28,14 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Allow pointing at a pre-installed Chromium (managed/CI images that ship a browser at a fixed
+        // path) without re-downloading. Unset → Playwright's bundled browser (the default for normal CI).
+        launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
+          ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+          : undefined,
+      },
     },
   ],
   timeout: 30 * 1000,

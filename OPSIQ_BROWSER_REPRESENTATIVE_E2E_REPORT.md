@@ -1,50 +1,71 @@
-# OpsIQ Browser-Representative E2E — Report (Slice C)
+# OpsIQ Browser-Representative E2E — Report (businessId migration; full 10 flows)
+
+## Branch / HEADs
+- Branch: `claude/opsiq-real-world-case-training`
+- Base HEAD (start of this slice): `481bf58`
+- Final HEAD: this slice's commit (businessId migration + 10 browser flows)
+
+## businessId migration status
+**APPLIED.** `OwnerCapacitySnapshot`, `OwnerWorkloadSnapshot`, `Proof`, `OwnerStandingInstruction` each
+gained a nullable `business_id uuid` + `(workspace_id, business_id)` index (migration
+`20260629020000_owner_entities_business_scope`, additive, reversible). Provider reads now scope these four
+by `workspaceId + businessId`; writes set a workspace-validated `businessId`; seeds write business-scoped
+rows. This **unblocks the previously-collapsing flows**: capacity / owner-workload / proof-fraud /
+standing-instruction state no longer bleeds across businesses in one workspace.
 
 ## Result
-**7/7 Playwright flows passed** on real Chromium against the built app + real seeded postgres:16:
-**4 distinct desktop flows** + **3 mobile flows**. 0 failed, 0 skipped, no fatal console errors.
+**15/15 Playwright flows passed** on real Chromium against the built app + real seeded postgres:16:
+**10 distinct desktop flows** (all 10 representative profiles, one workspace) + **5 mobile flows**.
+0 failed, **0 skipped**, no fatal console errors.
 
-| # | Flow | Seed (business-scoped) | Dominant constraint | Mobile |
-|---|---|---|---|---|
-| 1 | Cash crisis | cash 0, overdue receivables | `cash_survival` | ✓ |
-| 2 | Bad contract / opportunity | negative gross margin (rev<cogs) | `below_margin` | ✓ |
-| 3 | Vendor / supplier compliance | expired trade licence | `compliance_block` | ✓ |
-| 4 | Growth / scale (healthy) | all healthy | `profitable_growth` | — |
+| # | Flow | businessId (deterministic) | Expected constraint | Actual rendered | Desktop | Mobile |
+|---|---|---|---|---|---|---|
+| 1 | Cash crisis | `…704b62697a30` | `cash_survival` | `cash_survival` | ✓ | ✓ |
+| 2 | Bad contract / opportunity | `…8bfa62697a30` | `below_margin` | `below_margin` | ✓ | ✓ |
+| 3 | Marketing blocked (capacity/quality) | `…0a9262697a30` | `capacity_feasibility` | `capacity_feasibility` | ✓ | — |
+| 4 | Owner workload overload | `…6ce762697a30` | `owner_workload` | `owner_workload` | ✓ | ✓ |
+| 5 | Proof / fake completion risk | `…097762697a30` | `proof_fraud_block` | `proof_fraud_block` | ✓ | — |
+| 6 | Vendor / supplier compliance | `…3a3562697a30` | `compliance_block` | `compliance_block` | ✓ | ✓ |
+| 7 | Delivery / logistics capacity | `…cf1262697a30` | `capacity_feasibility` | `capacity_feasibility` | ✓ | — |
+| 8 | Growth / scale (healthy) | `…662c62697a30` | `profitable_growth` | `profitable_growth` | ✓ | — |
+| 9 | Shutdown / pivot / stop-loss | `…449362697a30` | `cash_survival` | `cash_survival` | ✓ | — |
+| 10 | Multi-location / remote-owner | `…950e62697a30` | `owner_workload` | `owner_workload` | ✓ | ✓ |
 
-Each flow asserts the command-center "Whole-business plan (live runtime)" card renders from the runtime:
-`wbp-dominant-constraint` = the expected constraint, plus do-not-do/stop, next action, owner-workload/
-offload, proof, reassessment, growth-gate, arbitration, **provider-backed data** + confidence, and
-**stored-learning provenance** — with no `Cannot read / is not a function / Hydration failed` console
-errors. The dropdown selects each DB-backed scenario business; one login per `describe` (no login
-rate-limit hit).
+All 10 businesses are co-seeded in **ONE** workspace (`E2E_WORKSPACE_ID`). 7 distinct constraints across
+the 10 (the model has 7 blocking constraints; some flows faithfully share where the business genuinely
+binds there). Mobile subset = 5 flows (cash_survival, below_margin, owner_workload ×2, compliance_block).
+
+## Per-flow assertions (every flow)
+The command-center "Whole-business plan (live runtime)" card renders from the runtime:
+`wbp-dominant-constraint` = expected, plus top-priority, do-not-do/stop, next action,
+owner-workload/offload, proof, reassessment, growth-gate, arbitration, **provider-backed data** +
+confidence, and **stored-learning provenance** — with no `Cannot read / is not a function / Hydration
+failed` console errors. The dropdown (`select[name="businessSelector"]`) selects each DB-backed scenario
+business by its `businessId`; one login per `describe`.
+
+## Cross-business / cross-workspace isolation proof
+- **No cross-business leakage:** the 10 co-seeded businesses render **distinct** dominant constraints
+  (proven both at the DB level — `getOwnerWholeBusinessPlan` per business — and in the browser). Pre-
+  migration, 8/10 collapsed to `proof_fraud_block` from a single workspace-shared duplicate proof; post-
+  migration each business resolves only its own state.
+- `[db] owner-business-isolation.db.test.ts` (6 tests): three businesses in one workspace each resolve
+  their own constraint; a business with only **legacy** `business_id IS NULL` capacity/workload/proof rows
+  is **not** backed by them (capacity/workload null, 0 proofs, standingCount 0); a fourth workspace sees
+  none of them; writes store `businessId`; a cross-workspace `businessId` is rejected (`BusinessScopeError`).
+- `provider does not claim REAL_DB for a business backed only by legacy workspace-only data` — proven by
+  the legacy-business case above (`criticalDomainsRealProviderBacked` is computed from business-scoped
+  reads only).
 
 ## Login rate-limit handling
-One authenticated context per `describe` (serial mode), reused across all flows in that describe → ≤2
-logins total, well under the 10/15-min/IP limiter. Production login security unchanged; rate limiting not
-disabled.
+One authenticated context per `describe` (serial mode), reused across all flows → ≤2 logins per describe,
+well under the 10/15-min/IP limiter. Production login security unchanged; rate limiting not disabled.
 
-## Service-level proof of ALL 10 constraints
-`owner-scenario-constraints.test.ts` (11 tests, green) proves each of the 10 representative profiles
-resolves its expected dominant constraint through the full `getOwnerWholeBusinessPlan` path (mock-DB,
-provider-backed), exercising **7 distinct constraints** (cash_survival, below_margin, capacity_feasibility,
-owner_workload, proof_fraud_block, compliance_block, profitable_growth).
+## Browser executable
+Real Chromium at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` via a CI-neutral
+`PLAYWRIGHT_CHROMIUM_PATH` env override in `playwright.config.ts` (unset → bundled browser; CI behaviour
+unchanged). No browser download.
 
-## HARD ARCHITECTURAL BLOCKER (the reason it is not 10 browser flows)
-`OwnerCapacitySnapshot`, `OwnerWorkloadSnapshot`, `Proof`, and `OwnerStandingInstruction` have **no
-`businessId` column** — they are workspace-scoped entities. The wbp providers therefore read them per
-WORKSPACE, not per business. With 10 businesses in one workspace, capacity/proof/workload bleed across
-all of them (a single duplicate-flagged proof made 8/10 resolve `proof_fraud_block` — captured during
-this slice). So the 4 constraints driven by **business-scoped** rows (cashflow/finance/compliance/working-
-capital) render distinctly in the browser, but the constraints driven by **workspace-scoped** entities
-(`capacity_feasibility`, `owner_workload`, `proof_fraud_block`, and the delivery/shutdown/multi-location
-flows that depend on them) **cannot be isolated per business in one workspace**. Producing all 10 distinct
-browser flows would require either (a) a scoped schema migration adding `businessId` to those 3–4 entities
-+ provider scoping, or (b) a 10-workspace harness with a UI workspace-switcher — both **architectural
-changes beyond this slice's scope** (and explicitly out of "do not touch unrelated integrations").
-
-## Classification
-**`BROWSER_REPRESENTATIVE_FAILED`** — honestly: the "all 10 representative browser flows pass" gate is
-NOT met (6 are architecturally blocked as above). What DID run passed: 4 distinct desktop flows + 3 mobile,
-plus all 10 constraints proven at the service level. This is a documented HARD BLOCKER, not a defect and
-not a faked result. CORE_READY/EXPERT_READY are therefore NOT claimed. The training rung
-`LEARNING_PERSISTENCE_READY` (60/60 domains + learning persistence + 4,032-case corpus) stands.
+## Final browser sub-gate result
+**`BROWSER_REPRESENTATIVE_READY`** — all 10 representative browser flows pass + 5 mobile (≥3) + 0 skipped,
+no cross-business/cross-workspace leakage, whole-business card renders runtime output, provider/confidence
+visible, owner-workload/offload + proof/reassessment + do-not-do/stop visible, 0 critical console errors.

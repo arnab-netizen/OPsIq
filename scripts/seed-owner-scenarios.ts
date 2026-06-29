@@ -21,8 +21,13 @@ const rid = (businessId: string, seed: string) => {
   return `00000000-0000-4000-8000-${node}${tail}`;
 };
 
-async function seedScenario(prisma: PrismaClient, businessId: string, label: string, k: ScenarioKnobs, now: Date) {
-  const ws = E2E_WORKSPACE_ID, userId = E2E_OWNER.userId;
+/**
+ * Seed ONE business-scoped scenario (the business row + its full critical-domain row set, all tagged with
+ * `businessId`) into `ws`. Exported so both the browser seed (10 businesses in the E2E workspace) and the
+ * `[db]` isolation test seed identical state — no drift between what the browser renders and what the test
+ * asserts. Every row carries `businessId`, so co-seeded businesses never bleed across each other.
+ */
+export async function seedScenarioBusiness(prisma: PrismaClient, ws: string, userId: string, businessId: string, label: string, k: ScenarioKnobs, now: Date) {
   const periodEnd = now, periodStart = new Date(now.getTime() - 30 * day);
   const future = new Date(now.getTime() + 90 * day), past = new Date(now.getTime() - 10 * day);
 
@@ -43,28 +48,31 @@ async function seedScenario(prisma: PrismaClient, businessId: string, label: str
     where: { id: rid(businessId, "wc1") }, update: { amount: k.overdueWcReceivable ? 80000 : 40000, dueDate: k.overdueWcReceivable ? past : future },
     create: { id: rid(businessId, "wc1"), workspaceId: ws, businessId, kind: "receivable", counterparty: "Client", amount: k.overdueWcReceivable ? 80000 : 40000, dueDate: k.overdueWcReceivable ? past : future, status: "open" },
   });
-  // NOTE: capacity/proof/workload are WORKSPACE-scoped entities (no businessId column), so they are
-  // forced NEUTRAL here — within one workspace they cannot vary per business. Only business-scoped rows
-  // (cashflow/finance/compliance/working-capital) drive the per-business browser constraint.
+  // Capacity / proof / workload / standing instruction are NOW business-scoped (businessId migration), so
+  // each is seeded per-knob and tagged with this business's id — within one workspace they vary per
+  // business and the provider reads isolate them (no cross-business bleed). The knob→row mapping mirrors
+  // `scenarioRows` so the DB browser path resolves the SAME dominant constraint as the mock-DB unit proof.
   await prisma.ownerCapacitySnapshot.upsert({
-    where: { id: rid(businessId, "cap1") }, update: { bottleneckUtilization: 0.6, growthSafe: true },
-    create: { id: rid(businessId, "cap1"), workspaceId: ws, currentRevenue: k.revenue, safeUtilization: 0.7, resources: {}, bottleneckUtilization: 0.6, growthCapacityRevenue: 0, availableBuffer: 0, expansionTriggered: false, growthSafe: true, createdAt: periodEnd },
+    where: { id: rid(businessId, "cap1") }, update: { businessId, bottleneckUtilization: k.bottleneckUtilization, growthSafe: k.growthSafe, expansionTriggered: !k.growthSafe },
+    create: { id: rid(businessId, "cap1"), workspaceId: ws, businessId, currentRevenue: k.revenue, safeUtilization: 0.7, resources: {}, bottleneckUtilization: k.bottleneckUtilization, growthCapacityRevenue: 0, availableBuffer: 0, expansionTriggered: !k.growthSafe, growthSafe: k.growthSafe, createdAt: periodEnd },
   });
   await prisma.ownerComplianceItem.upsert({
     where: { id: rid(businessId, "cmp1") }, update: { expiresAt: k.complianceExpired ? past : future },
     create: { id: rid(businessId, "cmp1"), workspaceId: ws, businessId, kind: "trade_licence", name: "Trade licence", status: "active", expiresAt: k.complianceExpired ? past : future, createdByUserId: userId },
   });
   await prisma.proof.upsert({
-    where: { id: rid(businessId, "prf1") }, update: { duplicateFlagged: false },
-    create: { id: rid(businessId, "prf1"), workspaceId: ws, proofType: "delivery", status: "ACCEPTED", duplicateFlagged: false, submittedAt: now },
+    where: { id: rid(businessId, "prf1") },
+    update: { businessId, duplicateFlagged: k.proofDuplicate, status: k.proofUnsubmitted ? "REQUIRED" : "ACCEPTED", submittedAt: k.proofUnsubmitted ? null : now },
+    create: { id: rid(businessId, "prf1"), workspaceId: ws, businessId, proofType: "delivery", status: k.proofUnsubmitted ? "REQUIRED" : "ACCEPTED", duplicateFlagged: k.proofDuplicate, submittedAt: k.proofUnsubmitted ? null : now },
   });
   await prisma.ownerWorkloadSnapshot.upsert({
-    where: { id: rid(businessId, "wl1") }, update: { overloaded: false, bottleneckRisk: false },
-    create: { id: rid(businessId, "wl1"), workspaceId: ws, ownerMinutesPerDay: 300, sustainableMinutesPerDay: 360, ownerTasks: 8, ownerOnlyCriticalTasks: 1, dailyLoad: 0.8, dailyLoadPct: 80, band: "healthy", bottleneckRisk: false, overloaded: false, recommendedPath: "delegate_with_proof", createdAt: periodEnd },
+    where: { id: rid(businessId, "wl1") },
+    update: { businessId, overloaded: k.workloadOverloaded, bottleneckRisk: k.workloadOverloaded, band: k.workloadOverloaded ? "overloaded" : "healthy", dailyLoadPct: k.workloadOverloaded ? 167 : 80, ownerOnlyCriticalTasks: k.workloadOverloaded ? 9 : 1 },
+    create: { id: rid(businessId, "wl1"), workspaceId: ws, businessId, ownerMinutesPerDay: k.workloadOverloaded ? 600 : 300, sustainableMinutesPerDay: 360, ownerTasks: 8, ownerOnlyCriticalTasks: k.workloadOverloaded ? 9 : 1, dailyLoad: k.workloadOverloaded ? 1.67 : 0.8, dailyLoadPct: k.workloadOverloaded ? 167 : 80, band: k.workloadOverloaded ? "overloaded" : "healthy", bottleneckRisk: k.workloadOverloaded, overloaded: k.workloadOverloaded, recommendedPath: "delegate_with_proof", createdAt: periodEnd },
   });
   await prisma.ownerStandingInstruction.upsert({
-    where: { id: rid(businessId, "si1") }, update: {},
-    create: { id: rid(businessId, "si1"), workspaceId: ws, scope: "pricing.routine", allowedActionTypes: ["routine_discount"], forbiddenActionTypes: ["expansion"], riskClass: "low", status: "active", createdByUserId: userId },
+    where: { id: rid(businessId, "si1") }, update: { businessId },
+    create: { id: rid(businessId, "si1"), workspaceId: ws, businessId, scope: "pricing.routine", allowedActionTypes: ["routine_discount"], forbiddenActionTypes: ["expansion"], riskClass: "low", status: "active", createdByUserId: userId },
   });
   await prisma.behavioralLearningArtifact.upsert({
     where: { id: rid(businessId, "art1") }, update: {},
@@ -97,7 +105,7 @@ async function main() {
 
   for (const s of SCENARIOS) {
     const bizId = scenarioBusinessId(s.id);
-    await seedScenario(prisma, bizId, `Scenario: ${s.label}`, s.knobs, now);
+    await seedScenarioBusiness(prisma, E2E_WORKSPACE_ID, E2E_OWNER.userId, bizId, `Scenario: ${s.label}`, s.knobs, now);
     console.log(`[seed-scenarios] ${s.id} -> business ${bizId} (expect ${s.expectedConstraint})`);
   }
   await pool.end();

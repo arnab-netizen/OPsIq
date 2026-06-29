@@ -32,7 +32,8 @@ real arbitration engine.
 **4,032**.
 
 ## 11. Browser/E2E representative cases
-**1,440** flagged (360 in the `browser_representative` split). Browser flows **not yet executed** — see §32.
+**1,440** flagged (360 in the `browser_representative` split). Browser flows **executed: 15/15 pass**
+(10 desktop + 5 mobile, one workspace) — see §32.
 
 ## 12. Source register summary
 **20** metadata-only `SourceRecord`s (anonymized, no PII, no long copied text); validated. New this phase:
@@ -102,18 +103,35 @@ All **26 critical domains ≥90** (min 92.5) — none weak.
 **0**.
 
 ## 32. Browser/E2E representative result
-**Partially executed (4 distinct flows + 3 mobile) — full 10 hit a hard architectural blocker.**
-`tests/browser/14-owner-representative-flows.spec.ts`: **7/7 Playwright flows passed** on real Chromium +
-seeded postgres:16 — 4 distinct desktop flows (cash_survival, below_margin, compliance_block,
-profitable_growth) + 3 mobile — each asserting the whole-business card renders from the runtime (dominant
-constraint, do-not-do/stop, next action, owner-workload/offload, proof, reassessment, growth, arbitration,
+**ALL 10 distinct browser flows pass (one workspace) + 5 mobile — the businessId migration unblocked the
+full set.** `tests/browser/14-owner-representative-flows.spec.ts`: **15/15 Playwright flows passed** on real
+Chromium + seeded postgres:16 — **10 distinct desktop flows** co-seeded in ONE workspace + **5 mobile** —
+each asserting the whole-business card renders from the runtime (dominant constraint == expected,
+do-not-do/stop, next action, owner-workload/offload, proof, reassessment, growth, arbitration,
 provider-backed + confidence, stored-learning provenance), no fatal console errors, one login per
-describe (no rate-limit). All **10 constraints are proven at the service level**
-(`owner-scenario-constraints.test.ts`, 11 green, 7 distinct constraints). **Hard blocker for the full
-10:** `OwnerCapacitySnapshot` / `OwnerWorkloadSnapshot` / `Proof` / `OwnerStandingInstruction` have no
-`businessId` column (workspace-scoped), so capacity/owner-workload/proof-fraud constraints cannot be
-isolated per business in one workspace — see `OPSIQ_BROWSER_REPRESENTATIVE_E2E_REPORT.md`. Unblock =
-scoped schema migration adding `businessId` to those entities (out of this slice's scope).
+describe (no rate-limit). 0 skipped. All 10 constraints are also proven at the service level
+(`owner-scenario-constraints.test.ts`, 11 green) and the DB level (`owner-business-isolation.db.test.ts`,
+6 green). See `OPSIQ_BROWSER_REPRESENTATIVE_E2E_REPORT.md`.
+
+## 32a. business-scoped owner-mode entities migration (schema blocker — RESOLVED)
+The prior blocker — `OwnerCapacitySnapshot` / `OwnerWorkloadSnapshot` / `Proof` / `OwnerStandingInstruction`
+were workspace-scoped with **no `businessId`**, so capacity/owner-workload/proof-fraud/standing state bled
+across businesses in one workspace (8/10 collapsed to `proof_fraud_block`) — is **fixed** by a staged,
+additive migration (`OPSIQ_BUSINESS_SCOPED_OWNER_MODE_ENTITIES_PLAN.md`):
+- **Affected models / migration:** nullable `business_id uuid` + `(workspace_id, business_id)` index on all
+  four (`20260629020000_owner_entities_business_scope`). Additive, reversible, no data loss; legacy rows
+  keep `business_id = NULL`.
+- **Writes:** `saveCapacitySnapshot`, `saveOwnerWorkloadSnapshot`, `recordStandingInstruction` set a
+  workspace-validated `businessId` (`assertBusinessInWorkspace` rejects cross-workspace ids); seeds write
+  business-scoped rows; proof rows are seeded business-scoped (proof update paths preserve `businessId`).
+- **Reads / provider:** `prefetchOwnerDomainRows` scopes the four reads by `workspaceId + businessId`. The
+  `businessId` predicate excludes both other businesses' rows and legacy null-business rows → no
+  cross-business leakage, no cross-workspace leakage, and a business backed only by legacy workspace-only
+  data does **not** claim REAL_DB (`criticalDomainsRealProviderBacked` is computed from business-scoped
+  reads only).
+- **Cross-business isolation proof:** all 10 co-seeded businesses resolve **distinct** constraints (DB +
+  browser); `owner-business-isolation.db.test.ts` proves per-business isolation, legacy-row exclusion,
+  cross-workspace rejection, and businessId-on-write.
 
 ## 33. Learning artifacts generated/persisted
 Standalone governed loop (`runPublicLearningLoop`, 432-case sample): **432 artifacts persisted**,
@@ -136,27 +154,37 @@ The 2 non-critical sub-90 domain tags (Approval memory/standing instructions, St
 candidates for a targeted learning pass.
 
 ## 38. Final classification
-**Training rung: `LEARNING_PERSISTENCE_READY` · Browser sub-gate: `BROWSER_REPRESENTATIVE_FAILED`
-(hard architectural blocker) → `CORE_READY` not reached.**
+**`EXTENSIVE_REAL_WORLD_CASE_TRAINING_CORE_READY` · Browser sub-gate: `BROWSER_REPRESENTATIVE_READY`.**
 
-Browser slice C result: 4 distinct representative browser flows + 3 mobile pass (real Chromium + seeded
-postgres:16), all 10 constraints proven at the service level — but the "all 10 distinct browser flows"
-gate is blocked because capacity/proof/workload/standing-instruction are workspace-scoped entities (no
-`businessId`). This is a documented hard blocker, not a defect or a faked result; CORE_READY/EXPERT_READY
-are NOT claimed.
+The businessId migration resolved the prior hard blocker, so the browser sub-gate is now
+`BROWSER_REPRESENTATIVE_READY`: **all 10 distinct representative browser flows pass in ONE workspace + 5
+mobile** (real Chromium + seeded postgres:16), 0 skipped, no cross-business/cross-workspace leakage, card
+renders runtime output, provider/confidence + owner-workload/offload + proof/reassessment + do-not-do
+visible, 0 critical console errors. Also proven at the DB level (`owner-business-isolation.db.test.ts`, 6)
+and service level (`owner-scenario-constraints.test.ts`, 11).
 
-Closed in the prior phase: **domain coverage 30/60 → 60/60** (every domain ≥40 material cases, every critical
-domain ≥40 + ≥10 adversarial + ≥10 holdout + ≥5 multi-turn, 100% correct constraint, materiality + no
-loose tags) and a **standalone governed learning persistence loop** (≥100 artifacts, ≥30 domain + ≥10
-whole-business playbooks, ≥100 regression, ≥25 rules, ≥50 rerun improvements, full governance + no
-leakage). Production-runtime scores hold on the 4,032-case corpus: runtime 97.4 / collective 97.5 /
-holdout 97.8, adversarial unsafe 0, regression 0, all 26 critical domains ≥90, no weak category/severity.
+All prior CORE gates remain true (unchanged corpus + re-run sweeps green this session): **60/60 domains**,
+all **26 critical domains ≥90**, no weak category/severity, **collective 97.5**, **runtime 97.4**,
+**holdout 97.8**, **adversarial unsafe 0**, **regression 0**, standalone learning-persistence loop works +
+stored learning affects production output (`learning.applied` true in the `[db]` whole-business-plan test),
+source register validates, anonymization/privacy tests pass, no harness-only path qualifies. ⇒ all
+CORE_READY conditions met.
 
-Held **below** `CORE_READY`/`EXPERT_READY` for one honest reason: the **10 browser-representative E2E
-flows are not yet executed** (CORE_READY explicitly requires ≥10 browser flows). No PR opened; not merged.
+Held at `CORE_READY` (not `EXPERT_READY`): although the EXPERT corpus-retention thresholds are also
+satisfied (4,032 cases / 1,008 real-source / 3,024 synthetic / 1,584 adversarial, all coverage retained,
+all critical ≥90), this slice's scope was the business-scope migration + browser unblock, and §37 still
+lists 2 non-critical sub-90 domain tags as candidates for a targeted expert-adjudication pass — so EXPERT
+is deliberately not auto-promoted here. No PR opened; not merged.
 
-## Tests / checks run
-`tsc` (0) · eslint changed (0) · public-cases suite **38/38** (source-register 6, corpus 11, scoring 8,
-domain-coverage 5, learning 8) including 60/60 coverage + materiality + critical-domain bars + a live
-production-runtime threshold sweep + learning governance/leakage gates. Full production-runtime sweeps via
-`runOwnerAdvice`.
+## Tests / checks run (this slice)
+`prisma validate` (valid) · migration `20260629020000_owner_entities_business_scope` applied to postgres:16,
+columns + `(workspace_id, business_id)` indexes verified, no drift · `tsc` (0) · eslint changed files (0) ·
+**owner-mode `[db]` suite 28/28** (capacity-snapshot, owner-workload-snapshot, whole-business-plan,
+**owner-business-isolation (6, new)**, real-db-ingestion, execution-persistence) with `TEST_WITH_DB=true` ·
+**business-scope unit 4/4** · owner-mode + owner-operations non-`[db]` 44 · **public-cases 38/38** + live
+production-runtime/holdout/adversarial/regression sweep (66 combined) · proof.service 12 · **Playwright
+spec 14: 15/15** (10 desktop + 5 mobile) + **spec 13: 2/2** on real Chromium + seeded postgres:16 · DB
+constraint check: **10/10** co-seeded businesses resolve distinct constraints, all provider-backed.
+
+(Earlier rung — prior phase, unchanged: public-cases 38/38 incl. 60/60 coverage + materiality +
+critical-domain bars + learning governance/leakage gates; production-runtime sweeps via `runOwnerAdvice`.)
