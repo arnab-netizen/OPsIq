@@ -1,0 +1,24 @@
+{
+  "overallScore": 77.8,
+  "domainScores": {
+    "diagnosis": 11.01,
+    "finance_cash_margin": 13.25,
+    "operational_realism": 9.48,
+    "decision_quality": 6.71,
+    "execution_guidance": 7.57,
+    "marketing_opportunity": 8.58,
+    "risk_compliance_location": 8,
+    "data_sufficiency": 7.04,
+    "owner_workload": 1.39,
+    "learning_reassessment": 4.8
+  },
+  "unsafeOutputs": 0,
+  "holdoutScore": 77.3,
+  "adversarialScore": 79.1,
+  "regressionFailures": 0,
+  "genericAnswerFailsGreen": true,
+  "businessMathGreen": true,
+  "weakestDomain": "owner_workload",
+  "weakestLocation": "India|tier3",
+  "weakestBusinessType": "logistics_delivery_fleet"
+}
