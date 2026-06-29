@@ -26,10 +26,16 @@ Clean (only the new mobile E2E spec + this report committed; Playwright output a
 `3685d1b` (named) and `20a93af` (fix).
 
 ## 9. CI DB proof status
-**CI: in progress (corroborating).** IMPORTANT: the originally-named run `28365562829` is on the
-PRE-FIX commit `3685d1b`, whose `[db]` seed builds invalid UUIDs — that run is expected to FAIL the
-`real-db-ingestion.db` test. The fix is in `20a93af` (run `28366401904`, in progress).
-**DB proof was instead OBSERVED GREEN LOCALLY against a real postgres:16 cluster** (see §10–12).
+**CI: OBSERVED GREEN.** Fix run `28366401904` (commit `20a93af`) completed **`success`**:
+`build-and-test (20.x)` green with the `postgres:16` service, `TEST_WITH_DB=true`, `prisma migrate
+deploy` green, `Build project` green, and the blocking **`Run maintained test suite`** step green
+(≈15m35s). The CI job sets `TEST_WITH_DB=true` (job-level + step env) against a real `postgres:16`
+service, so the `[db]`-gated tests ran in the **blocking** lane (the `real-db-ingestion.db`,
+`owner-db-providers`, `persistence.db`, and `approval-resolution-no-500.db` files are NOT in
+`.claude/test-quarantine.json`). `lint` job green; `branch-protection` skipped (push, not PR).
+The originally-named run `28365562829` is on the PRE-FIX commit `3685d1b` (invalid-UUID seed) and is
+expected to fail — superseded by the fix run. DB proof was ALSO OBSERVED GREEN LOCALLY against a real
+postgres:16 cluster (see §10–12).
 
 ## 10. TEST_WITH_DB=true ran
 **Yes — locally.** A real PostgreSQL 16 cluster was started in the sandbox, migrations applied
@@ -109,24 +115,33 @@ DB: `real-db-ingestion.db` (a second workspace sees DATA_SOURCE_MISSING; provide
 workspace-scoped). Browser: `10-rbac-workspace` (non-owner 403; unauth redirect).
 
 ## 30. Remaining blockers
-1. **CI corroboration of DB proof.** The named CI run `28365562829` is on the pre-fix buggy commit and
-   will fail; the fix run `28366401904` is in progress. DB proof is already OBSERVED GREEN locally on
-   postgres:16, but the prompt's CI-run gate has not yet been observed green.
+1. ~~**CI corroboration of DB proof.**~~ **CLOSED.** Fix run `28366401904` (commit `20a93af`) is
+   `success` with the `[db]` tests executed in the blocking lane against `postgres:16` (see §9).
 2. **New runtime not yet surfaced in the browser.** The browser proof covers the EXISTING owner command
    center (owner-control-center service + business condition). The new owner-advice-runtime + DB
-   providers are proven at the service/`[db]` level, not yet wired into a browser page — so "command
-   center reflects the NEW runtime output" is proven in services/`[db]`, not in the browser.
+   providers are proven at the service/`[db]` level (incl. the CI-green `[db]` real-ingestion tests),
+   not yet wired into a browser page — so "command center reflects the NEW runtime output" is proven in
+   services/`[db]` and in CI, but not yet in the browser. This is the single remaining step to full
+   `READY_FOR_REAL_WORLD_CASE_TRAINING`: wire `owner-advice-runtime` + `buildOwnerDomainProviders` into
+   the command-center page and add one E2E asserting the new whole-business plan renders in the browser.
 
 ## 31. Final classification
-**`BROWSER_OWNER_FLOW_PROVEN`**
+**`PRODUCTION_DB_INGESTION_READY`**
 
-Both required proofs were OBSERVED GREEN: real DB ingestion on a real **postgres:16** cluster
-(250/250, incl. the 7 `[db]` real-ingestion tests) and the **Playwright owner browser flow** (9 owner
-specs, real Chromium, real seeded backend) covering command center, proof gating, owner indicators,
-RBAC/workspace isolation and mobile viewport. All prior quality gates remain green.
+Both required proofs are now OBSERVED GREEN **in CI and locally**:
+- **CI DB proof — GREEN.** Run `28366401904` (commit `20a93af`) `success`: `postgres:16` service,
+  `TEST_WITH_DB=true`, `prisma migrate deploy` + build + blocking maintained test suite all green, with
+  the `[db]` real-ingestion tests running in the **blocking** lane (not quarantined).
+- **Local DB proof — GREEN.** Real `postgres:16` cluster, 250/250 incl. the 7 `[db]` real-ingestion
+  tests.
+- **Playwright owner browser flow — GREEN.** 9 owner specs, real Chromium, real seeded backend
+  (command center, proof gating, owner indicators, RBAC/workspace isolation, mobile viewport).
 
-It is deliberately **NOT** `READY_FOR_REAL_WORLD_CASE_TRAINING` for two honest reasons: (a) the prompt
-gates READY on the CI DB run being observed green and that run is still in progress (the named run is on
-a buggy pre-fix commit; fix run `28366401904` pending); and (b) the browser proof exercises the existing
-command-center surface, while the new runtime/providers are proven at the service/`[db]` level and are
-not yet surfaced in a browser page. Closing either of those advances toward READY.
+All prior quality gates remain green (runtime 98.2 · collective 98.1 · holdout 98.6 · adversarial unsafe
+0 · regression 0 · 15/15 critical domains 100 · 36/36 EXPERT_READY).
+
+It is deliberately **NOT YET** `READY_FOR_REAL_WORLD_CASE_TRAINING` for ONE remaining honest reason
+(blocker #2): the browser proof exercises the existing command-center surface, while the new
+owner-advice-runtime/providers are proven at the service/`[db]`/CI level and are not yet surfaced in a
+browser page. Wiring the new runtime into the command-center page + one browser E2E closes the gap to
+READY. No PR opened; not merged.
