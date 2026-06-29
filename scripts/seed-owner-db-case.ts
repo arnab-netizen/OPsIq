@@ -18,7 +18,11 @@ export interface OwnerDbCaseIds {
   cashInHand?: number;
 }
 
-const uuid = (seed: string) => `00000000-0000-4000-8000-${seed.padStart(12, "0")}`;
+// Deterministic, VALID uuid from a label (hex-encode the chars so non-hex labels like "fin1" work).
+const uuid = (seed: string) => {
+  const hex = Array.from(seed).map((c) => c.charCodeAt(0).toString(16)).join("").slice(0, 12).padStart(12, "0");
+  return `00000000-0000-4000-8000-${hex}`;
+};
 
 /** Insert a full persisted owner-business case. Returns the ids used. */
 export async function seedOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds): Promise<OwnerDbCaseIds> {
