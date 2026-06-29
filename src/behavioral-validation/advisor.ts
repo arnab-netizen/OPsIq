@@ -161,6 +161,9 @@ export function baseAdvise(c: BehavioralCase): AdviceOutput {
     blockedActions: c.flags.cashRisk || c.flags.capacityRisk || c.decisionCategory === "marketing_opportunity_contract"
       ? whatNotToDoBase(c).map((w) => w.replace(/^Do not /, "Blocked: "))
       : undefined,
+    // Executable SOP: who does what, by when, and the stop-condition (drives actionability).
+    processSopUpdate:
+      "Assign a named supervisor to own each step with a daily checklist; deadline 7 days; stop immediately if margin, cash or complaint/rework metrics worsen.",
     // Bounded blind spots (closed by learning): no ownerWorkloadReduction; thin marketing guidance.
     marketingOpportunityGuidance:
       c.decisionCategory === "marketing_opportunity_contract" ? "Review the opportunity before spending." : undefined,
