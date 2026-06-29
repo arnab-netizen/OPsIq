@@ -178,6 +178,25 @@ export function buildDomainMatrix(pairs: AdvisedCase[]): DomainReport[] {
   return DOMAINS.map((d) => scoreDomain(d, pairs));
 }
 
+export interface CaseDomainHealth {
+  domain: DomainId;
+  critical: boolean;
+  score: number; // 0..100 for this single case
+  status: "green" | "amber" | "red";
+}
+
+/** Per-case domain health (relevant domains only) — the domain health table in the operating plan. */
+export function caseDomainHealth(c: BehavioralCase, a: AdviceOutput): CaseDomainHealth[] {
+  const out: CaseDomainHealth[] = [];
+  for (const d of DOMAINS) {
+    const spec = SPECS[d];
+    if (!spec.relevant(c)) continue;
+    const s = Math.round(spec.grade(c, a) * 1000) / 10;
+    out.push({ domain: d, critical: spec.critical, score: s, status: s >= 85 ? "green" : s >= 60 ? "amber" : "red" });
+  }
+  return out;
+}
+
 export interface DomainMatrixSummary {
   reports: DomainReport[];
   criticalBelowThreshold: DomainReport[];
