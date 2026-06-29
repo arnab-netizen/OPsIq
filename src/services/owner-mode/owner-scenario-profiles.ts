@@ -29,6 +29,11 @@ export interface Scenario {
   label: string;
   expectedConstraint: Constraint;
   mobile: boolean;
+  /** True when the constraint is driven by BUSINESS-scoped rows (cashflow/finance/compliance/working-
+   *  capital) so it renders distinctly per-business in one workspace. Constraints driven by WORKSPACE-
+   *  scoped entities (capacity/proof/workload — no businessId column) cannot be isolated per business in
+   *  one workspace, so those flows are proven at the service level (scenario unit tests) only. */
+  browserDistinguishable: boolean;
   knobs: ScenarioKnobs;
 }
 
@@ -40,29 +45,40 @@ const HEALTHY: ScenarioKnobs = {
 
 /** The 10 representative flows. */
 export const SCENARIOS: Scenario[] = [
-  { id: "cash_crisis", label: "Cash crisis", expectedConstraint: "cash_survival", mobile: true,
+  { id: "cash_crisis", label: "Cash crisis", expectedConstraint: "cash_survival", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, cashInHand: 0, receivablesOverdue: 80000, overdueWcReceivable: true } },
-  { id: "bad_contract", label: "Bad contract / opportunity (below margin)", expectedConstraint: "below_margin", mobile: false,
+  { id: "bad_contract", label: "Bad contract / opportunity (below margin)", expectedConstraint: "below_margin", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, revenue: 200000, costOfGoods: 240000 } },
-  { id: "marketing_blocked", label: "Marketing blocked by capacity/quality", expectedConstraint: "capacity_feasibility", mobile: false,
+  { id: "marketing_blocked", label: "Marketing blocked by capacity/quality", expectedConstraint: "capacity_feasibility", mobile: false, browserDistinguishable: false,
     knobs: { ...HEALTHY, bottleneckUtilization: 1.2, growthSafe: false } },
-  { id: "owner_overload", label: "Owner workload overload", expectedConstraint: "owner_workload", mobile: true,
+  { id: "owner_overload", label: "Owner workload overload", expectedConstraint: "owner_workload", mobile: false, browserDistinguishable: false,
     knobs: { ...HEALTHY, workloadOverloaded: true } },
-  { id: "proof_fraud", label: "Proof / fake completion risk", expectedConstraint: "proof_fraud_block", mobile: false,
+  { id: "proof_fraud", label: "Proof / fake completion risk", expectedConstraint: "proof_fraud_block", mobile: false, browserDistinguishable: false,
     knobs: { ...HEALTHY, proofDuplicate: true } },
-  { id: "vendor_compliance", label: "Vendor / supplier compliance issue", expectedConstraint: "compliance_block", mobile: false,
+  { id: "vendor_compliance", label: "Vendor / supplier compliance issue", expectedConstraint: "compliance_block", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, complianceExpired: true } },
-  { id: "delivery_capacity", label: "Delivery / logistics capacity issue", expectedConstraint: "capacity_feasibility", mobile: false,
+  { id: "delivery_capacity", label: "Delivery / logistics capacity issue", expectedConstraint: "capacity_feasibility", mobile: false, browserDistinguishable: false,
     knobs: { ...HEALTHY, bottleneckUtilization: 1.3, growthSafe: false } },
-  { id: "growth_scale", label: "Growth / scale decision (healthy)", expectedConstraint: "profitable_growth", mobile: false,
+  { id: "growth_scale", label: "Growth / scale decision (healthy)", expectedConstraint: "profitable_growth", mobile: false, browserDistinguishable: true,
     knobs: { ...HEALTHY } },
-  { id: "shutdown_pivot", label: "Shutdown / pivot / stop-loss", expectedConstraint: "cash_survival", mobile: false,
+  { id: "shutdown_pivot", label: "Shutdown / pivot / stop-loss", expectedConstraint: "cash_survival", mobile: false, browserDistinguishable: false,
     knobs: { ...HEALTHY, cashInHand: 0, receivablesOverdue: 120000, overdueWcReceivable: true } },
-  { id: "multi_location_remote", label: "Multi-location / remote-owner control", expectedConstraint: "owner_workload", mobile: true,
+  { id: "multi_location_remote", label: "Multi-location / remote-owner control", expectedConstraint: "owner_workload", mobile: false, browserDistinguishable: false,
     knobs: { ...HEALTHY, workloadOverloaded: true } },
 ];
 
-export const MOBILE_SCENARIOS = SCENARIOS.filter((s) => s.mobile);
+/** Flows whose constraint is business-scoped → render distinctly in the browser within one workspace. */
+export const BROWSER_SCENARIOS = SCENARIOS.filter((s) => s.browserDistinguishable);
+export const MOBILE_SCENARIOS = BROWSER_SCENARIOS.filter((s) => s.mobile);
+
+/** Deterministic business id per scenario (shared by the DB seed + the Playwright spec). */
+export function scenarioBusinessId(id: string): string {
+  let h = 5381;
+  for (const c of `scn-${id}:biz0`) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0;
+  const node = h.toString(16).padStart(8, "0").slice(0, 4); // 4 hex
+  return `00000000-0000-4000-8000-${node}62697a30`; // 4 + 8 = 12 hex node
+
+}
 
 /** Build a full OwnerDomainRows bundle from knobs (for the mock-DB unit proof + provider checks). */
 export function scenarioRows(k: ScenarioKnobs, ids: { workspaceId: string; businessId: string; now: Date }): OwnerDomainRows {
