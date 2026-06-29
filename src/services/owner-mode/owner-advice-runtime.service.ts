@@ -13,6 +13,7 @@
  */
 import { advise } from "@/behavioral-validation/advisor";
 import { detectUnsafe } from "@/behavioral-validation/scorer";
+import { ingestBusinessState, type DomainIngestionReport, type OwnerDomainProviders } from "./owner-domain-ingestion";
 import { type ArbitrationResult, type Constraint } from "@/behavioral-validation/whole-business/arbitration";
 import { buildWholeBusinessPlan, type WholeBusinessPlan } from "@/behavioral-validation/whole-business/whole-plan";
 import { scoreCollectivePlan, type CollectiveScore } from "@/behavioral-validation/whole-business/collective-scorer";
@@ -48,6 +49,8 @@ export interface OwnerAdviceRequest {
 
 export interface OwnerAdviceRuntimeDeps {
   store: LearningStore;
+  /** Optional real DB/service-backed domain providers (production wires the owner-mode services here). */
+  providers?: OwnerDomainProviders;
 }
 
 export interface OwnerAdviceResult {
@@ -58,6 +61,7 @@ export interface OwnerAdviceResult {
   learningApplied: boolean;
   learningArtifactIds: string[];
   unsafeCount: number;
+  ingestion: DomainIngestionReport;
 }
 
 const FULL_FLAGS = (p: Partial<CaseFlags>): CaseFlags => ({
@@ -104,10 +108,20 @@ export async function runOwnerAdvice(req: OwnerAdviceRequest, deps: OwnerAdviceR
   const c = contextToCase(req.context, `${req.workspaceId}-case`);
   // advise() queries the store for active, in-scope, workspace-private artifacts only → no leakage.
   const advice = await advise(c, { store: deps.store, workspaceId: req.workspaceId });
+  const learningArtifactIds = advice.learningNotesApplied ?? [];
+
+  // Per-domain ingestion: which domain state is real (db/service/context) vs DATA_SOURCE_MISSING.
+  const ingestion = ingestBusinessState(req.context, {
+    providers: deps.providers,
+    learningStore: deps.store,
+    hasLearningArtifacts: learningArtifactIds.length > 0,
+  });
+  // Missing critical domain data lowers the runtime's stated confidence (never hidden).
+  if (ingestion.overallConfidence === "low") advice.dataConfidence = "low";
+
   const plan = buildWholeBusinessPlan(c, advice);
   const arbitration = plan.arbitration;
   const collective = scoreCollectivePlan(plan, req.context.expectedTopPriority);
-  const learningArtifactIds = advice.learningNotesApplied ?? [];
   return {
     workspaceId: req.workspaceId,
     plan,
@@ -116,6 +130,7 @@ export async function runOwnerAdvice(req: OwnerAdviceRequest, deps: OwnerAdviceR
     learningApplied: learningArtifactIds.length > 0,
     learningArtifactIds,
     unsafeCount: detectUnsafe(c, advice).length,
+    ingestion,
   };
 }
 

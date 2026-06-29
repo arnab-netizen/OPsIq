@@ -26,6 +26,7 @@ export interface WholeBusinessGateInput {
   numericallyWrongAdviceFails: boolean;
   disconnectedDomainAdviceFails: boolean;
   wrongTopPriorityFails: boolean;
+  criticalDomainsUseRealData: boolean; // no critical domain on fake/DATA_SOURCE_MISSING data
 }
 
 export const WHOLE_BUSINESS_CLASSIFICATIONS = [
@@ -68,6 +69,7 @@ export function evaluateGates(i: WholeBusinessGateInput): GateResult[] {
     { gate: "numerically wrong advice fails", passed: i.numericallyWrongAdviceFails },
     { gate: "disconnected domain advice fails", passed: i.disconnectedDomainAdviceFails },
     { gate: "wrong top priority fails", passed: i.wrongTopPriorityFails },
+    { gate: "no critical domain on fake/missing data", passed: i.criticalDomainsUseRealData },
   ];
 }
 

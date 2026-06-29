@@ -10,11 +10,18 @@ const allReadyExceptCriticalFloor: WholeBusinessGateInput = {
   businessStageAwarenessWorks: true, ownerWorkloadReductionWorks: true, proofReassessmentPresent: true,
   storedLearningAffectsProduction: true, noCrossBusinessLeakage: true, commandCenterSurface: true,
   genericAdviceFails: true, numericallyWrongAdviceFails: true, disconnectedDomainAdviceFails: true, wrongTopPriorityFails: true,
+  criticalDomainsUseRealData: true,
 };
 
 describe("whole-business readiness gates + classification", () => {
-  it("defines 20 readiness gates", () => {
-    expect(evaluateGates(allReadyExceptCriticalFloor).length).toBe(20);
+  it("defines the readiness gates including the fake-data guard", () => {
+    expect(evaluateGates(allReadyExceptCriticalFloor).length).toBe(21);
+  });
+
+  it("fake/missing data on a critical domain blocks readiness", () => {
+    const v = classifyWholeBusiness({ ...allReadyExceptCriticalFloor, criticalDomainsAllPass: true, criticalDomainsUseRealData: false });
+    expect(v.classification).not.toBe("READY_FOR_REAL_WORLD_CASE_TRAINING");
+    expect(v.gatesFailed).toContain("no critical domain on fake/missing data");
   });
 
   it("does NOT award READY when a critical individual domain is below the floor", () => {
