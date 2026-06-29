@@ -61,7 +61,7 @@ model AuditEvent {
   actorId       String?  @map("actor_id") @db.Uuid
   actorType     String   @default("user") @map("actor_type")
   entityType    String?  @map("entity_type")
-  entityId      String?  @map("entity_id") @db.Uuid
+  entityId      String?  @map("entity_id")
   payload       Json?
   correlationId String?  @map("correlation_id")
   visibility    String   @default("internal")

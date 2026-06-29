@@ -552,7 +552,11 @@ export default function OwnerCommandCenterPage() {
                       <div className={new Date(data.nextReassessmentDue) <= new Date() ? "text-warning font-medium" : ""}>
                         Next reassessment {new Date(data.nextReassessmentDue) <= new Date() ? "overdue" : "due"}:{" "}
                         {new Date(data.nextReassessmentDue).toLocaleDateString()}
+                        {data.reassessmentCadenceDays != null && <> (every {data.reassessmentCadenceDays} days)</>}
                       </div>
+                    )}
+                    {data.reassessmentReason && (
+                      <div className="italic">Why: {data.reassessmentReason}</div>
                     )}
                   </div>
                 )}
