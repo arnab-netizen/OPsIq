@@ -1,0 +1,57 @@
+{
+  "_note": "Structured high-signal extract of the CI-captured baseline (full raw artifact: owner-baseline run 28347587097, artifact id 7942333991, 322KB, 30-day retention). Extracted from the workflow log; no secrets.",
+  "scenario": "Laundry Cash Squeeze + Capacity + Quality Complaint Growth Trap",
+  "location": "Kolkata, West Bengal, India",
+  "branch": "claude/pretraining-baseline",
+  "appHead": "a4241a9 (main, merged readiness)",
+  "ownerBaselineRunId": 28347587097,
+  "commandCenter": {
+    "hasData": true,
+    "isStaleData": true,
+    "dataAgeDays": 60,
+    "survivalRiskScore": 77,
+    "overallHealthScore": 48,
+    "domainsWired": ["finance", "cashflow", "operations"],
+    "recommendedNextAction": {
+      "domain": "cashflow",
+      "findingCode": "CF_URGENT_PAYMENT_RISK",
+      "title": "Sequence and fund near-term dues",
+      "description": "Rank salary/rent/vendor/tax dues by criticality, fund the essential ones first, and stagger or arrange cash for the rest."
+    },
+    "missingInputsWithPriority": ["Cost of Goods Sold", "Payroll / Salary", "Loan / EMI / Debt Payments", "Receivables (IMPORTANT)"]
+  },
+  "controlCenter": {
+    "nextBestAction": "Sequence and fund near-term dues",
+    "whatNotToDo": ["Do not pursue growth/marketing until the capacity bottleneck is cleared."],
+    "criticalAlerts": ["Capacity bottleneck: Industrial dryer #2 (DOWN), Front-load washer #1."],
+    "ownerActionsToday": 2,
+    "handledByOpsIQ": 0,
+    "approvalsAvoided": 0,
+    "needsOwnerAttention": true,
+    "sections": {
+      "blockedRecommendations": 0,
+      "proofBlocked": 0,
+      "financeBlocked": 0,
+      "sopsNeedingReview": 1,
+      "trainingRecommendations": 0,
+      "equipmentBottlenecks": 2,
+      "processReviewsDue": 1,
+      "reassessmentsDue": 0
+    }
+  },
+  "ownerActions": {
+    "riskyDiscountApproval": {
+      "route": "/api/owner/approvals/resolve",
+      "status": 500,
+      "defect": "PrismaClientKnownRequestError P2007 — invalid input syntax for type uuid: \"approval.owner_decision_required\"",
+      "interpretation": "The owner could NOT get an approve/reject/defer decision on the tempting 30% discount + below-margin B2B deal — the approval-resolution route crashes. Pre-existing product defect on main; captured, NOT fixed."
+    },
+    "proofGatedCompletion": {
+      "route": "/api/owner/tasks/complete",
+      "status": 409,
+      "body": { "blocked": true, "reason": "proof_not_accepted" },
+      "interpretation": "Server correctly rejected a proofless completion — no fake success."
+    },
+    "proofBlockedBeforeAfter": { "before": 0, "after": 1 }
+  }
+}
