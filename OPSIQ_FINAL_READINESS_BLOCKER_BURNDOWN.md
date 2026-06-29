@@ -2,6 +2,14 @@
 
 Branch `claude/full-repo-jarvis-db-blocker-closure`. Two blockers to green.
 
+## FINAL STATUS — BOTH GREEN
+- **GAP-E2E-01** ✅ `owner-e2e.yml` run **28340198887** (commit 4931475) — success.
+- **GAP-CI-FLAKE-01** ✅ `ci.yml` run **28341095191** (commit 432e4bd) — blocking maintained suite success
+  (was 3 failed / 643 passed on 4931475 → 0 failed after the owner-budget obligation fix).
+- Classification: **READY_FOR_BEHAVIORAL_VALIDATION**. Full detail in
+  `OPSIQ_FINAL_READINESS_BLOCKER_CLOSURE_REPORT.md`.
+
+
 ## B. GAP-E2E-01 — owner browser flow
 - **Resolved so far:**
   - Health gate `curl -sf` false-negative → connectivity-based check (any HTTP code = up).
