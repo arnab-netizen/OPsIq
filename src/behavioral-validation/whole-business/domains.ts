@@ -73,13 +73,33 @@ const SPECS: Record<DomainId, DomainSpec> = {
   process_improvement: { critical: false, relevant: (c) => c.decisionCategory === "staff_process_equipment" || c.flags.capacityRisk, playbook: "process fix", grade: (_c, a) => frac([has(a.processSopUpdate), /process|bottleneck|rework|measure/.test(text(a))]) },
   equipment_capacity: { critical: true, relevant: (c) => c.flags.capacityRisk, playbook: "capacity realism", grade: (c, a) => frac([has(a.capacityImpact), /capacity|equipment|bottleneck|throughput/.test(text(a)), !c.flags.capacityRisk || /capacity|reliable|cap /.test(text(a))]) },
   inventory_stock: { critical: false, relevant: (c) => /inventory|stock|dead/i.test(c.hiddenRootCause + JSON.stringify(c.numbers)), playbook: "inventory ageing", grade: (_c, a) => frac([/inventory|stock|dead|ageing|expir/.test(text(a))]) },
-  vendor_supplier: { critical: false, relevant: (c) => /vendor|supplier|scheme/i.test(c.hiddenRootCause), playbook: "vendor reliability", grade: (_c, a) => frac([/vendor|supplier|reliab|payment|terms/.test(text(a))]) },
+  vendor_supplier: { critical: false, relevant: (c) => /vendor|supplier|scheme|procure|sourcing|invoice|bulk/i.test(`${c.businessType} ${c.ownerGoal} ${c.hiddenRootCause} ${c.messyFacts.join(" ")}`), playbook: "vendor reliability", grade: (_c, a) => frac([has(a.vendorGuidance), /quality|rework|reliab|sla/.test((a.vendorGuidance ?? "").toLowerCase()), /payment terms|working capital/.test((a.vendorGuidance ?? "").toLowerCase()), /reconcil|collusion|invoice|proof/.test((a.vendorGuidance ?? "").toLowerCase())]) },
   opportunity_eval: { critical: true, relevant: (c) => c.decisionCategory === "marketing_opportunity_contract", playbook: "opportunity gating", grade: (_c, a) => frac([/margin|cost|capacity|terms|pilot|proof/.test(text(a)), hasList(a.proofRequired), hasList(a.whatNotToDo)]) },
   contract_quote: { critical: false, relevant: (c) => c.decisionCategory === "marketing_opportunity_contract", playbook: "contract terms", grade: (_c, a) => frac([/terms|payment|penalty|margin|cost/.test(text(a)), hasList(a.proofRequired)]) },
   compliance_review: { critical: true, relevant: (c) => c.flags.complianceRisk, playbook: "professional-review boundary", grade: (c, a) => frac([!c.flags.complianceRisk || has(a.professionalReview), /professional review|compliance|legal|tax/.test(text(a))]) },
   proof_anti_gaming: { critical: true, relevant: (c) => c.flags.hostile, playbook: "independent verification", grade: (c, a) => frac([!c.flags.hostile || /independent|verif|proof|audit/.test(text(a)), hasList(a.proofRequired)]) },
   fraud_collusion: { critical: false, relevant: (c) => c.flags.hostile, playbook: "anti-collusion", grade: (_c, a) => frac([/independent|verif|fraud|collusion|cross-check|gam/.test(text(a))]) },
-  owner_workload: { critical: true, relevant: ALWAYS, playbook: "owner offload", grade: (_c, a) => frac([has(a.ownerWorkloadReduction), /delegate|supervisor|offload|exception/.test(text(a))]) },
+  owner_workload: {
+    critical: true,
+    relevant: ALWAYS,
+    playbook: "owner offload",
+    grade: (_c, a) => {
+      const p = a.ownerWorkloadPlan;
+      const summary = (a.ownerWorkloadReduction ?? "").toLowerCase();
+      // Boilerplate ("owner should review/handle/do it") with no structured plan must NOT pass.
+      const boilerplate = /owner should (review|handle|do|personally|check)/.test(summary) && !p;
+      if (boilerplate || !has(a.ownerWorkloadReduction)) return 0;
+      if (!p) return 0.3; // a string but no structured offload
+      return frac([
+        p.ownerDecides.length > 8, // owner decision is scoped (one decision)
+        p.staffExecutes.length > 0, // staff execution separated from owner
+        p.staffProof.length > 0 && !/owner (provides|re-?check)/.test(p.staffProof.join(" ").toLowerCase()), // proof on staff, not owner
+        p.defer.length > 0 || p.ignoreForNow.length > 0, // what to defer/ignore
+        p.standingInstruction.length > 8 && p.escalationThreshold.length > 8, // standing rule + exception-only escalation
+        p.opsiqPrepares.length > 0 && p.opsiqMonitors.length > 0, // OpsIQ prepares + monitors
+      ]);
+    },
+  },
   approval_memory: { critical: false, relevant: ALWAYS, playbook: "standing instructions", grade: (_c, a) => frac([typeof a.ownerApprovalNeeded === "boolean", /approv|standing|memory|rule/.test(text(a))]) },
   self_evaluation_learning: { critical: true, relevant: ALWAYS, playbook: "learning loop", grade: (_c, a) => frac([has(a.learningMemoryNote), has(a.reassessmentTrigger), hasList(a.learningNotesApplied) || /reassess|learn|memory/.test(text(a))]) },
   location_market: { critical: true, relevant: (c) => c.location.locationSensitivity === "high", playbook: "local adaptation", grade: (c, a) => frac([has(a.localConsiderations), text(a).includes(c.location.country.toLowerCase().slice(0, 5)) || /local|labour|payment/.test(text(a))]) },
@@ -88,7 +108,7 @@ const SPECS: Record<DomainId, DomainSpec> = {
   scaling_expansion: { critical: true, relevant: (c) => c.flags.multiBranch || c.decisionCategory === "multi_branch_portfolio", playbook: "growth gating", grade: (_c, a) => frac([/expand|scale|branch|unit econ|proven|capacity/.test(text(a)), hasList(a.whatNotToDo)]) },
   shutdown_pivot_stoploss: { critical: true, relevant: ALWAYS, playbook: "stop-loss", grade: (_c, a) => frac([/stop|reassess|pilot|defer|threshold|worsen/.test(text(a)), has(a.reassessmentTrigger)]) },
   quality_control: { critical: true, relevant: (c) => c.flags.capacityRisk || /quality|rework|complaint/i.test(c.hiddenRootCause), playbook: "quality protection", grade: (_c, a) => frac([/quality|rework|complaint|defect/.test(text(a)), has(a.capacityImpact) || has(a.processSopUpdate)]) },
-  delivery_logistics: { critical: false, relevant: (c) => /delivery|logistic|fleet|rider|trip/i.test(c.businessType + c.hiddenRootCause), playbook: "delivery cost", grade: (_c, a) => frac([/delivery|logistic|route|trip|fleet|rider/.test(text(a))]) },
+  delivery_logistics: { critical: false, relevant: (c) => /delivery|logistic|fleet|rider|courier|route|dispatch|rto|cod|trip/i.test(`${c.businessType} ${c.ownerGoal} ${c.hiddenRootCause} ${c.messyFacts.join(" ")}`), playbook: "delivery cost", grade: (_c, a) => frac([has(a.deliveryGuidance), /cost per|successful|rto|cod|failed/.test((a.deliveryGuidance ?? "").toLowerCase()), /incentive|proof.?of.?delivery|proof of delivery/.test((a.deliveryGuidance ?? "").toLowerCase()), /route|batch|fuel|maintenance|radius/.test((a.deliveryGuidance ?? "").toLowerCase())]) },
   working_capital: { critical: true, relevant: (c) => c.flags.cashRisk || c.decisionCategory === "marketing_opportunity_contract", playbook: "working-capital", grade: (c, a) => frac([/working capital|receivable|payment terms|cash conversion|cash/.test(text(a)), has(a.cashMarginRisk)]) },
   risk_management: { critical: false, relevant: (c) => c.flags.cashRisk || c.flags.capacityRisk || c.flags.complianceRisk || c.flags.hostile, playbook: "FMEA", grade: (_c, a) => frac([has(a.riskAnalysis), hasList(a.whatNotToDo)]) },
   business_continuity: { critical: false, relevant: ALWAYS, playbook: "continuity", grade: (_c, a) => frac([has(a.reassessmentTrigger), has(a.saferAlternative) || /fallback|continu|backup|contingen/.test(text(a))]) },
@@ -130,7 +150,7 @@ export async function advisedCorpus(cases: BehavioralCase[] = EXPANDED_CASES, wo
   const store = new InMemoryLearningStore();
   for (const c of cases) {
     const base = scoreAdvice(c, baseAdvise(c));
-    if (!base.passed) await learnFromFailure(c, base, store, { workspaceId, actor: "matrix", at: "2026-06-29T00:00:00Z" });
+    if (!base.passed || base.failureLabels.length > 0) await learnFromFailure(c, base, store, { workspaceId, actor: "matrix", at: "2026-06-29T00:00:00Z" });
   }
   const out: AdvisedCase[] = [];
   for (const c of cases) out.push({ c, advice: await advise(c, { store, workspaceId }) });

@@ -108,7 +108,8 @@ export async function runValidation(mode: ValidationMode, opts: RunOptions = {})
   for (let i = 0; i < cases.length; i++) {
     const s = baseScores[i];
     for (const l of classifyFailure(cases[i], s).labels) failureLabelCounts[l] = (failureLabelCounts[l] ?? 0) + 1;
-    if (!s.passed) {
+    // Learn from outright failures AND identified sub-expert weaknesses (continuous improvement).
+    if (!s.passed || s.failureLabels.length > 0) {
       const r = await learnFromFailure(cases[i], s, store, { workspaceId, actor: "validation-runner", at });
       if (r) artifactsCreated++;
     }

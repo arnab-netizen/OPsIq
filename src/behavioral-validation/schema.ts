@@ -115,6 +115,27 @@ export const adviceOutputSchema = z.object({
   saferAlternative: z.string().optional(),
   professionalReview: z.string().optional(),
   ownerWorkloadReduction: z.string().optional(),
+  // Structured owner-workload offload (default, not boilerplate) — separates the owner's decision
+  // from staff execution and assigns the proof burden away from the owner.
+  ownerWorkloadPlan: z
+    .object({
+      ownerDecides: z.string(),
+      opsiqPrepares: z.array(z.string()),
+      opsiqMonitors: z.array(z.string()),
+      staffExecutes: z.array(z.string()),
+      staffProof: z.array(z.string()),
+      batch: z.array(z.string()),
+      defer: z.array(z.string()),
+      ignoreForNow: z.array(z.string()),
+      standingInstruction: z.string(),
+      escalationThreshold: z.string(),
+      nextOwnerTouchpoint: z.string(),
+      estimatedOwnerReductionPct: z.number(),
+    })
+    .optional(),
+  // Domain reasoning surfaced when the case signals a vendor/supplier or delivery/logistics decision.
+  vendorGuidance: z.string().optional(),
+  deliveryGuidance: z.string().optional(),
   // Calculation trace — shown whenever finance materially affects the decision (slice 4).
   calculationTrace: z.array(z.string()).optional(),
   // Risk / FMEA analysis — required for high-risk recommendations (slice 11).

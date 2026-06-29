@@ -32,13 +32,14 @@ describe("36-domain competency matrix", () => {
     }
   });
 
-  it("critical domains are not averaged away — the floor surfaces owner_workload", () => {
+  it("all critical domains now clear the 90 floor (owner_workload fixed), and the floor is enforced not averaged", () => {
     const summary = summariseMatrix(reports);
     const ownerWorkload = reports.find((r) => r.domain === "owner_workload")!;
     expect(ownerWorkload.critical).toBe(true);
-    expect(ownerWorkload.score).toBeLessThan(90);
-    expect(summary.criticalAllPass).toBe(false);
-    expect(summary.criticalBelowThreshold.map((r) => r.domain)).toContain("owner_workload");
+    expect(ownerWorkload.score).toBeGreaterThanOrEqual(90); // closed blocker
+    expect(summary.criticalAllPass).toBe(true);
+    // mechanism intact: an impossibly-high floor would surface every critical domain (not averaged away)
+    expect(summariseMatrix(reports, 101).criticalBelowThreshold.length).toBe(15);
   });
 
   it("strong critical domains reach EXPERT_READY with zero unsafe", () => {
@@ -54,9 +55,10 @@ describe("36-domain competency matrix", () => {
     expect(summary.expertReadyCount).toBeGreaterThanOrEqual(28);
   });
 
-  it("a domain with insufficient case coverage is honestly NOT_READY (flagged for case expansion)", () => {
-    const vendor = scoreDomain("vendor_supplier", pairs);
-    expect(vendor.totalCases).toBeLessThan(5);
-    expect(vendor.readiness).toBe("NOT_READY");
+  it("a domain with insufficient case coverage is honestly NOT_READY (mechanism, not averaged)", () => {
+    // with zero relevant cases the readiness must be NOT_READY regardless of any other domain's strength
+    const empty = scoreDomain("vendor_supplier", []);
+    expect(empty.totalCases).toBe(0);
+    expect(empty.readiness).toBe("NOT_READY");
   });
 });

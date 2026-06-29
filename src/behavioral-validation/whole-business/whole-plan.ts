@@ -33,6 +33,7 @@ export interface WholeBusinessPlan {
   ownerApprovalRequired: boolean;
   opsiqPreparedWork: string[];
   delegatedWork: string[];
+  ownerWorkloadOffload: string;
   proofRequired: string[];
   successMetrics: string[];
   reassessmentTriggers: string[];
@@ -87,7 +88,11 @@ export function buildWholeBusinessPlan(c: BehavioralCase, a: AdviceOutput): Whol
       "Prepare the margin/cash calculation and proof templates.",
       "Draft the checklist/SOP and the reassessment schedule.",
     ],
-    delegatedWork: a.processSopUpdate ? [a.processSopUpdate] : ["Assign a named supervisor to own each step with a daily proof report."],
+    delegatedWork: [
+      ...(a.ownerWorkloadPlan?.staffExecutes ?? []),
+      ...(a.processSopUpdate ? [a.processSopUpdate] : []),
+    ].length ? [...(a.ownerWorkloadPlan?.staffExecutes ?? []), ...(a.processSopUpdate ? [a.processSopUpdate] : [])] : ["Assign a named supervisor to own each step with a daily proof report."],
+    ownerWorkloadOffload: s(a.ownerWorkloadReduction, "Delegate routine checks to a named supervisor; owner reviews exceptions only."),
     proofRequired: a.proofRequired ?? [],
     successMetrics: [s(a.expectedOutcome, "Cash, margin and complaint/rework metrics move into the acceptable band.")],
     reassessmentTriggers: a.reassessmentTrigger ? [a.reassessmentTrigger] : [arb.reassessmentDate],

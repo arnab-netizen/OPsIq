@@ -118,8 +118,59 @@ function localConsiderations(c: BehavioralCase): string {
   return `${l.cityRegion} (${l.country}, ${l.currency}): customers — ${l.localCustomerBehavior}; labour — ${l.localLabourReality}; payment — ${l.localPaymentBehavior}; cost pressure — ${l.localCostPressure}; channels — ${l.localMarketingChannel}.`;
 }
 
-/** Base advice from inputs only. Bounded blind spots: ownerWorkloadReduction, emotional governance,
- *  marketing depth — these are intentionally weak until learning closes them. */
+type OwnerWorkloadPlan = NonNullable<AdviceOutput["ownerWorkloadPlan"]>;
+
+/** Always-on owner-workload offload: separates the owner's decision from staff execution, assigns the
+ *  proof burden to staff/process, and states what to batch/defer/ignore + exception-only escalation. */
+function ownerWorkloadPlan(c: BehavioralCase): OwnerWorkloadPlan {
+  const high = c.flags.cashRisk || c.flags.capacityRisk || c.flags.complianceRisk || c.flags.hostile || c.flags.ownerEmotional;
+  const decision =
+    c.flags.complianceRisk ? "whether to pause the grey-area action pending professional review"
+      : c.flags.cashRisk ? "the cash-protection call (approve the spend block / receivables push)"
+        : c.decisionCategory === "marketing_opportunity_contract" ? "accept / re-quote / decline the opportunity once the margin proof is in"
+          : "approve the single next action once the proof is in";
+  return {
+    ownerDecides: `Owner decides only ${decision} — one decision, not the execution.`,
+    opsiqPrepares: [
+      "the margin/cash calculation and the proof templates",
+      "the staff checklist / SOP draft and the approval-memory entry",
+      c.decisionCategory === "marketing_opportunity_contract" ? "a counter-offer / re-quote draft" : "a delegation brief for the named supervisor",
+    ],
+    opsiqMonitors: [
+      "the daily proof report and the success metric vs its band",
+      "the stop-condition and the reassessment date",
+    ],
+    staffExecutes: [
+      "a named supervisor runs the daily checklist and the routine checks",
+      c.flags.capacityRisk ? "the line lead rebalances shifts to relieve the bottleneck" : "the team executes the agreed steps",
+    ],
+    staffProof: [
+      "supervisor submits a dated daily proof report (counts, photos, reconciled figures)",
+      c.flags.hostile ? "an independent reconciliation (system/third-party), not self-reported" : "system/till reconciliation handled by staff so the owner does not have to re-verify",
+    ],
+    batch: ["routine approvals into one daily review window", "low-risk sign-offs under a standing rule"],
+    defer: [high ? "all discretionary spend/marketing/expansion until the constraint clears" : "nice-to-have optimisations"],
+    ignoreForNow: [c.flags.cashRisk ? "vanity revenue/top-line targets while cash is the constraint" : "non-binding metrics that do not move the dominant constraint"],
+    standingInstruction: "Pre-approve routine, in-band actions under a standing rule; the owner is asked only when a threshold breaks (approval memory suppresses repeat asks).",
+    escalationThreshold: "Escalate to the owner ONLY if cash, margin, complaint/rework or capacity move outside the acceptable band — otherwise no owner action.",
+    nextOwnerTouchpoint: `Next owner touchpoint in ${high ? 7 : 14} days (exception-only before then).`,
+    estimatedOwnerReductionPct: high ? 60 : 40,
+  };
+}
+
+function ownerWorkloadSummary(p: OwnerWorkloadPlan): string {
+  return `Offload from the owner (~${p.estimatedOwnerReductionPct}% less owner time): ${p.ownerDecides} OpsIQ prepares ${p.opsiqPrepares.length} items and monitors the proof; a named supervisor executes and provides proof (proof burden is on staff/process, not the owner). Batch routine approvals; defer ${p.defer.join("; ")}; ignore ${p.ignoreForNow.join("; ")} for now. Standing rule: ${p.standingInstruction} ${p.escalationThreshold} ${p.nextOwnerTouchpoint}`;
+}
+
+function vendorSignal(c: BehavioralCase): boolean {
+  return /vendor|supplier|procure|purchase order|invoice|sourcing|scheme|bulk/i.test(`${c.businessType} ${c.ownerGoal} ${c.messyFacts.join(" ")} ${c.hiddenRootCause}`);
+}
+function deliverySignal(c: BehavioralCase): boolean {
+  return /deliver|logistic|rider|courier|fleet|route|dispatch|last.?mile|rto|cod/i.test(`${c.businessType} ${c.ownerGoal} ${c.messyFacts.join(" ")} ${c.hiddenRootCause}`);
+}
+
+/** Base advice from inputs only. Owner-workload offload is now emitted by DEFAULT (a critical-domain
+ *  requirement); marketing depth remains a bounded blind spot closed by learning. */
 export function baseAdvise(c: BehavioralCase): AdviceOutput {
   const high = c.flags.cashRisk || c.flags.hostile || c.flags.complianceRisk || c.flags.capacityRisk || c.flags.ownerEmotional;
   const advice: AdviceOutput = {
@@ -171,7 +222,17 @@ export function baseAdvise(c: BehavioralCase): AdviceOutput {
     // Learning/memory note — what is recorded if this fails its checkpoint.
     learningMemoryNote:
       "If this action fails its outcome checkpoint, record a do-not-repeat rule and re-diagnose before retrying.",
-    // Bounded blind spots (closed by learning): no ownerWorkloadReduction; thin marketing guidance.
+    // Owner-workload offload — emitted by default (critical domain), relevant and structured.
+    ownerWorkloadReduction: ownerWorkloadSummary(ownerWorkloadPlan(c)),
+    ownerWorkloadPlan: ownerWorkloadPlan(c),
+    // Domain reasoning when the case signals a vendor/supplier or delivery/logistics decision.
+    vendorGuidance: vendorSignal(c)
+      ? "Do not switch supplier on price alone: check quality/rework and customer impact, SLA/reliability, and payment terms vs working capital. Reconcile stock/quality/invoices to prevent staff-vendor collusion and fake/inflated invoices; require proof. Dual-source to avoid single-vendor lock-in; reject bulk discounts when cash/dead-stock risk is high; negotiate terms instead of blindly accepting; escalate safety/compliance to professional review."
+      : undefined,
+    deliveryGuidance: deliverySignal(c)
+      ? "Measure delivery cost per SUCCESSFUL order (not per order); cut failed-delivery/RTO/COD losses; align rider incentives to verified proof-of-delivery, not attempts. Fix routing/batching and account for fuel/maintenance before adding riders; set delivery radius/slot constraints for peak/local conditions; protect customer experience; reassess on failed-delivery rate and cost-per-successful-order."
+      : undefined,
+    // Bounded blind spot closed by learning: thin marketing guidance.
     marketingOpportunityGuidance:
       c.decisionCategory === "marketing_opportunity_contract" ? "Review the opportunity before spending." : undefined,
     // Calculation trace whenever finance materially drives the decision and numbers permit it (slice 4).
@@ -187,7 +248,7 @@ function applyArtifact(advice: AdviceOutput, c: BehavioralCase, art: LearningArt
   const corrected = art.correctedBehavior;
   switch (art.failureLabel) {
     case "owner_workload_increased":
-      next.ownerWorkloadReduction = `Offload from the owner: delegate the routine checks to a named staff member with a daily proof report; the owner reviews exceptions only, not every order. ${corrected}`;
+      next.ownerWorkloadReduction = `${next.ownerWorkloadReduction ?? ""} Reinforced offload: ${corrected}`.trim();
       break;
     case "owner_emotional_decision_enabled":
       next.whatNotToDo = Array.from(new Set([...(next.whatNotToDo ?? []), "Do not act on the emotionally-preferred decision before the evidence supports it"]));

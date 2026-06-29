@@ -37,8 +37,10 @@ describe("owner-goal alignment", () => {
   it("a workload-reduction goal changes the recommendation (adds an explicit offload step)", async () => {
     const without = await advise(cashRevenue, ctx);
     const withGoal = await adviseForGoal(cashRevenue, "reduce_owner_workload", ctx);
-    expect(without.ownerWorkloadReduction).toBeUndefined();
+    // base advice already offloads (critical-domain default); the explicit goal sharpens it further
+    expect(without.ownerWorkloadReduction).toBeTruthy();
     expect(withGoal.ownerWorkloadReduction).toBeTruthy();
+    expect(withGoal.ownerWorkloadReduction).not.toBe(without.ownerWorkloadReduction);
     const al = assessGoalAlignment(cashRevenue, withGoal, "reduce_owner_workload");
     expect(al.ownerWorkloadRespected).toBe(true);
     expect(al.alignedWithPriority).toBe(true);

@@ -43,7 +43,7 @@ async function trainedStore(cases: BehavioralCase[], workspaceId: string): Promi
   const store = new InMemoryLearningStore();
   for (const c of cases) {
     const base = scoreAdvice(c, baseAdvise(c));
-    if (!base.passed) await learnFromFailure(c, base, store, { workspaceId, actor: "production", at: AT });
+    if (!base.passed || base.failureLabels.length > 0) await learnFromFailure(c, base, store, { workspaceId, actor: "production", at: AT });
   }
   return store;
 }

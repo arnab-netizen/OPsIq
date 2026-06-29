@@ -46,7 +46,9 @@ describe("harness advisor", () => {
     const c = SEED_CASES.find((x) => x.archetype === "laundry_dry_cleaning")!;
     const before = await advise(c, { store, workspaceId: "ws-1" });
     expect((before.learningNotesApplied ?? []).length).toBe(0);
-    expect(before.ownerWorkloadReduction).toBeUndefined();
+    // Owner-workload offload is emitted by default now (critical domain); a structured plan is present.
+    expect(before.ownerWorkloadReduction).toBeTruthy();
+    expect(before.ownerWorkloadPlan).toBeTruthy();
 
     await store.save({
       id: "seed-art::v1", sourceCaseId: "seed-art", businessType: c.businessType, archetype: c.archetype,
@@ -59,6 +61,8 @@ describe("harness advisor", () => {
     });
     const after = await advise(c, { store, workspaceId: "ws-1" });
     expect(after.ownerWorkloadReduction).toBeTruthy();
+    // learning enriches the offload and records provenance (output demonstrably changes).
+    expect(after.ownerWorkloadReduction).not.toBe(before.ownerWorkloadReduction);
     expect(after.learningNotesApplied).toContain("seed-art::v1");
   });
 });

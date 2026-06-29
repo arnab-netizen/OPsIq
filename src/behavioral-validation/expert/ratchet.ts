@@ -18,7 +18,7 @@ import { SEED_CASES } from "../seed-cases";
 import { validateBusinessMath } from "./business-math";
 import type { RubricDimension } from "../schema";
 
-export const CRITICAL_DOMAINS: RubricDimension[] = ["diagnosis", "finance_cash_margin", "decision_quality", "execution_guidance"];
+export const CRITICAL_DOMAINS: RubricDimension[] = ["diagnosis", "finance_cash_margin", "decision_quality", "execution_guidance", "owner_workload"];
 
 /** Absolute per-domain floors (fraction of max) that critical domains must never fall below. */
 export const CRITICAL_FLOORS: Partial<Record<RubricDimension, number>> = {
@@ -26,6 +26,7 @@ export const CRITICAL_FLOORS: Partial<Record<RubricDimension, number>> = {
   finance_cash_margin: 9,
   decision_quality: 5,
   execution_guidance: 5,
+  owner_workload: 5, // owner-workload offload is now emitted by default — guard against regression
 };
 
 export interface Benchmark {

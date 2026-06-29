@@ -78,7 +78,10 @@ export function deriveCorrection(
   score: ScoreResult,
   opts: { workspaceId: string; actor: string; at: string },
 ): CorrectionResult | null {
-  if (score.passed) return null; // only failures produce learning
+  // Learn from outright failures AND from identified sub-expert weaknesses (failure labels / unsafe),
+  // not only from cases that drop below the pass threshold — continuous improvement toward expert.
+  const hasWeakness = score.failureLabels.length > 0 || score.unsafe.length > 0;
+  if (score.passed && !hasWeakness) return null; // a clean pass has nothing to learn
   const { primary } = classifyFailure(c, score);
   if (!primary) return null;
 

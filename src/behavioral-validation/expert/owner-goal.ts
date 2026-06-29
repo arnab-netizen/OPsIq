@@ -107,8 +107,9 @@ export function assessGoalAlignment(c: BehavioralCase, a: AdviceOutput, goal: Ow
 export async function adviseForGoal(c: BehavioralCase, goal: OwnerGoal, ctx: AdviseContext): Promise<AdviceOutput> {
   const a = await advise(c, ctx);
   const next: AdviceOutput = { ...a };
-  if (goal === "reduce_owner_workload" && !has(next.ownerWorkloadReduction))
-    next.ownerWorkloadReduction = "Delegate the routine checks to a named staff member with a daily exception-only proof report; the owner reviews exceptions only.";
+  if (goal === "reduce_owner_workload")
+    // The base advice already carries an offload; the explicit workload goal sharpens it further.
+    next.ownerWorkloadReduction = `Owner-workload-reduction goal: maximise offload. ${next.ownerWorkloadReduction ?? "Delegate routine checks to a named supervisor with a daily exception-only proof report; the owner reviews exceptions only."}`;
   if ((goal === "expand_new_branch" || goal === "increase_revenue") && (c.flags.cashRisk || c.flags.capacityRisk) && !has(next.saferAlternative))
     next.saferAlternative = "Stage it: protect cash and prove unit economics first, then run a small capped pilot with proof gates before any full commitment.";
   return next;

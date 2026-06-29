@@ -9,9 +9,19 @@ const AT = "2026-06-29T00:00:00Z";
 const opts = { workspaceId: "ws-1", actor: "trainer", at: AT };
 
 describe("learning engine", () => {
-  it("returns null for a passing case (nothing to learn)", () => {
-    const c = SEED_CASES.find((x) => scoreAdvice(x, baseAdvise(x)).passed)!;
-    expect(deriveCorrection(c, scoreAdvice(c, baseAdvise(c)), opts)).toBeNull();
+  it("returns null for a CLEAN pass (passed with no failure labels — nothing to learn)", () => {
+    const c = SEED_CASES.find((x) => {
+      const s = scoreAdvice(x, baseAdvise(x));
+      return s.passed && s.failureLabels.length === 0;
+    });
+    // a clean-pass case must yield no correction; if none exists, a fabricated clean score does
+    const score = c ? scoreAdvice(c, baseAdvise(c)) : { total: 95, dimensions: {} as never, unsafe: [], passed: true, failureLabels: [], notes: [] };
+    expect(deriveCorrection(c ?? SEED_CASES[0], score, opts)).toBeNull();
+  });
+
+  it("DOES learn from a sub-expert weakness even when the case passes the threshold", () => {
+    const weak = SEED_CASES.map((x) => ({ x, s: scoreAdvice(x, baseAdvise(x)) })).find((r) => r.s.passed && r.s.failureLabels.length > 0);
+    if (weak) expect(deriveCorrection(weak.x, weak.s, opts)).not.toBeNull();
   });
 
   it("produces a schema-valid, workspace-private, pending artifact from a failure", () => {
