@@ -4456,3 +4456,37 @@ model OwnerArchetypeMetric {
   @@index([metricType])
   @@map("owner_archetype_metrics")
 }
+
+/// Persistent controlled-learning artifact for behavioral validation. A corrected-behavior rule
+/// distilled from a scored failure. Workspace-scoped by default (workspace_private); promotion to a
+/// shareable/global template requires approval. Future advice READS active, in-scope artifacts and
+/// records which it applied. Versioned + revertible; never silently rewritten.
+model BehavioralLearningArtifact {
+  id                     String   @id
+  sourceCaseId           String   @map("source_case_id")
+  businessType           String   @map("business_type")
+  archetype              String
+  locationKey            String   @map("location_key") // abstracted country|tier — never raw private data
+  failureLabel           String   @map("failure_label")
+  originalFailedBehavior String   @map("original_failed_behavior")
+  correctedBehavior      String   @map("corrected_behavior")
+  scopeArchetype         String?  @map("scope_archetype")
+  scopeDecisionCategory  String?  @map("scope_decision_category")
+  scopeLocationKey       String?  @map("scope_location_key")
+  riskLevel              String   @map("risk_level") // low | medium | high
+  approvalStatus         String   @map("approval_status") // pending | approved | rejected
+  scope                  String // local_only | archetype_level | global_template
+  privacyClassification  String   @map("privacy_classification") // workspace_private | abstracted_shareable
+  workspaceId            String?  @map("workspace_id") // set for workspace_private artifacts
+  version                Int      @default(1)
+  supersededByVersion    Int?     @map("superseded_by_version")
+  active                 Boolean  @default(true)
+  createdAt              String   @map("created_at") // ISO, stamped by caller
+  auditTrail             Json     @map("audit_trail")
+
+  @@index([workspaceId])
+  @@index([archetype])
+  @@index([approvalStatus])
+  @@index([sourceCaseId])
+  @@map("behavioral_learning_artifacts")
+}
