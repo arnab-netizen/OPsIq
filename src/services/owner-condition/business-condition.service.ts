@@ -325,7 +325,29 @@ export interface BusinessConditionResult {
   dataAgeDays: number | null;
   missingInputsWithPriority: MissingInput[];
   lastDiagnosedAt: string | null; // ISO date string of most recent domain diagnosis
-  nextReassessmentDue: string | null; // ISO date string (lastDiagnosedAt + 30 days)
+  nextReassessmentDue: string | null; // ISO date string (lastDiagnosedAt + adaptive cadence)
+  reassessmentCadenceDays: number | null; // adaptive review cadence (7 / 14 / 30) by condition
+  reassessmentReason: string | null; // why this cadence — visible to the owner
+}
+
+/**
+ * Adaptive review cadence (CLAUDE.md mandatory adaptive rule): the reassessment interval must
+ * track the business condition, not be a fixed 30 days. A high-survival-risk business (tight cash,
+ * complaints, capacity bottleneck) needs a weekly review; a stable one does not. Thresholds mirror
+ * the existing risk-badge semantics used across the owner UI (>=70 critical, >=40 elevated). Pure.
+ */
+export function computeReassessmentCadence(
+  survivalRiskScore: number,
+  executionRiskScore: number
+): { days: number; reason: string } {
+  const risk = Math.max(survivalRiskScore, executionRiskScore);
+  if (risk >= 70) {
+    return { days: 7, reason: "High survival/execution risk — weekly cash, complaint and capacity review until the condition stabilises." };
+  }
+  if (risk >= 40) {
+    return { days: 14, reason: "Elevated risk — fortnightly review while the condition recovers." };
+  }
+  return { days: 30, reason: "Stable condition — monthly review cadence." };
 }
 
 /**
@@ -350,7 +372,7 @@ export async function getBusinessCondition(
   if (!selectedBusinessId && businesses.length > 0) selectedBusinessId = businesses[0].id;
 
   if (!selectedBusinessId) {
-    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null, isStaleData: false, dataAgeDays: null, missingInputsWithPriority: [], lastDiagnosedAt: null, nextReassessmentDue: null };
+    return { businesses: businessList, selectedBusinessId: null, hasData: false, domainsWired: [], profile: null, isStaleData: false, dataAgeDays: null, missingInputsWithPriority: [], lastDiagnosedAt: null, nextReassessmentDue: null, reassessmentCadenceDays: null, reassessmentReason: null };
   }
 
   await getBusiness(selectedBusinessId, workspaceId); // ownership guard
@@ -486,20 +508,17 @@ export async function getBusinessCondition(
     ? computeMissingInputsWithPriority(latestFinanceSnapshot as Record<string, unknown>)
     : [];
 
-  // Reassessment schedule: derived from the most recent domain diagnosis (30 days cadence).
-  const REASSESSMENT_DAYS = 30;
+  // Most-recent domain diagnosis date (cadence is applied below, once the profile risk is known).
   let lastDiagnosedAt: string | null = null;
-  let nextReassessmentDue: string | null = null;
+  let lastDate: Date | null = null;
   if (domainScores.length > 0) {
     const latestScore = domainScores.reduce((latest, s) => {
       const t = s.generatedAt instanceof Date ? s.generatedAt : new Date(s.generatedAt as string);
       const l = latest instanceof Date ? latest : new Date(latest as string);
       return t > l ? s.generatedAt : latest;
     }, domainScores[0].generatedAt);
-    const lastDate = latestScore instanceof Date ? latestScore : new Date(latestScore as string);
+    lastDate = latestScore instanceof Date ? latestScore : new Date(latestScore as string);
     lastDiagnosedAt = lastDate.toISOString();
-    const nextDate = new Date(lastDate.getTime() + REASSESSMENT_DAYS * 86_400_000);
-    nextReassessmentDue = nextDate.toISOString();
   }
 
   if (domainScores.length === 0) {
@@ -514,6 +533,8 @@ export async function getBusinessCondition(
       missingInputsWithPriority,
       lastDiagnosedAt: null,
       nextReassessmentDue: null,
+      reassessmentCadenceDays: null,
+      reassessmentReason: null,
     };
   }
 
@@ -526,6 +547,12 @@ export async function getBusinessCondition(
     now,
   });
 
+  // Adaptive review cadence driven by the diagnosed condition (not a fixed 30 days).
+  const cadence = computeReassessmentCadence(profile.survivalRiskScore, profile.executionRiskScore);
+  const nextReassessmentDue = lastDate
+    ? new Date(lastDate.getTime() + cadence.days * 86_400_000).toISOString()
+    : null;
+
   return {
     businesses: businessList,
     selectedBusinessId,
@@ -537,5 +564,7 @@ export async function getBusinessCondition(
     missingInputsWithPriority,
     lastDiagnosedAt,
     nextReassessmentDue,
+    reassessmentCadenceDays: cadence.days,
+    reassessmentReason: cadence.reason,
   };
 }
