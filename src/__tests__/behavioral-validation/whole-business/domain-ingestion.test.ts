@@ -83,4 +83,10 @@ describe("production runtime — per-domain ingestion seam", () => {
     const r = await runProductionValidation("production-smoke");
     expect(r.productionRuntimeScore).toBeGreaterThan(0);
   }, 60000);
+
+  it("production validation mode records provider status — harness (no DB providers) is NOT real-backed", async () => {
+    const r = await runProductionValidation("production-smoke");
+    // honest: without wired DB providers the corpus is context-only, so the readiness gate is false
+    expect(r.criticalDomainsRealProviderBacked).toBe(false);
+  }, 60000);
 });

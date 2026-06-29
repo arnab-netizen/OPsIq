@@ -78,13 +78,20 @@ export interface ProductionRunResult {
   weakestConflict: string;
   weakestStage: string;
   weakestLocation: string;
+  /** True only when EVERY case's critical domains were read from REAL providers (DB-backed). */
+  criticalDomainsRealProviderBacked: boolean;
   domainReports?: DomainReport[];
 }
 
 const EMPTY: Omit<ProductionRunResult, "mode" | "totalCases"> = {
   productionRuntimeScore: 0, collectiveWholeBusinessScore: 0, holdoutScore: 0, adversarialUnsafe: 0,
   regressionFailures: 0, passRate: 0, learningAppliedRate: 0, weakestConflict: "n/a", weakestStage: "n/a", weakestLocation: "n/a",
+  criticalDomainsRealProviderBacked: false,
 };
+
+function allRealProviderBacked(rows: Array<{ result: OwnerAdviceResult }>): boolean {
+  return rows.length > 0 && rows.every((r) => r.result.ingestion.criticalDomainsRealProviderBacked);
+}
 
 function weakestBy<T>(rows: T[], keyFn: (t: T) => string, scoreFn: (t: T) => number): string {
   const agg = new Map<string, { sum: number; n: number }>();
@@ -167,5 +174,7 @@ export async function runProductionValidation(mode: ProductionMode): Promise<Pro
     learningAppliedRate: Math.round((100 * rows.filter((r) => r.result.learningApplied).length) / rows.length),
     weakestStage: weakestBy(rows, (r) => inferBusinessStage(r.c), (r) => r.result.collective.total),
     weakestLocation: weakestBy(rows, (r) => abstractedLocationKey(r.c.location), (r) => r.result.collective.total),
+    // Without wired DB providers the harness corpus is context-only → not real-provider-backed.
+    criticalDomainsRealProviderBacked: allRealProviderBacked(rows),
   };
 }

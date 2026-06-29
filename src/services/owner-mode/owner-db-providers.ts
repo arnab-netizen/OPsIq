@@ -11,7 +11,6 @@
  * `[db]`-gated execution is deferred to CI.
  */
 import type { PrismaClient } from "@/generated/prisma/client";
-import type { OwnerBusinessContext } from "./owner-advice-runtime.service";
 import {
   type Confidence,
   type DomainProvider,
@@ -158,7 +157,7 @@ export async function buildOwnerDomainProviders(deps: OwnerDbProviderDeps): Prom
 
 /** A deliberately fixture-only provider set (NOT real) — used by tests to prove it cannot pass readiness. */
 export function fixtureOnlyProviders(): OwnerDomainProviders {
-  const fake: DomainProvider = (_ctx: OwnerBusinessContext) => ({ sourceType: "CONTEXT_PROVIDED", confidence: "low", summary: "fixture-only (not real DB)", realData: false });
+  const fake: DomainProvider = () => ({ sourceType: "CONTEXT_PROVIDED", confidence: "low", summary: "fixture-only (not real DB)", realData: false });
   return { finance_cash: fake, working_capital: fake } satisfies OwnerDomainProviders;
 }
 
