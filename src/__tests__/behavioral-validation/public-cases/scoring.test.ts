@@ -28,6 +28,16 @@ describe("public corpus — production-runtime scoring", () => {
     expect(r.weakCategories).toEqual([]);
     expect(r.weakSeverities).toEqual([]);
   }, 180_000);
+
+  // Final expert-adjudication gate: the two previously sub-90 non-critical domains must hold ≥90 and NO
+  // domain may be weak. This locks in the owner-overload cross-domain-tradeoff fix against regression.
+  it("every domain scores ≥90 — incl. the expert-adjudicated approval-memory + staff-workload domains", async () => {
+    const r = await scorePublicCorpus({ stride: 4 });
+    expect(r.byDomain["Approval memory/standing instructions"]).toBeGreaterThanOrEqual(90);
+    expect(r.byDomain["Staff workload/fairness"]).toBeGreaterThanOrEqual(90);
+    expect(r.weakDomains).toEqual([]);
+    expect(r.weakCriticalDomains).toEqual([]);
+  }, 180_000);
 });
 
 describe("public corpus — split integrity", () => {
