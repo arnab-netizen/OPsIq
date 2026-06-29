@@ -1,0 +1,24 @@
+{
+  "overallScore": 83.6,
+  "domainScores": {
+    "diagnosis": 11.05,
+    "finance_cash_margin": 13.35,
+    "operational_realism": 9.48,
+    "decision_quality": 6.59,
+    "execution_guidance": 7.57,
+    "marketing_opportunity": 9.29,
+    "risk_compliance_location": 8,
+    "data_sufficiency": 7.04,
+    "owner_workload": 6,
+    "learning_reassessment": 5.2
+  },
+  "unsafeOutputs": 0,
+  "holdoutScore": 80.6,
+  "adversarialScore": 82.5,
+  "regressionFailures": 0,
+  "genericAnswerFailsGreen": true,
+  "businessMathGreen": true,
+  "weakestDomain": "learning_reassessment",
+  "weakestLocation": "UAE|gulf",
+  "weakestBusinessType": "education_training"
+}

@@ -171,6 +171,16 @@ async function main() {
   });
   console.log(`[seed-e2e] non-owner member ${MEMBER_EMAIL} ready (membership only, no owner role)`);
 
+  // Cross-domain persisted records (cashflow/finance/working-capital/capacity/compliance/proof/
+  // workload/standing-instruction/learning) for the SAME workspace+business, so the NEW production
+  // owner-advice runtime (/api/owner/whole-business-plan) reads REAL provider-backed state and applies
+  // the workspace-private learning artifact with provenance. Seeded LAST so the newer finance snapshot
+  // it inserts cannot perturb the budget plan computed above (the budget reads the latest finance
+  // snapshot at compute time; its persisted EMERGENCY snapshot is what /owner/budget displays).
+  const { seedOwnerDbCase } = await import("./seed-owner-db-case");
+  await seedOwnerDbCase(prisma, { workspaceId: WORKSPACE_ID, businessId: archetype.businessId, userId: USER_ID, now: new Date() });
+  console.log(`[seed-e2e] owner-db-case rows seeded for whole-business runtime on business ${archetype.businessId}`);
+
   await pool.end();
 }
 
