@@ -115,6 +115,8 @@ export const adviceOutputSchema = z.object({
   saferAlternative: z.string().optional(),
   professionalReview: z.string().optional(),
   ownerWorkloadReduction: z.string().optional(),
+  // Calculation trace — shown whenever finance materially affects the decision (slice 4).
+  calculationTrace: z.array(z.string()).optional(),
   // Provenance: which stored learning artifacts shaped this output (proves learning is read).
   learningNotesApplied: z.array(z.string()).optional(), // artifact IDs
   blockedActions: z.array(z.string()).optional(), // actions OpsIQ actively blocked

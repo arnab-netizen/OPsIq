@@ -15,8 +15,18 @@
  * store ⇒ demonstrably different advice.
  */
 import { abstractedLocationKey } from "./locations";
+import { deriveCalcs } from "./expert/business-math";
 import type { AdviceOutput, BehavioralCase, LearningArtifact } from "./schema";
 import type { LearningStore } from "./learning-store";
+
+function financeMaterial(c: BehavioralCase): boolean {
+  return (
+    c.decisionCategory === "cash_margin_working_capital" ||
+    c.decisionCategory === "marketing_opportunity_contract" ||
+    c.flags.cashRisk ||
+    c.flags.capacityRisk
+  );
+}
 
 function num(c: BehavioralCase, k: string): number | undefined {
   const v = c.numbers[k];
@@ -150,6 +160,8 @@ export function baseAdvise(c: BehavioralCase): AdviceOutput {
     // Bounded blind spots (closed by learning): no ownerWorkloadReduction; thin marketing guidance.
     marketingOpportunityGuidance:
       c.decisionCategory === "marketing_opportunity_contract" ? "Review the opportunity before spending." : undefined,
+    // Calculation trace whenever finance materially drives the decision (slice 4).
+    calculationTrace: financeMaterial(c) ? deriveCalcs(c).trace : undefined,
     learningNotesApplied: [],
   };
   return advice;
