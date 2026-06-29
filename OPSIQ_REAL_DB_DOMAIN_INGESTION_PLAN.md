@@ -61,10 +61,10 @@ proof here → `DB_PROVIDER_READY_DB_PROOF_PENDING`.
 ## Slices
 | # | Slice | Status |
 |---|---|---|
-| 1 | Real DB providers + async seam (prefetch) | pending |
-| 2 | Ingestion + classification require real provider data | pending |
-| 3 | DB seed + [db] read-back/runtime/isolation tests | pending |
-| 4 | Final validation + report | pending |
+| 1 | Real DB providers + async seam (prefetch) | done |
+| 2 | Ingestion + classification require real provider data | done |
+| 3 | DB seed + [db] read-back/runtime/isolation tests | done |
+| 4 | Final validation + report | done |
 
 ## Prohibitions
 No fake DB ingestion. No marking a provider real unless it reads persisted data. No scorer weakening.
