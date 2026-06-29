@@ -53,10 +53,10 @@ or WHOLE_BUSINESS_EXPERT_CORE_READY). Will report the measured rung honestly.
 ## Slices
 | # | Slice | Status |
 |---|---|---|
-| 1 | owner-workload critical fix | pending |
-| 2 | vendor + delivery coverage | pending |
-| 3 | production DB/domain ingestion | pending |
-| 4 | final validation + report | pending |
+| 1 | owner-workload critical fix | done |
+| 2 | vendor + delivery coverage | done |
+| 3 | production DB/domain ingestion | done |
+| 4 | final validation + report | done |
 
 ## Prohibitions
 No scorer weakening. No score inflation. No averaging away a failing critical domain. No fake DB
