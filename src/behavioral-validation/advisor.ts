@@ -65,6 +65,10 @@ function whatNotToDoBase(c: BehavioralCase): string[] {
   if (c.flags.capacityRisk) out.push("Do not take on more volume than reliable capacity and quality can support");
   if (c.decisionCategory === "marketing_opportunity_contract")
     out.push("Do not accept the opportunity/contract before the cost, margin, capacity and payment-term checks pass");
+  if (c.decisionCategory === "staff_process_equipment")
+    out.push("Do not hire staff or buy equipment before the bottleneck is measured and the need is proven");
+  if (c.decisionCategory === "multi_branch_portfolio")
+    out.push("Do not expand or open a new branch before per-branch unit economics are proven");
   if (c.flags.hostile) out.push("Do not act on self-reported or unverifiable numbers");
   if (c.flags.missingOrStaleData) out.push("Do not make an irreversible decision on stale, missing or conflicting data");
   if (c.flags.complianceRisk) out.push("Do not rely on a definitive legal/tax answer without professional review");
