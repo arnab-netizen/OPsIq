@@ -211,6 +211,7 @@ function OwnerActions({ businessId }: { businessId: string | null }) {
 export default function OwnerCommandCenterPage() {
   const [data, setData] = useState<any | null>(null);
   const [control, setControl] = useState<any | null>(null);
+  const [wbp, setWbp] = useState<any | null>(null);
   const [businesses, setBusinesses] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -230,6 +231,13 @@ export default function OwnerCommandCenterPage() {
         setControl(await api(`/api/owner/control-center${qs}`));
       } catch {
         setControl(null);
+      }
+      // NEW production owner-advice runtime → whole-business plan (provider-backed). Non-fatal.
+      try {
+        const bizId = res.selectedBusinessId ?? businessId ?? null;
+        setWbp(bizId ? await api(`/api/owner/whole-business-plan?businessId=${bizId}`) : null);
+      } catch {
+        setWbp(null);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -341,6 +349,97 @@ export default function OwnerCommandCenterPage() {
             <h2 className="text-xl font-semibold text-foreground mb-2">
               {businessList.find((b) => b.id === selected)?.name ?? ""}
             </h2>
+          )}
+
+          {wbp?.found && (
+            <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white mb-6" data-testid="owner-whole-business-plan">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="text-xs uppercase text-muted-foreground">Whole-business plan (live runtime)</div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={wbp.data.criticalDomainsRealProviderBacked ? "success" : "warning"} data-testid="wbp-provider-status">
+                    {wbp.data.criticalDomainsRealProviderBacked ? "Provider-backed data" : "Partial data"}
+                  </Badge>
+                  <Badge variant="muted" data-testid="wbp-confidence">Confidence: {wbp.data.overallConfidence}</Badge>
+                  <Badge variant="muted">Plan score {Math.round(wbp.collectiveScore)}/100</Badge>
+                  <Badge variant="muted">Stage: {String(wbp.stage).replace(/_/g, " ")}</Badge>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-foreground/20 bg-foreground/5 p-3 mb-3" data-testid="wbp-top-priority">
+                <div className="text-xs uppercase text-muted-foreground">Top priority</div>
+                <div className="text-lg font-semibold">{wbp.topPriority.label}</div>
+                <div className="text-xs text-muted-foreground">
+                  Dominant constraint: <span data-testid="wbp-dominant-constraint">{wbp.dominantConstraint}</span>
+                </div>
+              </div>
+
+              <div className="text-sm mb-3" data-testid="wbp-next-action">
+                <span className="font-medium">Next best action:</span> {wbp.nextBestAction}
+              </div>
+
+              {wbp.doNotDo.length > 0 && (
+                <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm mb-3" data-testid="wbp-do-not-do">
+                  <strong>What NOT to do / stop:</strong>
+                  <ul className="list-disc ml-5">{wbp.doNotDo.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                </div>
+              )}
+
+              <div className="rounded-md border p-3 text-sm mb-3" data-testid="wbp-owner-workload">
+                <strong>Owner workload / offload:</strong> {wbp.ownerWorkload.offload}
+                {wbp.ownerWorkload.approvalRequired && <Badge variant="warning" className="ml-2">Owner approval required</Badge>}
+                {wbp.ownerWorkload.delegatedWork.length > 0 && (
+                  <ul className="list-disc ml-5 mt-1">{wbp.ownerWorkload.delegatedWork.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                )}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 mb-3">
+                <div className="rounded-md border p-3 text-sm" data-testid="wbp-proof">
+                  <strong>Proof required:</strong>
+                  {wbp.proofRequired.length > 0
+                    ? <ul className="list-disc ml-5">{wbp.proofRequired.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                    : <span className="text-muted-foreground"> none outstanding</span>}
+                </div>
+                <div className="rounded-md border p-3 text-sm" data-testid="wbp-reassessment">
+                  <strong>Reassessment trigger:</strong>
+                  <ul className="list-disc ml-5">{wbp.reassessmentTriggers.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 mb-3">
+                <div className="rounded-md border p-3 text-sm" data-testid="wbp-growth-gate">
+                  <strong>Growth / scale gate:</strong> {wbp.growth.scaleAllowed ? "scale allowed (capped pilot)" : "scale gated"}
+                  {wbp.growth.blockedBy.length > 0 && <span className="text-muted-foreground"> — blocked by: {wbp.growth.blockedBy.join(", ")}</span>}
+                </div>
+                <div className="rounded-md border p-3 text-sm" data-testid="wbp-arbitration">
+                  <strong>Cross-domain arbitration:</strong> {wbp.arbitration.dominantConstraint} wins; {wbp.arbitration.rejectedCount} conflicting move(s) rejected.
+                  {wbp.arbitration.ownerApprovalNeeded && " Owner approval needed."}
+                </div>
+              </div>
+
+              <div className="rounded-md border p-3 text-sm mb-3" data-testid="wbp-domains">
+                <strong>Critical / red domains:</strong>{" "}
+                {wbp.redDomains.length > 0
+                  ? <span className="text-destructive">{wbp.redDomains.join(", ")}</span>
+                  : <span className="text-success">none red</span>}
+                <span className="text-muted-foreground"> · {wbp.domainHealth.length} domains assessed</span>
+              </div>
+
+              <div className="rounded-md border p-3 text-sm mb-3" data-testid="wbp-learning">
+                <strong>Stored learning applied:</strong> {wbp.learning.applied ? "yes" : "no"}
+                {wbp.learning.applied && <span className="text-muted-foreground"> ({wbp.learning.artifactIds.length} artifact{wbp.learning.artifactIds.length === 1 ? "" : "s"})</span>}
+                {wbp.learning.notes.length > 0 && (
+                  <ul className="list-disc ml-5 mt-1">{wbp.learning.notes.slice(0, 3).map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                )}
+              </div>
+
+              <details data-testid="wbp-plan-detail">
+                <summary className="text-xs uppercase text-muted-foreground cursor-pointer">Whole-business plan summary</summary>
+                <p className="text-sm mt-1">{wbp.plan.businessHealthSummary}</p>
+                <p className="text-xs text-muted-foreground mt-1"><strong>7-day:</strong> {wbp.plan.plan7Day}</p>
+                <p className="text-xs text-muted-foreground"><strong>30-day:</strong> {wbp.plan.plan30Day}</p>
+                <p className="text-xs text-muted-foreground"><strong>90-day:</strong> {wbp.plan.plan90Day}</p>
+              </details>
+            </section>
           )}
 
           {profileLoading ? (

@@ -17,10 +17,9 @@ export const runtime = "nodejs";
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const url = new URL(ctx.request!.url);
-    const businessId = url.searchParams.get("businessId");
-    if (!businessId) {
-      return canonicalJson({ error: { message: "businessId is required" } }, { status: 400 });
-    }
+    // Mirrors the sibling owner routes: an absent businessId yields the service's safe not-found
+    // view (found:false) rather than a hand-rendered error — the page only renders when found.
+    const businessId = url.searchParams.get("businessId") ?? "";
     const view = await getOwnerWholeBusinessPlan({
       db: db as unknown as PrismaClient,
       workspaceId: ctx.verifiedWorkspaceId,

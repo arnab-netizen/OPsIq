@@ -106,6 +106,15 @@ async function main() {
   });
   console.log(`[seed-e2e] guaranteed bottleneck equipment recorded`);
 
+  // Cross-domain persisted records (cashflow/finance/working-capital/capacity/compliance/proof/
+  // workload/standing-instruction/learning) for the SAME workspace+business, so the NEW production
+  // owner-advice runtime (/api/owner/whole-business-plan) reads REAL provider-backed state and applies
+  // the workspace-private learning artifact with provenance. This is what the whole-business browser
+  // proof asserts — without it the new runtime would render with DATA_SOURCE_MISSING/low confidence.
+  const { seedOwnerDbCase } = await import("./seed-owner-db-case");
+  await seedOwnerDbCase(prisma, { workspaceId: WORKSPACE_ID, businessId: archetype.businessId, userId: USER_ID, now: new Date() });
+  console.log(`[seed-e2e] owner-db-case rows seeded for whole-business runtime on business ${archetype.businessId}`);
+
   // Run a finance diagnosis on the archetype business so a domain score exists → command center
   // hasData=true → the control center panel (the asserted surface) actually renders.
   const { createFinancialSnapshot } = await import("../src/services/owner-finance/snapshot.service");
