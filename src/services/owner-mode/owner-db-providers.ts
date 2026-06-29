@@ -42,14 +42,26 @@ function state(partial: Omit<DomainState, "realData"> & { realData: boolean }): 
   return partial;
 }
 
-/**
- * Prefetch all DB-backed domain rows (one async pass) and return the synchronous provider map.
- * Workspace/business scoped throughout — a provider never reads another workspace's rows.
- */
-export async function buildOwnerDomainProviders(deps: OwnerDbProviderDeps): Promise<OwnerDomainProviders> {
-  const { db, workspaceId, businessId, now } = deps;
-  const windowDays = deps.freshnessDays ?? 35;
+/** The prefetched, workspace/business-scoped DB rows the providers + context derivation read. */
+export interface OwnerDomainRows {
+  cashflow: Awaited<ReturnType<PrismaClient["ownerCashflowSnapshot"]["findFirst"]>>;
+  finance: Awaited<ReturnType<PrismaClient["ownerFinancialSnapshot"]["findFirst"]>>;
+  wcItems: Awaited<ReturnType<PrismaClient["ownerWorkingCapitalItem"]["findMany"]>>;
+  capacity: Awaited<ReturnType<PrismaClient["ownerCapacitySnapshot"]["findFirst"]>>;
+  compliance: Awaited<ReturnType<PrismaClient["ownerComplianceItem"]["findMany"]>>;
+  proofs: Awaited<ReturnType<PrismaClient["proof"]["findMany"]>>;
+  workload: Awaited<ReturnType<PrismaClient["ownerWorkloadSnapshot"]["findFirst"]>>;
+  standingCount: number;
+  business: Awaited<ReturnType<PrismaClient["ownerBusiness"]["findFirst"]>>;
+  learningCount: number;
+}
 
+/**
+ * Prefetch all DB-backed domain rows in ONE async pass, workspace/business scoped throughout — a
+ * provider/context-derivation step never reads another workspace's rows.
+ */
+export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promise<OwnerDomainRows> {
+  const { db, workspaceId, businessId } = deps;
   const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount] = await Promise.all([
     db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
     db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
@@ -62,6 +74,22 @@ export async function buildOwnerDomainProviders(deps: OwnerDbProviderDeps): Prom
     db.ownerBusiness.findFirst({ where: { id: businessId, workspaceId } }),
     db.behavioralLearningArtifact.count({ where: { workspaceId, active: true } }),
   ]);
+  return { cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount };
+}
+
+/**
+ * Prefetch all DB-backed domain rows (one async pass) and return the synchronous provider map.
+ * Workspace/business scoped throughout — a provider never reads another workspace's rows.
+ */
+export async function buildOwnerDomainProviders(deps: OwnerDbProviderDeps): Promise<OwnerDomainProviders> {
+  return buildProvidersFromRows(await prefetchOwnerDomainRows(deps), deps);
+}
+
+/** Pure: build the synchronous provider closures from already-prefetched rows. */
+export function buildProvidersFromRows(rows: OwnerDomainRows, deps: OwnerDbProviderDeps): OwnerDomainProviders {
+  const { now } = deps;
+  const windowDays = deps.freshnessDays ?? 35;
+  const { cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount } = rows;
 
   const providers: OwnerDomainProviders = {};
 
@@ -149,8 +177,24 @@ export async function buildOwnerDomainProviders(deps: OwnerDbProviderDeps): Prom
       state({ sourceType: "REAL_DB_SERVICE", confidence: "high", freshness: "fresh", realData: true, summary: `${learningCount} active learning artifact(s) for this workspace` });
   }
 
-  // opportunity_contract is intentionally NOT provided here — the live opportunity terms arrive as
-  // request input and are read as CONTEXT_PROVIDED (justified) by the ingestion layer.
+  // ── opportunity_contract (REAL_DB_SERVICE — steady-state growth/opportunity posture) ──
+  // When live opportunity terms arrive as request input the caller can still override via context;
+  // for a steady business the opportunity-evaluation readiness IS derivable from real capacity +
+  // margin (can we profitably take on more?). Provided only when that real data exists.
+  if (capacity || finance) {
+    providers.opportunity_contract = (): DomainState => {
+      const grossMargin = finance && finance.revenue != null && finance.revenue > 0
+        ? (finance.revenue - (finance.costOfGoods ?? 0)) / finance.revenue : null;
+      const scaleGated = (capacity ? capacity.bottleneckUtilization >= 1 || !capacity.growthSafe : false)
+        || (grossMargin !== null && grossMargin < 0.15);
+      const riskFlags = scaleGated ? ["growth_gated"] : [];
+      return state({
+        sourceType: "REAL_DB_SERVICE", confidence: "medium", freshness: "fresh", realData: true,
+        summary: `no live contract under evaluation; growth posture: scale ${scaleGated ? "GATED (resolve constraint first)" : "available via capped pilot"}${grossMargin !== null ? `, gross margin ≈ ${Math.round(grossMargin * 100)}%` : ""}`,
+        riskFlags,
+      });
+    };
+  }
   void ((): IngestionDomain => "opportunity_contract")();
   return providers;
 }

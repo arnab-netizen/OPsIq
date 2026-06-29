@@ -1,0 +1,143 @@
+/**
+ * Production whole-business plan service — surfaces the NEW owner-advice runtime for the command center.
+ *
+ * Composes the real DB providers + persisted-state context derivation + the workspace-private learning
+ * store, runs the validated owner-advice runtime, and returns ONE serializable view the command-center
+ * page renders. Workspace/business scoped end-to-end; nothing is fabricated — missing/stale provider
+ * data lowers confidence (never invents certainty), and cross-workspace data never leaks (the providers'
+ * queries and the learning store's privacy gate both enforce scope).
+ *
+ * This is the integration seam the FINAL UI-RUNTIME-WIRING gate requires: the browser command center
+ * reflects provider-backed runtime output, not harness code.
+ */
+import type { PrismaClient } from "@/generated/prisma/client";
+import { prefetchOwnerDomainRows, buildProvidersFromRows } from "./owner-db-providers";
+import { deriveOwnerContext } from "./owner-context-derivation";
+import { runOwnerAdvice } from "./owner-advice-runtime.service";
+import { PrismaLearningStore } from "@/behavioral-validation/learning-store";
+import type { Constraint } from "@/behavioral-validation/whole-business/arbitration";
+
+export interface OwnerWholeBusinessPlanDeps {
+  db: PrismaClient;
+  workspaceId: string;
+  businessId: string;
+  now: Date;
+  freshnessDays?: number;
+}
+
+/** Human label for the dominant constraint (display only — never drives advice). */
+const CONSTRAINT_LABEL: Record<Constraint, string> = {
+  compliance_block: "Compliance / legal block",
+  proof_fraud_block: "Proof / fraud block",
+  cash_survival: "Cash survival",
+  below_margin: "Below-margin work",
+  capacity_feasibility: "Capacity / feasibility",
+  customer_quality: "Customer quality",
+  owner_workload: "Owner workload",
+  profitable_growth: "Profitable growth",
+  efficiency_scaling: "Efficiency / scaling",
+  optimization: "Optimisation",
+};
+
+export interface OwnerWholeBusinessPlanView {
+  workspaceId: string;
+  businessId: string;
+  /** Present ⇔ an owner business row exists for this workspace+business. */
+  found: boolean;
+  generatedFromRuntime: true;
+  topPriority: { constraint: Constraint; label: string };
+  dominantConstraint: Constraint;
+  nextBestAction: string;
+  doNotDo: string[];
+  redDomains: string[];
+  domainHealth: Array<{ domain: string; status: string }>;
+  ownerWorkload: { offload: string; delegatedWork: string[]; approvalRequired: boolean };
+  proofRequired: string[];
+  reassessmentTriggers: string[];
+  arbitration: { dominantConstraint: Constraint; ownerApprovalNeeded: boolean; requiredProofToReconsider: string; rejectedCount: number };
+  growth: { scaleAllowed: boolean; blockedBy: string[] };
+  stage: string;
+  plan: { businessHealthSummary: string; plan7Day: string; plan30Day: string; plan90Day: string };
+  learning: { applied: boolean; artifactIds: string[]; notes: string[] };
+  data: {
+    criticalDomainsRealProviderBacked: boolean;
+    criticalDomainsAllReal: boolean;
+    overallConfidence: string;
+    dataSourceMissing: string[];
+    realProviderDomains: string[];
+  };
+  collectiveScore: number;
+  unsafeCount: number;
+}
+
+/** A safe "business not found" view (no fabricated runtime output). */
+function notFound(workspaceId: string, businessId: string): OwnerWholeBusinessPlanView {
+  return {
+    workspaceId, businessId, found: false, generatedFromRuntime: true,
+    topPriority: { constraint: "profitable_growth", label: CONSTRAINT_LABEL.profitable_growth },
+    dominantConstraint: "profitable_growth", nextBestAction: "No business data found for this workspace.",
+    doNotDo: [], redDomains: [], domainHealth: [],
+    ownerWorkload: { offload: "—", delegatedWork: [], approvalRequired: false },
+    proofRequired: [], reassessmentTriggers: [],
+    arbitration: { dominantConstraint: "profitable_growth", ownerApprovalNeeded: false, requiredProofToReconsider: "—", rejectedCount: 0 },
+    growth: { scaleAllowed: false, blockedBy: [] }, stage: "unknown",
+    plan: { businessHealthSummary: "No persisted business data.", plan7Day: "", plan30Day: "", plan90Day: "" },
+    learning: { applied: false, artifactIds: [], notes: [] },
+    data: { criticalDomainsRealProviderBacked: false, criticalDomainsAllReal: false, overallConfidence: "none", dataSourceMissing: [], realProviderDomains: [] },
+    collectiveScore: 0, unsafeCount: 0,
+  };
+}
+
+/**
+ * Build the whole-business plan view for ONE workspace+business from real persisted state.
+ * Reads (never writes) the DB and the learning store.
+ */
+export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps): Promise<OwnerWholeBusinessPlanView> {
+  const { db, workspaceId, businessId, now } = deps;
+  const rows = await prefetchOwnerDomainRows({ db, workspaceId, businessId, now, freshnessDays: deps.freshnessDays });
+  if (!rows.business) return notFound(workspaceId, businessId);
+
+  const providers = buildProvidersFromRows(rows, { db, workspaceId, businessId, now, freshnessDays: deps.freshnessDays });
+  const context = deriveOwnerContext(rows, { now, freshnessDays: deps.freshnessDays });
+  const store = new PrismaLearningStore(db as unknown as ConstructorParameters<typeof PrismaLearningStore>[0]);
+
+  const result = await runOwnerAdvice({ workspaceId, context }, { store, providers });
+  const { plan, arbitration, ingestion } = result;
+  const dominant = plan.arbitration.dominantConstraint;
+
+  const realProviderDomains = (Object.keys(ingestion.byDomain) as Array<keyof typeof ingestion.byDomain>)
+    .filter((d) => ingestion.byDomain[d].realData === true)
+    .map((d) => String(d));
+
+  return {
+    workspaceId, businessId, found: true, generatedFromRuntime: true,
+    topPriority: { constraint: dominant, label: CONSTRAINT_LABEL[dominant] },
+    dominantConstraint: dominant,
+    nextBestAction: plan.nextBestAction,
+    doNotDo: plan.stopDoNotDoList,
+    redDomains: plan.domainHealthTable.filter((d) => d.status === "red").map((d) => d.domain),
+    domainHealth: plan.domainHealthTable.map((d) => ({ domain: d.domain, status: d.status })),
+    ownerWorkload: { offload: plan.ownerWorkloadOffload, delegatedWork: plan.delegatedWork, approvalRequired: plan.ownerApprovalRequired },
+    proofRequired: plan.proofRequired,
+    reassessmentTriggers: plan.reassessmentTriggers,
+    arbitration: {
+      dominantConstraint: dominant,
+      ownerApprovalNeeded: arbitration.ownerApprovalNeeded,
+      requiredProofToReconsider: arbitration.requiredProofToReconsider,
+      rejectedCount: arbitration.rejectedAlternatives.length,
+    },
+    growth: { scaleAllowed: plan.growth.scaleAllowed, blockedBy: plan.growth.blockedBy },
+    stage: plan.stage,
+    plan: { businessHealthSummary: plan.businessHealthSummary, plan7Day: plan.plan7Day, plan30Day: plan.plan30Day, plan90Day: plan.plan90Day },
+    learning: { applied: result.learningApplied, artifactIds: result.learningArtifactIds, notes: plan.learningUsed },
+    data: {
+      criticalDomainsRealProviderBacked: ingestion.criticalDomainsRealProviderBacked,
+      criticalDomainsAllReal: ingestion.criticalDomainsAllReal,
+      overallConfidence: ingestion.overallConfidence,
+      dataSourceMissing: ingestion.dataSourceMissing.map((d) => String(d)),
+      realProviderDomains,
+    },
+    collectiveScore: result.collective.total,
+    unsafeCount: result.unsafeCount,
+  };
+}
