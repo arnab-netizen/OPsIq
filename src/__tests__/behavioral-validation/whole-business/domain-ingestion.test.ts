@@ -11,19 +11,19 @@ import { SEED_CASES } from "@/behavioral-validation/seed-cases";
 const cash = SEED_CASES.find((c) => c.id === "A1")!;
 const AT = "2026-06-29T00:00:00Z";
 
-const dbFinance: OwnerDomainProviders = { finance_cash: () => ({ sourceType: "db", confidence: "high", summary: "finance from DB" }) };
+const dbFinance: OwnerDomainProviders = { finance_cash: () => ({ sourceType: "REAL_DB", confidence: "high", summary: "finance from DB", realData: true }) };
 
 describe("production runtime — per-domain ingestion seam", () => {
   it("reads DB/service-backed finance state when a provider is wired", async () => {
     const store = new InMemoryLearningStore();
     const r = await runOwnerAdvice({ workspaceId: "ws-1", context: caseToContext(cash) }, { store, providers: dbFinance });
-    expect(r.ingestion.byDomain.finance_cash.sourceType).toBe("db");
+    expect(r.ingestion.byDomain.finance_cash.sourceType).toBe("REAL_DB");
   });
 
   it("reads capacity state from the business context", () => {
     const ctx = caseToContext(SEED_CASES.find((c) => c.flags.capacityRisk)!);
     const report = ingestBusinessState(ctx);
-    expect(["db", "service", "context_provided"]).toContain(report.byDomain.equipment_capacity.sourceType);
+    expect(["REAL_DB", "REAL_DB_SERVICE", "REAL_RUNTIME_SERVICE", "CONTEXT_PROVIDED"]).toContain(report.byDomain.equipment_capacity.sourceType);
   });
 
   it("reads proof/compliance state from context flags", () => {
@@ -36,13 +36,13 @@ describe("production runtime — per-domain ingestion seam", () => {
     await learnFromFailure(cash, scoreAdvice(cash, emptyAdvise()), store, { workspaceId: "ws-1", actor: "t", at: AT });
     const r = await runOwnerAdvice({ workspaceId: "ws-1", context: caseToContext(cash) }, { store });
     expect(r.learningApplied).toBe(true);
-    expect(r.ingestion.byDomain.learning_playbooks.sourceType).toBe("service");
+    expect(r.ingestion.byDomain.learning_playbooks.sourceType).toBe("REAL_DB_SERVICE");
   });
 
   it("includes vendor/delivery state when the context signals them", () => {
     const vendorCtx = { ...caseToContext(cash), businessType: "grocery with supplier", messyFacts: ["supplier raised prices; bulk scheme offered"] };
     const r = ingestBusinessState(vendorCtx);
-    expect(r.byDomain.vendor_supplier.sourceType).toBe("context_provided");
+    expect(r.byDomain.vendor_supplier.sourceType).toBe("CONTEXT_PROVIDED");
   });
 
   it("marks a missing source explicitly and lowers confidence (no fabrication)", () => {
