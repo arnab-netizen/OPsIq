@@ -13,6 +13,7 @@ import { learnFromFailure } from "../learning-engine";
 import { scoreAdvice } from "../scorer";
 import { detectUnsafe } from "../scorer";
 import { deriveCalcs } from "../expert/business-math";
+import { DOMAIN_EXTRA_CASES } from "./domain-cases";
 import type { AdviceOutput, BehavioralCase } from "../schema";
 
 export const DOMAINS = [
@@ -145,8 +146,9 @@ export interface AdvisedCase {
   advice: AdviceOutput;
 }
 
-/** Train on base failures, then advise the whole corpus — the system's best current output. */
-export async function advisedCorpus(cases: BehavioralCase[] = EXPANDED_CASES, workspaceId = "domain-ws"): Promise<AdvisedCase[]> {
+/** Train on base failures, then advise the whole corpus — the system's best current output.
+ *  The default corpus now includes the dedicated vendor/delivery cases so those domains are covered. */
+export async function advisedCorpus(cases: BehavioralCase[] = [...EXPANDED_CASES, ...DOMAIN_EXTRA_CASES], workspaceId = "domain-ws"): Promise<AdvisedCase[]> {
   const store = new InMemoryLearningStore();
   for (const c of cases) {
     const base = scoreAdvice(c, baseAdvise(c));
