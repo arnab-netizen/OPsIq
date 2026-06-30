@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Select } from "@/ui/primitives";
+import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
@@ -215,6 +216,7 @@ export default function OwnerCommandCenterPage() {
   const [guidance, setGuidance] = useState<any | null>(null);
   const [readiness, setReadiness] = useState<any | null>(null);
   const [actionPlan, setActionPlan] = useState<any | null>(null);
+  const [priorities, setPriorities] = useState<any | null>(null);
   const [businesses, setBusinesses] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -259,6 +261,12 @@ export default function OwnerCommandCenterPage() {
         setActionPlan(bizId ? await api(`/api/owner/action-plan?businessId=${bizId}`) : null);
       } catch {
         setActionPlan(null);
+      }
+      // Top 3–5 priority command strip (runtime-fed). Non-fatal.
+      try {
+        setPriorities(bizId ? await api(`/api/owner/priorities?businessId=${bizId}`) : null);
+      } catch {
+        setPriorities(null);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -371,6 +379,8 @@ export default function OwnerCommandCenterPage() {
               {businessList.find((b) => b.id === selected)?.name ?? ""}
             </h2>
           )}
+
+          {priorities?.found && <PriorityCommandStrip cards={priorities.cards} />}
 
           {wbp?.found && (
             <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white mb-6" data-testid="owner-whole-business-plan">
