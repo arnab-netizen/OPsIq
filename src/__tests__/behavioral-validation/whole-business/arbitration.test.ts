@@ -102,4 +102,25 @@ describe("cross-domain arbitration", () => {
     const r = arbitrate(mk({ flags: { remoteOwner: true, capacityRisk: true } }), [{ domain: "owner", action: "Owner handles all", type: "owner_centralize" }]);
     expect(r.rejectedAlternatives.some((x) => x.candidate.type === "owner_centralize")).toBe(true);
   });
+
+  // ── customer-quality tradeoff: "grow/spend while quality is broken" must be rejected ──
+  it("a complaints/quality case rejects the grow-while-quality-broken spend via customer_quality", () => {
+    const c = mk({ decisionCategory: "staff_process_equipment", hiddenRootCause: "rising complaints and rework are breaking reputation; service is thin", messyFacts: ["complaints up, rework high"], numbers: {} });
+    const r = arbitrate(c); // default candidates
+    expect(r.dominantConstraint).toBe("customer_quality");
+    const spendRej = r.rejectedAlternatives.find((x) => x.candidate.type === "spend_marketing");
+    expect(spendRej).toBeDefined();
+    expect(spendRej!.blockedBy).toBe("customer_quality");
+    expect(r.whatNotToDo.join(" ").toLowerCase()).toMatch(/while complaints\/quality are unresolved/);
+  });
+
+  it("a clean non-quality case does NOT fabricate the quality spend candidate", () => {
+    const cands = defaultCandidates(mk({ decisionCategory: "staff_process_equipment", hiddenRootCause: "healthy steady business considering growth", messyFacts: ["all stable"], numbers: {} }));
+    expect(cands.some((x) => x.type === "spend_marketing")).toBe(false);
+  });
+
+  it("defaultCandidates dedupes by type (a cash-dominant case keeps exactly one spend_marketing)", () => {
+    const cands = defaultCandidates(mk({ flags: { cashRisk: true }, hiddenRootCause: "cash crunch with complaints", messyFacts: ["complaints up"], numbers: {} }));
+    expect(cands.filter((x) => x.type === "spend_marketing").length).toBe(1);
+  });
 });

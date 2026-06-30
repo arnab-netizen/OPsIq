@@ -39,6 +39,14 @@ describe("public corpus — production-runtime scoring", () => {
     expect(r.weakDomains).toEqual([]);
     expect(r.weakCriticalDomains).toEqual([]);
   }, 180_000);
+
+  // Maximum-reliability EXPERT gate: every one of the 60 domains is ≥95 (no near-threshold domain remains).
+  it("every domain scores ≥95 (max-reliability expert floor — no near-95 domain remains)", async () => {
+    const r = await scorePublicCorpus({ stride: 4 });
+    const under95 = Object.entries(r.byDomain).filter(([, v]) => v < 95).map(([k, v]) => `${k}=${v}`);
+    expect(under95).toEqual([]);
+    expect(Object.keys(r.byDomain).length).toBe(60);
+  }, 180_000);
 });
 
 describe("public corpus — split integrity", () => {

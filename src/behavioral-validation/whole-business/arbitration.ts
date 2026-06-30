@@ -116,8 +116,16 @@ export function defaultCandidates(c: BehavioralCase): DomainCandidate[] {
   // personally approving/handling every decision instead of delegating with proof — surface it so
   // arbitration can reject it (owner_workload remedy: delegate with proof-based controls).
   if (c.flags.remoteOwner || c.flags.ownerEmotional) out.push({ domain: "owner", action: "Owner personally approves and handles every decision", type: "owner_centralize" });
+  // When quality/complaints/rework are the binding issue (customer_quality active), the tempting wrong move
+  // is to grow/spend on acquisition while the quality problem is unresolved — the customer_quality remedy is
+  // exactly "fix quality before spending on acquisition". Surface it so arbitration rejects it.
+  if (c.flags.capacityRisk || /complaint|rework|quality|missing|late delivery|defect/.test(caseText(c)))
+    out.push({ domain: "marketing", action: "Spend on acquisition/marketing to grow while complaints/quality are unresolved", type: "spend_marketing" });
   if (out.length === 0) out.push({ domain: "operations", action: "Proceed with the plan", type: "proceed" });
-  return out;
+  // Dedupe by action type so a case that already had a spend_marketing candidate keeps exactly one
+  // (no behaviour change for existing single-type candidate sets).
+  const seen = new Set<ActionType>();
+  return out.filter((cand) => (seen.has(cand.type) ? false : (seen.add(cand.type), true)));
 }
 
 export function arbitrate(c: BehavioralCase, candidates: DomainCandidate[] = defaultCandidates(c)): ArbitrationResult {

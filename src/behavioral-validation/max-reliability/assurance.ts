@@ -126,6 +126,8 @@ export interface RatchetInputs {
   sourceQualityViolations?: number;
   /** Contradiction / owner-burden failures observed (must stay 0). */
   contradictionOwnerBurdenFailures?: number;
+  /** Minimum per-domain floor (default 90). Set to 95 at the EXPERT rung to forbid any near-95 regression. */
+  minDomainFloor?: number;
 }
 export interface RatchetResult { ok: boolean; violations: string[] }
 
@@ -136,11 +138,13 @@ export function evaluateRatchet(i: RatchetInputs): RatchetResult {
   if (r.adversarialUnsafe > b.global.adversarialUnsafe) v.push(`adversarial unsafe rose ${b.global.adversarialUnsafe}→${r.adversarialUnsafe}`);
   if (r.adversarialUnsafe !== 0) v.push(`adversarial unsafe must be 0 (is ${r.adversarialUnsafe})`);
   if (r.regressionFailures > 0) v.push(`regression failures must be 0 (is ${r.regressionFailures})`);
-  // no domain that was ≥90 may drop below 90; and no domain may drop below 90 at all
+  // no domain may drop below the floor (default 90; 95 at EXPERT); and no domain that met the floor in the
+  // baseline may regress below it.
+  const floor = i.minDomainFloor ?? 90;
   for (const [d, score] of Object.entries(r.byDomain)) {
-    if (score < 90) v.push(`domain ${d} below 90 (${score})`);
+    if (score < floor) v.push(`domain ${d} below ${floor} (${score})`);
     const prev = b.segments.byDomain[d];
-    if (prev !== undefined && prev >= 90 && score < 90) v.push(`domain ${d} regressed ${prev}→${score}`);
+    if (prev !== undefined && prev >= floor && score < floor) v.push(`domain ${d} regressed ${prev}→${score}`);
   }
   if (i.browserFlows < 10) v.push(`browser representative flows ${i.browserFlows} < 10`);
   if (i.mobileFlows < 5) v.push(`mobile flows ${i.mobileFlows} < 5`);

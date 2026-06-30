@@ -119,6 +119,14 @@ describe("max-reliability ratchet — only moves forward", () => {
     expect(evaluateRatchet({ ...clean(), sourceQualityViolations: 1 }).ok).toBe(false);
     expect(evaluateRatchet({ ...clean(), contradictionOwnerBurdenFailures: 1 }).ok).toBe(false);
   });
+  it("the EXPERT floor (minDomainFloor 95) fails a domain that drops below 95", () => {
+    const allExpert = mkReport({ byDomain: { "Cash flow": 98, "Marketing": 96, "Staff training": 99 }, byDomainHoldout: { "Cash flow": 97, "Marketing": 96, "Staff training": 98 } });
+    expect(evaluateRatchet({ ...clean(), report: allExpert, minDomainFloor: 95 }).ok).toBe(true);
+    // a domain at 92 passes the default 90 floor but fails the expert 95 floor
+    const near = mkReport({ byDomain: { "Cash flow": 98, "Staff training": 92 } });
+    expect(evaluateRatchet({ ...clean(), report: near, minDomainFloor: 90 }).ok).toBe(true);
+    expect(evaluateRatchet({ ...clean(), report: near, minDomainFloor: 95 }).ok).toBe(false);
+  });
 });
 
 describe("max-reliability assurance over the REAL sweep", () => {
