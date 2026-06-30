@@ -12,6 +12,7 @@ export const PILOT_LAUNDRY_BIZ = "30000000-0000-4000-8000-00000000aa01";
 export const PILOT_B2B_BIZ = "30000000-0000-4000-8000-00000000aa02";
 export const PILOT_MULTI_BIZ = "30000000-0000-4000-8000-00000000aa03";
 export const PILOT_WEAK_BIZ = "30000000-0000-4000-8000-00000000aa04";
+export const PILOT_REMOTE_BIZ = "30000000-0000-4000-8000-00000000aa05";
 
 export interface PilotBizFixture {
   id: string;
@@ -28,5 +29,6 @@ export const PILOT_BUSINESSES: PilotBizFixture[] = [
   { id: PILOT_LAUNDRY_BIZ, label: "Pilot: Sparkle Laundry", businessType: "Laundry & dry cleaning", operatingModel: "owner_operated", expectMissingCategory: "equipment", hasFinancialMinimum: true },
   { id: PILOT_B2B_BIZ, label: "Pilot: FacilityCare B2B", businessType: "B2B facility maintenance contracts", operatingModel: "owner_operated", expectMissingCategory: "contract", hasFinancialMinimum: true },
   { id: PILOT_MULTI_BIZ, label: "Pilot: 3-Branch Tiffin", businessType: "3-branch outlet chain", operatingModel: "multi_location", expectMissingCategory: "branch", hasFinancialMinimum: true },
+  { id: PILOT_REMOTE_BIZ, label: "Pilot: Remote-run Pest Control", businessType: "Remote-owner pest control service", operatingModel: "remote_owner", expectMissingCategory: "proof", hasFinancialMinimum: true },
   { id: PILOT_WEAK_BIZ, label: "Pilot: Weak Cleaning Co", businessType: "Housekeeping & cleaning services", operatingModel: "owner_operated", expectMissingCategory: "revenue", hasFinancialMinimum: false },
 ];

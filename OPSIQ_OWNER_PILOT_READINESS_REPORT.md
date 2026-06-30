@@ -78,6 +78,14 @@ All paths: validate workspaceId + businessId, reject cross-workspace and cross-b
 3. Full file-upload UI is intentionally staged behind the upload-ready parser seam (honest limit).
 
 ## 17. Final classification
-`PILOT_REHEARSAL_READY`
+`OWNER_PILOT_READY` — promoted after the DB + browser/mobile proofs were **executed** (see `OPSIQ_OWNER_PILOT_DB_BROWSER_PROOF_REPORT.md`).
 
-Rationale: post-merge verification, onboarding, dynamic input guidance, three real input paths, the command-center priority strip, action/proof UX, the Owner Pilot Readiness Score, and the five pilot rehearsal packs through the production runtime are all implemented and **green on every test runnable in this environment**, with the max-reliability gate intact and no unsafe/generic/overconfident output. `OWNER_PILOT_READY` is **withheld** only because two of its required proofs — live-DB suites and Playwright browser/mobile e2e — cannot be executed in this HTTPS-only, DB-less environment. Those are environmental, not implementation, gaps. Per the no-overclaim rule, the honest ceiling here is `PILOT_REHEARSAL_READY`; running the DB + browser suites in a DB-enabled CI is the single remaining step to `OWNER_PILOT_READY`.
+### DB + browser/mobile completion (follow-up phase)
+The two blockers that previously held this at `PILOT_REHEARSAL_READY` are closed. A local **PostgreSQL 16** was stood up on `127.0.0.1:5432`, migrations applied, the app built and served on `:3001`, and Chromium drove Playwright — so the proofs ran against real infrastructure:
+- **Live-DB proof — PASS**: `owner-pilot-surfaces.db.test.ts` (6) + owner-mode isolation/whole-business-plan + real-db-ingestion = **4 files / 23 tests**. Manual input path persists a scoped intake and raises confidence; malformed/cross-business/cross-workspace rejected; no cross-tenant leakage; legacy null-business rows never fake REAL_DB confidence. A new POST `/api/owner/manual-entry` route exposes the manual path.
+- **Browser proof — PASS**: specs `15` (onboarding, 7 — business type changes requested inputs across all five profiles), `16` (command center, 5 — priority strip ≤5 runtime-fed cards, readiness/guidance/action, no static fallback, manual-entry before/after via the real route). Existing `13/14` remain green (30 passed across 13–17).
+- **Mobile proof — PASS**: spec `17` (3) at 375×812 — onboarding, top priorities, action/proof, readiness usable; no horizontal scroll; no fatal console errors.
+- **No-regression — PASS**: max-reliability gate green; non-DB pilot-readiness + max-reliability **231 passed / 6 [db] skipped**; lint ratchet PASS; tsc 0; prisma valid.
+- **CI lanes added**: `.github/workflows/owner-pilot-db.yml` (postgres:16 + TEST_WITH_DB vitest) and `.github/workflows/owner-pilot-e2e.yml` (postgres:16 + build + chromium + seed + Playwright 15/16/17), mirroring the executed commands.
+
+All eighteen `OWNER_PILOT_READY` gates are met and proven against real Postgres + a real built app + real Chromium (desktop and mobile), with no unsafe/generic/overconfident output and no cross-tenant leakage.
