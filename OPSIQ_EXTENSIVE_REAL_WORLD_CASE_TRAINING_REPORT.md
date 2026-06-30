@@ -171,6 +171,16 @@ runtime output, provider/confidence + owner-workload/offload + proof/reassessmen
 critical console errors; re-verified green after the arbitration change (`13` + `14`, 17/17). No PR opened;
 not merged.
 
+## 40. Maximum-reliability hardening (in progress)
+A hostile-audited reliability-assurance layer is being added over the training (see
+`OPSIQ_MAX_RELIABILITY_HARDENING_REPORT.md` + `OPSIQ_MAX_RELIABILITY_BASELINE.json`). Proven this pass:
+a real before-fix baseline across all 7 segment dimensions (anti-averaging tested); a scorer anti-gaming
+negative-control + strictness lock (16 bad outputs rejected, `PASS_THRESHOLD`/`COLLECTIVE_WEIGHTS` pinned);
+per-domain and per-collective-type assurance scorecards (real sweep: all 60 domains ASSURED_EXPERT_READY,
+no weak collective type); and a forward-only ratchet (passes vs the committed baseline). Current rung:
+`COLLECTIVE_ASSURANCE_READY` — `MAX_RELIABILITY_CORE/EXPERT_READY` not yet claimed (FMEA/evidence-trace/
+adjudication-queue dedicated slices remain). No gate weakened; no average hides a weak segment.
+
 ## 39. Final expert-adjudication pass
 Plan: `OPSIQ_FINAL_EXPERT_ADJUDICATION_PASS_PLAN.md`. Detail report:
 `OPSIQ_FINAL_EXPERT_ADJUDICATION_PASS_REPORT.md`.
