@@ -212,6 +212,8 @@ export default function OwnerCommandCenterPage() {
   const [data, setData] = useState<any | null>(null);
   const [control, setControl] = useState<any | null>(null);
   const [wbp, setWbp] = useState<any | null>(null);
+  const [guidance, setGuidance] = useState<any | null>(null);
+  const [readiness, setReadiness] = useState<any | null>(null);
   const [businesses, setBusinesses] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -233,11 +235,23 @@ export default function OwnerCommandCenterPage() {
         setControl(null);
       }
       // NEW production owner-advice runtime → whole-business plan (provider-backed). Non-fatal.
+      const bizId = res.selectedBusinessId ?? businessId ?? null;
       try {
-        const bizId = res.selectedBusinessId ?? businessId ?? null;
         setWbp(bizId ? await api(`/api/owner/whole-business-plan?businessId=${bizId}`) : null);
       } catch {
         setWbp(null);
+      }
+      // Dynamic input-accuracy guidance (next best input / missing data). Non-fatal.
+      try {
+        setGuidance(bizId ? await api(`/api/owner/input-guidance?businessId=${bizId}`) : null);
+      } catch {
+        setGuidance(null);
+      }
+      // Owner Pilot Readiness Score. Non-fatal.
+      try {
+        setReadiness(bizId ? await api(`/api/owner/readiness?businessId=${bizId}`) : null);
+      } catch {
+        setReadiness(null);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -443,6 +457,81 @@ export default function OwnerCommandCenterPage() {
                 <p className="text-xs text-muted-foreground"><strong>30-day:</strong> {wbp.plan.plan30Day}</p>
                 <p className="text-xs text-muted-foreground"><strong>90-day:</strong> {wbp.plan.plan90Day}</p>
               </details>
+            </section>
+          )}
+
+          {readiness?.found && (
+            <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white mb-6" data-testid="owner-readiness-score">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="text-xs uppercase text-muted-foreground">Owner pilot readiness</div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={HEALTH_VARIANT(readiness.overallScore)} data-testid="readiness-overall">
+                    Readiness {Math.round(readiness.overallScore)}/100
+                  </Badge>
+                  <Badge variant={readiness.pilotReady ? "success" : "warning"} data-testid="readiness-gate">
+                    {readiness.pilotReady ? "Pilot-ready" : "Not pilot-ready yet"}
+                  </Badge>
+                </div>
+              </div>
+              {readiness.blockers.length > 0 && (
+                <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm" data-testid="readiness-blockers">
+                  <strong>What is holding readiness back:</strong>
+                  <ul className="list-disc ml-5">{readiness.blockers.slice(0, 4).map((x: string, i: number) => <li key={i}>{x}</li>)}</ul>
+                </div>
+              )}
+              <details className="mt-2" data-testid="readiness-dimensions">
+                <summary className="text-xs uppercase text-muted-foreground cursor-pointer">Readiness by dimension</summary>
+                <div className="grid gap-1 sm:grid-cols-2 mt-2">
+                  {readiness.dimensions.map((d: any) => (
+                    <div key={d.key} className="flex items-center justify-between text-sm border rounded px-2 py-1">
+                      <span className="capitalize">{String(d.label)}</span>
+                      <Badge variant={HEALTH_VARIANT(d.score)}>{Math.round(d.score)}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </section>
+          )}
+
+          {guidance?.found && (
+            <section className="border rounded-lg p-4 bg-white mb-6" data-testid="owner-input-guidance">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div className="text-xs uppercase text-muted-foreground">Improve accuracy</div>
+                <Badge variant="muted" data-testid="guidance-confidence">Confidence: {guidance.overallConfidence}</Badge>
+              </div>
+              <div className="text-sm mb-2" data-testid="guidance-next-input">
+                <span className="font-medium">Next best input:</span>{" "}
+                {guidance.nextBestInput ? (
+                  <>
+                    {guidance.nextBestInput.replace(/_/g, " ")}
+                    <Link href="/owner/intake" className="ml-2 underline">add it →</Link>
+                  </>
+                ) : (
+                  "you have what you need to start"
+                )}
+              </div>
+              {!guidance.canProceedWithStrongRecommendation && (
+                <p className="text-xs text-warning mb-2" data-testid="guidance-must-wait">
+                  Strong recommendations are paused until the critical data below is supplied.
+                </p>
+              )}
+              {guidance.missingBySeverity.length > 0 && (
+                <ul className="space-y-2" data-testid="guidance-missing">
+                  {guidance.missingBySeverity.slice(0, 3).map((m: any) => (
+                    <li key={m.category} className="rounded-md border p-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{m.label}</span>
+                        <Badge variant={m.severity === "critical" ? "destructive" : m.severity === "high" ? "warning" : "muted"}>{m.severity}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{m.why}</p>
+                      <p className="text-xs text-muted-foreground">Affects: {m.decisionAffected} · effort: {m.ownerEffort}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-2">
+                <Link href="/owner/onboarding" className="text-xs text-primary underline">See full setup guidance →</Link>
+              </div>
             </section>
           )}
 
