@@ -214,6 +214,7 @@ export default function OwnerCommandCenterPage() {
   const [wbp, setWbp] = useState<any | null>(null);
   const [guidance, setGuidance] = useState<any | null>(null);
   const [readiness, setReadiness] = useState<any | null>(null);
+  const [actionPlan, setActionPlan] = useState<any | null>(null);
   const [businesses, setBusinesses] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -252,6 +253,12 @@ export default function OwnerCommandCenterPage() {
         setReadiness(bizId ? await api(`/api/owner/readiness?businessId=${bizId}`) : null);
       } catch {
         setReadiness(null);
+      }
+      // Action assignment + proof framing for the live next best action. Non-fatal.
+      try {
+        setActionPlan(bizId ? await api(`/api/owner/action-plan?businessId=${bizId}`) : null);
+      } catch {
+        setActionPlan(null);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -531,6 +538,33 @@ export default function OwnerCommandCenterPage() {
               )}
               <div className="mt-2">
                 <Link href="/owner/onboarding" className="text-xs text-primary underline">See full setup guidance →</Link>
+              </div>
+            </section>
+          )}
+
+          {actionPlan?.found && actionPlan.assignment && (
+            <section className="border rounded-lg p-4 bg-white mb-6" data-testid="owner-action-plan">
+              <div className="text-xs uppercase text-muted-foreground mb-2">Action &amp; proof</div>
+              <div className="text-sm font-medium mb-2" data-testid="action-title">{actionPlan.assignment.actionTitle}</div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-md border p-2 text-sm" data-testid="action-responsible">
+                  <strong>Who owns it:</strong> <span className="capitalize">{actionPlan.assignment.responsibleParty}</span>
+                  {actionPlan.assignment.assistedBy.length > 0 && (
+                    <span className="text-muted-foreground"> (with {actionPlan.assignment.assistedBy.join(", ")})</span>
+                  )}
+                  {actionPlan.assignment.ownerApprovalRequired && <Badge variant="warning" className="ml-2">Owner approval</Badge>}
+                  {actionPlan.assignment.delegatable && <Badge variant="muted" className="ml-2">Delegatable</Badge>}
+                </div>
+                <div className="rounded-md border p-2 text-sm" data-testid="action-opsiq-work">
+                  <strong>OpsIQ prepared:</strong> {actionPlan.assignment.opsiqPreparedWork}
+                </div>
+                <div className="rounded-md border p-2 text-sm" data-testid="action-proof">
+                  <strong>Proof required:</strong> {String(actionPlan.assignment.proofType).replace(/_/g, " ")} — {actionPlan.assignment.acceptanceCriteria}
+                </div>
+                <div className="rounded-md border p-2 text-sm" data-testid="action-escalation">
+                  <strong>Escalation:</strong> {actionPlan.assignment.escalationTrigger}
+                  <div className="text-xs text-muted-foreground mt-1">Reassess: {actionPlan.assignment.reassessmentMetric}</div>
+                </div>
               </div>
             </section>
           )}
