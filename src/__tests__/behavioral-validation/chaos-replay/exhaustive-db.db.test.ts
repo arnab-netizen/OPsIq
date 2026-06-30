@@ -18,7 +18,7 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { CHAOS_LEDGER, EXPECTED_LEDGER_COUNT, type LayerStatus } from "@/behavioral-validation/chaos-replay/chaos-ledger";
-import { seedChaosScenario, chaosBusinessId } from "../../../../scripts/seed-chaos-scenarios";
+import { seedChaosScenario } from "../../../../scripts/seed-chaos-scenarios";
 import { getOwnerWholeBusinessPlan } from "@/services/owner-mode/owner-whole-business-plan.service";
 
 const prisma = db as unknown as PrismaClient;
@@ -27,8 +27,16 @@ const ws = randomUUID();
 const wsOther = randomUUID();
 const userId = randomUUID();
 
-/** Deterministic business id per scenario (unique per scenarioId → 180 isolated businesses in one ws). */
-const bizIdFor = chaosBusinessId;
+/** Workspace-SCOPED business id (unique per (ws, scenarioId)). Must NOT reuse the globally-stable
+ *  `chaosBusinessId` (which the browser seeds under the E2E workspace) — `ownerBusiness.upsert` keys on the
+ *  id PK alone, so a shared id would collide cross-workspace. Deriving from `ws` keeps every test run's 180
+ *  businesses globally unique and isolated. */
+function bizIdFor(scenarioId: string): string {
+  let h = 5381;
+  for (const c of `${ws}:chaos:${scenarioId}`) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0;
+  const node = h.toString(16).padStart(8, "0").slice(0, 8);
+  return `00000000-0000-4000-8000-${node}d00d`;
+}
 
 const ensureWorkspace = (id: string) =>
   (prisma as unknown as { workspace: { upsert: (a: unknown) => Promise<unknown> } }).workspace.upsert({
