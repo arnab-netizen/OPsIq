@@ -40,6 +40,7 @@ export default function OwnerOnboardingPage() {
   const [businesses, setBusinesses] = useState<any[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [state, setState] = useState<any | null>(null);
+  const [readiness, setReadiness] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,6 +51,11 @@ export default function OwnerOnboardingPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load onboarding");
       setState(null);
+    }
+    try {
+      setReadiness(await api(`/api/owner/readiness?businessId=${businessId}`));
+    } catch {
+      setReadiness(null);
     }
   }, []);
 
@@ -111,6 +117,27 @@ export default function OwnerOnboardingPage() {
               options={(businesses ?? []).map((b) => ({ value: b.id, label: `${b.name} (${b.currency})` }))}
             />
           </div>
+
+          {readiness?.found && (
+            <section className="border rounded-lg p-4 bg-white mb-6" data-testid="onboarding-readiness">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs uppercase text-muted-foreground">Owner pilot readiness</div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={readiness.overallScore >= 70 ? "success" : readiness.overallScore >= 40 ? "warning" : "destructive"}>
+                    {Math.round(readiness.overallScore)}/100
+                  </Badge>
+                  <Badge variant={readiness.pilotReady ? "success" : "warning"}>
+                    {readiness.pilotReady ? "Pilot-ready" : "Keep setting up"}
+                  </Badge>
+                </div>
+              </div>
+              {readiness.blockers.length > 0 && (
+                <ul className="list-disc ml-5 mt-2 text-xs text-muted-foreground">
+                  {readiness.blockers.slice(0, 3).map((b: string, i: number) => <li key={i}>{b}</li>)}
+                </ul>
+              )}
+            </section>
+          )}
 
           {state?.found && (
             <div className="space-y-6">
