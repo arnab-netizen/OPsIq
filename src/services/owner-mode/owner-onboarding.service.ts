@@ -1,0 +1,116 @@
+/**
+ * Owner onboarding SERVICE — binds the pure onboarding domain to real, workspace+business-scoped DB
+ * rows. Reads (never writes). The category-presence mapping is a pure exported function so it is unit
+ * tested with no live DB; the async wrapper just prefetches the same scoped rows the whole-business
+ * plan uses (one source of truth, no second query path).
+ */
+import type { PrismaClient } from "@/generated/prisma/client";
+import {
+  prefetchOwnerDomainRows,
+  type OwnerDomainRows,
+} from "@/services/owner-mode/owner-db-providers";
+import {
+  computeOnboardingState,
+  type BusinessProfileType,
+  type OwnerRole,
+  type OnboardingState,
+} from "@/domain/owner-mode/owner-onboarding";
+import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
+import { intakeDomainToCategory } from "@/domain/owner-mode/input-record-parser";
+
+export interface OwnerOnboardingDeps {
+  db: PrismaClient;
+  workspaceId: string;
+  businessId: string;
+  now: Date;
+  freshnessDays?: number;
+}
+
+/** Map a free-text business type to a canonical onboarding profile. */
+export function mapBusinessTypeToProfile(businessType: string | null | undefined): BusinessProfileType {
+  const s = (businessType ?? "").toLowerCase();
+  if (/laundr|dry.?clean|launder/.test(s)) return "laundry_drycleaning";
+  if (/clean|housekeep|maid|janitor/.test(s)) return "housekeeping_cleaning";
+  if (/b2b|contract|facilit|institutional/.test(s)) return "b2b_contract_service";
+  if (/multi|branch|chain|outlet|franchise/.test(s)) return "multi_location_smb";
+  if (/remote/.test(s)) return "remote_owner_service";
+  return "generic";
+}
+
+/** Map operating model + branch signal to a canonical owner role. */
+export function mapOperatingModelToRole(operatingModel: string | null | undefined, multiBranch: boolean): OwnerRole {
+  const s = (operatingModel ?? "").toLowerCase();
+  if (multiBranch) return "multi_location";
+  if (/remote/.test(s)) return "remote_owner";
+  if (/manager|managed|staff.?run|delegate/.test(s)) return "manager_run";
+  if (/multi|branch/.test(s)) return "multi_location";
+  return "owner_operated";
+}
+
+/**
+ * Derive the data categories the owner has actually supplied from real persisted rows. Only a real
+ * backing value counts as supplied — an empty/legacy row never inflates the supplied set.
+ */
+export function rowsToSuppliedCategories(rows: OwnerDomainRows): OwnerInputCategory[] {
+  const out = new Set<OwnerInputCategory>();
+  const f = rows.finance as Record<string, unknown> | null;
+  const num = (v: unknown): boolean => typeof v === "number" && Number.isFinite(v);
+
+  if (f) {
+    if (num(f.revenue)) out.add("revenue_sales");
+    if (num(f.costOfGoods) || num(f.variableCosts)) out.add("expenses");
+    if (num(f.fixedCosts) || num(f.rent) || num(f.utilities)) out.add("fixed_costs");
+    if (num(f.payroll)) out.add("payroll");
+    if (num(f.marketingSpend)) out.add("marketing");
+    if (num(f.debtPayments) || num(f.cashOnHand)) out.add("cash_debt");
+  }
+  const cf = rows.cashflow as Record<string, unknown> | null;
+  if (cf) {
+    if (num(cf.cashInHand) || num(cf.bankBalance) || num(cf.upcomingEmi)) out.add("cash_debt");
+  }
+  if (rows.wcItems && rows.wcItems.length > 0) out.add("cash_debt");
+  if (rows.capacity) {
+    out.add("equipment_logs");
+    out.add("staff_attendance");
+  }
+  if (rows.compliance && rows.compliance.length > 0) out.add("tax_compliance");
+  if (rows.proofs && rows.proofs.length > 0) out.add("proof_completion");
+  if (rows.standingCount && rows.standingCount > 0) out.add("sops_checklists");
+  // Owner-confirmed manual/import intakes (the real input paths) count as supplied data.
+  for (const domain of rows.confirmedIntakeDomains ?? []) {
+    const cat = intakeDomainToCategory(domain);
+    if (cat) out.add(cat);
+  }
+  return Array.from(out);
+}
+
+export interface OwnerOnboardingResult extends OnboardingState {
+  workspaceId: string;
+  businessId: string;
+  found: boolean;
+  generatedFromRuntime: true;
+}
+
+/** Build the onboarding state for ONE workspace+business from real persisted state. */
+export async function getOwnerOnboardingState(deps: OwnerOnboardingDeps): Promise<OwnerOnboardingResult> {
+  const { workspaceId, businessId } = deps;
+  const rows = await prefetchOwnerDomainRows(deps);
+  const business = rows.business as { name?: string; businessType?: string; operatingModel?: string | null; b2bSupported?: boolean } | null;
+
+  if (!business) {
+    const empty = computeOnboardingState({ businessName: "", profileType: "generic", ownerRole: "owner_operated", suppliedCategories: [] });
+    return { ...empty, workspaceId, businessId, found: false, generatedFromRuntime: true };
+  }
+
+  const profileType = mapBusinessTypeToProfile(business.businessType);
+  const role = mapOperatingModelToRole(business.operatingModel, profileType === "multi_location_smb");
+  const supplied = rowsToSuppliedCategories(rows);
+
+  const state = computeOnboardingState({
+    businessName: business.name ?? "",
+    profileType,
+    ownerRole: role,
+    suppliedCategories: supplied,
+  });
+  return { ...state, workspaceId, businessId, found: true, generatedFromRuntime: true };
+}

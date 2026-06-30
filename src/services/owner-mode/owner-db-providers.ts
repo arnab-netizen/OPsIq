@@ -54,6 +54,8 @@ export interface OwnerDomainRows {
   standingCount: number;
   business: Awaited<ReturnType<PrismaClient["ownerBusiness"]["findFirst"]>>;
   learningCount: number;
+  /** targetDomain of owner-confirmed intakes (manual/import paths) for THIS workspace+business. */
+  confirmedIntakeDomains?: string[];
 }
 
 /**
@@ -67,7 +69,7 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
   // so there is no cross-business leakage, no cross-workspace leakage, and a business backed only by
   // legacy null-business rows reports those domains as missing (it never inflates REAL_DB readiness).
   // behavioralLearningArtifact stays workspace-scoped by design (workspace-private learning memory).
-  const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount] = await Promise.all([
+  const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakes] = await Promise.all([
     db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
     db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
     db.ownerWorkingCapitalItem.findMany({ where: { workspaceId, businessId, status: "open" } }),
@@ -78,8 +80,16 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
     db.ownerStandingInstruction.count({ where: { workspaceId, businessId, status: "active" } }),
     db.ownerBusiness.findFirst({ where: { id: businessId, workspaceId } }),
     db.behavioralLearningArtifact.count({ where: { workspaceId, active: true } }),
+    // Owner-confirmed manual/import intakes feed the supplied-data view (workspace+business scoped).
+    // Defensive: some callers inject a partial db (no intake model) — treat as no confirmed intakes.
+    (db as { ownerDataIntake?: { findMany: (a: unknown) => Promise<Array<{ targetDomain: string | null }>> } }).ownerDataIntake?.findMany
+      ? db.ownerDataIntake.findMany({ where: { workspaceId, businessId, ownerConfirmed: true }, select: { targetDomain: true } })
+      : Promise.resolve([] as Array<{ targetDomain: string | null }>),
   ]);
-  return { cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount };
+  const confirmedIntakeDomains = (confirmedIntakes as Array<{ targetDomain: string | null }>)
+    .map((r) => r.targetDomain)
+    .filter((d): d is string => typeof d === "string");
+  return { cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakeDomains };
 }
 
 /**
