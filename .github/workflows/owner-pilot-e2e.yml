@@ -8,7 +8,9 @@ name: Owner Pilot Browser + Mobile E2E
 
 on:
   push:
-    branches: ["claude/opsiq-owner-pilot-readiness-isow0m"]
+    branches: ["claude/opsiq-owner-pilot-readiness-isow0m", "claude/opsiq-ai-supervisor-minimal-audit"]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -84,6 +86,7 @@ jobs:
           tests/browser/15-owner-pilot-onboarding.spec.ts
           tests/browser/16-owner-pilot-command-center.spec.ts
           tests/browser/17-owner-pilot-mobile.spec.ts
+          tests/browser/18-owner-supervisor-summary.spec.ts
           --project=chromium
       - name: Print Playwright failures + app log
         if: always()

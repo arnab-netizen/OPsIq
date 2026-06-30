@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button, Select } from "@/ui/primitives";
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
+import { SupervisorSummary } from "@/components/owner/SupervisorSummary";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
@@ -379,6 +380,8 @@ export default function OwnerCommandCenterPage() {
               {businessList.find((b) => b.id === selected)?.name ?? ""}
             </h2>
           )}
+
+          {wbp?.supervisor?.found && <SupervisorSummary summary={wbp.supervisor} />}
 
           {priorities?.found && <PriorityCommandStrip cards={priorities.cards} />}
 

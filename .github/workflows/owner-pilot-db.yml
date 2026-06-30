@@ -8,7 +8,9 @@ name: Owner Pilot DB Proof
 
 on:
   push:
-    branches: ["claude/opsiq-owner-pilot-readiness-isow0m"]
+    branches: ["claude/opsiq-owner-pilot-readiness-isow0m", "claude/opsiq-ai-supervisor-minimal-audit"]
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
 
 jobs:

@@ -16,6 +16,7 @@ import { deriveOwnerContext } from "./owner-context-derivation";
 import { runOwnerAdvice } from "./owner-advice-runtime.service";
 import { PrismaLearningStore } from "@/behavioral-validation/learning-store";
 import type { Constraint } from "@/behavioral-validation/whole-business/arbitration";
+import { buildSupervisorSummary, type SupervisorSummary, type SupervisorInput } from "@/domain/owner-mode/supervisor-summary";
 
 export interface OwnerWholeBusinessPlanDeps {
   db: PrismaClient;
@@ -48,6 +49,17 @@ export interface OwnerWholeBusinessPlanView {
   topPriority: { constraint: Constraint; label: string };
   dominantConstraint: Constraint;
   nextBestAction: string;
+  rootCause: string;
+  successMetrics: string[];
+  /** Expected impact of the recommendation — computed by the runtime plan, surfaced for the owner. */
+  impact: {
+    financeCash: string;
+    marginPricing: string;
+    equipmentCapacity: string;
+    staffWorkload: string;
+    customerQuality: string;
+    operationsProcess: string;
+  };
   doNotDo: string[];
   redDomains: string[];
   domainHealth: Array<{ domain: string; status: string }>;
@@ -68,7 +80,20 @@ export interface OwnerWholeBusinessPlanView {
   };
   collectiveScore: number;
   unsafeCount: number;
+  /** Concise governed supervisor summary derived from THIS runtime view (no new advice/model). */
+  supervisor: SupervisorSummary;
 }
+
+/** A complete empty supervisor input (found:false path ignores the rest; keeps types honest). */
+const EMPTY_SUPERVISOR_INPUT: SupervisorInput = {
+  found: false, dominantConstraint: "profitable_growth", topPriorityLabel: "—", nextBestAction: "—", rootCause: "",
+  doNotDo: [], proofRequired: [], reassessmentTriggers: [], successMetrics: [], redDomains: [],
+  ownerApprovalRequired: false, ownerOffload: "—", delegatedWork: [], opsiqPreparedWork: [],
+  growthScaleAllowed: false, growthBlockedBy: [], overallConfidence: "none", criticalDomainsAllReal: false,
+  dataSourceMissing: [], realProviderDomains: [], assessedDomains: [], unsafeCount: 0,
+  impact: { financeCash: "—", marginPricing: "—", equipmentCapacity: "—", staffWorkload: "—", customerQuality: "—" },
+  ownerWorkloadOffload: "—", plan7Day: "", plan30Day: "",
+};
 
 /** A safe "business not found" view (no fabricated runtime output). */
 function notFound(workspaceId: string, businessId: string): OwnerWholeBusinessPlanView {
@@ -76,6 +101,8 @@ function notFound(workspaceId: string, businessId: string): OwnerWholeBusinessPl
     workspaceId, businessId, found: false, generatedFromRuntime: true,
     topPriority: { constraint: "profitable_growth", label: CONSTRAINT_LABEL.profitable_growth },
     dominantConstraint: "profitable_growth", nextBestAction: "No business data found for this workspace.",
+    rootCause: "", successMetrics: [],
+    impact: { financeCash: "—", marginPricing: "—", equipmentCapacity: "—", staffWorkload: "—", customerQuality: "—", operationsProcess: "—" },
     doNotDo: [], redDomains: [], domainHealth: [],
     ownerWorkload: { offload: "—", delegatedWork: [], approvalRequired: false },
     proofRequired: [], reassessmentTriggers: [],
@@ -85,6 +112,7 @@ function notFound(workspaceId: string, businessId: string): OwnerWholeBusinessPl
     learning: { applied: false, artifactIds: [], notes: [] },
     data: { criticalDomainsRealProviderBacked: false, criticalDomainsAllReal: false, overallConfidence: "none", dataSourceMissing: [], realProviderDomains: [] },
     collectiveScore: 0, unsafeCount: 0,
+    supervisor: buildSupervisorSummary(EMPTY_SUPERVISOR_INPUT),
   };
 }
 
@@ -109,11 +137,57 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
     .filter((d) => ingestion.byDomain[d].realData === true)
     .map((d) => String(d));
 
+  // Governed supervisor summary — a pure derivation over THIS runtime output (no new advice/model).
+  const supervisor = buildSupervisorSummary({
+    found: true,
+    dominantConstraint: String(dominant),
+    topPriorityLabel: CONSTRAINT_LABEL[dominant],
+    nextBestAction: plan.nextBestAction,
+    rootCause: plan.rootCause,
+    doNotDo: plan.stopDoNotDoList,
+    proofRequired: plan.proofRequired,
+    reassessmentTriggers: plan.reassessmentTriggers,
+    successMetrics: plan.successMetrics,
+    redDomains: plan.domainHealthTable.filter((d) => d.status === "red").map((d) => d.domain),
+    ownerApprovalRequired: plan.ownerApprovalRequired,
+    ownerOffload: plan.ownerWorkloadOffload,
+    delegatedWork: plan.delegatedWork,
+    opsiqPreparedWork: plan.opsiqPreparedWork,
+    growthScaleAllowed: plan.growth.scaleAllowed,
+    growthBlockedBy: plan.growth.blockedBy,
+    overallConfidence: ingestion.overallConfidence,
+    criticalDomainsAllReal: ingestion.criticalDomainsAllReal,
+    dataSourceMissing: ingestion.dataSourceMissing.map((d) => String(d)),
+    realProviderDomains,
+    assessedDomains: Object.keys(ingestion.byDomain).map((d) => String(d)),
+    unsafeCount: result.unsafeCount,
+    impact: {
+      financeCash: plan.financeCashImpact,
+      marginPricing: plan.marginPricingImpact,
+      equipmentCapacity: plan.equipmentCapacityImpact,
+      staffWorkload: plan.staffTrainingImpact,
+      customerQuality: plan.customerReputationImpact,
+    },
+    ownerWorkloadOffload: plan.ownerWorkloadOffload,
+    plan7Day: plan.plan7Day,
+    plan30Day: plan.plan30Day,
+  });
+
   return {
     workspaceId, businessId, found: true, generatedFromRuntime: true,
     topPriority: { constraint: dominant, label: CONSTRAINT_LABEL[dominant] },
     dominantConstraint: dominant,
     nextBestAction: plan.nextBestAction,
+    rootCause: plan.rootCause,
+    successMetrics: plan.successMetrics,
+    impact: {
+      financeCash: plan.financeCashImpact,
+      marginPricing: plan.marginPricingImpact,
+      equipmentCapacity: plan.equipmentCapacityImpact,
+      staffWorkload: plan.staffTrainingImpact,
+      customerQuality: plan.customerReputationImpact,
+      operationsProcess: plan.operationsProcessImpact,
+    },
     doNotDo: plan.stopDoNotDoList,
     redDomains: plan.domainHealthTable.filter((d) => d.status === "red").map((d) => d.domain),
     domainHealth: plan.domainHealthTable.map((d) => ({ domain: d.domain, status: d.status })),
@@ -139,5 +213,6 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
     },
     collectiveScore: result.collective.total,
     unsafeCount: result.unsafeCount,
+    supervisor,
   };
 }
