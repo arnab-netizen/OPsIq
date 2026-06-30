@@ -10,8 +10,8 @@
 ## 2. Base HEAD (post PR #60 merge, confirmed merged 2026-06-30T11:22:41Z)
 `9bcac7a4659da4aedafef912de1bbfb08ccc17eb`
 
-## 3. Final HEAD
-`938eb41383bdebfb04139629398bbf86272b883f`
+## 3. Final HEAD (training + report; stamped by the immediately following docs commit)
+`82b0ae1ee54588ea769e05d646136f47a280b10e`
 
 ## 4. Working tree status
 Clean after commits (`git status --short` empty). Diff vs base:
