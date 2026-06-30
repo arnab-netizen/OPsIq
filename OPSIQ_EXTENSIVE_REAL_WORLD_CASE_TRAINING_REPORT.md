@@ -171,7 +171,16 @@ runtime output, provider/confidence + owner-workload/offload + proof/reassessmen
 critical console errors; re-verified green after the arbitration change (`13` + `14`, 17/17). No PR opened;
 not merged.
 
-## 40. Maximum-reliability hardening — `MAX_RELIABILITY_CORE_READY`
+## 41. Maximum-reliability expert climb — `MAX_RELIABILITY_EXPERT_READY`
+The 10 non-critical near-95 domains were lifted to **≥95** (all 60 domains now ≥95 and ASSURED_EXPERT_READY)
+via one surgical, monotonically-safe arbitration candidate — the customer-quality "grow/spend while quality
+is broken" tradeoff (same technique as the owner-workload + approval-memory fixes). Runtime/collective rose
+to **99.7**, holdout **99.6**, unsafe 0, regression 0, no weak segment; browser `13`+`14` re-run **17/17**
+green on a fresh build; ratchet gains a 95 expert floor. Every EXPERT gate proven →
+**`MAX_RELIABILITY_EXPERT_READY`**. See `OPSIQ_MAX_RELIABILITY_EXPERT_CLIMB_REPORT.md` +
+`OPSIQ_MAX_RELIABILITY_EXPERT_CLIMB_PLAN.md`. No threshold lowered, no scorer weakened, nothing faked.
+
+## 40. Maximum-reliability hardening — `MAX_RELIABILITY_CORE_READY` (superseded by §41)
 A hostile-audited reliability-assurance layer is complete over the training (see
 `OPSIQ_MAX_RELIABILITY_HARDENING_REPORT.md` + `OPSIQ_MAX_RELIABILITY_BASELINE.json` +
 `OPSIQ_MAX_RELIABILITY_COMPLETION_PLAN.md`). Delivered: a real before-fix baseline across all 7 segment

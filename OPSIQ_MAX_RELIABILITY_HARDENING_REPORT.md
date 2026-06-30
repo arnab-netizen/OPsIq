@@ -97,7 +97,14 @@ all-domains≥90 gate, learning, source-register, expert-adjudication) · `owner
 with `TEST_WITH_DB=true` · **180 tests** in the consolidated validation · real baseline sweep (stride 2) ·
 **Playwright `13`+`14` 17/17** (10 desktop + 5 mobile + 2 plan), fresh re-run on real Chromium + postgres:16.
 
-## 23. Final classification — **`MAX_RELIABILITY_CORE_READY`**
+## 23. Final classification — **`MAX_RELIABILITY_EXPERT_READY`**
+The expert climb (`OPSIQ_MAX_RELIABILITY_EXPERT_CLIMB_REPORT.md`) lifted all 10 non-critical near-95 domains
+to ≥95 via one surgical, monotonically-safe arbitration candidate (customer-quality "grow-while-quality-
+broken" tradeoff). **All 60 domains are now ≥95 and ASSURED_EXPERT_READY**; runtime/collective rose to 99.7,
+holdout 99.6; unsafe 0, regression 0; every EXPERT gate (collective types ≥90, no weak segment, 0 unresolved
+high-risk, all assurance suites + ratchet + browser 17/17 + DB isolation) is green. Superseded rung below:
+
+### (superseded) `MAX_RELIABILITY_CORE_READY`
 Every CORE gate is now freshly and independently proven:
 1. all remaining assurance modules implemented (FMEA, evidence-trace, business-math, red-team, source-
    quality, contradiction/owner-burden, learning-governance, adjudication queue) — §0.
