@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     // Generated code (Prisma client, etc.) is not authored source: its lint
     // profile tracks the generator version, not developer intent.
     "src/generated/**",
+    // Playwright run artifacts (HTML report, traces) are generated, not source.
+    "test-results/**",
+    "playwright-report/**",
   ]),
   // PHASE G2: Auth enforcement rules
   {

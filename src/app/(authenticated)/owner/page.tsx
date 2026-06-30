@@ -482,12 +482,16 @@ export default function OwnerCommandCenterPage() {
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="text-xs uppercase text-muted-foreground">Owner pilot readiness</div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={HEALTH_VARIANT(readiness.overallScore)} data-testid="readiness-overall">
-                    Readiness {Math.round(readiness.overallScore)}/100
-                  </Badge>
-                  <Badge variant={readiness.pilotReady ? "success" : "warning"} data-testid="readiness-gate">
-                    {readiness.pilotReady ? "Pilot-ready" : "Not pilot-ready yet"}
-                  </Badge>
+                  <span data-testid="readiness-overall">
+                    <Badge variant={HEALTH_VARIANT(readiness.overallScore)}>
+                      Readiness {Math.round(readiness.overallScore)}/100
+                    </Badge>
+                  </span>
+                  <span data-testid="readiness-gate">
+                    <Badge variant={readiness.pilotReady ? "success" : "warning"}>
+                      {readiness.pilotReady ? "Pilot-ready" : "Not pilot-ready yet"}
+                    </Badge>
+                  </span>
                 </div>
               </div>
               {readiness.blockers.length > 0 && (
@@ -514,7 +518,7 @@ export default function OwnerCommandCenterPage() {
             <section className="border rounded-lg p-4 bg-white mb-6" data-testid="owner-input-guidance">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div className="text-xs uppercase text-muted-foreground">Improve accuracy</div>
-                <Badge variant="muted" data-testid="guidance-confidence">Confidence: {guidance.overallConfidence}</Badge>
+                <span data-testid="guidance-confidence"><Badge variant="muted">Confidence: {guidance.overallConfidence}</Badge></span>
               </div>
               <div className="text-sm mb-2" data-testid="guidance-next-input">
                 <span className="font-medium">Next best input:</span>{" "}
