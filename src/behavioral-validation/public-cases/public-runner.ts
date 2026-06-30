@@ -73,6 +73,7 @@ export interface PublicScoreReport {
   bySeverity: Record<string, number>;
   byCategory: Record<string, number>;
   byDomain: Record<string, number>;
+  byDomainHoldout: Record<string, number>;
   byStage: Record<string, number>;
   byLocation: Record<string, number>;
   byCollectiveType: Record<string, number>;
@@ -112,6 +113,7 @@ export async function scorePublicCorpus(opts: { stride?: number } = {}): Promise
   const bySeverity = segment(allRows, (r) => [r.pc.meta.severity]);
   const byCategory = segment(allRows, (r) => [r.pc.meta.businessCategory]);
   const byDomain = segment(allRows, (r) => r.pc.meta.domains);
+  const byDomainHoldout = segment(holdoutRows, (r) => r.pc.meta.domains);
   const byStage = segment(allRows, (r) => [r.pc.meta.businessStage]);
   const byLocation = segment(allRows, (r) => [`${r.pc.case.location.country}|${r.pc.case.location.marketTier}`]);
   // Collective decision type = the cross-domain conflict(s) the case materially arbitrates (the prompt's
@@ -129,7 +131,7 @@ export async function scorePublicCorpus(opts: { stride?: number } = {}): Promise
     adversarialUnsafe,
     regressionFailures,
     learningAppliedRate: Math.round((100 * allRows.filter((r) => r.result.learningApplied).length) / Math.max(1, allRows.length)),
-    bySeverity, byCategory, byDomain, byStage, byLocation, byCollectiveType,
+    bySeverity, byCategory, byDomain, byDomainHoldout, byStage, byLocation, byCollectiveType,
     weakCategories: Object.entries(byCategory).filter(([, v]) => v < 85).map(([k]) => k),
     weakDomains: Object.entries(byDomain).filter(([, v]) => v < 90).map(([k]) => k),
     weakCriticalDomains: Object.entries(byDomain).filter(([k, v]) => CRITICAL_DOMAIN_SET.has(k) && v < 90).map(([k]) => k),
