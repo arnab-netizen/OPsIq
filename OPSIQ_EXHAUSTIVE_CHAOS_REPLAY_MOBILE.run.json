@@ -1,0 +1,366 @@
+{
+  "layer": "playwright-mobile",
+  "count": 45,
+  "results": {
+    "CHAOS-PC-weak_unit_economics_scale-laundry-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-laundry-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-laundry-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-housekeeping-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-housekeeping-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-housekeeping-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-restaurant-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-restaurant-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-restaurant-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-retail_grocery-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-retail_grocery-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-retail_grocery-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-pharmacy-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-pharmacy-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-pharmacy-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-salon-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-salon-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-salon-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-repair-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-repair-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-repair-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-manufacturing-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-manufacturing-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-manufacturing-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-logistics-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-logistics-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-logistics-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-agency-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-agency-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-agency-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-ecommerce-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-ecommerce-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-ecommerce-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-eldercare-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-eldercare-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-eldercare-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-franchise-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-franchise-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-franchise-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-multi_location-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-multi_location-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-multi_location-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-b2b_contractor-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-b2b_contractor-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-b2b_contractor-r0": {
+      "playwrightMobileStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "Owner decision required"
+      },
+      "failureReason": null
+    }
+  }
+}

@@ -41,6 +41,14 @@ export function chaosScenarioToKnobs(dominant: Constraint): ScenarioKnobs {
   }
 }
 
+/** Deterministic, unique business id per scenarioId (shared by the DB seed + the Playwright spec). */
+export function chaosBusinessId(scenarioId: string): string {
+  let h = 5381;
+  for (const c of `chaos:${scenarioId}`) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0;
+  const node = h.toString(16).padStart(8, "0").slice(0, 8);
+  return `00000000-0000-4000-8000-${node}c0de`;
+}
+
 const ridLike = (businessId: string, seed: string) => {
   let h = 5381;
   for (const c of `${businessId}:${seed}`) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0;
@@ -72,4 +80,13 @@ export async function seedChaosScenario(
     });
   }
   return businessId;
+}
+
+/** Seed ALL 180 counted chaos scenarios into one workspace (idempotent). Used by the browser seed + CI. */
+export async function seedAllChaosScenarios(prisma: PrismaClient, ws: string, userId: string, now: Date): Promise<number> {
+  const { CHAOS_LEDGER } = await import("../src/behavioral-validation/chaos-replay/chaos-ledger");
+  for (const e of CHAOS_LEDGER) {
+    await seedChaosScenario(prisma, ws, userId, chaosBusinessId(e.scenarioId), e, now);
+  }
+  return CHAOS_LEDGER.length;
 }

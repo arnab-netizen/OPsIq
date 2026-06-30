@@ -128,4 +128,8 @@ async function main() {
   await pool.end();
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+// Only run the seeder when executed directly (e.g. `npx tsx scripts/seed-owner-scenarios.ts`). Importing
+// this module for `seedScenarioBusiness` must NOT trigger a full E2E seed as a side effect.
+if (process.argv[1] && process.argv[1].includes("seed-owner-scenarios")) {
+  main().catch((e) => { console.error(e); process.exit(1); });
+}

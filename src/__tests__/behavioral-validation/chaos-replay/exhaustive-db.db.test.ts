@@ -18,7 +18,7 @@ import { db } from "@/lib/db";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { CHAOS_LEDGER, EXPECTED_LEDGER_COUNT, type LayerStatus } from "@/behavioral-validation/chaos-replay/chaos-ledger";
-import { seedChaosScenario } from "../../../../scripts/seed-chaos-scenarios";
+import { seedChaosScenario, chaosBusinessId } from "../../../../scripts/seed-chaos-scenarios";
 import { getOwnerWholeBusinessPlan } from "@/services/owner-mode/owner-whole-business-plan.service";
 
 const prisma = db as unknown as PrismaClient;
@@ -28,12 +28,7 @@ const wsOther = randomUUID();
 const userId = randomUUID();
 
 /** Deterministic business id per scenario (unique per scenarioId → 180 isolated businesses in one ws). */
-function bizIdFor(scenarioId: string): string {
-  let h = 5381;
-  for (const c of `chaos:${scenarioId}`) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0;
-  const node = h.toString(16).padStart(8, "0").slice(0, 8);
-  return `00000000-0000-4000-8000-${node}c0de`;
-}
+const bizIdFor = chaosBusinessId;
 
 const ensureWorkspace = (id: string) =>
   (prisma as unknown as { workspace: { upsert: (a: unknown) => Promise<unknown> } }).workspace.upsert({
