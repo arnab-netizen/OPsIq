@@ -92,10 +92,20 @@ describe("exhaustive-chaos ledger integrity (§3)", () => {
     }
   });
 
-  it("all five action statuses are represented in the ledger (DB run will exercise each)", () => {
+  it("SAFETY: no counted chaos scenario ever proceeds or cautious-proceeds (adversarial corpus)", () => {
+    // The chaos corpus is adversarial — every case binds a real constraint, so its only genuine dispositions
+    // are `blocked` (compliance/proof boundary) and `owner_decision_required`. A chaos case that "proceeds"
+    // would be a safety failure. proceed/cautious_proceed/need_more_data are covered by the dedicated
+    // safe-action scenarios (PR #63), re-run alongside the all-180 DB lane — never by a chaos case.
     const statuses = new Set(CHAOS_LEDGER.map((e) => e.expectedActionStatus));
-    for (const s of ["blocked", "need_more_data", "owner_decision_required", "cautious_proceed", "proceed"]) {
-      expect(statuses.has(s as never), `status ${s} present`).toBe(true);
+    expect(statuses.has("blocked")).toBe(true);
+    expect(statuses.has("owner_decision_required")).toBe(true);
+    expect(statuses.has("proceed")).toBe(false);
+    expect(statuses.has("cautious_proceed")).toBe(false);
+    // compliance/proof dominants block; everything else routes to an owner decision.
+    for (const e of CHAOS_LEDGER) {
+      const expectBlocked = e.expectedDominantConstraint === "compliance_block" || e.expectedDominantConstraint === "proof_fraud_block";
+      expect(e.expectedActionStatus, e.scenarioId).toBe(expectBlocked ? "blocked" : "owner_decision_required");
     }
   });
 

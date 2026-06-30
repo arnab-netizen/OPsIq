@@ -62,19 +62,14 @@ export interface ChaosLedgerEntry {
 const BLOCKED_DOMINANTS = new Set<Constraint>(["compliance_block", "proof_fraud_block"]);
 
 /**
- * Status-spectrum designations — three corpus GOOD (`profitable_growth`) scenarios are seeded as variants so
- * the all-180 DB run exercises proceed / cautious_proceed / need_more_data IN ADDITION to the blocked /
- * owner_decision_required that the corpus naturally produces. Each keeps its locked dominant; none is
- * high-risk; missing-data never "proceeds". Deterministic by scenarioId.
+ * The genuine DB disposition for a COUNTED chaos scenario. The chaos corpus is adversarial by construction
+ * (bad / ugly / good-fragile real-world cases) — NONE of its locked dominants is a low-risk, routine,
+ * SOP-approved action, so NO counted scenario may ever `proceed` / `cautious_proceed`. That is the safety
+ * property, not a gap: a compliance/proof boundary blocks; every other binding constraint routes to an owner
+ * decision. The proceed / cautious_proceed / need_more_data statuses are exercised separately by the
+ * dedicated PR #63 safe-action scenarios (re-run alongside the all-180 DB lane), never by a chaos case.
  */
-export const SPECTRUM_PROCEED_ID = "CHAOS-PC-weak_unit_economics_scale-laundry-r0";
-export const SPECTRUM_CAUTIOUS_ID = "CHAOS-PC-weak_unit_economics_scale-housekeeping-r0";
-export const SPECTRUM_NEEDDATA_ID = "CHAOS-PC-weak_unit_economics_scale-restaurant-r0";
-
-function dbActionStatusFor(dominant: Constraint, scenarioId: string): { status: DbActionStatus; seedExtra: Partial<ScenarioSeedPlan> } {
-  if (scenarioId === SPECTRUM_PROCEED_ID) return { status: "proceed", seedExtra: { sopRiskClass: "low" } };
-  if (scenarioId === SPECTRUM_CAUTIOUS_ID) return { status: "cautious_proceed", seedExtra: { sopRiskClass: "medium" } };
-  if (scenarioId === SPECTRUM_NEEDDATA_ID) return { status: "need_more_data", seedExtra: { stripCriticalData: true } };
+function dbActionStatusFor(dominant: Constraint): { status: DbActionStatus; seedExtra: Partial<ScenarioSeedPlan> } {
   if (BLOCKED_DOMINANTS.has(dominant)) return { status: "blocked", seedExtra: {} };
   return { status: "owner_decision_required", seedExtra: {} };
 }
@@ -110,7 +105,7 @@ export function buildChaosLedger(): ChaosLedgerEntry[] {
   const out: ChaosLedgerEntry[] = [];
 
   for (const s of COUNTED_CHAOS_SCENARIOS) {
-    const { status, seedExtra } = dbActionStatusFor(s.expectedDominantConstraint, s.scenarioId);
+    const { status, seedExtra } = dbActionStatusFor(s.expectedDominantConstraint);
     out.push({
       scenarioId: s.scenarioId,
       category: s.businessCategory,

@@ -14,7 +14,7 @@
       ],
       "independentGold": false,
       "expectedDominantConstraint": "below_margin",
-      "expectedActionStatus": "proceed",
+      "expectedActionStatus": "owner_decision_required",
       "expectedModules": [
         "Digital/e-commerce unit economics",
         "Marketing",
@@ -45,8 +45,7 @@
       ],
       "seed": {
         "dominant": "below_margin",
-        "goodBadUgly": "good",
-        "sopRiskClass": "low"
+        "goodBadUgly": "good"
       },
       "arbitrateStatus": "not_run",
       "ownerRuntimeStatus": "not_run",
@@ -627,7 +626,7 @@
       ],
       "independentGold": false,
       "expectedDominantConstraint": "below_margin",
-      "expectedActionStatus": "cautious_proceed",
+      "expectedActionStatus": "owner_decision_required",
       "expectedModules": [
         "Digital/e-commerce unit economics",
         "Marketing",
@@ -658,8 +657,7 @@
       ],
       "seed": {
         "dominant": "below_margin",
-        "goodBadUgly": "good",
-        "sopRiskClass": "medium"
+        "goodBadUgly": "good"
       },
       "arbitrateStatus": "not_run",
       "ownerRuntimeStatus": "not_run",
@@ -1240,7 +1238,7 @@
       ],
       "independentGold": false,
       "expectedDominantConstraint": "below_margin",
-      "expectedActionStatus": "need_more_data",
+      "expectedActionStatus": "owner_decision_required",
       "expectedModules": [
         "Digital/e-commerce unit economics",
         "Marketing",
@@ -1271,8 +1269,7 @@
       ],
       "seed": {
         "dominant": "below_margin",
-        "goodBadUgly": "good",
-        "stripCriticalData": true
+        "goodBadUgly": "good"
       },
       "arbitrateStatus": "not_run",
       "ownerRuntimeStatus": "not_run",

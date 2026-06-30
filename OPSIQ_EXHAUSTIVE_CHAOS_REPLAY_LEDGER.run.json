@@ -1,0 +1,1806 @@
+{
+  "layer": "db",
+  "count": 180,
+  "results": {
+    "CHAOS-PC-weak_unit_economics_scale-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-laundry-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-housekeeping-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-restaurant-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-retail_grocery-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-pharmacy-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-salon-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-repair-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-manufacturing-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-logistics-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-agency-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-ecommerce-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-eldercare-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-franchise-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-multi_location-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-weak_unit_economics_scale-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-owner_overload-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-quality_complaints-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-seasonality_planning-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-local_market_remote-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cashflow_squeeze-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-over_expansion-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-compliance_shutdown_risk-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_completion_proof-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-fake_vendor_fraud-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CHAOS-PC-cyber_payment_fraud-b2b_contractor-r0": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "IGOLD-laundry": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-housekeeping": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-restaurant": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "customer_quality",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-retail_grocery": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-pharmacy": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "IGOLD-salon": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-repair": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-manufacturing": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "IGOLD-logistics": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-agency": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-ecommerce": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "IGOLD-eldercare": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "IGOLD-franchise": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-multi_location": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "IGOLD-b2b_contractor": {
+      "dbBackedStatus": "pass",
+      "supervisorSummaryStatus": "pass",
+      "businessScopeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    }
+  }
+}
