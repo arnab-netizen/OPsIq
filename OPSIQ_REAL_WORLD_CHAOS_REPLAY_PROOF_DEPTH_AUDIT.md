@@ -337,3 +337,42 @@ structural + the dominant is co-engineered (MEDIUM circularity); (e) only 11 uni
 3. **Independent gold cases** — author a handful of expected outcomes without reference to `arbitrate()`
    output to drop circularity MEDIUM → LOW.
 4. **Broaden sources** — raise the 11 unique public sources toward the breadth the "75+ real-world" claim implies.
+
+---
+
+# PROOF-ADDITION UPDATE (after DB-backed + full Playwright + independent gold)
+
+Read-only re-audit after the proof additions (test/fixture/spec only; no production change).
+
+## Updated exact counts
+1. **counted scenarios:** **180** (165 chaos-corpus + 15 independent gold).
+2. **unique sources:** **26** (11 chaos-pattern sources + 15 new independent-gold sources).
+3. **scenarios through `arbitrate()`:** **180**.
+4. **scenarios through owner runtime (`runOwnerAdvice`):** **180**.
+5. **scenarios through DB-backed `getOwnerWholeBusinessPlan`:** **10** (chaos themes, real scoped rows) +
+   the 4 chaos-isolation profiles — representative, not all 165.
+6. **scenarios through jsdom dashboard:** **8**.
+7. **scenarios through full Playwright desktop (real browser):** **6** (spec 19 — ran locally, 11 passed).
+8. **scenarios through full Playwright mobile (real browser):** **3** (spec 19).
+9. **independent gold cases:** **15** (hand-authored expectations; engine independently agreed on all 15).
+10. **circularity risk:** **LOW for the 15 independent gold** (hand-authored, no engine hint, engine agreed);
+    **MEDIUM for the 165 derived corpus** (goldSkeleton co-engineered) — reported honestly, not averaged away.
+11. **action-status distribution (honest):** real-data DB path → `blocked` (4) + `owner_decision_required`
+    (6); in-memory chaos → `need_more_data` (105) + `blocked` (60). **`proceed` / `cautious_proceed` = 0** —
+    the supervisor is conservative by design: any binding constraint routes to an owner decision or a block,
+    so the full proceed spectrum is **not** reachable for binding-constraint chaos data (a safety property,
+    not a faked gap).
+12. **Playwright covers chaos scenarios:** **YES** — `tests/browser/19-chaos-replay.spec.ts` renders 6 chaos
+    scenarios desktop + 3 mobile in a real browser and is wired into the `owner-pilot-e2e` CI lane.
+13. **DB covers chaos scenarios:** **YES** — 10 chaos themes through the real DB-backed owner plan path.
+14. **Classification ceiling:** **`CHAOS_REPLAY_DB_BROWSER_REPRESENTATIVE_PROVEN`** — DB-of-chaos and
+    real-browser chaos proven on representative scenarios + circularity reduced to LOW on 15 independent
+    cases + source breadth met (26). **Not** `REAL_WORLD_CHAOS_REPLAY_READY`, because the conservative
+    supervisor does not emit `proceed`/`cautious_proceed` for binding-constraint chaos data, so the full
+    action-status spectrum that gate requires is not honestly demonstrable without changing production logic.
+
+## What remains representative vs exhaustive
+- DB-backed and real-browser proofs are **representative** (10 DB themes, 6+3 Playwright scenarios), not all
+  180 counted scenarios. The 165 corpus replays remain runtime-level (in-memory) proven.
+- `proceed`/`cautious_proceed` dispositions are not produced by realistic chaos data and are reported as a
+  conservative-design property, not claimed.

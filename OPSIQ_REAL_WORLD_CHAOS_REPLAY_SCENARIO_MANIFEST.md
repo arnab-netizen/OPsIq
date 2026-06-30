@@ -173,3 +173,16 @@
 | 163 | fake_completion_proof-b2b_contractor-r0 | b2b_contractor | ugly | SRC-SDK-FICTITIOUS-VENDOR | case_study | medium | self-reported owner clai | proof_fraud_block | proof_fraud_block | blocked | blocked | Act on the manager's report | no | no | no | PASS |
 | 164 | fake_vendor_fraud-b2b_contractor-r0 | b2b_contractor | ugly | SRC-TAL-FAKEVENDOR | case_study | high | self-reported owner clai | proof_fraud_block | proof_fraud_block | blocked | blocked | Act on the manager's report | no | no | no | PASS |
 | 165 | cyber_payment_fraud-b2b_contractor-r0 | b2b_contractor | ugly | SRC-FORTUNE-RANSOMWARE | cyber_continuity | high | self-reported owner clai | proof_fraud_block | proof_fraud_block | blocked | blocked | Act on the manager's report | no | no | no | PASS |
+
+---
+
+## PROOF-ADDITION UPDATE
+The per-row `db`/`pw` flags above are for the **165 corpus PublicCases** (honestly **no** — those exact cases
+ran runtime-level/in-memory). Separately, the proof additions cover **representative** chaos scenarios:
+- **DB-backed (real `getOwnerWholeBusinessPlan`):** 10 chaos themes (marketing_blocked, proof_fraud,
+  bad_contract, multi_location_remote, delivery_capacity, cash_crisis, vendor_compliance, proof_fraud,
+  growth_scale, shutdown_pivot) → dominant + action status proven on real scoped rows; no leakage.
+- **Full Playwright (real browser):** 6 desktop + 3 mobile chaos scenarios (`tests/browser/19-chaos-replay.spec.ts`,
+  ran locally — 11 passed; wired into the `owner-pilot-e2e` CI lane).
+- **Independent gold:** 15 hand-authored cases (one per category) with 15 new sources; the engine
+  independently agreed on all 15 → circularity LOW for those (unique sources used: 11 + 15 = 26).
