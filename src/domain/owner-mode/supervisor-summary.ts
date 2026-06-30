@@ -19,6 +19,7 @@
  * Pure module. No DB, no Date.now, no AI.
  */
 import type { Confidence } from "@/services/owner-mode/owner-domain-ingestion";
+import { decideActionStatus, type SafeActionSignals } from "./action-status-policy";
 
 export type OwnerActionStatus =
   | "proceed"
@@ -65,6 +66,13 @@ export interface SupervisorInput {
   ownerWorkloadOffload: string;
   plan7Day: string;
   plan30Day: string;
+  /**
+   * OPTIONAL safe-action signals. Present ONLY when the runtime has classified the recommended action as
+   * genuinely safe (low/medium risk, reversible, within an approved SOP/standing instruction, evidence
+   * sufficient, no material cash/staff/customer/compliance risk). When absent (the default for every
+   * existing caller), the disposition stays conservative and identical to before this field existed.
+   */
+  safeAction?: SafeActionSignals;
 }
 
 export interface AssumptionLedger {
@@ -160,20 +168,41 @@ function deriveConfidence(input: SupervisorInput): { confidence: Confidence; rea
   };
 }
 
+/**
+ * Delegates to the canonical action-status policy. Behaviour-preserving: when `input.safeAction` is absent
+ * (every existing caller), the supplied signals reproduce the original conservative ladder exactly —
+ * blocked (unsafe / compliance / proof) → need_more_data (missing critical data / no confidence) →
+ * owner_decision_required (owner approval or high-risk-financial) → cautious_proceed (confidence low/medium)
+ * → proceed. A genuinely-safe action may downgrade an owner-decision to cautious_proceed / proceed, but can
+ * NEVER override blocked or need_more_data.
+ */
 function deriveActionStatus(input: SupervisorInput, confidence: Confidence): OwnerActionStatus {
-  if (input.unsafeCount > 0 || input.dominantConstraint === "compliance_block" || input.dominantConstraint === "proof_fraud_block") {
-    return "blocked";
-  }
-  if (!input.criticalDomainsAllReal || confidence === "none") {
-    return "need_more_data";
-  }
-  if (input.ownerApprovalRequired || HIGH_RISK_FINANCIAL.has(input.dominantConstraint)) {
-    return "owner_decision_required";
-  }
-  if (confidence === "low" || confidence === "medium") {
-    return "cautious_proceed";
-  }
-  return "proceed";
+  return decideActionStatus({
+    unsafe: input.unsafeCount > 0,
+    complianceOrProofBoundaryWithoutReview: input.dominantConstraint === "compliance_block" || input.dominantConstraint === "proof_fraud_block",
+    disputedOrFakeProof: false,
+    badContractHighRisk: false,
+    cashHardBlock: false,
+    staffOrCustomerSafetyRisk: false,
+    highRiskActionWithMissingData: false,
+    likelyBadOutcomeIfFollowed: false,
+    criticalDataMissing: !input.criticalDomainsAllReal,
+    confidenceNone: confidence === "none",
+    materialAssumptions: false,
+    weakOrOneSidedSource: false,
+    confidenceBelowThreshold: false,
+    highImpactInsufficientEvidence: false,
+    financiallyMaterial: false,
+    changesStaffingPayroll: false,
+    changesPricingMaterially: false,
+    b2bContractTerms: false,
+    brandComplianceLegalBoundary: false,
+    reversibleButMaterial: false,
+    ownerApprovalRequiredByStandingInstruction: input.ownerApprovalRequired,
+    highRiskFinancialConstraint: HIGH_RISK_FINANCIAL.has(input.dominantConstraint),
+    safeAction: input.safeAction,
+    confidence,
+  }).status;
 }
 
 function buildLedger(input: SupervisorInput, confidence: Confidence, reason: string): AssumptionLedger {

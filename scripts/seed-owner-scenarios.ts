@@ -7,7 +7,8 @@
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { E2E_OWNER, E2E_WORKSPACE_ID } from "../tests/browser/e2e-fixtures";
-import { SCENARIOS, scenarioBusinessId, type ScenarioKnobs } from "../src/services/owner-mode/owner-scenario-profiles";
+import { SCENARIOS, SAFE_ACTION_SCENARIOS, scenarioBusinessId, type ScenarioKnobs } from "../src/services/owner-mode/owner-scenario-profiles";
+import { SAFE_ACTION_SOP_SCOPE } from "../src/services/owner-mode/owner-whole-business-plan.service";
 import type { PrismaClient } from "../src/generated/prisma/client";
 
 const OWNER_ROLE = "admin_or_portfolio_manager";
@@ -27,7 +28,7 @@ const rid = (businessId: string, seed: string) => {
  * `[db]` isolation test seed identical state — no drift between what the browser renders and what the test
  * asserts. Every row carries `businessId`, so co-seeded businesses never bleed across each other.
  */
-export async function seedScenarioBusiness(prisma: PrismaClient, ws: string, userId: string, businessId: string, label: string, k: ScenarioKnobs, now: Date) {
+export async function seedScenarioBusiness(prisma: PrismaClient, ws: string, userId: string, businessId: string, label: string, k: ScenarioKnobs, now: Date, safeActionSop?: "low" | "medium", stripCriticalData?: boolean) {
   const periodEnd = now, periodStart = new Date(now.getTime() - 30 * day);
   const future = new Date(now.getTime() + 90 * day), past = new Date(now.getTime() - 10 * day);
 
@@ -74,6 +75,15 @@ export async function seedScenarioBusiness(prisma: PrismaClient, ws: string, use
     where: { id: rid(businessId, "si1") }, update: { businessId },
     create: { id: rid(businessId, "si1"), workspaceId: ws, businessId, scope: "pricing.routine", allowedActionTypes: ["routine_discount"], forbiddenActionTypes: ["expansion"], riskClass: "low", status: "active", createdByUserId: userId },
   });
+  // Deliberate, explicitly-scoped owner grant ONLY for the safe-action scenarios — pre-approves a routine,
+  // reversible action class so the runtime may downgrade to proceed (low) / cautious_proceed (medium).
+  // Every other scenario leaves this absent, so its disposition is unchanged.
+  if (safeActionSop) {
+    await prisma.ownerStandingInstruction.upsert({
+      where: { id: rid(businessId, "sop1") }, update: { businessId, riskClass: safeActionSop, status: "active" },
+      create: { id: rid(businessId, "sop1"), workspaceId: ws, businessId, scope: SAFE_ACTION_SOP_SCOPE, allowedActionTypes: ["routine_reorder", "approved_message", "preventive_maintenance"], forbiddenActionTypes: ["expansion", "pricing_change", "contract_terms"], riskClass: safeActionSop, status: "active", createdByUserId: userId },
+    });
+  }
   await prisma.behavioralLearningArtifact.upsert({
     where: { id: rid(businessId, "art1") }, update: {},
     create: {
@@ -85,6 +95,13 @@ export async function seedScenarioBusiness(prisma: PrismaClient, ws: string, use
       createdAt: now.toISOString(), auditTrail: [{ at: now.toISOString(), actor: "seed", action: "created" }],
     },
   });
+  // Remove the critical finance/cash/working-capital evidence AFTER seeding so the providers report
+  // DATA_SOURCE_MISSING and the runtime resolves to need_more_data (proves SOP cannot fake evidence).
+  if (stripCriticalData) {
+    await prisma.ownerCashflowSnapshot.deleteMany({ where: { workspaceId: ws, businessId } });
+    await prisma.ownerFinancialSnapshot.deleteMany({ where: { workspaceId: ws, businessId } });
+    await prisma.ownerWorkingCapitalItem.deleteMany({ where: { workspaceId: ws, businessId } });
+  }
 }
 
 async function main() {
@@ -103,10 +120,10 @@ async function main() {
   await prisma.workspaceMembership.upsert({ where: { workspaceId_userId: { workspaceId: E2E_WORKSPACE_ID, userId: E2E_OWNER.userId } }, update: { role: "owner", isActive: true }, create: { workspaceId: E2E_WORKSPACE_ID, userId: E2E_OWNER.userId, role: "owner", addedBy: E2E_OWNER.userId, isActive: true } });
   await prisma.userRoleAssignment.upsert({ where: { userId_role_scope_scopeId: { userId: E2E_OWNER.userId, role: OWNER_ROLE, scope: "workspace", scopeId: E2E_WORKSPACE_ID } }, update: { isActive: true, revokedAt: null }, create: { id: randomUUID(), userId: E2E_OWNER.userId, role: OWNER_ROLE, scope: "workspace", scopeId: E2E_WORKSPACE_ID, isActive: true } });
 
-  for (const s of SCENARIOS) {
+  for (const s of [...SCENARIOS, ...SAFE_ACTION_SCENARIOS]) {
     const bizId = scenarioBusinessId(s.id);
-    await seedScenarioBusiness(prisma, E2E_WORKSPACE_ID, E2E_OWNER.userId, bizId, `Scenario: ${s.label}`, s.knobs, now);
-    console.log(`[seed-scenarios] ${s.id} -> business ${bizId} (expect ${s.expectedConstraint})`);
+    await seedScenarioBusiness(prisma, E2E_WORKSPACE_ID, E2E_OWNER.userId, bizId, `Scenario: ${s.label}`, s.knobs, now, s.safeActionSop, s.stripCriticalData);
+    console.log(`[seed-scenarios] ${s.id} -> business ${bizId} (expect ${s.expectedConstraint}${s.safeActionSop ? `, SOP ${s.safeActionSop}` : ""})`);
   }
   await pool.end();
 }

@@ -39,7 +39,7 @@ function seededDb(opts: { hasBusiness?: boolean; hasSnapshots?: boolean; learnin
     ownerComplianceItem: { findMany: fm([{ expiresAt: past(5) }]) },
     proof: { findMany: fm([{ duplicateFlagged: true, status: "REQUIRED", submittedAt: null }]) },
     ownerWorkloadSnapshot: { findFirst: ff({ dailyLoadPct: 167, band: "overloaded", ownerOnlyCriticalTasks: 9, overloaded: true, bottleneckRisk: true, createdAt: NOW }) },
-    ownerStandingInstruction: { count: async (a: { where?: unknown }) => { rec(a?.where); return 1; } },
+    ownerStandingInstruction: { count: async (a: { where?: unknown }) => { rec(a?.where); return 1; }, findFirst: async (a: { where?: unknown }) => { rec(a?.where); return null; } },
     ownerBusiness: { findFirst: async (a: { where?: unknown }) => { rec(a?.where); return hasBusiness ? { id: BIZ, workspaceId: WS, name: "Mock Laundry", businessType: "laundry_dry_cleaning", location: "Kolkata, West Bengal", currency: "INR" } : null; } },
     behavioralLearningArtifact: {
       count: async (a: { where?: unknown }) => { rec(a?.where); return learning ? 1 : 0; },
