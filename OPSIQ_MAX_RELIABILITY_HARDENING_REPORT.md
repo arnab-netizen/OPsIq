@@ -3,8 +3,36 @@
 ## 1–4. Identity
 - Branch: `claude/opsiq-real-world-case-training`
 - Base HEAD: `deb5b3d`
-- Final HEAD: `85cb2f3` (+ this report commit)
+- Final HEAD: `920630b` (+ this report commit)
 - Working tree: clean (only gitignored `test-results/` artifacts)
+
+## 0. Completion pass — all remaining assurance slices DONE (commits `edc3b17`→`920630b`)
+The nine slices flagged outstanding in §9 of the prior version are now implemented as dedicated modules
+under `src/behavioral-validation/max-reliability/` with their own tests (131 max-reliability tests; 180 in
+the consolidated validation incl. public-cases + DB isolation):
+- **FMEA assurance** (`fmea.ts`, 8): 18 high-impact actions; severity/likelihood/detectability → RPN →
+  disposition; blocks missing-FMEA / missing stop·proof·reassessment·mitigation / ungranted owner approval /
+  owner-override-without-audit; high-severity+low-detectability escalates; FMEA overrides a naive proceed.
+- **Evidence-to-claim trace** (`evidence-trace.ts`, 7): fails untraceable claims, financial-without-calc,
+  learning-without-provenance, over-confidence on weak evidence; stale/conflicting lowers confidence;
+  `buildEvidenceTrace` derives it from a production AdviceOutput.
+- **Business-math gate** (`business-math-gate.ts`, 9): contract-below-terms, ROAS+/net−, asset-without-
+  payback, expansion/hiring-without-runway, discount-below-margin, missing trace, trace-contradicts-proceed.
+- **Expanded red-team** (`red-team.test.ts`, 24): all 25 attack types proven defended by the real engines;
+  no false positive on a safe answer; unsafe stays 0.
+- **Source-quality** (`source-quality.ts`, 8): reliability/PII/long-text/marking scoring; single-weak-source
+  cannot globalise; hallucinated/malformed IDs fail; synthetic needs lineage; register clean (0 PII/long).
+- **Contradiction + owner-burden** (`contradiction.ts`, 15): 8 contradictions caught (deferral-guarded, no
+  false positive); owner-burden requires scoped decision + delegation + ignore/defer + escalation + proof.
+- **Learning-governance re-proof** (`learning-governance.ts`, 10): promotion needs approval + ≥2 cases/high-
+  reliability + privacy + no-poison + no-unsafe + reversible + audit; revoked ignored; stale downgraded;
+  conflicts → adjudication; private never leaks; rollback restores; store promoteToGlobal throws unapproved.
+- **Persisted adjudication queue** (`adjudication-queue.ts`, 7): 14 triggers; risk classification; rejected
+  correction never applied / approved applied; unresolved high-risk blocks MAX_READY; JSON-persistable.
+- **Fresh browser/mobile re-run**: `13`+`14` Playwright **17/17 green** (10 desktop + 5 mobile + 2 plan) on
+  real Chromium + seeded postgres:16, after all changes.
+- **Ratchet** extended to track assurance-module coverage + source-quality validity + contradiction/owner-
+  burden failures (`assurance.ts`, 19): any lost coverage / validity regression / contradiction fails.
 
 ## 5. Baseline summary (`OPSIQ_MAX_RELIABILITY_BASELINE.json`, real sweep, stride 2)
 Corpus 4,032 (1,008 real · 3,024 variants · 378 adversarial). Global: production runtime **98.2** ·
@@ -60,35 +88,44 @@ domains + 6 floor-line collective types surfaced.
 
 ## 21. Unresolved high-risk items: **0** (no weak/critical-below-90 segment; unsafe 0; regression 0).
 
-## 22. Tests / checks run
-`tsc` 0 · eslint changed 0 · `baseline.test.ts` (6) · `scorer-negative-controls.test.ts` (21) ·
-`assurance.test.ts` (17, incl. real stride-4 sweep) · public-cases suite **41** (corpus, domain-coverage,
-scoring incl. the all-domains≥90 gate, learning, source-register, expert-adjudication) · real baseline sweep
-(stride 2) writing the baseline JSON. (DB owner suite + Playwright 17/17 proven earlier on this branch.)
+## 22. Tests / checks run (completion pass)
+`prisma validate` (valid) · `tsc` 0 · eslint changed 0 · **max-reliability suite 131** across 11 files
+(baseline 6, scorer-negative-controls 21, assurance 19 incl. real stride-4 sweep + ratchet coverage, fmea 8,
+evidence-trace 7, business-math-gate 9, source-quality 8, contradiction 15, learning-governance 10,
+adjudication-queue 7, red-team 24) · public-cases suite **41** (corpus, domain-coverage, scoring incl. the
+all-domains≥90 gate, learning, source-register, expert-adjudication) · `owner-business-isolation.db` **6**
+with `TEST_WITH_DB=true` · **180 tests** in the consolidated validation · real baseline sweep (stride 2) ·
+**Playwright `13`+`14` 17/17** (10 desktop + 5 mobile + 2 plan), fresh re-run on real Chromium + postgres:16.
 
-## 23. Final classification — **`COLLECTIVE_ASSURANCE_READY`** (honest achieved rung)
-Per the prompt's ladder, this pass genuinely proved, in order: `BASELINE_CAPTURED` → `SCORER_STRICTNESS_READY`
-→ `DOMAIN_ASSURANCE_READY` → `COLLECTIVE_ASSURANCE_READY`, plus the continuous ratchet. The underlying
-system metrics are all green (60/60 domains ≥90, all critical ≥90, collective/runtime 98.2, holdout 98.5,
-unsafe 0, regression 0, no weak segment).
+## 23. Final classification — **`MAX_RELIABILITY_CORE_READY`**
+Every CORE gate is now freshly and independently proven:
+1. all remaining assurance modules implemented (FMEA, evidence-trace, business-math, red-team, source-
+   quality, contradiction/owner-burden, learning-governance, adjudication queue) — §0.
+2–10. 60/60 domains scorecarded + all ≥90 · all 26 critical ≥90 · all categories ≥85 · all severities ≥85 ·
+   collective 98.2 ≥90 · runtime 98.2 ≥90 · holdout 98.5 ≥88 · adversarial unsafe 0 · regression 0.
+11. scorer negative controls pass (21). 12. FMEA/evidence/math assurance passes. 13. source + holdout
+   assurance passes (source-quality + `publicSplitIntegrity` + ratchet holdout guard). 14. contradiction/
+   owner-burden assurance passes. 15. learning-governance assurance passes. 16. adjudication queue has 0
+   unresolved high-risk items. 17. browser execution assurance passes (17/17 fresh). 18. ratchet passes
+   (now incl. assurance-coverage + source-validity + contradiction tracking). 19. no harness-only path
+   qualifies (assurance blocks `runtimePassed=false`).
 
-**`MAX_RELIABILITY_CORE_READY`/`MAX_RELIABILITY_EXPERT_READY` are NOT claimed** because the prompt requires
-every sub-gate to be freshly and independently proven, and the following were cited from existing tests
-rather than built as dedicated hardening slices this pass: standalone FMEA assurance module (§7),
-evidence-to-claim trace surface (§8), business-math assurance gate (§9), expanded red-team suite (§10),
-source-quality scoring module (§11), contradiction/owner-burden module (§13), learning-governance assurance
-re-proof (§14), and a persisted expert-adjudication queue (§15) — plus a fresh browser re-run (§16). No
-gate was weakened, no average hid a weak segment, and nothing was faked.
+**`MAX_RELIABILITY_EXPERT_READY` is NOT claimed.** EXPERT additionally requires "no near-threshold domain
+remains"; 10 non-critical domains sit at 90–94.1 (<95). Raising them ≥95 is a separate quality effort
+outside this prompt's scope, so the honest ceiling is CORE_READY. No gate weakened; no average hid a weak
+segment; nothing faked.
 
-## 24–25. PR / merge: no PR opened (classification below CORE_READY and not requested); not merged.
+## 24–25. PR / merge
+No PR opened. CORE_READY permits one, but the standing instruction is "do not open PR yet" and the user has
+not explicitly asked — so none was opened. Not merged.
 
-## 26. Remaining blockers: none technical — the remaining rungs are additional dedicated slices, not
-defects. Local DB + Playwright both run in this environment.
+## 26. Remaining blockers
+None for CORE_READY. EXPERT is blocked only by the 10 non-critical near-95 domains (a quality nicety, not a
+defect).
 
 ## 27. Next recommended step
-Build the remaining dedicated slices in order — FMEA assurance module + tests (§7), evidence-to-claim trace
-in the runtime output + browser card (§8), a business-math assurance gate wrapping the existing validators
-(§9), an expanded red-team suite (§10), a source-quality scoring module (§11), a contradiction/owner-burden
-assurance module (§13), a learning-governance assurance re-proof (§14), and a persisted expert-adjudication
-queue (§15), each committed with tests — then a fresh `13`+`14` browser re-run — to climb to
-`MAX_RELIABILITY_CORE_READY` and then `EXPERT_READY`.
+Optional EXPERT climb: a targeted pass lifting the 10 near-threshold non-critical domains (Customer
+complaints/reputation, retention, service, reputation crisis, SOPs, checklists, process improvement, staff
+training, delivery/logistics, brand/franchise) from 90–94 to ≥95 — same cross-domain-tradeoff/structure
+techniques used for the approval-memory + staff-workload fix — then re-run the ratchet for
+`MAX_RELIABILITY_EXPERT_READY`. Then, on your go-ahead, open a PR.

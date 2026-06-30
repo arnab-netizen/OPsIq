@@ -171,15 +171,18 @@ runtime output, provider/confidence + owner-workload/offload + proof/reassessmen
 critical console errors; re-verified green after the arbitration change (`13` + `14`, 17/17). No PR opened;
 not merged.
 
-## 40. Maximum-reliability hardening (in progress)
-A hostile-audited reliability-assurance layer is being added over the training (see
-`OPSIQ_MAX_RELIABILITY_HARDENING_REPORT.md` + `OPSIQ_MAX_RELIABILITY_BASELINE.json`). Proven this pass:
-a real before-fix baseline across all 7 segment dimensions (anti-averaging tested); a scorer anti-gaming
-negative-control + strictness lock (16 bad outputs rejected, `PASS_THRESHOLD`/`COLLECTIVE_WEIGHTS` pinned);
-per-domain and per-collective-type assurance scorecards (real sweep: all 60 domains ASSURED_EXPERT_READY,
-no weak collective type); and a forward-only ratchet (passes vs the committed baseline). Current rung:
-`COLLECTIVE_ASSURANCE_READY` — `MAX_RELIABILITY_CORE/EXPERT_READY` not yet claimed (FMEA/evidence-trace/
-adjudication-queue dedicated slices remain). No gate weakened; no average hides a weak segment.
+## 40. Maximum-reliability hardening — `MAX_RELIABILITY_CORE_READY`
+A hostile-audited reliability-assurance layer is complete over the training (see
+`OPSIQ_MAX_RELIABILITY_HARDENING_REPORT.md` + `OPSIQ_MAX_RELIABILITY_BASELINE.json` +
+`OPSIQ_MAX_RELIABILITY_COMPLETION_PLAN.md`). Delivered: a real before-fix baseline across all 7 segment
+dimensions (anti-averaging tested); scorer anti-gaming negative-control + strictness lock; per-domain +
+per-collective-type assurance scorecards (all 60 domains ASSURED_EXPERT_READY); and dedicated assurance
+modules — FMEA, evidence-to-claim trace, business-math gate, expanded 25-type red-team, source-quality,
+contradiction/owner-burden, learning-governance re-proof, persisted adjudication queue — each tested (131
+max-reliability tests; 180 consolidated). A forward-only ratchet (incl. assurance-coverage, source-validity,
+contradiction tracking) passes vs the committed baseline; Playwright `13`+`14` re-run 17/17 green. Rung:
+**`MAX_RELIABILITY_CORE_READY`**. EXPERT held only by 10 non-critical near-95 domains. No gate weakened; no
+average hides a weak segment; nothing faked.
 
 ## 39. Final expert-adjudication pass
 Plan: `OPSIQ_FINAL_EXPERT_ADJUDICATION_PASS_PLAN.md`. Detail report:
