@@ -1,0 +1,106 @@
+name: Owner Pilot Browser + Mobile E2E
+
+# Real browser + mobile proof for the owner-pilot surfaces: boots the built app against a seeded
+# postgres, logs in as a real OWNER, and asserts the runtime-fed onboarding, command-center priority
+# strip, readiness score, dynamic input guidance, and action/proof cards — plus the manual input path
+# raising confidence, business-type-driven inputs, and mobile usability. Server enforcement stays
+# active; no client fakery; no static fallback can satisfy the tests.
+
+on:
+  push:
+    branches: ["claude/opsiq-owner-pilot-readiness-isow0m"]
+  workflow_dispatch:
+
+jobs:
+  owner-pilot-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      AUTH_SECRET: e2e-test-auth-secret-not-a-real-secret
+      AUTH_URL: http://localhost:3001
+      NEXT_PUBLIC_APP_URL: http://localhost:3001
+      BASE_URL: http://localhost:3001
+      TEST_WITH_DB: "true"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - name: Configure .env.local
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          AUTH_SECRET=e2e-test-auth-secret-not-a-real-secret
+          AUTH_URL=http://localhost:3001
+          NEXT_PUBLIC_APP_URL=http://localhost:3001
+          TEST_WITH_DB=true
+          EOF
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Build app
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Seed scenario businesses + owner-pilot businesses
+        run: |
+          npx tsx scripts/seed-owner-scenarios.ts
+          npx tsx scripts/seed-e2e-owner-pilot.ts
+      - name: Start app
+        run: |
+          PORT=3001 npm run start > /tmp/app.log 2>&1 &
+          up=""
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/login || echo 000)
+            if [ "$code" != "000" ]; then echo "app up (HTTP $code)"; up=1; break; fi
+            sleep 2
+          done
+          if [ -z "$up" ]; then echo "app failed to start"; tail -80 /tmp/app.log; exit 1; fi
+      - name: Run owner-pilot browser + mobile specs
+        run: >-
+          npx playwright test
+          tests/browser/15-owner-pilot-onboarding.spec.ts
+          tests/browser/16-owner-pilot-command-center.spec.ts
+          tests/browser/17-owner-pilot-mobile.spec.ts
+          --project=chromium
+      - name: Print Playwright failures + app log
+        if: always()
+        run: |
+          echo "PWFAIL_BEGIN"
+          node -e '
+            try {
+              const r=require("./test-results/results.json");
+              const walk=(s)=>{ (s.suites||[]).forEach(walk); for(const sp of (s.specs||[])){ for(const t of (sp.tests||[])){ for(const res of (t.results||[])){ if(res.status!=="passed"){ const err=(res.error&&res.error.message)||""; console.log("PWFAIL "+sp.title+" :: "+res.status+" :: "+String(err).replace(/\s+/g," ").slice(0,500)); } } } } };
+              (r.suites||[]).forEach(walk);
+            } catch(e){ console.log("PWFAIL_NOJSON "+e.message); }
+          ' 2>&1 | head -60
+          echo "PWFAIL_END"
+          echo "APPLOG_BEGIN"; tail -40 /tmp/app.log || true; echo "APPLOG_END"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owner-pilot-playwright-report
+          path: test-results
+          retention-days: 7

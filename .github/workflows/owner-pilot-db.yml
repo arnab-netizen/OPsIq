@@ -1,0 +1,57 @@
+name: Owner Pilot DB Proof
+
+# Live-DB proof for the owner-pilot surfaces: runs the owner-pilot [db] suite + the owner-mode
+# business-scope isolation [db] suites against a real postgres:16, with TEST_WITH_DB=true. Proves
+# onboarding/guidance/readiness/action read real scoped rows, the manual input path persists a scoped
+# intake and raises confidence, malformed/cross-business/cross-workspace records are rejected, and
+# legacy null-business rows never fake REAL_DB confidence — with no cross-tenant leakage.
+
+on:
+  push:
+    branches: ["claude/opsiq-owner-pilot-readiness-isow0m"]
+  workflow_dispatch:
+
+jobs:
+  owner-pilot-db:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_WITH_DB: "true"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - name: Prisma validate + migrate + generate
+        run: |
+          npx prisma validate
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Owner-pilot live DB suite + owner-mode isolation [db] tests
+        run: >-
+          TEST_WITH_DB=true npx vitest run
+          src/__tests__/owner-mode/pilot-readiness/owner-pilot-surfaces.db.test.ts
+          src/__tests__/services/owner-mode/owner-business-isolation.db.test.ts
+          src/__tests__/services/owner-mode/owner-whole-business-plan.db.test.ts
+          src/__tests__/behavioral-validation/whole-business/real-db-ingestion.db.test.ts
+          --maxWorkers 1
