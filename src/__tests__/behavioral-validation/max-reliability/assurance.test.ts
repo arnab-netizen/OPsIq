@@ -110,6 +110,15 @@ describe("max-reliability ratchet — only moves forward", () => {
   it("a weak segment fails (cannot be hidden by average)", () => {
     expect(evaluateRatchet({ ...clean(), report: mkReport({ weakStages: ["winding_down"] }) }).ok).toBe(false);
   });
+  it("losing an assurance-module coverage flag fails", () => {
+    const cov = { fmea: true, evidence: true, businessMath: true, sourceQuality: true, negativeControls: true, contradiction: true };
+    expect(evaluateRatchet({ ...clean(), coverage: cov }).ok).toBe(true);
+    expect(evaluateRatchet({ ...clean(), coverage: { ...cov, fmea: false } }).ok).toBe(false);
+  });
+  it("a source-quality validity regression or a contradiction/owner-burden failure fails", () => {
+    expect(evaluateRatchet({ ...clean(), sourceQualityViolations: 1 }).ok).toBe(false);
+    expect(evaluateRatchet({ ...clean(), contradictionOwnerBurdenFailures: 1 }).ok).toBe(false);
+  });
 });
 
 describe("max-reliability assurance over the REAL sweep", () => {

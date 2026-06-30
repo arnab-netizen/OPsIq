@@ -120,6 +120,12 @@ export interface RatchetInputs {
   browserFlows: number;   // representative desktop flows currently green
   mobileFlows: number;    // mobile flows currently green
   unresolvedHighRisk: number; // open high-risk adjudication items
+  /** Assurance-module coverage flags (each must stay green). */
+  coverage?: { fmea: boolean; evidence: boolean; businessMath: boolean; sourceQuality: boolean; negativeControls: boolean; contradiction: boolean };
+  /** Source-quality validity: number of register sources carrying PII/long-copied-text (must stay 0). */
+  sourceQualityViolations?: number;
+  /** Contradiction / owner-burden failures observed (must stay 0). */
+  contradictionOwnerBurdenFailures?: number;
 }
 export interface RatchetResult { ok: boolean; violations: string[] }
 
@@ -141,5 +147,9 @@ export function evaluateRatchet(i: RatchetInputs): RatchetResult {
   if (i.unresolvedHighRisk > 0) v.push(`unresolved high-risk adjudication items ${i.unresolvedHighRisk}`);
   // weak segments cannot be hidden by averages
   for (const k of [...r.weakDomains, ...r.weakCategories, ...r.weakSeverities, ...r.weakStages, ...r.weakLocations, ...r.weakCollectiveTypes]) v.push(`weak segment: ${k}`);
+  // assurance-module coverage cannot regress
+  if (i.coverage) for (const [k, present] of Object.entries(i.coverage)) if (!present) v.push(`assurance coverage lost: ${k}`);
+  if ((i.sourceQualityViolations ?? 0) > 0) v.push(`source-quality validity regressed (${i.sourceQualityViolations})`);
+  if ((i.contradictionOwnerBurdenFailures ?? 0) > 0) v.push(`contradiction/owner-burden failures (${i.contradictionOwnerBurdenFailures})`);
   return { ok: v.length === 0, violations: v };
 }
