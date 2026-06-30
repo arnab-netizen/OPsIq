@@ -73,10 +73,16 @@ export interface PublicScoreReport {
   bySeverity: Record<string, number>;
   byCategory: Record<string, number>;
   byDomain: Record<string, number>;
+  byStage: Record<string, number>;
+  byLocation: Record<string, number>;
+  byCollectiveType: Record<string, number>;
   weakCategories: string[];
   weakDomains: string[];
   weakCriticalDomains: string[];
   weakSeverities: string[];
+  weakStages: string[];
+  weakLocations: string[];
+  weakCollectiveTypes: string[];
 }
 
 const ofSplit = (s: Split) => PUBLIC_CORPUS.filter((p) => p.meta.split === s);
@@ -106,6 +112,11 @@ export async function scorePublicCorpus(opts: { stride?: number } = {}): Promise
   const bySeverity = segment(allRows, (r) => [r.pc.meta.severity]);
   const byCategory = segment(allRows, (r) => [r.pc.meta.businessCategory]);
   const byDomain = segment(allRows, (r) => r.pc.meta.domains);
+  const byStage = segment(allRows, (r) => [r.pc.meta.businessStage]);
+  const byLocation = segment(allRows, (r) => [`${r.pc.case.location.country}|${r.pc.case.location.marketTier}`]);
+  // Collective decision type = the cross-domain conflict(s) the case materially arbitrates (the prompt's
+  // "cash vs marketing", "quality vs growth", … framings). Every collective case carries these.
+  const byCollectiveType = segment(allRows.filter((r) => r.pc.meta.collective), (r) => r.pc.meta.crossDomainConflicts ?? []);
 
   const regressionFailures = regRows.filter((r) => r.result.plan.highestPriorityConstraint !== r.pc.meta.dominantConstraint).length;
   const adversarialUnsafe = advRows.reduce((s, r) => s + r.result.unsafeCount, 0);
@@ -118,11 +129,14 @@ export async function scorePublicCorpus(opts: { stride?: number } = {}): Promise
     adversarialUnsafe,
     regressionFailures,
     learningAppliedRate: Math.round((100 * allRows.filter((r) => r.result.learningApplied).length) / Math.max(1, allRows.length)),
-    bySeverity, byCategory, byDomain,
+    bySeverity, byCategory, byDomain, byStage, byLocation, byCollectiveType,
     weakCategories: Object.entries(byCategory).filter(([, v]) => v < 85).map(([k]) => k),
     weakDomains: Object.entries(byDomain).filter(([, v]) => v < 90).map(([k]) => k),
     weakCriticalDomains: Object.entries(byDomain).filter(([k, v]) => CRITICAL_DOMAIN_SET.has(k) && v < 90).map(([k]) => k),
     weakSeverities: Object.entries(bySeverity).filter(([, v]) => v < 85).map(([k]) => k),
+    weakStages: Object.entries(byStage).filter(([, v]) => v < 85).map(([k]) => k),
+    weakLocations: Object.entries(byLocation).filter(([, v]) => v < 85).map(([k]) => k),
+    weakCollectiveTypes: Object.entries(byCollectiveType).filter(([, v]) => v < 90).map(([k]) => k),
   };
 }
 

@@ -14,7 +14,8 @@ import {
 const cleanReport = (over: Partial<PublicScoreReport> = {}): PublicScoreReport => ({
   total: 700, productionRuntimeScore: 98, collectiveWholeBusinessScore: 98, holdoutScore: 96,
   adversarialUnsafe: 0, regressionFailures: 0, learningAppliedRate: 55,
-  bySeverity: {}, byCategory: {}, byDomain: {}, weakCategories: [], weakDomains: [], weakCriticalDomains: [], weakSeverities: [], ...over,
+  bySeverity: {}, byCategory: {}, byDomain: {}, byStage: {}, byLocation: {}, byCollectiveType: {},
+  weakCategories: [], weakDomains: [], weakCriticalDomains: [], weakSeverities: [], weakStages: [], weakLocations: [], weakCollectiveTypes: [], ...over,
 });
 
 describe("public corpus — production-runtime scoring", () => {
