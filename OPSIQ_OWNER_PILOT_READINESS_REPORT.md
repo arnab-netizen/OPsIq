@@ -89,3 +89,31 @@ The two blockers that previously held this at `PILOT_REHEARSAL_READY` are closed
 - **CI lanes added**: `.github/workflows/owner-pilot-db.yml` (postgres:16 + TEST_WITH_DB vitest) and `.github/workflows/owner-pilot-e2e.yml` (postgres:16 + build + chromium + seed + Playwright 15/16/17), mirroring the executed commands.
 
 All eighteen `OWNER_PILOT_READY` gates are met and proven against real Postgres + a real built app + real Chromium (desktop and mobile), with no unsafe/generic/overconfident output and no cross-tenant leakage.
+
+---
+
+## AI Supervisor / Dashboard Assistance (follow-on, branch `claude/opsiq-ai-supervisor-minimal-audit`, base `825bf14`)
+
+A minimal-code, audit-first pass added governed AI-supervisor assistance WITHOUT a parallel AI brain
+(owner advice is fully deterministic/rule-based — no LLM in the owner runtime). The audit found the
+runtime already computed profit/cash/workload/quality impact, an evidence/assumption ledger,
+confidence/missing-data, an action disposition, owner/delegate/proof/reassessment, and learning
+provenance — most of it simply DROPPED at the owner-view boundary.
+
+Closed gaps (1 pure domain module + 1 panel + thin view plumbing):
+- **OpsIQ Supervisor Summary** (`supervisor-summary.ts` + `SupervisorSummary.tsx`): one concise,
+  runtime-fed panel — main issue / why / do-now / do-not-do / owner-vs-delegate / proof /
+  missing-data+assumptions / confidence / **action status** (proceed / cautious / owner-decision /
+  need-more-data / blocked) / profit-cash-workload **impact** / reassessment + stop-loss / ≤3 priorities.
+- **Assumption ledger + no-fake-confidence**: known facts / marked assumptions / missing data /
+  confidence + reason / what-would-change; confidence can never read high while a critical domain is
+  missing; blocked/need-more-data never look like proceed.
+- **No-bypass contract**: final advice cannot bypass the approved runtime; production routes read only
+  runtime services; no static fallback.
+- **Owner question flow**: proven over existing structured seams (contract/marketing/opportunity
+  screens + supervisor summary); natural-language flow honestly staged (no parallel brain).
+
+Proof: 48 new tests; DB 66 (Postgres 16); browser lane 13–18 = 36 passed (supervisor spec 18 desktop+
+mobile); max-reliability + owner-pilot green (417 non-DB / 13 [db] skipped); tsc 0; lint ratchet PASS.
+Inventory: `OPSIQ_AI_SUPERVISOR_INVENTORY.json`. Full detail: `OPSIQ_AI_SUPERVISOR_MINIMAL_AUDIT_REPORT.md`.
+Classification: `AI_SUPERVISOR_READY`.
