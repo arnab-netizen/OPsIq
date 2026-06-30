@@ -6,15 +6,19 @@
  */
 
 import { assessCapacity, type CapacityInput } from "@/domain/execution/capacity-ceiling";
+import { assertBusinessInWorkspace, type BusinessScopeDb } from "@/services/owner-mode/business-scope";
 
 export interface CapacitySnapshotInput extends CapacityInput {
   workspaceId: string;
+  /** Business this snapshot belongs to (one workspace may hold many businesses). Validated server-side. */
+  businessId?: string | null;
   periodStart?: Date | null;
   periodEnd?: Date | null;
 }
 
 export interface PersistedCapacity {
   workspaceId: string;
+  businessId: string | null;
   bottleneckResource: string | null;
   bottleneckUtilization: number;
   revenueCeiling: number | null;
@@ -25,10 +29,10 @@ export interface PersistedCapacity {
   growthSafe: boolean;
 }
 
-interface CapDb {
+interface CapDb extends BusinessScopeDb {
   ownerCapacitySnapshot: {
     create(args: { data: Record<string, unknown> }): Promise<unknown>;
-    findMany(args: { where: { workspaceId: string }; orderBy?: unknown }): Promise<PersistedCapacity[]>;
+    findMany(args: { where: { workspaceId: string; businessId?: string }; orderBy?: unknown }): Promise<PersistedCapacity[]>;
   };
 }
 
@@ -46,9 +50,13 @@ async function resolveDefaultDeps(): Promise<CapDeps> {
 /** Compute + persist a capacity snapshot (workspace-scoped). */
 export async function saveCapacitySnapshot(input: CapacitySnapshotInput, injected?: CapDeps): Promise<PersistedCapacity> {
   const deps = injected ?? (await resolveDefaultDeps());
+  const businessId = input.businessId ?? null;
+  // Server-side authority: a supplied businessId must belong to the workspace (rejects cross-workspace).
+  if (businessId) await assertBusinessInWorkspace(deps.db, input.workspaceId, businessId);
   const a = assessCapacity(input);
   const persisted: PersistedCapacity = {
     workspaceId: input.workspaceId,
+    businessId,
     bottleneckResource: a.bottleneckResource,
     bottleneckUtilization: a.bottleneckUtilization,
     revenueCeiling: a.revenueCeiling,
@@ -62,6 +70,7 @@ export async function saveCapacitySnapshot(input: CapacitySnapshotInput, injecte
     data: {
       id: deps.uuid(),
       workspaceId: input.workspaceId,
+      businessId,
       periodStart: input.periodStart ?? null,
       periodEnd: input.periodEnd ?? null,
       currentRevenue: input.currentRevenue,
@@ -80,8 +89,9 @@ export async function saveCapacitySnapshot(input: CapacitySnapshotInput, injecte
   return persisted;
 }
 
-/** List capacity snapshots for a workspace (scoped). */
-export async function listCapacitySnapshots(workspaceId: string, injected?: CapDeps): Promise<PersistedCapacity[]> {
+/** List capacity snapshots for a workspace, optionally scoped to one business. */
+export async function listCapacitySnapshots(workspaceId: string, injected?: CapDeps, businessId?: string): Promise<PersistedCapacity[]> {
   const deps = injected ?? (await resolveDefaultDeps());
-  return deps.db.ownerCapacitySnapshot.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" } });
+  const where = businessId ? { workspaceId, businessId } : { workspaceId };
+  return deps.db.ownerCapacitySnapshot.findMany({ where, orderBy: { createdAt: "desc" } });
 }

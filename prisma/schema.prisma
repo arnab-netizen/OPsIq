@@ -1488,6 +1488,7 @@ model OwnerSopDocument {
 model OwnerStandingInstruction {
   id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   workspaceId          String    @map("workspace_id") @db.Uuid
+  businessId           String?   @map("business_id") @db.Uuid
   scope                String
   allowedActionTypes   String[]  @map("allowed_action_types")
   forbiddenActionTypes String[]  @map("forbidden_action_types")
@@ -1500,6 +1501,7 @@ model OwnerStandingInstruction {
   updatedAt            DateTime  @updatedAt @map("updated_at")
 
   @@index([workspaceId, scope])
+  @@index([workspaceId, businessId])
   @@map("owner_standing_instruction")
 }
 
@@ -3990,6 +3992,7 @@ model OwnerEmployeeWorkloadSnapshot {
 model OwnerWorkloadSnapshot {
   id                       String    @id @db.Uuid
   workspaceId              String    @map("workspace_id") @db.Uuid
+  businessId               String?   @map("business_id") @db.Uuid
   periodStart              DateTime? @map("period_start")
   periodEnd                DateTime? @map("period_end")
   ownerMinutesPerDay       Float     @map("owner_minutes_per_day")
@@ -4006,6 +4009,7 @@ model OwnerWorkloadSnapshot {
 
   @@index([workspaceId])
   @@index([workspaceId, band])
+  @@index([workspaceId, businessId])
   @@map("owner_workload_snapshots")
 }
 
@@ -4014,6 +4018,7 @@ model OwnerWorkloadSnapshot {
 model OwnerCapacitySnapshot {
   id                    String    @id @db.Uuid
   workspaceId           String    @map("workspace_id") @db.Uuid
+  businessId            String?   @map("business_id") @db.Uuid
   periodStart           DateTime? @map("period_start")
   periodEnd             DateTime? @map("period_end")
   currentRevenue        Float     @map("current_revenue")
@@ -4030,6 +4035,7 @@ model OwnerCapacitySnapshot {
   createdAt             DateTime  @default(now()) @map("created_at")
 
   @@index([workspaceId])
+  @@index([workspaceId, businessId])
   @@map("owner_capacity_snapshots")
 }
 
@@ -4116,6 +4122,7 @@ model ProofRequirement {
 model Proof {
   id                  String    @id @db.Uuid
   workspaceId         String    @map("workspace_id") @db.Uuid
+  businessId          String?   @map("business_id") @db.Uuid
   taskId              String?   @map("task_id") @db.Uuid
   proofRequirementId  String?   @map("proof_requirement_id") @db.Uuid
   proofType           String    @map("proof_type")
@@ -4134,6 +4141,7 @@ model Proof {
 
   @@index([workspaceId, status])
   @@index([workspaceId, fileHash])
+  @@index([workspaceId, businessId])
   @@map("proofs")
 }
 

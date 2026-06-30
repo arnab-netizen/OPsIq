@@ -64,7 +64,7 @@ export async function seedOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds): Pr
   await db.ownerCapacitySnapshot.upsert({
     where: { id: rid(businessId, "cap1") },
     update: {},
-    create: { id: rid(businessId, "cap1"), workspaceId, currentRevenue: 320000, safeUtilization: 0.7, resources: {}, bottleneckUtilization: 1.1, growthCapacityRevenue: 0, availableBuffer: -20000, expansionTriggered: false, growthSafe: false, createdAt: periodEnd },
+    create: { id: rid(businessId, "cap1"), workspaceId, businessId, currentRevenue: 320000, safeUtilization: 0.7, resources: {}, bottleneckUtilization: 1.1, growthCapacityRevenue: 0, availableBuffer: -20000, expansionTriggered: false, growthSafe: false, createdAt: periodEnd },
   });
 
   await db.ownerComplianceItem.upsert({
@@ -76,19 +76,19 @@ export async function seedOwnerDbCase(db: PrismaClient, ids: OwnerDbCaseIds): Pr
   await db.proof.upsert({
     where: { id: rid(businessId, "prf1") },
     update: {},
-    create: { id: rid(businessId, "prf1"), workspaceId, proofType: "delivery", status: "REQUIRED", duplicateFlagged: true },
+    create: { id: rid(businessId, "prf1"), workspaceId, businessId, proofType: "delivery", status: "REQUIRED", duplicateFlagged: true },
   });
 
   await db.ownerWorkloadSnapshot.upsert({
     where: { id: rid(businessId, "wl1") },
     update: {},
-    create: { id: rid(businessId, "wl1"), workspaceId, ownerMinutesPerDay: 600, sustainableMinutesPerDay: 360, ownerTasks: 22, ownerOnlyCriticalTasks: 9, dailyLoad: 1.6, dailyLoadPct: 167, band: "overloaded", bottleneckRisk: true, overloaded: true, recommendedPath: "delegate_with_proof", createdAt: periodEnd },
+    create: { id: rid(businessId, "wl1"), workspaceId, businessId, ownerMinutesPerDay: 600, sustainableMinutesPerDay: 360, ownerTasks: 22, ownerOnlyCriticalTasks: 9, dailyLoad: 1.6, dailyLoadPct: 167, band: "overloaded", bottleneckRisk: true, overloaded: true, recommendedPath: "delegate_with_proof", createdAt: periodEnd },
   });
 
   await db.ownerStandingInstruction.upsert({
     where: { id: rid(businessId, "si1") },
     update: {},
-    create: { id: rid(businessId, "si1"), workspaceId, scope: "pricing.routine", allowedActionTypes: ["routine_discount"], forbiddenActionTypes: ["expansion"], riskClass: "low", status: "active", createdByUserId: userId },
+    create: { id: rid(businessId, "si1"), workspaceId, businessId, scope: "pricing.routine", allowedActionTypes: ["routine_discount"], forbiddenActionTypes: ["expansion"], riskClass: "low", status: "active", createdByUserId: userId },
   });
 
   await db.behavioralLearningArtifact.upsert({

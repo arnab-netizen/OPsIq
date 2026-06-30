@@ -20,7 +20,7 @@ const BLOCKING: Constraint[] = ["compliance_block", "proof_fraud_block", "cash_s
 
 export type ActionType =
   | "spend_marketing" | "accept_contract" | "expand" | "hire" | "cut_staff" | "discount"
-  | "buy_equipment" | "proceed_compliance" | "act_on_report" | "proceed";
+  | "buy_equipment" | "proceed_compliance" | "act_on_report" | "owner_centralize" | "proceed";
 
 const BLOCK_MAP: Record<ActionType, Constraint[]> = {
   spend_marketing: ["cash_survival", "customer_quality", "below_margin"],
@@ -32,6 +32,9 @@ const BLOCK_MAP: Record<ActionType, Constraint[]> = {
   buy_equipment: ["cash_survival"],
   proceed_compliance: ["compliance_block"],
   act_on_report: ["proof_fraud_block"],
+  // The owner personally doing/approving/controlling everything is the classic owner-overload mistake:
+  // blocked by owner_workload (delegate with proof-based controls) and by a capacity bottleneck.
+  owner_centralize: ["owner_workload", "capacity_feasibility"],
   proceed: ["compliance_block", "proof_fraud_block", "cash_survival"],
 };
 
@@ -109,8 +112,20 @@ export function defaultCandidates(c: BehavioralCase): DomainCandidate[] {
   if (c.decisionCategory === "staff_process_equipment") out.push({ domain: "operations", action: "Hire more staff", type: "hire" });
   if (c.flags.complianceRisk) out.push({ domain: "compliance", action: "Proceed past the grey area", type: "proceed_compliance" });
   if (c.flags.hostile) out.push({ domain: "operations", action: "Act on the manager's report", type: "act_on_report" });
+  // When the owner is the bottleneck (remote/overloaded owner), the tempting wrong move is to keep
+  // personally approving/handling every decision instead of delegating with proof — surface it so
+  // arbitration can reject it (owner_workload remedy: delegate with proof-based controls).
+  if (c.flags.remoteOwner || c.flags.ownerEmotional) out.push({ domain: "owner", action: "Owner personally approves and handles every decision", type: "owner_centralize" });
+  // When quality/complaints/rework are the binding issue (customer_quality active), the tempting wrong move
+  // is to grow/spend on acquisition while the quality problem is unresolved — the customer_quality remedy is
+  // exactly "fix quality before spending on acquisition". Surface it so arbitration rejects it.
+  if (c.flags.capacityRisk || /complaint|rework|quality|missing|late delivery|defect/.test(caseText(c)))
+    out.push({ domain: "marketing", action: "Spend on acquisition/marketing to grow while complaints/quality are unresolved", type: "spend_marketing" });
   if (out.length === 0) out.push({ domain: "operations", action: "Proceed with the plan", type: "proceed" });
-  return out;
+  // Dedupe by action type so a case that already had a spend_marketing candidate keeps exactly one
+  // (no behaviour change for existing single-type candidate sets).
+  const seen = new Set<ActionType>();
+  return out.filter((cand) => (seen.has(cand.type) ? false : (seen.add(cand.type), true)));
 }
 
 export function arbitrate(c: BehavioralCase, candidates: DomainCandidate[] = defaultCandidates(c)): ArbitrationResult {

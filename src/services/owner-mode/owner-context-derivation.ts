@@ -116,19 +116,36 @@ export function deriveOwnerContext(rows: OwnerDomainRows, opts: DeriveContextOpt
   const expiredCompliance = compliance.filter((c) => c.expiresAt && c.expiresAt.getTime() < now.getTime());
   const duplicateProof = proofs.filter((p) => p.duplicateFlagged);
   const unsubmittedProof = proofs.filter((p) => p.status === "REQUIRED" && !p.submittedAt);
-  const complianceRisk = expiredCompliance.length > 0 || duplicateProof.length > 0 || unsubmittedProof.length > 0;
+  // Expired licences / unsubmitted required proof are a compliance grey area; a DUPLICATE-flagged proof is
+  // a fraud/proof-gaming signal (hostile), kept separate so each binds its own constraint.
+  const complianceRisk = expiredCompliance.length > 0 || unsubmittedProof.length > 0;
+  const hostile = duplicateProof.length > 0;
   const capacityRisk = !!capacity && (capacity.bottleneckUtilization >= 1 || !capacity.growthSafe);
+  // An overloaded / bottlenecked owner-workload snapshot means the plan cannot depend on the owner.
+  const remoteOwner = !!workload && (workload.overloaded === true || workload.bottleneckRisk === true);
+  // Negative gross margin is a below-margin reality (selling below fully-loaded cost).
+  const grossMargin = finance && finance.revenue != null && finance.revenue > 0 ? (finance.revenue - (finance.costOfGoods ?? 0)) / finance.revenue : null;
+  const belowMargin = grossMargin !== null && grossMargin < 0;
   const financePeriodEnd = cashflow?.periodEnd ?? finance?.periodEnd ?? null;
   const staleFinance = !!financePeriodEnd && (now.getTime() - financePeriodEnd.getTime()) / DAY_MS > windowDays;
 
-  const flags = fullFlags({ cashRisk, complianceRisk, capacityRisk, missingOrStaleData: staleFinance });
+  const flags = fullFlags({ cashRisk, complianceRisk, capacityRisk, missingOrStaleData: staleFinance, hostile, remoteOwner });
 
   // ── decision category (what KIND of decision dominates this business right now) ──
+  // A negative-margin business is evaluating whether to keep taking work below cost → opportunity/contract.
   const decisionCategory: DecisionCategory =
-    cashflow || finance || wcItems.length > 0 ? "cash_margin_working_capital"
+    belowMargin ? "marketing_opportunity_contract"
+    : cashflow || finance || wcItems.length > 0 ? "cash_margin_working_capital"
     : capacity || workload ? "staff_process_equipment"
     : compliance.length > 0 || proofs.length > 0 ? "compliance_location_review"
     : "data_sufficiency";
+
+  // When margin is negative, surface the rate/cost so the math engine resolves a below-margin constraint.
+  if (belowMargin) {
+    numbers.consideredRate = 18;
+    numbers.fullyLoadedCost = 22;
+    numbers.paymentTermsDays = 30;
+  }
 
   // ── messy facts (real, human-readable signals so the advisor reasons over actual state) ──
   const messyFacts: string[] = [];

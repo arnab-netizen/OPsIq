@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arbitrate, applyOwnerOverride, activeConstraints, type DomainCandidate } from "@/behavioral-validation/whole-business/arbitration";
+import { arbitrate, applyOwnerOverride, activeConstraints, defaultCandidates, type DomainCandidate } from "@/behavioral-validation/whole-business/arbitration";
 import { SEED_CASES } from "@/behavioral-validation/seed-cases";
 import type { BehavioralCase } from "@/behavioral-validation/schema";
 
@@ -74,5 +74,53 @@ describe("cross-domain arbitration", () => {
     expect(r.rejectedAlternatives.length).toBeGreaterThan(0);
     expect(r.requiredProofToReconsider.length).toBeGreaterThan(0);
     expect(r.reassessmentDate).toMatch(/reassess/i);
+  });
+
+  // ── owner-overload tradeoff: "owner does everything" is the classic mistake and must be rejected ──
+  // Neutral root cause/numbers so the ONLY active constraint is owner_workload (no quality/capacity text).
+  const ownerOverload = (over: Partial<BehavioralCase> = {}) =>
+    mk({ decisionCategory: "staff_process_equipment", hiddenRootCause: "the owner is the bottleneck and personally signs off on every routine task", messyFacts: ["owner approves each order before it ships"], numbers: {}, flags: { remoteOwner: true }, ...over });
+
+  it("a remote-owner case rejects the owner-centralize alternative via owner_workload", () => {
+    const r = arbitrate(ownerOverload()); // default candidates
+    expect(r.dominantConstraint).toBe("owner_workload");
+    expect(r.rejectedAlternatives.some((x) => x.candidate.type === "owner_centralize" && x.blockedBy === "owner_workload")).toBe(true);
+    expect(r.whatNotToDo.join(" ").toLowerCase()).toMatch(/personally approves and handles every decision/);
+  });
+
+  it("an owner-emotional (bottlenecked) case also surfaces and rejects owner_centralize", () => {
+    const r = arbitrate(ownerOverload({ flags: { ownerEmotional: true } }));
+    expect(r.rejectedAlternatives.some((x) => x.candidate.type === "owner_centralize")).toBe(true);
+  });
+
+  it("a non-overloaded owner case does NOT fabricate an owner_centralize temptation", () => {
+    const cands = defaultCandidates(mk({ decisionCategory: "staff_process_equipment", hiddenRootCause: "process bottleneck at the press station", messyFacts: ["one machine is slow"], numbers: {} }));
+    expect(cands.some((x) => x.type === "owner_centralize")).toBe(false);
+  });
+
+  it("owner_centralize is also blocked by a capacity bottleneck", () => {
+    const r = arbitrate(mk({ flags: { remoteOwner: true, capacityRisk: true } }), [{ domain: "owner", action: "Owner handles all", type: "owner_centralize" }]);
+    expect(r.rejectedAlternatives.some((x) => x.candidate.type === "owner_centralize")).toBe(true);
+  });
+
+  // ── customer-quality tradeoff: "grow/spend while quality is broken" must be rejected ──
+  it("a complaints/quality case rejects the grow-while-quality-broken spend via customer_quality", () => {
+    const c = mk({ decisionCategory: "staff_process_equipment", hiddenRootCause: "rising complaints and rework are breaking reputation; service is thin", messyFacts: ["complaints up, rework high"], numbers: {} });
+    const r = arbitrate(c); // default candidates
+    expect(r.dominantConstraint).toBe("customer_quality");
+    const spendRej = r.rejectedAlternatives.find((x) => x.candidate.type === "spend_marketing");
+    expect(spendRej).toBeDefined();
+    expect(spendRej!.blockedBy).toBe("customer_quality");
+    expect(r.whatNotToDo.join(" ").toLowerCase()).toMatch(/while complaints\/quality are unresolved/);
+  });
+
+  it("a clean non-quality case does NOT fabricate the quality spend candidate", () => {
+    const cands = defaultCandidates(mk({ decisionCategory: "staff_process_equipment", hiddenRootCause: "healthy steady business considering growth", messyFacts: ["all stable"], numbers: {} }));
+    expect(cands.some((x) => x.type === "spend_marketing")).toBe(false);
+  });
+
+  it("defaultCandidates dedupes by type (a cash-dominant case keeps exactly one spend_marketing)", () => {
+    const cands = defaultCandidates(mk({ flags: { cashRisk: true }, hiddenRootCause: "cash crunch with complaints", messyFacts: ["complaints up"], numbers: {} }));
+    expect(cands.filter((x) => x.type === "spend_marketing").length).toBe(1);
   });
 });

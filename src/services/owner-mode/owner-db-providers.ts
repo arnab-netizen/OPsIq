@@ -62,15 +62,20 @@ export interface OwnerDomainRows {
  */
 export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promise<OwnerDomainRows> {
   const { db, workspaceId, businessId } = deps;
+  // Every business-specific read is scoped by workspaceId + businessId. A `businessId` predicate matches
+  // neither another business's rows (different id) nor LEGACY workspace-only rows (business_id IS NULL),
+  // so there is no cross-business leakage, no cross-workspace leakage, and a business backed only by
+  // legacy null-business rows reports those domains as missing (it never inflates REAL_DB readiness).
+  // behavioralLearningArtifact stays workspace-scoped by design (workspace-private learning memory).
   const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount] = await Promise.all([
     db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
     db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
     db.ownerWorkingCapitalItem.findMany({ where: { workspaceId, businessId, status: "open" } }),
-    db.ownerCapacitySnapshot.findFirst({ where: { workspaceId }, orderBy: { createdAt: "desc" } }),
+    db.ownerCapacitySnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { createdAt: "desc" } }),
     db.ownerComplianceItem.findMany({ where: { workspaceId, businessId } }),
-    db.proof.findMany({ where: { workspaceId } }),
-    db.ownerWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: { createdAt: "desc" } }),
-    db.ownerStandingInstruction.count({ where: { workspaceId, status: "active" } }),
+    db.proof.findMany({ where: { workspaceId, businessId } }),
+    db.ownerWorkloadSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { createdAt: "desc" } }),
+    db.ownerStandingInstruction.count({ where: { workspaceId, businessId, status: "active" } }),
     db.ownerBusiness.findFirst({ where: { id: businessId, workspaceId } }),
     db.behavioralLearningArtifact.count({ where: { workspaceId, active: true } }),
   ]);
