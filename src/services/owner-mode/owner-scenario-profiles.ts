@@ -33,6 +33,14 @@ export interface Scenario {
    *  alongside cashflow/finance/compliance/working-capital), EVERY scenario renders distinctly per-business
    *  inside one workspace. Kept as an explicit flag so the browser suite iterates the full set. */
   browserDistinguishable: boolean;
+  /** When set, the seed grants a DELIBERATE `owner.safe-action-approved` standing instruction at this risk
+   *  class for the scenario business, so a genuinely-safe healthy business resolves to proceed (low) /
+   *  cautious_proceed (medium) through the real runtime. Absent on every other scenario (unchanged). */
+  safeActionSop?: "low" | "medium";
+  /** When set, the seed removes the persisted finance/cash/working-capital rows AFTER seeding, so the
+   *  critical-evidence providers report DATA_SOURCE_MISSING and the runtime resolves to need_more_data —
+   *  proving (browser-side) that an SOP grant can never fake missing evidence. */
+  stripCriticalData?: boolean;
   knobs: ScenarioKnobs;
 }
 
@@ -64,6 +72,25 @@ export const SCENARIOS: Scenario[] = [
     knobs: { ...HEALTHY, cashInHand: 0, receivablesOverdue: 120000, overdueWcReceivable: true } },
   { id: "multi_location_remote", label: "Multi-location / remote-owner control", expectedConstraint: "owner_workload", mobile: true, browserDistinguishable: true,
     knobs: { ...HEALTHY, workloadOverloaded: true } },
+];
+
+/**
+ * Safe-action SCENARIO PROFILES (§5 action-status spectrum). Both are genuinely healthy businesses whose
+ * dominant constraint is `profitable_growth` (no binding risk) — identical to `growth_scale` EXCEPT each
+ * carries a DELIBERATE owner `owner.safe-action-approved` standing instruction. That explicit owner grant
+ * is what lets the runtime downgrade the otherwise owner-decision disposition: a `low` risk class yields
+ * `proceed`; a `medium` risk class yields `cautious_proceed`. Kept OUT of `SCENARIOS` so no existing browser
+ * / chaos / DB spec changes; spec 20 + the cautious-proceed DB proof iterate this array explicitly.
+ */
+export const SAFE_ACTION_SCENARIOS: Scenario[] = [
+  { id: "safe_proceed", label: "Safe proceed (healthy + low-risk SOP-approved action)", expectedConstraint: "profitable_growth", mobile: true, browserDistinguishable: true, safeActionSop: "low",
+    knobs: { ...HEALTHY } },
+  { id: "safe_cautious", label: "Cautious proceed (healthy + medium-risk reversible SOP-approved action)", expectedConstraint: "profitable_growth", mobile: false, browserDistinguishable: true, safeActionSop: "medium",
+    knobs: { ...HEALTHY } },
+  // Healthy business WITH an SOP grant but its critical finance/cash evidence stripped after seeding →
+  // need_more_data. Proves (browser-side) the SOP grant cannot fake missing evidence.
+  { id: "safe_needs_data", label: "Need more data (SOP-approved but critical evidence missing)", expectedConstraint: "profitable_growth", mobile: false, browserDistinguishable: true, safeActionSop: "low", stripCriticalData: true,
+    knobs: { ...HEALTHY } },
 ];
 
 /** All 10 flows are business-scoped → render distinctly in the browser within one workspace. */

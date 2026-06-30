@@ -32,7 +32,7 @@ function mockDb(rows: ReturnType<typeof scenarioRows>): PrismaClient {
     ownerComplianceItem: { findMany: async () => rows.compliance },
     proof: { findMany: async () => rows.proofs },
     ownerWorkloadSnapshot: { findFirst: async () => rows.workload },
-    ownerStandingInstruction: { count: async () => rows.standingCount },
+    ownerStandingInstruction: { count: async () => rows.standingCount, findFirst: async () => null },
     ownerBusiness: { findFirst: async () => rows.business },
     behavioralLearningArtifact: { count: async () => rows.learningCount, findMany: async () => [learningRow], findUnique: async () => null, upsert: async () => undefined },
   } as unknown as PrismaClient;

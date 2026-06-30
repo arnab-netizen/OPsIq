@@ -26,6 +26,13 @@ export interface OwnerWholeBusinessPlanDeps {
   freshnessDays?: number;
 }
 
+/**
+ * The explicit standing-instruction scope an owner uses to pre-approve a safe routine action class. Only an
+ * active standing instruction with THIS scope makes a (otherwise owner-decision) safe action eligible for
+ * cautious_proceed / proceed. Deliberate by design — a generic/incidental standing instruction does not count.
+ */
+export const SAFE_ACTION_SOP_SCOPE = "owner.safe-action-approved";
+
 /** Human label for the dominant constraint (display only — never drives advice). */
 const CONSTRAINT_LABEL: Record<Constraint, string> = {
   compliance_block: "Compliance / legal block",
@@ -137,6 +144,61 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
     .filter((d) => ingestion.byDomain[d].realData === true)
     .map((d) => String(d));
 
+  // Safe-action policy signals — populated ONLY for a genuinely-safe business so the supervisor may
+  // downgrade an owner-decision to cautious_proceed / proceed. Conservative by construction: any binding
+  // risk (unsafe / compliance / proof / cash / margin / capacity / quality / red domain / missing critical
+  // data / low confidence / no covering standing instruction) leaves `safeAction` undefined, so the
+  // disposition stays exactly as before. The action is "within approved SOP" only when a covering owner
+  // standing instruction exists (owner approval pre-granted for this action class).
+  // A red in any genuinely-risky financial / operational / quality / compliance / proof / vendor domain
+  // blocks a safe action; advisory reds (business continuity, risk-management planning, self-evaluation,
+  // local-market awareness) do not, since they are surfaced in the summary but do not make a routine,
+  // reversible, SOP-approved action unsafe.
+  const HARD_RISK_RED = new Set([
+    "cash_flow", "finance", "pricing_margin", "working_capital", "budgeting_capital", "equipment_capacity",
+    "operations", "staff_management", "quality_control", "reputation_complaints", "customer_retention",
+    "compliance_review", "proof_anti_gaming", "fraud_collusion", "vendor_supplier", "delivery_logistics",
+    "process_improvement", "contract_quote", "opportunity_eval",
+  ]);
+  const hardRiskRed = plan.domainHealthTable.some((d) => d.status === "red" && HARD_RISK_RED.has(d.domain));
+  const SAFE_DOMINANTS = new Set(["profitable_growth", "efficiency_scaling", "optimization"]);
+  // "Within approved SOP" requires a DELIBERATE, explicitly-scoped owner standing instruction that
+  // pre-approves a safe routine action class — never a generic/incidental standing instruction. This is the
+  // owner's explicit grant; absent it, the disposition stays an owner decision (unchanged behaviour). The
+  // owner's declared risk class on that instruction decides proceed (low) vs cautious_proceed (medium).
+  const sopApproval = await db.ownerStandingInstruction.findFirst({
+    where: { workspaceId, businessId, status: "active", scope: SAFE_ACTION_SOP_SCOPE },
+    select: { riskClass: true },
+  });
+  const withinApprovedSOP = sopApproval !== null;
+  const lowRiskApproved = sopApproval?.riskClass === "low";
+  const safeEligible =
+    result.unsafeCount === 0 &&
+    ingestion.criticalDomainsAllReal &&
+    SAFE_DOMINANTS.has(String(dominant)) &&
+    !hardRiskRed &&
+    withinApprovedSOP &&
+    ingestion.overallConfidence !== "low" &&
+    ingestion.overallConfidence !== "none" &&
+    plan.proofRequired.length > 0 &&
+    plan.reassessmentTriggers.length > 0;
+  const safeAction = safeEligible
+    ? {
+        riskLevel: (lowRiskApproved ? "low" : "medium") as "low" | "medium",
+        routine: lowRiskApproved,
+        reversible: true,
+        withinApprovedSOP: true,
+        ownerApprovalNotRequiredOrGranted: true,
+        evidenceSufficient: true,
+        cashImpactSafe: true,
+        staffCapacityOk: true,
+        customerQualityControlled: true,
+        hasStopLoss: true,
+        hasProofReassessment: true,
+        noMaterialComplianceRisk: true,
+      }
+    : undefined;
+
   // Governed supervisor summary — a pure derivation over THIS runtime output (no new advice/model).
   const supervisor = buildSupervisorSummary({
     found: true,
@@ -171,6 +233,7 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
     ownerWorkloadOffload: plan.ownerWorkloadOffload,
     plan7Day: plan.plan7Day,
     plan30Day: plan.plan30Day,
+    safeAction,
   });
 
   return {
