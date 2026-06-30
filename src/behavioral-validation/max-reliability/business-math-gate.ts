@@ -25,8 +25,6 @@ export interface MathDecision {
 
 export interface MathGateResult { ok: boolean; failures: string[]; computed: Record<string, number | boolean | null> }
 
-const POSITIVE = (x: number | null) => x !== null && x > 0;
-
 /** Validate a decision's math vs its recommendation. A "proceed" must be supported by the numbers. */
 export function assertBusinessMath(d: MathDecision): MathGateResult {
   const failures: string[] = [];
