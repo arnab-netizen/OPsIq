@@ -16,6 +16,7 @@ import {
   type OnboardingState,
 } from "@/domain/owner-mode/owner-onboarding";
 import type { OwnerInputCategory } from "@/domain/owner-mode/input-catalog";
+import { intakeDomainToCategory } from "@/domain/owner-mode/input-record-parser";
 
 export interface OwnerOnboardingDeps {
   db: PrismaClient;
@@ -75,6 +76,11 @@ export function rowsToSuppliedCategories(rows: OwnerDomainRows): OwnerInputCateg
   if (rows.compliance && rows.compliance.length > 0) out.add("tax_compliance");
   if (rows.proofs && rows.proofs.length > 0) out.add("proof_completion");
   if (rows.standingCount && rows.standingCount > 0) out.add("sops_checklists");
+  // Owner-confirmed manual/import intakes (the real input paths) count as supplied data.
+  for (const domain of rows.confirmedIntakeDomains ?? []) {
+    const cat = intakeDomainToCategory(domain);
+    if (cat) out.add(cat);
+  }
   return Array.from(out);
 }
 
