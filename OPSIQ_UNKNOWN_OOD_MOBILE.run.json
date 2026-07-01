@@ -1,0 +1,558 @@
+{
+  "layer": "ood-mobile",
+  "shardIndex": 0,
+  "shardTotal": 0,
+  "count": 110,
+  "results": {
+    "OOD-unfamiliar_business_model-001": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-002": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-003": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-004": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-005": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-006": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-007": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-008": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-009": {
+      "playwrightMobileStatus": "pass",
+      "got": "Proceed with caution",
+      "failureReason": null
+    },
+    "OOD-unfamiliar_business_model-010": {
+      "playwrightMobileStatus": "pass",
+      "got": "Proceed",
+      "failureReason": null
+    },
+    "OOD-new_service_category-011": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_service_category-012": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-new_service_category-013": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_service_category-014": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_service_category-015": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_service_category-016": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_service_category-017": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_service_category-018": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-new_service_category-019": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-new_service_category-020": {
+      "playwrightMobileStatus": "pass",
+      "got": "Proceed with caution",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-021": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-022": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-023": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-024": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-025": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-026": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-027": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-028": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-029": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-new_equipment_process-030": {
+      "playwrightMobileStatus": "pass",
+      "got": "Proceed",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-031": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-032": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-033": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-034": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-035": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-036": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-037": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-038": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-039": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-new_jurisdiction_rule-040": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-041": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-042": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-043": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-044": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-045": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-046": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-047": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-048": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-049": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_b2b_terms-050": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-051": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-052": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-053": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-054": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-055": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-056": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-057": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-058": {
+      "playwrightMobileStatus": "pass",
+      "got": "Proceed with caution",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-059": {
+      "playwrightMobileStatus": "pass",
+      "got": "Proceed with caution",
+      "failureReason": null
+    },
+    "OOD-strange_customer_behavior-060": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-061": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-062": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-063": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-064": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-065": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-066": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-067": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-068": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-069": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unseen_staff_proof_manipulation-070": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-071": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-072": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-073": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-074": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-075": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-076": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-077": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-078": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-079": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-unusual_vendor_supply-080": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-081": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-082": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-083": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-084": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-085": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-086": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-087": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-088": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-089": {
+      "playwrightMobileStatus": "pass",
+      "got": "Blocked",
+      "failureReason": null
+    },
+    "OOD-sudden_external_shock-090": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-091": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-092": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-093": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-094": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-095": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-096": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-097": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-098": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-099": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-contradictory_incomplete_urgent-100": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-101": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-102": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-103": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-104": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-105": {
+      "playwrightMobileStatus": "pass",
+      "got": "Need more data",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-106": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-107": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-108": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-109": {
+      "playwrightMobileStatus": "pass",
+      "got": "Owner decision required",
+      "failureReason": null
+    },
+    "OOD-weak_analogy_pattern_adjacent-110": {
+      "playwrightMobileStatus": "pass",
+      "got": "Proceed with caution",
+      "failureReason": null
+    }
+  }
+}
