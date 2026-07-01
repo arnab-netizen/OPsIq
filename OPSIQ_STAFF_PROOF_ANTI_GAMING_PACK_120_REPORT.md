@@ -63,15 +63,14 @@ real-backed, confidence ≠ high ⇒ fake completion never verifies); fraud/stag
 serious risk → owner_decision; cross-workspace isolation proven. Run this session on a local Postgres cluster.
 
 ## 15. Desktop proof count
-**CI-gated (0 locally this session).** The desktop Playwright lane (`25-staff-proof-desktop.spec.ts`, all 120,
-shardable) is implemented and green-by-construction, but could NOT be executed locally: this session's harness
-terminates any persistent HTTP server (exit 144) before Playwright can drive it, and remote Neon is unreachable.
-The additive CI lane (`staff-proof-anti-gaming.yml → spa-browser`) runs it authoritatively on PR. NOT claimed as
-proven.
+**120 / 120 — PROVEN in CI.** The desktop Playwright lane (`25-staff-proof-desktop.spec.ts`, all 120, 2 shards)
+ran green on PR #67 (`staff-proof-anti-gaming.yml → spa-browser` shards 1 + 2). It could not be executed locally
+in the build session (the harness terminates any persistent HTTP server, exit 144), so CI is the authoritative
+observation — now green.
 
 ## 16. Mobile proof count
-**CI-gated (0 locally this session).** Same as §15 for `26-staff-proof-mobile.spec.ts` (375×812, all 120). NOT
-claimed as proven.
+**120 / 120 — PROVEN in CI.** Same as §15 for `26-staff-proof-mobile.spec.ts` (375×812, all 120, 2 shards) —
+green on PR #67. No high-risk / professional-review / fraud / collusion case reads "Proceed".
 
 ## 17. Skipped count
 **0** in the DB proof (120/120 executed). Browser/mobile are CI-gated (not skipped — pending the CI environment).
@@ -121,23 +120,22 @@ prior scenarios stay valid. Existing full-mobile 180 + chaos browser untouched (
 prisma validate, tsc, eslint (changed), ratchet; staff-proof-anti-gaming-pack (invariants),
 staff-proof-anti-gaming-db (120/120), business-reality-schema, unknown-ood-pack, unknown-ood-db (3/3),
 exhaustive-db 180 (4/4), ai-supervisor, action-status-policy, shadow-pilot, lean-guardrail, source-classification,
-learning-privacy, business-scope isolation, max-reliability. Desktop/mobile Playwright: implemented, CI-gated
-(not runnable locally — see §15/§16).
+learning-privacy, business-scope isolation, max-reliability. Desktop/mobile Playwright: **run green on PR #67 CI**
+(`spa-browser` shards 1 + 2, all 120 desktop + mobile).
 
 ## 29. Final classification
-**`STAFF_PROOF_ANTIGAMING_DB_PROVEN`** — 120 counted; all schema-valid + ledger-valid; all 120 DB-backed; fake
-completion never verifies; reused/stale never passes as fresh; rubber-stamping never overrides defects; collusion
-requires independent verification; high-risk manipulation never proceeds; no fake confidence / generic advice /
-unsafe output / live claim / un-adjudicated global learning; no-regression green. **Not** raised to
-`STAFF_PROOF_ANTIGAMING_PACK_READY` because the desktop/mobile risk proof could not be executed in this session
-(harness kills any persistent app server; remote DB unreachable) — that layer is implemented and CI-gated, and
-readiness must not be claimed for a layer not yet observed green.
+**`STAFF_PROOF_ANTIGAMING_PACK_READY`** — 120 counted; all schema-valid + ledger-valid; all 120 DB-backed; all
+120 desktop + mobile risk lanes **observed green on PR #67 CI** (with all no-regression + branch-protection
+gates); fake completion never verifies; reused/stale never passes as fresh; rubber-stamping never overrides
+defects; collusion requires independent verification; high-risk manipulation never proceeds; no fake confidence /
+generic advice / unsafe output / live claim / un-adjudicated global learning; no-regression green. The
+`DB_PROVEN → PACK_READY` gate (desktop/mobile risk lane) is satisfied by the observed-green CI run — readiness is
+claimed only for layers now observed green.
 
 ## 30. Limitations
-- Desktop/mobile browser proof is CI-gated, not locally observed this session (infrastructure, not a defect):
-  the harness terminates persistent HTTP servers (exit 144) and foreground `sleep` is blocked, so Playwright's
-  webServer could not stay up; remote Neon is unreachable (`P1001`). The `spa-browser` CI lane runs both specs
-  (all 120, sharded) authoritatively on PR.
+- Desktop/mobile browser proof was executed on CI (PR #67), not in the build session (the harness terminates
+  persistent HTTP servers, exit 144; foreground `sleep` blocked; remote Neon unreachable). CI is the authoritative
+  observation and is green.
 - Proves SAFE handling (detect/resist/escalate/prevent-unsafe-reliance) of staff/proof/manipulation risk, NOT
   full prevention of staff fraud.
 - Staff/proof `need_more_data` scenarios resolve dominant `profitable_growth` (arbitration fallback under
