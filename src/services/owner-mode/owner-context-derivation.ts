@@ -93,7 +93,7 @@ export function deriveOwnerContext(rows: OwnerDomainRows, opts: DeriveContextOpt
   if (!rows.business) throw new Error("deriveOwnerContext: no owner business row for this workspace/business");
   const { now } = opts;
   const windowDays = opts.freshnessDays ?? 35;
-  const { cashflow, finance, wcItems, capacity, compliance, proofs, workload, business } = rows;
+  const { cashflow, finance, wcItems, capacity, compliance, proofs, workload, business, reputation } = rows;
 
   const archetype = businessTypeToArchetype(business.businessType);
   const location = deriveLocationContext(business.location, business.currency);
@@ -157,6 +157,10 @@ export function deriveOwnerContext(rows: OwnerDomainRows, opts: DeriveContextOpt
   if (capacity) messyFacts.push(`Bottleneck utilization ≈ ${Math.round(capacity.bottleneckUtilization * 100)}%; growth ${capacity.growthSafe ? "safe" : "UNSAFE"}.`);
   if (workload) messyFacts.push(`Owner daily load ${workload.dailyLoadPct}% (band ${workload.band}); owner-only critical tasks ${workload.ownerOnlyCriticalTasks}.`);
   if (compliance.length > 0 || proofs.length > 0) messyFacts.push(`Compliance items ${compliance.length} (expired ${expiredCompliance.length}); proofs ${proofs.length} (duplicate-flagged ${duplicateProof.length}, unsubmitted ${unsubmittedProof.length}).`);
+  // Customer-reputation signal (additive): a real complaints/rework metric surfaces a quality problem so the
+  // engine binds customer_quality when it is the dominant issue. Absent a metric snapshot ⇒ no change.
+  const qualityComplaintRisk = !!reputation && ((reputation.complaintCount ?? 0) > 0 || (reputation.rewashCount ?? 0) > 0);
+  if (qualityComplaintRisk) messyFacts.push(`Customer complaints and rework rising (complaints ${reputation!.complaintCount}, rework ${reputation!.rewashCount}); quality/reputation is the binding issue before any acquisition spend.`);
   if (messyFacts.length === 0) messyFacts.push(`${business.name}: limited persisted operating data — confidence is reduced until more is captured.`);
 
   const ownerGoal = cashRisk

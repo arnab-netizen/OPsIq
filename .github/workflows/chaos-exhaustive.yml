@@ -1,0 +1,141 @@
+name: Exhaustive Chaos Replay (DB + Browser)
+
+# Exhaustive proof that all 180 counted real-world chaos scenarios (165 source-backed corpus + 15
+# independent gold) run through the REAL DB-backed owner plan path and render the runtime-fed Supervisor
+# Summary in a real browser. Boots the built app against a seeded postgres, seeds all 180 chaos businesses,
+# runs the all-180 DB lane + the all-180 Playwright desktop shards + the representative mobile lane.
+# Does NOT replace owner-pilot-e2e; additive lane.
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  chaos-db-exhaustive:
+    name: All-180 DB-backed chaos replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_WITH_DB: "true"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Ledger integrity (exactly 180)
+        run: npx vitest run src/__tests__/behavioral-validation/chaos-replay/ledger-integrity.test.ts
+      - name: All-180 DB-backed chaos replay
+        run: npx vitest run src/__tests__/behavioral-validation/chaos-replay/exhaustive-db.db.test.ts
+      - name: Assert DB ledger covered exactly 180
+        run: |
+          node -e '
+            const d=require("./OPSIQ_EXHAUSTIVE_CHAOS_REPLAY_LEDGER.run.json");
+            const pass=Object.values(d.results).filter(r=>r.dbBackedStatus==="pass").length;
+            if(d.count!==180||pass!==180){console.error("DB coverage not 180/180:",d.count,pass);process.exit(1);}
+            console.log("DB coverage 180/180 OK");
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chaos-db-ledger
+          path: OPSIQ_EXHAUSTIVE_CHAOS_REPLAY_LEDGER.run.json
+          retention-days: 7
+
+  chaos-browser-exhaustive:
+    name: All-180 desktop + representative mobile chaos browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      AUTH_SECRET: e2e-test-auth-secret-not-a-real-secret
+      AUTH_URL: http://localhost:3001
+      NEXT_PUBLIC_APP_URL: http://localhost:3001
+      BASE_URL: http://localhost:3001
+      TEST_WITH_DB: "true"
+      CHAOS_SHARD_INDEX: ${{ matrix.shard }}
+      CHAOS_SHARD_TOTAL: 3
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+      - run: npm ci
+      - name: Configure .env.local
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          AUTH_SECRET=e2e-test-auth-secret-not-a-real-secret
+          AUTH_URL=http://localhost:3001
+          NEXT_PUBLIC_APP_URL=http://localhost:3001
+          TEST_WITH_DB=true
+          EOF
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Build app
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Seed all 180 chaos businesses
+        run: npx tsx scripts/seed-chaos-e2e.ts
+      - name: Start app
+        run: |
+          PORT=3001 npm run start > /tmp/app.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/login || echo 000)
+            if [ "$code" != "000" ]; then echo "app up (HTTP $code)"; break; fi
+            sleep 2
+          done
+      - name: Desktop chaos shard ${{ matrix.shard }}/3
+        run: npx playwright test tests/browser/21-chaos-exhaustive-desktop.spec.ts --project=chromium
+      - name: Representative mobile (shard 1 only)
+        if: ${{ matrix.shard == 1 }}
+        run: npx playwright test tests/browser/22-chaos-exhaustive-mobile.spec.ts --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chaos-browser-results-shard-${{ matrix.shard }}
+          path: test-results
+          retention-days: 7

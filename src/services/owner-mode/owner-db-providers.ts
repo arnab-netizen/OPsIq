@@ -56,6 +56,9 @@ export interface OwnerDomainRows {
   learningCount: number;
   /** targetDomain of owner-confirmed intakes (manual/import paths) for THIS workspace+business. */
   confirmedIntakeDomains?: string[];
+  /** Latest customer-reputation signal (complaints / rework) for THIS workspace+business, or null when no
+   *  metric snapshot is persisted. Additive: absent ⇒ context derivation is byte-for-byte unchanged. */
+  reputation?: { complaintCount: number; rewashCount: number; refundCount: number } | null;
 }
 
 /**
@@ -69,7 +72,7 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
   // so there is no cross-business leakage, no cross-workspace leakage, and a business backed only by
   // legacy null-business rows reports those domains as missing (it never inflates REAL_DB readiness).
   // behavioralLearningArtifact stays workspace-scoped by design (workspace-private learning memory).
-  const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakes] = await Promise.all([
+  const [cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakes, reputationRow] = await Promise.all([
     db.ownerCashflowSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
     db.ownerFinancialSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" } }),
     db.ownerWorkingCapitalItem.findMany({ where: { workspaceId, businessId, status: "open" } }),
@@ -85,11 +88,19 @@ export async function prefetchOwnerDomainRows(deps: OwnerDbProviderDeps): Promis
     (db as { ownerDataIntake?: { findMany: (a: unknown) => Promise<Array<{ targetDomain: string | null }>> } }).ownerDataIntake?.findMany
       ? db.ownerDataIntake.findMany({ where: { workspaceId, businessId, ownerConfirmed: true }, select: { targetDomain: true } })
       : Promise.resolve([] as Array<{ targetDomain: string | null }>),
+    // Latest customer-reputation signal (additive). Defensive: a partial injected db may lack the model.
+    (db as { ownerMetricSnapshot?: { findFirst: (a: unknown) => Promise<{ complaintCount: number | null; rewashCount: number | null; refundAmount: number | null } | null> } }).ownerMetricSnapshot?.findFirst
+      ? db.ownerMetricSnapshot.findFirst({ where: { workspaceId, businessId }, orderBy: { periodEnd: "desc" }, select: { complaintCount: true, rewashCount: true, refundAmount: true } })
+      : Promise.resolve(null),
   ]);
   const confirmedIntakeDomains = (confirmedIntakes as Array<{ targetDomain: string | null }>)
     .map((r) => r.targetDomain)
     .filter((d): d is string => typeof d === "string");
-  return { cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakeDomains };
+  const rep = reputationRow as { complaintCount: number | null; rewashCount: number | null; refundAmount: number | null } | null;
+  const reputation = rep && (rep.complaintCount != null || rep.rewashCount != null)
+    ? { complaintCount: rep.complaintCount ?? 0, rewashCount: rep.rewashCount ?? 0, refundCount: rep.refundAmount ?? 0 }
+    : null;
+  return { cashflow, finance, wcItems, capacity, compliance, proofs, workload, standingCount, business, learningCount, confirmedIntakeDomains, reputation };
 }
 
 /**
