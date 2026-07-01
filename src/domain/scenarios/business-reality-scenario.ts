@@ -20,6 +20,13 @@ export const INPUT_QUALITY_STATES = ["high_confidence", "sufficient", "data_limi
 export const BOUNDARY_STATES = ["safe_operational", "needs_external_verification", "owner_approval_required", "professional_review_required", "blocked_until_review"] as const;
 export const NOVELTY_STATES = ["known", "novel_low_risk", "novel_high_risk"] as const;
 
+/** Proof-quality risk (Staff/Proof/Anti-Gaming pack). High-proof-risk states can never proceed/cautious. */
+export const PROOF_RISK_STATES = ["none", "verified", "weak", "stale", "delayed", "unverified", "staged", "contradictory", "fabricated"] as const;
+export const HIGH_PROOF_RISK_STATES = new Set(["staged", "contradictory", "fabricated"]);
+/** Manipulation/gaming risk. High-manipulation states can never proceed/cautious. */
+export const MANIPULATION_RISK_STATES = ["none", "low", "suspected", "collusion_suspected", "confirmed_pattern"] as const;
+export const HIGH_MANIPULATION_RISK_STATES = new Set(["collusion_suspected", "confirmed_pattern"]);
+
 export const businessRealityScenarioSchema = z.object({
   scenarioId: z.string().min(3),
   scenarioPack: z.string().min(3),
@@ -43,6 +50,10 @@ export const businessRealityScenarioSchema = z.object({
   expectedInputQualityState: z.enum(INPUT_QUALITY_STATES),
   expectedBoundaryState: z.enum(BOUNDARY_STATES),
   expectedNoveltyState: z.enum(NOVELTY_STATES),
+  // Optional proof/manipulation risk axes (populated by the Staff/Proof/Anti-Gaming pack; omitted by earlier
+  // packs, which stay valid). When present they are enforced by the refinements below.
+  expectedProofRiskState: z.enum(PROOF_RISK_STATES).optional(),
+  expectedManipulationRiskState: z.enum(MANIPULATION_RISK_STATES).optional(),
   expectedProfitCashWorkloadImpact: z.array(z.string()).min(1),
   expectedOutcomeMetric: z.string().min(2),
   expectedDashboardFields: z.array(z.string()).min(1),
@@ -67,7 +78,15 @@ export const businessRealityScenarioSchema = z.object({
   .refine((s) => !s.professionalReviewRequired || (s.expectedActionStatus !== "proceed" && s.expectedActionStatus !== "cautious_proceed"),
     { message: "professionalReviewRequired cannot proceed/cautious_proceed" })
   // A live-outcome claim is only allowed when backed by real live data.
-  .refine((s) => !s.liveOutcomeClaimAllowed || s.liveDataBacked, { message: "liveOutcomeClaimAllowed requires liveDataBacked" });
+  .refine((s) => !s.liveOutcomeClaimAllowed || s.liveDataBacked, { message: "liveOutcomeClaimAllowed requires liveDataBacked" })
+  // High proof-risk (staged/contradictory/fabricated proof) can never proceed or cautious-proceed.
+  .refine((s) => !HIGH_PROOF_RISK_STATES.has(s.expectedProofRiskState ?? "none")
+    || (s.expectedActionStatus !== "proceed" && s.expectedActionStatus !== "cautious_proceed"),
+    { message: "high proof-risk cannot proceed/cautious_proceed" })
+  // High manipulation-risk (suspected collusion / confirmed gaming pattern) can never proceed or cautious-proceed.
+  .refine((s) => !HIGH_MANIPULATION_RISK_STATES.has(s.expectedManipulationRiskState ?? "none")
+    || (s.expectedActionStatus !== "proceed" && s.expectedActionStatus !== "cautious_proceed"),
+    { message: "high manipulation-risk cannot proceed/cautious_proceed" });
 
 export type BusinessRealityScenario = z.infer<typeof businessRealityScenarioSchema>;
 
