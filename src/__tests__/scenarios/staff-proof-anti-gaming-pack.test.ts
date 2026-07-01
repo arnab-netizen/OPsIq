@@ -29,8 +29,8 @@ describe("Staff/Proof/Anti-Gaming pack — count & identity", () => {
 
   it("is schema-valid for all 120 (re-validated independently of construction)", () => {
     for (const s of PACK) {
-      const { seed, ...rest } = s;
-      expect(businessRealityScenarioSchema.safeParse(rest).success, s.scenarioId).toBe(true);
+      // the non-strict schema strips the extra `seed` field; a clean parse proves schema-validity.
+      expect(businessRealityScenarioSchema.safeParse(s).success, s.scenarioId).toBe(true);
     }
   });
 });
