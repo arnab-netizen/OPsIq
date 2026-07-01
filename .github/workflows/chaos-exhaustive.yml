@@ -130,8 +130,7 @@ jobs:
           done
       - name: Desktop chaos shard ${{ matrix.shard }}/3
         run: npx playwright test tests/browser/21-chaos-exhaustive-desktop.spec.ts --project=chromium
-      - name: Representative mobile (shard 1 only)
-        if: ${{ matrix.shard == 1 }}
+      - name: FULL mobile chaos shard ${{ matrix.shard }}/3 (all 180 across shards)
         run: npx playwright test tests/browser/22-chaos-exhaustive-mobile.spec.ts --project=chromium
       - uses: actions/upload-artifact@v4
         if: always()
