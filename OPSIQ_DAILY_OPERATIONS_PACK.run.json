@@ -1,0 +1,2706 @@
+{
+  "layer": "db",
+  "count": 300,
+  "results": {
+    "DOP-routine_order_handling-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_order_handling-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-pickup_delivery_coordination-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-customer_complaint_minor-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-staff_attendance_punctuality-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-daily_task_completion-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-inventory_stock_small_mismatch-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-cash_collection_small_reconciliation-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-routine_discount_price_exception-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-equipment_idle_minor_maintenance-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-proof_quality_routine_issue-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-owner_time_limited_decision-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-016": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-017": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-018": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-019": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-020": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-021": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-022": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-023": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-024": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "DOP-small_repeated_operational_leak-025": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    }
+  }
+}
