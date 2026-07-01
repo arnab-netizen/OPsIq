@@ -1,0 +1,128 @@
+name: Daily Operations Pack (DB + Browser + Mobile)
+
+# Proof that all 300 counted Daily Operations scenarios run through the REAL DB-backed owner plan path and
+# render the runtime-fed Supervisor Summary in a real browser (desktop + mobile). OpsIQ handles routine daily
+# reality WITHOUT over-escalating or overburdening the owner (proceed/cautious on routine reversible SOP-granted
+# steps; owner-gate the material calls; block safety/compliance/fraud). Additive lane; does NOT modify
+# unknown-ood.yml, staff-proof-anti-gaming.yml, chaos-exhaustive.yml, or owner-pilot-e2e.
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  dop-db:
+    name: All-300 Daily Operations DB-backed
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_WITH_DB: "true"
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: opsiq_test }
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Daily Ops schema + invariant tests
+        run: npx vitest run src/__tests__/scenarios/daily-operations-pack.test.ts
+      - name: All-300 Daily Ops DB-backed proof
+        run: npx vitest run src/__tests__/scenarios/daily-operations-db.db.test.ts
+      - name: Assert Daily Ops DB covered exactly 300
+        run: |
+          node -e '
+            const d=require("./OPSIQ_DAILY_OPERATIONS_PACK.run.json");
+            const pass=Object.values(d.results).filter(r=>r.dbStatus==="pass").length;
+            if(d.count!==300||pass!==300){console.error("DOP DB not 300/300:",d.count,pass);process.exit(1);}
+            console.log("DOP DB 300/300 OK");
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dop-db-ledger
+          path: OPSIQ_DAILY_OPERATIONS_PACK.run.json
+          retention-days: 7
+
+  dop-browser:
+    name: All-300 Daily Operations desktop + mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      AUTH_SECRET: e2e-test-auth-secret-not-a-real-secret
+      AUTH_URL: http://localhost:3001
+      NEXT_PUBLIC_APP_URL: http://localhost:3001
+      BASE_URL: http://localhost:3001
+      TEST_WITH_DB: "true"
+      DOP_SHARD_INDEX: ${{ matrix.shard }}
+      DOP_SHARD_TOTAL: 3
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: opsiq_test }
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Configure .env.local
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          AUTH_SECRET=e2e-test-auth-secret-not-a-real-secret
+          AUTH_URL=http://localhost:3001
+          NEXT_PUBLIC_APP_URL=http://localhost:3001
+          TEST_WITH_DB=true
+          EOF
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Build app
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Seed all 300 Daily Ops businesses
+        run: npx tsx scripts/seed-daily-operations-e2e.ts
+      - name: Start app
+        run: |
+          PORT=3001 npm run start > /tmp/app.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/login || echo 000)
+            if [ "$code" != "000" ]; then echo "app up (HTTP $code)"; break; fi
+            sleep 2
+          done
+      - name: Daily Ops desktop shard ${{ matrix.shard }}/3
+        run: npx playwright test tests/browser/27-daily-ops-desktop.spec.ts --project=chromium
+      - name: Daily Ops mobile shard ${{ matrix.shard }}/3
+        run: npx playwright test tests/browser/28-daily-ops-mobile.spec.ts --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dop-browser-shard-${{ matrix.shard }}
+          path: "OPSIQ_DAILY_OPERATIONS_*.run.json"
+          retention-days: 7
