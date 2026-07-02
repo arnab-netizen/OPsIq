@@ -16,6 +16,7 @@ import { ConflictError, NotFoundError, ValidationError } from "@/infra/errors";
 import { getBusiness } from "@/services/founder-recovery/business.service";
 import { buildCsvIntake, fieldSpecForDomain } from "@/domain/owner-intake";
 import type { IntakeUploadInput } from "@/domain/owner-intake";
+import { materializeIntake, type MaterializeResult } from "./materialize";
 
 export async function createDataIntake(
   businessId: string,
@@ -110,16 +111,30 @@ export async function confirmDataIntake(intakeId: string, actorId: string, works
   }
   const updated = await db.ownerDataIntake.findFirstOrThrow({ where: { id: intakeId, workspaceId } });
 
+  // Materialize the confirmed records into the snapshot read models the owner plan / diagnosis actually consume.
+  // Fail-closed by construction: only fully-valid records become snapshots, so a confirm with unmapped required fields
+  // materializes 0 and therefore cannot fake readiness (the plan still resolves need_more_data).
+  const materialization: MaterializeResult = await materializeIntake(
+    { targetDomain: intake.targetDomain, businessId: intake.businessId, workspaceId, records: updated.records },
+    actorId
+  );
+
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OWNER_DATA_INTAKE_CONFIRMED,
     actorId,
     workspaceId,
     entityType: "OwnerDataIntake",
     entityId: intakeId,
-    payload: { businessId: intake.businessId, targetDomain: intake.targetDomain, rowCount: intake.rowCount },
+    payload: {
+      businessId: intake.businessId,
+      targetDomain: intake.targetDomain,
+      rowCount: intake.rowCount,
+      materialized: materialization.materialized,
+      skipped: materialization.skipped,
+    },
   });
 
-  return updated;
+  return { ...updated, materialization };
 }
 
 export async function getIntakeDashboard(workspaceId: string, requestedBusinessId?: string | null) {
