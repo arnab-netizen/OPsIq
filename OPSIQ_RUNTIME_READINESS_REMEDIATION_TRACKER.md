@@ -1,0 +1,38 @@
+# OpsIQ Runtime-Readiness Remediation Tracker
+
+> Master status board for the blockers/majors in `OPSIQ_HOSTILE_READINESS_AUDIT.md`, sliced per
+> `OPSIQ_RUNTIME_READINESS_REMEDIATION_PLAN.md`. Statuses: TODO / IN_PROGRESS / PR_OPEN / MERGED / DEFERRED.
+> Base: `main @ bfa427a2`. Do not begin a later priority until the prior priority is merged or explicitly authorized.
+
+| ID | Title | Severity | Slice | Status | Branch/PR | Tests | CI | Merge | Notes |
+|----|-------|----------|-------|--------|-----------|-------|----|----|-------|
+| B1 | Critical ingestion domains (capacity + workload) unwritable | BLOCKER | P0-A | PR_OPEN | `claude/runtime-readiness-p0-ingestion-unblock` | 12 pass (6 route + 6 DB) | pending | no | Enforced write routes added; DB proof of the need_more_data unblock; CSV/UI/browser → P0-B |
+| B2 | manual-entry/CSV intake dead-ends (no materialization) | BLOCKER | P0-B | TODO | — | — | — | no | Next slice after P0-A |
+| B5 | Proof loop production-inert (no proof ever demanded) | BLOCKER | P1-A | TODO | — | — | — | no | After P0 merged |
+| M5 | Owner workload / standing instructions unwritable | MAJOR | P1-B | TODO | — | — | — | no | Workload half rides P0-A; standing-instructions in P1-B |
+| B3 | No quantified profit/growth upside reaches owner | BLOCKER | P2-A | TODO | — | — | — | no | Surface already-computed figures only |
+| M3 | Hardcoded margin constants (18/22/30) in live plan path | MAJOR | P2-B | TODO | — | — | — | no | CLAUDE.md placeholder violation |
+| B6 | Decision/operator learning store write-only | BLOCKER | P3-A | TODO | — | — | — | no | Consolidate onto owner-plan learning store |
+| M7 | Two learning subsystems (one dead) — duplicate split | MAJOR | P3-A | TODO | — | — | — | no | Pairs with B6 |
+| M9 | Outcome loop records but does not steer recommendations | MAJOR | P3-A | TODO | — | — | — | no | Feed outcome history into plan composer |
+| M8 | Scheduled reassessment is dead code | MAJOR | P3-B | TODO | — | — | — | no | Due-scanner via internal route; not external cron |
+| B4 | Ratcheted/quarantined safety gates (2155 errors, 30 strict-auth) | BLOCKER | P4-A | TODO | — | — | — | no | Drive strict-auth to 0; promote scanner to blocking |
+| M1 | Fabricated verified-session authz state | MAJOR | P4-B | TODO | — | — | — | no | Fetch real workspace.isActive + limits |
+| M2 | Governed decision transition TOCTOU race | MAJOR | P4-C | TODO | — | — | — | no | updateMany status-guard + count assert |
+| M4 | Log-only escalations/alerts | MAJOR | P4-D | TODO | — | — | — | no | Honesty-label delivery state first |
+| M6 | Multi-workspace owner pinned to first membership | MAJOR | P4-E | TODO | — | — | — | no | Deterministic orderBy now; switcher later |
+| MINOR-1 | Nullable businessId invisibility | MINOR | P0-A/P4 | PR_OPEN | this slice | covered | pending | no | Capacity/workload routes require businessId in path (always plan-visible) |
+| MINOR-2 | internal/* diagnostic routes + hardcoded demo-password | MINOR | P4-F | TODO | — | — | — | no | Remove hardcoded credential; gate non-prod |
+| MINOR-3 | execution-stub.ts unlocked status→executed footgun | MINOR | P4-F | TODO | — | — | — | no | Delete dead stub |
+| MINOR-4 | external-systems `not implemented` throws | MINOR | DEFERRED | DEFERRED | — | — | — | — | External integrations explicitly out of scope |
+
+## Rules
+- One slice per PR. No gate weakened. No duplicate engine. No parallel AI brain. No AI autonomy.
+- Do not start public SaaS / billing / launch / integrations / external automation until P0–P3 are MERGED and verified.
+- Deferrals must be justified in Notes (only MINOR-4 is deferred, because external integrations are out of scope).
+- A slice is MERGED only with CI green + a final hostile re-read + all no-regression gates green.
+
+## Current position
+P0-A in progress on branch `claude/runtime-readiness-p0-ingestion-unblock`. Nothing merged yet from this tracker.
+Honest classification unchanged: `BUSINESS_REALITY_KNOWN_TO_UNKNOWN_READY_MERGED` (corpus/judgment) — runtime-readiness
+remains blocked until at least P0–P3 are closed.
