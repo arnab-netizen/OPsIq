@@ -1,0 +1,906 @@
+{
+  "layer": "db",
+  "count": 100,
+  "results": {
+    "LLB-tax_filing_gst_treatment-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-tax_filing_gst_treatment-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-employment_labor_law_issue-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-licensing_permit_registration-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-contract_legal_dispute-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-regulatory_compliance_inspection-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-data_privacy_customer_records-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-health_safety_regulation-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-intellectual_property_trademark-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-accounting_audit_professional_boundary-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "LLB-local_authority_zoning_municipal-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    }
+  }
+}
