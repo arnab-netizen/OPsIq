@@ -6,7 +6,7 @@
 
 | ID | Title | Severity | Slice | Status | Branch/PR | Tests | CI | Merge | Notes |
 |----|-------|----------|-------|--------|-----------|-------|----|----|-------|
-| B1 | Critical ingestion domains (capacity + workload) unwritable | BLOCKER | P0-A | IN_PROGRESS | `claude/runtime-readiness-p0-ingestion-unblock` | pending | pending | no | This slice — add enforced write routes |
+| B1 | Critical ingestion domains (capacity + workload) unwritable | BLOCKER | P0-A | PR_OPEN | `claude/runtime-readiness-p0-ingestion-unblock` | 12 pass (6 route + 6 DB) | pending | no | Enforced write routes added; DB proof of the need_more_data unblock; CSV/UI/browser → P0-B |
 | B2 | manual-entry/CSV intake dead-ends (no materialization) | BLOCKER | P0-B | TODO | — | — | — | no | Next slice after P0-A |
 | B5 | Proof loop production-inert (no proof ever demanded) | BLOCKER | P1-A | TODO | — | — | — | no | After P0 merged |
 | M5 | Owner workload / standing instructions unwritable | MAJOR | P1-B | TODO | — | — | — | no | Workload half rides P0-A; standing-instructions in P1-B |
@@ -21,7 +21,7 @@
 | M2 | Governed decision transition TOCTOU race | MAJOR | P4-C | TODO | — | — | — | no | updateMany status-guard + count assert |
 | M4 | Log-only escalations/alerts | MAJOR | P4-D | TODO | — | — | — | no | Honesty-label delivery state first |
 | M6 | Multi-workspace owner pinned to first membership | MAJOR | P4-E | TODO | — | — | — | no | Deterministic orderBy now; switcher later |
-| MINOR-1 | Nullable businessId invisibility | MINOR | P0-A/P4 | IN_PROGRESS | this slice | pending | pending | no | Path-param businessId closes it for capacity/workload |
+| MINOR-1 | Nullable businessId invisibility | MINOR | P0-A/P4 | PR_OPEN | this slice | covered | pending | no | Capacity/workload routes require businessId in path (always plan-visible) |
 | MINOR-2 | internal/* diagnostic routes + hardcoded demo-password | MINOR | P4-F | TODO | — | — | — | no | Remove hardcoded credential; gate non-prod |
 | MINOR-3 | execution-stub.ts unlocked status→executed footgun | MINOR | P4-F | TODO | — | — | — | no | Delete dead stub |
 | MINOR-4 | external-systems `not implemented` throws | MINOR | DEFERRED | DEFERRED | — | — | — | — | External integrations explicitly out of scope |
