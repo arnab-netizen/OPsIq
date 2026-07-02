@@ -4,10 +4,15 @@
 > desktop / mobile proof is per-pack (each pack proves ALL its scenarios through DB + desktop + mobile in CI).
 > "Live outcome" is intentionally out of scope until a live pilot; this corpus proves handling/safety, not live profit.
 
-## Cumulative corpus on main (after Sequential Simulations Pack)
+## Cumulative corpus on main (after Sequential Simulations Pack + Final Corpus Audit)
+> Honest accounting (measured by the Final Corpus Audit, Step 8, directly from code): the chaos baseline is **165
+> counted-for-readiness + 15 independent-gold = 180 replayed/proven**. So the true **counted-for-readiness** single
+> scenarios = 1300 (business-reality) + 165 (chaos) = **1465**; adding the 15 chaos independent-gold gives **1480
+> proven**. The "1480" figure below is the PROVEN total (counted + chaos gold), not the counted-for-readiness total.
+
 | Pack | Count | DB | Desktop | Mobile | Status |
 |---|---|---|---|---|---|
-| Chaos baseline (v1) | 180 | 180/180 | 180 (repr.) | repr. | merged |
+| Chaos baseline (v1) | 165 counted + 15 gold = 180 | 180/180 | 180 (repr.) | repr. | merged |
 | Unknown / OOD | 110 | 110/110 | 110 | 110 | merged (#66) |
 | Staff / Proof / Anti-Gaming | 120 | 120/120 | 120 | 120 | merged (#67) |
 | Daily Operations | 300 | 300/300 | 300 | 300 | merged (#68) |
@@ -17,11 +22,13 @@
 | Customer / Vendor / Market | 100 | 100/100 | 100 | 100 | merged (#72) |
 | Local / Legal / Professional-Boundary | 100 | 100/100 | 100 | 100 | merged (#73) |
 | Ugly / Tail-Risk / Crisis | 150 | 150/150 | 150 (CI) | 150 (CI) | merged (#74) |
-| **Cumulative counted (single scenarios)** | **1480** | | | | |
+| **Cumulative single scenarios** | **1465 counted + 15 gold = 1480 proven** | 1480/1480 | per-pack | per-pack | audited (Step 8) |
 | **Sequential simulations (multi-event)** | **50 sims / 427 events** | **50/50 sims, 427/427 events** | **≥20/shard (CI)** | **≥20/shard (CI)** | **this pack** |
 
-Sequential simulations are counted SEPARATELY from the 1480 single scenarios (a different artifact shape: time-ordered
-7–30-event sequences). The single-scenario corpus stays 1480; no schema change → all 1480 prior scenarios stay valid.
+Sequential simulations are counted SEPARATELY from the single scenarios (a different artifact shape: time-ordered
+7–30-event sequences; 50 sims / 427 events). The single-scenario corpus is 1465 counted-for-readiness (1480 proven);
+no schema change → all prior scenarios stay valid. The Final Corpus Audit (Step 8) verifies these totals, cross-pack
+scenarioId uniqueness (1465 unique), source/privacy cleanliness (240 aggregated sources), and 0 unsafe / 0 live claims.
 
 Action-status coverage across the corpus: all five statuses (proceed / cautious_proceed / need_more_data /
 owner_decision_required / blocked) present in every pack. Corpus-wide policy-violation / high-risk-proceed /
@@ -30,6 +37,8 @@ critical-missing-proceed / live-claim counts: **0**.
 ## Module / domain coverage (30 modules)
 Legend: cumulative scenarios primarily exercising the module · this-pack contribution · proof (DB/desktop/mobile
 all = the owning packs' full proof) · action-status coverage · high-risk coverage · gap.
+Note: "1480" in the Cumulative column denotes the PROVEN single-scenario total (1465 counted-for-readiness + 15 chaos
+independent-gold), per the Step 8 Final Corpus Audit; the "UTR pack" column is the historical per-pack contribution.
 
 | # | Module / domain | Cumulative | UTR pack | Proof | Action-status | High-risk | Gap |
 |---|---|---|---|---|---|---|---|

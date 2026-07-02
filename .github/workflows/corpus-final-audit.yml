@@ -1,0 +1,46 @@
+name: Business-Reality Corpus Final Audit (Step 8)
+
+# Read-only, hostile, aggregate audit over the WHOLE known-to-unknown corpus (Steps 1-7): the 9 business-reality
+# single-scenario packs (1300 counted), the chaos baseline (165 counted + 15 independent-gold = 180 proven), and the
+# 50 sequential simulations (427 events). Verifies exact counts, cross-pack scenarioId uniqueness, schema validity,
+# bookkeeping honesty (counted / non-synthetic / not-live), source + privacy cleanliness, action-status coverage, and
+# aggregate safety invariants. Static (no DB, no browser) — each pack already DB-proved + browser-proved its own
+# scenarios in its own CI lane. Additive lane; does NOT modify any existing workflow.
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  corpus-audit:
+    name: Whole-corpus final audit (static aggregate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Prisma generate (types only)
+        run: npx prisma generate
+      - name: Whole-corpus final audit
+        run: npx vitest run src/__tests__/scenarios/business-reality-corpus-audit.test.ts
+      - name: Assert audit totals (1465 counted / 1480 proven / 50 sims / 427 events)
+        run: |
+          node -e '
+            const d=require("./OPSIQ_BUSINESS_REALITY_CORPUS_FINAL_AUDIT.run.json");
+            const ok = d.counted_for_readiness===1465 && d.proven_single===1480
+              && d.simulations.sims===50 && d.simulations.events===427
+              && d.unique_single_ids===1465 && d.unsafe_high_risk_proceeds===0 && d.live_claims===0;
+            if(!ok){console.error("Corpus audit totals mismatch:",JSON.stringify(d));process.exit(1);}
+            console.log("Corpus audit OK: 1465 counted / 1480 proven / 50 sims / 427 events / 0 unsafe / 0 live");
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: corpus-final-audit-ledger
+          path: OPSIQ_BUSINESS_REALITY_CORPUS_FINAL_AUDIT.run.json
+          retention-days: 7
