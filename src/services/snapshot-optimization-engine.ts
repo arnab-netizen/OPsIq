@@ -103,7 +103,7 @@ export class SnapshotOptimizationEngine {
         expectedChecksum,
       });
       // Corruption detected: mark snapshot invalid and regenerate
-      await db.snapshotData.delete({
+      await db.snapshotData.deleteMany({
         where: { id: snapshot.id },
       });
       return null;
@@ -119,7 +119,7 @@ export class SnapshotOptimizationEngine {
         ageHours: Math.round(snapshotAge / (60 * 60 * 1000)),
       });
       // Snapshot is stale: regenerate
-      await db.snapshotData.delete({
+      await db.snapshotData.deleteMany({
         where: { id: snapshot.id },
       });
       return null;
