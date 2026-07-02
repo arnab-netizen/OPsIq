@@ -1,0 +1,906 @@
+{
+  "layer": "db",
+  "count": 100,
+  "results": {
+    "CVM-customer_complaint_resolution-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_complaint_resolution-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_refund_dispute-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-key_customer_relationship_risk-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-customer_churn_winback-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_reliability_quality_issue-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_price_increase_negotiation-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-vendor_dependency_single_source_risk-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-new_vendor_onboarding_vetting-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-competitor_pricing_pressure-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "CVM-market_demand_shift_signal-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    }
+  }
+}
