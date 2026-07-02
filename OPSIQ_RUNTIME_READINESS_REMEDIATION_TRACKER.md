@@ -8,7 +8,7 @@
 |----|-------|----------|-------|--------|-----------|-------|----|----|-------|
 | B1 | Critical ingestion domains (capacity + workload) unwritable | BLOCKER | P0-A | PR_OPEN | `claude/runtime-readiness-p0-ingestion-unblock` | 12 pass (6 route + 6 DB) | pending | no | Enforced write routes added; DB proof of the need_more_data unblock; CSV/UI/browser → P0-B |
 | B2 | manual-entry/CSV intake dead-ends (no materialization) | BLOCKER | P0-B | TODO | — | — | — | no | Next slice after P0-A |
-| B5 | Proof loop production-inert (no proof ever demanded) | BLOCKER | P1-A | TODO | — | — | — | no | After P0 merged |
+| B5 | Proof loop production-inert (no proof ever demanded) | BLOCKER | P1-A | PR_OPEN | `claude/runtime-readiness-p1a-proof-loop` | 6 DB pass (create-path wiring, gate blocks, submit works, loop closes, no-proof frees, isolation) + 508+1521 no-regression | pending | no | Create path added (POST /api/owner/tasks → assignDelegatedTask): task+proofRequirement+PENDING_SUBMISSION proof wired so completeTask gate fires. Owner assignment UI/browser → P1-B. No FSM/gate change |
 | M5 | Owner workload / standing instructions unwritable | MAJOR | P1-B | TODO | — | — | — | no | Workload half rides P0-A; standing-instructions in P1-B |
 | B3 | No quantified profit/growth upside reaches owner | BLOCKER | P2-A | TODO | — | — | — | no | Surface already-computed figures only |
 | M3 | Hardcoded margin constants (18/22/30) in live plan path | MAJOR | P2-B | TODO | — | — | — | no | CLAUDE.md placeholder violation |
