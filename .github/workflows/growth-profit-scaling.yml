@@ -1,0 +1,128 @@
+name: Growth / Profit / Scaling Pack (DB + Browser + Mobile)
+
+# Proof that all 150 counted Growth/Profit/Scaling scenarios run through the REAL DB-backed owner plan path and
+# render the runtime-fed Supervisor Summary in a real browser (desktop + mobile). OpsIQ handles growth/scaling
+# WITHOUT reckless expansion: small capped verified pilots proceed, growth missing its ROI/capacity/margin/cash
+# figures blocks on data, material scaling commitments are owner-gated, and licensing/labour/consumer-law/franchise
+# boundaries or gamed numbers are blocked. Additive lane; does NOT modify any existing workflow.
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  grw-db:
+    name: All-150 Growth/Profit/Scaling DB-backed
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_WITH_DB: "true"
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: opsiq_test }
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Growth schema + invariant tests
+        run: npx vitest run src/__tests__/scenarios/growth-profit-scaling-pack.test.ts
+      - name: All-150 Growth DB-backed proof
+        run: npx vitest run src/__tests__/scenarios/growth-profit-scaling-db.db.test.ts
+      - name: Assert Growth DB covered exactly 150
+        run: |
+          node -e '
+            const d=require("./OPSIQ_GROWTH_PROFIT_SCALING_PACK.run.json");
+            const pass=Object.values(d.results).filter(r=>r.dbStatus==="pass").length;
+            if(d.count!==150||pass!==150){console.error("GRW DB not 150/150:",d.count,pass);process.exit(1);}
+            console.log("GRW DB 150/150 OK");
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: grw-db-ledger
+          path: OPSIQ_GROWTH_PROFIT_SCALING_PACK.run.json
+          retention-days: 7
+
+  grw-browser:
+    name: All-150 Growth/Profit/Scaling desktop + mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      AUTH_SECRET: e2e-test-auth-secret-not-a-real-secret
+      AUTH_URL: http://localhost:3001
+      NEXT_PUBLIC_APP_URL: http://localhost:3001
+      BASE_URL: http://localhost:3001
+      TEST_WITH_DB: "true"
+      GRW_SHARD_INDEX: ${{ matrix.shard }}
+      GRW_SHARD_TOTAL: 2
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: opsiq_test }
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Configure .env.local
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          AUTH_SECRET=e2e-test-auth-secret-not-a-real-secret
+          AUTH_URL=http://localhost:3001
+          NEXT_PUBLIC_APP_URL=http://localhost:3001
+          TEST_WITH_DB=true
+          EOF
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Build app
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Seed all 150 Growth businesses
+        run: npx tsx scripts/seed-growth-profit-scaling-e2e.ts
+      - name: Start app
+        run: |
+          PORT=3001 npm run start > /tmp/app.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/login || echo 000)
+            if [ "$code" != "000" ]; then echo "app up (HTTP $code)"; break; fi
+            sleep 2
+          done
+      - name: Growth desktop shard ${{ matrix.shard }}/2
+        run: npx playwright test tests/browser/33-growth-desktop.spec.ts --project=chromium
+      - name: Growth mobile shard ${{ matrix.shard }}/2
+        run: npx playwright test tests/browser/34-growth-mobile.spec.ts --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: grw-browser-shard-${{ matrix.shard }}
+          path: "OPSIQ_GROWTH_PROFIT_SCALING_*.run.json"
+          retention-days: 7
