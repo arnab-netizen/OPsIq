@@ -60,6 +60,16 @@ DB-proven→READY convention used by the prior packs):
   still blocks correctly;
 - DB proof passed (#78/#79); browser/mobile proof is CI-gated in this PR.
 
+## CI fix (login rate-limit headroom for the E2E lane)
+First CI run surfaced a real infra limit (not a feature bug): the `owner-pilot-e2e` lane runs 7 owner specs serially,
+each logging in from the same CI IP, and the `login:${ip}` bucket (`LOGIN_RATE_LIMIT`, 10 / 15 min) was already at its
+ceiling with the pre-existing 6 specs — so adding spec 21 tipped it over (`rate_limit_exceeded`, count 11–13), timing
+out the mobile `beforeAll` login. The app log confirmed the FEATURE works: `POST .../capacity-snapshots` → 200 and
+`POST .../workload-snapshots` → 200, and the desktop test passed on retry. Fix (gate-preserving): `LOGIN_RATE_LIMIT`'s
+`maxAttempts` is now env-overridable via `LOGIN_RATE_LIMIT_MAX_ATTEMPTS`, **clamped to ≥ 10** so it can only ever raise
+the CI ceiling, never lower the production gate (default stays 10 when unset). The workflow sets it to 200 for the CI
+lane only. 131 rate-limit tests still pass (they see the default 10).
+
 ## Merge recommendation
 Open PR; **do not merge** until CI is green — specifically observe the `owner-pilot-e2e` lane (spec 21 desktop +
 mobile) green — and a final hostile re-read. Then P0 ingestion is fully closed and the next slice is **P1-A (B5 proof

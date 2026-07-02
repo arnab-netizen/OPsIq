@@ -26,6 +26,9 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3001
       BASE_URL: http://localhost:3001
       TEST_WITH_DB: "true"
+      # This lane runs many real logins from one CI IP across its serial owner spec suite; raise the login rate-limit
+      # ceiling for CI only (production default stays 10; the override is clamped to >= 10 so it can never weaken it).
+      LOGIN_RATE_LIMIT_MAX_ATTEMPTS: "200"
     services:
       postgres:
         image: postgres:16
