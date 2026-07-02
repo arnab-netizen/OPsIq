@@ -1,0 +1,1356 @@
+{
+  "layer": "db",
+  "count": 150,
+  "results": {
+    "UTR-cash_collapse_insolvency_risk-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-cash_collapse_insolvency_risk-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-fraud_theft_embezzlement-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-key_person_loss_founder_dependency-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-major_customer_loss_revenue_shock-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-supply_chain_disruption_shortage-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-safety_incident_injury-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-legal_lawsuit_regulatory_action-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-reputational_crisis_public_backlash-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-natural_disaster_business_continuity-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "owner_workload",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "UTR-data_breach_cyber_incident-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    }
+  }
+}
