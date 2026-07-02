@@ -89,6 +89,7 @@ jobs:
           tests/browser/18-owner-supervisor-summary.spec.ts
           tests/browser/19-chaos-replay.spec.ts
           tests/browser/20-action-status-spectrum.spec.ts
+          tests/browser/21-owner-critical-intake.spec.ts
           --project=chromium
       - name: Print Playwright failures + app log
         if: always()
