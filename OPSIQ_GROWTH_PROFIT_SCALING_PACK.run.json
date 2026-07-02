@@ -1,0 +1,1356 @@
+{
+  "layer": "db",
+  "count": 150,
+  "results": {
+    "GRW-new_location_branch_expansion-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-new_location_branch_expansion-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-hiring_team_scaling-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-new_product_service_line-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-capacity_expansion_investment-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "cash_survival",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-market_geographic_expansion-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-price_increase_for_profit-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-profit_margin_improvement_initiative-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-large_contract_bulk_order_scaling-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "below_margin",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-marketing_channel_scale_up-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "proof_fraud_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-001": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-002": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-003": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-004": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-005": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "cautious_proceed"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-006": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-007": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-008": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-009": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "profitable_growth",
+        "status": "need_more_data"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-010": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-011": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-012": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-013": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-014": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "capacity_feasibility",
+        "status": "owner_decision_required"
+      },
+      "failureReason": null
+    },
+    "GRW-partnership_franchise_scaling-015": {
+      "dbStatus": "pass",
+      "ownerRuntimeStatus": "pass",
+      "got": {
+        "dominant": "compliance_block",
+        "status": "blocked"
+      },
+      "failureReason": null
+    }
+  }
+}
