@@ -30,6 +30,10 @@ export interface ActionRecommendation {
     lowConfidenceVariables?: string[];
     minConfidenceRequired?: number;
   };
+  /** True when prior realized failures for this problem type lowered the confidence (B6 learning read-back). */
+  learningApplied?: boolean;
+  /** How many prior realized failures for this problem type were found in the workspace history. */
+  priorFailureCount?: number;
 }
 
 interface ActionFrequency {
@@ -58,6 +62,48 @@ function getMostFrequentAction(items: OperatorItem[]): string | null {
   }
 
   return mostFrequent || null;
+}
+
+/**
+ * Count prior REALIZED failures for a problem type in the workspace's decision history (B6 learning read-back).
+ * A realized failure is a terminal `failed` decision, or a completed one whose measured outcome moved the wrong
+ * way (`outcomeDelta < 0`). Pure over the already-loaded, workspace-scoped `items` — no new store, no new query.
+ */
+function priorRealizedFailures(items: OperatorItem[], problemType: OperatorItem["problemType"]): number {
+  if (!problemType) return 0;
+  let failures = 0;
+  for (const it of items) {
+    if (it.problemType !== problemType) continue;
+    const failed = it.status === "failed";
+    const negativeOutcome = typeof it.outcomeDelta === "number" && it.outcomeDelta < 0;
+    if (failed || negativeOutcome) failures++;
+  }
+  return failures;
+}
+
+/**
+ * Fold the prior-failure signal into a finalized recommendation: repeated realized failures for the same problem
+ * type demonstrably lower confidence and annotate why (B6). Mirrors the owner-plan learning shape
+ * (read → annotate → lower confidence). Each prior failure removes 15% of confidence, capped at 60%, so a single
+ * bad outcome nudges and a repeated pattern of failure materially tempers the recommendation. No-op when there are
+ * no prior failures, so behaviour is unchanged for a clean history.
+ */
+function applyPriorFailureLearning(
+  base: ActionRecommendation,
+  items: OperatorItem[],
+  problemType: OperatorItem["problemType"],
+): ActionRecommendation {
+  const failures = priorRealizedFailures(items, problemType);
+  if (failures <= 0) return base;
+  const penalty = Math.min(0.6, 0.15 * failures);
+  const adjusted = Math.max(0, base.confidenceScore * (1 - penalty));
+  return {
+    ...base,
+    confidenceScore: adjusted,
+    learningApplied: true,
+    priorFailureCount: failures,
+    explanation: `${base.explanation} Confidence lowered ${Math.round(penalty * 100)}% from prior learning: ${failures} realized failure(s) recorded for this problem type.`,
+  };
 }
 
 export function generateRecommendation(
@@ -214,16 +260,22 @@ export function generateRecommendation(
     };
   }
 
-  return {
-    recommendedAction,
-    confidenceScore: bestPattern.successRate / 100,
-    basedOnPatternId: bestPattern.patternId,
-    variablesUsed: usedVariables,
-    variablesIgnored: ignoredVariables,
-    dataSufficiency: "sufficient",
-    explanation: `Recommendation based on ${bestPattern.patternId} pattern with ${bestPattern.successRate}% success rate`,
-    scenarioContext,
-  };
+  // B6: fold the decision-path learning read-back into the finalized recommendation — prior realized failures for
+  // this problem type lower confidence and are annotated, so the recommendation demonstrably learns from history.
+  return applyPriorFailureLearning(
+    {
+      recommendedAction,
+      confidenceScore: bestPattern.successRate / 100,
+      basedOnPatternId: bestPattern.patternId,
+      variablesUsed: usedVariables,
+      variablesIgnored: ignoredVariables,
+      dataSufficiency: "sufficient",
+      explanation: `Recommendation based on ${bestPattern.patternId} pattern with ${bestPattern.successRate}% success rate`,
+      scenarioContext,
+    },
+    items,
+    decision.problemType,
+  );
 }
 
 export function generateMultipleRecommendations(
