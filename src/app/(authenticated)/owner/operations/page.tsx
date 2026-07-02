@@ -63,6 +63,10 @@ export default function OwnerOperationsPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [showBusinessForm, setShowBusinessForm] = useState(false);
   const [showSnapshotForm, setShowSnapshotForm] = useState(false);
+  const [showCapacityForm, setShowCapacityForm] = useState(false);
+  const [showWorkloadForm, setShowWorkloadForm] = useState(false);
+  const [capacityResult, setCapacityResult] = useState<string | null>(null);
+  const [workloadResult, setWorkloadResult] = useState<string | null>(null);
 
   const load = useCallback(async (businessId?: string | null) => {
     setLoading(true);
@@ -136,6 +140,61 @@ export default function OwnerOperationsPage() {
       await load(selected);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save snapshot");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Critical-domain ingestion (equipment_capacity): feeds the whole-business plan's scaling gate.
+  async function addCapacity(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    setCapacityResult(null);
+    const fd = new FormData(e.currentTarget);
+    try {
+      const snap = await api(`/api/owner/operations/businesses/${selected}/capacity-snapshots`, {
+        method: "POST",
+        body: JSON.stringify({
+          currentRevenue: parseFloat(String(fd.get("currentRevenue"))),
+          resources: [{ type: "primary", utilization: parseFloat(String(fd.get("utilization"))) }],
+        }),
+      });
+      setShowCapacityForm(false);
+      setCapacityResult(
+        `Capacity saved — bottleneck utilization ${Math.round((snap.bottleneckUtilization ?? 0) * 100)}%; ` +
+          `${snap.growthSafe ? "growth headroom available" : "at/over safe capacity"}.`
+      );
+      await load(selected);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save capacity");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Critical-domain ingestion (owner_workload_memory): the mandated human-execution-reality dimension.
+  async function addWorkload(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    setWorkloadResult(null);
+    const fd = new FormData(e.currentTarget);
+    try {
+      const snap = await api(`/api/owner/operations/businesses/${selected}/workload-snapshots`, {
+        method: "POST",
+        body: JSON.stringify({
+          ownerMinutesPerDay: parseFloat(String(fd.get("ownerMinutesPerDay"))),
+          sustainableMinutesPerDay: parseFloat(String(fd.get("sustainableMinutesPerDay"))),
+        }),
+      });
+      setShowWorkloadForm(false);
+      setWorkloadResult(`Owner workload saved — daily load ${Math.round(snap.dailyLoadPct ?? 0)}% (band ${snap.band ?? "?"}).`);
+      await load(selected);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save workload");
     } finally {
       setBusy(false);
     }
@@ -310,6 +369,45 @@ export default function OwnerOperationsPage() {
               <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save snapshot"}</Button>
             </form>
           )}
+
+          {/* Critical-domain ingestion — equipment_capacity + owner_workload_memory (P0 runtime-readiness).
+              These two domains previously had no owner write path, so every real business was stuck at
+              need_more_data. Owner can now enter them here; missing data is reported, never invented. */}
+          <div className="mb-4 flex flex-wrap items-end gap-3" data-testid="critical-intake-section">
+            <span className="text-sm font-medium">Critical operations data:</span>
+            <Button data-testid="capacity-form-toggle" onClick={() => setShowCapacityForm((s) => !s)} disabled={!selected}>
+              + Capacity snapshot
+            </Button>
+            <Button data-testid="workload-form-toggle" onClick={() => setShowWorkloadForm((s) => !s)} disabled={!selected}>
+              + Owner workload snapshot
+            </Button>
+          </div>
+
+          {showCapacityForm && (
+            <form data-testid="capacity-form" onSubmit={addCapacity} className="mb-4 border rounded-lg p-4 bg-white space-y-3">
+              <h2 className="font-semibold">Capacity snapshot {currentBusiness ? `(${currentBusiness.currency})` : ""}</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Input name="currentRevenue" label="Current revenue at this capacity" type="number" required data-testid="capacity-currentRevenue" />
+                <Input name="utilization" label="Bottleneck utilization (0–1)" type="number" step="0.01" required data-testid="capacity-utilization" />
+              </div>
+              <p className="text-xs text-muted-foreground">Equipment/capacity feeds the scaling gate. Leave blank if unknown — missing data is reported, never invented.</p>
+              <Button type="submit" disabled={busy} data-testid="capacity-submit">{busy ? "Saving…" : "Save capacity"}</Button>
+            </form>
+          )}
+          {capacityResult && <div className="mb-4 text-sm text-success" data-testid="capacity-result">{capacityResult}</div>}
+
+          {showWorkloadForm && (
+            <form data-testid="workload-form" onSubmit={addWorkload} className="mb-4 border rounded-lg p-4 bg-white space-y-3">
+              <h2 className="font-semibold">Owner workload snapshot</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Input name="ownerMinutesPerDay" label="Owner minutes/day on ops" type="number" required data-testid="workload-ownerMinutes" />
+                <Input name="sustainableMinutesPerDay" label="Sustainable minutes/day" type="number" required data-testid="workload-sustainableMinutes" />
+              </div>
+              <p className="text-xs text-muted-foreground">Owner workload is the human-execution-reality dimension. Leave blank if unknown — missing data is reported, never invented.</p>
+              <Button type="submit" disabled={busy} data-testid="workload-submit">{busy ? "Saving…" : "Save workload"}</Button>
+            </form>
+          )}
+          {workloadResult && <div className="mb-4 text-sm text-success" data-testid="workload-result">{workloadResult}</div>}
 
           {!dashboard?.hasData ? (
             <div className="border rounded-lg p-8 text-center text-muted-foreground">

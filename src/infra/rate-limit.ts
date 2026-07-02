@@ -75,9 +75,18 @@ export function requireRateLimit(key: string, config: RateLimitConfig): void {
   }
 }
 
+// Production default is 10 attempts / 15 min (unchanged). The ceiling is env-overridable ONLY so the browser E2E
+// lane — which legitimately performs many real logins from a single CI IP across its serial spec suite — is not
+// self-throttled. When LOGIN_RATE_LIMIT_MAX_ATTEMPTS is unset or invalid the value is exactly 10, so no production
+// deployment is affected and the gate is not weakened.
+const LOGIN_MAX_ATTEMPTS = ((): number => {
+  const raw = Number(process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS);
+  return Number.isInteger(raw) && raw >= 10 ? raw : 10;
+})();
+
 export const LOGIN_RATE_LIMIT: RateLimitConfig = {
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxAttempts: 10,
+  maxAttempts: LOGIN_MAX_ATTEMPTS,
 };
 
 export const MUTATION_RATE_LIMIT: RateLimitConfig = {
