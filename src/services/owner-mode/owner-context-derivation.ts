@@ -140,11 +140,14 @@ export function deriveOwnerContext(rows: OwnerDomainRows, opts: DeriveContextOpt
     : compliance.length > 0 || proofs.length > 0 ? "compliance_location_review"
     : "data_sufficiency";
 
-  // When margin is negative, surface the rate/cost so the math engine resolves a below-margin constraint.
-  if (belowMargin) {
-    numbers.consideredRate = 18;
-    numbers.fullyLoadedCost = 22;
-    numbers.paymentTermsDays = 30;
+  // A negative gross margin means the business is genuinely selling below cost, so the REAL revenue and
+  // cost basis are both present (belowMargin ⇒ costOfGoods > revenue > 0). Feed those REAL figures — never
+  // planted constants — to the contract-margin gate so the below-margin constraint resolves from actual data
+  // (revenue − cost < 0). Payment terms are not captured on any owner snapshot, so we OMIT them rather than
+  // plant a number; the gate relies on the real negative margin, not a fabricated financing leg.
+  if (belowMargin && finance?.revenue != null && finance.costOfGoods != null) {
+    numbers.consideredRate = finance.revenue;
+    numbers.fullyLoadedCost = finance.costOfGoods;
   }
 
   // ── messy facts (real, human-readable signals so the advisor reasons over actual state) ──

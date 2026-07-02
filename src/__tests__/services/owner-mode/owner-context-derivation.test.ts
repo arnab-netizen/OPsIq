@@ -81,4 +81,37 @@ describe("deriveOwnerContext", () => {
   it("throws only when there is no business row", () => {
     expect(() => deriveOwnerContext({ ...rows(), business: null }, { now: NOW })).toThrow(/no owner business/i);
   });
+
+  // ── M3: no hardcoded margin constants in the live plan path ──
+  it("[M3] a below-margin business feeds REAL revenue/cost to the margin gate — never the 18/22/30 placeholders", () => {
+    // revenue 200000 < costOfGoods 240000 ⇒ negative gross margin ⇒ belowMargin.
+    const belowMarginRows = rows({
+      cashflow: { periodEnd: NOW, cashInHand: 50000, bankBalance: 0, receivables: 0, receivablesOverdue: 0, payables: 0 } as OwnerDomainRows["cashflow"],
+      finance: { periodEnd: NOW, revenue: 200000, costOfGoods: 240000, fixedCosts: 60000, variableCosts: 20000 } as OwnerDomainRows["finance"],
+      wcItems: [], capacity: null, compliance: [], proofs: [], workload: null,
+    });
+    const ctx = deriveOwnerContext(belowMarginRows, { now: NOW });
+    expect(ctx.decisionCategory).toBe("marketing_opportunity_contract"); // below-margin ⇒ opportunity/contract
+    // The rate/cost fed to the gate are the owner's REAL figures, not the removed 18/22/30 constants.
+    expect(ctx.numbers.consideredRate).toBe(200000);
+    expect(ctx.numbers.fullyLoadedCost).toBe(240000);
+    expect(ctx.numbers.consideredRate).not.toBe(18);
+    expect(ctx.numbers.fullyLoadedCost).not.toBe(22);
+    // Payment terms are not captured on any owner snapshot, so no number is planted.
+    expect(ctx.numbers.paymentTermsDays).toBeUndefined();
+    // The real negative-margin basis holds: revenue < fully-loaded cost.
+    expect(Number(ctx.numbers.consideredRate)).toBeLessThan(Number(ctx.numbers.fullyLoadedCost));
+  });
+
+  it("[M3] a profitable business plants no rate/cost/terms numbers at all", () => {
+    const healthyRows = rows({
+      cashflow: { periodEnd: NOW, cashInHand: 200000, bankBalance: 0, receivables: 0, receivablesOverdue: 0, payables: 0 } as OwnerDomainRows["cashflow"],
+      finance: { periodEnd: NOW, revenue: 320000, costOfGoods: 120000, fixedCosts: 60000, variableCosts: 20000 } as OwnerDomainRows["finance"],
+      wcItems: [], capacity: null, compliance: [], proofs: [], workload: null,
+    });
+    const ctx = deriveOwnerContext(healthyRows, { now: NOW });
+    expect(ctx.numbers.consideredRate).toBeUndefined();
+    expect(ctx.numbers.fullyLoadedCost).toBeUndefined();
+    expect(ctx.numbers.paymentTermsDays).toBeUndefined();
+  });
 });
