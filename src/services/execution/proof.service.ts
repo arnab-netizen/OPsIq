@@ -5,8 +5,9 @@
  * before the proof moves to SUBMITTED; an employee may only submit for their own
  * task. Review (accept/reject/dispute/resubmit) requires a human reviewer; the
  * status change + audit are written in ONE transaction, so a failed audit write
- * prevents the final proof status update (Slice 8 rule). The Prisma Proof table is
- * MIGRATION_LANE_PENDING; this service uses an injected store and is DI-proven.
+ * prevents the final proof status update (Slice 8 rule). The Prisma Proof/ProofRequirement
+ * tables are migrated and exercised end-to-end (see task-assignment.db.test.ts); the service
+ * accepts an injected store for DI while defaulting to the live Prisma client.
  */
 
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
