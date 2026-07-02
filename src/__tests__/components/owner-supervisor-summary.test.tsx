@@ -67,6 +67,23 @@ describe("SupervisorSummary panel", () => {
     expect(container.querySelector('[data-testid="supervisor-impact"]')?.textContent).toMatch(/Profit \/ margin|Cash/);
   });
 
+  it("renders read-only supporting figures when present, and omits the block when absent", () => {
+    const { container } = render(<SupervisorSummary summary={view({
+      supportingFigures: [
+        { key: "monthly_net", label: "Monthly net (revenue − cost)", value: 205000, unit: "per month", basis: "monthly revenue − (fixed + variable cost)" },
+        { key: "cash_runway_days", label: "Cash runway", value: 43, unit: "days", basis: "cash on hand ÷ monthly net burn" },
+      ],
+    })} />);
+    const block = container.querySelector('[data-testid="supervisor-supporting-figures"]');
+    expect(block).not.toBeNull();
+    expect(block?.textContent).toMatch(/Supporting figures/);
+    expect(container.querySelector('[data-testid="supervisor-figure-monthly_net"]')?.textContent).toMatch(/205,000 per month/);
+    expect(container.querySelector('[data-testid="supervisor-figure-cash_runway_days"]')?.textContent).toMatch(/43 days/);
+
+    const { container: none } = render(<SupervisorSummary summary={view({ supportingFigures: [] })} />);
+    expect(none.querySelector('[data-testid="supervisor-supporting-figures"]')).toBeNull();
+  });
+
   it("renders NOTHING when not found (no static fallback)", () => {
     const { container } = render(<SupervisorSummary summary={view({ found: false })} />);
     expect(container.querySelector('[data-testid="owner-supervisor-summary"]')).toBeNull();

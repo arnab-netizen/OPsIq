@@ -105,6 +105,10 @@ export function stopLossThreshold(maxAcceptableLossPct: number, capitalAtRisk: n
 // ─── Case-driven derivation + trace ─────────────────────────────────────────────────────────────
 export interface CaseCalcs {
   monthlyNetBurn: number | null;
+  /** Monthly revenue actually present in the case (null when no revenue figure is known). */
+  monthlyRevenue: number | null;
+  /** Monthly operating cost — null when NO cost component was supplied (so 0 never masquerades as real data). */
+  monthlyCost: number | null;
   cashRunwayDays: number | null;
   receivablesRisk: number | null;
   capacityUtilization: number | null;
@@ -122,6 +126,8 @@ export function deriveCalcs(c: BehavioralCase): CaseCalcs {
   const fixed = (n(num.rent) ?? 0) + (n(num.electricity) ?? 0) + (n(num.water) ?? 0) + (n(num.staff) ?? 0);
   const variable = (n(num.chemicals) ?? 0);
   const monthlyCost = fixed + variable;
+  // Distinguish "no cost data" from a genuine zero — a bare 0 must never surface as a real supporting figure.
+  const haveCostData = [num.rent, num.electricity, num.water, num.staff, num.chemicals].some((x) => n(x) !== null);
   const monthlyNetBurn = revNow !== null ? monthlyCost - revNow : monthlyCost > 0 ? monthlyCost : null;
   const runway = cashRunwayDays(cash, monthlyNetBurn !== null && monthlyNetBurn > 0 ? monthlyNetBurn : null);
   const receivablesRisk = receivablesRiskRatio(n(num.receivables), revNow);
@@ -150,7 +156,7 @@ export function deriveCalcs(c: BehavioralCase): CaseCalcs {
   if (c.flags.cashRisk && cash === null) missingForDecision.push("current cash balance");
   if (c.flags.capacityRisk && n(num.reliableKgPerDay) === null && n(num.machineMaxKgPerDay) === null) missingForDecision.push("reliable capacity");
 
-  return { monthlyNetBurn, cashRunwayDays: runway, receivablesRisk, capacityUtilization: util, contractMarginAfterTerms: contractMargin, netRoas: roas, trace, missingForDecision };
+  return { monthlyNetBurn, monthlyRevenue: revNow, monthlyCost: haveCostData ? monthlyCost : null, cashRunwayDays: runway, receivablesRisk, capacityUtilization: util, contractMarginAfterTerms: contractMargin, netRoas: roas, trace, missingForDecision };
 }
 
 // ─── Validator ──────────────────────────────────────────────────────────────────────────────────

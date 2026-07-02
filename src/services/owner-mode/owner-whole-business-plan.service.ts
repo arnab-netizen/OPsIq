@@ -234,6 +234,15 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
     plan7Day: plan.plan7Day,
     plan30Day: plan.plan30Day,
     safeAction,
+    // Read-only supporting numbers the runtime already computed from real persisted inputs (never fabricated;
+    // contract-margin / net-ROAS deliberately excluded until the M3 placeholder constants are removed).
+    calcs: {
+      cashRunwayDays: result.supportingCalcs.cashRunwayDays,
+      monthlyRevenue: result.supportingCalcs.monthlyRevenue,
+      monthlyCost: result.supportingCalcs.monthlyCost,
+      receivablesRisk: result.supportingCalcs.receivablesRisk,
+      capacityUtilization: result.supportingCalcs.capacityUtilization,
+    },
   });
 
   return {
