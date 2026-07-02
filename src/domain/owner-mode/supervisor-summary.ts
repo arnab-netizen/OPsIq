@@ -73,6 +73,11 @@ export interface SupervisorInput {
    * existing caller), the disposition stays conservative and identical to before this field existed.
    */
   safeAction?: SafeActionSignals;
+  /**
+   * OPTIONAL already-computed calc numbers to surface read-only. When absent (every existing caller), no
+   * supporting figures are emitted — behaviour is identical to before this field existed.
+   */
+  calcs?: SupportingCalcInput | null;
 }
 
 export interface AssumptionLedger {
@@ -91,6 +96,56 @@ export interface ImpactStatement {
   label: string;
   statement: string;
   relevant: boolean;
+}
+
+/**
+ * Read-only, already-computed supporting numbers (never fabricated). Each figure is surfaced ONLY when it
+ * was derived from real persisted inputs; when an input is absent the figure is simply omitted. This is a
+ * pure pass-through of numbers the runtime already computed — no new math, no defaults, no placeholders.
+ */
+export interface SupportingFigure {
+  /** Stable identifier for the figure (also used as a React key / test hook). */
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  /** Short, plain description of how the number was derived from real inputs. */
+  basis: string;
+}
+
+/**
+ * The subset of the runtime's already-computed calc numbers we are willing to surface read-only. Every field
+ * is `number | null`; null means "not derivable from real inputs" and yields NO figure. Deliberately EXCLUDES
+ * contract-margin and net-ROAS: those are placeholder/default-contaminated in the live path today (the margin
+ * constants are the separate M3 concern), so surfacing them would fabricate a number.
+ */
+export interface SupportingCalcInput {
+  cashRunwayDays: number | null;
+  monthlyRevenue: number | null;
+  monthlyCost: number | null;
+  receivablesRisk: number | null;
+  capacityUtilization: number | null;
+}
+
+/** Map real, non-null computed numbers to owner-facing read-only figures. Fabricates nothing. */
+export function buildSupportingFigures(calc?: SupportingCalcInput | null): SupportingFigure[] {
+  if (!calc) return [];
+  const out: SupportingFigure[] = [];
+  const real = (v: number | null): v is number => v !== null && Number.isFinite(v);
+  if (real(calc.cashRunwayDays)) {
+    out.push({ key: "cash_runway_days", label: "Cash runway", value: Math.round(calc.cashRunwayDays), unit: "days", basis: "cash on hand ÷ monthly net burn" });
+  }
+  // Monthly net requires BOTH real revenue and real cost so a missing side never reads as a zero.
+  if (real(calc.monthlyRevenue) && real(calc.monthlyCost)) {
+    out.push({ key: "monthly_net", label: "Monthly net (revenue − cost)", value: Math.round(calc.monthlyRevenue - calc.monthlyCost), unit: "per month", basis: "monthly revenue − (fixed + variable cost)" });
+  }
+  if (real(calc.receivablesRisk)) {
+    out.push({ key: "receivables_risk", label: "Receivables", value: Math.round(calc.receivablesRisk * 100) / 100, unit: "× monthly revenue", basis: "receivables ÷ monthly revenue" });
+  }
+  if (real(calc.capacityUtilization)) {
+    out.push({ key: "capacity_utilization", label: "Capacity utilization", value: Math.round(calc.capacityUtilization * 100), unit: "%", basis: "offered ÷ reliable capacity" });
+  }
+  return out;
 }
 
 export interface OperatingCadence {
@@ -126,6 +181,8 @@ export interface SupervisorSummary {
   /** Convenience flag — true only when the status genuinely permits proceeding. */
   canProceed: boolean;
   impact: ImpactStatement[];
+  /** Read-only already-computed numbers (never fabricated); empty when no real inputs were available. */
+  supportingFigures: SupportingFigure[];
   cadence: OperatingCadence;
   topPriorities: SupervisorPriority[];
 }
@@ -286,7 +343,7 @@ export function buildSupervisorSummary(input: SupervisorInput): SupervisorSummar
       doNow: "Add your business data to begin.", doNotDo: [], ownerDecisionRequired: null,
       delegateToStaff: [], opsiqPreparedWork: [], proofNeeded: [],
       ledger: { knownFacts: [], assumptions: [], assumptionsAreMarked: true, missingData: [], confidence: "none", confidenceReason: "No data supplied.", whatWouldChange: "Supplying business data." },
-      confidence: "none", actionStatus: "need_more_data", canProceed: false, impact: [],
+      confidence: "none", actionStatus: "need_more_data", canProceed: false, impact: [], supportingFigures: [],
       cadence: { now: "Add business data.", today: "—", thisWeek: "—", reassessmentTrigger: "—", kpiWatch: "—", stopLoss: "—", nextReview: "—" },
       topPriorities: [],
     };
@@ -297,6 +354,7 @@ export function buildSupervisorSummary(input: SupervisorInput): SupervisorSummar
   const actionStatus = deriveActionStatus(input, confidence);
   const ledger = buildLedger(input, confidence, reason);
   const impact = buildImpact(input);
+  const supportingFigures = buildSupportingFigures(input.calcs);
   const cadence = buildCadence(input, actionStatus);
   const topPriorities = buildPriorities(input, emergency, actionStatus);
 
@@ -318,6 +376,7 @@ export function buildSupervisorSummary(input: SupervisorInput): SupervisorSummar
     actionStatus,
     canProceed: actionStatus === "proceed" || actionStatus === "cautious_proceed",
     impact,
+    supportingFigures,
     cadence,
     topPriorities,
   };

@@ -16,6 +16,7 @@ import { detectUnsafe } from "@/behavioral-validation/scorer";
 import { ingestBusinessState, type DomainIngestionReport, type OwnerDomainProviders } from "./owner-domain-ingestion";
 import { type ArbitrationResult, type Constraint } from "@/behavioral-validation/whole-business/arbitration";
 import { buildWholeBusinessPlan, type WholeBusinessPlan } from "@/behavioral-validation/whole-business/whole-plan";
+import { deriveCalcs, type CaseCalcs } from "@/behavioral-validation/expert/business-math";
 import { scoreCollectivePlan, type CollectiveScore } from "@/behavioral-validation/whole-business/collective-scorer";
 import type { LearningStore } from "@/behavioral-validation/learning-store";
 import {
@@ -62,6 +63,8 @@ export interface OwnerAdviceResult {
   learningArtifactIds: string[];
   unsafeCount: number;
   ingestion: DomainIngestionReport;
+  /** Already-computed calc numbers over the live case (runway/burn/receivables/…); surfaced read-only, never fabricated. */
+  supportingCalcs: CaseCalcs;
 }
 
 const FULL_FLAGS = (p: Partial<CaseFlags>): CaseFlags => ({
@@ -131,6 +134,7 @@ export async function runOwnerAdvice(req: OwnerAdviceRequest, deps: OwnerAdviceR
     learningArtifactIds,
     unsafeCount: detectUnsafe(c, advice).length,
     ingestion,
+    supportingCalcs: deriveCalcs(c),
   };
 }
 

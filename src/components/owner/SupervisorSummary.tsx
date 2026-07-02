@@ -27,6 +27,7 @@ export interface SupervisorSummaryView {
     whatWouldChange: string;
   };
   impact: Array<{ dimension: string; label: string; statement: string; relevant: boolean }>;
+  supportingFigures?: Array<{ key: string; label: string; value: number; unit: string; basis: string }>;
   cadence: { now: string; today: string; thisWeek: string; reassessmentTrigger: string; kpiWatch: string; stopLoss: string; nextReview: string };
   topPriorities: Array<{ severity: string; whatIsWrong: string; doNext: string }>;
 }
@@ -52,6 +53,7 @@ const CONFIDENCE_VARIANT: Record<string, "success" | "warning" | "destructive" |
 export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView | null }) {
   if (!summary || !summary.found) return null;
   const relevantImpact = summary.impact.filter((i) => i.relevant);
+  const supportingFigures = summary.supportingFigures ?? [];
 
   return (
     <section className="border-2 border-foreground/20 rounded-lg p-4 bg-white mb-6" data-testid="owner-supervisor-summary">
@@ -98,6 +100,21 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
           <ul className="list-disc ml-5">
             {relevantImpact.slice(0, 4).map((i) => (
               <li key={i.dimension}><span className="font-medium">{i.label}:</span> {i.statement}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {supportingFigures.length > 0 && (
+        <div className="rounded-md border p-2 text-sm mt-2" data-testid="supervisor-supporting-figures">
+          <strong>Supporting figures</strong>
+          <span className="text-xs text-muted-foreground"> (computed from your real records)</span>
+          <ul className="list-disc ml-5">
+            {supportingFigures.map((f) => (
+              <li key={f.key} data-testid={`supervisor-figure-${f.key}`}>
+                <span className="font-medium">{f.label}:</span> {f.value.toLocaleString()} {f.unit}
+                <span className="text-xs text-muted-foreground"> — {f.basis}</span>
+              </li>
             ))}
           </ul>
         </div>
