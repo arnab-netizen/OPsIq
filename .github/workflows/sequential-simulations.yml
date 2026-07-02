@@ -1,0 +1,127 @@
+name: Sequential Simulations Pack (DB + Browser + Mobile)
+
+# Proof that EVERY event of all 50 counted sequential simulations runs through the REAL DB-backed owner plan path and
+# that a representative event per simulation renders the runtime-fed Supervisor Summary in a real browser (desktop +
+# mobile). Over a business EVOLVING in time OpsIQ makes the right governed decision at each step: routine reversible
+# steps proceed, missing figures pause for data, binding constraints owner-gate, boundaries/fraud block — and nothing
+# owner-gated / boundary / missing-data ever auto-proceeds. Additive lane; does NOT modify any existing workflow.
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  sim-db:
+    name: Every-event Sequential Simulations DB-backed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      TEST_WITH_DB: "true"
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: opsiq_test }
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Simulations schema + invariant tests
+        run: npx vitest run src/__tests__/scenarios/business-simulation-pack.test.ts
+      - name: Every-event Simulations DB-backed proof
+        run: npx vitest run src/__tests__/scenarios/business-simulation-db.db.test.ts
+      - name: Assert all 50 sims passed every event
+        run: |
+          node -e '
+            const d=require("./OPSIQ_SEQUENTIAL_SIMULATIONS_PACK.run.json");
+            if(d.sims!==50||d.passSims!==50){console.error("SIM DB not 50/50:",d.sims,d.passSims);process.exit(1);}
+            console.log("SIM DB 50/50 sims OK across",d.events,"events");
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sim-db-ledger
+          path: OPSIQ_SEQUENTIAL_SIMULATIONS_PACK.run.json
+          retention-days: 7
+
+  sim-browser:
+    name: Sequential Simulations desktop + mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      AUTH_SECRET: e2e-test-auth-secret-not-a-real-secret
+      AUTH_URL: http://localhost:3001
+      NEXT_PUBLIC_APP_URL: http://localhost:3001
+      BASE_URL: http://localhost:3001
+      TEST_WITH_DB: "true"
+      SIM_SHARD_INDEX: ${{ matrix.shard }}
+      SIM_SHARD_TOTAL: 2
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: opsiq_test }
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5 --health-start-period 10s
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20.x, cache: npm }
+      - run: npm ci
+      - name: Configure .env.local
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          AUTH_SECRET=e2e-test-auth-secret-not-a-real-secret
+          AUTH_URL=http://localhost:3001
+          NEXT_PUBLIC_APP_URL=http://localhost:3001
+          TEST_WITH_DB=true
+          EOF
+      - name: Prisma migrate + generate
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+      - name: Build app
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Seed representative simulation-event businesses
+        run: npx tsx scripts/seed-business-simulation-e2e.ts
+      - name: Start app
+        run: |
+          PORT=3001 npm run start > /tmp/app.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/login || echo 000)
+            if [ "$code" != "000" ]; then echo "app up (HTTP $code)"; break; fi
+            sleep 2
+          done
+      - name: Simulations desktop shard ${{ matrix.shard }}/2
+        run: npx playwright test tests/browser/41-simulations-desktop.spec.ts --project=chromium
+      - name: Simulations mobile shard ${{ matrix.shard }}/2
+        run: npx playwright test tests/browser/42-simulations-mobile.spec.ts --project=chromium
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sim-browser-shard-${{ matrix.shard }}
+          path: "OPSIQ_SEQUENTIAL_SIMULATIONS_*.run.json"
+          retention-days: 7
