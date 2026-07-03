@@ -9,14 +9,29 @@
  * required fields cannot fake readiness. Period duplicates are treated idempotently (skip, not overwrite).
  *
  * Scope: `finance` → OwnerFinancialSnapshot (feeds the plan's `finance_cash` + `margin_pricing` critical domains).
- * Other intake domains (sales/operations/marketing/sop) are recognised and reported as not-yet-materialized (0) so
- * later slices can extend this dispatch without a rewrite.
+ * Wave 5: `sales`/`operations`/`sop`/`marketing` → their existing Owner{Domain}Snapshot services, which the
+ * owner-visible per-domain dashboards (GET /api/owner/{domain}/dashboard) read. The intake field-specs are a 1:1
+ * match for those snapshots' create-input fields, so no field is invented — periodStart/periodEnd/currency are
+ * required (mirroring finance) and every other numeric key is passed through. These per-domain snapshots feed the
+ * per-domain dashboards, NOT the whole-business-plan critical domains (that bridge is a documented product decision).
  */
 import { createFinancialSnapshot } from "@/services/owner-finance/snapshot.service";
+import { createSalesSnapshot } from "@/services/owner-sales/snapshot.service";
+import { createOperationsSnapshot } from "@/services/owner-operations/snapshot.service";
+import { createSopSnapshot } from "@/services/owner-sop/snapshot.service";
+import { createMarketingSnapshot } from "@/services/owner-marketing/snapshot.service";
 import { ConflictError } from "@/infra/errors";
 import type { FinancialSnapshotCreateInput } from "@/domain/owner-finance/validation";
 
 type NormalizedRecord = Record<string, number | string | null>;
+
+/** A period-keyed snapshot create service. All four non-finance domains share this shape. */
+type SnapshotCreator = (
+  businessId: string,
+  input: Record<string, string | number>,
+  actorId: string,
+  workspaceId: string
+) => Promise<unknown>;
 
 export interface MaterializeResult {
   domain: string;
@@ -45,8 +60,64 @@ export async function materializeIntake(
   if (intake.targetDomain === "finance") {
     return materializeFinance(intake.businessId, intake.workspaceId, actorId, records);
   }
-  // Recognised but not yet materialized in this slice — reported honestly as 0 materialized.
+  // Wave 5: the non-finance CSV domains materialize into their existing owner-wired snapshot services. The intake
+  // field-spec keys ARE the snapshot create-input field names (verified 1:1), so the generic pass-through invents
+  // nothing. `createFinancialSnapshot`'s signature differs only in the input type; the four below are identical.
+  const NON_FINANCE_CREATORS: Record<string, SnapshotCreator> = {
+    sales: createSalesSnapshot as unknown as SnapshotCreator,
+    operations: createOperationsSnapshot as unknown as SnapshotCreator,
+    sop: createSopSnapshot as unknown as SnapshotCreator,
+    marketing: createMarketingSnapshot as unknown as SnapshotCreator,
+  };
+  const creator = NON_FINANCE_CREATORS[intake.targetDomain];
+  if (creator) {
+    return materializeViaSnapshot(intake.targetDomain, creator, intake.businessId, intake.workspaceId, actorId, records);
+  }
+  // Unrecognised domain — reported honestly as 0 materialized (no fabrication).
   return { domain: intake.targetDomain, materialized: 0, skipped: records.length };
+}
+
+/**
+ * Generic period-snapshot materializer for domains whose intake field-spec keys equal their snapshot create-input
+ * field names. Requires periodStart/periodEnd/currency (a meaningful period snapshot); passes through every other
+ * finite-number key; drops nulls/strings. A duplicate period (ConflictError) is an idempotent skip. Fabricates nothing.
+ */
+async function materializeViaSnapshot(
+  domain: string,
+  creator: SnapshotCreator,
+  businessId: string,
+  workspaceId: string,
+  actorId: string,
+  records: NormalizedRecord[]
+): Promise<MaterializeResult> {
+  let materialized = 0;
+  let skipped = 0;
+  for (const r of records) {
+    const periodStart = str(r.periodStart);
+    const periodEnd = str(r.periodEnd);
+    const currency = str(r.currency);
+    if (!periodStart || !periodEnd || !currency) {
+      skipped++;
+      continue;
+    }
+    const input: Record<string, string | number> = { periodStart, periodEnd, currency };
+    for (const [key, value] of Object.entries(r)) {
+      if (key === "periodStart" || key === "periodEnd" || key === "currency") continue;
+      const n = num(value);
+      if (n !== undefined) input[key] = n; // only real numbers; nulls/strings are not fabricated into the snapshot
+    }
+    try {
+      await creator(businessId, input, actorId, workspaceId);
+      materialized++;
+    } catch (e) {
+      if (e instanceof ConflictError) {
+        skipped++; // a snapshot for this period already exists — idempotent, never overwrite
+        continue;
+      }
+      throw e;
+    }
+  }
+  return { domain, materialized, skipped };
 }
 
 async function materializeFinance(
