@@ -1,9 +1,6 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { recordDecisionMetrics } from "@/services/metrics/decision-metrics-service";
-import { logger } from "@/infra/logger";
 
 export async function executeDecision(
   decisionId: string,
@@ -154,20 +151,10 @@ export async function markSuccess(
     },
   });
 
-  await recordDecisionMetrics(workspaceId, {
-    problemType: decision.problemType || "general",
-    actionTaken: decision.action,
-    success: true,
-    actualOutcome: outcomeValue,
-    expectedOutcome: decision.impactExpected,
-  }).catch((metricsError) => {
-    const governed = classifyOperatorError(metricsError instanceof Error ? metricsError : new Error(String(metricsError)), { context: "load" });
-    logger.warn("Failed to record success metrics", {
-      decisionId,
-      workspaceId,
-      error: governed.operatorMessage,
-    });
-  });
+  // NOTE (M7): the former `recordDecisionMetrics(...)` call wrote to a Prisma model (`learning_records`)
+  // that does not exist, so it always threw and was swallowed — nothing persisted. The real success/outcome
+  // is recorded on the OperatorItem row (above) + the audit event, which the live decision-learning
+  // read-back (recommendation.ts, B6) consumes. Dead writer removed.
 
   return updated;
 }
@@ -247,20 +234,8 @@ export async function markFailure(
     },
   });
 
-  await recordDecisionMetrics(workspaceId, {
-    problemType: decision.problemType || "general",
-    actionTaken: decision.action,
-    success: false,
-    actualOutcome: 0,
-    expectedOutcome: decision.impactExpected,
-  }).catch((metricsError) => {
-    const governed = classifyOperatorError(metricsError instanceof Error ? metricsError : new Error(String(metricsError)), { context: "load" });
-    logger.warn("Failed to record failure metrics", {
-      decisionId,
-      workspaceId,
-      error: governed.operatorMessage,
-    });
-  });
+  // NOTE (M7): removed the dead `recordDecisionMetrics(...)` writer (nonexistent `learning_records` table;
+  // threw + swallowed). This path is also unreachable — `markFailure` is retired and throws above.
 
   return updated;
 }

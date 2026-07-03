@@ -4,7 +4,6 @@ import { CalibrationRecord } from "@/domain/calibration/types";
 import { calculateDeviation } from "@/services/calibration/engine";
 import { isFirstWinConditionMet } from "@/services/firstwin/detector";
 import { requireWorkspaceContext, validateWorkspaceAccess } from "@/services/workspace/context";
-import { recordOperatorItemLearning } from "@/services/learning/store";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
@@ -236,62 +235,10 @@ export async function updateItem(
     });
   });
 
-  // Record learning when decision is completed with outcome data
-  if ((updates.status === "done" || updates.actualOutcomeValue !== undefined) && updates.problemType) {
-    if (item && item.status === "done") {
-      // Silently record learning if conditions are met
-      // Don't throw if learning recording fails
-      try {
-        await recordOperatorItemLearning({
-          id: item.id,
-          workspaceId: item.workspaceId,
-          ownerUserId: item.ownerUserId,
-          createdBy: item.createdBy,
-          lastUpdatedBy: item.lastUpdatedBy,
-          problem: item.problem,
-          action: item.action,
-          impactExpected: Number(item.impactExpected),
-          impactLow: Number(item.impactLow),
-          impactHigh: Number(item.impactHigh),
-          confidence: Number(item.confidence),
-          priorityScore: Number(item.priorityScore),
-          status: item.status as "pending" | "in_progress" | "done" | "failed",
-          dueAt: item.dueAt ? item.dueAt.toISOString() : null,
-          decisionType: item.decisionType || "general",
-          problemType: item.problemType || undefined,
-          baselineValue: item.baselineValue ? Number(item.baselineValue) : undefined,
-          projectedWithoutAction: item.projectedWithoutAction ? Number(item.projectedWithoutAction) : undefined,
-          expectedOutcome: item.expectedOutcome,
-          actualOutcome: item.actualOutcome,
-          actualOutcomeValue: item.actualOutcomeValue ? Number(item.actualOutcomeValue) : undefined,
-          outcomeDelta: item.outcomeDelta ? Number(item.outcomeDelta) : undefined,
-          decisionAccuracy: item.decisionAccuracy ? Number(item.decisionAccuracy) : undefined,
-          decisionError: item.decisionError ? Number(item.decisionError) : undefined,
-          outcomeNotes: item.outcomeNotes || undefined,
-          startedAt: item.startedAt ? item.startedAt.toISOString() : undefined,
-          completedAt: item.completedAt ? item.completedAt.toISOString() : undefined,
-          executionStatus: item.executionStatus || undefined,
-          firstCompletedAt: item.firstCompletedAt ? item.firstCompletedAt.toISOString() : undefined,
-          firstPositiveOutcomeAt: item.firstPositiveOutcomeAt ? item.firstPositiveOutcomeAt.toISOString() : undefined,
-          firstWinAchieved: item.firstWinAchieved || undefined,
-          explanation: item.explanation ? JSON.parse(String(item.explanation)) : undefined,
-          inputsSnapshot: item.inputsSnapshot ? JSON.parse(String(item.inputsSnapshot)) : undefined,
-          decisionHash: item.decisionHash || undefined,
-          signedHash: item.signedHash || undefined,
-          signature: item.signature || undefined,
-          signatureAlgo: item.signatureAlgo || undefined,
-          publicKeyId: item.publicKeyId || undefined,
-          engineVersion: item.engineVersion || "v1.0.0",
-          createdAt: item.createdAt.toISOString(),
-          blockingDependencies: Array.isArray(item.blockingDependencies)
-            ? (item.blockingDependencies as string[])
-            : [],
-        });
-      } catch {
-        // Silently fail learning recording to not block decision updates
-      }
-    }
-  }
+  // NOTE (M7): the former `recordOperatorItemLearning(...)` call here targeted a Prisma model
+  // (`learning_records`) that does not exist in the schema, so it threw on every completion and was
+  // swallowed — it never persisted anything. The live decision-path learning read-back now reads the real
+  // persisted `OperatorItem` outcome history (see recommendation.ts, blocker B6), so this dead writer is removed.
 }
 
 export function addCalibrationRecord(
