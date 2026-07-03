@@ -75,10 +75,11 @@ export async function detectKPIDeteriorationPattern(
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   const kpis = await db.kPI.findMany({
-    where: { engagementId, workspaceId },
+    // KPI has no workspaceId column — scope via the engagement relation.
+    where: { engagementId, engagement: { workspaceId } },
     orderBy: { createdAt: "desc" },
     include: {
-      snapshots: {
+      kpiSnapshots: {
         orderBy: { recordedAt: "desc" },
         take: 3,
       },
@@ -88,13 +89,13 @@ export async function detectKPIDeteriorationPattern(
   const deterioratedKPIs: string[] = [];
 
   for (const kpi of kpis) {
-    if (kpi.snapshots.length < 2) continue;
+    if (kpi.kpiSnapshots.length < 2) continue;
 
     let consecutiveDeteriorations = 0;
 
-    for (let i = 0; i < kpi.snapshots.length - 1; i++) {
-      const current = kpi.snapshots[i].value;
-      const previous = kpi.snapshots[i + 1].value;
+    for (let i = 0; i < kpi.kpiSnapshots.length - 1; i++) {
+      const current = kpi.kpiSnapshots[i].value;
+      const previous = kpi.kpiSnapshots[i + 1].value;
 
       // Default to "up" is better (e.g., revenue, margin, growth)
       const isWorsening = current < previous;

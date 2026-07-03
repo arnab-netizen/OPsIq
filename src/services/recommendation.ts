@@ -748,7 +748,7 @@ export async function updateRecommendationStatus(
         db.finding.findMany({
           where: {
             engagementId: rec.engagementId,
-            workspaceId: validatedWorkspaceId,
+            engagement: { workspaceId: validatedWorkspaceId },
           },
         }),
         db.recommendation.findMany({
@@ -760,7 +760,7 @@ export async function updateRecommendationStatus(
         db.action.findMany({
           where: {
             engagementId: rec.engagementId,
-            workspaceId: validatedWorkspaceId,
+            engagement: { workspaceId: validatedWorkspaceId },
           },
         }),
       ]);

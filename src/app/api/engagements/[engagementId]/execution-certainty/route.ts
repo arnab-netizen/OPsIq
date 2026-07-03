@@ -30,13 +30,13 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, pa
   // Fetch all required data in parallel (all scoped by workspace)
   const [findings, recommendations, actions, condition] = await Promise.all([
     db.finding.findMany({
-      where: { engagementId, workspaceId: ctx.verifiedWorkspaceId },
+      where: { engagementId, engagement: { workspaceId: ctx.verifiedWorkspaceId } },
     }),
     db.recommendation.findMany({
       where: { engagementId, workspaceId: ctx.verifiedWorkspaceId },
     }),
     db.action.findMany({
-      where: { engagementId, workspaceId: ctx.verifiedWorkspaceId },
+      where: { engagementId, engagement: { workspaceId: ctx.verifiedWorkspaceId } },
     }),
     db.businessConditionProfile.findFirst({
       where: { engagementId, isCurrent: true, workspaceId: ctx.verifiedWorkspaceId },

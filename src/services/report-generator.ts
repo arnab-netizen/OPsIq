@@ -216,7 +216,7 @@ export async function generateEngagementReport(
         orderBy: { createdAt: "desc" },
       }),
       db.finding.findMany({
-        where: { engagementId, workspaceId },
+        where: { engagementId, engagement: { workspaceId } },
         orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
       }),
       db.recommendation.findMany({
@@ -228,7 +228,7 @@ export async function generateEngagementReport(
         orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
       }),
       db.kPI.findMany({
-        where: { engagementId, workspaceId },
+        where: { engagementId, engagement: { workspaceId } },
         orderBy: { createdAt: "asc" },
       }),
     ]);

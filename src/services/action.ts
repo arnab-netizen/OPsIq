@@ -320,7 +320,7 @@ export async function updateActionStatus(
   const updateResult = await db.action.updateMany({
     where: {
       id: actionId,
-      workspaceId: validatedWorkspaceId,
+      engagement: { workspaceId: validatedWorkspaceId },
       version: input.version,
     },
     data: {
@@ -337,8 +337,8 @@ export async function updateActionStatus(
     );
   }
 
-  const updated = await db.action.findUnique({
-    where: { id: actionId, workspaceId: validatedWorkspaceId },
+  const updated = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!updated) throw new NotFoundError("Action", actionId);
 
@@ -466,8 +466,10 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
 export async function getActionById(actionId: string, workspaceId: string) {
   enforceWorkspaceId(workspaceId, "getActionById", "action");
 
-  const action = await db.action.findUnique({
-    where: { id: actionId },
+  // Action has no workspaceId column; scope via the engagement relation so a caller in one workspace
+  // cannot read another workspace's action (the previous findUnique-by-id ignored workspaceId entirely).
+  const action = await db.action.findFirst({
+    where: { id: actionId, engagement: { workspaceId } },
   });
   if (!action) throw new NotFoundError("Action", actionId);
   return action;

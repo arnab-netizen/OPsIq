@@ -22,7 +22,7 @@ function deps(w: World): ConfDeps {
       clientAccount: { findUnique: async () => (w.flag === undefined ? null : { requireBusinessImpactAssessment: w.flag }) },
       recommendationBusinessImpact: { findUnique: async () => w.impact ?? null },
       recommendation: { findUnique: async () => ({ findingId: "f1" }) },
-      finding: { findUnique: async () => ({ impactArea: w.impactArea ?? "operations" }) },
+      finding: { findFirst: async () => ({ impactArea: w.impactArea ?? "operations" }) },
       ownerInputQualityAssessment: { findFirst: async () => (w.qualityStatus == null ? null : { qualityStatus: w.qualityStatus }) },
     } as any,
   };

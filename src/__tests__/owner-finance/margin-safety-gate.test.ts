@@ -50,7 +50,7 @@ function depsFor(impactArea: string | null, revenue: number | null, costOfGoods:
     marginFloorPct: 15,
     db: {
       recommendation: { findUnique: vi.fn(async () => ({ findingId: "f1" })) },
-      finding: { findUnique: vi.fn(async () => ({ impactArea })) },
+      finding: { findFirst: vi.fn(async () => ({ impactArea })) },
       ownerFinancialSnapshot: { findFirst: vi.fn(async () => (revenue === null && costOfGoods === null ? null : { revenue, costOfGoods })) },
     },
   };

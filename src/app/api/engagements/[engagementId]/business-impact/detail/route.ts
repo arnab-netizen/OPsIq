@@ -43,9 +43,9 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, pa
       db.engagement.findUnique({ where: { id: engagementId, workspaceId } }),  // Scoped
       generateBusinessImpact(engagementId, ctx.verifiedActorId, workspaceId),
       detectExecutionDrift(engagementId, workspaceId),
-      db.finding.findMany({ where: { engagementId, workspaceId } }),  // Scoped
+      db.finding.findMany({ where: { engagementId, engagement: { workspaceId } } }),  // Scoped via engagement (Finding has no workspaceId)
       db.recommendation.findMany({ where: { engagementId, workspaceId } }),  // Scoped
-      db.action.findMany({ where: { engagementId, workspaceId } }),  // Scoped
+      db.action.findMany({ where: { engagementId, engagement: { workspaceId } } }),  // Scoped via engagement (Action has no workspaceId)
     ]);
 
   if (!engagement) {

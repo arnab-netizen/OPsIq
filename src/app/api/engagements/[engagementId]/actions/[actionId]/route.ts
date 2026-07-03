@@ -25,8 +25,8 @@ export const PATCH = withCanonicalEnforcement(
     const body = await parseRequestBody(ctx.request!, updateActionSchema);
 
     // Fetch action to verify engagement access
-    const action = await db.action.findUnique({
-      where: { id: actionId, workspaceId: ctx.verifiedWorkspaceId },
+    const action = await db.action.findFirst({
+      where: { id: actionId, engagement: { workspaceId: ctx.verifiedWorkspaceId } },
       select: { engagementId: true },
     });
     if (!action) throw new NotFoundError("Action", actionId);

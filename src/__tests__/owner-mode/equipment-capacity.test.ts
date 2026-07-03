@@ -58,7 +58,7 @@ function deps(impactArea: string, fleet: Array<{ name: string; utilization: numb
     now: () => NOW,
     db: {
       recommendation: { findUnique: vi.fn(async () => ({ findingId: "f1" })) },
-      finding: { findUnique: vi.fn(async () => ({ impactArea })) },
+      finding: { findFirst: vi.fn(async () => ({ impactArea })) },
       ownerEquipment: { findMany: vi.fn(async () => fleet) },
     },
   };

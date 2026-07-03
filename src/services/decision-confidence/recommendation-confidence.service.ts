@@ -29,7 +29,7 @@ interface ConfDb {
     findUnique(args: { where: { id: string; workspaceId: string }; select: { findingId: true } }): Promise<{ findingId: string | null } | null>;
   };
   finding: {
-    findUnique(args: { where: { id: string; workspaceId: string }; select: { impactArea: true } }): Promise<{ impactArea: string | null } | null>;
+    findFirst(args: { where: { id: string; engagement: { workspaceId: string } }; select: { impactArea: true } }): Promise<{ impactArea: string | null } | null>;
   };
   ownerInputQualityAssessment: {
     findFirst(args: { where: { workspaceId: string }; orderBy: { assessedAt: "desc" }; select: { qualityStatus: true } }): Promise<{ qualityStatus: string } | null>;
@@ -81,7 +81,7 @@ export async function enforceConfidenceForPromotion(
   const rec = await deps.db.recommendation.findUnique({ where: { id: recommendationId, workspaceId }, select: { findingId: true } });
   let needsProfessionalReview = false;
   if (rec?.findingId) {
-    const finding = await deps.db.finding.findUnique({ where: { id: rec.findingId, workspaceId }, select: { impactArea: true } });
+    const finding = await deps.db.finding.findFirst({ where: { id: rec.findingId, engagement: { workspaceId } }, select: { impactArea: true } });
     needsProfessionalReview = mapImpactAreaToSensitivity(finding?.impactArea) === RecommendationSensitivity.COMPLIANCE_SENSITIVE;
   }
 

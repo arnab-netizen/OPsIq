@@ -22,7 +22,7 @@ function deps(finding: { code: string | null; impactArea: string | null } | null
     deps: {
       db: {
         recommendation: { findUnique: vi.fn(async () => (finding ? { findingId: "f1" } : { findingId: null })) },
-        finding: { findUnique: vi.fn(async () => finding) },
+        finding: { findFirst: vi.fn(async () => finding) },
         ownerDoNotRepeatRule: {
           findFirst: vi.fn(async (args: { where: { memoryKey: { in: string[] } } }) => {
             captured.keys = args.where.memoryKey.in;

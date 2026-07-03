@@ -34,7 +34,7 @@ function deps(findingCode: string | null, memory: { changedContextExplanation: s
   return {
     db: {
       recommendation: { findUnique: vi.fn(async () => (findingCode === null ? { findingId: null } : { findingId: "f1" })) },
-      finding: { findUnique: vi.fn(async () => ({ code: findingCode })) },
+      finding: { findFirst: vi.fn(async () => ({ code: findingCode })) },
       ownerDoNotRepeatRule: {
         findFirst: vi.fn(async () => (memory ? { blocksRepetition: true, ...memory } : null)),
         create: vi.fn(async () => ({ id: "m1" })),

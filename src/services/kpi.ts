@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -43,12 +44,12 @@ export async function createKPI(
         return await db.$transaction(async (tx: any) => {
           const kpi = await tx.kPI.create({
             data: {
+              id: randomUUID(),
               engagementId: input.engagementId,
               name: input.name,
               description: input.description || null,
               target: input.target || null,
               createdBy: userId,
-              workspaceId: validatedWorkspaceId,
             },
           });
 
@@ -89,12 +90,12 @@ export async function createKPI(
 
   const kpi = await db.kPI.create({
     data: {
+      id: randomUUID(),
       engagementId: input.engagementId,
       name: input.name,
       description: input.description || null,
       target: input.target || null,
       createdBy: userId,
-      workspaceId: validatedWorkspaceId,
     },
   });
 
@@ -128,7 +129,7 @@ export async function getKPIsForEngagement(engagementId: string, workspaceId: st
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
   return db.kPI.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -142,10 +143,12 @@ export async function updateKPIValue(
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const kpi = await db.kPI.findUnique({
-    where: { id: kpiId, workspaceId: validatedWorkspaceId },
+  // KPI has no workspaceId column — scope via the engagement relation. findFirst (not findUnique) is
+  // required because relation filters aren't valid in a unique where; `id` still selects a single row.
+  const kpi = await db.kPI.findFirst({
+    where: { id: kpiId, engagement: { workspaceId: validatedWorkspaceId } },
     include: {
-      snapshots: {
+      kpiSnapshots: {
         orderBy: { recordedAt: "desc" },
         take: 1,
       },
@@ -170,7 +173,7 @@ export async function updateKPIValue(
           const updateResult = await tx.kPI.updateMany({
             where: {
               id: kpiId,
-              workspaceId: validatedWorkspaceId,
+              engagement: { workspaceId: validatedWorkspaceId },
               version: input.version,
             },
             data: {
@@ -189,22 +192,23 @@ export async function updateKPIValue(
 
           // Create snapshot of the new value
           const newValue = input.currentValue ?? kpi.currentValue;
+          // KPISnapshot has no workspaceId column — it is scoped via its kpi → engagement. Do not write it.
           const snapshot = await tx.kPISnapshot.create({
             data: {
+              id: randomUUID(),
               kpiId,
               value: newValue ?? 0,
               recordedBy: userId,
-              workspaceId: validatedWorkspaceId,
             },
           });
 
-          const updated = await tx.kPI.findUnique({
-            where: { id: kpiId, workspaceId: validatedWorkspaceId },
+          const updated = await tx.kPI.findFirst({
+            where: { id: kpiId, engagement: { workspaceId: validatedWorkspaceId } },
           });
           if (!updated) throw new NotFoundError("KPI", kpiId);
 
           // Detect deterioration
-          const previousValue = kpi.snapshots[0]?.value;
+          const previousValue = kpi.kpiSnapshots[0]?.value;
           let deteriorated = false;
 
           if (previousValue != null && newValue != null) {
@@ -260,7 +264,7 @@ export async function updateKPIValue(
   const updateResult = await db.kPI.updateMany({
     where: {
       id: kpiId,
-      workspaceId: validatedWorkspaceId,
+      engagement: { workspaceId: validatedWorkspaceId },
       version: input.version,
     },
     data: {
@@ -279,22 +283,23 @@ export async function updateKPIValue(
 
   // Create snapshot of the new value
   const newValue = input.currentValue ?? kpi.currentValue;
+  // KPISnapshot has no workspaceId column — scoped via its kpi → engagement. Do not write it.
   await db.kPISnapshot.create({
     data: {
+      id: randomUUID(),
       kpiId,
       value: newValue ?? 0,
       recordedBy: userId,
-      workspaceId: validatedWorkspaceId,
     },
   });
 
-  const updated = await db.kPI.findUnique({
-    where: { id: kpiId, workspaceId: validatedWorkspaceId },
+  const updated = await db.kPI.findFirst({
+    where: { id: kpiId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!updated) throw new NotFoundError("KPI", kpiId);
 
   // Detect deterioration
-  const previousValue = kpi.snapshots[0]?.value;
+  const previousValue = kpi.kpiSnapshots[0]?.value;
   let deteriorated = false;
 
   if (previousValue != null && newValue != null) {
