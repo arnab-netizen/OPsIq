@@ -398,12 +398,17 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
   const results = [];
 
   for (const action of overdueActions) {
-    // Emit overdue event
+    // Emit overdue event. The Action model has no `priority` column, so an action's priority cannot be raised
+    // here (the earlier `db.action.update({ data: { priority } })` referenced a phantom field and threw at
+    // runtime). Priority lives on the linked Recommendation; auto-escalating that shared record because one of
+    // its actions is overdue is a product decision (see the Wave 6 decision memo), not a mechanical fix. This
+    // function performs honest overdue detection + the ACTION_OVERDUE audit event.
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ACTION_OVERDUE,
       actorId,
       entityType: "action",
       entityId: action.id,
+      workspaceId,
       payload: {
         engagementId,
         dueAt: action.dueAt,
@@ -412,44 +417,10 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
       visibility: "internal",
     });
 
-    // Increase priority if high/critical
-    if (action.priority !== "critical") {
-      const newPriority = action.priority === "high" ? "critical" : "high";
-      await db.action.update({
-        where: { id: action.id },
-        data: {
-          priority: newPriority,
-          version: { increment: 1 },
-        },
-      });
-
-      await emitAuditEvent({
-        eventName: AUDIT_EVENTS.ACTION_PRIORITY_ESCALATED,
-        actorId,
-        entityType: "action",
-        entityId: action.id,
-        workspaceId,
-        payload: {
-          previousPriority: action.priority,
-          newPriority,
-          reason: "overdue",
-        },
-        visibility: "internal",
-      });
-
-      results.push({
-        actionId: action.id,
-        overdue: true,
-        priorityIncreased: true,
-        newPriority,
-      });
-    } else {
-      results.push({
-        actionId: action.id,
-        overdue: true,
-        priorityIncreased: false,
-      });
-    }
+    results.push({
+      actionId: action.id,
+      overdue: true,
+    });
   }
 
   if (overdueActions.length > 0) {

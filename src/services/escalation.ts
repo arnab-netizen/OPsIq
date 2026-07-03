@@ -22,16 +22,42 @@ export async function detectHighPriorityOverdueActions(
 
   const now = new Date();
 
-  const criticalOverdueActions = await db.action.findMany({
-    where: {
-      engagementId,
-      workspaceId,
-      priority: "critical",
-      dueDate: { lt: now },
-      status: { notIn: ["completed", "verified", "cancelled"] },
-    },
-    select: { id: true, title: true },
-  });
+  // The Action model has no `priority`, `dueDate`, or `workspaceId` column (see prisma/schema.prisma): the field
+  // is `dueAt`, workspace scope goes through the `engagement` relation, and "priority" lives on the linked
+  // Recommendation. So "critical overdue action" = an overdue, still-open action whose Recommendation is critical.
+  // Step 1: overdue, still-open actions in this workspace's engagement that carry a recommendation.
+  const overdueOpenActions: Array<{ id: string; title: string; recommendationId: string | null }> =
+    await db.action.findMany({
+      where: {
+        engagementId,
+        engagement: { workspaceId },
+        dueAt: { lt: now },
+        status: { notIn: ["completed", "verified", "cancelled"] },
+        recommendationId: { not: null },
+      },
+      select: { id: true, title: true, recommendationId: true },
+    });
+
+  // Step 2: of those, keep only the ones whose Recommendation has critical priority (no Action→Recommendation
+  // relation object exists, so this is a two-step lookup by id — no invented column, no fabricated priority).
+  const recommendationIds = Array.from(
+    new Set(
+      overdueOpenActions
+        .map((a) => a.recommendationId)
+        .filter((id): id is string => id !== null)
+    )
+  );
+  const criticalRecommendations: Array<{ id: string }> = recommendationIds.length
+    ? await db.recommendation.findMany({
+        where: { id: { in: recommendationIds }, workspaceId, priority: "critical" },
+        select: { id: true },
+      })
+    : [];
+  const criticalRecommendationIds = new Set(criticalRecommendations.map((r) => r.id));
+
+  const criticalOverdueActions = overdueOpenActions.filter(
+    (a) => a.recommendationId !== null && criticalRecommendationIds.has(a.recommendationId)
+  );
 
   if (criticalOverdueActions.length > 0) {
     const alert: EscalationAlert = {
@@ -39,7 +65,7 @@ export async function detectHighPriorityOverdueActions(
       engagementId,
       severity: "critical",
       description: `${criticalOverdueActions.length} critical action(s) overdue`,
-      relatedEntityIds: criticalOverdueActions.map((a: any) => a.id),
+      relatedEntityIds: criticalOverdueActions.map((a) => a.id),
     };
 
     await emitAuditEvent({
@@ -52,7 +78,7 @@ export async function detectHighPriorityOverdueActions(
         engagementId,
         actionCount: criticalOverdueActions.length,
         actionIds: alert.relatedEntityIds,
-        actionTitles: criticalOverdueActions.map((a: any) => a.title),
+        actionTitles: criticalOverdueActions.map((a) => a.title),
       },
       visibility: "internal",
     });
