@@ -36,6 +36,8 @@ export type MaterialChangeKind =
   | "seasonality_changed" | "vendor_price_changed" | "supplier_bank_changed"
   // H. owner governance
   | "owner_override_recorded" | "budget_authority_changed"
+  // I. time-based cadence (scheduled review due — M8 due-scanner)
+  | "scheduled_review_due"
   // non-material
   | "note_edited" | "label_renamed";
 
@@ -87,6 +89,9 @@ const TRIGGER_MAP: Record<MaterialChangeKind, ReassessmentTriggerClass> = {
 
   owner_override_recorded: "BUDGET_STRUCTURE",
   budget_authority_changed: "EMPLOYEE_GOVERNANCE",
+
+  // A scheduled cadence review is a planning-class reassessment (governed, not immediate).
+  scheduled_review_due: "EXTERNAL_PLANNING",
 
   note_edited: "NONE",
   label_renamed: "NONE",

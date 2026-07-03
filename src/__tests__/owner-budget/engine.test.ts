@@ -142,6 +142,12 @@ describe("Reassessment Trigger Classifier", () => {
     expect(classifyMaterialChange("note_edited").requiresReassessment).toBe(false);
     expect(classifyMaterialChange("label_renamed").requiresReassessment).toBe(false);
   });
+  it("[M8] treats a scheduled cadence review as material planning-class, but not immediate", () => {
+    const r = classifyMaterialChange("scheduled_review_due");
+    expect(r.requiresReassessment).toBe(true);
+    expect(r.triggerClass).toBe("EXTERNAL_PLANNING");
+    expect(r.immediate).toBe(false);
+  });
 });
 
 describe("Updated Owner Plan Composer", () => {
