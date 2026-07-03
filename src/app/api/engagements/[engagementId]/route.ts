@@ -1,8 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { canonicalJson } from "@/lib/canonical-json-response";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
