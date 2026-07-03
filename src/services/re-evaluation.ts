@@ -308,9 +308,12 @@ async function evaluateInterventionModeImpact(engagementId: string, workspaceId:
 async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId: string) {
   // Determine phase based on findings and actions (deterministic lifecycle rules)
   const findings = await db.finding.findMany({
+    // Finding/Action carry no workspaceId column — scope via the engagement relation
+    // (matches the KPI query above). Filtering on a flat `workspaceId` here threw
+    // PrismaClientValidationError on every intervention re-evaluation.
     where: {
       engagementId,
-      workspaceId,
+      engagement: { workspaceId },
     },
     select: { id: true },
   });
@@ -318,7 +321,7 @@ async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId
   const actions = await db.action.findMany({
     where: {
       engagementId,
-      workspaceId,
+      engagement: { workspaceId },
     },
     select: { id: true, status: true },
   });
