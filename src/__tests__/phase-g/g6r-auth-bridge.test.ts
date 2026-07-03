@@ -68,7 +68,7 @@ describe("canonicalizeAuthContext - PHASE G6R Auth Type Bridge", () => {
 
   it("should fail closed when session is missing", () => {
     const auth = createAuthContext({ session: undefined });
-    expect(() => canonicalizeAuthContext(auth as any, "workspace-789")).toThrow(UnauthorizedError);
+    expect(() => canonicalizeAuthContext(auth, "workspace-789")).toThrow(UnauthorizedError);
   });
 
   it("should fail closed when user is missing", () => {
