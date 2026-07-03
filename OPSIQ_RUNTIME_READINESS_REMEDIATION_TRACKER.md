@@ -49,7 +49,7 @@ final hostile read, then merge and auto-start the next.
 | Wave | Name | Branch | Status | PR | Notes |
 |------|------|--------|--------|----|-------|
 | 1 | RUNTIME_SCHEMA_QUERY_SWEEP | `claude/runtime-schema-query-sweep` | MERGED | `#97` (squash `04bdb32`) | 32 schema-invalid Action/KPI/Finding query sites rescoped via `engagement:{workspaceId}`; findUnique→findFirst; getActionById cross-workspace leak fixed; incidental create-id/relation-name defects unmasked. 6-test DB proof + 2412 no-regression. No migration, no gate weakened, no masking. Deferred domain/schema decisions documented |
-| 2 | REAL_OWNER_RUNTIME_LOOP | `claude/real-owner-runtime-loop` | IN_PROGRESS | — | equipment_capacity + owner_workload write/intake, CSV materialization, standing instructions, delegated task/proof loop, proof-gated completion, intake+proof flows |
+| 2 | REAL_OWNER_RUNTIME_LOOP | `claude/real-owner-runtime-loop` | PR_OPEN | — | Recon showed most scope already shipped (#78-#81). Two clean, migration-free sub-slices: S1 owner standing-instructions write route (orphaned service → canonical route); S2 proof-submit contract made server-authoritative (close self-certification + inert dup-detection). 9 DB tests. Non-finance CSV/manual materialization, WorkOrder, equipment↔capacity split documented as domain/schema decisions |
 | 3 | VALUE_LEARNING_REASSESSMENT_LOOP | `claude/value-learning-reassessment-loop` | TODO | — | — |
 | 4 | GOVERNANCE_HARDENING_SWEEP | `claude/governance-hardening-sweep` | TODO | — | — |
 
