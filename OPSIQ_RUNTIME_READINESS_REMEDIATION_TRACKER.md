@@ -51,11 +51,12 @@ final hostile read, then merge and auto-start the next.
 | 1 | RUNTIME_SCHEMA_QUERY_SWEEP | `claude/runtime-schema-query-sweep` | MERGED | `#97` (squash `04bdb32`) | 32 schema-invalid Action/KPI/Finding query sites rescoped via `engagement:{workspaceId}`; findUnique→findFirst; getActionById cross-workspace leak fixed; incidental create-id/relation-name defects unmasked. 6-test DB proof + 2412 no-regression. No migration, no gate weakened, no masking. Deferred domain/schema decisions documented |
 | 2 | REAL_OWNER_RUNTIME_LOOP | `claude/real-owner-runtime-loop` | MERGED | `#98` (squash `20492a4`) | Two clean migration-free sub-slices: S1 owner standing-instructions write route (orphaned service → canonical route); S2 proof-submit contract made server-authoritative (close self-certification + inert dup-detection + taskId guard). 11 DB tests. Non-finance CSV/manual materialization, WorkOrder, equipment↔capacity split documented as domain/schema decisions |
 | 3 | VALUE_LEARNING_REASSESSMENT_LOOP | `claude/wave3-value-learning-reassessment-loop` | PR_READY | — | Recon showed B3/B6/M7/M8/M9 mostly shipped (#82/#84/#85/#86/#87). Three migration-free sub-slices: S1 surface specific missing-financial-inputs to owner; S2 disposition+variance outcome steering (not just terminal FAILED); S3 apply prior-failure learning to recommendation alternatives. M8 scheduled reassessment = infra decision (no fake scheduler). 8 DB + pure/component tests. Classification OUTCOME_STEERING_READY |
-| 4 | GOVERNANCE_HARDENING_SWEEP | `claude/governance-hardening-sweep` | TODO | — | — |
+| 4 | GOVERNANCE_HARDENING_SWEEP | `claude/wave4-governance-hardening-sweep` | PR_READY (stacked on #99) | — | Recon: auth/governance gates already green (prior waves). Clean set: S1 delete 5 grep-proven-dead files (execution-stub footgun + orphaned CSV parsers + empty scheduler) + lint-baseline hygiene; S2 fix diagnosis-route-proof fabricated authorized:true; S3 de-any g6r strict-auth cast (7→6). M4/M1, 3 route strict-auth, contact concurrency, demo-credential, TLS, health-probes documented as schema/wrapper/owner decisions. Classification GOVERNANCE_HARDENING_SWEEP_READY |
 
 ## Current position
 Waves 1 (`#97` `04bdb32`) and 2 (`#98` `20492a4`) MERGED into `main @ 20492a43`.
-Wave 3 (VALUE_LEARNING_REASSESSMENT_LOOP) implemented on `claude/wave3-value-learning-reassessment-loop`
-(rebased on updated main); classification `OUTCOME_STEERING_READY`; PR to open next.
+Wave 3 (VALUE_LEARNING_REASSESSMENT_LOOP) PR **#99** OPEN (`OUTCOME_STEERING_READY`) — CI resolving.
+Wave 4 (GOVERNANCE_HARDENING_SWEEP) implemented stacked on #99 head (`GOVERNANCE_HARDENING_SWEEP_READY`);
+PR opens after #99 merges + rebase.
 Honest classification unchanged: `BUSINESS_REALITY_KNOWN_TO_UNKNOWN_READY_MERGED` (corpus/judgment) — runtime-readiness
 remains blocked until the wave sequence + final audit close.
