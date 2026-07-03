@@ -42,7 +42,19 @@
 - Deferrals must be justified in Notes (only MINOR-4 is deferred, because external integrations are out of scope).
 - A slice is MERGED only with CI green + a final hostile re-read + all no-regression gates green.
 
+## Fast-track batched waves (post-audit runtime-readiness remediation)
+Controlled remediation waves — one PR per wave, plan-first, local targeted tests, one CI run at the PR gate,
+final hostile read, then merge and auto-start the next.
+
+| Wave | Name | Branch | Status | PR | Notes |
+|------|------|--------|--------|----|-------|
+| 1 | RUNTIME_SCHEMA_QUERY_SWEEP | `claude/runtime-schema-query-sweep` | MERGED | `#97` (squash `04bdb32`) | 32 schema-invalid Action/KPI/Finding query sites rescoped via `engagement:{workspaceId}`; findUnique→findFirst; getActionById cross-workspace leak fixed; incidental create-id/relation-name defects unmasked. 6-test DB proof + 2412 no-regression. No migration, no gate weakened, no masking. Deferred domain/schema decisions documented |
+| 2 | REAL_OWNER_RUNTIME_LOOP | `claude/real-owner-runtime-loop` | PR_OPEN | — | Recon showed most scope already shipped (#78-#81). Two clean, migration-free sub-slices: S1 owner standing-instructions write route (orphaned service → canonical route); S2 proof-submit contract made server-authoritative (close self-certification + inert dup-detection). 9 DB tests. Non-finance CSV/manual materialization, WorkOrder, equipment↔capacity split documented as domain/schema decisions |
+| 3 | VALUE_LEARNING_REASSESSMENT_LOOP | `claude/value-learning-reassessment-loop` | TODO | — | — |
+| 4 | GOVERNANCE_HARDENING_SWEEP | `claude/governance-hardening-sweep` | TODO | — | — |
+
 ## Current position
-P0-A in progress on branch `claude/runtime-readiness-p0-ingestion-unblock`. Nothing merged yet from this tracker.
+Wave 1 (RUNTIME_SCHEMA_QUERY_SWEEP) MERGED via `#97` (squash `04bdb32`) into `main @ 04bdb326`.
+Starting Wave 2 (REAL_OWNER_RUNTIME_LOOP) on branch `claude/real-owner-runtime-loop` (plan-first).
 Honest classification unchanged: `BUSINESS_REALITY_KNOWN_TO_UNKNOWN_READY_MERGED` (corpus/judgment) — runtime-readiness
-remains blocked until at least P0–P3 are closed.
+remains blocked until the wave sequence + final audit close.
