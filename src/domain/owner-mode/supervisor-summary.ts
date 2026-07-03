@@ -78,6 +78,13 @@ export interface SupervisorInput {
    * supporting figures are emitted — behaviour is identical to before this field existed.
    */
   calcs?: SupportingCalcInput | null;
+  /**
+   * OPTIONAL specific field-level inputs the runtime needs before it can quantify the decision (e.g.
+   * "current cash balance", "fully-loaded cost/kg and quoted rate"). Distinct from the generic
+   * `dataSourceMissing` domain names: this names the exact figures to add. Already computed by the runtime
+   * (deriveCalcs.missingForDecision); never invented here. Absent/empty ⇒ nothing surfaced.
+   */
+  missingForQuantification?: string[];
 }
 
 export interface AssumptionLedger {
@@ -183,6 +190,11 @@ export interface SupervisorSummary {
   impact: ImpactStatement[];
   /** Read-only already-computed numbers (never fabricated); empty when no real inputs were available. */
   supportingFigures: SupportingFigure[];
+  /**
+   * Specific field-level inputs still needed to quantify the decision (e.g. "current cash balance"). Distinct
+   * from `ledger.missingData` (domain names): these are the exact figures to add. Empty when nothing is missing.
+   */
+  missingForQuantification: string[];
   cadence: OperatingCadence;
   topPriorities: SupervisorPriority[];
 }
@@ -344,6 +356,7 @@ export function buildSupervisorSummary(input: SupervisorInput): SupervisorSummar
       delegateToStaff: [], opsiqPreparedWork: [], proofNeeded: [],
       ledger: { knownFacts: [], assumptions: [], assumptionsAreMarked: true, missingData: [], confidence: "none", confidenceReason: "No data supplied.", whatWouldChange: "Supplying business data." },
       confidence: "none", actionStatus: "need_more_data", canProceed: false, impact: [], supportingFigures: [],
+      missingForQuantification: [],
       cadence: { now: "Add business data.", today: "—", thisWeek: "—", reassessmentTrigger: "—", kpiWatch: "—", stopLoss: "—", nextReview: "—" },
       topPriorities: [],
     };
@@ -377,6 +390,8 @@ export function buildSupervisorSummary(input: SupervisorInput): SupervisorSummar
     canProceed: actionStatus === "proceed" || actionStatus === "cautious_proceed",
     impact,
     supportingFigures,
+    // Dedupe + drop blanks; the runtime already computed these specific missing inputs (never invented here).
+    missingForQuantification: Array.from(new Set((input.missingForQuantification ?? []).map((s) => s.trim()).filter((s) => s.length > 0))),
     cadence,
     topPriorities,
   };

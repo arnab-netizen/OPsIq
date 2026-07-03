@@ -243,6 +243,8 @@ export async function getOwnerWholeBusinessPlan(deps: OwnerWholeBusinessPlanDeps
       receivablesRisk: result.supportingCalcs.receivablesRisk,
       capacityUtilization: result.supportingCalcs.capacityUtilization,
     },
+    // Specific field-level inputs the runtime needs to quantify the decision (already computed; never invented).
+    missingForQuantification: result.supportingCalcs.missingForDecision,
   });
 
   return {
