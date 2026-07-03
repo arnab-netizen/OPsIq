@@ -25,7 +25,7 @@ function deps(w: World): IQDeps {
         findUnique: async () => ({ findingId: w.findingId ?? null }),
       },
       finding: {
-        findUnique: async () => ({ impactArea: w.impactArea ?? null }),
+        findFirst: async () => ({ impactArea: w.impactArea ?? null }),
       },
       ownerInputQualityAssessment: {
         findFirst: async () => (w.qualityStatus == null ? null : { qualityStatus: w.qualityStatus }),

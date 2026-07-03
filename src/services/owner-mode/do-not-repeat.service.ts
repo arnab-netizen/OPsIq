@@ -16,7 +16,7 @@ interface DnrDb {
     findUnique(args: { where: { id: string; workspaceId: string }; select: { findingId: true } }): Promise<{ findingId: string | null } | null>;
   };
   finding: {
-    findUnique(args: { where: { id: string; workspaceId: string }; select: { code: true; impactArea: true } }): Promise<{ code: string | null; impactArea: string | null } | null>;
+    findFirst(args: { where: { id: string; engagement: { workspaceId: string } }; select: { code: true; impactArea: true } }): Promise<{ code: string | null; impactArea: string | null } | null>;
   };
   ownerDoNotRepeatRule: {
     findFirst(args: {
@@ -60,7 +60,7 @@ export class DoNotRepeatBlockedError extends Error {
 async function memoryKeysFor(recommendationId: string, workspaceId: string, deps: DnrDeps): Promise<string[]> {
   const rec = await deps.db.recommendation.findUnique({ where: { id: recommendationId, workspaceId }, select: { findingId: true } });
   if (!rec?.findingId) return [];
-  const finding = await deps.db.finding.findUnique({ where: { id: rec.findingId, workspaceId }, select: { code: true, impactArea: true } });
+  const finding = await deps.db.finding.findFirst({ where: { id: rec.findingId, engagement: { workspaceId } }, select: { code: true, impactArea: true } });
   const keys = new Set<string>();
   if (finding?.code) keys.add(finding.code);
   const scopeKey = scopeKeyForImpactArea(finding?.impactArea);

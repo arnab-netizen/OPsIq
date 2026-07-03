@@ -32,7 +32,7 @@ export const PATCH = withCanonicalEnforcement(
     const updated = await db.action.updateMany({
       where: {
         id: actionId,
-        workspaceId,
+        engagement: { workspaceId },
         version: action.version,
       },
       data: {

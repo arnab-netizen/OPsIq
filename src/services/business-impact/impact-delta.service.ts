@@ -80,8 +80,8 @@ export async function calculateImpactDelta(
 ): Promise<ImpactDeltaResult> {
   // Fetch action and engagement
   const [action, engagement, currentBusinessImpact] = await Promise.all([
-    db.action.findUnique({
-      where: { id: actionId, workspaceId },
+    db.action.findFirst({
+      where: { id: actionId, engagement: { workspaceId } },
       include: { engagement: true },
     }),
     db.engagement.findUnique({

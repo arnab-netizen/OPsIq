@@ -118,7 +118,7 @@ describe("owner loop (service-level)", () => {
     const dnrDeps = {
       db: {
         recommendation: { findUnique: vi.fn(async () => ({ findingId: "f1" })) },
-        finding: { findUnique: vi.fn(async () => ({ code: "EXPRESS_TIER_UNDERPRICED", impactArea: "pricing" })) },
+        finding: { findFirst: vi.fn(async () => ({ code: "EXPRESS_TIER_UNDERPRICED", impactArea: "pricing" })) },
         ownerDoNotRepeatRule: {
           findFirst: vi.fn(async (args: { where: { memoryKey: { in: string[] } } }) =>
             rules.find((r) => args.where.memoryKey.in.includes(r.memoryKey) && r.blocksRepetition && r.active) ?? null

@@ -39,13 +39,13 @@ export async function computeEngagementHealth(engagementId: string, workspaceId:
     db.finding.findMany({
       where: {
         engagementId,
-        workspaceId,
+        engagement: { workspaceId },
       },
     }),
     db.action.findMany({
       where: {
         engagementId,
-        workspaceId,
+        engagement: { workspaceId },
       },
     }),
   ]);

@@ -22,7 +22,7 @@ function deps(w: World): CashDeps {
       ownerCashflowCycle: { findFirst: async () => (w.cashflowState == null ? null : { cashflowState: w.cashflowState }) },
       ownerFinanceCycle: { findFirst: async () => (w.survivalState == null ? null : { survivalState: w.survivalState }) },
       recommendation: { findUnique: async () => ({ findingId: "f1" }) },
-      finding: { findUnique: async () => ({ impactArea: w.impactArea ?? "operations" }) },
+      finding: { findFirst: async () => ({ impactArea: w.impactArea ?? "operations" }) },
     } as any,
   };
 }

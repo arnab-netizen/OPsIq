@@ -51,7 +51,7 @@ export async function generateReviewCycle(
 
   // Get all KPIs and evaluate progress
   const kpis = await db.kPI.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     select: {
       id: true,
       currentValue: true,
@@ -77,7 +77,7 @@ export async function generateReviewCycle(
 
   // Count action statuses
   const actions = await db.action.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     select: { status: true },
   });
 
@@ -93,7 +93,7 @@ export async function generateReviewCycle(
 
   // Count findings (all considered unresolved since status is not tracked)
   const findings = await db.finding.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     select: { id: true },
   });
 
@@ -230,7 +230,7 @@ export async function getReviewCycleStats(
 
   // Get KPI stats
   const kpis = await db.kPI.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     select: {
       currentValue: true,
       target: true,
@@ -246,7 +246,7 @@ export async function getReviewCycleStats(
 
   // Get action stats
   const actions = await db.action.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     select: { status: true },
   });
 
@@ -259,7 +259,7 @@ export async function getReviewCycleStats(
 
   // Get finding stats (status not tracked in schema, so count all as unresolved)
   const findings = await db.finding.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     select: { id: true },
   });
 

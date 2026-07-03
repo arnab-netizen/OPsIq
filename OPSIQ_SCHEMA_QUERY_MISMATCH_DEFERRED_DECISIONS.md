@@ -40,3 +40,10 @@ These block the last three B4 route migrations' **success** paths (deny paths re
 ## Not masked
 None of the above were "fixed" by returning empty arrays, swallowing errors, or converting 500s to 200s.
 They remain honestly broken until the decision is made.
+
+## Follow-up (found in Wave 1) — `missing-id-on-create` on id-columns without DB defaults
+`KPI.id`, `KPISnapshot.id`, `Action.id`, `Finding.id` are `UUID NOT NULL` with **no DB default** (confirmed in
+the committed migrations). Any `create` that omits `id` throws `Argument id is missing`. Wave 1 fixed the KPI
+path creates it touched (`kpi.ts`: `id: randomUUID()`). Other creates of these models may share the defect and
+warrant a targeted create-id audit (bundle with Wave 2 ingestion). Not masked — remaining ones stay broken
+until swept.

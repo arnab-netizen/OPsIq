@@ -285,7 +285,7 @@ export async function countActionsByEngagementState(
       where: {
         engagementId,
         status: state,
-        workspaceId,
+        engagement: { workspaceId },
       },
     });
     counts[state] = count;

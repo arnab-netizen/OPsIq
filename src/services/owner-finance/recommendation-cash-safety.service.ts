@@ -30,7 +30,7 @@ interface CashDb {
     findUnique(args: { where: { id: string; workspaceId: string }; select: { findingId: true } }): Promise<{ findingId: string | null } | null>;
   };
   finding: {
-    findUnique(args: { where: { id: string; workspaceId: string }; select: { impactArea: true } }): Promise<{ impactArea: string | null } | null>;
+    findFirst(args: { where: { id: string; engagement: { workspaceId: string } }; select: { impactArea: true } }): Promise<{ impactArea: string | null } | null>;
   };
 }
 
@@ -58,7 +58,7 @@ export async function isCashSafetyGateEnabled(workspaceId: string, injected?: Ca
 async function resolveSensitivity(recommendationId: string, workspaceId: string, deps: CashDeps): Promise<RecommendationSensitivity> {
   const rec = await deps.db.recommendation.findUnique({ where: { id: recommendationId, workspaceId }, select: { findingId: true } });
   if (!rec?.findingId) return RecommendationSensitivity.GENERAL;
-  const finding = await deps.db.finding.findUnique({ where: { id: rec.findingId, workspaceId }, select: { impactArea: true } });
+  const finding = await deps.db.finding.findFirst({ where: { id: rec.findingId, engagement: { workspaceId } }, select: { impactArea: true } });
   return mapImpactAreaToSensitivity(finding?.impactArea);
 }
 

@@ -14,8 +14,8 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, actionId);
 
     // Fetch action to get engagementId (scoped by verified workspace)
-    const action = await db.action.findUnique({
-      where: { id: actionId, workspaceId: ctx.verifiedWorkspaceId },
+    const action = await db.action.findFirst({
+      where: { id: actionId, engagement: { workspaceId: ctx.verifiedWorkspaceId } },
     });
 
     if (!action) {
