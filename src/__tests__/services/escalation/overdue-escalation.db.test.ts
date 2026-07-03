@@ -79,6 +79,18 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Wave 6 — overdue-action escalation
     expect(alert?.relatedEntityIds).toContain(actionId);
   });
 
+  it("[db] M4 honesty: the alert and its audit event carry delivery:'log_only' (not implied delivery)", async () => {
+    const recId = await seedRecommendation(A, "critical");
+    await seedAction(A, { dueAt: PAST, recommendationId: recId });
+    const alert = await detectHighPriorityOverdueActions(A.engagementId, ctxFor(A), A.workspaceId);
+    expect(alert?.delivery).toBe("log_only");
+    const auditEvent = await db.auditEvent.findFirst({
+      where: { workspaceId: A.workspaceId, eventName: "escalation.high_priority_overdue", entityId: A.engagementId },
+    });
+    expect(auditEvent).not.toBeNull();
+    expect((auditEvent?.payload as { delivery?: string } | null)?.delivery).toBe("log_only");
+  });
+
   it("[db] overdue action whose recommendation is NOT critical → no alert (real derivation)", async () => {
     const recId = await seedRecommendation(A, "high");
     await seedAction(A, { dueAt: PAST, recommendationId: recId });

@@ -11,7 +11,16 @@ export interface EscalationAlert {
   severity: "high" | "critical";
   description: string;
   relatedEntityIds: string[];
+  /**
+   * Honest delivery state (M4). These escalations are DETECTED and written to the audit log only — there is no
+   * notification/email/push channel, so the alert is never "delivered" to a human. `"log_only"` says so explicitly
+   * instead of letting a returned alert imply it was dispatched.
+   */
+  delivery: "log_only";
 }
+
+/** The escalation detectors persist nothing and dispatch nothing; they detect + audit-log. */
+const ESCALATION_DELIVERY: "log_only" = "log_only";
 
 export async function detectHighPriorityOverdueActions(
   engagementId: string,
@@ -66,6 +75,7 @@ export async function detectHighPriorityOverdueActions(
       severity: "critical",
       description: `${criticalOverdueActions.length} critical action(s) overdue`,
       relatedEntityIds: criticalOverdueActions.map((a) => a.id),
+      delivery: ESCALATION_DELIVERY,
     };
 
     await emitAuditEvent({
@@ -79,6 +89,7 @@ export async function detectHighPriorityOverdueActions(
         actionCount: criticalOverdueActions.length,
         actionIds: alert.relatedEntityIds,
         actionTitles: criticalOverdueActions.map((a) => a.title),
+        delivery: ESCALATION_DELIVERY,
       },
       visibility: "internal",
     });
@@ -145,6 +156,7 @@ export async function detectKPIDeteriorationPattern(
       severity: "high",
       description: `${deterioratedKPIs.length} KPI(s) showing deterioration pattern`,
       relatedEntityIds: deterioratedKPIs,
+      delivery: ESCALATION_DELIVERY,
     };
 
     await emitAuditEvent({
@@ -157,6 +169,7 @@ export async function detectKPIDeteriorationPattern(
         engagementId,
         kpiCount: deterioratedKPIs.length,
         kpiIds: deterioratedKPIs,
+        delivery: ESCALATION_DELIVERY,
       },
       visibility: "internal",
     });

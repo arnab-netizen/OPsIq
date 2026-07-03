@@ -47,6 +47,11 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
         alerts,
         hasEscalations: alerts.length > 0,
         checkedAt: new Date(),
+        // M4 honesty: these escalations are detected + written to the audit log only. There is no
+        // notification/email/push channel, so nothing here was delivered to a human.
+        delivery: "log_only",
+        deliveryNote:
+          "Escalations are detected and recorded to the audit log; they are not delivered to any notification channel.",
       },
       { status: 200 }
     );

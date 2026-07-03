@@ -20,7 +20,8 @@ export interface RoleSnapshot {
   role: string;
   scope: string;
   scopeId: string;
-  grantedAt: Date;
+  // null = not captured in this snapshot (no cheap per-role grant-date source). Never a fabricated `now`.
+  grantedAt: Date | null;
 }
 
 /**
@@ -30,7 +31,8 @@ export interface RoleSnapshot {
 export interface EngagementMembershipSnapshot {
   engagementId: string;
   role: string;
-  joinedAt: Date;
+  // null = not captured in this snapshot (not fabricated). See RoleSnapshot.grantedAt.
+  joinedAt: Date | null;
 }
 
 /**
@@ -38,7 +40,10 @@ export interface EngagementMembershipSnapshot {
  * Captured at request entry, never changes during request
  */
 export interface EntitlementSnapshot {
-  planId: string;
+  // false = entitlements were NOT resolved into this snapshot (resolve on-demand via entitlement.service, which
+  // fails closed at point of use). Prevents the snapshot from asserting a fabricated plan/limits it never read.
+  resolved: boolean;
+  planId: string | null;
   featureFlags: Set<string>;
   limits: Record<string, number>;
   expiresAt?: Date;
@@ -154,6 +159,12 @@ export class CanonicalVerifiedSessionBuilder {
     policyContext: PolicyContext;
     workspaceId: string;
     capabilities: Set<CapabilityName>;
+    // Real workspace/membership facts, fetched by the wrapper from the DB (no fabrication). Required so the
+    // snapshot can never again hardcode `isActive: true` / the workspace id as the name / a `now` join date.
+    workspaceName: string;
+    workspaceIsActive: boolean;
+    membershipIsActive: boolean;
+    membershipJoinedAt: Date;
   }) {
     const snapshotId = this.generateSnapshotId();
     const now = new Date();
@@ -181,18 +192,18 @@ export class CanonicalVerifiedSessionBuilder {
 
       workspace: {
         id: input.workspaceId,
-        name: input.workspaceId,  // TODO: Fetch workspace name
-        isActive: true,           // TODO: Verify workspace active
+        name: input.workspaceName,          // real workspace name (fetched by the wrapper)
+        isActive: input.workspaceIsActive,  // real workspace.isActive (no longer hardcoded true)
         membership: {
           workspaceId: input.workspaceId,
           userId: input.sessionInfo.user.id,
-          isActive: true,
-          joinedAt: now,  // TODO: Fetch actual join date
+          isActive: input.membershipIsActive,   // real membership.isActive
+          joinedAt: input.membershipJoinedAt,    // real membership.addedAt
           roles: input.policyContext.roles.map((r) => ({
             role: r.role,
             scope: r.scope || "workspace",
             scopeId: r.scopeId || input.workspaceId,
-            grantedAt: now,  // TODO: Fetch actual grant date
+            grantedAt: null,  // no cheap per-role grant-date source — honest null, not a fabricated `now`
           })),
         },
       },
@@ -201,21 +212,24 @@ export class CanonicalVerifiedSessionBuilder {
         role: r.role,
         scope: r.scope || "workspace",
         scopeId: r.scopeId || input.workspaceId,
-        grantedAt: now,  // TODO: Fetch actual grant date
+        grantedAt: null,  // honest null (see above)
       })),
 
       engagementMemberships: (input.policyContext.engagementMemberships || []).map((em) => ({
         engagementId: em.engagementId,
         role: em.role,
-        joinedAt: now,  // TODO: Fetch actual join date
+        joinedAt: null,  // honest null (no cheap per-engagement join-date source)
       })),
 
       capabilities: new Set(input.capabilities),
 
       entitlements: {
-        planId: "default",         // TODO: Fetch actual plan
-        featureFlags: new Set(),   // TODO: Fetch feature flags
-        limits: {},                // TODO: Fetch limits
+        // Not resolved into the snapshot (resolveEntitlements fails closed → unsafe in the per-request hot path).
+        // Real limits are enforced on-demand via entitlement.service. Honest, not a fabricated "default" plan.
+        resolved: false,
+        planId: null,
+        featureFlags: new Set(),
+        limits: {},
       },
 
       revocationState: {
