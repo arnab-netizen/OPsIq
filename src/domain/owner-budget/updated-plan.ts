@@ -43,6 +43,15 @@ export interface PriorInitiativeOutcome {
   initiativeLabel: string;
   outcome: string;
   safeForLearning: boolean;
+  /**
+   * Stored learning disposition (repeat | modify | escalate | block). When present it selects the corrective
+   * path directly; when absent it is derived from `outcome` (+ repeat-failure count). `repeat`/absent-success
+   * never steers.
+   */
+  disposition?: "repeat" | "modify" | "escalate" | "block";
+  /** Expected/actual impact for the closed initiative — used only to show the owner the variance, never to fabricate. */
+  expectedImpact?: number | null;
+  actualImpact?: number | null;
 }
 
 export interface UpdatedPlanInput {
@@ -142,35 +151,63 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     allocation.blockedCount = allocation.ranked.filter((r) => r.decision === "BLOCK" || r.decision === "DEFER").length;
   }
 
-  // ---- Prior-outcome steering (M9): a recorded FAILED/BLOCKED funded-initiative outcome must change the next
-  // plan — do not blindly re-fund what already failed. Only outcomes marked safeForLearning steer (external-factor
-  // / owner-override failures are excluded upstream). A matching FUND/PARTIAL_FUND candidate is DEFERRED (funding
-  // withheld, so the steer is real, not advisory-only) and a guard signal + what-not-to-do is emitted. ----
+  // ---- Prior-outcome steering (M9 + Wave 3): a recorded NON-SUCCESS funded-initiative outcome must change the next
+  // plan — never re-recommend the same funded action unchanged. The learning disposition (stored, else derived from
+  // the outcome + repeat-failure count) selects the corrective path: modify (partial / underperformance) / escalate
+  // (first failure) / block (repeat failure). Only safeForLearning outcomes steer (external-factor / owner-override /
+  // unverified are excluded upstream). The matching FUND/PARTIAL_FUND candidate is DEFERRED (funding withheld, so the
+  // steer is real) with an owner-visible reason carrying the expected-vs-actual variance when known. SUCCESS never
+  // steers, and no success/profit is ever claimed here. ----
   const outcomeSteerSignals: BudgetSignal[] = [];
   const outcomeWhatNotToDo: string[] = [];
-  const priorFailures = (input.outcomeHistory ?? []).filter(
-    (o) => o.safeForLearning && (o.outcome === "FAILED" || o.outcome === "BLOCKED")
-  );
-  if (priorFailures.length > 0) {
-    const seen = new Set<string>();
-    for (const pf of priorFailures) {
-      const label = pf.initiativeLabel.replace(/^budget-action:/, "");
-      if (seen.has(label)) continue;
-      seen.add(label);
-      outcomeSteerSignals.push({
-        type: "prior_initiative_failure",
-        severity: "HIGH",
-        message: `Initiative "${label}" has a prior recorded ${pf.outcome} outcome — do not repeat the same funded action without a changed approach and stronger proof.`,
-      });
-      outcomeWhatNotToDo.push(`Re-fund "${label}" on the same plan that already failed — require a changed approach + proof of the fix first.`);
-      for (const r of allocation.ranked) {
-        if ((r.decision === "FUND" || r.decision === "PARTIAL_FUND") && (label === r.candidate.label || pf.initiativeLabel.includes(r.candidate.label))) {
-          r.decision = "DEFER";
-          r.fundedAmount = 0;
-          r.reason = `Deferred by prior-outcome learning: this initiative recorded a ${pf.outcome} outcome before — re-prove the fix before re-funding.`;
-        }
+  const safeOutcomes = (input.outcomeHistory ?? []).filter((o) => o.safeForLearning);
+  const failedCountByLabel = new Map<string, number>();
+  for (const o of safeOutcomes) {
+    if (o.outcome === "FAILED") {
+      const l = o.initiativeLabel.replace(/^budget-action:/, "");
+      failedCountByLabel.set(l, (failedCountByLabel.get(l) ?? 0) + 1);
+    }
+  }
+  const dispositionFor = (o: PriorInitiativeOutcome, label: string): "modify" | "escalate" | "block" | null => {
+    if (o.disposition === "modify" || o.disposition === "escalate" || o.disposition === "block") return o.disposition;
+    if (o.disposition === "repeat") return null;
+    // Derived when not stored: partial → modify; failed → escalate (first) / block (repeat); success → no steer.
+    if (o.outcome === "PARTIAL") return "modify";
+    if (o.outcome === "FAILED") return (failedCountByLabel.get(label) ?? 0) >= 2 ? "block" : "escalate";
+    return null;
+  };
+  const varianceText = (o: PriorInitiativeOutcome): string => {
+    if (typeof o.expectedImpact === "number" && typeof o.actualImpact === "number" && o.expectedImpact !== 0) {
+      return ` (actual ${o.actualImpact} vs expected ${o.expectedImpact} ≈ ${Math.round((o.actualImpact / o.expectedImpact) * 100)}% of target)`;
+    }
+    return "";
+  };
+  const CORRECTIVE: Record<"modify" | "escalate" | "block", string> = {
+    modify: "modify the approach and add evidence before re-funding unchanged",
+    escalate: "escalate: re-prove the fix before re-funding",
+    block: "block re-funding until a changed approach is proven",
+  };
+  const steered = new Set<string>();
+  for (const o of safeOutcomes) {
+    const label = o.initiativeLabel.replace(/^budget-action:/, "");
+    const disp = dispositionFor(o, label);
+    if (!disp || steered.has(label)) continue;
+    steered.add(label);
+    outcomeSteerSignals.push({
+      type: "prior_initiative_failure",
+      severity: disp === "modify" ? "MEDIUM" : "HIGH",
+      message: `Initiative "${label}" recorded a prior ${o.outcome} outcome${varianceText(o)} — ${CORRECTIVE[disp]}.`,
+    });
+    outcomeWhatNotToDo.push(`Re-fund "${label}" unchanged after its ${o.outcome} outcome — ${CORRECTIVE[disp]}.`);
+    for (const r of allocation.ranked) {
+      if ((r.decision === "FUND" || r.decision === "PARTIAL_FUND") && (label === r.candidate.label || o.initiativeLabel.includes(r.candidate.label))) {
+        r.decision = "DEFER";
+        r.fundedAmount = 0;
+        r.reason = `Deferred by prior-outcome learning (${disp}): this initiative recorded a ${o.outcome} outcome${varianceText(o)} — ${CORRECTIVE[disp]}.`;
       }
     }
+  }
+  if (steered.size > 0) {
     allocation.fundedTotal = allocation.ranked.reduce((s, r) => s + r.fundedAmount, 0);
     allocation.blockedCount = allocation.ranked.filter((r) => r.decision === "BLOCK" || r.decision === "DEFER").length;
   }

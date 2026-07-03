@@ -18,6 +18,8 @@ import { runOwnerAdvice } from "@/services/owner-mode/owner-advice-runtime.servi
 import { caseToContext } from "@/behavioral-validation/whole-business/production-runner";
 import { InMemoryLearningStore } from "@/behavioral-validation/learning-store";
 import { SEED_CASES } from "@/behavioral-validation/seed-cases";
+import { deriveCalcs } from "@/behavioral-validation/expert/business-math";
+import type { BehavioralCase } from "@/behavioral-validation/schema";
 
 const ALLOWED_KEYS = new Set(["cash_runway_days", "monthly_net", "receivables_risk", "capacity_utilization"]);
 
@@ -86,5 +88,45 @@ describe("P2-A supporting figures — quantified upside, never fabricated", () =
     expect(figs.some((f) => f.key === "cash_runway_days")).toBe(false);
     // The placeholder-derived contract-margin (M3's 18/22/30) and default-laden net-ROAS never reach the owner.
     for (const f of figs) expect(ALLOWED_KEYS.has(f.key)).toBe(true);
+  });
+});
+
+describe("Wave 3 S1 — specific missing-input request reaches the owner (never fabricated)", () => {
+  it("buildSupervisorSummary surfaces the specific missing-quantification inputs, deduped + trimmed", () => {
+    const summary = buildSupervisorSummary({
+      ...baseInput(null),
+      missingForQuantification: ["current cash balance", "  current cash balance  ", "", "fully-loaded cost/kg and quoted rate"],
+    });
+    expect(summary.missingForQuantification).toEqual(["current cash balance", "fully-loaded cost/kg and quoted rate"]);
+  });
+
+  it("emits an empty list when nothing is missing (no fabrication, distinct from generic domain missingData)", () => {
+    const summary = buildSupervisorSummary(baseInput(null));
+    expect(summary.missingForQuantification).toEqual([]);
+  });
+
+  it("deriveCalcs → summary: a marketing contract missing cost/rate + cash yields specific field requests", () => {
+    // deriveCalcs reads only numbers/decisionCategory/flags; a minimal case exercises the real calculator.
+    const missingCase = {
+      decisionCategory: "marketing_opportunity_contract",
+      flags: { cashRisk: true, capacityRisk: false, hostile: false, missingOrStaleData: false, complianceRisk: false, ownerEmotional: false, remoteOwner: false, multiBranch: false },
+      numbers: {},
+    } as unknown as BehavioralCase;
+    const calcs = deriveCalcs(missingCase);
+    // The runtime itself computed these specific missing inputs — we assert, not invent, them.
+    expect(calcs.missingForDecision).toContain("fully-loaded cost/kg and quoted rate");
+    expect(calcs.missingForDecision).toContain("current cash balance");
+    const summary = buildSupervisorSummary({ ...baseInput(null), missingForQuantification: calcs.missingForDecision });
+    expect(summary.missingForQuantification).toEqual(expect.arrayContaining(["fully-loaded cost/kg and quoted rate", "current cash balance"]));
+    // Surfacing missing-inputs adds no numeric figure and no profit claim — it is a request, not a value.
+    expect(summary.supportingFigures).toEqual([]);
+  });
+
+  it("live path: the owner-visible missing-inputs list is exactly what the runtime computed (faithful, non-fabricating)", async () => {
+    const a1 = SEED_CASES.find((c) => c.id === "A1")!;
+    const r = await runOwnerAdvice({ workspaceId: "ws-fig-missing", context: caseToContext(a1) }, { store: new InMemoryLearningStore() });
+    const expected = Array.from(new Set((r.supportingCalcs.missingForDecision ?? []).map((s) => s.trim()).filter((s) => s.length > 0)));
+    const summary = buildSupervisorSummary({ ...baseInput(null), missingForQuantification: r.supportingCalcs.missingForDecision });
+    expect(summary.missingForQuantification).toEqual(expected);
   });
 });

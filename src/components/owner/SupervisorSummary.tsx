@@ -28,6 +28,8 @@ export interface SupervisorSummaryView {
   };
   impact: Array<{ dimension: string; label: string; statement: string; relevant: boolean }>;
   supportingFigures?: Array<{ key: string; label: string; value: number; unit: string; basis: string }>;
+  /** Specific field-level inputs still needed to quantify the decision (e.g. "current cash balance"). */
+  missingForQuantification?: string[];
   cadence: { now: string; today: string; thisWeek: string; reassessmentTrigger: string; kpiWatch: string; stopLoss: string; nextReview: string };
   topPriorities: Array<{ severity: string; whatIsWrong: string; doNext: string }>;
 }
@@ -115,6 +117,18 @@ export function SupervisorSummary({ summary }: { summary: SupervisorSummaryView 
                 <span className="font-medium">{f.label}:</span> {f.value.toLocaleString()} {f.unit}
                 <span className="text-xs text-muted-foreground"> — {f.basis}</span>
               </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(summary.missingForQuantification ?? []).length > 0 && (
+        <div className="rounded-md border p-2 text-sm mt-2" data-testid="supervisor-missing-to-quantify">
+          <strong>To quantify the upside, add:</strong>
+          <span className="text-xs text-muted-foreground"> (specific figures the analysis needs)</span>
+          <ul className="list-disc ml-5">
+            {(summary.missingForQuantification ?? []).map((m: string, i: number) => (
+              <li key={i} data-testid={`supervisor-quantify-missing-${i}`} className="text-muted-foreground">{m}</li>
             ))}
           </ul>
         </div>

@@ -432,16 +432,25 @@ export function generateMultipleRecommendations(
     const recommendedAction = getMostFrequentAction(patternItems);
 
     if (recommendedAction) {
-      recommendations.push({
-        recommendedAction,
-        confidenceScore: pattern.successRate / 100,
-        basedOnPatternId: pattern.patternId,
-        variablesUsed: usedVariables,
-        variablesIgnored: ignoredVariables,
-        dataSufficiency: "sufficient",
-        explanation: `Recommendation based on ${pattern.patternId} pattern with ${pattern.successRate}% success rate`,
-        scenarioContext,
-      });
+      // B6 (Wave 3 S3): apply the SAME workspace-scoped prior-failure learning to each actionable alternative
+      // that the primary recommendation gets, so the owner never sees an alternative with un-penalized confidence
+      // for a problem type that has already failed. No-op for a clean history; reuses the existing read-back.
+      recommendations.push(
+        applyPriorFailureLearning(
+          {
+            recommendedAction,
+            confidenceScore: pattern.successRate / 100,
+            basedOnPatternId: pattern.patternId,
+            variablesUsed: usedVariables,
+            variablesIgnored: ignoredVariables,
+            dataSufficiency: "sufficient",
+            explanation: `Recommendation based on ${pattern.patternId} pattern with ${pattern.successRate}% success rate`,
+            scenarioContext,
+          },
+          items,
+          decision.problemType,
+        )
+      );
     }
   }
 
