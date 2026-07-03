@@ -30,7 +30,7 @@
 | M1 | Fabricated verified-session authz state | MAJOR | P4-B | TODO | — | — | — | no | Fetch real workspace.isActive + limits |
 | M2 | Governed decision transition TOCTOU race | MAJOR | P4-C | TODO | — | — | — | no | updateMany status-guard + count assert |
 | M4 | Log-only escalations/alerts | MAJOR | P4-D | TODO | — | — | — | no | Honesty-label delivery state first |
-| M6 | Multi-workspace owner pinned to first membership | MAJOR | P4-E | TODO | — | — | — | no | Deterministic orderBy now; switcher later |
+| M6 | Multi-workspace owner pinned to first membership | MAJOR | P4-E | PR_OPEN | `claude/runtime-readiness-p4e-m6-deterministic-workspace` | tsc + governance (0 new, 4 baseline re-keys) + ratchet (2086); 2 DB proofs + 60 no-regression | pending | no | Deterministic + consistent membership resolution: wrapper STEP 1.5 + getPolicyContext + activation-context all order by [addedAt asc, workspaceId asc]. Fixes latent wrapper↔policy workspace mismatch for multi-membership users. Switcher later. No schema change |
 | MINOR-1 | Nullable businessId invisibility | MINOR | P0-A/P4 | PR_OPEN | this slice | covered | pending | no | Capacity/workload routes require businessId in path (always plan-visible) |
 | MINOR-2 | internal/* diagnostic routes + hardcoded demo-password | MINOR | P4-F | TODO | — | — | — | no | Remove hardcoded credential; gate non-prod |
 | MINOR-3 | execution-stub.ts unlocked status→executed footgun | MINOR | P4-F | TODO | — | — | — | no | Delete dead stub |

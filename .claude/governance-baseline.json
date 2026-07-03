@@ -213,7 +213,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 351,
+      "line": 357,
       "severity": "error",
       "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -222,7 +222,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 675,
+      "line": 681,
       "severity": "error",
       "code": "const errorMessage = error instanceof Error ? error.message : String(error);",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -231,7 +231,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 692,
+      "line": 698,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error),",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
@@ -240,7 +240,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/lib/canonical-route-enforcement.ts",
-      "line": 758,
+      "line": 764,
       "severity": "error",
       "code": "errorMessage: error instanceof Error ? error.message : String(error),",
       "reason": "route-wrapper internal error classification (ClassifiedApiError construction)"
