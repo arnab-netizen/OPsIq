@@ -10,6 +10,7 @@
 import { timingSafeEqual } from "crypto";
 import { scanDueReassessments } from "@/services/owner-budget/due-reassessment.service";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { AppError, UnauthorizedError } from "@/infra/errors";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -27,13 +28,17 @@ function isAuthorized(req: Request): boolean {
 }
 
 export async function POST(req: Request): Promise<Response> {
-  if (!isAuthorized(req)) {
-    return Response.json({ error: "unauthorized" }, { status: 401 });
-  }
   try {
+    if (!isAuthorized(req)) {
+      // Typed auth error (governance: never Response.json(401)); rendered from its statusCode below.
+      throw new UnauthorizedError("Scheduler token missing or invalid.");
+    }
     const result = await scanDueReassessments(new Date());
     return Response.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
+    if (error instanceof AppError) {
+      return Response.json(error.toJSON(), { status: error.statusCode });
+    }
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     const safeDetail = governed.operatorMessage;
     return Response.json({ ok: false, error: safeDetail }, { status: 500 });

@@ -34,6 +34,7 @@
     "governance:phase-g2": "node scripts/phase-g2-compiler-hardening.js",
     "governance:scan": "tsx scripts/governance-scan.ts",
     "governance:scan:strict": "tsx scripts/governance-scan.ts --strict",
+    "governance:scan:auth": "tsx scripts/auth-governance-scanner.ts",
     "smoke:prod": "tsx scripts/smoke-tests.ts",
     "smoke:staging": "tsx scripts/smoke-tests.ts --env=staging",
     "deployment:preflight": "node scripts/deployment-preflight.mjs",

@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { getControlSurface } from "@/services/control/control-surface.service";
+import { UnauthorizedError } from "@/infra/errors";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export const GET = withCanonicalEnforcement(
@@ -12,7 +13,7 @@ export const GET = withCanonicalEnforcement(
 
     const membership = await enforceWorkspaceScoping(ctx.request!, workspaceIdParam);
     if (!membership) {
-      throw new Error("Unauthorized or invalid workspace");
+      throw new UnauthorizedError("Unauthorized or invalid workspace");
     }
 
     const surface = await getControlSurface(workspaceIdParam);
