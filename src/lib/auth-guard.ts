@@ -177,13 +177,15 @@ export function requireCapabilityForService(
   capability: CapabilityName,
   scope?: { type: string; id: string }
 ): void {
-  // Support both AuthContext (legacy) and CanonicalAuthContext (new)
-  const policy = (authContext as AuthContext).policy || (authContext as any).policy;
-  if (policy) {
-    requireCapability(policy, capability, scope);
-  } else if ((authContext as any).verifiedCapabilities) {
+  // Support both AuthContext (legacy, has `policy`) and CanonicalAuthContext (new, has
+  // `verifiedCapabilities`). Narrow to the shared structural shape ONCE — a typed view, not `as any` —
+  // so property access stays type-checked (both union members are assignable to this shape).
+  const ctx = authContext as { policy?: PolicyContext; verifiedCapabilities?: Set<string> };
+  if (ctx.policy) {
+    requireCapability(ctx.policy, capability, scope);
+  } else if (ctx.verifiedCapabilities) {
     // For CanonicalAuthContext, verify capability is in the set
-    if (!(authContext as any).verifiedCapabilities.has(capability)) {
+    if (!ctx.verifiedCapabilities.has(capability)) {
       throw new ForbiddenError(`Capability required: ${capability}`);
     }
   }
