@@ -84,6 +84,22 @@ describe("SupervisorSummary panel", () => {
     expect(none.querySelector('[data-testid="supervisor-supporting-figures"]')).toBeNull();
   });
 
+  it("renders the specific missing-to-quantify inputs when present, and omits the block when empty (Wave 3 S1)", () => {
+    const { container } = render(<SupervisorSummary summary={view({
+      missingForQuantification: ["current cash balance", "fully-loaded cost/kg and quoted rate"],
+    })} />);
+    const block = container.querySelector('[data-testid="supervisor-missing-to-quantify"]');
+    expect(block).not.toBeNull();
+    expect(block?.textContent).toMatch(/To quantify the upside, add:/);
+    expect(container.querySelector('[data-testid="supervisor-quantify-missing-0"]')?.textContent).toMatch(/current cash balance/);
+    expect(container.querySelector('[data-testid="supervisor-quantify-missing-1"]')?.textContent).toMatch(/fully-loaded cost\/kg/);
+
+    const { container: none } = render(<SupervisorSummary summary={view({ missingForQuantification: [] })} />);
+    expect(none.querySelector('[data-testid="supervisor-missing-to-quantify"]')).toBeNull();
+    const { container: undef } = render(<SupervisorSummary summary={view()} />);
+    expect(undef.querySelector('[data-testid="supervisor-missing-to-quantify"]')).toBeNull();
+  });
+
   it("renders NOTHING when not found (no static fallback)", () => {
     const { container } = render(<SupervisorSummary summary={view({ found: false })} />);
     expect(container.querySelector('[data-testid="owner-supervisor-summary"]')).toBeNull();
