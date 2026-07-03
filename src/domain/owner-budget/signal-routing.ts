@@ -106,6 +106,7 @@ const ROUTES = {
   working_capital_data_stale: auditConsumed("working_capital_data_stale", "owner_risk_audit"),
   working_capital_data_insufficient: auditConsumed("working_capital_data_insufficient", "owner_risk_audit"),
   archetype_data_insufficient: auditConsumed("archetype_data_insufficient", "owner_risk_audit"),
+  prior_initiative_failure: auditConsumed("prior_initiative_failure", "owner_risk_audit"),
 
   // --- Informational / meta (budget-internal state) → health, audit-only ---
   reassessment_required: auditConsumed("reassessment_required", "owner_risk_audit"),

@@ -589,11 +589,21 @@ export async function reassessBudget(
     businessId, workspaceId, opts.financeOverride
   );
 
+  // M9: feed prior recorded funded-initiative outcomes so a FAILED/BLOCKED initiative steers the next plan
+  // (defer + guard) instead of being blindly re-funded. Workspace/business-scoped; recent history only.
+  const priorOutcomes = await db.fundedInitiativeOutcome.findMany({
+    where: { workspaceId, businessId },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    select: { initiativeLabel: true, outcome: true, safeForLearning: true },
+  });
+
   const plan = composeUpdatedPlan({
     assessment,
     change: opts.change ?? null,
     candidates,
     allocationContext: { approvedBudget },
+    outcomeHistory: priorOutcomes,
   });
 
   // Persist atomically: new immutable snapshot, prior marked non-current,

@@ -271,7 +271,9 @@ export type BudgetSignalType =
   // Working-capital × archetype cross-integration
   | "laundry_b2b_cash_conversion_risk" | "laundry_b2b_payment_terms_risk"
   | "laundry_reserve_protected_by_downtime_and_receivables"
-  | "housekeeping_recurring_contract_cash_risk" | "housekeeping_payroll_collection_conflict";
+  | "housekeeping_recurring_contract_cash_risk" | "housekeeping_payroll_collection_conflict"
+  // Prior-outcome steering (M9): a recorded funded-initiative failure steers the next plan
+  | "prior_initiative_failure";
 
 export interface BudgetSignal {
   type: BudgetSignalType;

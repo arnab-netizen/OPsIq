@@ -35,6 +35,16 @@ import type {
 } from "@/domain/collective-training/collective-types";
 import type { BudgetConfidenceLevel } from "@/domain/owner-budget/types";
 
+/**
+ * A prior funded-initiative outcome the plan should learn from (M9). Sourced from persisted
+ * `FundedInitiativeOutcome` rows; only outcomes explicitly `safeForLearning` steer the next plan.
+ */
+export interface PriorInitiativeOutcome {
+  initiativeLabel: string;
+  outcome: string;
+  safeForLearning: boolean;
+}
+
 export interface UpdatedPlanInput {
   assessment: BudgetAssessmentInput;
   change?: ChangeDescriptor | null;
@@ -46,6 +56,12 @@ export interface UpdatedPlanInput {
     accruedObligations?: number | null;
   };
   affectedBudgetLines?: string[];
+  /**
+   * Prior recorded funded-initiative outcomes (M9). A FAILED/BLOCKED outcome for an initiative demonstrably
+   * steers the next plan — the matching candidate is deferred and a guard signal + what-not-to-do is added, so
+   * the owner is not told to blindly re-fund what already failed. Absent → behaviour is unchanged.
+   */
+  outcomeHistory?: PriorInitiativeOutcome[];
 }
 
 function toRecConfidence(c: BudgetConfidenceLevel): RecommendationConfidence {
@@ -126,6 +142,39 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     allocation.blockedCount = allocation.ranked.filter((r) => r.decision === "BLOCK" || r.decision === "DEFER").length;
   }
 
+  // ---- Prior-outcome steering (M9): a recorded FAILED/BLOCKED funded-initiative outcome must change the next
+  // plan — do not blindly re-fund what already failed. Only outcomes marked safeForLearning steer (external-factor
+  // / owner-override failures are excluded upstream). A matching FUND/PARTIAL_FUND candidate is DEFERRED (funding
+  // withheld, so the steer is real, not advisory-only) and a guard signal + what-not-to-do is emitted. ----
+  const outcomeSteerSignals: BudgetSignal[] = [];
+  const outcomeWhatNotToDo: string[] = [];
+  const priorFailures = (input.outcomeHistory ?? []).filter(
+    (o) => o.safeForLearning && (o.outcome === "FAILED" || o.outcome === "BLOCKED")
+  );
+  if (priorFailures.length > 0) {
+    const seen = new Set<string>();
+    for (const pf of priorFailures) {
+      const label = pf.initiativeLabel.replace(/^budget-action:/, "");
+      if (seen.has(label)) continue;
+      seen.add(label);
+      outcomeSteerSignals.push({
+        type: "prior_initiative_failure",
+        severity: "HIGH",
+        message: `Initiative "${label}" has a prior recorded ${pf.outcome} outcome — do not repeat the same funded action without a changed approach and stronger proof.`,
+      });
+      outcomeWhatNotToDo.push(`Re-fund "${label}" on the same plan that already failed — require a changed approach + proof of the fix first.`);
+      for (const r of allocation.ranked) {
+        if ((r.decision === "FUND" || r.decision === "PARTIAL_FUND") && (label === r.candidate.label || pf.initiativeLabel.includes(r.candidate.label))) {
+          r.decision = "DEFER";
+          r.fundedAmount = 0;
+          r.reason = `Deferred by prior-outcome learning: this initiative recorded a ${pf.outcome} outcome before — re-prove the fix before re-funding.`;
+        }
+      }
+    }
+    allocation.fundedTotal = allocation.ranked.reduce((s, r) => s + r.fundedAmount, 0);
+    allocation.blockedCount = allocation.ranked.filter((r) => r.decision === "BLOCK" || r.decision === "DEFER").length;
+  }
+
   // ---- Cross-domain "what not to do" via the reused collective engine ----
   const signalsForCollective = buildDomainSignals(input.assessment, mode.netMarginPct, cash.runwayDays, conf);
   const packet = runCollective({
@@ -142,6 +191,7 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
 
   // ---- Budget signals ----
   const signals: BudgetSignal[] = [];
+  signals.push(...outcomeSteerSignals); // M9 prior-outcome guards surface first
   if (cash.reserveBreached) signals.push({ type: "statutory_reserve_breach", severity: "CRITICAL", message: "Cash below required statutory/cash reserve." });
   if (cash.runwayDays !== null && cash.runwayDays < 45) signals.push({ type: "cash_runway_risk", severity: cash.runwayDays < 14 ? "CRITICAL" : "HIGH", message: `Cash runway ${cash.runwayDays} days.` });
   if (mode.netMarginPct !== null && mode.netMarginPct < 10) signals.push({ type: "profit_guardrail_breach", severity: mode.netMarginPct < 0 ? "HIGH" : "MEDIUM", message: `Net margin ${mode.netMarginPct.toFixed(1)}% below target.` });
@@ -416,7 +466,7 @@ export function composeUpdatedPlan(input: UpdatedPlanInput): UpdatedOwnerPlan {
     reviewInDays,
     killRule: "Reassess on any material budget/spend/revenue/proof/cash change.",
     signals,
-    whatNotToDo: [...whatNotToDo, ...extraWhatNotToDo],
+    whatNotToDo: [...whatNotToDo, ...extraWhatNotToDo, ...outcomeWhatNotToDo],
     highRiskBlocked: mode.primaryMode === "DATA_INSUFFICIENT",
   };
 }
