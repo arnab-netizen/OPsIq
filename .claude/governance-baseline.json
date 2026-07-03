@@ -33,7 +33,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/engagements/route.ts",
-      "line": 87,
+      "line": 85,
       "severity": "error",
       "code": "error instanceof Error ? error.message : \"invalid query parameters\",",
       "reason": "API route server-side error string used for classification/logging"
@@ -42,7 +42,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/engagements/route.ts",
-      "line": 110,
+      "line": 108,
       "severity": "error",
       "code": "error instanceof Error ? error.message : String(error);",
       "reason": "API route server-side error string used for classification/logging"
@@ -51,7 +51,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/engagements/route.ts",
-      "line": 179,
+      "line": 177,
       "severity": "error",
       "code": "const msg = error instanceof Error ? error.message : String(error);",
       "reason": "API route server-side error string used for classification/logging"
