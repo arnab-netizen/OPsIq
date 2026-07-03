@@ -20,12 +20,15 @@ export async function requireWorkspaceContext(): Promise<WorkspaceContext> {
 
   const userId = session.user.id;
 
-  // Get user's workspace membership (assuming single workspace per session for now)
+  // Get user's workspace membership. M6: deterministic multi-workspace resolution — order identically
+  // to the canonical wrapper / getPolicyContext (earliest membership, workspaceId tiebreaker) so all
+  // three surfaces agree on which workspace a multi-membership user is scoped to.
   const membership = await db.workspaceMembership.findFirst({
     where: {
       userId,
       isActive: true,
     },
+    orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
     include: {
       workspace: {
         select: {

@@ -110,7 +110,9 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
   if (!resolvedWorkspaceId) {
     const membership = await db.workspaceMembership.findFirst({
       where: { userId: session.user.id, isActive: true },
-      orderBy: { addedAt: "asc" },
+      // M6: full deterministic order (workspaceId tiebreaker) so this matches the canonical wrapper's
+      // workspace derivation exactly — a same-addedAt tie must resolve to the same workspace in both.
+      orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
     });
     resolvedWorkspaceId = membership?.workspaceId;
   }

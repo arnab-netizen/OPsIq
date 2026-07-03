@@ -306,6 +306,12 @@ export function withCanonicalEnforcement(
               userId: sessionFact.session.user.id,
               isActive: true,
             },
+            // M6: deterministic multi-workspace resolution. Without an explicit order a user with more
+            // than one active membership got a non-deterministic workspace here — and one that could
+            // disagree with the workspace `getPolicyContext` resolved capabilities for (auth.ts also
+            // orders by addedAt). Order identically (earliest membership, workspaceId tiebreaker) so the
+            // verified workspace and the policy context always agree.
+            orderBy: [{ addedAt: "asc" }, { workspaceId: "asc" }],
             select: {
               workspaceId: true,
             },
