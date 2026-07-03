@@ -66,3 +66,50 @@ describe("P3-A3 M9 — prior funded-initiative outcomes steer the next plan", ()
     expect(growthLine(p)).toMatch(/FUND/); // but the unrelated Referral campaign stays funded
   });
 });
+
+describe("Wave 3 S2 — disposition/variance-aware steering", () => {
+  const partial: PriorInitiativeOutcome = {
+    initiativeLabel: "budget-action:Referral campaign", outcome: "PARTIAL", safeForLearning: true,
+    expectedImpact: 100, actualImpact: 60,
+  };
+
+  it("a PARTIAL (underperforming) outcome steers with a MODIFY disposition — not re-funded unchanged", () => {
+    const p = plan([partial]);
+    expect(growthLine(p)).toMatch(/DEFER/);
+    expect(growthLine(p)).toMatch(/modify/i);
+    const sig = p.signals.find((s) => s.type === "prior_initiative_failure");
+    expect(sig?.severity).toBe("MEDIUM");
+    expect(p.whatNotToDo.some((w) => /Referral campaign/.test(w))).toBe(true);
+  });
+
+  it("surfaces the expected-vs-actual variance to the owner in the steer reason (never a profit claim)", () => {
+    const p = plan([partial]);
+    expect(growthLine(p)).toMatch(/60% of target/); // actual 60 vs expected 100
+    const sig = p.signals.find((s) => s.type === "prior_initiative_failure");
+    expect(sig?.message).toMatch(/actual 60 vs expected 100/);
+    // No success/profit is asserted — only a corrective instruction.
+    expect(sig?.message).not.toMatch(/profit|succeeded|proven/i);
+  });
+
+  it("a repeat FAILED escalates to BLOCK (not merely escalate)", () => {
+    const twice: PriorInitiativeOutcome[] = [
+      { initiativeLabel: "budget-action:Referral campaign", outcome: "FAILED", safeForLearning: true },
+      { initiativeLabel: "budget-action:Referral campaign", outcome: "FAILED", safeForLearning: true },
+    ];
+    const p = plan(twice);
+    expect(growthLine(p)).toMatch(/block re-funding/i);
+    expect(growthLine(p)).toMatch(/DEFER/);
+  });
+
+  it("honors a stored disposition directly (block) regardless of the outcome string", () => {
+    const p = plan([{ initiativeLabel: "budget-action:Referral campaign", outcome: "PARTIAL", safeForLearning: true, disposition: "block" }]);
+    expect(growthLine(p)).toMatch(/block re-funding/i);
+    expect(growthLine(p)).toMatch(/DEFER/);
+  });
+
+  it("a stored 'repeat' disposition (verified success) never steers", () => {
+    const p = plan([{ initiativeLabel: "budget-action:Referral campaign", outcome: "SUCCESS", safeForLearning: true, disposition: "repeat" }]);
+    expect(growthLine(p)).toMatch(/FUND/);
+    expect(hasFailureSignal(p)).toBe(false);
+  });
+});

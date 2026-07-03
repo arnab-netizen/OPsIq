@@ -589,13 +589,32 @@ export async function reassessBudget(
     businessId, workspaceId, opts.financeOverride
   );
 
-  // M9: feed prior recorded funded-initiative outcomes so a FAILED/BLOCKED initiative steers the next plan
-  // (defer + guard) instead of being blindly re-funded. Workspace/business-scoped; recent history only.
-  const priorOutcomes = await db.fundedInitiativeOutcome.findMany({
+  // M9 + Wave 3: feed prior recorded funded-initiative outcomes so a non-SUCCESS initiative steers the next plan
+  // (defer + disposition-specific guard + expected-vs-actual variance) instead of being blindly re-funded.
+  // Workspace/business-scoped; recent history only. The stored disposition lives in the outcome `note` JSON.
+  const priorOutcomeRows = await db.fundedInitiativeOutcome.findMany({
     where: { workspaceId, businessId },
     orderBy: { createdAt: "desc" },
     take: 50,
-    select: { initiativeLabel: true, outcome: true, safeForLearning: true },
+    select: { initiativeLabel: true, outcome: true, safeForLearning: true, expectedImpact: true, actualImpact: true, note: true },
+  });
+  const priorOutcomes = priorOutcomeRows.map((r: {
+    initiativeLabel: string; outcome: string; safeForLearning: boolean;
+    expectedImpact: number | null; actualImpact: number | null; note: string | null;
+  }) => {
+    let disposition: "repeat" | "modify" | "escalate" | "block" | undefined;
+    if (r.note) {
+      try {
+        const d = (JSON.parse(r.note) as { disposition?: string }).disposition;
+        if (d === "repeat" || d === "modify" || d === "escalate" || d === "block") disposition = d;
+      } catch {
+        // Malformed note → fall back to outcome-derived disposition (no throw, no masking).
+      }
+    }
+    return {
+      initiativeLabel: r.initiativeLabel, outcome: r.outcome, safeForLearning: r.safeForLearning,
+      disposition, expectedImpact: r.expectedImpact, actualImpact: r.actualImpact,
+    };
   });
 
   const plan = composeUpdatedPlan({
