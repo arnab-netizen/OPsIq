@@ -86,6 +86,10 @@ export async function intakeProofSubmission(
   const db = deps.db ?? (liveDb as unknown as ProofIntakeReadDb);
   const { workspaceId, actorId, taskId } = input;
 
+  // Guard: a missing/blank taskId must not become an unfiltered `where` (Prisma drops `id: undefined`,
+  // which would otherwise match an arbitrary task in the workspace).
+  if (typeof taskId !== "string" || taskId.trim() === "") return { ok: false, reason: "taskId is required." };
+
   // 1. Task must exist in this workspace (never trust a client-claimed task).
   const task = await db.delegatedTask.findFirst({
     where: { id: taskId, workspaceId },

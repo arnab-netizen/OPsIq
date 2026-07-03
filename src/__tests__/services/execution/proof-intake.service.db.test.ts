@@ -106,6 +106,16 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Wave 2 S2 — proof-submit contract 
     if (!res.ok) expect(res.reason).toContain("not found");
   });
 
+  it("[db] a missing taskId is rejected (never becomes an unfiltered task match)", async () => {
+    await assignWithProof(A);
+    const res = await intakeProofSubmission({
+      workspaceId: A.workspaceId, actorId: A.empId, taskId: "",
+      submission: { proofType: ProofType.PHOTO, fields: { note: "x" }, fileHash: "h" },
+    });
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.reason).toContain("taskId is required");
+  });
+
   it("[db] a non-assignee employee is denied task access", async () => {
     const t = await assignWithProof(A);
     await expect(
