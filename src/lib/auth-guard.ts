@@ -4,11 +4,9 @@ import type { PolicyContext } from "@/policies/capability-check";
 import {
   requireCapability,
   hasCapability,
-  highestRole,
   hasInternalAccess,
 } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
-import { ROLE_HIERARCHY } from "@/domain/constants/roles";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { checkShadowRead } from "@/lib/runtime-shadow-read-enforcer";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
@@ -150,11 +148,9 @@ export async function withAuth(
  * Returns the actor's highest role hierarchy level.
  * Used by role-assignment to enforce hierarchy authority.
  */
-export function getActorHierarchyLevel(policy: PolicyContext): number {
-  const role = highestRole(policy);
-  if (!role) return -1;
-  return ROLE_HIERARCHY[role] ?? 0;
-}
+// `getActorHierarchyLevel` moved to @/policies/capability-check so canonical routes can import it without
+// pulling in this legacy auth-guard module (strict-auth). Re-exported here for back-compat.
+export { getActorHierarchyLevel } from "@/policies/capability-check";
 
 /**
  * Check if a policy context has a specific capability (non-throwing).

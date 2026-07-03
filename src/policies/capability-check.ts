@@ -327,6 +327,17 @@ export function highestRole(ctx: PolicyContext): RoleName | null {
   return highest;
 }
 
+/**
+ * Numeric hierarchy level of the actor's highest role (−1 when the actor has no role). Lives here — beside
+ * `highestRole` / `ROLE_HIERARCHY` — so canonical routes can read role hierarchy WITHOUT importing the legacy
+ * `@/lib/auth-guard` module (which the strict-auth governance rule forbids in canonical routes).
+ */
+export function getActorHierarchyLevel(ctx: PolicyContext): number {
+  const role = highestRole(ctx);
+  if (!role) return -1;
+  return ROLE_HIERARCHY[role] ?? 0;
+}
+
 /** Check if a context has any internal (non-client) role */
 export function hasInternalAccess(ctx: PolicyContext): boolean {
   return ctx.roles.some((r) => !isClientRole(r.role));
