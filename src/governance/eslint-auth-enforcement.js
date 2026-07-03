@@ -48,12 +48,15 @@ const rule = {
         }
       },
 
-      // Rule 2: NO unions mixing auth types
+      // Rule 2: NO unions mixing auth types.
+      // Match type names EXACTLY (array membership), not as substrings — "CanonicalAuthContext" contains the
+      // substring "AuthContext", so a substring check falsely flagged legitimate `CanonicalAuthContext | null`
+      // signatures. Only a genuine union of BOTH distinct types (legacy `AuthContext` AND `CanonicalAuthContext`)
+      // should be reported.
       TSUnionType(node) {
         const typeNames = node.types
           .filter(t => t.type === "TSTypeReference")
-          .map(t => t.typeName.name)
-          .join("|");
+          .map(t => t.typeName.name);
 
         if (typeNames.includes("AuthContext") && typeNames.includes("CanonicalAuthContext")) {
           context.report({
