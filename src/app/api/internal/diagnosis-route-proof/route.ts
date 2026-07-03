@@ -2,12 +2,10 @@
 /**
  * Diagnostic Proof: Diagnosis Route Context Resolution
  *
- * Tests the same auth/context pipeline that POST /api/diagnosis uses.
- * Protected by x-opsiq-diagnostic-key.
- *
- * Usage:
- *   curl -H "x-opsiq-diagnostic-key: $OPSIQ_DIAGNOSTIC_KEY" \
- *     https://o-ps-iq.vercel.app/api/internal/diagnosis-route-proof
+ * Tests the same auth/context pipeline that POST /api/diagnosis uses. This route is gated by
+ * canonical session enforcement (a signed-in actor with the ENGAGEMENT_CREATE capability in a
+ * resolved workspace) — NOT by an x-opsiq-diagnostic-key. The handler runs only after that gate
+ * passes, and every field it returns is scoped to the caller's own verified session/workspace.
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
@@ -40,9 +38,13 @@ export const GET = withCanonicalEnforcement(
       status: 200,
       body: {
         classification: "diagnosis_route_proof_complete",
-        diagnosticKey: {
-          headerPresent: true,
-          authorized: true,
+        // Truthful gate description: reaching this handler means canonical session enforcement
+        // (ENGAGEMENT_CREATE capability + resolved workspace) already passed. There is no
+        // diagnostic-key check on this route, so we do not fabricate one.
+        auth: {
+          mechanism: "canonical_session_capability",
+          requireCapabilities: [CAPABILITIES.ENGAGEMENT_CREATE],
+          requireWorkspace: true,
         },
         session: {
           sessionFound,
