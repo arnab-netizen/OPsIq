@@ -35,6 +35,7 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    return Response.json({ ok: false, error: governed.operatorMessage }, { status: 500 });
+    const safeDetail = governed.operatorMessage;
+    return Response.json({ ok: false, error: safeDetail }, { status: 500 });
   }
 }

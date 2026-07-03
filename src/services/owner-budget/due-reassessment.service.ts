@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { OPEN_BUDGET_ACTION_STATUSES } from "@/domain/owner-budget/action-mapping";
 import { reassessBudget } from "./budget.service";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 /** Deterministic system actor for scheduler-initiated reassessments (not a user). */
 export const SCHEDULER_SYSTEM_ACTOR = "00000000-0000-0000-0000-000000000000";
@@ -69,10 +70,11 @@ export async function scanDueReassessments(now: Date, opts: { limit?: number; ac
     } catch (err) {
       skipped++;
       businesses.push({ ...t, ok: false });
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
       logger.warn("Scheduled reassessment failed for a business", {
         workspaceId: t.workspaceId,
         businessId: t.businessId,
-        error: err instanceof Error ? err.message : String(err),
+        error: governed.operatorMessage,
       });
     }
   }
