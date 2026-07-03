@@ -63,19 +63,17 @@ export async function transitionDecisionState(
     throw new ValidationError(governed.operatorMessage);
   }
 
-  // Prepare update data based on target state
+  // Prepare update data based on target state. Only columns that actually exist on OperatorItem are
+  // written — the prior code set `lastUpdatedBy` (real column is `lastUpdatedByUserId`) plus
+  // `submittedAt`/`approvedAt` (no such columns), so EVERY transition threw PrismaClientValidationError.
   const updateData: Record<string, any> = {
     status: mapStateToStatus(toState),
-    lastUpdatedBy: actorId || null,
+    lastUpdatedByUserId: actorId || null,
     updatedAt: new Date(),
   };
 
-  // Set state-specific fields
-  if (toState === "SUBMITTED") {
-    updateData.submittedAt = new Date();
-  } else if (toState === "APPROVED") {
-    updateData.approvedAt = new Date();
-  } else if (toState === "EXECUTED") {
+  // Set state-specific fields (SUBMITTED/APPROVED have no dedicated timestamp column on OperatorItem).
+  if (toState === "EXECUTED") {
     updateData.startedAt = new Date();
     updateData.executionStatus = "started";
   } else if (toState === "OUTCOME_RECORDED") {
@@ -94,11 +92,22 @@ export async function transitionDecisionState(
     updateData.status = "failed";
   }
 
-  // Apply transition
-  const updated = await db.operatorItem.update({
-    where: { id: decisionId },
+  // Apply transition — concurrency-safe (M2 TOCTOU guard). The transition was validated against the
+  // status we READ above; guard the write on that exact status (and workspace) so a racing transition
+  // cannot clobber this one. If the row moved under us, count is 0 and we reject the now-stale
+  // transition instead of silently overwriting a governed record.
+  const result = await db.operatorItem.updateMany({
+    where: { id: decisionId, workspaceId, status: decision.status },
     data: updateData,
   });
+
+  if (result.count !== 1) {
+    throw new ValidationError(
+      `Decision ${decisionId} was modified concurrently; transition ${fromState} → ${toState} is no longer valid from status "${decision.status}"`
+    );
+  }
+
+  const newStatus = updateData.status as string;
 
   // Emit audit event for state transition
   const eventName = getAuditEventName(fromState, toState);
@@ -133,8 +142,8 @@ export async function transitionDecisionState(
   });
 
   return {
-    id: updated.id,
-    status: updated.status,
+    id: decisionId,
+    status: newStatus,
   };
 }
 
