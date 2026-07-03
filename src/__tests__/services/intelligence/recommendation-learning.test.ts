@@ -9,7 +9,7 @@
  * disclosed; and the signal is scoped to the matching problem type. Pure — no DB, no new store.
  */
 import { describe, it, expect } from "vitest";
-import { generateRecommendation } from "@/services/intelligence/recommendation";
+import { generateRecommendation, generateMultipleRecommendations } from "@/services/intelligence/recommendation";
 import type { DecisionResult } from "@/domain/decision/types";
 import type { DetectedPattern } from "@/services/intelligence/pattern-engine";
 import type { OperatorItem } from "@/domain/operator/types";
@@ -75,5 +75,36 @@ describe("P3-A B6 — recommendation learns from prior realized failures", () =>
     const r = generateRecommendation(decision, patterns, items);
     expect(r.learningApplied).toBeUndefined();
     expect(r.confidenceScore).toBeCloseTo(0.8, 5);
+  });
+});
+
+describe("Wave 3 S3 — alternatives apply the same prior-failure learning as the primary", () => {
+  const actionable = (recs: ReturnType<typeof generateMultipleRecommendations>) =>
+    recs.filter((r) => r.dataSufficiency === "sufficient" && r.recommendedAction);
+
+  it("clean history: every actionable alternative carries un-penalized confidence", () => {
+    const recs = generateMultipleRecommendations(decision, patterns, patternHits);
+    const a = actionable(recs);
+    expect(a.length).toBeGreaterThan(1);
+    for (const r of a) expect(r.learningApplied).toBeUndefined();
+  });
+
+  it("prior failures lower confidence + disclose on EVERY actionable alternative, not only the primary", () => {
+    const items = [...patternHits, failed("f-1"), failed("f-2"), failed("f-3")];
+    const a = actionable(generateMultipleRecommendations(decision, patterns, items));
+    expect(a.length).toBeGreaterThan(1);
+    for (const r of a) {
+      expect(r.learningApplied).toBe(true);
+      expect(r.priorFailureCount).toBe(3);
+      // Clean alternative confidences are all ≥ 0.70; penalized ones are all ≤ 0.44.
+      expect(r.confidenceScore).toBeLessThan(0.7);
+      expect(r.explanation).toMatch(/3 realized failure\(s\)/i);
+    }
+  });
+
+  it("failures for a different problem type do not penalize the alternatives (scoped)", () => {
+    const items = [...patternHits, failed("o-1", { problemType: "cost_overrun" })];
+    const a = actionable(generateMultipleRecommendations(decision, patterns, items));
+    for (const r of a) expect(r.learningApplied).toBeUndefined();
   });
 });
