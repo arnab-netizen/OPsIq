@@ -67,6 +67,10 @@ jobs:
         run: npm run governance:scan:strict
         continue-on-error: false
 
+      - name: Auth route governance scan (blocking)
+        run: npm run governance:scan:auth
+        continue-on-error: false
+
       - name: TypeScript type checking
         run: npx tsc --noEmit
         continue-on-error: false
