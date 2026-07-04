@@ -24,7 +24,20 @@ function computeEventHash(eventId: string, workspaceId: string, eventName: strin
   return createHash("sha256").update(hashInput).digest("hex");
 }
 
-export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
+/**
+ * Optional Prisma client override. Pass a transaction client (`tx`) to write the
+ * audit event INSIDE a caller's `$transaction`, so a failed audit write rolls
+ * back the governed mutation (fail-closed) and the hash-chain read/create both
+ * run on the same transactional snapshot. Defaults to the ambient `db` client.
+ */
+type AuditDbClient = {
+  auditEvent: {
+    findFirst: (args: unknown) => Promise<{ id: string; previousHash: string | null; eventName: string; occurredAt: Date } | null>;
+    create: (args: unknown) => Promise<{ id: string }>;
+  };
+};
+
+export async function emitAuditEvent(input: AuditEventInput, tx?: AuditDbClient): Promise<string> {
   if (!input.workspaceId) {
     logger.warn("Audit event emitted without workspaceId - fail-safe activated", {
       eventName: input.eventName,
@@ -35,17 +48,19 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
     return "fail-safe-no-workspace-id";
   }
 
+  const client = (tx ?? db) as AuditDbClient;
+
   // Fetch the last audit event for this workspace to chain hashes.
   // Fetch eventName and occurredAt so the hash binds to actual event content
   // (using only the eventId twice was incorrect — fixed here).
-  const lastEvent = await db.auditEvent.findFirst({
+  const lastEvent = await client.auditEvent.findFirst({
     where: { workspaceId: input.workspaceId },
     orderBy: { occurredAt: "desc" },
     select: { id: true, previousHash: true, eventName: true, occurredAt: true },
   });
 
   const eventId = uuidv4();
-  const event = await db.auditEvent.create({
+  const event = await client.auditEvent.create({
     data: {
       id: eventId,
       workspaceId: input.workspaceId,

@@ -1,135 +1,35 @@
+/**
+ * POST /api/override — override an operator-item decision/action.
+ *
+ * Governed (GAP-OVR-01): the SERVER decides whether the override is permitted
+ * (via the item's stored guardrail result), never a client-supplied flag.
+ * Requires the OVERRIDE_DECIDE capability (server-verified, workspace-scoped),
+ * an explicit reason and risk acknowledgement, persists a durable OverrideRecord,
+ * and writes a hash-chained OVERRIDE_APPROVED audit event fail-closed inside a
+ * transaction. All business logic lives in `recordOperatorOverride`.
+ */
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
-import { addOverride } from "@/services/override/store";
-import { getItems, applyOverride } from "@/services/operator/store";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { resolveServerRole } from "@/services/auth/server-role";
-import { canEdit } from "@/services/auth/access";
-import { logAuditEvent } from "@/services/audit/audit-log";
-import { randomUUID } from "crypto";
+import { recordOperatorOverride } from "@/services/override/operator-override.service";
 
-export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  // Enforce server-side auth
-  const role = await resolveServerRole();
-  if (!role) {
-    // Log AUTH_FAILED audit event
-    await logAuditEvent({
-      eventName: "AUTH_FAILED",
-      entityType: "OperatorItem",
-      entityId: "unknown",
-      actorId: ctx.verifiedActorId,
-      role: null,
-      before: null,
-      after: null,
-      metadata: {
-        reason: "Role resolution failed",
-        action: "override_attempt",
-      },
-    }).catch((auditError) => {
-      console.error(`Audit logging failed: ${auditError}`);
-    });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const body = await ctx.request!.json();
+    const { operatorItemId, overriddenAction, reason, riskAcknowledged } = body ?? {};
 
-    throw new UnauthorizedError("Unauthorized");
-  }
+    const role = await resolveServerRole();
 
-  if (!canEdit(role)) {
-    // Log PERMISSION_DENIED audit event
-    await logAuditEvent({
-      eventName: "PERMISSION_DENIED",
-      entityType: "OperatorItem",
-      entityId: "unknown",
-      actorId: ctx.verifiedActorId,
-      role,
-      before: null,
-      after: null,
-      metadata: {
-        reason: "User role lacks edit permission",
-        action: "override_attempt",
-      },
-    }).catch((auditError) => {
-      console.error(`Audit logging failed: ${auditError}`);
-    });
-
-    throw new Error("Insufficient permissions");
-  }
-
-  const body = await ctx.request!.json();
-  const { operatorItemId, overriddenAction, reason, overrideAllowed } = body;
-
-  // Validate required fields
-  if (!operatorItemId || !overriddenAction || !reason) {
-    throw new Error("Missing required fields: operatorItemId, overriddenAction, reason");
-  }
-
-  // Fetch operator item to get original action
-  const items = await getItems();
-  const item = items.find((i) => i.id === operatorItemId);
-
-  if (!item) {
-    throw new Error("Operator item not found");
-  }
-
-  const actorId = ctx.verifiedActorId;
-
-  // Check if override is allowed
-  if (overrideAllowed === false) {
-    // Log OVERRIDE_DENIED audit event
-    await logAuditEvent({
-      eventName: "OVERRIDE_DENIED",
-      entityType: "OperatorItem",
-      entityId: operatorItemId,
-      actorId,
-      role,
-      before: item,
-      after: null,
-      metadata: {
-        originalAction: item.action,
-        attemptedOverride: overriddenAction,
-        reason,
-        denialReason: "Override not allowed for this violation",
-      },
-    }).catch((auditError) => {
-      console.error(`Audit logging failed: ${auditError}`);
-    });
-
-    throw new Error("Override not allowed for this guardrail violation");
-  }
-
-  // Create and store override record
-  const overrideRecord = {
-    id: randomUUID(),
-    operatorItemId,
-    originalAction: item.action,
-    overriddenAction,
-    reason,
-    createdAt: new Date().toISOString(),
-  };
-
-  addOverride(overrideRecord);
-  const beforeItem = item;
-  await applyOverride(operatorItemId, overriddenAction);
-
-  // Capture after state
-  const itemsAfter = await getItems();
-  const afterItem = itemsAfter.find((i) => i.id === operatorItemId);
-
-  // Log OVERRIDE_APPROVED audit event
-  await logAuditEvent({
-    eventName: "OVERRIDE_APPROVED",
-    entityType: "OperatorItem",
-    entityId: operatorItemId,
-    actorId,
-    role,
-    before: beforeItem,
-    after: afterItem ?? null,
-    metadata: {
-      originalAction: item.action,
+    return recordOperatorOverride({
+      operatorItemId,
       overriddenAction,
       reason,
-    },
-  }).catch((auditError) => {
-    console.error(`Audit logging failed: ${auditError}`);
-  });
-
-  return { success: true };
-}, { requireWorkspace: true });
+      riskAcknowledged,
+      workspaceId: ctx.verifiedWorkspaceId,
+      actorId: ctx.verifiedActorId,
+      role,
+    });
+  },
+  { requireCapabilities: [CAPABILITIES.OVERRIDE_DECIDE], requireWorkspace: true },
+);
