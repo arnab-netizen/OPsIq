@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -7,12 +8,8 @@ import {
   NotFoundError,
   ConflictError,
   ValidationError,
+  OptimisticLockError,
 } from "@/infra/errors";
-import {
-  optimisticUpdate,
-  withVersionCheck,
-  withVersionIncrement,
-} from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
@@ -40,6 +37,15 @@ export interface ListUsersParams {
 
 // ─── Service ───────────────────────────────────────────────────────────────
 
+// `User` has NO `workspaceId` column (and no `email_workspaceId` compound unique — `email` is globally unique).
+// A user belongs to a workspace via `WorkspaceMembership`, so every workspace-bound query is scoped through that
+// relation (matching the working precedent in engagement-membership.ts). Prisma `update`/`findUnique` cannot take a
+// relation filter, so reads use `findFirst` and version-checked writes use `updateMany` + a count assert (the
+// Wave-1 `action.ts` pattern) instead of the previous — invalid — `{ id, workspaceId }` unique lookups.
+const inWorkspace = (workspaceId: string) => ({
+  workspaceMemberships: { some: { workspaceId, isActive: true } },
+});
+
 export async function createUser(
   input: CreateUserInput,
   authContext: CanonicalAuthContext,
@@ -53,8 +59,11 @@ export async function createUser(
     idempotencyKey,
     "user.create",
     async () => {
+      // `email` is globally unique (no per-workspace compound). A created user is a global identity; associating
+      // them with a workspace is a separate governed WorkspaceMembership grant (role-assignment decision — see the
+      // Wave 8 decision memo), not a column on User.
       const existing = await db.user.findUnique({
-        where: { email_workspaceId: { email: input.email, workspaceId: validatedWorkspaceId } },
+        where: { email: input.email },
       });
 
       if (existing) {
@@ -63,10 +72,11 @@ export async function createUser(
 
       const user = await db.user.create({
         data: {
+          id: randomUUID(),
           email: input.email,
           name: input.name ?? null,
           hashedPassword: input.hashedPassword ?? null,
-          workspaceId: validatedWorkspaceId,
+          updatedAt: new Date(),
         },
       });
 
@@ -99,7 +109,7 @@ export async function updateUser(
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const user = await db.user.findUnique({ where: { id: userId, workspaceId: validatedWorkspaceId } });
+  const user = await db.user.findFirst({ where: { id: userId, ...inWorkspace(validatedWorkspaceId) } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -111,22 +121,26 @@ export async function updateUser(
 
   if (input.email && input.email !== user.email) {
     const emailTaken = await db.user.findUnique({
-      where: { email_workspaceId: { email: input.email, workspaceId: validatedWorkspaceId } },
+      where: { email: input.email },
     });
     if (emailTaken) {
       throw new ConflictError(`Email ${input.email} is already in use`);
     }
   }
 
-  await optimisticUpdate("user", userId, input.version, () =>
-    db.user.update({
-      where: withVersionCheck({ id: userId, workspaceId: validatedWorkspaceId }, input.version),
-      data: withVersionIncrement({
-        ...(input.name !== undefined && { name: input.name }),
-        ...(input.email !== undefined && { email: input.email }),
-      }),
-    })
-  );
+  // Relation-scoped optimistic update: workspace membership + version in the same guarded write. count===0 after
+  // the membership+active pre-check means the version moved under us.
+  const updateResult = await db.user.updateMany({
+    where: { id: userId, ...inWorkspace(validatedWorkspaceId), version: input.version },
+    data: {
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.email !== undefined && { email: input.email }),
+      version: { increment: 1 },
+    },
+  });
+  if (updateResult.count === 0) {
+    throw new OptimisticLockError("user", userId);
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.USER_UPDATED,
@@ -152,7 +166,7 @@ export async function deactivateUser(
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const user = await db.user.findUnique({ where: { id: userId, workspaceId: validatedWorkspaceId } });
+  const user = await db.user.findFirst({ where: { id: userId, ...inWorkspace(validatedWorkspaceId) } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -166,31 +180,31 @@ export async function deactivateUser(
     throw new ValidationError("Cannot deactivate your own account");
   }
 
-  await optimisticUpdate("user", userId, version, () =>
-    db.user.update({
-      where: withVersionCheck({ id: userId, workspaceId: validatedWorkspaceId }, version),
-      data: withVersionIncrement({
-        isActive: false,
-        deactivatedAt: new Date(),
-      }),
-    })
-  );
+  const deactivateResult = await db.user.updateMany({
+    where: { id: userId, ...inWorkspace(validatedWorkspaceId), version },
+    data: { isActive: false, deactivatedAt: new Date(), version: { increment: 1 } },
+  });
+  if (deactivateResult.count === 0) {
+    throw new OptimisticLockError("user", userId);
+  }
 
-  // Revoke all active sessions
+  // Revoke all active sessions. Session has NO workspaceId column and is keyed by userId — a session is global to
+  // the user, so revoking by userId (not a phantom workspace filter) is correct.
   const sessionResult = await db.session.updateMany({
-    where: { userId, workspaceId: validatedWorkspaceId, revokedAt: null },
+    where: { userId, revokedAt: null },
     data: { revokedAt: new Date() },
   });
 
-  // Revoke all active role assignments
+  // Revoke all active role assignments. UserRoleAssignment also has no workspaceId column; it is userId-scoped.
   const roleResult = await db.userRoleAssignment.updateMany({
-    where: { userId, workspaceId: validatedWorkspaceId, isActive: true },
+    where: { userId, isActive: true },
     data: { isActive: false, revokedAt: new Date() },
   });
 
-  // Remove from active engagement memberships
+  // Remove from active engagement memberships. EngagementMembership has no workspaceId column — scope to this
+  // workspace via the engagement relation (the Wave-1 pattern) so only this workspace's memberships are removed.
   const membershipResult = await db.engagementMembership.updateMany({
-    where: { userId, workspaceId: validatedWorkspaceId, isActive: true },
+    where: { userId, isActive: true, engagement: { workspaceId: validatedWorkspaceId } },
     data: { isActive: false, removedAt: new Date() },
   });
 
@@ -225,7 +239,7 @@ export async function reactivateUser(
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const user = await db.user.findUnique({ where: { id: userId, workspaceId: validatedWorkspaceId } });
+  const user = await db.user.findFirst({ where: { id: userId, ...inWorkspace(validatedWorkspaceId) } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -235,15 +249,13 @@ export async function reactivateUser(
     throw new ValidationError("User is already active");
   }
 
-  await optimisticUpdate("user", userId, version, () =>
-    db.user.update({
-      where: withVersionCheck({ id: userId, workspaceId: validatedWorkspaceId }, version),
-      data: withVersionIncrement({
-        isActive: true,
-        deactivatedAt: null,
-      }),
-    })
-  );
+  const reactivateResult = await db.user.updateMany({
+    where: { id: userId, ...inWorkspace(validatedWorkspaceId), version },
+    data: { isActive: true, deactivatedAt: null, version: { increment: 1 } },
+  });
+  if (reactivateResult.count === 0) {
+    throw new OptimisticLockError("user", userId);
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.USER_REACTIVATED,
@@ -260,8 +272,8 @@ export async function reactivateUser(
 export async function getUserById(userId: string, workspaceId: string) {
   enforceWorkspaceId(workspaceId, "getUserById", "user");
 
-  const user = await db.user.findUnique({
-    where: { id: userId, workspaceId },
+  const user = await db.user.findFirst({
+    where: { id: userId, ...inWorkspace(workspaceId) },
     select: {
       id: true,
       email: true,
@@ -287,7 +299,7 @@ export async function listUsers(workspaceId: string, params: ListUsersParams = {
   const { limit = 25, offset = 0, isActive, search } = params;
 
   const where = {
-    workspaceId,
+    ...inWorkspace(workspaceId),
     ...(isActive !== undefined && { isActive }),
     ...(search && {
       OR: [
