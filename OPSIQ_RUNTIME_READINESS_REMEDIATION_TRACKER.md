@@ -60,3 +60,25 @@ Wave 4 (GOVERNANCE_HARDENING_SWEEP) implemented stacked on #99 head (`GOVERNANCE
 PR opens after #99 merges + rebase.
 Honest classification unchanged: `BUSINESS_REALITY_KNOWN_TO_UNKNOWN_READY_MERGED` (corpus/judgment) — runtime-readiness
 remains blocked until the wave sequence + final audit close.
+
+## Follow-up waves 5–9 (close remaining MILESTONE_RUNTIME_PARTIAL items) — ALL MERGED
+| Wave | Name | Status | PR (squash) | Classification |
+|------|------|--------|-------------|----------------|
+| 5 | NON_FINANCE_INGESTION_MATERIALIZATION | MERGED | `#101` (`20a6fd74`) | NON_FINANCE_MATERIALIZATION_DB_PROVEN — 4 non-finance CSV domains materialize into their owner-wired per-domain snapshots. Manual-entry materialization + command-center non-finance flip = documented product decisions |
+| 6 | ESCALATION_ACTION_SCHEMA + OVERDUE FIX | MERGED | `#102` (`de782756`) | OVERDUE_ESCALATION_SCHEMA_RESOLVED_DB_PROVEN — overdue-action escalation off phantom `Action.priority/dueDate/workspaceId`; "critical" derived from `Recommendation.priority`; no `Action.priority` column (decision) |
+| 7 | GOVERNANCE_HONESTY_M1_M4 | MERGED | `#103` (`68e4e43b`) | GOVERNANCE_HONESTY_M1_M4_DB_PROVEN — verified-session reads real workspace/membership (M1); escalations `delivery:"log_only"` (M4). Entitlements-in-hot-path + adjacent alert debt = documented decisions |
+| 8 | INTERNAL_ROUTE_SCOPING (User/Lead/ClientAccount) | MERGED | `#104` (`920afc6a`) | USER_ROUTE_SCOPING_DB_PROVEN — User service scoped via `workspaceMemberships` (migration-free). Lead + ClientAccount/ClientContact = schema decisions (memo); internal/consultant routes, non-blocking for owner path |
+| 9 | SCHEDULED_REASSESSMENT (infra decision) | MERGED | `#105` (`0b1e104b`) | SCHEDULED_REASSESSMENT_TRIGGER_DECISION_RECORDED — seam done+DB-proven+verified (authorized 200 + fail-closed); external cadence trigger = owner deployment decision (Vercel Cron / GitHub Actions), no fake scheduler |
+
+### Final Tier-3 post-merge hostile audit — `OPSIQ_RUNTIME_READINESS_WAVES_5_9_POST_MERGE_HOSTILE_AUDIT.md`
+On merged `main @ 0b1e104b`: 32/32 across the five waves' proofs pass; gates green (tsc 0; ratchet 2083 ≤ 2155;
+governance 32 frozen / 0 new; auth comply). Every residual item is a documented product/schema/infra decision, honest
+at runtime, and assessed **non-blocking for the owner shadow-pilot runtime path**.
+
+**Milestone classification: `SHADOW_PILOT_RUNTIME_READY_MERGED`.** The five MILESTONE_RUNTIME_PARTIAL items are closed
+(fixed + DB-proven) or converted into explicit non-blocking owner-visible decisions.
+
+**Explicit NON-claims:** NOT LIVE_PILOT_READY, NOT LIVE_OUTCOME_PROVEN, NOT PUBLIC_SAAS_READY, NOT Startup-Mode-ready;
+no live outcome/profit/growth proof; public SaaS/billing/launch/integrations untouched.
+`SHADOW_PILOT_RUNTIME_READY_MERGED` *unlocks* `STARTUP_MODE_BUILD` (a new build phase) — **not started; awaiting
+explicit owner go-ahead.**
