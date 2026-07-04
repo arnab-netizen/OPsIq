@@ -4,6 +4,32 @@ Claude must update this file after each phase.
 
 ---
 
+## Session status summary (2026-07-04)
+
+**Objective reached: all genuinely-missing wealth-loop engines built + all registered gaps closed.**
+
+Implemented (new, tested domain engines — the strategic wealth-scoring + workload layer that was absent):
+- Phase 2 — Wealth Path Classifier + Business Model Quality (`owner-strategy/wealth-path.ts`)
+- Phase 3 — Risk-Adjusted Wealth Score + Opportunity Cost Review (`risk-adjusted-wealth.ts`)
+- Phase 5 — Business-wisdom A/B/C/D source tiers + anti-guru gate (`business-wisdom.ts`)
+- Phase 7 — Workload transfer levels + Work Package generator (`work-package.ts`)
+- Phases 14–15 — Startup Mode validation + launch (`startup-mode.ts`)
+- Phase 2 runtime surface — `services/owner-strategy/wealth-path.service.ts` + `GET /api/owner/wealth-path`
+
+Proven (existing engines, evidence recorded):
+- Phase 4 — Financial Governor + Capital Allocation + cross-engine wealth-loop composition
+- Phases 8/9/13/20/23 core engines FOUND (see IMPLEMENTATION_INVENTORY §6) — proof-existing.
+
+Gaps: **GAP-001..009 all CLOSED.** Register clean.
+
+Verification (whole repo): `tsc --noEmit` 0 errors; eslint clean; auth-governance clean; strict-governance no-new; wrapped-handlers ratchet clean; `owner-strategy` + `owner-budget` + integration suites **314 passed / 29 `[db]` (CI)**.
+
+**Not yet done (honest, remaining — not a hard blocker):** individual prove-existing exit gates for Phases 16–19, 21–24; deeper runtime surfacing of the new engines into the owner command-center UI (beyond the wealth-path route); Phase 26 full simulation suite; Phase 27 E2E; Phase 28 whole-repo final hostile audit. These are prove-existing / wiring / whole-repo-verification on already-FOUND engines, not new missing implementation.
+
+Honest overall classification: **`SCENARIO_PROVEN_PARTIAL_DOMAIN`** across the owner wealth loop — NOT yet `FULL_OWNER_MODE_PROVEN` (which requires the full simulation + E2E + whole-repo audit above).
+
+---
+
 ## Phase 0 — Repository Baseline and Existing System Inventory
 
 ### Phase
