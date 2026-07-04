@@ -1,3 +1,12 @@
+> **⚠️ SCOPE-LIMITED / HISTORICAL (2026-07-04).** The absolute "ZERO
+> VULNERABILITIES" phrasing below reflects a 2026-05-02 review of the user
+> service and is not a whole-repo guarantee. The later full-repo commercial audit
+> found live cross-tenant reads via a trusted `x-workspace-id` header and a
+> client-spoofable high-impact financial-approval bypass (both since fixed) and a
+> dead DB-level tenant backstop — see
+> `docs/full-repo-commercial-audit/FULL_REPO_GAP_REGISTER.md`. Do not cite this
+> file as proof that the whole product is vulnerability-free.
+
 # Final Security Audit: Comprehensive Adversarial Testing Report
 
 **Date**: 2026-05-02  

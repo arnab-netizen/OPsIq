@@ -86,6 +86,20 @@ export function createWorkspaceEnforcementMiddleware() {
       query: {
         $allModels: {
           async $allOperations({ operation, model, args, query }) {
+            // NOTE (GAP-TEN-01): Prisma v7 passes `model` as PascalCase
+            // (e.g. "Engagement"); the sets below are keyed camelCase, so today
+            // NOTHING matches and this DB-level tenant backstop is inert. Fixing
+            // the casing alone is NOT safe to flip in one slice: several
+            // production paths legitimately write workspace-owned models without
+            // a direct workspaceId (e.g. signup creates `User` before any
+            // workspace exists — src/app/api/auth/signup/route.ts; audit-event
+            // cleanup deletes without a workspace filter). Enabling enforcement
+            // requires first re-classifying models (User is membership-scoped,
+            // not directly workspace-owned) and scoping every query. Until then
+            // the LIVE tenant protection is route-level: withCanonicalEnforcement
+            // (ctx.verifiedWorkspaceId) + assertEngagementAccess + capability
+            // gates. Do not claim DB-level isolation is enforced. See
+            // docs/full-repo-commercial-audit/FULL_REPO_GAP_REGISTER.md.
             const isWorkspaceOwned = WORKSPACE_OWNED_MODELS.has(model as string);
             const isGlobal = GLOBAL_MODELS.has(model as string);
 

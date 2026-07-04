@@ -1,3 +1,13 @@
+> **⚠️ SUPERSEDED / HISTORICAL (2026-07-04).** This report's "PRODUCTION_READY /
+> 100% test coverage" verdict is a point-in-time snapshot (2026-04-28) and does
+> not reflect the current repository, which carries active baselines of 23
+> quarantined test files, 29 frozen unwrapped-handler violations, and 32 frozen
+> error-governance findings, plus the open items in
+> `docs/full-repo-commercial-audit/FULL_REPO_GAP_REGISTER.md`. It is also
+> contradicted by the later `AUDIT_MASTER_REPORT.md` (2026-05-12). Treat the
+> full-repo commercial audit as the current authority; do not cite this file as
+> proof of production readiness.
+
 # PRODUCTION READINESS AUDIT - FINAL
 **Date:** 2026-04-28  
 **Auditor:** Claude Code  

@@ -9,6 +9,7 @@ import { NextRequest } from "next/server";
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { WebhookRegistrationSchema } from "@/domain/webhooks/webhook-contracts";
 import { registerWebhook } from "@/services/webhooks.service";
@@ -26,6 +27,15 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
     throw new Error("Workspace ID required");
+  }
+
+  // SECURITY: the workspace comes from a client-supplied header, so verify the
+  // authenticated user is an active member of it before registering a webhook
+  // into it — otherwise a WEBHOOK_MANAGE holder in workspace A could subscribe a
+  // webhook to workspace B's events (cross-tenant exfiltration). See GAP-TEN-02.
+  const membership = await enforceWorkspaceScoping(request, workspaceId);
+  if (!membership) {
+    throw new UnauthorizedError("Unauthorized or invalid workspace");
   }
 
   let body: any = {};

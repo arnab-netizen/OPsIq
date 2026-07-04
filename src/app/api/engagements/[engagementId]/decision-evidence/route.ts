@@ -2,6 +2,7 @@ import { getDecisionEvidence } from "@/services/decision-evidence/decision-evide
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
+import { assertEngagementAccess } from "@/lib/visibility";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export const GET = withCanonicalEnforcement(
@@ -9,7 +10,12 @@ export const GET = withCanonicalEnforcement(
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
 
-    const workspaceId = ctx.request!.headers.get("x-workspace-id") || "";
+    // SECURITY: membership-verified workspace + actor-bound engagement access,
+    // never a client-supplied x-workspace-id header (which allowed cross-tenant
+    // decision-evidence reads by engagement id). See GAP-TEN-02.
+    const workspaceId = ctx.verifiedWorkspaceId;
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
+
     const evidence = await getDecisionEvidence(engagementId, workspaceId);
 
     return {
@@ -17,5 +23,5 @@ export const GET = withCanonicalEnforcement(
       data: evidence,
     };
   },
-  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );

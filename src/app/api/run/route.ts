@@ -7,7 +7,7 @@ import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems, addBlockedDecision } from "@/services/operator/store";
 import { resolveServerRole, getSession } from "@/services/auth/server-role";
-import { canEdit } from "@/services/auth/access";
+import { canEdit, resolveApprovalGrant } from "@/services/auth/access";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { createDecisionResult } from "@/services/explanation/generate";
@@ -20,7 +20,7 @@ import { createEventLogger } from "@/lib/observability/log";
 import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { normalizeDecisionInput, validateNormalizedMetrics } from "@/lib/decision/run";
 import { evaluateDecisionGate, gateResultToPayload } from "@/services/control/decision-gate";
-import { evaluateGuardrails, formatGuardrailViolations } from "@/services/control/guardrails";
+import { evaluateGuardrails, formatGuardrailViolations, HIGH_IMPACT_APPROVAL_THRESHOLD } from "@/services/control/guardrails";
 import { validateDependencies } from "@/services/control/variable-registry";
 import { enforceControlLayer } from "@/services/control/enforcement";
 import { recordLifecycleStage } from "@/services/lifecycle/decision-lifecycle";
@@ -861,10 +861,55 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     );
 
     // 9a. CONTROL LAYER: Evaluate Guardrails - Check visible policy constraints
+    // SECURITY: `approvalFlag` is client-supplied but a high-impact financial
+    // block must never be self-granted. Honor the flag ONLY when the
+    // server-verified role is authorized to approve (canApprove → admin). An
+    // operator/viewer cannot bypass HIGH_IMPACT_APPROVAL by sending
+    // approvalFlag:true. See RELIABILITY/proof-integrity audit (GAP-FIN-01).
+    const approvalRequested = body.approvalFlag === true;
+    const approverAuthorized = resolveApprovalGrant(role, body.approvalFlag);
+    const isHighImpact =
+      result.impact.impactExpected > HIGH_IMPACT_APPROVAL_THRESHOLD;
+
+    // Audit trail: no financial-block override without a record of who granted
+    // it, and a record of any unauthorized self-approval attempt that was denied.
+    if (isHighImpact && approvalRequested) {
+      await logAuditEvent({
+        eventName: approverAuthorized
+          ? "HIGH_IMPACT_APPROVAL_GRANTED"
+          : "HIGH_IMPACT_APPROVAL_DENIED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: {
+          expectedImpact: result.impact.impactExpected,
+          threshold: HIGH_IMPACT_APPROVAL_THRESHOLD,
+          approverAuthorized,
+        },
+        metadata: {
+          reason: approverAuthorized
+            ? "High-impact decision approved by an authorized approver"
+            : "High-impact approval flag ignored: actor role is not authorized to approve",
+          role,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) {
+          const governed = classifyOperatorError(
+            auditError instanceof Error ? auditError : new Error(String(auditError)),
+            { context: "load" },
+          );
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
+      });
+    }
+
     const guardrailsResult = evaluateGuardrails({
       expectedImpact: result.impact.impactExpected,
       confidence: normalizedMetrics.confidence,
-      approvalFlag: body.approvalFlag || false,
+      approvalFlag: approverAuthorized,
     });
 
     if (guardrailsResult.blocked) {
