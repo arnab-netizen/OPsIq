@@ -19,7 +19,8 @@ import { lmh } from "./scales";
 import { evaluateSpend } from "@/domain/owner-budget/spend-governance";
 import { rankCapitalAllocation } from "@/domain/owner-budget/capital-allocation";
 import { evaluateCashSafetyGate } from "@/domain/owner-finance/cash-safety-gate";
-import type { WorkPackageInput } from "./work-package.types";
+import type { WorkPackageInput, WorkPackageActionKind } from "./work-package.types";
+import type { ActionKind, RiskAdjustedWealthInput } from "./risk-adjusted-wealth.types";
 import type {
   WealthCommandCenterInput,
   WealthCommandCenter,
@@ -29,6 +30,24 @@ import type {
 } from "./command-center.types";
 
 const BLOCKING_SPEND_DECISIONS = new Set(["HOLD", "BLOCK", "INVESTIGATE"]);
+
+/** Map a risk-adjusted action kind to a Work Package artifact kind. */
+const ACTION_KIND_TO_WP: Record<ActionKind, WorkPackageActionKind> = {
+  preserve_cash: "generic",
+  reduce_debt: "generic",
+  fix_operations: "sop_creation",
+  customer_retention: "customer_reactivation",
+  sales_followup: "customer_reactivation",
+  marketing: "marketing_campaign",
+  staff_training: "staff_training",
+  equipment_purchase: "generic",
+  hiring: "generic",
+  expansion: "generic",
+  new_business: "generic",
+  owner_skill_building: "generic",
+  do_nothing: "generic",
+  other: "generic",
+};
 
 function riskLevelFor(a: ProposedAction): "low" | "medium" | "high" | "critical" {
   const d = lmh(a.downsideRisk);
@@ -131,9 +150,15 @@ export function composeWealthCommandCenter(input: WealthCommandCenterInput): Wea
     nextBestMove = {
       decision: "CHOOSE_ALTERNATIVE",
       actionLabel: opportunityCost.recommendedLabel,
-      reason: `A higher-value option exists: "${opportunityCost.recommendedLabel}". Prepare that instead of "${proposed.label}".`,
+      reason: `A higher-value option exists: "${opportunityCost.recommendedLabel}". OpsIQ prepares that instead of "${proposed.label}".`,
     };
-    warnings.push(`Generate a Work Package for "${opportunityCost.recommendedLabel}" (the higher-value action).`);
+    // Prepare the recommended alternative's work — do not leave the owner with only a suggestion.
+    const rec = [proposed as RiskAdjustedWealthInput, ...(input.alternatives ?? [])].find((c) => c.label === opportunityCost.recommendedLabel);
+    if (rec && rec.label === proposed.label) {
+      workPackage = generateWorkPackage(toWorkPackageInput(proposed, businessName, proposed.financialDecision ?? "APPROVED"));
+    } else if (rec) {
+      workPackage = generateWorkPackage(altToWorkPackageInput(rec, businessName));
+    }
   } else if (wealthPath?.blocksHighRiskExecution && (riskLevelFor(proposed) === "high" || proposed.kind === "expansion")) {
     nextBestMove = {
       decision: "VALIDATE_FIRST",
@@ -179,6 +204,22 @@ export function composeWealthCommandCenter(input: WealthCommandCenterInput): Wea
     startupValidation: null,
     provisional: wealthPath?.provisionalLowConfidence ?? false,
     warnings,
+  };
+}
+
+/** Prepare a Work Package for a recommended ALTERNATIVE (a bare risk-adjusted input). */
+function altToWorkPackageInput(alt: RiskAdjustedWealthInput, businessName: string | null): WorkPackageInput {
+  const dr = lmh(alt.downsideRisk);
+  const risk = dr === "high" ? "high" : dr === "low" ? "low" : "medium";
+  return {
+    title: alt.label,
+    problem: `Prepare the higher-value action: ${alt.label}`,
+    actionKind: ACTION_KIND_TO_WP[alt.kind ?? "other"],
+    riskLevel: risk,
+    assigneeRole: "owner",
+    financialDecision: "APPROVED",
+    isSafe: true,
+    businessName,
   };
 }
 
