@@ -438,6 +438,57 @@ Phase 5 — Business Wisdom / Playbook layer: map existing source-quality tiers 
 
 ---
 
+## Phase 5 — Business Wisdom source tiers + anti-guru gate (GAP-007)
+
+### Phase / Branch / HEAD / Working tree
+Phase 5 (closes GAP-007); `claude/owner-cheatcode-full-implementation`; HEAD at commit time; clean after commit.
+
+### Scope completed
+Added the A/B/C/D business-wisdom source-tier scheme + anti-guru gate that blocks unverified/guru advice from high-risk decisions. The playbook *retrieval → workflow* portion of Phase 5 is already provided by existing `domain-training` / `execution/workflow-library`; retrieval → Work-Package conversion is tracked under GAP-006 (Phase 7).
+
+### Files changed
+- Added `src/domain/owner-strategy/business-wisdom.types.ts` + `business-wisdom.ts` (`tierForSourceType`, `classifyWisdom`, `detectGuruRedFlags`, `admitAdvice`).
+- Added `src/__tests__/owner-strategy/business-wisdom.test.ts` (16 tests).
+- Modified `src/domain/owner-strategy/index.ts` (barrel).
+
+### Existing systems reused
+- Distinct from `behavioral-validation/max-reliability/source-quality.ts` (learning-pipeline reliability) — reused its *conceptual* tiering intent without duplicating its function (different purpose: advice admission vs learning promotion).
+
+### New systems added
+One deterministic domain module. No new service/route/DB/dependency.
+
+### Tests added / run
+`business-wisdom.test.ts` — 16 tests (A/B/C/D mapping; Tier C/D and unsourced blocked from high-risk; guru red flags strip high-risk influence from Tier B; admitAdvice ADMIT/DOWNGRADE/BLOCK by decision domain; professional-review flag for legal/tax/compliance; determinism). `tsc --noEmit` 0 errors; eslint clean.
+
+### DB / UI tests
+N/A (pure domain logic).
+
+### Scenario results
+An unsourced "just fire the slow ones" tip is BLOCKED from a hiring/firing decision; a Tier-A accounts-based repayment model is ADMITTED into a debt decision; a "guaranteed 10x overnight" claim from a reputable book is downgraded and stripped of high-risk influence.
+
+### Owner workload transferred
+N/A (gate). Prevents the owner from acting on guru advice in high-stakes decisions.
+
+### Financial/proof/wealth-path evidence
+Anti-guru gate protects debt/expansion/hiring decisions (financial safety); complements Phase 4 governor.
+
+### Known gaps / Gap register updates
+GAP-007 → Closed. Remaining: GAP-005 (workload transfer levels, Phase 7), GAP-006 (Work Package bundle, Phase 7), GAP-008 (Startup Mode, Phase 14).
+
+### Hostile audit result
+§3 wealth-path (rejects guru/unverified for high-risk) PASS; §8 minimum-code (no duplicate of source-quality; single module) PASS; §9 no-gaps PASS.
+
+### Minimum-code audit result
+New files: 2 source + 1 test. Existing modified: 1 barrel line. Dependencies: **none**.
+
+### Honest classification
+Phase 5 = `SCENARIO_PROVEN_PARTIAL_DOMAIN` — source-tier + anti-guru gate proven; retrieval→Work-Package conversion deferred to Phase 7 (GAP-006).
+
+### Next phase
+Phase 7 — Workload Execution Engine transfer levels (GAP-005) + Work Package bundle with prepared artifacts (GAP-006), composing over existing `services/execution/task-assignment.service.ts`.
+
+---
+
 ## Template (for subsequent phases)
 
 ### Phase

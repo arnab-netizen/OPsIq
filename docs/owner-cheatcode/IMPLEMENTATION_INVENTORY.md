@@ -92,7 +92,7 @@ Legend: **FOUND** = exists, reuse it. **PARTIAL** = exists in adjacent form, ext
 | 5 | Opportunity Cost Review | **DONE (Phase 3)** | `src/domain/owner-strategy/risk-adjusted-wealth.ts` → `reviewOpportunityCost` (ranks proposed vs alternatives, names rejected). Distinct from `opportunity-decision.service.ts` (single-opportunity decision). Closes GAP-004. |
 | 6 | Capital Allocation Engine | FOUND | `src/domain/owner-budget/capital-allocation.ts` (`rankCapitalAllocation`), `confidence-gate.ts` |
 | 7 | Financial Governor | FOUND | `src/domain/owner-budget/spend-governance.ts` (`evaluateSpend`, `SpendDecisionType`), `budget-authority.ts`, `services/owner-budget/governance.service.ts` |
-| 8 | Business Wisdom / Playbook Layer | PARTIAL | `domain/domain-training/domains/*`, `execution/workflow-library.ts`; source tiers low/med/high (`behavioral-validation/max-reliability/source-quality.ts`) — not lettered A/B/C/D. |
+| 8 | Business Wisdom / Playbook Layer | **PARTIAL→ tiers DONE (Phase 5)** | Retrieval/workflow: `domain/domain-training/domains/*`, `execution/workflow-library.ts` (existing). A/B/C/D source tiers + anti-guru high-risk gate: `src/domain/owner-strategy/business-wisdom.ts` (`classifyWisdom`/`admitAdvice`, closes GAP-007). Retrieval→Work-Package conversion tracked under GAP-006 (Phase 7). |
 | 9 | Diagnosis Engine | FOUND | `src/services/consulting-engine/diagnosis-engine.ts`, `domain/business-facts/diagnosis.ts` |
 | 10 | Next Best Move Engine | FOUND | `src/domain/owner-guidance/next-best-step.ts`, `collective-training/priority-engine.ts` |
 | 11 | Workload Execution Engine (levels 0–5) | PARTIAL | `domain/execution/employee-workload.ts` (utilization bands); no 0–5 transfer-level ladder. |

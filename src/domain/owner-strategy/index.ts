@@ -18,3 +18,5 @@ export * from "./wealth-path.types";
 export * from "./wealth-path";
 export * from "./risk-adjusted-wealth.types";
 export * from "./risk-adjusted-wealth";
+export * from "./business-wisdom.types";
+export * from "./business-wisdom";
