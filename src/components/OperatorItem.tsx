@@ -73,6 +73,14 @@ export function OperatorItem({ item, onUpdate }: OperatorItemProps) {
       return;
     }
 
+    // Friction: overriding a governed decision requires an explicit, acknowledged
+    // acceptance of the risk (the server also requires riskAcknowledged: true).
+    const riskAcknowledged = window.confirm(
+      "You are overriding a governed decision. This is recorded, audited, and reviewed. " +
+        "Non-overridable safety/financial blocks will still be refused. Proceed?",
+    );
+    if (!riskAcknowledged) return;
+
     setOverrideLoading(true);
     try {
       const response = await fetch("/api/override", {
@@ -82,6 +90,7 @@ export function OperatorItem({ item, onUpdate }: OperatorItemProps) {
           operatorItemId: item.id,
           overriddenAction: overrideAction,
           reason: overrideReason,
+          riskAcknowledged,
         }),
       });
 
