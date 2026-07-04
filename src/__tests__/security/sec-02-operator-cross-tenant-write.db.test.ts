@@ -61,6 +61,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] SEC-02 operator store cross-tenant w
   });
 
   afterAll(async () => {
+    // Audit events (created by the successful updateItem) reference the actor via a
+    // Restrict FK, so they must be cleared before the workspace/user rows.
+    await db.auditEvent.deleteMany({ where: { workspaceId: { in: [wsA, wsB] } } });
     await db.operatorItem.deleteMany({ where: { id: { in: [itemA, itemB] } } });
     await db.workspace.deleteMany({ where: { id: { in: [wsA, wsB] } } });
     await db.user.deleteMany({ where: { id: userId } });

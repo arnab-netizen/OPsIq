@@ -15,7 +15,7 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 | SEC-05 | MEDIUM | PARTIAL | Commit 3dd002f ('stop trusting client x-workspace-id') only partially applied. ~30 handler… | OPEN | |
 | SEC-06 | MEDIUM | PARTIAL | Three incompatible role vocabularies coexist (admin/operator/viewer; system_admin/.../view… | OPEN | |
 | IDEM-01 | CRITICAL | FAKE_COMPLETE | withIdempotency() in src/infra/idempotency.ts unconditionally runs the operation and retur… | CLOSED_PROVEN | idem-01-durable-idempotency.db 3/3 + 223 service tests pass |
-| AUDIT-01 | CRITICAL | UNSAFE_OR_BYPASSABLE | Only ONE mutation path (applyTaskTransition, delegated tasks) writes its audit event insid… | OPEN | |
+| AUDIT-01 | CRITICAL | UNSAFE_OR_BYPASSABLE | Only ONE mutation path (applyTaskTransition, delegated tasks) writes its audit event insid… | IN_PROGRESS | operator path atomic (audit-01-atomic-audit.db 2/2); decision paths pending Phase G |
 | AUDIT-02 | HIGH | PARTIAL / STUB_OR_PLACEHOLDER | Audit logging is NOT centralized: 5 parallel mechanisms — infra/audit.emitAuditEvent (DB+h… | OPEN | |
 | APPR-01 | HIGH | PARTIAL / UNSAFE_OR_BYPASSABLE | The >100000 approval-threshold workflow (canCompleteWithApprovalStatus/enforceApprovalRequ… | OPEN | |
 | APPR-02 | HIGH | STUB_OR_PLACEHOLDER / UNSAFE | /api/override writes the override justification to a process-global in-memory array (overr… | OPEN | |
@@ -79,3 +79,9 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 - **Test:** `src/__tests__/security/idem-01-durable-idempotency.db.test.ts` (3/3): op runs exactly once on duplicate key + result replayed; different-payload rejected; record persisted (status completed).
 - **Regression:** action + api/actions + intervention-route.rbac + recommendation-business-impact.db = 223/223 pass.
 - **Remaining risk:** `infra/withIdempotency` and `services/idempotency` remain two entry points (consolidation is a MEDIUM cleanup); the `IdempotencyRecord.idempotencyKey` unique is global, not per-workspace — callers must use globally-unique keys (SCHEMA note). Routes still generate UUID keys per request.
+
+### AUDIT-01 — fail-open audit — IN_PROGRESS (operator path CLOSED_PROVEN; decision paths tracked)
+- **Root cause:** only `applyTaskTransition` wrote audit inside its mutation transaction; other governed mutations wrote audit post-commit and swallowed failures (`.catch(logger.warn)`), so state could change with the audit trail silently lost. `emitAuditEvent` also had no way to join a caller's transaction.
+- **Fix (this phase):** `emitAuditEvent(input, client?)` now accepts a Prisma tx client so audit can be atomic. Operator governed writes (`updateItem`, `applyOverride`) now run the state change + audit in ONE `db.$transaction` with NO swallow — a failed audit rolls the mutation back. Also fixed the actor id (`createdBy`→`createdByUserId`/`lastUpdatedByUserId`) so audit references a real actor (previously actorId was `"system"` and the create silently FK-failed and was swallowed).
+- **Test:** `src/__tests__/security/audit-01-atomic-audit.db.test.ts` (2/2): forced audit failure rolls back both updateItem and applyOverride (row unchanged).
+- **Remaining (tracked → extended in Phase G):** decision-lifecycle transition + decision-acceptance still write audit post-commit. `emitAuditEvent(tx)` capability now available to convert them. Low-risk create-audit paths (addItems) remain best-effort by design.

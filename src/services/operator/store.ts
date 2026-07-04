@@ -213,11 +213,6 @@ export async function updateItem(
   });
   if (!item) throw new NotFoundError("OperatorItem", id);
 
-  await db.operatorItem.update({
-    where: { id },
-    data: updateData,
-  });
-
   // Emit audit event for operator item update
   const payloadFields: Record<string, unknown> = {};
   Object.keys(updateData)
@@ -226,20 +221,27 @@ export async function updateItem(
       payloadFields[key] = updateData[key];
     });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OPERATOR_ITEM_UPDATED,
-    actorId: item.lastUpdatedBy || item.createdBy || "system",
-    entityType: "operator_item",
-    entityId: id,
-    workspaceId: item.workspaceId,
-    payload: payloadFields,
-    visibility: "internal",
-  }).catch((error) => {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.warn("Failed to emit audit event for operator item update", {
-      itemId: id,
-      error: governed.operatorMessage,
+  // AUDIT-01: high-risk governed mutation — the update and its audit event are written
+  // in ONE transaction. If the audit write fails, the mutation rolls back (fail-closed),
+  // so a decision can never change state with the audit trail silently lost.
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.operatorItem.update({
+      where: { id },
+      data: updateData,
     });
+
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OPERATOR_ITEM_UPDATED,
+        actorId: item.lastUpdatedByUserId || item.createdByUserId || "system",
+        entityType: "operator_item",
+        entityId: id,
+        workspaceId: item.workspaceId,
+        payload: payloadFields,
+        visibility: "internal",
+      },
+      tx
+    );
   });
 
   // NOTE (M7): the former `recordOperatorItemLearning(...)` call here targeted a Prisma model
@@ -292,29 +294,28 @@ export async function applyOverride(
   const resolvedWorkspaceId = workspaceId || item.workspaceId;
   const resolvedActorId = actorId || item.createdByUserId || "system";
 
-  await db.operatorItem.update({
-    where: { id },
-    data: { action: newAction },
-  });
-
-  // Emit audit event for operator item override
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OPERATOR_ITEM_OVERRIDDEN,
-    actorId: resolvedActorId,
-    entityType: "operator_item",
-    entityId: id,
-    workspaceId: resolvedWorkspaceId,
-    payload: {
-      previousAction: item.action,
-      newAction,
-    },
-    visibility: "internal",
-  }).catch((error) => {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.warn("Failed to emit audit event for operator item override", {
-      itemId: id,
-      error: governed.operatorMessage,
+  // AUDIT-01: high-risk governed mutation — override write + audit are atomic.
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.operatorItem.update({
+      where: { id },
+      data: { action: newAction },
     });
+
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OPERATOR_ITEM_OVERRIDDEN,
+        actorId: resolvedActorId,
+        entityType: "operator_item",
+        entityId: id,
+        workspaceId: resolvedWorkspaceId,
+        payload: {
+          previousAction: item.action,
+          newAction,
+        },
+        visibility: "internal",
+      },
+      tx
+    );
   });
 }
 

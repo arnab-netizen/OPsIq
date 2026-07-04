@@ -24,7 +24,17 @@ function computeEventHash(eventId: string, workspaceId: string, eventName: strin
   return createHash("sha256").update(hashInput).digest("hex");
 }
 
-export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
+/**
+ * Minimal Prisma-client surface used by emitAuditEvent. Both `db` and a
+ * `$transaction` tx client satisfy this, so audit writes can participate in a
+ * caller's transaction (AUDIT-01: atomic mutation + audit that rolls back together).
+ */
+type AuditClient = Pick<Prisma.TransactionClient, "auditEvent">;
+
+export async function emitAuditEvent(
+  input: AuditEventInput,
+  client: AuditClient = db
+): Promise<string> {
   if (!input.workspaceId) {
     logger.warn("Audit event emitted without workspaceId - fail-safe activated", {
       eventName: input.eventName,
@@ -38,14 +48,14 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
   // Fetch the last audit event for this workspace to chain hashes.
   // Fetch eventName and occurredAt so the hash binds to actual event content
   // (using only the eventId twice was incorrect — fixed here).
-  const lastEvent = await db.auditEvent.findFirst({
+  const lastEvent = await client.auditEvent.findFirst({
     where: { workspaceId: input.workspaceId },
     orderBy: { occurredAt: "desc" },
     select: { id: true, previousHash: true, eventName: true, occurredAt: true },
   });
 
   const eventId = uuidv4();
-  const event = await db.auditEvent.create({
+  const event = await client.auditEvent.create({
     data: {
       id: eventId,
       workspaceId: input.workspaceId,

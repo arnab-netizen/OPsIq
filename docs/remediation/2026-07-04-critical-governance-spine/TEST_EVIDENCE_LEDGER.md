@@ -23,3 +23,7 @@ Every command run + result. DB commands use local PostgreSQL (opsiq_test, /tmp s
 ### IDEM-01 (Phase C)
 - `vitest run idem-01-durable-idempotency.db.test.ts` → **3/3 PASS**.
 - Regression: action.test + api/actions.test + intervention-route.rbac + recommendation-business-impact.db → **223/223 PASS**.
+
+### AUDIT-01 (Phase D)
+- `vitest run audit-01-atomic-audit.db.test.ts` → **2/2 PASS** (forced audit failure rolls back mutation).
+- `npx tsc --noEmit` after Phase D → **0 errors**.
