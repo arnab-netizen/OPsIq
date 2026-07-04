@@ -12,6 +12,22 @@ CRITICAL = live exploitable / data-loss / core-flow-broken · HIGH = exploitable
 
 ---
 
+## ⏩ UPDATE — Owner-Mode Hardening slice (branch `claude/owner-mode-hardening-commercial-gap-closure`, base `98762ba`)
+The follow-up hardening slice changed the status of several gaps below. See
+`OWNER_MODE_HARDENING_GAP_REGISTER.md`, `COMMERCIALIZATION_GAP_REGISTER.md`,
+`COMMERCIALIZATION_DECISION_REGISTER.md`, `TENANT_BACKSTOP_MODEL_CLASSIFICATION.md`,
+`EVIDENCE_SYSTEM_DECISION_RECORD.md`.
+
+| Gap | New status | Where |
+|---|---|---|
+| GAP-TEN-01 (dead DB backstop) | **CLOSED (curated: UsageEvent live) + remainder downgraded with per-model criteria** | commit `e763f8c` |
+| GAP-TEN-03 (admin billing role) | **CLOSED — resolved workspace-scoped** | commit `7339332` |
+| GAP-EVIDENCE-DRIFT-01 | **CLOSED (core evidence routes)**; bundle sub-feature → GAP-EVIDENCE-DRIFT-02 (owner decision) | commit `9fd3f00` |
+| GAP-PROOF-02 (override client-trust) | **CLOSED → renamed GAP-OVR-01** (server gate + durable + audited) | commit `5dc4202` |
+| GAP-AUDIT-01 (silent audit) | **PARTIALLY CLOSED** — override + blocked-decision transactional; addItems/updateItem remain (GAP-AUDIT-02) | commits `5dc4202`,`33ae3ab` |
+
+---
+
 ## FIXED THIS AUDIT
 
 ### GAP-FIN-01 — HIGH — Client-spoofable high-impact financial approval bypass — **CLOSED_PROVEN**
