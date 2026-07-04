@@ -260,6 +260,91 @@ Phase 3 — Risk-Adjusted Wealth Score + Opportunity Cost Review (GAP-003/004), 
 
 ---
 
+## Phase 3 — Risk-Adjusted Wealth Score + Opportunity Cost Review
+
+### Phase
+Phase 3 (of `execution.md`). Closes GAP-003, GAP-004.
+
+### Branch
+`claude/owner-cheatcode-full-implementation`.
+
+### HEAD
+Set at commit time (follows Phase 2 Slice 2 commit `edf68e8`).
+
+### Working tree status
+Clean after commit.
+
+### Scope completed
+Deterministic engine that ranks major actions/paths by risk-adjusted probability of wealth (not excitement), and compares a proposed action against realistic alternatives. Evidence weighting makes a boring high-probability action beat an exciting low-evidence one; opportunity-cost review names rejected alternatives and can reject expansion in favour of stabilization. Also extracted shared scale helpers to remove duplication with Phase 2.
+
+### Files changed
+- Added `src/domain/owner-strategy/scales.ts` (shared qualitative/quantitative scale helpers).
+- Added `src/domain/owner-strategy/risk-adjusted-wealth.types.ts`.
+- Added `src/domain/owner-strategy/risk-adjusted-wealth.ts` (`scoreRiskAdjustedWealth`, `reviewOpportunityCost`).
+- Added `src/__tests__/owner-strategy/risk-adjusted-wealth.test.ts` (11 tests).
+- Modified `src/domain/owner-strategy/wealth-path.ts` (now imports shared helpers from `scales.ts` — dedup, no behaviour change; 20 tests still pass).
+- Modified `src/domain/owner-strategy/index.ts` (barrel re-exports the new surface).
+
+### Existing systems reused
+- `clampScore`, `clampConfidence` (`owner-spine/contracts`).
+- Phase 2 `scales.ts` helpers (`num`, `qual`, `lmh`, `qualTo100`, `lmhValue`) — shared, not duplicated.
+- Consumes the same signal vocabulary as the Phase 2 wealth-path engine.
+
+### New systems added
+One deterministic domain module + one shared helper file. No new service, route, DB model, migration, or dependency.
+
+### Tests added or updated
+`risk-adjusted-wealth.test.ts` — 11 tests: score integrity (disclosure, provisional flag, no-hallucination, determinism), boring-beats-exciting (incl. an explicit check that expansion's RAW upside is higher yet its risk-adjusted score is lower), opportunity-cost (expansion rejected for stabilization, rejected alternatives named with reasons, "stabilize first" warning, proposed-is-best path, no-alternatives warning).
+
+### Tests run
+- `npx vitest run src/__tests__/owner-strategy/risk-adjusted-wealth.test.ts` → **11 passed**.
+- `npx vitest run src/__tests__/owner-strategy/` → **91 passed, 8 skipped (`[db]`)** (incl. Phase 2 regression after the `scales.ts` refactor).
+- `npx tsc --noEmit` → **0 errors**. `npx eslint <new files>` → clean.
+
+### DB tests run if applicable
+Not applicable — pure domain logic, no persistence.
+
+### UI/E2E tests run if applicable
+Not applicable this slice (engine layer). Runtime surface tracked with the Phase 2 command-center follow-up.
+
+### Scenario results
+Stabilize (moderate upside, high evidence, low risk) risk-adjusted-outranks Open-a-second-branch (high upside, low evidence, high risk); opportunity-cost review recommends stabilize and rejects expansion with a "stabilize first" warning — the exact Phase 3 exit-gate scenario.
+
+### Owner workload transferred
+N/A (engine). Produces the ranking a later slice uses to prioritize prepared work.
+
+### Financial safety evidence
+Read-only scoring. The evidence weighting is a safety mechanism: low-evidence, high-capital, long-payback actions are structurally discounted so they cannot be prioritized over survival/stabilization on excitement alone.
+
+### Proof/audit evidence
+No proof/audit path touched.
+
+### Wealth-path evidence
+Complements Phase 2: Phase 2 says what kind of vehicle the business is; Phase 3 ranks what to do next by risk-adjusted wealth and opportunity cost.
+
+### Known gaps
+GAP-003/004 closed. GAP-005..008 remain phase-deferred. No new critical/high gap.
+
+### Gap register updates
+GAP-003, GAP-004 → Closed with evidence.
+
+### Hostile audit result (checklist run)
+- §3 Wealth-path: chooses high-probability boring actions over exciting weak ones; includes opportunity cost, downside risk, confidence, missing data; no guaranteed-wealth language. PASS.
+- §4 Financial-safety: evidence/risk weighting prevents optimizing a vanity/expansion action over stabilization. PASS.
+- §8 Minimum-code: extracted shared helpers (net reduction of duplication); no duplicate engine (distinct from `opportunity-decision.service.ts`); no dependency/schema. PASS.
+- §9 No-gaps: gates green; honest classification. PASS.
+
+### Minimum-code audit result
+New files: 3 source + 1 test. Existing modified: 2 (barrel + wealth-path dedup). The `scales.ts` extraction removed duplicated helpers rather than adding them. Dependencies added: **none**.
+
+### Honest classification
+`PARTIAL_RUNTIME_SLICE` — engine proven by unit tests; not yet surfaced via API/UI (shares the tracked command-center runtime follow-up with Phase 2).
+
+### Next phase
+Phase 4 — prove/wire Capital Allocation Engine + Financial Governor (both FOUND: `owner-budget/capital-allocation.ts`, `owner-budget/spend-governance.ts`) into the wealth loop, then surface the Phase 2/3 verdicts + ranking in the owner command center.
+
+---
+
 ## Template (for subsequent phases)
 
 ### Phase

@@ -16,3 +16,5 @@ export * from "./actions";
 export * from "./validation";
 export * from "./wealth-path.types";
 export * from "./wealth-path";
+export * from "./risk-adjusted-wealth.types";
+export * from "./risk-adjusted-wealth";

@@ -29,48 +29,9 @@ import {
   type BmqDimensionScore,
   type BmqTier,
   type StrategicOption,
-  type QualLevel,
   type LmhLevel,
 } from "./wealth-path.types";
-
-// ---------------------------------------------------------------------------
-// Presence + scale helpers (mirrors owner-strategy/data-confidence.ts)
-// ---------------------------------------------------------------------------
-
-/** A finite, present number (missing/NaN/Infinity → not present). */
-function num(x: number | undefined | null): number | undefined {
-  return typeof x === "number" && Number.isFinite(x) ? x : undefined;
-}
-
-function bool(x: boolean | undefined | null): boolean | undefined {
-  return typeof x === "boolean" ? x : undefined;
-}
-
-function qual(x: QualLevel | undefined | null): QualLevel | undefined {
-  return x === "none" || x === "weak" || x === "moderate" || x === "strong" ? x : undefined;
-}
-
-function lmh(x: LmhLevel | undefined | null): LmhLevel | undefined {
-  return x === "low" || x === "medium" || x === "high" ? x : undefined;
-}
-
-/** none=0 weak=33 moderate=67 strong=100 */
-function qualTo100(q: QualLevel): number {
-  return { none: 0, weak: 33, moderate: 67, strong: 100 }[q];
-}
-
-function qualRank(q: QualLevel | undefined): number {
-  return q === undefined ? -1 : { none: 0, weak: 1, moderate: 2, strong: 3 }[q];
-}
-
-/** Safety score for a "lower is safer" risk level (low=90 medium=55 high=20). */
-function lmhSafety(l: LmhLevel): number {
-  return { low: 90, medium: 55, high: 20 }[l];
-}
-
-function lmhRank(l: LmhLevel | undefined): number {
-  return l === undefined ? -1 : { low: 0, medium: 1, high: 2 }[l];
-}
+import { num, bool, qual, lmh, qualTo100, qualRank, lmhSafety, lmhRank } from "./scales";
 
 // ---------------------------------------------------------------------------
 // Business Model Quality — dimension scorers
