@@ -4,11 +4,10 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.request!.headers.get("x-workspace-id");
-
-    if (!workspaceId) {
-      throw new Error("Workspace ID required (x-workspace-id header)");
-    }
+    // SECURITY: use the wrapper's membership-verified workspace, never a
+    // client-supplied x-workspace-id header (which previously let any
+    // authenticated user read any workspace's billing plan). See GAP-TEN-02.
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const entitlements = await resolveEntitlements(workspaceId);
 
@@ -18,5 +17,6 @@ export const GET = withCanonicalEnforcement(
       currentPeriodStart: entitlements.currentPeriodStart,
       currentPeriodEnd: entitlements.currentPeriodEnd,
     };
-  }
+  },
+  { requireWorkspace: true },
 );
