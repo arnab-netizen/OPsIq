@@ -1,0 +1,75 @@
+{
+  "layer": "corpus-audit",
+  "counted_for_readiness": 1465,
+  "proven_single": 1480,
+  "chaos": {
+    "counted": 165,
+    "independent_gold": 15,
+    "proven": 180
+  },
+  "simulations": {
+    "sims": 50,
+    "events": 427
+  },
+  "unique_single_ids": 1465,
+  "aggregated_sources": 240,
+  "br_status_distribution": {
+    "need_more_data": 390,
+    "owner_decision_required": 348,
+    "cautious_proceed": 212,
+    "proceed": 137,
+    "blocked": 213
+  },
+  "unsafe_high_risk_proceeds": 0,
+  "high_risk": 301,
+  "professional_review": 150,
+  "live_claims": 0,
+  "packs": [
+    {
+      "name": "unknown_ood",
+      "count": 110,
+      "workflow": "unknown-ood.yml"
+    },
+    {
+      "name": "staff_proof",
+      "count": 120,
+      "workflow": "staff-proof-anti-gaming.yml"
+    },
+    {
+      "name": "daily_operations",
+      "count": 300,
+      "workflow": "daily-operations.yml"
+    },
+    {
+      "name": "finance_cash",
+      "count": 120,
+      "workflow": "finance-cash.yml"
+    },
+    {
+      "name": "weekly_management_trend",
+      "count": 150,
+      "workflow": "weekly-management-trend.yml"
+    },
+    {
+      "name": "growth_profit_scaling",
+      "count": 150,
+      "workflow": "growth-profit-scaling.yml"
+    },
+    {
+      "name": "customer_vendor_market",
+      "count": 100,
+      "workflow": "customer-vendor-market.yml"
+    },
+    {
+      "name": "local_legal_boundary",
+      "count": 100,
+      "workflow": "local-legal-professional-boundary.yml"
+    },
+    {
+      "name": "ugly_tail_risk_crisis",
+      "count": 150,
+      "workflow": "ugly-tail-risk-crisis.yml"
+    }
+  ],
+  "generated": "static-read-only-aggregate"
+}
