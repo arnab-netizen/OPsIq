@@ -14,7 +14,7 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 | SEC-04 | HIGH | UNSAFE_OR_BYPASSABLE (defense-in-depth absent) | The Prisma workspace-enforcement extension is INERT. WORKSPACE_OWNED_MODELS/GLOBAL_MODELS … | CLOSED_PROVEN | sec-04-db-tenant-backstop.db 4/4 + regression 16/16 |
 | SEC-05 | MEDIUM | PARTIAL | Commit 3dd002f ('stop trusting client x-workspace-id') only partially applied. ~30 handler… | OPEN | |
 | SEC-06 | MEDIUM | PARTIAL | Three incompatible role vocabularies coexist (admin/operator/viewer; system_admin/.../view… | OPEN | |
-| IDEM-01 | CRITICAL | FAKE_COMPLETE | withIdempotency() in src/infra/idempotency.ts unconditionally runs the operation and retur… | OPEN | |
+| IDEM-01 | CRITICAL | FAKE_COMPLETE | withIdempotency() in src/infra/idempotency.ts unconditionally runs the operation and retur… | CLOSED_PROVEN | idem-01-durable-idempotency.db 3/3 + 223 service tests pass |
 | AUDIT-01 | CRITICAL | UNSAFE_OR_BYPASSABLE | Only ONE mutation path (applyTaskTransition, delegated tasks) writes its audit event insid… | OPEN | |
 | AUDIT-02 | HIGH | PARTIAL / STUB_OR_PLACEHOLDER | Audit logging is NOT centralized: 5 parallel mechanisms — infra/audit.emitAuditEvent (DB+h… | OPEN | |
 | APPR-01 | HIGH | PARTIAL / UNSAFE_OR_BYPASSABLE | The >100000 approval-threshold workflow (canCompleteWithApprovalStatus/enforceApprovalRequ… | OPEN | |
@@ -72,3 +72,10 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 - **Fix:** rebuilt `WORKSPACE_OWNED_MODELS` from the schema (117 models with a REQUIRED direct workspaceId, PascalCase, matching Prisma), excluding the 3 nullable-workspaceId audit/learning models (documented exemption) and `User` (membership-scoped, pre-workspace at signup). Enforces two compatible high-value invariants: (1) create/createMany requires workspaceId; (2) updateMany/deleteMany requires a non-empty WHERE (no all-tenant wipe). By-id write & read scoping downgraded-with-proof to the service layer (SEC-02) + route guards — see TENANT_MODEL_CLASSIFICATION.md.
 - **Test:** `src/__tests__/security/sec-04-db-tenant-backstop.db.test.ts` (4/4): empty-where deleteMany/updateMany blocked; scoped create+deleteMany allowed; global model unaffected. Regression shard (owner isolation + TOCTOU + RBAC route) 16/16.
 - **Remaining risk:** DB-level read isolation for indirectly-scoped models (Action/Evidence/Finding — SCHEMA-01) still relies on route/service guards; tracked.
+
+### IDEM-01 — no-op idempotency — CLOSED_PROVEN
+- **Root cause:** `src/infra/idempotency.ts` `withIdempotency` always ran the operation and returned `{isNew:true}` ("Non-DB mode"), so the 13 core mutation services wrapping it (action, evidence, recommendation, engagement, findings, kpi, lead, client-account, role-assignment, business-condition, engagement-membership, user) had ZERO duplicate protection.
+- **Fix:** `withIdempotency` now delegates to the DB-backed `@/services/idempotency` (`checkIdempotencyKey` atomic pending-claim + payload-hash/operation mismatch + expiry + P2002 concurrency; `recordIdempotencyResponse`/`recordIdempotencyError`). Repeat of a completed key replays the stored result WITHOUT re-running the operation; different payload on same key rejected; in-flight duplicate rejected. Result wrapped in an envelope so scalars/objects round-trip.
+- **Test:** `src/__tests__/security/idem-01-durable-idempotency.db.test.ts` (3/3): op runs exactly once on duplicate key + result replayed; different-payload rejected; record persisted (status completed).
+- **Regression:** action + api/actions + intervention-route.rbac + recommendation-business-impact.db = 223/223 pass.
+- **Remaining risk:** `infra/withIdempotency` and `services/idempotency` remain two entry points (consolidation is a MEDIUM cleanup); the `IdempotencyRecord.idempotencyKey` unique is global, not per-workspace — callers must use globally-unique keys (SCHEMA note). Routes still generate UUID keys per request.

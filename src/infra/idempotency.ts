@@ -278,19 +278,72 @@ export interface IdempotencyResult<T> {
   result: T;
 }
 
+const IDEMPOTENT_RESULT_KEY = "__idempotentResult";
+
+function envelope(result: unknown): Record<string, unknown> {
+  return { [IDEMPOTENT_RESULT_KEY]: result ?? null };
+}
+
+function unwrap<T>(body: Record<string, unknown> | undefined): T {
+  if (body && Object.prototype.hasOwnProperty.call(body, IDEMPOTENT_RESULT_KEY)) {
+    return body[IDEMPOTENT_RESULT_KEY] as T;
+  }
+  return body as unknown as T;
+}
+
+/**
+ * IDEM-01 fix: durable, DB-backed idempotency (previously a no-op that always
+ * returned `{ isNew: true }`, allowing duplicate governed mutations).
+ *
+ * Delegates to the DB-backed idempotency service (`@/services/idempotency`), which
+ * provides an atomic pending-record claim, payload-hash + operation-name mismatch
+ * rejection, expiry handling, and P2002 concurrent-duplicate rejection. On a repeat
+ * of a completed key the original result is replayed WITHOUT re-running `operation`.
+ */
 export async function withIdempotency<T>(
   idempotencyKey: string,
-  _operationName: string,
+  operationName: string,
   operation: () => Promise<T>,
-  _payload?: unknown,
-  _actorId?: string,
+  payload?: unknown,
+  actorId?: string,
   ttlHours: number = 24
 ): Promise<IdempotencyResult<T>> {
-  // Non-DB mode: assume all operations are new (would require pre-checks in real implementation)
+  const { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } = await import(
+    "@/services/idempotency"
+  );
+
+  const normalizedPayload: Record<string, unknown> =
+    payload && typeof payload === "object" && !Array.isArray(payload)
+      ? (payload as Record<string, unknown>)
+      : { value: (payload ?? null) as unknown };
+
+  const check = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName,
+    actorId,
+    payload: normalizedPayload,
+    expirationMinutes: ttlHours * 60,
+  });
+
+  if (!check.isNew) {
+    // A prior request with this key already ran. Replay its outcome; never re-execute.
+    if (check.cachedError) {
+      throw check.cachedError;
+    }
+    return { isNew: false, result: unwrap<T>(check.cachedResponse?.body) };
+  }
+
   try {
     const result = await operation();
+    // Best-effort completion record: the mutation already committed, so a cache-write
+    // failure must not fail the request (a later retry stays blocked until expiry).
+    await recordIdempotencyResponse(idempotencyKey, 200, envelope(result)).catch(() => undefined);
     return { isNew: true, result };
   } catch (error) {
+    await recordIdempotencyError(
+      idempotencyKey,
+      error instanceof Error ? error : new Error(String(error))
+    ).catch(() => undefined);
     throw error;
   }
 }

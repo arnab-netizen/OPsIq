@@ -19,3 +19,7 @@ Every command run + result. DB commands use local PostgreSQL (opsiq_test, /tmp s
 - `vitest run sec-04-db-tenant-backstop.db.test.ts` → **4/4 PASS**.
 - Regression: `vitest run owner-business-isolation.db + decision-transition-toctou.db + intervention-route.rbac` → **16/16 PASS**.
 - `npx tsc --noEmit` after Phase A+B → **0 errors**.
+
+### IDEM-01 (Phase C)
+- `vitest run idem-01-durable-idempotency.db.test.ts` → **3/3 PASS**.
+- Regression: action.test + api/actions.test + intervention-route.rbac + recommendation-business-impact.db → **223/223 PASS**.
