@@ -419,11 +419,12 @@ export async function addBlockedDecision(params: {
     throw new Error("blockStage and blockReason are required for blocked decision records");
   }
 
+  // SCHEMA fix (as in addItems): map to real columns and set required updatedAt.
   const data: any = {
     id: require("crypto").randomUUID(),
     workspaceId: params.workspaceId,
     ownerUserId: params.ownerUserId,
-    createdBy: params.createdBy,
+    createdByUserId: params.createdBy,
     problem: params.problem,
     action: params.action,
     impactExpected: params.expectedImpact,
@@ -434,7 +435,7 @@ export async function addBlockedDecision(params: {
     status: "blocked",
     blockStage: params.blockStage,
     blockReason: params.blockReason,
-    decisionType: "general",
+    updatedAt: new Date(),
   };
 
   // Add optional blocking details
@@ -450,32 +451,28 @@ export async function addBlockedDecision(params: {
   if (params.guardrailResult) {
     data.guardrailResult = JSON.stringify(params.guardrailResult);
   }
-  if (params.problemType) {
-    data.problemType = params.problemType;
-  }
 
-  const created = await db.operatorItem.create({ data });
-
-  // Emit audit event for blocked decision
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OPERATOR_ITEM_BLOCKED,
-    actorId: params.createdBy,
-    entityType: "operator_item",
-    entityId: created.id,
-    workspaceId: params.workspaceId,
-    payload: {
-      blockStage: params.blockStage,
-      blockReason: params.blockReason,
-      problem: params.problem,
-    },
-    visibility: "internal",
-  }).catch((error) => {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.warn("Failed to emit audit event for blocked decision", {
-      itemId: created.id,
-      error: governed.operatorMessage,
-    });
+  // GAP-AUDIT-01: blocked-decision record + its audit event are written ATOMICALLY.
+  const createdId: string = data.id;
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const created = await tx.operatorItem.create({ data });
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OPERATOR_ITEM_BLOCKED,
+        actorId: params.createdBy,
+        entityType: "operator_item",
+        entityId: created.id,
+        workspaceId: params.workspaceId,
+        payload: {
+          blockStage: params.blockStage,
+          blockReason: params.blockReason,
+          problem: params.problem,
+        },
+        visibility: "internal",
+      },
+      tx
+    );
   });
 
-  return created.id;
+  return createdId;
 }
