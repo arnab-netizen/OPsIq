@@ -38,6 +38,42 @@ export interface PrecheckSignals {
 }
 
 /**
+ * Lengths (hex chars) of the digests a real upload pipeline produces: sha1(40),
+ * sha256(64), sha512(128). A fileHash outside this set is not a genuine digest.
+ */
+const WELL_FORMED_HASH_HEX_LENGTHS: ReadonlySet<number> = new Set([40, 64, 128]);
+const HEX_ONLY = /^[0-9a-f]+$/;
+
+/**
+ * EVID-01: derive the deterministic tamper/relevance signals for the AI precheck
+ * from typed submission fields only (never free-text notes).
+ *
+ *  - tamperRisk: a fileHash is PRESENT but is not a well-formed cryptographic
+ *    digest (wrong length or non-hex). A genuine artifact reference is content-
+ *    addressed by the upload pipeline, so a malformed hash is a forged/garbled
+ *    reference and must be routed to a human (POSSIBLE_TAMPER_RISK), never
+ *    auto-passed. This is conservative: an absent hash is NOT flagged here
+ *    (note-type proofs legitimately carry none; a missing required artifact is
+ *    caught by required-field validation → FAIL_MISSING_REQUIRED_PROOF).
+ *
+ * Duplicate/reuse and format/missing-field signals are computed elsewhere
+ * (existingHashes + validateProofSubmission) and combined in computeProofPrecheck,
+ * so this returns only the artifact-integrity signal.
+ */
+export function detectProofArtifactSignals(
+  _requirement: ProofRequirement,
+  submission: ProofSubmission
+): PrecheckSignals {
+  const raw = submission.fileHash;
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    const h = raw.trim().toLowerCase();
+    const wellFormed = HEX_ONLY.test(h) && WELL_FORMED_HASH_HEX_LENGTHS.has(h.length);
+    if (!wellFormed) return { tamperRisk: true };
+  }
+  return {};
+}
+
+/**
  * Deterministic precheck, computed only from typed requirement/submission fields
  * plus structural signals — never from free-text notes.
  */

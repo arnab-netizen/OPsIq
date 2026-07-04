@@ -18,7 +18,12 @@ import { db } from "@/lib/db";
 import { assignDelegatedTask } from "@/services/execution/task-assignment.service";
 import { intakeProofSubmission } from "@/services/execution/proof-intake.service";
 import { ProofType, ProofRiskLevel, ProofStatus } from "@/domain/execution/proof";
+import { AiProofPrecheckOutcome } from "@/domain/execution/proof-precheck";
 import { SHOULD_RUN_DB_TESTS } from "@/__tests__/test-helpers/db-test-gate";
+
+/** A well-formed sha256 hex digest (what the real upload pipeline produces). */
+const GOOD_HASH_A = "a".repeat(64);
+const GOOD_HASH_B = "b".repeat(64);
 
 interface WS { ownerId: string; empId: string; otherEmpId: string; workspaceId: string; }
 
@@ -55,16 +60,38 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Wave 2 S2 — proof-submit contract 
   beforeEach(async () => { A = await seedWorkspace("A"); B = await seedWorkspace("B"); });
   afterEach(async () => { await cleanup(A); await cleanup(B); });
 
-  it("[db] a valid submission transitions the real proof PENDING_SUBMISSION → SUBMITTED", async () => {
+  it("[db] a clean low-risk submission is submitted then AI-prechecked to AI_PRECHECK_PASSED (never ACCEPTED)", async () => {
     const t = await assignWithProof(A);
     const res = await intakeProofSubmission({
       workspaceId: A.workspaceId, actorId: A.empId, taskId: t.taskId,
-      submission: { proofType: ProofType.PHOTO, fields: { note: "done" }, fileHash: "hash-ok" },
+      submission: { proofType: ProofType.PHOTO, fields: { note: "done" }, fileHash: GOOD_HASH_A },
     });
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.status).toBe(ProofStatus.SUBMITTED);
+    if (res.ok) {
+      // EVID-01: the returned status is the SCREENED status — the precheck advanced the
+      // submitted proof. Low-risk, well-formed, non-duplicate ⇒ PASS_PRELIMINARY.
+      expect(res.precheckOutcome).toBe(AiProofPrecheckOutcome.PASS_PRELIMINARY);
+      expect(res.status).toBe(ProofStatus.AI_PRECHECK_PASSED);
+      // The precheck can NEVER final-accept — a human reviewer is still required.
+      expect(res.status).not.toBe(ProofStatus.ACCEPTED);
+    }
     const proof = await db.proof.findUnique({ where: { id: t.proofId! }, select: { status: true } });
-    expect(proof?.status).toBe(ProofStatus.SUBMITTED);
+    expect(proof?.status).toBe(ProofStatus.AI_PRECHECK_PASSED);
+  });
+
+  it("[db] EVID-01: a malformed (forged) file hash is tamper-routed to NEEDS_HUMAN_REVIEW, not passed", async () => {
+    const t = await assignWithProof(A);
+    const res = await intakeProofSubmission({
+      workspaceId: A.workspaceId, actorId: A.empId, taskId: t.taskId,
+      submission: { proofType: ProofType.PHOTO, fields: { note: "done" }, fileHash: "not-a-real-digest" },
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.precheckOutcome).toBe(AiProofPrecheckOutcome.POSSIBLE_TAMPER_RISK);
+      expect(res.status).toBe(ProofStatus.NEEDS_HUMAN_REVIEW);
+    }
+    const proof = await db.proof.findUnique({ where: { id: t.proofId! }, select: { status: true } });
+    expect(proof?.status).toBe(ProofStatus.NEEDS_HUMAN_REVIEW);
   });
 
   it("[db] the DB requirement is authoritative — a missing required field is rejected regardless of client input", async () => {
@@ -81,19 +108,24 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Wave 2 S2 — proof-submit contract 
     expect(proof?.status).toBe(ProofStatus.PENDING_SUBMISSION);
   });
 
-  it("[db] a reused file hash in the workspace is flagged (duplicate detection is live at submit)", async () => {
-    // Seed an existing proof in the same workspace carrying the hash we will reuse.
+  it("[db] a reused file hash is duplicate-flagged AND precheck-routed to NEEDS_HUMAN_REVIEW (REUSED)", async () => {
+    // Seed an existing proof in the same workspace carrying the (well-formed) hash we will reuse.
     await db.proof.create({
       data: { id: randomUUID(), workspaceId: A.workspaceId, taskId: null, proofType: ProofType.PHOTO,
-        status: ProofStatus.ACCEPTED, fileHash: "dup-hash", updatedAt: new Date() },
+        status: ProofStatus.ACCEPTED, fileHash: GOOD_HASH_B, updatedAt: new Date() },
     });
     const t = await assignWithProof(A);
     const res = await intakeProofSubmission({
       workspaceId: A.workspaceId, actorId: A.empId, taskId: t.taskId,
-      submission: { proofType: ProofType.PHOTO, fields: { note: "done" }, fileHash: "dup-hash" },
+      submission: { proofType: ProofType.PHOTO, fields: { note: "done" }, fileHash: GOOD_HASH_B },
     });
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.duplicateFlagged).toBe(true);
+    if (res.ok) {
+      expect(res.duplicateFlagged).toBe(true);
+      // EVID-01: a reused artifact is screened to human review, never auto-passed.
+      expect(res.precheckOutcome).toBe(AiProofPrecheckOutcome.POSSIBLE_DUPLICATE);
+      expect(res.status).toBe(ProofStatus.NEEDS_HUMAN_REVIEW);
+    }
   });
 
   it("[db] a task in another workspace is not found (isolation)", async () => {

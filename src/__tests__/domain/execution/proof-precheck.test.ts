@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   AiProofPrecheckOutcome as O,
   computeProofPrecheck,
+  detectProofArtifactSignals,
   mapPrecheckToProofStatus,
 } from "@/domain/execution/proof-precheck";
 import { ProofStatus, ProofType, ProofRiskLevel } from "@/domain/execution/proof";
@@ -65,6 +66,29 @@ describe("mapPrecheckToProofStatus — never ACCEPTED", () => {
   });
   it("high-risk types route to NEEDS_HUMAN_REVIEW", () => {
     expect(mapPrecheckToProofStatus(O.NEEDS_OWNER_REVIEW)).toBe(ProofStatus.NEEDS_HUMAN_REVIEW);
+  });
+});
+
+describe("detectProofArtifactSignals — deterministic artifact integrity (EVID-01)", () => {
+  const GOOD_SHA256 = "a".repeat(64);
+  const GOOD_SHA1 = "b".repeat(40);
+  it("no signal for a well-formed sha256/sha1 digest", () => {
+    expect(detectProofArtifactSignals(lowReq, sub({ fileHash: GOOD_SHA256 }))).toEqual({});
+    expect(detectProofArtifactSignals(lowReq, sub({ fileHash: GOOD_SHA1 }))).toEqual({});
+  });
+  it("no signal when no fileHash is present (note-type proofs carry none)", () => {
+    expect(detectProofArtifactSignals(lowReq, sub())).toEqual({});
+  });
+  it("tamperRisk for a present-but-malformed (forged) hash", () => {
+    expect(detectProofArtifactSignals(lowReq, sub({ fileHash: "not-a-real-digest" }))).toEqual({ tamperRisk: true });
+    expect(detectProofArtifactSignals(lowReq, sub({ fileHash: "zz".repeat(32) }))).toEqual({ tamperRisk: true }); // non-hex, len 64
+    expect(detectProofArtifactSignals(lowReq, sub({ fileHash: "abc123" }))).toEqual({ tamperRisk: true }); // hex but wrong length
+  });
+  it("a malformed hash drives the precheck to POSSIBLE_TAMPER_RISK end-to-end", () => {
+    const submission = sub({ fileHash: "forged" });
+    const outcome = computeProofPrecheck(lowReq, submission, detectProofArtifactSignals(lowReq, submission));
+    expect(outcome).toBe(O.POSSIBLE_TAMPER_RISK);
+    expect(mapPrecheckToProofStatus(outcome)).toBe(ProofStatus.NEEDS_HUMAN_REVIEW);
   });
 });
 

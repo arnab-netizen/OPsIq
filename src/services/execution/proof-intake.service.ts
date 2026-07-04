@@ -30,7 +30,16 @@ import {
   type ProofType,
   type ProofRequirement,
 } from "@/domain/execution/proof";
+import {
+  detectProofArtifactSignals,
+  type AiProofPrecheckOutcome,
+} from "@/domain/execution/proof-precheck";
+import {
+  runProofPrecheck,
+  PrecheckConflictError,
+} from "@/services/execution/proof-precheck.service";
 import { TaskActorRole } from "@/domain/execution/delegated-task";
+import { logger } from "@/infra/logger";
 
 /** States from which a proof may still be submitted (initial + after a resubmission request). */
 const SUBMITTABLE_STATUSES: ProofStatus[] = [ProofStatus.PENDING_SUBMISSION, ProofStatus.RESUBMISSION_REQUIRED];
@@ -68,7 +77,18 @@ export interface ProofIntakeDeps {
 }
 
 export type ProofIntakeResult =
-  | { ok: true; status: ProofStatus; duplicateFlagged: boolean }
+  | {
+      ok: true;
+      /**
+       * Status AFTER the AI precheck has advanced the submitted proof. This is the
+       * screened status (AI_PRECHECK_PASSED / AI_PRECHECK_FAILED / NEEDS_HUMAN_REVIEW),
+       * never ACCEPTED — final acceptance still requires a human reviewer.
+       */
+      status: ProofStatus;
+      duplicateFlagged: boolean;
+      /** The AI precheck outcome, or null if a concurrent transition pre-empted it. */
+      precheckOutcome: AiProofPrecheckOutcome | null;
+    }
   | { ok: false; reason: string; issues?: string[] };
 
 export interface ProofIntakeInput {
@@ -143,6 +163,13 @@ export async function intakeProofSubmission(
   // 6. Actor derived from the verified session; this route is the assignee-submit surface.
   const isAssignee = task.assignedUserId != null && task.assignedUserId === actorId;
 
+  const proofSubmission = {
+    proofType: input.submission.proofType as ProofType,
+    fields: input.submission.fields ?? {},
+    fileHash: input.submission.fileHash ?? null,
+    submittedByUserId: actorId,
+  };
+
   try {
     const result = await submitProof(
       {
@@ -151,18 +178,48 @@ export async function intakeProofSubmission(
         workspaceId,
         fromStatus: proof.status as ProofStatus,
         requirement,
-        submission: {
-          proofType: input.submission.proofType as ProofType,
-          fields: input.submission.fields ?? {},
-          fileHash: input.submission.fileHash ?? null,
-          submittedByUserId: actorId,
-        },
+        submission: proofSubmission,
         actor: { role: TaskActorRole.EMPLOYEE, isAssignee, canReviewProof: false },
         existingHashes,
       },
       deps.proof
     );
-    return { ok: true, status: result.status, duplicateFlagged: result.duplicateFlagged };
+
+    // EVID-01: a SUBMITTED proof must be screened by the deterministic AI precheck
+    // before it can be human-reviewed — tamper/format/reuse/high-risk are routed to
+    // AI_PRECHECK_FAILED or NEEDS_HUMAN_REVIEW so weak evidence is never mistaken for
+    // verified. The precheck is SYSTEM-only and can NEVER reach ACCEPTED (proof FSM),
+    // and completion clears only on ACCEPTED, so this only screens — it cannot verify.
+    // Signals are deterministic: real workspace duplicate hashes + artifact integrity.
+    let precheckOutcome: AiProofPrecheckOutcome | null = null;
+    let screenedStatus = result.status;
+    try {
+      const precheck = await runProofPrecheck({
+        proofId: proof.id,
+        workspaceId,
+        taskId,
+        requirement,
+        submission: proofSubmission,
+        signals: {
+          existingHashes,
+          ...detectProofArtifactSignals(requirement, proofSubmission),
+        },
+      });
+      precheckOutcome = precheck.outcome;
+      screenedStatus = precheck.status;
+    } catch (pe) {
+      // The precheck is a follow-on governed transition. A concurrency conflict (the
+      // proof already left SUBMITTED — e.g. a parallel precheck) must NOT roll back the
+      // valid submission; surface the submitted state with a null outcome. Any other
+      // error is unexpected and re-thrown (never swallowed).
+      if (pe instanceof PrecheckConflictError) {
+        logger.warn("Proof precheck skipped (proof no longer SUBMITTED)", { proofId: proof.id, workspaceId });
+      } else {
+        throw pe;
+      }
+    }
+
+    return { ok: true, status: screenedStatus, duplicateFlagged: result.duplicateFlagged, precheckOutcome };
   } catch (e) {
     // Expected, client-caused rejections are surfaced explicitly (not masked, not a 500).
     if (e instanceof ProofValidationError) return { ok: false, reason: e.message, issues: e.issues };
