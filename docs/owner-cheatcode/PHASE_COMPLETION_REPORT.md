@@ -110,6 +110,12 @@ Honest overall classification: **`SCENARIO_PROVEN`**, advancing toward `DOMAIN_H
 - Whole-repo sharded: shard 1/8 = 1747 pass / 0 fail; shard 3/16 = 775 pass / 0 fail (~2500 green, 0 failures); slow shards need CI.
 - Round classification: **`OWNER_MODE_REAL_WORLD_PARTIAL_CONTINUE_REQUIRED`** — Wealth + Startup real-world-proven; Domain benchmark partial (GAP-010 web research); whole-repo/UI green = CI (`BLOCKED_CI_BROWSER_VERIFICATION_REQUIRED`). Evidence commit: be6a330 + this.
 
+## CI verification evidence recorded (2026-07-04, from GitHub Actions API)
+- **CI "Build & Test" run 28694217011 (SHA be6a330) = SUCCESS** → **GAP-011a CLOSED_PROVEN**. Whole-repo maintained suite (DB-backed, postgres:16, TEST_WITH_DB) + governance(strict+auth) + tsc + prisma migrate + build + wrapped-handlers ratchet + lint all green. This IS the whole-repo green signal that timed out locally. URL: https://github.com/arnab-netizen/OPsIq/actions/runs/28694217011
+- DB Verification run 28692940196 (bfbab0a) = SUCCESS.
+- **Browser/UI E2E NOT yet run on this branch → GAP-011b BLOCKED_OWNER_ACTION_REQUIRED.** No owner-pilot-e2e / sim-browser run exists (verified via Actions API); integration cannot dispatch (HTTP 403). Owner must run `owner-pilot-e2e.yml` / `sequential-simulations.yml`.
+- Phase 28/32/34 (code/full-suite) → **COMPLETE** (CI evidence). Phase 27/33 UI-E2E leg → pending owner dispatch. Classification unchanged: still NOT FULL_OWNER_MODE_REAL_WORLD_PROVEN (browser E2E + GAP-010 pending).
+
 **Round classification: `OWNER_MODE_PARTIAL_CONTINUE_REQUIRED`.** Core wealth loop (Phases 3–16, 31–33) COMPLETE and E2E/DB-proven; Startup Mode + Domain Hardening advanced (loop-integrated, tested, simulated) but not to their full 26-item / per-domain-benchmark gates; the final whole-repo audit gate (Phase 34) is BLOCKED_EXTERNAL_DEPENDENCY on CI-scale compute. NOT `FULL_OWNER_MODE_PROVEN`.
 
 ---

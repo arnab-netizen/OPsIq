@@ -236,3 +236,25 @@ Full single-run times out; sharded green evidence: shard 1/8 = **1747 passed / 0
 - **`BLOCKED_CI_BROWSER_VERIFICATION_REQUIRED`** — whole-repo full-suite green + Playwright UI E2E exceed the local execution window (proven: multiple shards time out).
 
 Wealth Phase and Startup Mode are **real-world scenario-proven** (20/20 scored ≥ threshold, zero critical safety failures). Domain Hardening is benchmark-proven-partial (owner-outcome basis). **NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`** — that requires the two external items above.
+
+---
+
+# Part 5 — CI Evidence Recorded (from GitHub Actions API, 2026-07-04)
+
+Real evidence fetched via the Actions API for branch `claude/owner-cheatcode-full-implementation` (not pasted claims).
+
+| Workflow | Run | SHA | Result | Proves |
+|---|---|---|---|---|
+| CI - Build & Test | [28694217011](https://github.com/arnab-netizen/OPsIq/actions/runs/28694217011) | be6a330 | **SUCCESS** | job `build-and-test`: governance(strict+auth) ✓, tsc ✓, prisma validate/migrate/generate ✓, build ✓, wrapped-handlers ratchet ✓, **maintained suite DB-backed (postgres:16, TEST_WITH_DB) ✓**; job `lint` ✓; branch-protection skipped (push) |
+| CI - Build & Test | 28693560151 | b340928 | SUCCESS | prior code state green |
+| DB Verification | 28692940196 | bfbab0a | SUCCESS | DB-backed verification |
+
+**GAP-011a (whole-repo full-suite + DB + governance + ratchet + tsc + build) → CLOSED_PROVEN.** This is the whole-repo green signal that timed out locally.
+
+**GAP-011b (browser/UI Playwright E2E) → BLOCKED_OWNER_ACTION_REQUIRED.** No `owner-pilot-e2e` / `sim-browser` run exists on this branch (Actions API: 19 runs, all CI/DB-Verification). Integration cannot self-dispatch (HTTP 403). Owner must run the browser E2E workflows.
+
+## Updated blocker status
+- `BLOCKED_CI_BROWSER_VERIFICATION_REQUIRED` — **partially resolved**: CI code/full-suite/DB/governance = CLOSED_PROVEN (real run URL above); browser/UI E2E = still blocked pending owner dispatch (GAP-011b).
+
+## Classification (Part 5)
+**`OWNER_MODE_REAL_WORLD_PARTIAL_CONTINUE_REQUIRED`** unchanged. **NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`** — still requires: browser/UI E2E green (GAP-011b, owner dispatch) + verified domain benchmark (GAP-010).

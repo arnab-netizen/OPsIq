@@ -56,6 +56,9 @@ owner-workload overload, good-biz-bad-timing, bad-biz-attractive-revenue, sales-
 state → wealth path → BMQ → risk-adjusted → opportunity cost → next best move → Work
 Package → proof → owner-workload transfer → command-center reflection + workspace isolation.
 
+## CI evidence (GitHub Actions API, 2026-07-04)
+- **Whole-repo full-suite + DB + governance + ratchet + tsc + build → GREEN in CI.** CI "Build & Test" run **28694217011** (SHA be6a330), jobs `build-and-test` + `lint` SUCCESS. URL: https://github.com/arnab-netizen/OPsIq/actions/runs/28694217011 → **GAP-011a CLOSED_PROVEN** (the whole-repo green signal that timed out locally). DB Verification run 28692940196 SUCCESS.
+
 ## Remaining gaps
+- Browser/UI Playwright E2E (owner journey desktop+mobile) → **GAP-011b BLOCKED_OWNER_ACTION_REQUIRED** — not yet run on this branch; integration cannot dispatch (HTTP 403). Owner runs `owner-pilot-e2e.yml` / `sequential-simulations.yml`.
 - Verified feature-by-feature benchmark against named commercial apps → **GAP-010 BENCHMARK_RESEARCH_REQUIRED** (no verified web access; repo-local basis used, named-app comparison provisional).
-- UI/Playwright browser E2E + whole-repo full-suite green → CI-scale (BLOCKED_EXTERNAL_DEPENDENCY / BLOCKED_CI_BROWSER_VERIFICATION_REQUIRED).
