@@ -18,11 +18,29 @@ configured in the container env but was NOT used for tests (to avoid mutation).
 | 10 | Runtime probe: Prisma middleware model-arg casing | CONFIRMED inert — model passed PascalCase; `.has(camelCase)` never matches (GAP-TEN-01) |
 | 11 | Blast-radius test: casing fix applied, sample of 18 `*.db.test.ts` | 5 files / 15 tests FAIL (incl. `create User`, `deleteMany AuditEvent`) → enabling breaks prod signup → reverted (GAP-TEN-01) |
 | 12 | Runtime probe: `db.evidence.findUnique({where:{id, workspaceId}})` via app `@/lib/db` | CONFIRMED throws `Invalid prisma.evidence.findUnique() invocation` — no workspaceId column (GAP-EVIDENCE-DRIFT-01) |
-| 13 | Full DB-backed regression suite AFTER committed source fixes (guardrails, run route, access, 6 tenancy routes) | _PENDING — see below_ |
+| 13 | Full DB-backed regression suite AFTER committed source fixes (guardrails, run route, access, 6 tenancy routes) | 804 files pass / **1 file failed** = `admin-operability-db.test.ts` (`memberCount` assertion) |
+| 13a | Root-cause of the 1 failure: reset schema → `prisma migrate deploy` → run that test once on a CLEAN DB | PASS — 11/11 |
 | 14 | `eslint` on new/changed files | PASS (after matching the owner-page rule-disable convention) |
+| 15 | Final clean full-suite run on a freshly-reset DB (no intervening probes) | See "Final regression run" below |
 
 ## Regression run (item 13) — result
-_(Filled in after the post-fix full-suite run completes; see commit updating this file.)_
+The single failure (`admin-operability-db.test.ts > lists created workspaces with
+correct active member counts`) is **NOT a code regression**. It is a
+test-isolation defect in that test: its `beforeAll` fixtures are not idempotent
+across runs, so re-running it against a **persistent** DB accumulates
+memberships and the `memberCount).toBe(2)` assertion fails. It passed in the
+fresh-DB base run (item 5) and passes again after a schema reset (item 13a). It
+only surfaced here because the audit ran runtime probes + a blast-radius sample
+suite (items 10–12) against the shared `opsiq_test` DB before the regression
+run, polluting it. In CI this never manifests — `ci.yml` provisions a fresh
+`postgres:16` service container per run. Registered as **GAP-TEST-02 (LOW)**.
+
+None of the committed source changes (guardrails threshold const, run-route
+approval gating, `access.ts`, the 6 tenancy routes, the wealth page, the
+middleware comment) touch workspace listing or member counts.
+
+## Final regression run (item 15) — result
+_(Filled in when the clean-DB full run completes.)_
 
 ## Notes
 - The blocking CI lane (`ci.yml`) mirrors item 5 (full DB-backed suite, quarantine excluded) plus governance/tsc/build/ratchet gates, on push to main/claude/** and PRs to main.
