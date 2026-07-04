@@ -172,6 +172,27 @@ export async function archiveClient(
     visibility: "internal",
   });
 
+  // REEVAL-01: archiving a client is a major client loss — route each of its active engagements
+  // into governed re-evaluation (dedicated changeType, correlation-idempotent per engagement).
+  const activeEngagements = await db.engagement.findMany({
+    where: { clientId, workspaceId: validatedWorkspaceId, status: { notIn: ["completed", "cancelled", "archived"] } },
+    select: { id: true },
+  });
+  const { triggerReEvaluation } = await import("@/services/re-evaluation");
+  for (const eng of activeEngagements) {
+    await triggerReEvaluation({
+      changeType: "major_client_loss",
+      entityType: "client_account",
+      entityId: clientId,
+      engagementId: eng.id,
+      workspaceId: validatedWorkspaceId,
+      severity: "critical",
+      description: `Client ${clientId} archived (major client loss)`,
+      triggeredBy: actorId,
+      correlationId: `major-client-loss:${clientId}:${eng.id}`,
+    });
+  }
+
   logger.info("Client account archived", { clientId });
 }
 

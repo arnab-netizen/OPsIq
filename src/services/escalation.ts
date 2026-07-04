@@ -100,6 +100,21 @@ export async function detectHighPriorityOverdueActions(
       actionIds: alert.relatedEntityIds,
     });
 
+    // REEVAL-01: overdue CRITICAL actions = owner non-compliance on a critical recommendation.
+    // Route into governed re-evaluation (correlation-idempotent on the overdue action set).
+    const { triggerReEvaluation } = await import("@/services/re-evaluation");
+    await triggerReEvaluation({
+      changeType: "owner_non_compliance",
+      entityType: "engagement",
+      entityId: engagementId,
+      engagementId,
+      workspaceId,
+      severity: "high",
+      description: `${criticalOverdueActions.length} critical action(s) overdue (owner non-compliance)`,
+      triggeredBy: authContext.session?.user?.id ?? "system",
+      correlationId: `owner-non-compliance:${engagementId}:${[...alert.relatedEntityIds].sort().join(",")}`,
+    });
+
     return alert;
   }
 
