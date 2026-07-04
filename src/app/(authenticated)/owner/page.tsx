@@ -332,6 +332,7 @@ export default function OwnerCommandCenterPage() {
             { label: "Execution", href: "/owner/execution", domain: "sop" },
             { label: "Marketing", href: "/owner/marketing", domain: "marketing" },
             { label: "Strategy", href: "/owner/strategy", domain: "strategy" },
+            { label: "Wealth", href: "/owner/wealth", domain: null },
             { label: "Portfolio", href: "/owner/portfolio", domain: null },
             { label: "Data Intake", href: "/owner/intake", domain: null },
             { label: "Trust", href: "/owner/trust", domain: null },
