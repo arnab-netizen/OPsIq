@@ -2,7 +2,89 @@
 
 Claude must update this file after each phase.
 
-## Required report format
+---
+
+## Phase 0 — Repository Baseline and Existing System Inventory
+
+### Phase
+Phase 0 (Repository Baseline + Existing System Inventory).
+
+### Branch
+`claude/owner-cheatcode-full-implementation`.
+
+### HEAD
+`a3947d9` at inventory start (pre-commit); Phase 0 commit adds `docs/owner-cheatcode/IMPLEMENTATION_INVENTORY.md` + gap register + this report.
+
+### Working tree status
+Clean at start; Phase 0 changes are documentation only (no source code touched).
+
+### Scope completed
+- Confirmed branch, HEAD, working tree, base status.
+- Installed toolchain; confirmed Prisma client generation; baseline non-DB test 6/6 passing.
+- Inventoried DB models (168), API routes (~290), UI surfaces, tests (787 in `src/__tests__`, 21 owner-mode harness), CI (75 workflows).
+- Mapped all 23 Owner Wealth Loop concepts to existing code with file-path evidence.
+- Produced required `docs/owner-cheatcode/IMPLEMENTATION_INVENTORY.md`.
+- Recorded 8 real gaps (GAP-001..008) with severity, risk, phase, closure evidence requirement.
+
+### Files changed
+- Added `docs/owner-cheatcode/IMPLEMENTATION_INVENTORY.md`.
+- Updated `docs/owner-cheatcode/GAP_REGISTER.md` (replaced placeholder with GAP-001..008).
+- Updated `docs/owner-cheatcode/PHASE_COMPLETION_REPORT.md` (this entry).
+
+### Existing systems reused
+N/A (inventory only). Reuse targets identified: see IMPLEMENTATION_INVENTORY §9.
+
+### New systems added
+None (documentation only).
+
+### Tests added or updated
+None (Phase 0 is inventory; no code changed).
+
+### Tests run
+`npx vitest run src/__tests__/owner-mode/pilot-readiness/command-center-priorities.test.ts` → 6/6 passed (baseline health signal).
+
+### DB tests run if applicable
+Not applicable to Phase 0 (no code change). DB tests run in CI under `TEST_WITH_DB=true`.
+
+### UI/E2E tests run if applicable
+N/A.
+
+### Scenario results
+N/A.
+
+### Owner workload transferred
+N/A (inventory).
+
+### Financial safety evidence
+No financial logic touched. Existing Financial Governor (`owner-budget/spend-governance.ts`) and Capital Allocation (`owner-budget/capital-allocation.ts`) confirmed present and untouched.
+
+### Proof/audit evidence
+No proof/audit logic touched. Existing proof engine (`services/execution/proof.service.ts`, `verification-engine.ts`) and hash-chained `AuditEvent` confirmed present.
+
+### Wealth-path evidence
+Confirmed the Wealth Path Classifier (required taxonomy) is genuinely absent (GAP-001) — the earliest core gap.
+
+### Known gaps
+GAP-001..008 (see gap register). GAP-001/002 (Phase 2) are the first to close.
+
+### Gap register updates
+Placeholder GAP-000 replaced with GAP-001..008.
+
+### Hostile audit result
+Minimum-code audit (checklist §8): no code added, no engine duplicated, no dependency added, no schema change, no safety weakened. PASS for Phase 0 scope.
+
+### Minimum-code audit result
+PASS — documentation only; no new files in source tree.
+
+### Honest classification
+`INVENTORIED_ONLY`.
+
+### Next phase
+Phase 2, Slice 1 — Wealth Path Classifier + Business Model Quality Score (closes GAP-001/002). (Phase 1 Business State Model is PARTIAL/provable and does not block Phase 2's new-code gap.)
+
+---
+
+## Template (for subsequent phases)
 
 ### Phase
 
