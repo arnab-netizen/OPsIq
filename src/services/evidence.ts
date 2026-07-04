@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
+import { randomUUID } from "crypto";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import {
   optimisticUpdate,
@@ -116,21 +117,22 @@ export async function createEvidence(
     idempotencyKey,
     "evidence.create",
     async () => {
-      // Determine visibility based on evidence type
-      const visibility = evidenceType === "document" ? "client_visible" : "internal";
-
+      // GAP-EVIDENCE-DRIFT-01: Evidence is scoped via its engagement (no
+      // workspaceId column). Map to the real columns: sourceReference→source,
+      // severity→severityRating; supply id + updatedAt (no DB defaults); drop
+      // the non-existent workspaceId/visibility columns.
       const evidence = await db.evidence.create({
         data: {
-          engagementId: input.engagementId,
+          id: randomUUID(),
+          engagement: { connect: { id: input.engagementId } },
           title,
           description,
           evidenceType,
-          sourceReference,
-          severity: input.severity ?? null,
+          source: sourceReference ?? "", // `source` is NOT NULL in the schema
+          severityRating: input.severity ?? null,
           submittedBy: userId,
           status: "submitted",
-          visibility,
-          workspaceId: validatedWorkspaceId,
+          updatedAt: new Date(),
         },
       });
 
@@ -203,8 +205,9 @@ export async function updateEvidence(
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId, workspaceId: validatedWorkspaceId },
+  // GAP-EVIDENCE-DRIFT-01: scope via engagement (Evidence has no workspaceId).
+  const evidence = await db.evidence.findFirst({
+    where: { id: evidenceId, engagement: { workspaceId: validatedWorkspaceId } },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -222,19 +225,17 @@ export async function updateEvidence(
     );
   }
 
-  const { version, statement, validationStatus, ...fields } = input;
+  const { version, statement, validationStatus } = input;
   const data: Record<string, unknown> = {};
 
-  // Map backward compatibility fields
+  // Map backward compatibility + drifted field names to real columns.
   const actualStatus = input.status || validationStatus;
   const actualDescription = input.description || statement;
-
-  for (const [k, v] of Object.entries(fields)) {
-    if (v === undefined) continue;
-    data[k] = v;
-  }
-
-  // Add mapped fields
+  if (input.title !== undefined) data.title = input.title;
+  if (input.evidenceType !== undefined) data.evidenceType = input.evidenceType;
+  if (input.rejectionReason !== undefined) data.rejectionReason = input.rejectionReason;
+  if (input.sourceReference !== undefined) data.source = input.sourceReference;
+  if (input.severity !== undefined) data.severityRating = input.severity;
   if (actualDescription !== undefined) data.description = actualDescription;
   if (actualStatus !== undefined) data.status = actualStatus;
 
@@ -242,7 +243,7 @@ export async function updateEvidence(
 
   await optimisticUpdate("evidence", evidenceId, version, () =>
     db.evidence.update({
-      where: withVersionCheck({ id: evidenceId, workspaceId: validatedWorkspaceId }, version),
+      where: withVersionCheck({ id: evidenceId }, version),
       data: withVersionIncrement(data),
     })
   );
@@ -323,28 +324,25 @@ export async function getEvidenceById(
     userId = userIdOrVisibility;
   }
 
-  const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId, workspaceId },
+  // GAP-EVIDENCE-DRIFT-01: scope via engagement (Evidence has no workspaceId);
+  // there is no `visibility` column, and no submitter/validator relations
+  // (only scalar submittedBy/validatedBy).
+  void visibility;
+  const evidence = await db.evidence.findFirst({
+    where: { id: evidenceId, engagement: { workspaceId } },
   });
 
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
-
-  // Check visibility if visibility filter is provided
-  if (visibility === "client_visible" && evidence.visibility === "internal") {
-    throw new NotFoundError("Evidence", evidenceId);
-  }
 
   // Check engagement access if userId provided
   if (userId) {
     await assertEngagementAccess(userId, evidence.engagementId, workspaceId);
   }
 
-  const fullEvidence = await db.evidence.findUnique({
-    where: { id: evidenceId, workspaceId },
+  const fullEvidence = await db.evidence.findFirst({
+    where: { id: evidenceId, engagement: { workspaceId } },
     include: {
       engagement: { select: { id: true, code: true, title: true } },
-      submitter: { select: { id: true, name: true, email: true } },
-      validator: { select: { id: true, name: true, email: true } },
     },
   });
 
@@ -412,12 +410,15 @@ export async function listEvidence(
     await assertEngagementAccess(userId, engagementId, workspaceId);
   }
 
+  // GAP-EVIDENCE-DRIFT-01: Evidence has no workspaceId/visibility columns; scope
+  // via the engagement relation. When an engagementId is given it is already
+  // workspace-verified above; otherwise constrain to the workspace's engagements.
+  void visibility;
   const where = {
-    workspaceId,
-    ...(engagementId && { engagementId }),
+    ...(engagementId
+      ? { engagementId }
+      : { engagement: { workspaceId } }),
     ...(status && { status }),
-    ...(visibility === "internal" && { visibility: "internal" }),
-    ...(visibility === "client_visible" && { visibility: "client_visible" }),
   };
 
   const [evidence, total] = await Promise.all([
@@ -428,7 +429,7 @@ export async function listEvidence(
         title: true,
         evidenceType: true,
         status: true,
-        severity: true,
+        severityRating: true,
         createdAt: true,
         engagement: { select: { id: true, code: true } },
       },
@@ -477,8 +478,9 @@ export async function validateEvidence(
 
   if (!actor) throw new Error("userId is required");
 
-  const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId, workspaceId },
+  // GAP-EVIDENCE-DRIFT-01: scope via engagement (Evidence has no workspaceId).
+  const evidence = await db.evidence.findFirst({
+    where: { id: evidenceId, engagement: { workspaceId } },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -486,16 +488,42 @@ export async function validateEvidence(
     throw new ValidationError("Evidence is already validated");
   }
 
-  const updated = await db.evidence.update({
-    where: { id: evidenceId, workspaceId },
-    data: {
-      status: "validated" as EvidenceStatus,
-      version: { increment: 1 },
-    },
-  });
+  // SEPARATION OF DUTIES: the submitter cannot validate their own evidence.
+  if (evidence.submittedBy && evidence.submittedBy === actor) {
+    throw new ForbiddenError(
+      "Evidence cannot be validated by the same actor who submitted it (separation of duties)"
+    );
+  }
+
+  // Honor the explicit verdict: isValid=false records a rejection, not a validation.
+  const isValid = typeof input === "string" ? true : input.isValid !== false;
+  const expectedVersion = typeof input === "string" ? undefined : input.version;
+  const nextStatus: EvidenceStatus = (isValid ? "validated" : "rejected") as EvidenceStatus;
+
+  let updated;
+  try {
+    updated = await db.evidence.update({
+      // Optimistic-lock on version when the caller supplied it (concurrency-safe).
+      where:
+        typeof expectedVersion === "number"
+          ? { id: evidenceId, version: expectedVersion }
+          : { id: evidenceId },
+      data: {
+        status: nextStatus,
+        validatedBy: actor,
+        validatedAt: new Date(),
+        version: { increment: 1 },
+      },
+    });
+  } catch (err) {
+    if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "P2025") {
+      throw new ValidationError("Evidence was modified concurrently; reload and retry validation");
+    }
+    throw err;
+  }
 
   await emitAuditEvent({
-    eventName: AUDIT_EVENTS.EVIDENCE_VALIDATED,
+    eventName: isValid ? AUDIT_EVENTS.EVIDENCE_VALIDATED : AUDIT_EVENTS.EVIDENCE_REJECTED,
     actorId: actor,
     entityType: "evidence",
     entityId: evidenceId,
