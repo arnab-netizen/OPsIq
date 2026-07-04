@@ -281,5 +281,32 @@ Web research (WebSearch, dated primary/reputable sources) completed for all 7 do
 - `BLOCKED_EXTERNAL_BENCHMARK_RESEARCH_REQUIRED` (GAP-010) → **CLOSED_PROVEN**.
 - `BLOCKED_CI_BROWSER_VERIFICATION_REQUIRED`: CI code/full-suite half CLOSED_PROVEN (Part 5); **browser/UI E2E half still OPEN (GAP-011b, owner dispatch — integration 403)**.
 
-## Classification (Part 6)
-**`OWNER_MODE_REAL_WORLD_PARTIAL_CONTINUE_REQUIRED`.** The **only** remaining item before `FULL_OWNER_MODE_REAL_WORLD_PROVEN` is **GAP-011b — browser/UI Playwright E2E green**, which requires the owner to dispatch `owner-pilot-e2e.yml` / `sequential-simulations.yml` (my integration cannot dispatch — HTTP 403). All else (whole-repo CI, DB, governance, ratchet, wealth/startup real-world scenarios, verified domain benchmark) is proven. **NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`.**
+## Classification (Part 6 — superseded by Part 7)
+The only remaining item before `FULL_OWNER_MODE_REAL_WORLD_PROVEN` is GAP-011b — browser/UI Playwright E2E. See Part 7 for the corrected merge-readiness classification.
+
+---
+
+# Part 7 — Merge-Readiness Classification (2026-07-04)
+
+The browser/UI Playwright E2E is a **post-merge-on-main** gate (runs on `main` after
+merge), **not** a pre-merge branch gate. All branch-side gates are proven:
+
+| Gate | Status | Evidence |
+|---|---|---|
+| GAP-010 verified domain benchmark | CLOSED_PROVEN | `DOMAIN_BENCHMARK_LEDGER.md` VERIFIED BENCHMARK (dated web sources) |
+| GAP-011a CI: full suite + DB + governance + auth + ratchet + tsc + build + lint | CLOSED_PROVEN | CI run 28694217011 (be6a330) SUCCESS |
+| Wealth Phase real-world scenarios | GREEN | `real-world-wealth.test.ts` 10/10, 0 critical failures |
+| Startup Mode real-world scenarios | GREEN | `real-world-startup.test.ts` 10/10, 0 reckless-launch |
+| Simulation + domain-hardening + DB-E2E | GREEN | 17 + 8 + DB E2E |
+| GAP-011b browser/UI Playwright E2E | **PENDING_MAIN_POST_MERGE_VERIFICATION** | runs on main after merge |
+
+## Branch classification
+**`READY_TO_MERGE_FOR_MAIN_E2E_VERIFICATION`.**
+
+## Post-merge rule (required)
+After merge to `main`, run **`owner-pilot-e2e.yml`** (Owner Pilot Browser + Mobile E2E)
+and **`sequential-simulations.yml`** (sim-browser) **on main**.
+- If **green** → close GAP-011b `CLOSED_PROVEN`, then run the final hostile audit; only then may the classification become `FULL_OWNER_MODE_REAL_WORLD_PROVEN` (all Part-3-plan boxes checked).
+- If **failed** → classify `MAIN_E2E_FAILED_CONTINUE_REQUIRED`; reproduce locally (local Postgres + Playwright), fix or revert with **minimum required code**, re-run, and re-verify.
+
+**NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`** — that remains gated on the main post-merge browser/UI E2E above.

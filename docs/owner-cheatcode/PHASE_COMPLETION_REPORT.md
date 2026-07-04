@@ -118,7 +118,18 @@ Honest overall classification: **`SCENARIO_PROVEN`**, advancing toward `DOMAIN_H
 
 ## GAP-010 verified benchmark closed (2026-07-04)
 - Web research (dated primary/reputable sources) for all 7 domains → `DOMAIN_BENCHMARK_LEDGER.md` VERIFIED BENCHMARK section. All EQUAL_FOR_OWNER_USE_CASE or BETTER (Strategy=BETTER). **GAP-010 → CLOSED_PROVEN**; no domain BELOW/PARTIAL; no gap reopened.
-- **Only remaining blocker before FULL_OWNER_MODE_REAL_WORLD_PROVEN: GAP-011b** (browser/UI Playwright E2E green — owner must dispatch `owner-pilot-e2e.yml`; integration cannot, HTTP 403). Everything else proven.
+
+## Branch classification: `READY_TO_MERGE_FOR_MAIN_E2E_VERIFICATION` (2026-07-04)
+The browser/UI Playwright E2E is a **post-merge-on-main** gate (not a pre-merge branch gate). All branch-side gates are proven:
+1. GAP-010 verified benchmark → CLOSED_PROVEN.
+2. GAP-011a CI/DB/governance/ratchet/tsc/build/lint → CLOSED_PROVEN (CI run 28694217011).
+3. Wealth + Startup real-world scenarios green (20/20 scored, 0 critical failures).
+4. Domain benchmark verified (all EQUAL/BETTER).
+5. Only remaining gate: **GAP-011b browser/UI Playwright E2E → `PENDING_MAIN_POST_MERGE_VERIFICATION`** (runs on main after merge).
+
+**Post-merge rule:** after merge to `main`, run `owner-pilot-e2e.yml` (+ `sequential-simulations.yml` sim-browser) on main. If green → close GAP-011b CLOSED_PROVEN + run final hostile audit. If failed → classify `MAIN_E2E_FAILED_CONTINUE_REQUIRED` and fix or revert with minimum required code.
+
+**NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`** (awaits main post-merge E2E).
 
 **Round classification: `OWNER_MODE_PARTIAL_CONTINUE_REQUIRED`.** Core wealth loop (Phases 3–16, 31–33) COMPLETE and E2E/DB-proven; Startup Mode + Domain Hardening advanced (loop-integrated, tested, simulated) but not to their full 26-item / per-domain-benchmark gates; the final whole-repo audit gate (Phase 34) is BLOCKED_EXTERNAL_DEPENDENCY on CI-scale compute. NOT `FULL_OWNER_MODE_PROVEN`.
 
