@@ -1,0 +1,80 @@
+{
+  "auditTier": "Tier 3 — milestone post-merge hostile audit (Waves 5-9)",
+  "standard": "OPSIQ_HOSTILE_RUNTIME_AUDIT_STANDARD.md v3.0",
+  "baseOfRecord": "main @ 0b1e104b",
+  "ciTriggeredByAudit": false,
+  "classification": "SHADOW_PILOT_RUNTIME_READY_MERGED",
+  "mergedWaves": [
+    { "wave": 5, "pr": 101, "squash": "20a6fd74", "classification": "NON_FINANCE_MATERIALIZATION_DB_PROVEN" },
+    { "wave": 6, "pr": 102, "squash": "de782756", "classification": "OVERDUE_ESCALATION_SCHEMA_RESOLVED_DB_PROVEN" },
+    { "wave": 7, "pr": 103, "squash": "68e4e43b", "classification": "GOVERNANCE_HONESTY_M1_M4_DB_PROVEN" },
+    { "wave": 8, "pr": 104, "squash": "920afc6a", "classification": "USER_ROUTE_SCOPING_DB_PROVEN" },
+    { "wave": 9, "pr": 105, "squash": "0b1e104b", "classification": "SCHEDULED_REASSESSMENT_TRIGGER_DECISION_RECORDED" }
+  ],
+  "rows": [
+    {
+      "claimId": "AUDIT-postmerge-tests",
+      "claim": "All five waves' proofs pass on merged main with no cross-wave regression",
+      "proofLayer": "db",
+      "tests": [
+        "src/__tests__/api/owner/intake/non-finance-materialization.db.test.ts",
+        "src/__tests__/services/escalation/overdue-escalation.db.test.ts",
+        "src/__tests__/phase-e/verified-session-real-facts.db.test.ts",
+        "src/__tests__/services/user/user-workspace-scoping.db.test.ts",
+        "src/__tests__/api/internal/reassessment-scan.test.ts",
+        "src/__tests__/services/owner-budget/due-reassessment.service.db.test.ts"
+      ],
+      "commands": ["TEST_WITH_DB=true vitest run <the six suites>"],
+      "result": "pass",
+      "limitations": [],
+      "classificationImpact": "32/32 pass on merged main"
+    },
+    {
+      "claimId": "AUDIT-postmerge-gates",
+      "claim": "Gates green on merged main; no gate weakened across the five waves",
+      "proofLayer": "service",
+      "tests": [],
+      "commands": ["tsc --noEmit", "npm run lint:ratchet", "npm run governance:scan:strict", "npm run governance:scan:auth"],
+      "result": "pass",
+      "limitations": ["Ratchet current 2083 <= baseline 2155; governance 32 frozen / 0 new (only 4 line re-keys in Wave 7)"],
+      "classificationImpact": "No gate weakened; no test deleted"
+    },
+    {
+      "claimId": "AUDIT-owner-path-fixed",
+      "claim": "The owner shadow-pilot runtime path is free of the phantom-column throws + fabricated state that caused MILESTONE_RUNTIME_PARTIAL (ingestion materializes; escalation/re-eval runs; auth state real; user routes scoped; reassessment seam verified)",
+      "proofLayer": "db",
+      "tests": ["see AUDIT-postmerge-tests"],
+      "commands": [],
+      "result": "pass",
+      "limitations": ["Residual items in section 3 are documented decisions, each assessed non-blocking for the owner shadow-pilot path"],
+      "classificationImpact": "Supports SHADOW_PILOT_RUNTIME_READY_MERGED"
+    },
+    {
+      "claimId": "AUDIT-residual-decisions-nonblocking",
+      "claim": "NON-CLAIM: manual-entry/command-center non-finance flip (W5), auto-escalate-on-overdue (W6), entitlements-in-hot-path + adjacent alert debt (W7), Lead/ClientAccount schema (W8), external reassessment cron (W9) remain documented decisions, honest at runtime, non-blocking for the owner shadow-pilot path",
+      "proofLayer": "service",
+      "tests": [],
+      "commands": [],
+      "artifacts": [
+        "OPSIQ_RUNTIME_READINESS_WAVE5_INGESTION_DEFERRED_DECISIONS.md",
+        "OPSIQ_RUNTIME_READINESS_WAVE6_ESCALATION_ACTION_DECISION.md",
+        "OPSIQ_RUNTIME_READINESS_WAVE7_GOVERNANCE_HONESTY_DECISION.md",
+        "OPSIQ_RUNTIME_READINESS_WAVE8_INTERNAL_ROUTE_SCOPING_DECISION.md",
+        "OPSIQ_RUNTIME_READINESS_WAVE9_SCHEDULED_REASSESSMENT_DECISION.md"
+      ],
+      "result": "not_applicable",
+      "limitations": ["Internal Lead/ClientContact services still throw honestly until their schema decision is made"],
+      "classificationImpact": "Documented, not buried; each non-blocking for the owner shadow-pilot path"
+    },
+    {
+      "claimId": "AUDIT-nonclaims",
+      "claim": "NON-CLAIM: NOT LIVE_PILOT_READY, NOT LIVE_OUTCOME_PROVEN, NOT PUBLIC_SAAS_READY, NOT Startup-Mode-ready; no live outcome/profit/growth proof; public SaaS/billing/launch/integrations untouched",
+      "proofLayer": "service",
+      "tests": [],
+      "commands": [],
+      "result": "not_applicable",
+      "limitations": ["SHADOW_PILOT_RUNTIME_READY_MERGED unlocks STARTUP_MODE_BUILD but this audit does not begin it — awaiting explicit owner go-ahead"],
+      "classificationImpact": "Prevents overclaim beyond the milestone"
+    }
+  ]
+}
