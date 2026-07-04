@@ -1,10 +1,23 @@
 # Current OpsIQ Status
 
-**Last updated:** 2026-07-04 · **Branch of record:** `claude/opsiq-hostile-audit-jye6h4` ·
-**HEAD:** `af33f8c1` · **Base:** `origin/main` @ `98762ba5`
+**Last updated:** 2026-07-04 (post-merge owner-mode excellence pass) ·
+**Branch of record:** `claude/post-merge-owner-mode-excellence-profit-startup-hardening` ·
+**Merged to main:** the owner-use spine `d5e0ea60` is now on `origin/main` (fast-forward). ·
+**Base:** `origin/main` @ `d5e0ea60`.
 
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
+
+## Mode classifications (this pass)
+- **Owner Mode:** `OWNER_MODE_READY_WITH_INTENTIONAL_GUARDRAILS`.
+- **Startup Mode:** `STARTUP_MODE_PRIVATE_BASELINE_PROVEN`.
+- **Wealth / Opportunity / Profit Generation Mode:** `WEALTH_OPPORTUNITY_PRIVATE_BASELINE_PROVEN`
+  (owner-decision envelope added: confidence, missing-data disclosure, cash impact, owner-approval
+  gate, first-test action, success metric, stop-loss, reassessment trigger — deterministic, no
+  fabricated ROI).
+- **Product Hunt:** NOT READY. **Public SaaS / billing / webhooks:** BLOCKED (frozen).
+- Verification: `tsc` 0 errors; broad suite **271 files / 4733 tests pass**.
+- Details: `docs/remediation/post-merge-owner-mode-excellence/FINAL_POST_MERGE_OWNER_MODE_EXCELLENCE_REPORT.md`.
 
 ## What OpsIQ is
 A governed business intervention and consulting operating system that models four dimensions at all
