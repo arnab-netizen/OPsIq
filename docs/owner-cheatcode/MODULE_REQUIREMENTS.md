@@ -1,99 +1,262 @@
-# Claude Continue-Build Prompt — Full Owner Cheat-Code Implementation
+# OpsIQ Owner Cheat-Code Module Requirements
 
-You are continuing OpsIQ Owner Mode build work.
+# MODULE COMPLETION CONTRACT
 
-Read and obey these files before making changes:
+Every module listed in this file must satisfy the full module lifecycle:
 
-1. `execution.md`
-2. `docs/owner-cheatcode/IMPLEMENTATION_CONTRACT.md`
-3. `docs/owner-cheatcode/MODULE_REQUIREMENTS.md`
-4. `docs/owner-cheatcode/ACCEPTANCE_GATES.md`
-5. `docs/owner-cheatcode/HOSTILE_AUDIT_CHECKLIST.md`
-6. `docs/owner-cheatcode/TESTING_MATRIX.md`
-7. `docs/owner-cheatcode/MINIMUM_REQUIRED_CODE_POLICY.md`
-8. `docs/owner-cheatcode/NO_GAPS_LEFT_BEHIND_POLICY.md`
+1. Requirement defined.
+2. Existing implementation inspected.
+3. Minimum implementation completed.
+4. Runtime wiring completed.
+5. Owner-facing or command-surface visibility completed where applicable.
+6. Tests completed.
+7. Adversarial tests completed.
+8. Simulation completed where applicable.
+9. E2E completed where applicable.
+10. Hostile audit completed.
+11. Evidence manifest completed.
+12. Gap register updated.
+13. Phase report updated.
 
-You must implement the full personal-use Owner Mode system defined in `execution.md`.
+A module that is implemented but not wired is not complete.
 
-This is not an MVP.
+A module that is wired but not tested is not complete.
 
-This is not a public SaaS task.
+A module that is tested but not simulated is not complete.
 
-This is not Product Hunt work.
+A module that is simulated but not E2E-proven where applicable is not complete.
 
-This is not a prompt-writing task.
+A module that is not hostile-audited is not complete.
 
-This is implementation work.
+## Required module dependency rule
 
-## Absolute instruction
+Downstream modules must not be marked complete unless upstream modules are complete or formally blocked.
 
-OpsIQ must not merely advise the owner.
+For example:
 
-OpsIQ must take over as much of the owner’s workload as safely possible by preparing work, generating artifacts, creating Work Packages, assigning execution, defining proof, validating completion, measuring outcomes, learning, and escalating only decisions/exceptions that genuinely require owner judgment or approval.
+1. Startup Mode cannot be complete unless Wealth Scoring, Financial Governor, Work Package, Proof, Outcome, and Owner Workload Transfer are complete.
+2. Domain Hardening cannot be complete unless the domain plugs into Business State, Wealth Path, Financial Governor, Workload Execution, Proof, Outcome, and Owner Command Center.
+3. Owner Command Center cannot be complete unless it surfaces the full decision/action/proof/outcome loop.
+4. Full Owner Mode cannot be complete unless Startup Mode, Domain Hardening, simulations, E2E, and hostile audit are complete.
 
-## Work loop
+## 1. Business State Service
 
-Proceed in small safe slices.
+Must produce a canonical business state with known, unknown, missing, and confidence fields.
 
-For every slice:
+Must not hallucinate.
 
-1. Inspect existing implementation first.
-2. Reuse existing code wherever possible.
-3. Avoid duplicate engines.
-4. Use the minimum code required.
-5. Implement only the next necessary piece from `execution.md`.
-6. Add or update tests.
-7. Run relevant tests.
-8. Run the hostile audit checklist.
-9. Document evidence.
-10. Commit only if the slice is coherent and verified.
-11. Continue to the next required slice unless a hard blocker occurs.
+Must feed all other engines.
 
-## Prohibited behavior
+---
 
-Do not:
+## 2. Business Model Quality Service
 
-1. Stop after one slice.
-2. Claim complete after creating documentation only.
-3. Create a dashboard without execution.
-4. Create a recommendation without a Work Package.
-5. Create a Work Package without prepared artifacts where possible.
-6. Create an action without proof rules.
-7. Create outcome learning without metrics/evidence.
-8. Create wealth scoring without inputs, missing-data disclosure, and confidence.
-9. Create Startup Mode that jumps straight to launch without validation.
-10. Create domain hardening that does not plug into the owner wealth loop.
-11. Add large abstractions before proving need.
-12. Touch public SaaS, billing, Product Hunt, or launch work.
-13. Weaken auth, workspace isolation, audit, DB, CI, proof, owner approval, or financial governance.
+Must score business model quality using structural wealth potential, not superficial attractiveness.
 
-## Current target
+Must expose inputs, missing data, and confidence.
 
-Start at the earliest incomplete phase in `execution.md`.
+---
 
-If prior phases are already implemented, prove them with inventory, tests, and evidence before moving forward.
+## 3. Wealth Path Classifier
 
-## Required final response after each major slice
+Must classify each business/path as:
 
-Report:
+1. Survival cashflow business.
+2. Local profit business.
+3. Multi-unit scalable business.
+4. Asset-light scalable service.
+5. Technology/product business.
+6. Marketplace/aggregator business.
+7. Strategic stepping-stone.
+8. Owner-dependent job disguised as business.
+9. Dead-end business.
+10. Trap business.
 
-1. Branch.
-2. HEAD.
-3. Working tree status.
-4. Phase/slice completed.
-5. Files changed.
-6. Existing systems reused.
-7. New code added.
-8. Tests added/updated.
-9. Tests run and results.
-10. DB tests run if applicable.
-11. Hostile audit result.
-12. Owner workload transferred.
-13. Remaining gaps.
-14. Whether it is safe to continue.
-15. Next required slice.
+Must allow uncomfortable recommendations.
 
-Do not overclaim.
+---
+
+## 4. Risk-Adjusted Wealth Score Service
+
+Must score major actions and paths using expected value, downside risk, scalability, owner workload, capital requirement, time to evidence, and exit/asset value potential.
+
+Must not imply certainty.
+
+---
+
+## 5. Opportunity Cost Review Service
+
+Must compare major recommendations against realistic alternatives.
+
+Must identify rejected alternatives and why.
+
+---
+
+## 6. Capital Allocation Engine
+
+Must allocate available capital across survival reserve, required bills, debt, reinvestment, experiments, marketing, hiring, equipment, expansion, owner draw, unsafe spending, and blocked spending.
+
+Must protect cash safety.
+
+---
+
+## 7. Financial Governor
+
+Must approve, downgrade, require approval, require more data, or block material actions.
+
+Must review discounts, hiring, expansion, marketing, equipment, debt, and owner withdrawal.
+
+---
+
+## 8. Business Wisdom and Proven Playbook Service
+
+Must store/retrieve structured playbooks.
+
+Must rank by source quality and applicability.
+
+Must convert knowledge into executable work.
+
+Must reject guru/viral/unverified advice for high-risk decisions.
+
+---
+
+## 9. Diagnosis Service
+
+Must identify problems, constraints, bottlenecks, risks, opportunities, and missing data.
+
+Must separate symptoms from likely causes.
+
+---
+
+## 10. Next Best Move Service
+
+Must rank candidate actions and select the highest-probability next action.
+
+Must consider wealth score, financial governor, opportunity cost, business model quality, proof availability, owner workload, and confidence.
+
+---
+
+## 11. Workload Execution Engine
+
+Must classify safe workload-transfer level.
+
+Must implement levels 0, 1, 2, and 5 now.
+
+Must design levels 3 and 4 for later integrations without blocking current work.
+
+---
+
+## 12. Work Package Generator
+
+Must generate complete Work Packages with prepared artifacts.
+
+No Work Package is complete without proof requirements and outcome measurement.
+
+---
+
+## 13. Guided Action Runner
+
+Must convert Work Packages into executable guided actions with assignee, steps, deadline, proof, completion criteria, rejection criteria, and escalation.
+
+---
+
+## 14. Proof Validation Service
+
+Must reject invalid, missing, unauthorized, incomplete, or fake proof where detectable.
+
+Must preserve audit trail.
+
+---
+
+## 15. Outcome Learning Service
+
+Must compare expected vs actual result.
+
+Must classify causality confidence.
+
+Must update future recommendations.
+
+Must not over-learn from weak evidence.
+
+---
+
+## 16. Owner Workload Transfer Service
+
+Must measure what work OpsIQ prepared, assigned, automated, or left to owner.
+
+Must prevent features that increase owner burden without transfer.
+
+---
+
+## 17. Owner Discipline Guardrail
+
+Must detect owner patterns that reduce wealth probability.
+
+Must warn, downgrade, require override, or block where appropriate.
+
+---
+
+## 18. Controlled Experiment Service
+
+Must turn uncertainty into small tests with cost cap, time cap, hypothesis, success metric, failure threshold, proof, and learning update.
+
+---
+
+## 19. Scale Readiness Gate
+
+Must block premature scaling.
+
+Must require proof of profitability, SOP adherence, manager reliability, quality, cash buffer, unit economics, and owner bottleneck reduction.
+
+---
+
+## 20. Startup Validation Workbench
+
+Must validate before launch.
+
+Must reject weak ideas.
+
+Must generate validation Work Packages and artifacts.
+
+---
+
+## 21. Startup Launch Workbench
+
+Must generate launch artifacts only after validation.
+
+Must include SOPs, checklists, pricing, sales scripts, marketing calendar, vendor checklist, compliance confidence, proof, and review cadence.
+
+---
+
+## 22. Local Context and Compliance Confidence Gate
+
+Must prevent hallucinated legal/tax/labor/compliance advice.
+
+Must classify confidence and require professional review when needed.
+
+---
+
+## 23. Domain Hardening Layer
+
+Each domain must plug into the full owner wealth loop.
+
+Domains:
+
+1. Finance.
+2. Sales/customers.
+3. Marketing/growth.
+4. Operations/delivery/quality.
+5. Workforce/training/accountability.
+6. Compliance/risk/governance.
+7. Strategy/expansion/scaling.
+
+---
+
+## 24. Owner Daily Command Center
+
+Must show command decisions, prepared work, approvals, exceptions, proof failures, outcome reviews, capital allocation, and workload transferred.
+
+Must not be a passive dashboard.
 
 ---
 

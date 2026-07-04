@@ -1,5 +1,149 @@
 # OpsIQ Full Owner Cheat-Code Acceptance Gates
 
+# COMPLETION GATE ENFORCEMENT
+
+A phase, slice, module, domain, or mode is not complete unless it passes all applicable gates below.
+
+## Universal complete gate
+
+For every module:
+
+1. Existing implementation inspected.
+2. Minimum required code used.
+3. Existing systems reused where possible.
+4. No duplicate engine created.
+5. Runtime path wired.
+6. Owner-facing or internal operating surface wired where applicable.
+7. Positive tests added.
+8. Negative/adversarial tests added.
+9. Workspace/auth/audit rules preserved.
+10. Financial safety checked where applicable.
+11. Proof requirements checked where applicable.
+12. Owner workload transfer checked where applicable.
+13. Simulation added where applicable.
+14. E2E path tested where applicable.
+15. Hostile audit passed.
+16. Evidence manifest created.
+17. Gap register updated.
+18. Phase completion report updated.
+19. No critical/high gaps remain.
+20. Commit created.
+
+If any item is missing, status is not COMPLETE.
+
+## Mode complete gates
+
+### Wealth Slice complete
+
+The Wealth Slice is complete only when the following are end-to-end proven:
+
+1. Business State used.
+2. Wealth Path Classifier used.
+3. Business Model Quality Score used.
+4. Risk-Adjusted Wealth Score used.
+5. Opportunity Cost Review used.
+6. Financial Governor used.
+7. Capital Allocation used.
+8. Business Wisdom source-tier logic used.
+9. Next Best Move selected or blocked.
+10. Work Package generated.
+11. Owner workload transfer calculated.
+12. Proof requirement generated.
+13. Outcome learning rule generated.
+14. Runtime surface exists.
+15. Simulation suite passes.
+16. E2E wealth-loop journey passes.
+17. Hostile audit passes.
+
+### Startup Mode complete
+
+Startup Mode is complete only when the following are runtime, simulation, and E2E proven:
+
+1. Beginner intake.
+2. Location/local context capture.
+3. Capital/risk/time/skill constraints.
+4. Business idea shortlist.
+5. Rejected idea list.
+6. Rejection reasons.
+7. Business model quality scoring.
+8. Risk-adjusted wealth scoring.
+9. Startup cost estimate.
+10. Unit economics.
+11. Break-even.
+12. Compliance confidence gate.
+13. Competitor research work package.
+14. Customer validation script.
+15. Vendor/supplier script.
+16. Pricing draft.
+17. First offer draft.
+18. Validation work package.
+19. Launch workbench.
+20. First 30/60/90-day execution board.
+21. Proof requirements.
+22. Kill/pivot criteria.
+23. Owner workload transfer score.
+24. Startup simulation suite.
+25. Startup E2E journey.
+26. Startup hostile audit.
+
+Partial validation logic is not Startup Mode complete.
+
+### Domain Hardening complete
+
+Domain Hardening is complete only when every required domain is individually complete.
+
+Required domains:
+
+1. Finance / Budget / Cash Control.
+2. Sales / Customers / Revenue.
+3. Marketing / Growth.
+4. Operations / Delivery / Quality.
+5. Workforce / Training / Accountability.
+6. Compliance / Risk / Governance.
+7. Strategy / Expansion / Scaling.
+
+Each domain must pass:
+
+1. Existing implementation inventory.
+2. Top-tool benchmark.
+3. Owner-grade standard.
+4. Gap list.
+5. Minimum-code implementation.
+6. Runtime wiring.
+7. Positive tests.
+8. Negative/adversarial tests.
+9. Fake-work/proof tests where applicable.
+10. Financial safety tests where applicable.
+11. Workspace/auth tests.
+12. Domain simulation.
+13. Cross-domain interaction test.
+14. E2E path where applicable.
+15. Hostile audit.
+16. Evidence manifest.
+17. No critical/high gaps open.
+
+One hardened domain is not Domain Hardening complete.
+
+### Full Owner Mode complete
+
+FULL_OWNER_MODE_PROVEN requires:
+
+1. Wealth Slice complete.
+2. Startup Mode complete.
+3. All required domains hardened.
+4. Cross-domain command center wired.
+5. Full realistic simulation suite green.
+6. Full E2E owner journey green.
+7. Whole-repo hostile audit green.
+8. Gap register has no open critical/high items.
+9. Phase completion report fully updated.
+10. Evidence manifest complete.
+11. No overclaiming.
+12. No silent deferrals.
+13. No public SaaS/Product Hunt/billing work mixed in.
+
+If any item is missing, FULL_OWNER_MODE_PROVEN is forbidden.
+
 ## Global acceptance gates
 
 A phase or slice is not complete unless:

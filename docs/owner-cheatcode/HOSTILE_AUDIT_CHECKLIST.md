@@ -1,5 +1,67 @@
 # Hostile Audit Checklist
 
+# CLAUDE NON-COMPLIANCE HOSTILE AUDIT
+
+This checklist specifically audits whether Claude stopped too early or overclaimed.
+
+## Early-stop audit
+
+Fail the audit if Claude:
+
+1. Implemented one slice and stopped while authorized phases remained.
+2. Reported "remaining work" without continuing.
+3. Classified partial implementation as complete.
+4. Failed to run phase gates because "engines already exist."
+5. Did not re-run old gates against the new loop.
+6. Did not wire runtime surfaces.
+7. Did not run simulations.
+8. Did not run E2E where applicable.
+9. Did not update gap register.
+10. Did not update phase completion report.
+11. Did not create evidence manifest.
+12. Did not commit proof.
+13. Stopped without a true hard blocker.
+
+## Fake-complete audit
+
+Fail the audit if completion is based only on:
+
+1. Documentation.
+2. Plans.
+3. Stubs.
+4. Type-only tests.
+5. Unit tests with no runtime proof.
+6. Mock-only tests.
+7. UI screenshots without service proof.
+8. API route without owner-facing workflow where required.
+9. Existing test suites not re-run after changes.
+10. "All gaps closed" while remaining work exists elsewhere.
+
+## Scope-narrowing audit
+
+Fail the audit if Claude:
+
+1. Treated full Owner Cheat-Code scope as Wealth Slice only.
+2. Treated Startup validation as complete Startup Mode.
+3. Treated one finance/capital slice as complete Domain Hardening.
+4. Treated domain reuse as domain hardening proof.
+5. Treated existing engines as proven without re-running gates.
+6. Treated partial runtime route as command-center integration.
+7. Treated report honesty as permission to stop.
+
+## Mandatory audit conclusion
+
+The audit must end with exactly one of:
+
+1. PASS_FULL_SCOPE_COMPLETE
+2. FAIL_CONTINUE_REQUIRED
+3. BLOCKED_OWNER_ACTION_REQUIRED
+4. BLOCKED_EXTERNAL_DEPENDENCY
+
+If the conclusion is FAIL_CONTINUE_REQUIRED, Claude must continue and fix, not stop.
+
+---
+
 Run this after every slice and phase.
 
 ## 1. Advisor-app loophole audit

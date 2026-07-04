@@ -13,7 +13,10 @@ on:
       - 'src/__tests__/phase-3-event-emitter-integration.test.ts'
       - 'prisma/migrations/20260507_add_canonical_event/**'
       - 'prisma/schema.prisma'
-      - 'execution.md'
+      # Event-sourcing honesty classification (Gate 10). execution.md no longer
+      # carries this status — it is now the Owner Cheat-Code roadmap.
+      - 'docs/phase-3-slice-2-classification.md'
+      - '.github/workflows/phase-3-slice-2-truth-pass.yml'
   workflow_dispatch:
 
 jobs:
@@ -273,16 +276,28 @@ jobs:
           grep -r "SnapshotEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | grep -vE "$PARKED_DEFS" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ SnapshotEngine remains PARKED" || (echo "✗ SnapshotEngine unexpectedly wired"; exit 1)'
 
       # === GATE 10: Verify Honest Classification ===
-      - name: 'Gate 10: Verify execution.md honesty'
+      - name: 'Gate 10: Verify event-sourcing honesty'
         run: |
           # Truth gate: validate honest classification, not require COMPLETE
           # PASS if services are correctly classified (ACTIVE/PARKED/SCAFFOLD)
           # FAIL only if phases are falsely marked COMPLETE or ACTIVE claims are false
+          #
+          # Source of truth is the dedicated event-sourcing classification doc, NOT
+          # execution.md: execution.md is now the OpsIQ Owner Cheat-Code roadmap and no
+          # longer carries event-sourcing phase status. The runtime reality asserted in
+          # that doc is independently enforced from source by Gate 8 (EventEmitterService
+          # wiring) and Gate 9 (parked engines remain unwired) above.
+          DOC=docs/phase-3-slice-2-classification.md
 
-          echo "Validating Phase 3 honest classification..."
+          echo "Validating Phase 3 honest classification (source: $DOC)..."
+
+          if [ ! -f "$DOC" ]; then
+            echo "✗ Classification doc missing: $DOC"
+            exit 1
+          fi
 
           # Phase 3 must be marked PARTIAL (has ACTIVE EventEmitterService + PARKED engines)
-          if grep -A 5 "### Phase 3" execution.md | grep -q "**Status**: PARTIAL"; then
+          if grep -A 5 "### Phase 3" "$DOC" | grep -q "**Status**: PARTIAL"; then
             echo "✓ Phase 3 correctly classified as PARTIAL (has both ACTIVE and PARKED services)"
           else
             echo "✗ Phase 3 not marked as PARTIAL"
@@ -290,7 +305,7 @@ jobs:
           fi
 
           # EventEmitterService must be marked ACTIVE (wired + tested)
-          if grep -q "EventEmitterService.*ACTIVE" execution.md; then
+          if grep -q "EventEmitterService.*ACTIVE" "$DOC"; then
             echo "✓ EventEmitterService correctly marked ACTIVE"
           else
             echo "✗ EventEmitterService not marked as ACTIVE"
@@ -298,7 +313,7 @@ jobs:
           fi
 
           # Replay/Projection/Snapshot must be marked PARKED (code only, zero runtime wiring)
-          PARKED_COUNT=$(grep -c ".*PARKED" execution.md)
+          PARKED_COUNT=$(grep -c ".*PARKED" "$DOC")
           if [ "$PARKED_COUNT" -ge 3 ]; then
             echo "✓ Replay/Projection/Snapshot correctly marked PARKED ($PARKED_COUNT PARKED entries)"
           else
@@ -307,7 +322,7 @@ jobs:
           fi
 
           # Phase 4 must be marked SCAFFOLD (code only, zero runtime wiring)
-          if grep -A 5 "### Phase 4" execution.md | grep -q "**Status**: SCAFFOLD"; then
+          if grep -A 5 "### Phase 4" "$DOC" | grep -q "**Status**: SCAFFOLD"; then
             echo "✓ Phase 4 correctly classified as SCAFFOLD (no runtime wiring)"
           else
             echo "✗ Phase 4 not marked as SCAFFOLD"
@@ -315,7 +330,7 @@ jobs:
           fi
 
           # CRITICAL: No false COMPLETE claims for PARKED services (check actual classifications only)
-          FALSE_CLAIMS=$(grep "^| EventReplayEngine.*ACTIVE\|^| ProjectionEngine.*ACTIVE\|^| SnapshotEngine.*ACTIVE" execution.md | wc -l)
+          FALSE_CLAIMS=$(grep "^| EventReplayEngine.*ACTIVE\|^| ProjectionEngine.*ACTIVE\|^| SnapshotEngine.*ACTIVE" "$DOC" | wc -l)
           if [ "$FALSE_CLAIMS" -eq 0 ]; then
             echo "✓ No false COMPLETE/ACTIVE claims for PARKED services"
           else

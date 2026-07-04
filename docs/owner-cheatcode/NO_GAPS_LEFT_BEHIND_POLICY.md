@@ -1,191 +1,193 @@
-# OpsIQ Full Owner Cheat-Code Implementation Contract
+# No Gaps Left Behind Policy
+
+# NO STOPPING WITH KNOWN GAPS
+
+A known gap is not allowed to remain merely because it was documented.
+
+Documentation is not closure.
+
+A gap is closed only when one of the following is true:
+
+1. Implemented, wired, tested, simulated, audited, and evidenced.
+2. Proven not applicable with evidence.
+3. Superseded by an existing system with evidence.
+4. Blocked by a true hard blocker requiring owner action.
+5. Explicitly deferred by owner instruction.
+
+Claude must not proceed to final response while any critical/high gap remains in OPEN, PARTIAL, NEEDS_PROOF, NEEDS_WIRING, NEEDS_SIMULATION, NEEDS_E2E, or NEEDS_AUDIT status.
+
+## Gap status values
+
+Every gap must use exactly one of:
+
+- OPEN
+- IN_PROGRESS
+- IMPLEMENTED_NOT_WIRED
+- WIRED_NOT_TESTED
+- TESTED_NOT_SIMULATED
+- SIMULATED_NOT_E2E
+- E2E_NOT_AUDITED
+- CLOSED_PROVEN
+- CLOSED_NOT_APPLICABLE
+- CLOSED_SUPERSEDED_BY_EXISTING_SYSTEM
+- BLOCKED_OWNER_ACTION_REQUIRED
+- BLOCKED_EXTERNAL_DEPENDENCY
+- DEFERRED_BY_EXPLICIT_OWNER_SCOPE_ONLY
+
+The following are not closure statuses:
+
+- documented
+- acknowledged
+- reported
+- remaining
+- pending
+- not a blocker
+- future work
+- later
+- partial
+
+## Gap closure evidence
+
+Every CLOSED_PROVEN gap must include:
+
+1. Closing commit.
+2. Files changed.
+3. Tests added.
+4. Tests run.
+5. Runtime path verified.
+6. Simulation/E2E proof if applicable.
+7. Hostile audit result.
+8. Reason it cannot recur.
+
+No evidence = gap remains open.
+
+## Remaining work rule
+
+If Claude writes a "Remaining Work" section, then the work must either be:
+
+1. A true blocker with owner action required; or
+2. Explicitly out of current owner-authorized scope; or
+3. Immediately continued in the same run.
+
+Claude must not finish a run by listing remaining required work and stopping.
 
 ## Purpose
 
-This contract prevents OpsIQ from becoming a passive advisor, dashboard, report generator, or task list.
-
-OpsIQ must become a personal-use business command-and-control system that improves the owner’s probability of success and wealth by doing and preparing work, enforcing execution, protecting cash, validating decisions, and learning from outcomes.
+This policy prevents the project from moving forward while known loopholes, gaps, or incomplete requirements remain unresolved.
 
 ---
 
-## Product truth
+## Severity levels
 
-OpsIQ cannot guarantee wealth.
+### Critical
 
-OpsIQ must never imply guaranteed success.
+A gap is critical if it can:
 
-OpsIQ must maximize probability by:
+1. Mislead the owner.
+2. Recommend unsafe financial action.
+3. Recommend illegal/unverified compliance action as final.
+4. Allow fake work completion.
+5. Break workspace isolation.
+6. Break auth.
+7. Break audit trail.
+8. Corrupt business state.
+9. Overclaim wealth/success certainty.
+10. Move money/capital decisions without required approval.
+11. Skip required proof.
+12. Mark false outcome learning as true.
 
-1. Selecting higher-expected-value paths.
-2. Rejecting trap businesses and weak strategies.
-3. Protecting downside.
-4. Allocating capital rationally.
-5. Reducing owner workload.
-6. Forcing proof-backed execution.
-7. Learning from evidence.
+Critical gaps block phase progression.
 
----
+### High
 
-## Full-version requirement
+A gap is high if it can:
 
-This build is not an MVP.
+1. Increase owner workload without transfer.
+2. Produce passive advice instead of Work Package.
+3. Skip opportunity cost review.
+4. Skip capital allocation review.
+5. Use weak/guru advice as high-confidence.
+6. Produce fake scoring without inputs/confidence.
+7. Ignore missing data.
+8. Skip outcome measurement.
+9. Skip owner workload scoring.
+10. Allow domain hardening without connecting to core loop.
 
-The implementation may be sliced for safety, but the target is the full personal-use system.
+High gaps block phase progression unless explicitly converted into a current-phase closure task and fixed before exit.
 
-No phase can be skipped.
+### Medium
 
-No critical/high gap can be knowingly carried forward without being documented, classified, and given a closure requirement.
+A gap is medium if it limits quality but does not directly create unsafe owner decisions.
 
----
+Medium gaps must be documented and scheduled.
 
-## Minimum-code requirement
+### Low
 
-Claude must use the minimum required code.
+A gap is low if it is cosmetic, minor, or not required for personal-use proof.
 
-Minimum required code means:
-
-1. Reuse existing code first.
-2. Extend existing services before adding new services.
-3. Extend existing DB models before adding new models where safe.
-4. Avoid new dependencies unless necessary.
-5. Avoid speculative abstractions.
-6. Avoid duplicate engines.
-7. Avoid building future integration infrastructure before manual/internal paths are proven.
-8. Avoid UI overbuild; add only what is needed to prove owner use.
-9. Prefer deterministic service logic and tests.
-10. Prefer simple explicit data structures over generalized frameworks until repeated need is proven.
-
-Minimum code does not mean incomplete code.
-
-It means the smallest complete implementation that satisfies acceptance gates.
-
----
-
-## No advisor-app loophole
-
-OpsIQ must not stop at:
-
-1. Advice.
-2. Recommendations.
-3. Reports.
-4. Charts.
-5. Dashboards.
-6. Generic plans.
-7. Generic SOP text.
-8. Generic business tips.
-9. Passive playbook display.
-10. Task lists without prepared artifacts and proof.
-
-Every material recommendation must become:
-
-1. A Work Package, or
-2. A blocked action with reasons, or
-3. A validation experiment if evidence is insufficient.
+Low gaps may be deferred.
 
 ---
 
-## Workload-transfer contract
+## Required gap register
 
-For every material recommendation, OpsIQ must first attempt to handle the workload itself.
+Claude must maintain:
 
-OpsIQ should do or prepare:
+`docs/owner-cheatcode/GAP_REGISTER.md`
 
-1. Analysis.
-2. Prioritization.
-3. Financial review.
-4. Opportunity cost review.
-5. Capital allocation review.
-6. Playbook selection.
-7. Scripts.
-8. SOPs.
-9. Checklists.
-10. Calculators.
-11. Trackers.
-12. Staff instructions.
-13. Customer messages.
-14. Vendor messages.
-15. Campaign briefs.
-16. Validation worksheets.
-17. Training plans.
-18. Task assignment.
-19. Proof requirements.
-20. Follow-up schedule.
-21. Outcome measurement.
-22. Learning update.
+Each gap entry must include:
 
-The owner should handle:
-
-1. Goals.
-2. Constraints.
-3. Approval thresholds.
-4. High-risk decisions.
-5. Exception judgment.
-6. Final approval where required.
-7. Legal/professional confirmation where necessary.
+1. ID.
+2. Date.
+3. Phase.
+4. Severity.
+5. Description.
+6. Risk.
+7. Affected files/services.
+8. Required fix.
+9. Owner impact.
+10. Status.
+11. Closure evidence.
 
 ---
 
-## Wealth-acceleration contract
+## Phase progression rule
 
-OpsIQ must include:
+Claude may not move to the next phase if current phase has unresolved critical or high gaps.
 
-1. Wealth Path Classifier.
-2. Business Model Quality Score.
-3. Risk-Adjusted Wealth Score.
-4. Opportunity Cost Review.
-5. Capital Allocation Engine.
-6. Controlled Experiment System.
-7. Scale Readiness Gate.
-8. Owner Discipline Guardrail.
-9. Causality-Aware Outcome Learning.
-10. Startup Validation before Startup Launch.
-
-OpsIQ must be allowed to recommend:
-
-1. Continue.
-2. Stabilize.
-3. Improve.
-4. Pause.
-5. Validate.
-6. Pivot.
-7. Scale.
-8. Sell.
-9. Exit.
-10. Stop investing.
-
-OpsIQ must not assume every business or idea deserves growth capital.
+If Claude discovers a prior-phase critical/high gap later, Claude must stop forward work and fix or document it as a hard blocker.
 
 ---
 
-## Proof contract
+## No silent deferral
 
-Every action must define:
+Claude must not silently defer:
 
-1. Required proof.
-2. Proof type.
-3. Completion criteria.
-4. Rejection criteria.
-5. Authorized completer.
-6. Review date.
-7. Outcome metric.
-8. Escalation rule.
-
-OpsIQ must reject fake or incomplete work.
+1. Proof validation.
+2. Financial safety.
+3. Owner approval.
+4. Workspace isolation.
+5. Auth.
+6. Audit trail.
+7. Missing-data handling.
+8. Work Package creation.
+9. Owner workload transfer.
+10. Outcome measurement.
+11. Wealth scoring confidence.
+12. Compliance confidence.
+13. Domain core-loop connection.
 
 ---
 
-## Completion contract
+## Final audit rule
 
-A phase is complete only when:
+At final completion, `GAP_REGISTER.md` must show:
 
-1. Implementation exists.
-2. Tests exist.
-3. Hostile audit passed.
-4. Required documentation updated.
-5. Owner workload transfer is measured where applicable.
-6. No critical/high gaps remain.
-7. Existing system safety is preserved.
-8. Final status is honest.
+1. No open critical gaps.
+2. No open high gaps.
+3. Medium/low gaps documented honestly.
+4. No hidden TODOs that undermine acceptance gates.
+5. Final classification supported by test evidence.
 
 ---
 

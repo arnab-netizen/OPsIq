@@ -1,122 +1,124 @@
-# No Gaps Left Behind Policy
+# Minimum Required Code Policy
+
+# MINIMUM CODE DOES NOT MEAN MINIMUM PROOF
+
+Claude must use the minimum required code to implement the required behavior.
+
+Claude must not use "minimum required code" as an excuse to skip:
+
+1. Runtime wiring.
+2. Tests.
+3. Simulations.
+4. E2E proof.
+5. Hostile audit.
+6. Documentation updates.
+7. Gap closure evidence.
+8. Owner workload transfer proof.
+
+Minimum code means:
+
+1. Reuse existing systems.
+2. Avoid duplicate engines.
+3. Avoid unnecessary abstractions.
+4. Avoid premature integrations.
+5. Avoid broad rewrites.
+6. Avoid new dependencies unless justified.
+7. Implement the smallest correct slice of the required behavior.
+
+It does not mean implementing only a partial feature.
+
+## Required minimum-code justification
+
+Every new service/module/file must state:
+
+1. Existing systems inspected.
+2. Why existing systems could not fully satisfy the requirement.
+3. Why this new code is the minimum required.
+4. How duplication was avoided.
+5. What tests prove it.
+6. What runtime path uses it.
+
+If this justification is missing, the implementation is incomplete.
 
 ## Purpose
 
-This policy prevents the project from moving forward while known loopholes, gaps, or incomplete requirements remain unresolved.
+This policy prevents Claude from overbuilding, duplicating systems, or creating fragile abstractions while implementing the full Owner Mode system.
+
+Minimum required code means the smallest complete implementation that satisfies the acceptance gates.
+
+It does not mean partial implementation.
 
 ---
 
-## Severity levels
+## Required behavior
 
-### Critical
+Before adding code, Claude must inspect existing code for reusable:
 
-A gap is critical if it can:
+1. Services.
+2. Engines.
+3. DB models.
+4. API routes.
+5. UI components.
+6. Tests.
+7. Fixtures.
+8. Types.
+9. Validation helpers.
+10. Audit/proof systems.
 
-1. Mislead the owner.
-2. Recommend unsafe financial action.
-3. Recommend illegal/unverified compliance action as final.
-4. Allow fake work completion.
-5. Break workspace isolation.
-6. Break auth.
-7. Break audit trail.
-8. Corrupt business state.
-9. Overclaim wealth/success certainty.
-10. Move money/capital decisions without required approval.
-11. Skip required proof.
-12. Mark false outcome learning as true.
-
-Critical gaps block phase progression.
-
-### High
-
-A gap is high if it can:
-
-1. Increase owner workload without transfer.
-2. Produce passive advice instead of Work Package.
-3. Skip opportunity cost review.
-4. Skip capital allocation review.
-5. Use weak/guru advice as high-confidence.
-6. Produce fake scoring without inputs/confidence.
-7. Ignore missing data.
-8. Skip outcome measurement.
-9. Skip owner workload scoring.
-10. Allow domain hardening without connecting to core loop.
-
-High gaps block phase progression unless explicitly converted into a current-phase closure task and fixed before exit.
-
-### Medium
-
-A gap is medium if it limits quality but does not directly create unsafe owner decisions.
-
-Medium gaps must be documented and scheduled.
-
-### Low
-
-A gap is low if it is cosmetic, minor, or not required for personal-use proof.
-
-Low gaps may be deferred.
+Claude must extend existing systems where safe.
 
 ---
 
-## Required gap register
+## Prohibited behavior
 
-Claude must maintain:
+Do not:
 
-`docs/owner-cheatcode/GAP_REGISTER.md`
-
-Each gap entry must include:
-
-1. ID.
-2. Date.
-3. Phase.
-4. Severity.
-5. Description.
-6. Risk.
-7. Affected files/services.
-8. Required fix.
-9. Owner impact.
-10. Status.
-11. Closure evidence.
-
----
-
-## Phase progression rule
-
-Claude may not move to the next phase if current phase has unresolved critical or high gaps.
-
-If Claude discovers a prior-phase critical/high gap later, Claude must stop forward work and fix or document it as a hard blocker.
+1. Create duplicate engines.
+2. Create parallel guided execution.
+3. Create duplicate proof systems.
+4. Create duplicate finance governors.
+5. Create duplicate task systems.
+6. Add general abstraction layers prematurely.
+7. Add new dependencies without justification.
+8. Add broad framework code for future integrations.
+9. Build UI that is not needed for acceptance proof.
+10. Change DB schema when existing models can support the requirement.
+11. Rewrite working code instead of extending it.
+12. Weaken tests to pass.
+13. Hide gaps behind TODOs.
+14. Create dead code.
+15. Use mocks where real service/DB proof is required.
 
 ---
 
-## No silent deferral
+## Required justification for new code
 
-Claude must not silently defer:
+Every new service/model/route/component must have:
 
-1. Proof validation.
-2. Financial safety.
-3. Owner approval.
-4. Workspace isolation.
-5. Auth.
-6. Audit trail.
-7. Missing-data handling.
-8. Work Package creation.
-9. Owner workload transfer.
-10. Outcome measurement.
-11. Wealth scoring confidence.
-12. Compliance confidence.
-13. Domain core-loop connection.
+1. Requirement it satisfies.
+2. Existing alternatives checked.
+3. Reason existing code could not be reused.
+4. Tests covering it.
+5. Whether it is core or supporting infrastructure.
 
 ---
 
-## Final audit rule
+## Required simplification audit
 
-At final completion, `GAP_REGISTER.md` must show:
+After each slice, answer:
 
-1. No open critical gaps.
-2. No open high gaps.
-3. Medium/low gaps documented honestly.
-4. No hidden TODOs that undermine acceptance gates.
-5. Final classification supported by test evidence.
+1. Could this be done with less code?
+2. Did any new abstraction replace a simple function unnecessarily?
+3. Did any code duplicate existing behavior?
+4. Did any code solve a future problem not needed now?
+5. Did any new dependency become necessary?
+6. Did the code preserve existing safety?
+7. Is the code testable and deterministic?
+8. Is any generated artifact hardcoded too narrowly?
+9. Is any scoring fake or unsupported?
+10. Is any acceptance gate only superficially satisfied?
+
+If yes, simplify before moving on.
 
 ---
 

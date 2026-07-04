@@ -1,244 +1,239 @@
-# OpsIQ Full Owner Cheat-Code Testing Matrix
+# OpsIQ Full Owner Cheat-Code Implementation Contract
 
-## Required test categories
+# IMPLEMENTATION CONTRACT — NON-COMPLIANCE PREVENTION
 
-Each relevant implementation slice must include applicable tests from this matrix.
+Claude must not interpret implementation as code-only.
 
----
+Implementation means:
 
-## 1. Business state tests
+1. Code.
+2. Runtime wiring.
+3. Owner-facing usability where applicable.
+4. Tests.
+5. Simulations.
+6. E2E.
+7. Hostile audit.
+8. Documentation.
+9. Evidence.
+10. Gap closure.
 
-Must test:
+Claude must not end a run with required work still pending unless blocked.
 
-1. Complete known data.
-2. Partial missing data.
-3. Unknown values remain unknown.
-4. No hallucinated revenue/cash/customer facts.
-5. Confidence lowering when inputs are missing.
-6. Workspace isolation.
-7. Auth restrictions.
-8. Scenario fixture ingestion.
+## Continuing obligation
 
----
+After every commit, Claude must ask internally:
 
-## 2. Wealth scoring tests
+1. Are all authorized phases complete?
+2. Are all critical/high gaps closed?
+3. Are all simulations complete?
+4. Is E2E complete?
+5. Is hostile audit complete?
+6. Is final classification justified?
 
-Must test:
+If any answer is no, Claude must continue.
 
-1. High-quality scalable business.
-2. Local profit business.
-3. Survival cashflow business.
-4. Owner-job disguised as business.
-5. Dead-end business.
-6. Trap business.
-7. Missing-data confidence.
-8. Rejected alternatives.
-9. Opportunity cost comparison.
-10. No guaranteed wealth language.
+## Hard blocker declaration
 
----
+If Claude stops due to blocker, it must provide:
 
-## 3. Financial governor tests
+1. Blocker title.
+2. Blocker type.
+3. Exact phase blocked.
+4. Exact requirement blocked.
+5. Evidence of why Claude cannot resolve it.
+6. Owner action required.
+7. What was completed before blocker.
+8. What remains after blocker.
+9. Risk of continuing without resolution.
 
-Must test:
+Without this, blocker status is invalid.
 
-1. Discount blocked when margin unsafe.
-2. Hiring blocked when unaffordable.
-3. Expansion blocked when current unit unstable.
-4. Paid ads downgraded when tracking missing.
-5. Equipment purchase blocked without payback.
-6. Debt blocked without repayment capacity.
-7. Owner withdrawal warning when cash unsafe.
-8. Required bills prioritized.
-9. Survival reserve protected.
-10. Needs-more-data classification.
+## Purpose
 
----
+This contract prevents OpsIQ from becoming a passive advisor, dashboard, report generator, or task list.
 
-## 4. Business wisdom tests
-
-Must test:
-
-1. Playbook retrieval by problem type.
-2. Playbook retrieval by business stage.
-3. Playbook retrieval by industry.
-4. Low-trust advice downgraded.
-5. Guru advice rejected for high-risk recommendation.
-6. Playbook converted to Work Package.
-7. Applicable conditions checked.
-8. Failure conditions included.
-9. Stop/pivot criteria included.
-10. Proof requirements included.
+OpsIQ must become a personal-use business command-and-control system that improves the owner’s probability of success and wealth by doing and preparing work, enforcing execution, protecting cash, validating decisions, and learning from outcomes.
 
 ---
 
-## 5. Next Best Move tests
+## Product truth
 
-Must test:
+OpsIQ cannot guarantee wealth.
 
-1. Highest-probability boring action beats exciting weak action.
-2. Expansion rejected when scale gate fails.
-3. Marketing rejected when finance gate fails.
-4. Retention chosen when cheaper than acquisition.
-5. Missing data triggers validation/experiment.
-6. Rejected alternatives shown.
-7. Financial review included.
-8. Opportunity cost included.
-9. Work Package generated.
-10. Confidence disclosed.
+OpsIQ must never imply guaranteed success.
 
----
+OpsIQ must maximize probability by:
 
-## 6. Work Package tests
-
-Must test:
-
-1. Work Package generated from recommendation.
-2. Prepared artifacts included.
-3. Assignee included.
-4. Deadline included.
-5. Proof rules included.
-6. Outcome metric included.
-7. Completion criteria included.
-8. Rejection criteria included.
-9. Owner approval classification included.
-10. Owner workload transfer score included.
+1. Selecting higher-expected-value paths.
+2. Rejecting trap businesses and weak strategies.
+3. Protecting downside.
+4. Allocating capital rationally.
+5. Reducing owner workload.
+6. Forcing proof-backed execution.
+7. Learning from evidence.
 
 ---
 
-## 7. Proof validation tests
+## Full-version requirement
 
-Must test:
+This build is not an MVP.
 
-1. Missing proof rejected.
-2. Empty notes rejected where notes required.
-3. Wrong proof type rejected.
-4. Unauthorized user rejected.
-5. Manager cannot approve owner-only action.
-6. Failed proof keeps action open.
-7. Outcome claim without evidence rejected.
-8. Audit trail recorded.
-9. Reused proof warning where detectable.
-10. Staff fake completion fails closed.
+The implementation may be sliced for safety, but the target is the full personal-use system.
+
+No phase can be skipped.
+
+No critical/high gap can be knowingly carried forward without being documented, classified, and given a closure requirement.
 
 ---
 
-## 8. Outcome learning tests
+## Minimum-code requirement
 
-Must test:
+Claude must use the minimum required code.
 
-1. Worked outcome.
-2. Likely contributed outcome.
-3. Correlated-only outcome.
-4. Failed outcome.
-5. Harmful outcome.
-6. Inconclusive outcome.
-7. Failed playbook changes future recommendation.
-8. Weak evidence does not create false learning.
-9. Metric baseline required.
-10. Measurement window required.
+Minimum required code means:
 
----
+1. Reuse existing code first.
+2. Extend existing services before adding new services.
+3. Extend existing DB models before adding new models where safe.
+4. Avoid new dependencies unless necessary.
+5. Avoid speculative abstractions.
+6. Avoid duplicate engines.
+7. Avoid building future integration infrastructure before manual/internal paths are proven.
+8. Avoid UI overbuild; add only what is needed to prove owner use.
+9. Prefer deterministic service logic and tests.
+10. Prefer simple explicit data structures over generalized frameworks until repeated need is proven.
 
-## 9. Owner workload transfer tests
+Minimum code does not mean incomplete code.
 
-Must test:
-
-1. Artifacts prepared.
-2. Tasks assigned.
-3. Owner approvals minimized.
-4. Owner manual tasks counted.
-5. Owner minutes estimated.
-6. Owner minutes saved estimated.
-7. Feature increasing workload flagged.
-8. Repetitive micro-actions thresholded.
-9. Follow-up created automatically.
-10. Measurement structure created automatically.
+It means the smallest complete implementation that satisfies acceptance gates.
 
 ---
 
-## 10. Startup Mode tests
+## No advisor-app loophole
 
-Must test:
+OpsIQ must not stop at:
 
-1. Limited-capital beginner.
-2. Weak/hype business rejected.
-3. Good candidate sent to validation, not launch.
-4. Startup cost estimate.
-5. Unit economics.
-6. Break-even.
-7. Customer validation script.
-8. Competitor worksheet.
-9. Vendor script.
-10. Kill/pivot criteria.
-11. Compliance confidence flag.
-12. Validation Work Package.
-13. Launch only after validation.
+1. Advice.
+2. Recommendations.
+3. Reports.
+4. Charts.
+5. Dashboards.
+6. Generic plans.
+7. Generic SOP text.
+8. Generic business tips.
+9. Passive playbook display.
+10. Task lists without prepared artifacts and proof.
 
----
+Every material recommendation must become:
 
-## 11. Domain hardening tests
-
-For each domain, test:
-
-1. Positive path.
-2. Missing data path.
-3. Unsafe path.
-4. Owner approval path.
-5. Proof failure path.
-6. Fake completion path.
-7. Financial risk path if applicable.
-8. Owner workload transfer.
-9. Outcome measurement.
-10. Cross-domain conflict.
+1. A Work Package, or
+2. A blocked action with reasons, or
+3. A validation experiment if evidence is insufficient.
 
 ---
 
-## 12. Full scenario simulations
+## Workload-transfer contract
 
-Must run deterministic scenarios for:
+For every material recommendation, OpsIQ must first attempt to handle the workload itself.
 
-1. Laundry/local service survival.
-2. Laundry/local service growth.
-3. Laundry second-branch temptation.
-4. Beginner startup limited capital.
-5. Startup idea trap.
-6. Marketing waste.
-7. Staff fake completion.
-8. Manager bypass.
-9. Cash crunch.
-10. Complaint spike.
-11. Dormant customer recovery.
-12. B2B opportunity.
-13. Vendor failure.
-14. Equipment issue.
-15. Owner reckless expansion.
-16. Owner too many initiatives.
-17. Weak business model pivot.
-18. Strong business model scale readiness.
-19. Compliance uncertainty.
-20. Cross-domain conflict.
+OpsIQ should do or prepare:
+
+1. Analysis.
+2. Prioritization.
+3. Financial review.
+4. Opportunity cost review.
+5. Capital allocation review.
+6. Playbook selection.
+7. Scripts.
+8. SOPs.
+9. Checklists.
+10. Calculators.
+11. Trackers.
+12. Staff instructions.
+13. Customer messages.
+14. Vendor messages.
+15. Campaign briefs.
+16. Validation worksheets.
+17. Training plans.
+18. Task assignment.
+19. Proof requirements.
+20. Follow-up schedule.
+21. Outcome measurement.
+22. Learning update.
+
+The owner should handle:
+
+1. Goals.
+2. Constraints.
+3. Approval thresholds.
+4. High-risk decisions.
+5. Exception judgment.
+6. Final approval where required.
+7. Legal/professional confirmation where necessary.
 
 ---
 
-## 13. UI/E2E tests
+## Wealth-acceleration contract
 
-Where UI is present, test:
+OpsIQ must include:
 
-1. Owner command center.
-2. Business state view.
-3. Wealth path view.
-4. Next Best Move view.
-5. Work Package view.
-6. Approval/rejection.
-7. Staff assigned action.
-8. Proof submission.
-9. Proof rejection.
-10. Outcome review.
-11. Startup validation workbench.
-12. Startup launch workbench.
-13. Domain outputs.
-14. Workload transfer display.
+1. Wealth Path Classifier.
+2. Business Model Quality Score.
+3. Risk-Adjusted Wealth Score.
+4. Opportunity Cost Review.
+5. Capital Allocation Engine.
+6. Controlled Experiment System.
+7. Scale Readiness Gate.
+8. Owner Discipline Guardrail.
+9. Causality-Aware Outcome Learning.
+10. Startup Validation before Startup Launch.
+
+OpsIQ must be allowed to recommend:
+
+1. Continue.
+2. Stabilize.
+3. Improve.
+4. Pause.
+5. Validate.
+6. Pivot.
+7. Scale.
+8. Sell.
+9. Exit.
+10. Stop investing.
+
+OpsIQ must not assume every business or idea deserves growth capital.
+
+---
+
+## Proof contract
+
+Every action must define:
+
+1. Required proof.
+2. Proof type.
+3. Completion criteria.
+4. Rejection criteria.
+5. Authorized completer.
+6. Review date.
+7. Outcome metric.
+8. Escalation rule.
+
+OpsIQ must reject fake or incomplete work.
+
+---
+
+## Completion contract
+
+A phase is complete only when:
+
+1. Implementation exists.
+2. Tests exist.
+3. Hostile audit passed.
+4. Required documentation updated.
+5. Owner workload transfer is measured where applicable.
+6. No critical/high gaps remain.
+7. Existing system safety is preserved.
+8. Final status is honest.
 
 ---
 
