@@ -95,8 +95,8 @@ Legend: **FOUND** = exists, reuse it. **PARTIAL** = exists in adjacent form, ext
 | 8 | Business Wisdom / Playbook Layer | **PARTIAL→ tiers DONE (Phase 5)** | Retrieval/workflow: `domain/domain-training/domains/*`, `execution/workflow-library.ts` (existing). A/B/C/D source tiers + anti-guru high-risk gate: `src/domain/owner-strategy/business-wisdom.ts` (`classifyWisdom`/`admitAdvice`, closes GAP-007). Retrieval→Work-Package conversion tracked under GAP-006 (Phase 7). |
 | 9 | Diagnosis Engine | FOUND | `src/services/consulting-engine/diagnosis-engine.ts`, `domain/business-facts/diagnosis.ts` |
 | 10 | Next Best Move Engine | FOUND | `src/domain/owner-guidance/next-best-step.ts`, `collective-training/priority-engine.ts` |
-| 11 | Workload Execution Engine (levels 0–5) | PARTIAL | `domain/execution/employee-workload.ts` (utilization bands); no 0–5 transfer-level ladder. |
-| 12 | Work Package Generator | PARTIAL | `services/execution/task-assignment.service.ts` (`assignDelegatedTask` + proof); no bundled "Work Package w/ prepared artifacts" object. |
+| 11 | Workload Execution Engine (levels 0–5) | **DONE (Phase 7)** | `src/domain/owner-strategy/work-package.ts` → `determineMaxTransferLevel` (LEVEL_0/1/2/5 active; 3/4 future). Closes GAP-005. |
+| 12 | Work Package Generator | **DONE (Phase 7)** | `src/domain/owner-strategy/work-package.ts` → `generateWorkPackage` (20-field bundle + prepared artifacts + proof + owner-workload transfer). Closes GAP-006. Persists later via existing `services/execution/task-assignment.service.ts`. |
 | 13 | Guided Action Runner | FOUND | `src/services/routes/guided-execution-handlers.ts`, `domain/owner-guidance/guidance-orchestrator.ts` |
 | 14 | Proof Validation Engine | FOUND | `src/services/execution/proof.service.ts`, `verification-engine.ts` (self-review/wrong-user/duplicate/fake-completion) |
 | 15 | Outcome Measurement Engine | FOUND | `src/domain/owner-mode/outcome-tracking.ts`, `services/outcome-core/*` |

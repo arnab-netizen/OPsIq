@@ -20,3 +20,5 @@ export * from "./risk-adjusted-wealth.types";
 export * from "./risk-adjusted-wealth";
 export * from "./business-wisdom.types";
 export * from "./business-wisdom";
+export * from "./work-package.types";
+export * from "./work-package";

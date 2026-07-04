@@ -489,6 +489,55 @@ Phase 7 — Workload Execution Engine transfer levels (GAP-005) + Work Package b
 
 ---
 
+## Phase 7 — Workload Execution Engine + Work Package Generator (GAP-005 + GAP-006)
+
+### Phase / Branch / HEAD / Working tree
+Phase 7 (closes GAP-005, GAP-006); `claude/owner-cheatcode-full-implementation`; HEAD at commit time; clean.
+
+### Scope completed
+The core "OpsIQ carries the workload" slice: turns a recommendation into a complete Work Package with prepared artifacts, the max SAFE workload-transfer level, proof rules, outcome measurement, and a measurable owner-workload transfer — not advice.
+
+### Files changed
+- Added `src/domain/owner-strategy/work-package.types.ts` + `work-package.ts` (`determineMaxTransferLevel`, `generateWorkPackage`).
+- Added `src/__tests__/owner-strategy/work-package.test.ts` (12 tests).
+- Modified `src/domain/owner-strategy/index.ts` (barrel).
+
+### Existing systems reused
+- Composes over (does not duplicate) `services/execution/task-assignment.service.ts` (`assignDelegatedTask`) — the DB persistence layer for the assigned task; this slice is the domain composition layer above it.
+- Aligns with existing `ProofRequirement`/`Proof` model semantics for the proof rules.
+
+### New systems added
+One deterministic domain module (generator + transfer-level ladder). No new dependency, DB model, or migration.
+
+### Tests added / run
+`work-package.test.ts` — 12 tests: transfer-level ladder (assignable→L2, owner→L1, unsafe/illegal/blocked→L5, financial-BLOCKED→L5); artifacts are real + carry the business name (not placeholders); owner-workload decreases with proof; blocked prepares nothing + escalates; high-risk flags approval + short deadline; correct artifact kinds per action. `tsc --noEmit` 0 errors; eslint clean. Full `owner-strategy/` suite **119 passed / 8 `[db]`**.
+
+### Scenario results
+A dormant-customer reactivation assigned to staff → LEVEL_2: OpsIQ generates a win-back script (with the business name), a call list, and an outcome tracker; owner minutes drop from ~90 to ~5 (owner only spot-checks proof). An unlawful action → LEVEL_5, nothing prepared, escalated.
+
+### Owner workload transferred (Rule E evidence)
+Each Work Package reports: owner task avoided, artifact generated, task assigned, proof required, decision still required, estimated owner minutes before/after, and whether burden decreased/shifted. The reactivation example: 90 → 5 minutes, burden decreased.
+
+### Financial safety / proof evidence
+Financial-governor `BLOCKED` forces LEVEL_5 (no execution); `NEEDS_OWNER_APPROVAL`/high risk sets `ownerApprovalRequired` + a shorter deadline. Every non-blocked package defines required proof + rejection criteria.
+
+### Known gaps / Gap register updates
+GAP-005, GAP-006 → Closed. Remaining open: GAP-008 (Startup Mode, Phase 14). (GAP-001..007, 009 closed.)
+
+### Hostile audit result
+§1 advisor-loophole PASS (produces prepared work + assignment + proof, never advice-only when preparation is possible); §2 owner-workload PASS (measured transfer, minutes before/after); §8 minimum-code PASS (composes over task-assignment, no duplicate); §9 no-gaps PASS.
+
+### Minimum-code audit result
+New files: 2 source + 1 test. Existing modified: 1 barrel line. Dependencies: **none**.
+
+### Honest classification
+Phase 7 = `SCENARIO_PROVEN_PARTIAL_DOMAIN` — generator + transfer ladder proven by unit tests; DB persistence of a generated package via `task-assignment.service.ts` and a command-center surface are the tracked runtime follow-up.
+
+### Next phase
+Phases 8/9 are FOUND (Guided Action Runner, Proof Validation, Outcome, Causality) — prove-existing; then the owner command-center runtime surface folding wealth-path + next Work Package; then Phase 14 Startup Mode (GAP-008).
+
+---
+
 ## Template (for subsequent phases)
 
 ### Phase
