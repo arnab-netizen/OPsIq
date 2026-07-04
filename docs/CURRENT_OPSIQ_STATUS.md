@@ -8,7 +8,19 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Elite hardening pass (latest)
+## Constraint / Bottleneck Engine depth pass (latest)
+- **Branch:** `claude/constraint-bottleneck-engine-depth-pass` · **Base/main:** `394427e7`.
+- **Constraint Engine:** `CONSTRAINT_ENGINE_REAL_AND_OWNER_VISIBLE` — deterministic single-binding-
+  constraint identification (CASH/OWNER/QUALITY/CAPACITY/EQUIPMENT/DELIVERY/PRICING/STAFF/
+  CUSTOMER_RETENTION/B2B_ACCOUNT/STARTUP_VALIDATION/COMPLIANCE/DATA_INSUFFICIENT), fed by the live
+  Owner Now View signals, surfaced via `/api/owner/now-view` (`payload.topConstraint`), integrated with
+  the Owner Workload Budget and the Opportunity envelope (gates + caps scaling into a bottleneck).
+  Honest DATA_INSUFFICIENT; 18 tests (15 unit + 3 DB). Broad regression 89 files / 775 tests pass.
+- **Still missing/partial:** Profit-Leak Radar, Anti-Gaming Analytics, Evidence Credibility Graph,
+  Business-Control SLOs, Process Intelligence; authenticated browser E2E; APPR-01 breadth.
+- Details: `docs/remediation/constraint-bottleneck-engine-depth-pass/`.
+
+## Elite hardening pass (prior)
 - **Branch:** `claude/elite-business-operating-system-hardening` · **Base/main:** `be62a606`.
 - **Owner Workload Budget:** `REAL_AND_OWNER_VISIBLE` — grouping, noise suppression, owner-only vs
   delegable split, owner-bottleneck flag, real proof-review/reassessment counts, transparent

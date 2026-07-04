@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-07-04",
+  "branch": "claude/constraint-bottleneck-engine-depth-pass",
+  "baseMain": "394427e7",
+  "capability": "Constraint / Bottleneck Engine",
+  "classification": "CONSTRAINT_ENGINE_REAL_AND_OWNER_VISIBLE",
+  "code": [
+    "src/domain/owner-mode/constraint-engine.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts (integration + raw-state fix)",
+    "src/domain/owner-mode/opportunity-decision-envelope.ts (growth-blocking-constraint gate)"
+  ],
+  "ownerVisibleVia": "GET /api/owner/now-view (payload.topConstraint)",
+  "constraintTypes": ["DEMAND","CAPACITY","CASH","STAFF","OWNER","MANAGER","QUALITY","DELIVERY","PRICING","CUSTOMER_RETENTION","B2B_ACCOUNT","EQUIPMENT","COMPLIANCE_OR_LOCAL_VERIFICATION","STARTUP_VALIDATION","DATA_INSUFFICIENT"],
+  "typecheck": { "command": "npx tsc --noEmit", "errors": 0 },
+  "tests": {
+    "unit": { "file": "src/__tests__/owner-mode/constraint-engine.test.ts", "passed": 15 },
+    "dbSimulation": { "file": "src/__tests__/owner-mode/constraint-engine-simulation.db.test.ts", "passed": 3 },
+    "broadRegression": { "files": 89, "passed": 775, "failed": 0 }
+  },
+  "integration": {
+    "ownerNowView": "topConstraint exposed (single binding constraint, no flood)",
+    "ownerWorkloadBudget": "OWNER-constraint signal fed from workload budget",
+    "opportunityEnvelope": "growth-blocking constraint owner-gates + caps opportunity upside",
+    "reassessment": "constraint recomputed on each now-view read; state changes shift the binding constraint"
+  },
+  "honesty": {
+    "missingData": "absent cash/margin -> DATA_INSUFFICIENT with exact gaps",
+    "fabricationFix": "ctx.cashSafe=false-from-missing-data no longer maps to fake CRITICAL cash; raw states returned"
+  },
+  "browserE2E": "unchanged / not proven this pass",
+  "classification_overall": "HIGH_VALUE_PRIVATE_OWNER_SYSTEM_PROVEN + REMEDIATION_PARTIAL_CONTINUE_REQUIRED"
+}
