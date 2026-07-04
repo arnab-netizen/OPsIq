@@ -172,6 +172,94 @@ Phase 2, Slice 2 — surface wealth-path in a read path (service/route + command
 
 ---
 
+## Phase 2, Slice 2 — Wealth Path runtime read surface
+
+### Phase
+Phase 2, Slice 2 (of `execution.md` Phase 2). Runtime-First Rule H — surfaces the Slice 1 engine.
+
+### Branch
+`claude/owner-cheatcode-full-implementation`.
+
+### HEAD
+Set at commit time (follows Slice 1 commit `acf6a34`).
+
+### Working tree status
+Clean after commit.
+
+### Scope completed
+Wired the deterministic Wealth Path Classifier + BMQ engine into a real owner read path: a workspace-scoped service that derives the verdict from persisted metric snapshots, and a canonically-enforced GET route. Honest missing-data behaviour preserved end-to-end (snapshot data lacks structural signals → provisional verdict that blocks high-risk execution).
+
+### Files changed
+- Added `src/services/owner-strategy/wealth-path.service.ts` (`mapMetricSnapshotToWealthPathInput` pure mapper + `getWealthPath` DB read).
+- Added `src/app/api/owner/wealth-path/route.ts` (GET, OWNER_VIEW, workspace-scoped).
+- Added `src/__tests__/owner-strategy/wealth-path-service.test.ts` (8 non-DB tests: mapper + route enforcement wiring).
+- Added `src/__tests__/owner-strategy/wealth-path.db.test.ts` (3 `[db]` integration tests).
+
+### Existing systems reused
+- `getBusiness` / `listBusinesses` (`services/founder-recovery/business.service`) — ownership + workspace guard (no new auth path).
+- `db` proxy (`@/lib/db`) with workspace-scoped `where` (matches `owner-condition/business-condition.service.ts` pattern).
+- `withCanonicalEnforcement` + `CAPABILITIES.OWNER_VIEW` (canonical route enforcement).
+- `classifyWealthPath` (Slice 1 engine) — no re-implementation.
+- `createSnapshot` (`services/founder-recovery/snapshot.service`) + `teardownOwnerBusiness` helper for the DB test.
+
+### New systems added
+One read service + one GET route. No new DB model, migration, or dependency.
+
+### Tests added or updated
+- Non-DB: 8 tests — mapper derives margins/repeat ratio, no divide-by-zero, null→{}, mapped+classified stays provisional; route uses canonical enforcement + OWNER_VIEW + no direct auth import.
+- DB (`[db]`, CI): 3 tests — snapshot→verdict end-to-end (margins 60/15/60, provisional, offers "validate"), no-snapshot hasData=false, workspace isolation (foreign workspace sees no businesses).
+
+### Tests run
+- `npx vitest run src/__tests__/owner-strategy/wealth-path-service.test.ts` → **8 passed**.
+- `npx vitest run src/__tests__/owner-strategy/` → **80 passed, 8 skipped (`[db]`), 2 skipped files** (the two `.db.test.ts`).
+- `npx tsc --noEmit` → **0 errors** (repo-wide).
+- `npx eslint <new files>` → clean.
+
+### DB tests run if applicable
+`[db]` suite is filtered locally (no Postgres URL); runs in CI under `TEST_WITH_DB=true` (workflow family `owner-*` / `db-verification`). Present + tagged.
+
+### UI/E2E tests run if applicable
+No UI component added this slice (the JSON read surface is the runtime path). Command-center visual card is a tracked follow-up.
+
+### Scenario results
+Healthy-margin snapshot still returns a **provisional** verdict because structural signals (moat/expansion/owner-dependency) are not in snapshot data — proving OpsIQ does not overclaim a scalable verdict from financials alone.
+
+### Owner workload transferred
+N/A (read surface). No owner burden added; provides the verdict the owner would otherwise have to reason out unaided.
+
+### Financial safety evidence
+Read-only; no mutation, no spend path. `blocksHighRiskExecution` propagates through the service so downstream cannot act high-risk on a provisional/ bad-path verdict.
+
+### Proof/audit evidence
+No proof/audit mutation. Reuses `getBusiness` ownership guard; workspace isolation proven by the `[db]` foreign-workspace test.
+
+### Wealth-path evidence
+`GET /api/owner/wealth-path` returns pathType, label, rationale, quality score, evidence, missing inputs, confidence, strategic options, and warnings for the owner's real business.
+
+### Known gaps
+No new critical/high gap. GAP-003..008 remain phase-deferred. Follow-up (tracked, non-blocking): command-center visual surface + wiring wealth-path into the aggregated command brief.
+
+### Gap register updates
+None required (Slice 1 closed GAP-001/002; this slice adds their runtime surface).
+
+### Hostile audit result (checklist run)
+- §1 Advisor-loophole: read surface feeds later Work-Package generation; not a dead-end card. PASS.
+- §4 Financial-safety: read-only; provisional/bad-path blocks high-risk downstream. PASS.
+- §5 Anti-fake-work: N/A (no completion path). Workspace isolation enforced + tested.
+- §8 Minimum-code: reused business guard, db pattern, enforcement wrapper, Slice-1 engine; no duplicate, no dependency, no schema change. PASS.
+- §9 No-gaps: no critical/high opened; gates green (tsc/eslint/auth-governance/strict-governance/wrapped-handlers ratchet all pass). PASS.
+
+### Minimum-code audit result
+New files: 1 service + 1 route + 2 tests. Existing modified: none. No smaller change surfaces the engine to the owner with workspace-safe reads. Dependencies added: **none**.
+
+### Honest classification
+`RUNTIME_WIRED_NOT_FULLY_PROVEN` — service + route wired and unit-proven; DB path proven by `[db]` tests that execute in CI (not locally). Full `SCENARIO_PROVEN` awaits command-center integration + an owner-visible card.
+
+### Next phase
+Phase 3 — Risk-Adjusted Wealth Score + Opportunity Cost Review (GAP-003/004), consuming the Slice-1 wealth-path + BMQ outputs; then fold the wealth-path signal into the owner command center.
+
+---
+
 ## Template (for subsequent phases)
 
 ### Phase
