@@ -50,3 +50,31 @@ item 13's lone failure was purely DB pollution from the audit's own probes.
 ## Notes
 - The blocking CI lane (`ci.yml`) mirrors item 5 (full DB-backed suite, quarantine excluded) plus governance/tsc/build/ratchet gates, on push to main/claude/** and PRs to main.
 - Quarantined `security/*` suites were re-run in isolation during the audit: `diagnostic-key-validation` 17 pass, `ops-endpoints-auth` 20 pass — the quarantine is harness/DB-lane noise, not a hidden hole (GAP-TEST-01).
+
+---
+
+# Owner-Mode Hardening slice (branch `claude/owner-mode-hardening-commercial-gap-closure`, base `98762ba`)
+
+| # | Command | Result |
+|---|---|---|
+| H1 | `npx tsc --noEmit` | PASS (clean) — after every code change |
+| H2 | `governance:scan:auth` | PASS — all routes comply |
+| H3 | `governance:scan:strict` | PASS — 0 new (32 frozen) |
+| H4 | `audit:wrapped-handlers:ratchet` | PASS — 0 new (29 baseline) |
+| H5 | `lint:ratchet` | PASS — no new lint debt |
+| H6 | `admin/billing-route.test.ts` (GAP-TEN-03) | PASS — 16/16 |
+| H7 | `owner-mode/operator-override.db.test.ts` (GAP-OVR-01) | PASS — 6/6 |
+| H8 | `security/tenant-backstop-enforcement.db.test.ts` (GAP-TEN-01) | PASS — 7/7 |
+| H9 | UsageEvent/CanonicalEvent consumers incl. previously-broken phase-3 | PASS — 253/253 |
+| H10 | `services/evidence-repair.db.test.ts` (GAP-EVIDENCE-DRIFT-01) | PASS — 5/5 |
+| H11 | `p2b/operator-outcome-path` + `decision-outcome-path` (audit-durability path) | PASS — 24/24 |
+| H12 | Full DB-backed suite on fresh DB with all hardening changes (quarantine excluded) | _see below_ |
+
+## Full suite (item H12) — result
+On a freshly-reset `opsiq_test` DB (schema drop + `prisma migrate deploy`), the
+full DB-backed suite with **all** hardening changes (quarantine excluded):
+**808 files passed | 1 skipped (809); 14,012 tests passed | 13 skipped; EXIT 0.**
+Zero failures. +18 tests / +3 files vs the prior base run are this slice's new
+DB-backed tests (operator-override 6, tenant-backstop 7, evidence-repair 5).
+Confirms GAP-TEN-01/TEN-03/OVR-01/EVIDENCE-DRIFT-01(core)/AUDIT-01 fixes
+introduce no regressions.
