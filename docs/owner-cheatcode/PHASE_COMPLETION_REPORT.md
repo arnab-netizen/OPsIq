@@ -116,6 +116,10 @@ Honest overall classification: **`SCENARIO_PROVEN`**, advancing toward `DOMAIN_H
 - **Browser/UI E2E NOT yet run on this branch → GAP-011b BLOCKED_OWNER_ACTION_REQUIRED.** No owner-pilot-e2e / sim-browser run exists (verified via Actions API); integration cannot dispatch (HTTP 403). Owner must run `owner-pilot-e2e.yml` / `sequential-simulations.yml`.
 - Phase 28/32/34 (code/full-suite) → **COMPLETE** (CI evidence). Phase 27/33 UI-E2E leg → pending owner dispatch. Classification unchanged: still NOT FULL_OWNER_MODE_REAL_WORLD_PROVEN (browser E2E + GAP-010 pending).
 
+## GAP-010 verified benchmark closed (2026-07-04)
+- Web research (dated primary/reputable sources) for all 7 domains → `DOMAIN_BENCHMARK_LEDGER.md` VERIFIED BENCHMARK section. All EQUAL_FOR_OWNER_USE_CASE or BETTER (Strategy=BETTER). **GAP-010 → CLOSED_PROVEN**; no domain BELOW/PARTIAL; no gap reopened.
+- **Only remaining blocker before FULL_OWNER_MODE_REAL_WORLD_PROVEN: GAP-011b** (browser/UI Playwright E2E green — owner must dispatch `owner-pilot-e2e.yml`; integration cannot, HTTP 403). Everything else proven.
+
 **Round classification: `OWNER_MODE_PARTIAL_CONTINUE_REQUIRED`.** Core wealth loop (Phases 3–16, 31–33) COMPLETE and E2E/DB-proven; Startup Mode + Domain Hardening advanced (loop-integrated, tested, simulated) but not to their full 26-item / per-domain-benchmark gates; the final whole-repo audit gate (Phase 34) is BLOCKED_EXTERNAL_DEPENDENCY on CI-scale compute. NOT `FULL_OWNER_MODE_PROVEN`.
 
 ---

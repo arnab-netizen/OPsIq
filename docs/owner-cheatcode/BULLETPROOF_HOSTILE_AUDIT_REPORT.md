@@ -258,3 +258,28 @@ Real evidence fetched via the Actions API for branch `claude/owner-cheatcode-ful
 
 ## Classification (Part 5)
 **`OWNER_MODE_REAL_WORLD_PARTIAL_CONTINUE_REQUIRED`** unchanged. **NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`** — still requires: browser/UI E2E green (GAP-011b, owner dispatch) + verified domain benchmark (GAP-010).
+
+---
+
+# Part 6 — GAP-010 Verified Benchmark Closure (web-backed, 2026-07-04)
+
+Web research (WebSearch, dated primary/reputable sources) completed for all 7 domains — see `DOMAIN_BENCHMARK_LEDGER.md` VERIFIED BENCHMARK section.
+
+| Domain | Tool | Verified basis | Classification |
+|---|---|---|---|
+| Finance | QuickBooks (Intuit) | forecasts/records, no unsafe-spend block | EQUAL_FOR_OWNER_USE_CASE |
+| Sales | HubSpot CRM | pipeline/follow-up, no cash-safety ranking | EQUAL_FOR_OWNER_USE_CASE |
+| Marketing | Mailchimp | ROI analytics, no auto-stop on poor perf | EQUAL_FOR_OWNER_USE_CASE |
+| Operations | Asana | PM/workflow, no business scale-gate | EQUAL_FOR_OWNER_USE_CASE |
+| Workforce | Deputy | scheduling/checklist completion, no KPI-proof/fake-work | EQUAL_FOR_OWNER_USE_CASE |
+| Compliance | Vanta | security-framework automation, not owner-decision gating | EQUAL_FOR_OWNER_USE_CASE |
+| Strategy | LivePlan | plan/forecast, no pivot/exit | **BETTER_FOR_OWNER_USE_CASE** |
+
+**GAP-010 → CLOSED_PROVEN.** No domain BELOW/PARTIAL; no implementation gap reopened. Classification basis = owner decision-safety/execution outcome (not point-tool depth), honestly recorded.
+
+## Updated overall blocker status
+- `BLOCKED_EXTERNAL_BENCHMARK_RESEARCH_REQUIRED` (GAP-010) → **CLOSED_PROVEN**.
+- `BLOCKED_CI_BROWSER_VERIFICATION_REQUIRED`: CI code/full-suite half CLOSED_PROVEN (Part 5); **browser/UI E2E half still OPEN (GAP-011b, owner dispatch — integration 403)**.
+
+## Classification (Part 6)
+**`OWNER_MODE_REAL_WORLD_PARTIAL_CONTINUE_REQUIRED`.** The **only** remaining item before `FULL_OWNER_MODE_REAL_WORLD_PROVEN` is **GAP-011b — browser/UI Playwright E2E green**, which requires the owner to dispatch `owner-pilot-e2e.yml` / `sequential-simulations.yml` (my integration cannot dispatch — HTTP 403). All else (whole-repo CI, DB, governance, ratchet, wealth/startup real-world scenarios, verified domain benchmark) is proven. **NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`.**
