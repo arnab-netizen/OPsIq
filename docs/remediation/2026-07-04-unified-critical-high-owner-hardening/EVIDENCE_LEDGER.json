@@ -1,0 +1,458 @@
+{
+  "branch": "claude/unified-critical-high-owner-hardening-remediation",
+  "base_main": "98762ba",
+  "audit_commit": "626052e",
+  "hardening_commit": "01baa60 (reconciled, not merged to main)",
+  "db": "local postgres (env Neon unreachable)",
+  "generated_findings": 56,
+  "findings": [
+    {
+      "id": "SEC-01",
+      "source": "hostile-audit",
+      "severity": "CRITICAL",
+      "title": "resolveServerRole() unconditionally returns \"admin\" for EVERY authenticated user",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "sec-01 7/7"
+    },
+    {
+      "id": "SEC-02",
+      "source": "hostile-audit",
+      "severity": "CRITICAL",
+      "title": "Cross-tenant governed-decision write via POST /api/operator. Chain: (1) resolveS",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "sec-02 5/5"
+    },
+    {
+      "id": "SEC-03",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "requireWorkspaceContext() returns workspaceId = session.user.id — a placeholder ",
+      "unified_status": "OPEN",
+      "evidence": "not reviewed"
+    },
+    {
+      "id": "SEC-04",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "The Prisma workspace-enforcement extension is INERT. WORKSPACE_OWNED_MODELS/GLOB",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "sec-04 4/4 (scope downgraded w/proof)"
+    },
+    {
+      "id": "SEC-05",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "Commit 3dd002f ('stop trusting client x-workspace-id') only partially applied. ~",
+      "unified_status": "OPEN",
+      "evidence": "tracked"
+    },
+    {
+      "id": "SEC-06",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "Three incompatible role vocabularies coexist (admin|operator|viewer; system_admi",
+      "unified_status": "OPEN",
+      "evidence": "tracked"
+    },
+    {
+      "id": "IDEM-01",
+      "source": "hostile-audit",
+      "severity": "CRITICAL",
+      "title": "withIdempotency() in src/infra/idempotency.ts unconditionally runs the operation",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "idem-01 3/3 +223 svc"
+    },
+    {
+      "id": "AUDIT-01",
+      "source": "hostile-audit",
+      "severity": "CRITICAL",
+      "title": "Only ONE mutation path (applyTaskTransition, delegated tasks) writes its audit e",
+      "unified_status": "IN_PROGRESS",
+      "evidence": "operator+decision atomic; lifecycle paths tracked"
+    },
+    {
+      "id": "AUDIT-02",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Audit logging is NOT centralized: 5 parallel mechanisms — infra/audit.emitAuditE",
+      "unified_status": "OPEN",
+      "evidence": "audit not centralized — tracked"
+    },
+    {
+      "id": "APPR-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "The >100000 approval-threshold workflow (canCompleteWithApprovalStatus/enforceAp",
+      "unified_status": "OPEN",
+      "evidence": "approval-gate coverage tracked"
+    },
+    {
+      "id": "APPR-02",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "/api/override writes the override justification to a process-global in-memory ar",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "GAP-OVR-01 ported: durable OverrideRecord"
+    },
+    {
+      "id": "CONC-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Core governed transitions are last-write-wins plain update({where:{id}}) with no",
+      "unified_status": "IN_PROGRESS",
+      "evidence": "acceptDecision guarded; reject/outcome-verify tracked"
+    },
+    {
+      "id": "DEC-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Re-accept hole: validateDecisionForAcceptance allows status 'pending' OR 'in_pro",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "dec-01 2/2"
+    },
+    {
+      "id": "OUT-01",
+      "source": "hostile-audit",
+      "severity": "CRITICAL",
+      "title": "Outcome 'success' is model-vs-model fabrication, not measured business metrics. ",
+      "unified_status": "FIXED_PENDING_TEST",
+      "evidence": "labeled measured=false + schema-drift fixed"
+    },
+    {
+      "id": "OUT-02",
+      "source": "hostile-audit",
+      "severity": "CRITICAL",
+      "title": "The core product promise 're-evaluate when outcomes do NOT improve' is NOT wired",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "out 3/3"
+    },
+    {
+      "id": "REEVAL-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Of 9 CLAUDE.md mandatory adaptive triggers, 4 are wired (new critical evidence, ",
+      "unified_status": "OPEN",
+      "evidence": "3 triggers unwired"
+    },
+    {
+      "id": "SHOCK-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "createShockEvent does NOT persist the ShockEvent (comment falsely claims 'model ",
+      "unified_status": "OPEN",
+      "evidence": "ShockEvent not persisted"
+    },
+    {
+      "id": "EVID-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "The AI/deterministic anti-gaming precheck (runProofPrecheck/computeProofPrecheck",
+      "unified_status": "OPEN",
+      "evidence": "precheck dead"
+    },
+    {
+      "id": "GAME-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "/api/owner/tasks/complete accepts client-supplied maxProofAgeDays (nullable). Pa",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "game-01 3/3"
+    },
+    {
+      "id": "EVID-02",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "decision-evidence 'verified' is a passthrough boolean (verified: f.verified ?? f",
+      "unified_status": "OPEN",
+      "evidence": "tracked"
+    },
+    {
+      "id": "AI-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "A canned generic-advice engine is LIVE on /api/diagnosis: BASE_RECOMMENDATIONS a",
+      "unified_status": "OPEN",
+      "evidence": "canned /api/diagnosis"
+    },
+    {
+      "id": "AI-02",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "The fine-grained abstention/danger/constraint safety gate (governance/abstention",
+      "unified_status": "OPEN",
+      "evidence": "abstention dead"
+    },
+    {
+      "id": "AI-03",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "Per-recommendation proof linkage is dropped at persistence. The diagnosis carrie",
+      "unified_status": "OPEN",
+      "evidence": "tracked"
+    },
+    {
+      "id": "BILL-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Subscription/rate-limit tier is read from a CLIENT-supplied x-tier header (actio",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "bill-01 3/3"
+    },
+    {
+      "id": "BILL-02",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "assertCapability selects currentPeriodEnd but never compares it to now(). A subs",
+      "unified_status": "OPEN",
+      "evidence": "expiry (DEC_BILL)"
+    },
+    {
+      "id": "WEBHOOK-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "The stripe webhook route does NOT await processing: handleWebhookEvent(event).th",
+      "unified_status": "OPEN",
+      "evidence": "fire-and-forget"
+    },
+    {
+      "id": "WEBHOOK-02",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "The custom replay-timestamp check is theater: verifyWebhookSignature hardcodes t",
+      "unified_status": "OPEN",
+      "evidence": "tracked"
+    },
+    {
+      "id": "SCHEMA-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Governed models carry NO direct workspaceId (scoped only indirectly via engageme",
+      "unified_status": "OPEN",
+      "evidence": "workspaceId anchors (DEC_TEN)"
+    },
+    {
+      "id": "SCHEMA-02",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "82 onDelete: Cascade in schema, including the Owner* governed-record tree (Recov",
+      "unified_status": "OPEN",
+      "evidence": "cascades"
+    },
+    {
+      "id": "SCHEMA-03",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Multiple models have a column named workspaceId whose FK points to ClientAccount",
+      "unified_status": "OPEN",
+      "evidence": "entity collapse (DEC_TEN)"
+    },
+    {
+      "id": "SCHEMA-04",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Nearly every governed status is a free-form String (no enum/CHECK): Action.statu",
+      "unified_status": "PARTIAL",
+      "evidence": "operator-store drift fixed; broader tracked"
+    },
+    {
+      "id": "UI-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "The primary nav landing /dashboard is a server component that fetches its OWN AP",
+      "unified_status": "FIXED_PENDING_TEST",
+      "evidence": "cookie fix; E2E external-blocked"
+    },
+    {
+      "id": "UI-02",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "Top-level /decisions ('Decision Inbox / Review, approve, and govern decisions') ",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "redirect"
+    },
+    {
+      "id": "UI-03",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "The persistent sidebar (ui/shell/sidebar-nav.tsx NAV_ITEMS) has only 10 links; ~",
+      "unified_status": "OPEN",
+      "evidence": "nav"
+    },
+    {
+      "id": "STUB-01",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "engagements/[id]/experiments/[experimentId]/approve/route.ts uses 'Mock store fo",
+      "unified_status": "OPEN",
+      "evidence": "experiment-approve stub"
+    },
+    {
+      "id": "STUB-02",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "api/public/engagements, /actions, /kpis return hardcoded mock arrays (mockEngage",
+      "unified_status": "OPEN",
+      "evidence": "public mock arrays"
+    },
+    {
+      "id": "DEAD-01",
+      "source": "hostile-audit",
+      "severity": "LOW",
+      "title": "Four large mock-data-generator components (execution-workspace-shell, portfolio-",
+      "unified_status": "OPEN",
+      "evidence": "mock shells"
+    },
+    {
+      "id": "TEST-01",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "97 test files live in src/__ignored_tests__/ and are globally excluded from vite",
+      "unified_status": "OPEN",
+      "evidence": "97 ignored"
+    },
+    {
+      "id": "TEST-02",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "ci.yml runs a real DB suite with TEST_WITH_DB=true but EXCLUDES 23 quarantined f",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "scanners blocking"
+    },
+    {
+      "id": "TEST-03",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "The default `npm test` (no TEST_WITH_DB) additionally excludes all *.integration",
+      "unified_status": "OPEN",
+      "evidence": "default-run exclusions"
+    },
+    {
+      "id": "TEST-04",
+      "source": "hostile-audit",
+      "severity": "HIGH",
+      "title": "ACTIVE tests counted in the '13,994 passing' figure assert constants under gover",
+      "unified_status": "OPEN",
+      "evidence": "614 fakes NOT counted as proof"
+    },
+    {
+      "id": "WRAP-01",
+      "source": "hostile-audit",
+      "severity": "MEDIUM",
+      "title": "audit-wrapped-handlers reports 29 wrapped route files calling Response.json() di",
+      "unified_status": "OPEN",
+      "evidence": "29 (CM_SEC_02)"
+    },
+    {
+      "id": "GAP-OVR-01",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "operator override server-gated/durable/audited",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "ported operator-override.db"
+    },
+    {
+      "id": "GAP-TEN-03",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "admin billing diagnostics workspace-scoped",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "ported billing-route.test"
+    },
+    {
+      "id": "GAP-TEN-01",
+      "source": "owner-hardening",
+      "severity": "CRITICAL",
+      "title": "DB tenant backstop live",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "reconciled: 117-model backstop (sec-04)"
+    },
+    {
+      "id": "GAP-EVIDENCE-DRIFT-01",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "legacy Evidence repaired (no 500s)",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "ported evidence-repair.db"
+    },
+    {
+      "id": "GAP-AUDIT-01",
+      "source": "owner-hardening",
+      "severity": "CRITICAL",
+      "title": "blocked-decision record+audit transactional",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "reimplemented; store atomic"
+    },
+    {
+      "id": "GAP-AUDIT-02",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "addItems/updateItem transactional audit",
+      "unified_status": "CLOSED_PROVEN",
+      "evidence": "audit-02-additems-atomic.db 2/2"
+    },
+    {
+      "id": "DEC-EVID-01",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "canonical evidence bundle entity",
+      "unified_status": "PARTIALLY_CLOSED",
+      "evidence": "decision recorded; wiring OPEN"
+    },
+    {
+      "id": "DEC-TEN-01",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "ClientAccount/LeadRecord tenant anchor",
+      "unified_status": "BLOCKED_OWNER_DECISION_REQUIRED",
+      "evidence": "migration scope"
+    },
+    {
+      "id": "CM-TEN-02",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "ClientAccount/LeadRecord scoping",
+      "unified_status": "OPEN",
+      "evidence": "guards active; DB anchor OPEN"
+    },
+    {
+      "id": "DEC-BILL-01",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "Lemon Squeezy billing model",
+      "unified_status": "NOT_STARTED",
+      "evidence": "public-SaaS blocker"
+    },
+    {
+      "id": "DEC-BILL-02",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "billing lifecycle",
+      "unified_status": "NOT_STARTED",
+      "evidence": "public-SaaS blocker"
+    },
+    {
+      "id": "DEC-PII-01",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "PII/retention/delete/export",
+      "unified_status": "BLOCKED_OWNER_DECISION_REQUIRED",
+      "evidence": "not implemented"
+    },
+    {
+      "id": "CM-SEC-02",
+      "source": "owner-hardening",
+      "severity": "MEDIUM",
+      "title": "32 error-leak findings",
+      "unified_status": "OPEN",
+      "evidence": "must be itemized"
+    },
+    {
+      "id": "UI-E2E",
+      "source": "owner-hardening",
+      "severity": "HIGH",
+      "title": "browser owner journey",
+      "unified_status": "UI_E2E_UNPROVEN",
+      "evidence": "external-blocked"
+    }
+  ]
+}
