@@ -1,5 +1,10 @@
 # Real-World Proof Ledger — Owner Cheat-Code
 
+> **Main revalidation 2026-07-04 @ `1ef21e2`:** all scenario suites re-run on merged `main`
+> — Wealth 10/10 = **100/100** (thresholds 85/90), Startup 10/10 = **100/100** (threshold 90),
+> owner-strategy 194 passed, owner-mode real-world 790 passed. Owner workload reduced 64–92%
+> (mean ≈77%). No merge regression; proof is tied to main commit `1ef21e2`, not branch-only.
+
 Real-world operating proof for the Owner Cheat-Code loop. Each row is a realistic,
 messy scenario driven through the ACTUAL runtime path (composed loop / runtime
 service), scored on the owner rubric (§8: ordinary ≥85, high-risk ≥90, zero

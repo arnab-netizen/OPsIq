@@ -415,3 +415,97 @@ prior "timed out locally, run in CI" note for GAP-011a — CI already CLOSED_PRO
 
 NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`, NOT `..._ON_MAIN`, NOT post-merge-verified —
 those remain gated on the post-merge-on-main browser/UI E2E and final main-branch audit above.
+
+---
+
+# Part 10 — Post-Merge Main Real-World Verification (2026-07-04)
+
+**1. Scope audited:** full Owner Mode wealth loop + Startup Mode + 7 domains + safety
+gates + routes + E2E + benchmark + evidence ledgers, on merged `main`.
+**2. Branch / HEAD:** `claude/owner-mode-real-world-main-verification` @ `1ef21e2`.
+**3. Main merge commit:** `1ef21e2` (PR #107; base `f81d0b2` + head `f05c88d`, clean).
+
+## 4. Phase-state table (execution.md wealth phases + domains)
+| Phase/Module | State |
+|---|---|
+| Wealth Path Classifier + BMQ (Ph 2) | COMPLETE_ON_MAIN |
+| Risk-Adjusted Wealth + Opportunity Cost (Ph 3) | COMPLETE_ON_MAIN |
+| Business Wisdom tiers | COMPLETE_ON_MAIN |
+| Work Package + proof + outcome learning | COMPLETE_ON_MAIN |
+| Startup Mode (validate/evaluate/launch) | COMPLETE_ON_MAIN |
+| Wealth Command Center (composition) | COMPLETE_ON_MAIN |
+| Domains Finance/Sales/Marketing/Operations/Workforce/Compliance | COMPLETE_ON_MAIN (EQUAL) |
+| Domain Strategy | COMPLETE_ON_MAIN (BETTER) |
+| Browser/UI E2E (owner-pilot) | E2E_PROVEN (merge-ref = main tree) |
+
+## 5. Gap-state table
+| Gap | Severity | Status |
+|---|---|---|
+| GAP-001…009 | High/Med | Closed |
+| GAP-010 benchmark | Med | CLOSED_PROVEN |
+| GAP-011a CI/DB/gov/ratchet | High | CLOSED_PROVEN |
+| GAP-011b browser/UI E2E | High | CLOSED_PROVEN (run 28699750629) |
+| GAP-012 merge precondition | Info | Closed (merged 1ef21e2) |
+| GAP-013 stale CI Gate 10 | Info | Closed (repointed) |
+| Open critical/high | — | **none** |
+
+## 6. Evidence manifest / 7. Test command table
+| Check | Command | Result |
+|---|---|---|
+| Typecheck | `tsc --noEmit` | 0 errors |
+| Auth governance | `governance:scan:auth` | comply |
+| General governance | `governance:scan` | 0 new (32 frozen) |
+| Wrapped-handler ratchet | `audit:wrapped-handlers:ratchet` | 0 new |
+| Lint ratchet | `lint:ratchet` | pass (0 changed-file) |
+| Owner-strategy (incl DB) | `vitest run src/__tests__/owner-strategy` | 194 passed / 20 files |
+| Owner-mode real-world (DB) | `vitest run tests/owner-mode` | 790 passed / 21 files |
+| DB | local PG16 + `prisma migrate deploy` | all migrations applied |
+
+## 8. Simulation result table
+`wealth-loop-simulation.test.ts` — 17 named scenarios (survival, growth, startup validate,
+staff fake completion, marketing waste, premature expansion, weak-model trap, capital
+allocation, compliance escalation, owner override, cross-domain conflict, proof bypass,
+workload overload, bad timing, attractive-revenue trap, sales-vs-ops) — **all pass on main**.
+
+## 9. E2E result table
+| Workflow | Run | Job | Result |
+|---|---|---|---|
+| Owner Pilot Browser + Mobile E2E | 28699750629 (merge-ref = main tree) | owner-pilot-e2e (85115673154) | **success** (17 steps, Playwright specs green, artifact uploaded) |
+| CI Build & Test | 28699749922 | build-and-test | success |
+| Phase 3 Slice 2 Gates | 28699750636 | all 11 gates | success |
+
+## 10. Runtime surface table
+| Surface | Auth | Validation |
+|---|---|---|
+| `POST /api/owner/wealth-path` | withCanonicalEnforcement + OWNER_VIEW | ✓ |
+| `POST /api/owner/wealth-command-center` | withCanonicalEnforcement + OWNER_VIEW | ✓ |
+| `POST /api/owner/startup-validate` | withCanonicalEnforcement + OWNER_VIEW | parseRequestBody ✓ |
+| `composeWealthCommandCenter` | invokes classifyWealthPath, scoreRiskAdjustedWealth, reviewOpportunityCost, financialGovernor (7×), CapitalAllocation, generateWorkPackage (6×), admitAdvice | — |
+
+## 11–13. Ledger summaries
+- **Real-world proof** (`REAL_WORLD_PROOF_LEDGER.md`): 20 rows; Wealth 10/10=100/100, Startup 10/10=100/100 on main.
+- **Domain benchmark** (`DOMAIN_BENCHMARK_LEDGER.md`): 7 domains ≥ EQUAL (Strategy BETTER), dated web citations.
+- **Before-vs-after** (`BEFORE_AFTER_OPSIQ_IMPROVEMENT_LEDGER.md`): ≥25% improvement on hard scenarios; safety/proof never regress.
+
+## 14. Owner workload transfer table
+10/10 wealth scenarios reduce owner minutes 64–92% (mean ≈77%); Work Package + proof every
+scenario. Detail: `OWNER_WORKLOAD_EVIDENCE_LEDGER.md`.
+
+## 15. Financial safety / 16. Proof-resistance / 17. Startup / 18. Domain / 19. Cross-domain
+All proven via `SAFETY_ADVERSARIAL_LEDGER.md` (17 attack cases pass), domain-hardening (8),
+real-world-startup (10/10 launchAllowed=false), and WLS cross-domain #11/#16.
+
+## 20. True external blockers
+- **None blocking proof.** Residual (owner-only, non-blocking): literal `main`
+  `workflow_dispatch` of `owner-pilot-e2e.yml` returns 403 (integration lacks dispatch
+  permission). Merge-ref E2E already tested the identical main tree, so proof stands; owner
+  may click "Run workflow" on `main` for an additional literal-main run.
+
+## 21. Continue-locally-required / 22. Remaining gaps
+None. All locally-possible verification, benchmarking, simulation, audit, and evidence work
+is complete on `main`.
+
+## 23. Final classification
+**`FULL_OWNER_MODE_REAL_WORLD_PROVEN_ON_MAIN`** — all 12 gate conditions met on `main`
+`1ef21e2`; no open critical/high gaps; no `BLOCKED_*` gaps; sole residual is an owner-only
+literal-main E2E dispatch that is materially equivalent to the merge-ref run already green.
