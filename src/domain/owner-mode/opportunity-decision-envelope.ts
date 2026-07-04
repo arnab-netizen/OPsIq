@@ -17,6 +17,7 @@
 import type { ScreenResult, ScreenVerdict } from "@/domain/owner-mode/opportunity-contract-guardrails";
 import { type CapacityStatus, capacityBlocksGrowth } from "@/domain/owner-mode/equipment-capacity";
 import { type ConstraintType, GROWTH_BLOCKING_CONSTRAINTS } from "@/domain/owner-mode/constraint-engine";
+import { type ProfitLeakType, CASH_MARGIN_LEAKS } from "@/domain/owner-mode/profit-leak-radar";
 
 export type DecisionConfidence = "HIGH" | "MEDIUM" | "LOW";
 export type RiskClass = "LOW" | "MEDIUM" | "HIGH";
@@ -42,6 +43,12 @@ export interface OpportunityEnvelopeInput {
    * opportunity must be owner-gated and its upside capped — you do not scale into a bottleneck.
    */
   currentConstraint?: ConstraintType | null;
+  /**
+   * The business's current TOP profit leak (from the Profit-Leak Radar). When it is a
+   * cash/margin leak (cash-risk growth, discounting, underpricing, low-margin B2B), a growth
+   * opportunity is owner-gated — fix the leak before pouring more volume through it.
+   */
+  activeProfitLeak?: ProfitLeakType | null;
 }
 
 export interface OpportunityDecisionEnvelope {
@@ -122,6 +129,13 @@ export function buildOpportunityEnvelope(input: OpportunityEnvelopeInput): Oppor
     input.currentConstraint != null && GROWTH_BLOCKING_CONSTRAINTS.has(input.currentConstraint);
   if (constraintBlocksGrowth && verdict !== "reject") {
     ownerApprovalReasons.push(`current binding constraint is ${input.currentConstraint} — relieve it before scaling`);
+    if (upsideBand === "STRONG") upsideBand = "MODERATE";
+  }
+
+  // Profit-Leak Radar integration: do not scale volume through an active cash/margin leak.
+  const leakBlocksGrowth = input.activeProfitLeak != null && CASH_MARGIN_LEAKS.has(input.activeProfitLeak);
+  if (leakBlocksGrowth && verdict !== "reject") {
+    ownerApprovalReasons.push(`active profit leak (${input.activeProfitLeak}) — fix the leak before adding volume`);
     if (upsideBand === "STRONG") upsideBand = "MODERATE";
   }
 

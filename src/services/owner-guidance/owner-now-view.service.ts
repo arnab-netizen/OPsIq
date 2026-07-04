@@ -34,6 +34,7 @@ import { buildBeginnerExplanation, type BeginnerExplanation } from "@/domain/own
 import { archetypeGuidance, type ArchetypeGuidance } from "@/domain/owner-guidance/archetype-guidance";
 import { computeOwnerWorkloadBudget, type OwnerWorkloadBudget } from "@/domain/owner-guidance/owner-workload-budget";
 import { identifyConstraints, type ConstraintFinding, type ConstraintSignals } from "@/domain/owner-mode/constraint-engine";
+import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } from "@/domain/owner-mode/profit-leak-radar";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -50,6 +51,7 @@ interface CapacityRow { growthSafe: boolean; expansionTriggered: boolean; bottle
 interface MetricRow {
   complaintCount: number | null; rewashCount: number | null; refundAmount: number | null;
   newCustomers: number | null; repeatCustomers: number | null; revenue: number | null;
+  discountAmount: number | null; b2bRevenue: number | null;
 }
 interface SupplierRow { worstStockoutRisk: string; riskScore: number; supplyCutoffRisk: boolean; belowReorderCount: number }
 interface BusinessRow { businessType: string }
@@ -144,6 +146,8 @@ export interface OwnerNowViewPayload {
   workloadBudget: OwnerWorkloadBudget;
   /** The single binding constraint limiting the business right now (or null). */
   topConstraint: ConstraintFinding | null;
+  /** The single highest-value profit leak right now (or null). */
+  topProfitLeak: ProfitLeakFinding | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -238,7 +242,7 @@ export async function assembleGuidanceContext(
   workspaceId: string,
   businessId: string | null,
   deps: GuidanceDeps
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string } }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string; discountAmount: number | null; revenue: number | null; b2bRevenue: number | null; newCustomers: number | null; repeatCustomers: number | null } }> {
   const scope = businessId ? { workspaceId, businessId } : { workspaceId };
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
@@ -251,7 +255,7 @@ export async function assembleGuidanceContext(
     deps.db.ownerEmployeeWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overburdened: true, utilizationPct: true } }),
     deps.db.ownerWorkloadSnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { overloaded: true, bottleneckRisk: true, dailyLoadPct: true } }),
     deps.db.ownerCapacitySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { growthSafe: true, expansionTriggered: true, bottleneckUtilization: true } }),
-    deps.db.ownerMetricSnapshot.findFirst({ where: scope, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true } }),
+    deps.db.ownerMetricSnapshot.findFirst({ where: scope, orderBy: periodOrder, select: { complaintCount: true, rewashCount: true, refundAmount: true, newCustomers: true, repeatCustomers: true, revenue: true, discountAmount: true, b2bRevenue: true } }),
     deps.db.ownerSupplierInventorySnapshot.findFirst({ where: { workspaceId }, orderBy: order, select: { worstStockoutRisk: true, riskScore: true, supplyCutoffRisk: true, belowReorderCount: true } }),
     businessId
       ? deps.db.ownerBusiness.findFirst({ where: { workspaceId, id: businessId }, select: { businessType: true } })
@@ -369,7 +373,15 @@ export async function assembleGuidanceContext(
     growthReadinessTier: growthGatePassed ? "GROWTH_READY" : "STABILIZE_FIRST",
   };
 
-  return { ctx, state, ag, raw: { cashState, finState } };
+  return {
+    ctx, state, ag,
+    raw: {
+      cashState, finState,
+      discountAmount: metric?.discountAmount ?? null, revenue: metric?.revenue ?? null,
+      b2bRevenue: metric?.b2bRevenue ?? null, newCustomers: metric?.newCustomers ?? null,
+      repeatCustomers: metric?.repeatCustomers ?? null,
+    },
+  };
 }
 
 function buildBeginner(view: OwnerNowView, steps: GuidanceStep[]): BeginnerExplanation {
@@ -440,6 +452,32 @@ export async function getOwnerNowView(
   };
   const topConstraint = identifyConstraints(constraintSignals).topConstraint;
 
+  // Profit-Leak Radar — highest-value leak from the SAME live signals (workspace-scoped),
+  // linked to the current binding constraint. Fabricates nothing: real figures (discount
+  // amount, revenue) are reported as data; margin is left unknown (no 0..1 margin source),
+  // so margin-dependent leaks carry lower confidence / NEEDS_DATA rather than a fake number.
+  const profitLeakSignals: ProfitLeakSignals = {
+    workspaceId,
+    revenue: raw.revenue,
+    discountAmount: raw.discountAmount,
+    marginPct: null,
+    marginSafe: raw.finState ? SAFE_STATES.has(raw.finState) : null,
+    b2bRevenue: raw.b2bRevenue,
+    newCustomers: raw.newCustomers,
+    repeatCustomers: raw.repeatCustomers,
+    complaintsCount: state.complaintsCount,
+    reworkCount: state.reworkCount,
+    overdueProofCount: state.overdueProofCount,
+    capacityUtilizationPct: state.capacityUtilizationPct,
+    ownerBottleneckItems: workloadBudget.ownerBottleneckItems,
+    ownerReviewsRequired: workloadBudget.reviewsRequired,
+    ownerDecisionsRequired: workloadBudget.ownerDecisionsRequired,
+    currentConstraint: topConstraint?.constraintType ?? null,
+    missingCriticalData: ctx.missingCriticalData,
+    evaluatedAt: new Date(deps.now()).toISOString(),
+  };
+  const topProfitLeak = identifyProfitLeaks(profitLeakSignals).topLeak;
+
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -465,7 +503,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
