@@ -105,7 +105,7 @@ Legend: **FOUND** = exists, reuse it. **PARTIAL** = exists in adjacent form, ext
 | 18 | Owner Discipline Guardrail | PARTIAL | `owner-budget/budget-authority.ts`, `services/owner-mode/owner-action-gate.service.ts`, `gate-enforcement-policy.ts` — no unified behavioral detector. |
 | 19 | Scale Readiness Gate | FOUND | `src/domain/execution/scale-readiness.ts` (`assessScaleReadiness`, `NotScaleReadyError`) |
 | 20 | Domain Hardening Layer | FOUND | `src/domain/domain-training/`, `collective-training/`, `owner-{finance,sales,marketing,operations,sop,strategy}` |
-| 21 | Startup Validation + Launch Workbench | **GAP** | Entirely absent (pilot/onboarding readiness ≠ new-venture validation/launch). |
+| 21 | Startup Validation + Launch Workbench | **DONE (Phase 14–15)** | `src/domain/owner-strategy/startup-mode.ts` (`validateStartup`/`evaluateIdea`/`planLaunch`, validation-first, launch blocked before validation). Reuses wealth-path + risk-adjusted + work-package. Closes GAP-008. |
 | 22 | Local Context / Compliance Confidence Gate | PARTIAL | `domain/remote-operations/compliance-gate.ts`, `owner-mode/compliance-boundary.ts`, `remote-operations/location-readiness.ts` — spread, not one combined gate. |
 | 23 | Owner Daily Command Center | FOUND | `src/domain/execution/owner-command-center.ts`, `owner-mode/command-center-priorities.ts`, `services/owner-dashboard.service.ts` |
 

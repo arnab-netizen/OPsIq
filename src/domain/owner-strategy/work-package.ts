@@ -128,6 +128,19 @@ function artifactsFor(kind: WorkPackageActionKind, businessName: string | null |
         { kind: "vendor_script", title: "Vendor negotiation script", content: `Hi [vendor], we value working with ${biz}↔you. Given [volume/loyalty], can we agree [ask: price/terms]? If not, we'll need to compare alternatives for [reason].` },
         { kind: "checklist", title: "Vendor review checklist", content: "[ ] Current terms  [ ] Alternatives priced  [ ] Target agreed  [ ] Follow-up date" },
       ];
+    case "startup_validation":
+      return [
+        { kind: "customer_script", title: "Customer validation interview script", content: `Hi, I'm exploring starting ${biz}. Can I ask 3 quick questions? 1) How do you handle [problem] today? 2) What's frustrating about it? 3) If something solved that for [price], would you try it? (Listen; do NOT pitch.)` },
+        { kind: "checklist", title: "Competitor research worksheet", content: "For each competitor: Name | Offer | Price | Strengths | Weaknesses | Gap we could own. Fill in at least 3." },
+        { kind: "vendor_script", title: "Supplier/vendor feasibility call script", content: `Hi, I'm setting up ${biz}. For [input/material/service], what are your minimum order, unit price, and lead time? Any setup requirements?` },
+      ];
+    case "startup_launch":
+      return [
+        { kind: "launch_checklist", title: "Launch checklist", content: "[ ] Legal/registration  [ ] Licenses/compliance (professional review)  [ ] First offer + pricing set  [ ] Sales script ready  [ ] First-30-day marketing calendar  [ ] Vendor setup  [ ] SOP starter  [ ] Quality checklist  [ ] Follow-up workflow  [ ] Review cadence" },
+        { kind: "customer_script", title: "First sales script", content: `Hi [customer], ${biz} offers [offer]. It helps you [benefit] for [price]. Want to be one of our first customers? (Offer [launch incentive].)` },
+        { kind: "campaign_plan", title: "First 30-day marketing calendar", content: "Week 1: announce to network + [channel]. Week 2: referrals + reviews. Week 3: [channel] test (budget cap [amount], stop if ROI<[floor]). Week 4: follow up warm leads. Track results weekly." },
+        { kind: "sop", title: "SOP starter pack", content: "Document the 3 most-repeated tasks: [task] steps + quality standard + who + proof. Add more as volume grows." },
+      ];
     case "generic":
     default:
       return [
@@ -148,6 +161,10 @@ function stepsFor(kind: WorkPackageActionKind): string[] {
       return ["Confirm budget cap and stop rule", "Launch to the target segment", "Track spend/leads/ROI daily", "Apply the stop rule at review"];
     case "pricing_change":
       return ["Run the price-change calculator", "Confirm margin clears the floor", "Notify top customers and brief staff", "Update lists and set the review date"];
+    case "startup_validation":
+      return ["Interview at least 8 target customers with the script", "Record willingness to pay (not just interest)", "Complete the competitor worksheet", "Confirm supplier feasibility", "Decide go / pivot / stop against the kill criteria"];
+    case "startup_launch":
+      return ["Complete the legal/compliance checklist (professional review where flagged)", "Set the first offer + pricing", "Run the first-30-day marketing calendar", "Onboard first customers with the sales script", "Review at the cadence against kill/pivot criteria"];
     default:
       return ["Prepare using the attached artifacts", "Execute the action", "Capture the required proof", "Log the outcome for review"];
   }
@@ -159,6 +176,8 @@ const PROOF_BY_KIND: Partial<Record<WorkPackageActionKind, string>> = {
   marketing_campaign: "Campaign tracker with spend, conversions, and ROI vs the stop rule.",
   pricing_change: "Calculator output showing margin clears the floor + updated price list.",
   staff_training: "Signed-off training checklist + a supervised competency check.",
+  startup_validation: "Completed customer-interview log with willingness-to-pay evidence + competitor worksheet.",
+  startup_launch: "Launch checklist complete + evidence of the first paying customer.",
 };
 
 /** Rough owner-minutes to do the task unaided, per kind. */
@@ -174,6 +193,8 @@ const OWNER_MINUTES_BEFORE: Partial<Record<WorkPackageActionKind, number>> = {
   marketing_campaign: 120,
   daily_ops: 30,
   vendor_negotiation: 60,
+  startup_validation: 180,
+  startup_launch: 240,
   generic: 45,
 };
 

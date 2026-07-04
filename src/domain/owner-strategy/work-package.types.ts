@@ -29,6 +29,8 @@ export const WORK_PACKAGE_ACTION_KINDS = [
   "marketing_campaign",
   "daily_ops",
   "vendor_negotiation",
+  "startup_validation",
+  "startup_launch",
   "generic",
 ] as const;
 export type WorkPackageActionKind = (typeof WORK_PACKAGE_ACTION_KINDS)[number];

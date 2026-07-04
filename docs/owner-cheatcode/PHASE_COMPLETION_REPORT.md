@@ -538,6 +538,55 @@ Phases 8/9 are FOUND (Guided Action Runner, Proof Validation, Outcome, Causality
 
 ---
 
+## Phase 14–15 — Startup Mode: Validation + Launch Workbench (GAP-008)
+
+### Phase / Branch / HEAD / Working tree
+Phases 14–15 (closes GAP-008 — the last open gap); `claude/owner-cheatcode-full-implementation`; HEAD at commit; clean.
+
+### Scope completed
+Validation-first Startup Mode: screens candidate ideas with the existing wealth-path + risk-adjusted engines, rejects weak/unaffordable/trap ideas, exposes capital insufficiency, emits a validation-first Work Package, and blocks launch until an idea is validated.
+
+### Files changed
+- Added `src/domain/owner-strategy/startup-mode.types.ts` + `startup-mode.ts` (`evaluateIdea`, `validateStartup`, `planLaunch`, `StartupNotValidatedError`).
+- Extended `src/domain/owner-strategy/work-package.ts` + `.types.ts` with `startup_validation` / `startup_launch` action kinds (artifacts: customer-validation script, competitor worksheet, supplier script; launch checklist, first sales script, marketing calendar, SOP starter).
+- Added `src/__tests__/owner-strategy/startup-mode.test.ts` (12 tests).
+- Modified barrel `index.ts`.
+
+### Existing systems reused
+- `classifyWealthPath` (Phase 2), `scoreRiskAdjustedWealth` (Phase 3), `generateWorkPackage` (Phase 7), `clampConfidence`, `scales`. Startup Mode is orchestration over these — no new scoring engine.
+
+### New systems added
+One deterministic domain module + a 2-kind extension of the Phase 7 generator. No dependency/DB/migration.
+
+### Tests added / run
+`startup-mode.test.ts` — 12 tests (accept solid + economics/break-even; reject unaffordable with capital gap exposed; reject trap/loss-making; shortlist/reject + validation Work Package with real artifacts; launch never authorized from validation; no-idea-passes warning; kill/pivot; planLaunch throws before validation; validated → launch WP + 30/60/90 + compliance review; determinism). `tsc` 0; eslint clean. Full `owner-strategy/` **129 passed / 8 `[db]`**.
+
+### Scenario results (exit gate)
+Beginner intake (₹300k capital, ₹40k survival) + 3 ideas → recommends the affordable laundry idea with a **validation-first Work Package** (customer-interview script, competitor worksheet, supplier script), rejects the ₹1.5M cloud-kitchen (capital gap shown) and the loss-making reseller (trap/weak economics), and refuses to plan launch until validated.
+
+### Owner workload transferred
+Validation Work Package assigns the owner prepared interview scripts + worksheets (≈180 min of prep avoided); launch Work Package prepares the launch checklist, sales script, and marketing calendar.
+
+### Financial safety / wealth-path evidence
+Capital insufficiency exposed (never hidden); trap/dead-end ideas rejected via the wealth-path verdict; unvalidated ideas scored with LOW evidence so risk-adjusted scores stay provisional (reinforces validate-first).
+
+### Known gaps / Gap register updates
+GAP-008 → Closed. **All registered gaps GAP-001..009 are now closed.**
+
+### Hostile audit result
+§6 startup-audit PASS (validates before launch, rejects weak ideas, shows capital insufficiency, unit economics + break-even, kill/pivot, Work Packages); §8 minimum-code PASS (orchestration over existing engines, generator extended not duplicated); §9 no-gaps PASS.
+
+### Minimum-code audit result
+New files: 2 source + 1 test. Existing modified: work-package (2 kinds) + barrel. Dependencies: **none**.
+
+### Honest classification
+Phases 14–15 = `SCENARIO_PROVEN_PARTIAL_DOMAIN` — validation/launch engines proven by unit tests; owner-facing runtime surface shares the tracked command-center follow-up.
+
+### Next phase
+All genuine wealth-loop GAPs are closed. Remaining `execution.md` phases (8, 9, 13, 16–28) are FOUND/PARTIAL prove-existing + the runtime command-center surface. See the loop status summary in this report's header commit.
+
+---
+
 ## Template (for subsequent phases)
 
 ### Phase
