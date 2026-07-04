@@ -15,6 +15,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { assessFleetCapacity, type EquipmentRecord } from "@/domain/owner-mode/equipment-capacity";
 import { grossMarginPctFrom, DEFAULT_MARGIN_FLOOR_PCT } from "@/domain/owner-finance/margin-safety-gate";
 import { screenOpportunity, type ScreenVerdict } from "@/domain/owner-mode/opportunity-contract-guardrails";
+import { buildOpportunityEnvelope, type OpportunityDecisionEnvelope } from "@/domain/owner-mode/opportunity-decision-envelope";
 
 interface OppDb {
   ownerEquipment: { findMany(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<Array<EquipmentRecord & { name: string }>> };
@@ -39,6 +40,10 @@ export interface DecideOpportunityInput {
   /** Optional explicit margin (0..1); otherwise derived from the latest snapshot. */
   marginPct?: number | null;
   actorId?: string;
+  /** What kind of opportunity this is (e.g. "B2B contract", "retention campaign"). */
+  opportunityType?: string;
+  /** Owner-supplied capital outlay for this move, if known. */
+  estimatedCapitalOutlay?: number | null;
 }
 
 export interface OpportunityDecision {
@@ -46,6 +51,8 @@ export interface OpportunityDecision {
   reasons: string[];
   nextAction: string;
   derived: { capacityStatus: string; marginPct: number | null };
+  /** Full owner-reviewable decision envelope (Wealth Standard). */
+  envelope: OpportunityDecisionEnvelope;
 }
 
 const NEXT_ACTION: Record<ScreenVerdict, string> = {
@@ -77,12 +84,27 @@ export async function decideOpportunity(input: DecideOpportunityInput, injected?
     marginPct = gm == null ? null : gm / 100; // screenOpportunity wants 0..1
   }
 
+  const marginFloorPct = DEFAULT_MARGIN_FLOOR_PCT / 100;
   const result = screenOpportunity({
     fitScore: input.fitScore,
     marginPct,
-    marginFloorPct: DEFAULT_MARGIN_FLOOR_PCT / 100,
+    marginFloorPct,
     capacityStatus: capacity.status,
     paymentRisk: input.paymentRisk,
+  });
+
+  // Owner-decision envelope (Wealth Standard): confidence, missing-data disclosure,
+  // cash/operational burden, owner-approval gate, first-test-action, success metric,
+  // stop-loss, and reassessment trigger — deterministic, no fabricated ROI.
+  const envelope = buildOpportunityEnvelope({
+    opportunityType: input.opportunityType ?? "opportunity",
+    screen: result,
+    marginPct,
+    marginFloorPct,
+    capacityStatus: capacity.status,
+    paymentRisk: input.paymentRisk,
+    fitScore: input.fitScore,
+    estimatedCapitalOutlay: input.estimatedCapitalOutlay ?? null,
   });
 
   await emitAuditEvent({
@@ -92,8 +114,15 @@ export async function decideOpportunity(input: DecideOpportunityInput, injected?
     actorType: input.actorId ? "user" : "system",
     entityType: "owner_opportunity",
     entityId: input.businessId,
-    payload: { verdict: result.verdict, capacityStatus: capacity.status, marginPct },
+    payload: {
+      verdict: result.verdict,
+      capacityStatus: capacity.status,
+      marginPct,
+      confidence: envelope.confidence,
+      riskClass: envelope.riskClass,
+      ownerApprovalRequired: envelope.ownerApprovalRequired,
+    },
   });
 
-  return { verdict: result.verdict, reasons: result.reasons, nextAction: NEXT_ACTION[result.verdict], derived: { capacityStatus: capacity.status, marginPct } };
+  return { verdict: result.verdict, reasons: result.reasons, nextAction: NEXT_ACTION[result.verdict], derived: { capacityStatus: capacity.status, marginPct }, envelope };
 }
