@@ -201,11 +201,11 @@ const handleSignup = async (request: NextRequest) => {
       throw error;
     }
 
-    if (error instanceof Error) {
-      throw new BadRequestError(error.message);
-    }
-
-    throw new BadRequestError("Signup failed");
+    // CM-SEC-02: never surface a raw internal error (Prisma text, stack, internal
+    // hostnames) to a public signup caller. The full detail is already captured in
+    // the server log above and reachable via the diagnostic-key-gated branch; the
+    // client gets a stable, generic message.
+    throw new BadRequestError("Signup failed. Please try again.");
   }
 };
 
