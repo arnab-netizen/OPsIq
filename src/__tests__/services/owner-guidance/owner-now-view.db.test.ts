@@ -11,9 +11,11 @@ import { getOwnerNowView } from "@/services/owner-guidance/owner-now-view.servic
 const wsA = randomUUID();
 const wsB = randomUUID();
 const bizA = randomUUID();
+const wsC = randomUUID();
 
 afterAll(async () => {
-  await db.ownerGuidanceSnapshot.deleteMany({ where: { workspaceId: { in: [wsA, wsB] } } });
+  await db.ownerGuidanceSnapshot.deleteMany({ where: { workspaceId: { in: [wsA, wsB, wsC] } } });
+  await db.proof.deleteMany({ where: { workspaceId: { in: [wsC] } } });
 });
 
 describe("[db][module41] owner now view snapshot persistence", () => {
@@ -40,5 +42,21 @@ describe("[db][module41] owner now view snapshot persistence", () => {
     await getOwnerNowView(wsA, bizA);
     const rowsB = await db.ownerGuidanceSnapshot.findMany({ where: { workspaceId: wsB } });
     expect(rowsB.length).toBe(0);
+  });
+
+  it("[workload-budget] returns an owner workload budget that counts real proof reviews (workspace-scoped)", async () => {
+    // Seed two proofs in NEEDS_HUMAN_REVIEW for wsC — the owner review queue.
+    for (let i = 0; i < 2; i++) {
+      await db.proof.create({
+        data: { id: randomUUID(), workspaceId: wsC, proofType: "photo", status: "NEEDS_HUMAN_REVIEW", updatedAt: new Date() },
+      });
+    }
+    const out = await getOwnerNowView(wsC, null);
+    expect(out.workloadBudget).toBeTruthy();
+    expect(out.workloadBudget.reviewsRequired).toBe(2);
+    expect(out.workloadBudget.estimateBasis).toMatch(/estimate/i);
+    // A different workspace's review queue must not bleed in.
+    const other = await getOwnerNowView(wsA, bizA);
+    expect(other.workloadBudget.reviewsRequired).toBe(0);
   });
 });

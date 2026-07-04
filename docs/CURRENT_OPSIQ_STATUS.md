@@ -8,7 +8,19 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Mode classifications (this pass)
+## Elite hardening pass (latest)
+- **Branch:** `claude/elite-business-operating-system-hardening` · **Base/main:** `be62a606`.
+- **Owner Workload Budget:** `REAL_AND_OWNER_VISIBLE` — grouping, noise suppression, owner-only vs
+  delegable split, owner-bottleneck flag, real proof-review/reassessment counts, transparent
+  owner-minutes/minutes-saved estimate; surfaced via `/api/owner/now-view`. 8 new tests.
+- **Constraint Engine / Profit Leak Radar / Anti-gaming analytics:** `PARTIAL` (real backend signals,
+  no dedicated typed engine yet). **Evidence Credibility Graph / Business-Control SLOs / Process
+  Intelligence:** `MISSING` (not stubbed). **AI abstention gate:** intentionally blocked (no LLM
+  write-path active).
+- **Overall:** `HIGH_VALUE_PRIVATE_OWNER_SYSTEM_PROVEN` / `REMEDIATION_PARTIAL_CONTINUE_REQUIRED`.
+- Details: `docs/remediation/elite-business-operating-system-hardening/`.
+
+## Mode classifications (prior pass)
 - **Owner Mode:** `OWNER_MODE_READY_WITH_INTENTIONAL_GUARDRAILS`.
 - **Startup Mode:** `STARTUP_MODE_PRIVATE_BASELINE_PROVEN`.
 - **Wealth / Opportunity / Profit Generation Mode:** `WEALTH_OPPORTUNITY_PRIVATE_BASELINE_PROVEN`

@@ -32,6 +32,7 @@ import { BusinessFunction } from "@/domain/owner-guidance/business-function";
 import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation-business-impact";
 import { buildBeginnerExplanation, type BeginnerExplanation } from "@/domain/owner-guidance/beginner-mode";
 import { archetypeGuidance, type ArchetypeGuidance } from "@/domain/owner-guidance/archetype-guidance";
+import { computeOwnerWorkloadBudget, type OwnerWorkloadBudget } from "@/domain/owner-guidance/owner-workload-budget";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -138,6 +139,8 @@ export interface OwnerNowViewPayload {
   stepByStep: GuidanceStep[];
   archetype: ArchetypeGuidance["archetype"];
   generatedFromLiveData: boolean;
+  /** Owner Workload Budget — how much owner attention today, and how much was saved. */
+  workloadBudget: OwnerWorkloadBudget;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -395,6 +398,19 @@ export async function getOwnerNowView(
   const deps = injected ?? (await resolveDefaultDeps());
   const { ctx, state, ag } = await assembleGuidanceContext(workspaceId, businessId, deps);
 
+  // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
+  // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
+  // so it contributes 0 here rather than a fabricated count.
+  const [pendingProofReviews, pendingReassessments] = await Promise.all([
+    safeCount(deps.db.proof.count({ where: { workspaceId, status: "NEEDS_HUMAN_REVIEW" } })),
+    safeCount(deps.db.ownerReassessmentEvent.count({ where: { workspaceId, status: "pending" } })),
+  ]);
+  const workloadBudget = computeOwnerWorkloadBudget(ctx.issues, {
+    pendingProofReviews,
+    pendingReassessments,
+    opportunityApprovalsPending: 0,
+  });
+
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -420,7 +436,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
