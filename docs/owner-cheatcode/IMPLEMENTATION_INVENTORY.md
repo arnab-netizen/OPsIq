@@ -86,8 +86,8 @@ Legend: **FOUND** = exists, reuse it. **PARTIAL** = exists in adjacent form, ext
 | # | Concept | Status | Existing anchor (reuse/extend) |
 |---|---|---|---|
 | 1 | Business State Model | PARTIAL | `src/domain/business-facts/contract.ts`, `intake-adapter.ts`; `src/services/owner-intake/intake.service.ts`; `src/domain/owner-mode/business-state-timeline.ts`; `src/services/owner-mode/owner-context-derivation.ts` |
-| 2 | Business Model Quality Score | **GAP (partial input exists)** | Closest: `business-condition-profile.ts` health scores (owner/team/customer/financial). No structural **wealth-potential** quality score (margin/repeatability/moat/owner-dependency/wealth-ceiling). |
-| 3 | Wealth Path Classifier | **GAP** | Only operating-*stage* classifier `collective-training/stage-classifier.ts`. The required wealth taxonomy (survival-cashflow / local-profit / multi-unit-scalable / asset-light / tech-product / marketplace / stepping-stone / **owner-job / dead-end / trap**) does **not** exist. |
+| 2 | Business Model Quality Score | **DONE (Phase 2 slice 1)** | `src/domain/owner-strategy/wealth-path.ts` → `scoreBusinessModelQuality` (7 weighted structural dimensions, Rule-D disclosure). Tests: `src/__tests__/owner-strategy/wealth-path.test.ts`. Closes GAP-002. |
+| 3 | Wealth Path Classifier | **DONE (Phase 2 slice 1)** | `src/domain/owner-strategy/wealth-path.ts` → `classifyWealthPath` (all 10 categories incl. owner-job/dead-end/trap). Tests as above. Closes GAP-001. |
 | 4 | Risk-Adjusted Wealth Score | **GAP** | Only opportunity-viability `benchmark/growth-opportunity.ts` (`risk_adjusted_score` for a growth opp). No owner-path risk-adjusted wealth score. |
 | 5 | Opportunity Cost Review | PARTIAL | `services/owner-mode/opportunity-decision.service.ts` decides single opportunities; no alternative-comparison against preserve-cash/debt/retention/etc. |
 | 6 | Capital Allocation Engine | FOUND | `src/domain/owner-budget/capital-allocation.ts` (`rankCapitalAllocation`), `confidence-gate.ts` |

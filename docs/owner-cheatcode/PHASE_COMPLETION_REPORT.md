@@ -84,6 +84,94 @@ Phase 2, Slice 1 — Wealth Path Classifier + Business Model Quality Score (clos
 
 ---
 
+## Phase 2, Slice 1 — Wealth Path Classifier + Business Model Quality Score
+
+### Phase
+Phase 2, Slice 1 (of `execution.md` Phase 2). Closes GAP-001, GAP-002.
+
+### Branch
+`claude/owner-cheatcode-full-implementation`.
+
+### HEAD
+Set at commit time (this slice's commit follows the Phase 0 commit `d89e6e5`).
+
+### Working tree status
+Clean after commit.
+
+### Scope completed
+Deterministic domain engine that (a) scores structural Business Model Quality and
+(b) classifies the business into the required 10-category wealth taxonomy —
+including the uncomfortable verdicts owner-job / dead-end / trap — with full
+Score-Integrity disclosure and missing-data honesty.
+
+### Files changed
+- Added `src/domain/owner-strategy/wealth-path.types.ts` (types only).
+- Added `src/domain/owner-strategy/wealth-path.ts` (`scoreBusinessModelQuality`, `classifyWealthPath`).
+- Added `src/__tests__/owner-strategy/wealth-path.test.ts` (20 tests).
+- Modified `src/domain/owner-strategy/index.ts` (barrel re-export of the new surface).
+
+### Existing systems reused
+- `@/domain/owner-spine/contracts` → `clampScore`, `clampConfidence` (no new clamping helpers).
+- Presence/missing-input + confidence pattern mirrored from `owner-strategy/data-confidence.ts`.
+- Housed inside existing Module 8 `owner-strategy` (no new module/folder).
+
+### New systems added
+One deterministic domain module (pure functions). No new service, route, DB model, migration, or dependency.
+
+### Tests added or updated
+`src/__tests__/owner-strategy/wealth-path.test.ts` — 20 tests: score integrity (weights sum to 1.0, disclosure fields, clamping, no-hallucination), all taxonomy branches (high-quality, weak, dead-end, trap ×2, owner-job, multi-unit, asset-light, marketplace, stepping-stone, local-profit), missing-data/provisional, determinism, runway warning, what-would-change.
+
+### Tests run
+- `npx vitest run src/__tests__/owner-strategy/wealth-path.test.ts` → **20 passed**.
+- `npx vitest run src/__tests__/owner-strategy/` → **72 passed, 5 skipped (DB)** (barrel regression check).
+- `npx tsc --noEmit` → **0 errors** (whole repo).
+- `npx eslint <new files>` → clean (exit 0).
+
+### DB tests run if applicable
+Not applicable — pure domain logic, no persistence in this slice.
+
+### UI/E2E tests run if applicable
+Not applicable this slice (engine layer). UI/command-center wiring tracked as next slice.
+
+### Scenario results
+Owner-job case proves a *profitable* (net 20%) business is still flagged as a job disguised as a business — the key cheat-code verdict. Trap and dead-end cases surface stop_investing/sell/exit options.
+
+### Owner workload transferred
+N/A for this engine-only slice (no Work Package generated yet). The classifier is the input that later slices use to prepare/route work. No owner burden added.
+
+### Financial safety evidence
+No financial mutation. Classifier sets `blocksHighRiskExecution=true` for provisional/low-data results and for trap/dead-end/owner-job verdicts, so downstream cannot auto-run high-risk (e.g. scaling capital) on a weak or unproven path.
+
+### Proof/audit evidence
+No proof/audit path touched.
+
+### Wealth-path evidence
+`classifyWealthPath` returns all 10 required categories with evidence, rationale, missing inputs, confidence, and allowed strategic options (continue/stabilize/validate/pivot/pause/sell/exit/stop_investing/cashflow_only/redirect) — satisfying Amendment Rule K.
+
+### Known gaps
+GAP-001/002 closed. Remaining open: GAP-003..008 (deferred to their phases; none block Phase 2). New tracked follow-up: runtime surface (route/UI/command-center) for wealth-path — see Next phase.
+
+### Gap register updates
+GAP-001, GAP-002 → Closed with evidence.
+
+### Hostile audit result (checklist run)
+- §1 Advisor loophole: engine layer; it feeds Work-Package generation (Phase 7), does not stop at a card. PASS (for this layer).
+- §3 Wealth-path: distinguishes cashflow vs scalable; detects trap/dead-end/owner-job; allows stop/pivot/sell/exit; includes confidence + missing data; no guaranteed-wealth language. PASS.
+- §4 Financial safety: provisional + bad-path results block high-risk execution downstream. PASS.
+- §8 Minimum-code: reused clamps + module home; no duplicate engine (stage-classifier answers a different question); no new dependency/schema/UI. PASS.
+- §9 No-gaps: no critical/high gap opened; GAP-001/002 closed with evidence; classification honest. PASS.
+
+### Minimum-code audit result
+New files: 2 source + 1 test. Existing modified: 1 barrel line. No smaller change satisfies the gate (a new taxonomy classifier + structural quality score did not exist). Dependencies added: **none**.
+
+### Honest classification
+`PARTIAL_RUNTIME_SLICE` — engine proven by unit tests; not yet surfaced via API/UI/command-center (that is the next slice, per Runtime-First Rule H).
+
+### Next phase
+Phase 2, Slice 2 — surface wealth-path in a read path (service/route + command-center signal) so the owner can see the verdict, then Phase 3 (Risk-Adjusted Wealth Score + Opportunity Cost, GAP-003/004) consuming these outputs.
+
+---
+
 ## Template (for subsequent phases)
 
 ### Phase
