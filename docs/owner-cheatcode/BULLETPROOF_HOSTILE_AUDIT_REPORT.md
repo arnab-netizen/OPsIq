@@ -310,3 +310,46 @@ and **`sequential-simulations.yml`** (sim-browser) **on main**.
 - If **failed** → classify `MAIN_E2E_FAILED_CONTINUE_REQUIRED`; reproduce locally (local Postgres + Playwright), fix or revert with **minimum required code**, re-run, and re-verify.
 
 **NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`** — that remains gated on the main post-merge browser/UI E2E above.
+
+---
+
+# Part 8 — Main-Merge Verification Attempt (2026-07-04)
+
+**Task received:** "POST-MERGE MAIN REAL-WORLD OWNER MODE PROOF" — continue *after*
+`claude/owner-cheatcode-full-implementation` has been merged into `main`, verify on main,
+close GAP-011b, produce `FULL_OWNER_MODE_REAL_WORLD_PROVEN_ON_MAIN`.
+
+**Precondition check (step 0.3 of the task): FAILED — the branch is NOT merged.**
+
+| Check | Command | Result |
+|---|---|---|
+| origin/main HEAD | `git rev-parse origin/main` | `f81d0b2` (= shared base `0b1e104` + 1 unrelated commit #106) |
+| Is branch HEAD an ancestor of main? | `git merge-base --is-ancestor 93ebcbd origin/main` | **exit 1 → NO (not merged)** |
+| owner-cheatcode files on main | `git ls-tree -r --name-only origin/main \| grep owner-cheatcode` | **0 files** |
+| owner-strategy wealth engines on main | (same) | **0 files** |
+| Unmerged feature commits | `git rev-list --count origin/main..93ebcbd` | **22 commits** |
+
+**Red-herring resolved:** the first `execution.md` observed ("Reality Loop v2.0") came from
+a **stale local `main` ref (`fa1e057`)** that diverges from `origin/main`. Real `origin/main`
+carries the original root `execution.md`, not the owner-cheatcode work. There is no merge to verify.
+
+**Merge readiness re-confirmed (so the blocker is purely owner-action, not a code defect):**
+- Merge is **CLEAN**: `git merge-tree --write-tree origin/main HEAD` → exit 0, **0 CONFLICT markers**
+  (origin/main is only 1 commit past the shared base).
+- Branch revalidated **GREEN** at `93ebcbd`: `tsc --noEmit` 0 errors; owner-strategy suite 183 passed;
+  auth-governance clean; wrapped-handlers ratchet clean; finance/integration 43 passed.
+
+**Why Claude cannot self-resolve:** the standing rule "NEVER push to a different branch without
+explicit permission" and "Do NOT create a pull request unless explicitly asked" forbid Claude from
+merging to `main` or opening a PR unprompted. The merge is an **owner action**.
+
+## GAP-012 (recorded in GAP_REGISTER.md)
+`BLOCKED_OWNER_ACTION_REQUIRED` — branch not merged to main; owner must merge (clean) or authorize
+a PR; then re-run the post-merge main verification task.
+
+## Classification (Part 8 — current run)
+**`BLOCKED_OWNER_ACTION_REQUIRED`.** All locally-possible work is complete and green; the sole
+remaining item is the owner-side merge of the branch into `main`.
+
+**NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN_ON_MAIN`** — no merge exists on main to verify, and
+fabricating a main verification result is forbidden.
