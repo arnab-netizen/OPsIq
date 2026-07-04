@@ -353,3 +353,65 @@ remaining item is the owner-side merge of the branch into `main`.
 
 **NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN_ON_MAIN`** — no merge exists on main to verify, and
 fabricating a main verification result is forbidden.
+
+---
+
+# Part 9 — Pre-PR Readiness Revalidation (2026-07-04)
+
+**Task:** prepare and prove this branch is safe to open as a PR into `main` (post-merge
+main verification deliberately deferred). Reclassifies GAP-012 from a post-merge blocker
+to the **expected pre-PR precondition** (Part 8 was written under the post-merge-task framing).
+
+## Git state (fresh)
+| Item | Value |
+|---|---|
+| Branch | `claude/owner-cheatcode-full-implementation` |
+| Feature HEAD | `7120c67` |
+| origin/main HEAD | `f81d0b2` |
+| Merge base | `0b1e104` |
+| Ahead / behind | 23 / 1 |
+| origin/main has `docs/owner-cheatcode/` | 0 files |
+| origin/main has owner-strategy wealth engines | 0 (only 11 pre-existing Module 8 base files) |
+| Merge dry-run | `git merge-tree --write-tree origin/main HEAD` exit 0 — **0 conflicts** |
+| Files changed vs origin/main | 57 files, +7941 / −430 (12 owner-strategy engines, 15 tests, 3 services, 3 API routes, 16 docs; root control files correctly moved to `docs/owner-cheatcode/`, no duplicates) |
+
+## Checks run (all green, 2026-07-04)
+| Check | Command | Result |
+|---|---|---|
+| Typecheck | `tsc --noEmit` | **0 errors** |
+| Lint ratchet | `npm run lint:ratchet` | PASS — `changed_file_lint_errors: 0` (2083 ≤ 2155 baseline) |
+| Wrapped-handler ratchet | `audit:wrapped-handlers:ratchet` | PASS — 0 new (29/29 baseline) |
+| Auth governance | `governance:scan:auth` | PASS — all routes comply |
+| General governance | `governance:scan` | PASS — 0 new (32 pre-existing frozen) |
+| Owner-strategy (non-DB) | `vitest run src/__tests__/owner-strategy` | **183 passed / 17 files** |
+| Owner-strategy (DB) | `command-center.db` + `wealth-path.db` (local PG16) | **6 passed** |
+| Owner-mode real-world (DB) | `vitest run tests/owner-mode` (local PG16, 99 migrations applied) | **790 passed / 21 files** |
+
+DB-backed run used a locally-provisioned PostgreSQL 16 (`prisma migrate deploy` → all
+migrations applied), so DB coverage is proven **locally** this round (stronger than the
+prior "timed out locally, run in CI" note for GAP-011a — CI already CLOSED_PROVEN it too).
+
+## Evidence / gap status at PR time
+| Item | Status |
+|---|---|
+| GAP-001…009 (wealth engines + services + routes) | Closed |
+| GAP-010 verified commercial benchmark | CLOSED_PROVEN (`DOMAIN_BENCHMARK_LEDGER.md`, dated web sources) |
+| GAP-011a CI/DB/governance/ratchet/tsc/build/lint | CLOSED_PROVEN (CI run 28694217011 SUCCESS) + local DB reconfirmed today |
+| GAP-011b browser/UI Playwright E2E | PENDING_MAIN_POST_MERGE_VERIFICATION (post-merge-on-main gate) |
+| GAP-012 branch-not-merged | READY_TO_PR (expected pre-PR state, clean merge, branch green) |
+| Real-world scenario proof | GREEN (wealth 10/10, startup 10/10, simulation, hardening) |
+| Domain benchmark ledger | Present + verified |
+| Before-vs-after proof | Present (`REAL_WORLD_PROOF_LEDGER.md`) |
+| Owner workload evidence | Present (work-package generation proven in scenarios) |
+| Safety/adversarial evidence | Present (business-wisdom guru red-flags, startup-not-validated guard, domain-hardening) |
+
+## Remaining blockers
+- **Pre-merge:** none.
+- **Post-merge gates (deferred by design):** (1) browser/UI Playwright E2E on `main`
+  (`owner-pilot-e2e.yml` + `sequential-simulations.yml` sim-browser); (2) final main-branch hostile audit.
+
+## Classification (Part 9 — current run)
+**`READY_TO_PR_FOR_MAIN_MERGE_AND_MAIN_E2E_VERIFICATION`.**
+
+NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`, NOT `..._ON_MAIN`, NOT post-merge-verified —
+those remain gated on the post-merge-on-main browser/UI E2E and final main-branch audit above.

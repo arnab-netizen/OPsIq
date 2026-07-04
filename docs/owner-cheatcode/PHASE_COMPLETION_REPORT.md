@@ -2,24 +2,27 @@
 
 Claude must update this file after each phase.
 
-## ⚠ MAIN-MERGE STATUS (2026-07-04) — BLOCKER GAP-012
+## ✅ PRE-PR READINESS STATUS (2026-07-04) — see GAP-012
 
-**The Owner Cheat-Code branch is NOT merged into `main`.** Post-merge main
-verification cannot proceed. Verified facts:
-- `origin/main` = `f81d0b2` (= base `0b1e104` + 1 commit #106). Contains `execution.md`
-  at root but **zero `docs/owner-cheatcode/` files and zero owner-strategy wealth engines**.
-- Branch HEAD `93ebcbd` is **not an ancestor of `origin/main`** → not merged.
+**The Owner Cheat-Code branch is not yet merged into `main` — which is the
+*expected* precondition for opening a PR, not a defect.** Post-merge main
+verification is deliberately deferred. Verified facts (branch HEAD `7120c67`):
+- `origin/main` = `f81d0b2` (= base `0b1e104` + 1 unrelated commit). Contains root
+  `execution.md` but **zero `docs/owner-cheatcode/` files and zero owner-strategy
+  wealth engines** (only the pre-existing Module 8 base: actions/diagnosis/metrics/…).
+- Branch is **ahead 23 / behind 1**; HEAD is **not an ancestor of `origin/main`** → not merged (as expected before PR).
 - The initially-observed "Reality Loop v2.0" `execution.md` came from a **stale local
   `main` ref (`fa1e057`)** that diverges from `origin/main` — a red herring, not real main.
-- Merge is **clean** (dry-run `merge origin/main` into branch = 0 conflicts).
-- Branch revalidated **GREEN** at `93ebcbd`: tsc 0; owner-strategy 183 passed; auth-governance clean; wrapped-handlers ratchet clean; finance/integration 43 passed. **Merge-ready.**
+- Merge is **clean**: `git merge-tree --write-tree origin/main HEAD` → exit 0, **0 conflicts**.
+- Branch **revalidated GREEN today**: tsc 0; lint-ratchet pass (0 changed-file errors);
+  wrapped-handler ratchet pass (0 new); auth-governance clean; general governance 0 new;
+  owner-strategy 183 passed; owner-strategy DB 6 passed; owner-mode real-world (DB) 790 passed.
 
-**Owner action required:** merge the branch into `main` (or merge the PR). Claude is
-forbidden from pushing to `main` without permission, so cannot self-merge. After merge,
-re-run the post-merge main real-world verification task.
+**No pre-merge blockers.** The branch is ready to open as a PR into `main`.
 
-**Classification for this run: `BLOCKED_OWNER_ACTION_REQUIRED` (merge precondition unmet).**
-NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN_ON_MAIN` (no merge exists to verify).
+**Classification for this run: `READY_TO_PR_FOR_MAIN_MERGE_AND_MAIN_E2E_VERIFICATION`.**
+NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN` / `..._ON_MAIN` / post-merge-verified — those
+remain gated on the post-merge-on-main browser/UI E2E and final main-branch hostile audit.
 
 # REQUIRED PHASE COMPLETION REPORT TEMPLATE
 
