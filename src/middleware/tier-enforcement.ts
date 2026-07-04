@@ -138,9 +138,10 @@ export function tierEnforcement() {
       });
     }
 
-    // Get tier from x-tier header (set by auth middleware) or default to free
-    // In production, this would come from database subscription lookup
-    const tier: SubscriptionTier = (request.headers.get("x-tier") as SubscriptionTier) || "free";
+    // BILL-01: tier is resolved SERVER-SIDE from the workspace's active subscription,
+    // never from a client-supplied x-tier header. Fails safe to "free".
+    const { resolveWorkspaceTier } = await import("@/services/entitlement.service");
+    const tier: SubscriptionTier = await resolveWorkspaceTier(workspaceId);
 
     // Get endpoint path for quota tracking
     const endpoint = new URL(request.url).pathname;

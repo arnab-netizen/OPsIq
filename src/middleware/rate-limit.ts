@@ -163,7 +163,10 @@ export function rateLimitEnforcement() {
   return async (request: NextRequest, response: NextResponse) => {
     // Get workspace ID from header
     const workspaceId = request.headers.get("x-workspace-id");
-    const tier: SubscriptionTier = (request.headers.get("x-tier") as SubscriptionTier) || "free";
+    // BILL-01: tier resolved SERVER-SIDE (never from a client x-tier header). Fails safe to "free".
+    const tier: SubscriptionTier = workspaceId
+      ? await (await import("@/services/entitlement.service")).resolveWorkspaceTier(workspaceId)
+      : "free";
 
     // Get client IP
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";

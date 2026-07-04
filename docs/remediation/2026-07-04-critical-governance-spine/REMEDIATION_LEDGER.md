@@ -31,7 +31,7 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 | AI-01 | HIGH | GENERIC_ADVICE_ENGINE | A canned generic-advice engine is LIVE on /api/diagnosis: BASE_RECOMMENDATIONS are 6 hardc… | OPEN | |
 | AI-02 | HIGH | DEAD_CODE_OR_UNREACHABLE | The fine-grained abstention/danger/constraint safety gate (governance/abstention-engine.ts… | OPEN | |
 | AI-03 | MEDIUM | PARTIAL | Per-recommendation proof linkage is dropped at persistence. The diagnosis carries exact ev… | OPEN | |
-| BILL-01 | HIGH | UNSAFE_OR_BYPASSABLE | Subscription/rate-limit tier is read from a CLIENT-supplied x-tier header (actions/route.t… | OPEN | |
+| BILL-01 | HIGH | UNSAFE_OR_BYPASSABLE | Subscription/rate-limit tier is read from a CLIENT-supplied x-tier header (actions/route.t… | CLOSED_PROVEN | bill-01-server-side-tier.db 3/3 |
 | BILL-02 | MEDIUM | PARTIAL | assertCapability selects currentPeriodEnd but never compares it to now(). A subscription l… | OPEN | |
 | WEBHOOK-01 | HIGH | UNSAFE_OR_BYPASSABLE | The stripe webhook route does NOT await processing: handleWebhookEvent(event).then().catch… | OPEN | |
 | WEBHOOK-02 | MEDIUM | FAKE_COMPLETE | The custom replay-timestamp check is theater: verifyWebhookSignature hardcodes timestamp =… | OPEN | |
@@ -96,3 +96,9 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 - **Fix:** (1) Snapshot + result now carry `measured: false` and `accuracyBasis: "model_confidence_delta"` so owner-facing layers can never present the score as a measured business result. (2) Snapshot persisted/read via `Action.metadata.outcomeSnapshot` (schema-drift fixed; recordOutcome no longer throws).
 - **Test:** same file (3/3): result labeled `measured:false`, `accuracyBasis:"model_confidence_delta"`.
 - **Remaining risk:** full grounding of accuracy/value in persisted KPI snapshots (vs model confidence) is a larger follow-up; the score is now explicitly labeled unmeasured rather than fabricated-as-real. Tracked.
+
+### BILL-01 — client x-tier trust — CLOSED_PROVEN
+- **Root cause:** `actions/route.ts` (and the two — dead — tier/rate-limit middlewares) read the subscription tier from a client `x-tier` header; nothing set it server-side, so a free client could send `x-tier: enterprise` for enterprise quotas.
+- **Fix:** new `resolveWorkspaceTier(workspaceId)` in `entitlement.service` reads the workspace's ACTIVE subscription plan and maps it to a tier, failing SAFE to "free" (least privilege) when there is no active subscription. The actions route and both middlewares now use it; no route reads `x-tier`.
+- **Test:** `src/__tests__/security/bill-01-server-side-tier.db.test.ts` (3/3): no-subscription → free; active enterprise plan → enterprise; resolver takes only a workspaceId (no header to spoof).
+- **Remaining risk:** `currentPeriodEnd` expiry is not yet enforced (BILL-02, tracked); rate-limit store is still in-memory (tracked).

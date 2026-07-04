@@ -91,6 +91,30 @@ export async function getWorkspacePlan(
 }
 
 /**
+ * BILL-01: resolve a workspace's rate-limit/entitlement tier SERVER-SIDE from its
+ * active subscription plan. Never trust a client-supplied `x-tier` header.
+ *
+ * Fails SAFE: any workspace without an active subscription (or an unrecognized plan)
+ * resolves to the most restrictive tier ("free"). A client cannot elevate its tier.
+ */
+export async function resolveWorkspaceTier(
+  workspaceId: string
+): Promise<"free" | "pro" | "enterprise"> {
+  try {
+    const plan = await getWorkspacePlan(workspaceId); // throws unless an ACTIVE subscription exists
+    const name = (plan.name || "").toLowerCase();
+    if (name.includes("enterprise") || name.includes("scale")) return "enterprise";
+    if (name.includes("pro") || name.includes("growth") || name.includes("business") || name.includes("team")) {
+      return "pro";
+    }
+    return "free";
+  } catch {
+    // No active subscription / lookup error → least privilege.
+    return "free";
+  }
+}
+
+/**
  * Get current usage metrics for workspace
  * Returns all usage events from the current billing period
  */

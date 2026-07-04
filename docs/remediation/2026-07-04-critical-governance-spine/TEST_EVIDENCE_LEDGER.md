@@ -31,3 +31,6 @@ Every command run + result. DB commands use local PostgreSQL (opsiq_test, /tmp s
 ### OUT-01 / OUT-02 (Phase E)
 - `vitest run out-01-02-outcome-reeval.db.test.ts` → **3/3 PASS**.
 - Regression: 15 outcome test files → **228/228 PASS**. tsc → 0 errors.
+
+### BILL-01 (Phase F)
+- `vitest run bill-01-server-side-tier.db.test.ts` → **3/3 PASS**. tsc → 0 errors.

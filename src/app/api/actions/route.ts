@@ -8,7 +8,7 @@ import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
-import { assertCapability } from "@/services/entitlement.service";
+import { assertCapability, resolveWorkspaceTier } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
 
@@ -49,8 +49,10 @@ export const POST = withCanonicalEnforcement(
       throw new Error("Idempotency-Key header required");
     }
 
-    // Check rate limiting: workspace requests/hour limit
-    const tier: SubscriptionTier = (ctx.request?.headers.get("x-tier") as SubscriptionTier) || "free";
+    // Check rate limiting: workspace requests/hour limit.
+    // BILL-01: tier is resolved SERVER-SIDE from the workspace's active subscription,
+    // never from a client-supplied x-tier header (which allowed quota elevation).
+    const tier: SubscriptionTier = await resolveWorkspaceTier(workspaceId);
     const rateLimit = checkWorkspaceRateLimit(workspaceId, tier);
     if (!rateLimit.allowed) {
       const config = getTierConfig(tier);
