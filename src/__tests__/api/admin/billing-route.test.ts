@@ -34,10 +34,14 @@ describe("Admin Billing Diagnostics API Route", () => {
       expect(content).toContain("requireCapabilities");
     });
 
-    it("should require x-workspace-id header", () => {
+    it("should scope to the verified workspace, never a client header (GAP-TEN-03)", () => {
       const content = getRouteContent();
-      expect(content).toContain("x-workspace-id");
-      expect(content).toContain("headers.get");
+      // system_admin is workspace-scoped (getPolicyContext filters roles by
+      // scope=workspace); the diagnostic must use the membership-verified
+      // workspace and must NOT trust a client-supplied x-workspace-id header.
+      expect(content).toContain("ctx.verifiedWorkspaceId");
+      expect(content).toContain("requireWorkspace: true");
+      expect(content).not.toContain('headers.get("x-workspace-id")');
     });
 
     it("should call service with workspace ID", () => {
@@ -51,10 +55,12 @@ describe("Admin Billing Diagnostics API Route", () => {
       expect(content).toContain("format=export");
     });
 
-    it("should handle missing workspace ID gracefully", () => {
+    it("should require workspace context via the canonical wrapper", () => {
+      // Missing/invalid workspace membership is rejected by the wrapper
+      // (requireWorkspace: true) before the handler runs — no manual header
+      // null-check is needed or wanted.
       const content = getRouteContent();
-      expect(content).toContain("if (!workspaceId)");
-      expect(content).toContain("throw");
+      expect(content).toContain("requireWorkspace: true");
     });
 
     it("should not expose raw secrets in route", () => {
@@ -83,10 +89,10 @@ describe("Admin Billing Diagnostics API Route", () => {
   });
 
   describe("admin workspace scoping", () => {
-    it("should filter by workspace ID from header", () => {
+    it("should filter by the verified workspace, not a client header", () => {
       const content = getRouteContent();
       expect(content).toContain("workspaceId");
-      expect(content).toContain("ctx.request!.headers.get");
+      expect(content).toContain("ctx.verifiedWorkspaceId");
     });
 
     it("should pass workspace ID to service", () => {
@@ -106,14 +112,18 @@ describe("Admin Billing Diagnostics API Route", () => {
   });
 
   describe("error handling", () => {
-    it("should throw when workspace ID missing", () => {
-      expect(getRouteContent()).toContain('throw new Error("Workspace ID');
+    it("should delegate missing-workspace rejection to the canonical wrapper", () => {
+      // The wrapper (requireWorkspace: true) fails closed before the handler
+      // when the caller has no verified workspace membership.
+      expect(getRouteContent()).toContain("requireWorkspace: true");
     });
 
     it("should not expose raw database errors", () => {
       const content = getRouteContent();
-      // The error is thrown to the auth wrapper which handles classification
-      expect(content).toContain("throw");
+      // Error classification/sanitization is delegated to withCanonicalEnforcement
+      // (no raw error rendering in the handler); the handler stays thin.
+      expect(content).toContain("withCanonicalEnforcement");
+      expect(content).not.toMatch(/error\.message/);
     });
   });
 });

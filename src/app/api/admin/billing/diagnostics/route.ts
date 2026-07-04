@@ -2,8 +2,14 @@
  * GET /api/admin/billing/diagnostics
  *
  * Admin-safe billing and entitlement diagnostic endpoint.
- * Requires SYSTEM_ADMIN capability.
- * Workspace-scoped via x-workspace-id header.
+ * Requires SYSTEM_ADMIN capability, resolved against the caller's VERIFIED
+ * workspace. `system_admin` is a workspace-scoped role (getPolicyContext filters
+ * role assignments by scope="workspace"/scopeId=verified workspace), and the
+ * documented contract is "workspace-scoped access only, no cross-workspace
+ * leakage" (docs/ADMIN_BILLING_ENTITLEMENT_PROOF.md). The workspace is therefore
+ * taken from ctx.verifiedWorkspaceId — never a client-supplied x-workspace-id
+ * header, which previously let a workspace-A admin export another tenant's
+ * billing. See GAP-TEN-03.
  *
  * Returns comprehensive proof of:
  * - Billing account status
@@ -20,12 +26,8 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.request!.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const format = ctx.request!.url.includes("?format=export") ? "export" : "diagnostic";
-
-    if (!workspaceId) {
-      throw new Error("Workspace ID required (x-workspace-id header)");
-    }
 
     if (format === "export") {
       return await getBillingExportPacket(workspaceId);
@@ -35,5 +37,6 @@ export const GET = withCanonicalEnforcement(
   },
   {
     requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN],
+    requireWorkspace: true,
   }
 );
