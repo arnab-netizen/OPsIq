@@ -1,71 +1,35 @@
 import { Prisma } from "@/generated/prisma/client";
 
 /**
- * Models that belong to a workspace and MUST be scoped by workspaceId.
- * All other models are treated as global/system models and don't require scoping.
+ * DB-level tenant backstop — curated enforced allowlist (GAP-TEN-01).
+ *
+ * IMPORTANT: Prisma v7 passes `model` here as PascalCase (e.g. "Engagement").
+ * A prior version keyed on camelCase, so nothing matched and the backstop was
+ * silently inert. This is now an explicit PascalCase ALLOWLIST: enforcement is
+ * OFF by default and ON only for models whose EVERY live + test create/read/
+ * update/delete path has been individually audited to already carry
+ * `workspaceId` (so enabling enforcement cannot break a legitimate path).
+ *
+ * The dominant repo pattern is verify-then-mutate-by-id (a workspace-scoped
+ * `findFirst`, then `update({ where: { id } })`), which is safe at the route/
+ * service layer but does NOT carry workspaceId in the Prisma `where`; enforcing
+ * such models here would throw on legitimate writes. Signup also creates User/
+ * Session/UserRoleAssignment with no workspaceId column. Those models are
+ * therefore intentionally EXCLUDED. See
+ * docs/full-repo-commercial-audit/TENANT_BACKSTOP_MODEL_CLASSIFICATION.md for
+ * the full per-model classification and the exact criteria to add a model here.
+ *
+ * This backstop is defense-in-depth ONLY — it does not replace the route-level
+ * tenant control (withCanonicalEnforcement + ctx.verifiedWorkspaceId +
+ * assertEngagementAccess + capability gates), which remains the primary control.
  */
-const WORKSPACE_OWNED_MODELS = new Set([
-  "operatorItem", // decisions
-  "alert",
-  "engagement",
-  "clientAccount",
-  "lead",
-  "user", // workspace members
-  "workspaceMembership",
-  "evidence",
-  "finding",
-  "recommendation",
-  "action",
-  "actionLifecycle",
-  "deliverable",
-  "engagementMembership",
-  "businessConditionProfile",
-  "interventionState",
-  "decisionLifecycle",
-  "auditEvent", // audit events are workspace-scoped
-  "learningRecord",
-  "businessImpact",
-  "executionDrift",
-  "decisionConfidence",
-  "decisionControl",
-  "decisionEvidence",
-  "executionCertainty",
-  "kpi",
-  "outcome",
-  "shock",
-  "shockEvent",
-  "thresholdAlert",
-  "override",
-  "clientContact",
-  "businessCondition",
-  "stage",
-  "reviewCycle",
-  "roleAssignment",
-  "reEvaluation",
-  "interventionDesign",
-  "scenario",
-  "constraint",
-  "reportGeneration",
-]);
-
-/**
- * Global models that do NOT require workspaceId scoping.
- * These are system-wide configuration or reference data.
- */
-const GLOBAL_MODELS = new Set([
-  "workspace",
-  "workspaceRole",
-  "auditEventType",
-  "capability",
-  "problem",
-  "intervention",
-  "businessIntervention",
-  "metrics",
-  "systemConfig",
-  "idempotencyKey",
-  "session",
-  "token",
-  // Add any other truly global models
+const CANONICAL_ENFORCED_MODELS = new Set<string>([
+  "UsageEvent", // entitlement/metering; every live+test create/read/delete carries workspaceId (verified)
+  // NOTE: CanonicalEvent was a candidate but is NOT enforced — the event-store
+  // ordering/idempotency paths (exercised by phase-3 concurrency proofs) do
+  // unscoped count()/findMany() on CanonicalEvent, so enforcement would break
+  // them. Tracked as a follow-up in the classification doc (scope those reads
+  // first, then add it here).
 ]);
 
 interface QueryContext {
@@ -73,12 +37,12 @@ interface QueryContext {
 }
 
 /**
- * Enforce workspace isolation on all queries.
- * Strategy:
- * 1. BLOCK: All write operations (create, update, delete) on workspace models without workspaceId
- * 2. BLOCK: All write operations with conflicting workspaceId
- * 3. LOG: Unscoped reads (these are potential data leaks but less critical than writes)
- * 4. ALLOW: Global model operations without workspaceId
+ * Enforce workspace isolation for the curated enforced models (allowlist).
+ * For an enforced model:
+ * 1. BLOCK create/createMany without workspaceId in data.
+ * 2. BLOCK update/delete (and *Many) without workspaceId in where, or conflicting workspaceId.
+ * 3. BLOCK findFirst/findMany/count/aggregate/groupBy without workspaceId in where.
+ * All non-enforced models pass through untouched (route-level control applies).
  */
 export function createWorkspaceEnforcementMiddleware() {
   return Prisma.defineExtension((client) =>
@@ -86,25 +50,8 @@ export function createWorkspaceEnforcementMiddleware() {
       query: {
         $allModels: {
           async $allOperations({ operation, model, args, query }) {
-            // NOTE (GAP-TEN-01): Prisma v7 passes `model` as PascalCase
-            // (e.g. "Engagement"); the sets below are keyed camelCase, so today
-            // NOTHING matches and this DB-level tenant backstop is inert. Fixing
-            // the casing alone is NOT safe to flip in one slice: several
-            // production paths legitimately write workspace-owned models without
-            // a direct workspaceId (e.g. signup creates `User` before any
-            // workspace exists — src/app/api/auth/signup/route.ts; audit-event
-            // cleanup deletes without a workspace filter). Enabling enforcement
-            // requires first re-classifying models (User is membership-scoped,
-            // not directly workspace-owned) and scoping every query. Until then
-            // the LIVE tenant protection is route-level: withCanonicalEnforcement
-            // (ctx.verifiedWorkspaceId) + assertEngagementAccess + capability
-            // gates. Do not claim DB-level isolation is enforced. See
-            // docs/full-repo-commercial-audit/FULL_REPO_GAP_REGISTER.md.
-            const isWorkspaceOwned = WORKSPACE_OWNED_MODELS.has(model as string);
-            const isGlobal = GLOBAL_MODELS.has(model as string);
-
-            // Skip enforcement for global models
-            if (!isWorkspaceOwned || isGlobal) {
+            // Fail-open by default; enforce ONLY curated, per-model-audited models.
+            if (!CANONICAL_ENFORCED_MODELS.has(model as string)) {
               return query(args);
             }
 
