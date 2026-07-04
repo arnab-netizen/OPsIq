@@ -29,7 +29,6 @@ import { Prisma } from "@/generated/prisma/client";
  * The extension is no longer inert: (1) and (2) actually execute and throw.
  */
 const WORKSPACE_OWNED_MODELS = new Set<string>([
-  "ClientAccount", "LeadRecord", // DEC-TEN-01: workspace anchor added (migration 20260704120000)
   "AIProposalSandbox", "AggregateLock", "BillingAccount", "BrowserImportConsent", "BrowserImportSession", "BudgetAuthority",
   "BudgetLine", "BudgetPeriod", "BudgetPlanSnapshot", "BudgetReassessment", "BusinessConditionProfile", "CanonicalEvent",
   "ControlledLearningAdmission", "ControlledLearningAttributionReview", "ControlledLearningCandidate", "ControlledLearningCandidateAuditEntry", "ControlledLearningConsentRecord", "ControlledLearningHarmEvent",

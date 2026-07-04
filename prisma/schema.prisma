@@ -181,7 +181,7 @@ model CanonicalEvent {
 
 model ClientAccount {
   id                                            String                                  @id @db.Uuid
-  workspaceId                                   String                                  @map("workspace_id") @db.Uuid
+  workspaceId                                   String?                                 @map("workspace_id") @db.Uuid
   name                                          String
   legalName                                     String?                                 @map("legal_name")
   industry                                      String?
@@ -210,7 +210,7 @@ model ClientAccount {
   updatedAt                                     DateTime                                @map("updated_at")
   archivedAt                                    DateTime?                               @map("archived_at")
   clientContacts                                ClientContact[]
-  workspace                                     Workspace                               @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  workspace                                     Workspace?                              @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
   engagements                                   Engagement[]
   leadRecords                                   LeadRecord[]
   privateModeAccess                             PrivateModeAccess[]
@@ -637,7 +637,7 @@ model KPI {
 
 model LeadRecord {
   id                  String         @id @db.Uuid
-  workspaceId         String         @map("workspace_id") @db.Uuid
+  workspaceId         String?        @map("workspace_id") @db.Uuid
   companyName         String         @map("company_name")
   contactName         String?        @map("contact_name")
   contactEmail        String?        @map("contact_email")
@@ -654,7 +654,7 @@ model LeadRecord {
   updatedAt           DateTime       @map("updated_at")
   clientAccount       ClientAccount? @relation(fields: [convertedToClientId], references: [id], onDelete: Restrict, map: "lead_records_client_id_fkey")
   engagement          Engagement?    @relation(fields: [engagementId], references: [id], onDelete: Restrict)
-  workspace           Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  workspace           Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
 
   @@index([assignedTo])
   @@index([convertedToClientId])

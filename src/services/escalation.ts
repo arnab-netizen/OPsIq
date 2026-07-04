@@ -180,6 +180,21 @@ export async function detectKPIDeteriorationPattern(
       kpiIds: deterioratedKPIs,
     });
 
+    // REEVAL-01: a sustained KPI-deterioration pattern must route into governed
+    // re-evaluation, not just emit an alert. Correlation-idempotent on the KPI set.
+    const { triggerReEvaluation } = await import("@/services/re-evaluation");
+    await triggerReEvaluation({
+      changeType: "kpi_deterioration",
+      entityType: "engagement",
+      entityId: engagementId,
+      engagementId,
+      workspaceId,
+      severity: "high",
+      description: `${deterioratedKPIs.length} KPI(s) showing deterioration pattern`,
+      triggeredBy: authContext.session?.user?.id ?? "system",
+      correlationId: `kpi-deterioration:${engagementId}:${[...deterioratedKPIs].sort().join(",")}`,
+    });
+
     return alert;
   }
 
