@@ -61,7 +61,11 @@ export async function validateDecisionForAcceptance(input: {
   const warnings: string[] = [];
 
   // Validation checks
-  if (decision.status !== "pending" && decision.status !== "in_progress") {
+  // DEC-01: only a PENDING decision may be accepted. Previously "in_progress" was also
+  // allowed, but acceptDecision SETS status to "in_progress" — so an already-accepted
+  // decision passed validation again and could be re-accepted repeatedly (silent
+  // re-mutation of an accepted governed record).
+  if (decision.status !== "pending") {
     errors.push(`Decision is ${decision.status} - cannot accept`);
   }
 

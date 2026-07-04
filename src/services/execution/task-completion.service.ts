@@ -109,6 +109,19 @@ export interface CompleteTaskCommand {
 
 const DEFAULT_MAX_PROOF_AGE_DAYS = 30;
 
+/**
+ * GAME-01: resolve the server-governed proof freshness window from an (untrusted)
+ * client-supplied value. The client may only TIGHTEN the window — a positive value no
+ * larger than the server default. null / undefined / non-positive / out-of-range all
+ * fall back to the default, so the client can neither DISABLE the staleness gate (the
+ * previous `null` loophole) nor loosen it beyond the server ceiling.
+ */
+export function resolveEffectiveProofAgeDays(requested: number | null | undefined): number {
+  return typeof requested === "number" && requested > 0 && requested <= DEFAULT_MAX_PROOF_AGE_DAYS
+    ? requested
+    : DEFAULT_MAX_PROOF_AGE_DAYS;
+}
+
 async function recordCompletionBlocked(
   workspaceId: string,
   taskId: string,
@@ -150,11 +163,12 @@ export async function completeTask(command: CompleteTaskCommand, injected?: Task
       orderBy: { createdAt: "desc" },
       select: { status: true, duplicateFlagged: true, reviewedAt: true },
     });
+    // GAME-01: the freshness window is server-governed (see resolveEffectiveProofAgeDays).
     const clearance = evaluateProofClearance((proof?.status as ProofStatus) ?? ProofStatus.REQUIRED, {
       acceptedAt: proof?.reviewedAt ?? null,
       duplicateFlagged: proof?.duplicateFlagged ?? false,
       now,
-      maxAgeDays: command.maxProofAgeDays === undefined ? DEFAULT_MAX_PROOF_AGE_DAYS : command.maxProofAgeDays,
+      maxAgeDays: resolveEffectiveProofAgeDays(command.maxProofAgeDays),
     });
     proofCleared = clearance.cleared;
     if (!clearance.cleared && clearance.reason) {

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
@@ -60,33 +61,47 @@ export async function acceptDecision(input: VerifiedAcceptanceInput): Promise<Ac
 
   const now = new Date();
 
-  // Update decision status
-  const updated = await db.operatorItem.update({
-    where: { id: input.decisionId },
-    data: {
-      status: "in_progress",
-      lastUpdatedByUserId: input.verifiedActorId,
-      updatedAt: now,
-    },
-  });
+  // DEC-01 + CONC-01 + AUDIT-01: accept via a status-guarded updateMany (only a row that
+  // is STILL pending in THIS workspace transitions) inside one transaction with the audit
+  // event. This makes re-accept impossible (an already-accepted `in_progress` row no longer
+  // matches), makes concurrent accepts race-safe (exactly one wins), and rolls the state
+  // change back if the audit write fails.
+  let auditEventId = "";
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.operatorItem.updateMany({
+      where: { id: input.decisionId, workspaceId: input.verifiedWorkspaceId, status: "pending" },
+      data: {
+        status: "in_progress",
+        lastUpdatedByUserId: input.verifiedActorId,
+        updatedAt: now,
+      },
+    });
 
-  // Emit audit event
-  const auditEventId = await emitAuditEvent({
-    eventName: AUDIT_EVENTS.DECISION_ACCEPTED,
-    workspaceId: input.verifiedWorkspaceId,
-    actorId: input.verifiedActorId,
-    actorType: "user",
-    entityType: "OperatorItem",
-    entityId: input.decisionId,
-    payload: {
-      decisionType: decision.decisionType,
-      expectedImpact: decision.impactExpected,
-      confidence: decision.confidence,
-      rationale: input.rationale || "",
-      previousStatus: decision.status,
-      newStatus: updated.status,
-    },
-    visibility: "internal",
+    if (res.count !== 1) {
+      // Lost the race, already accepted, or wrong workspace — reject the re-accept.
+      throw new ValidationError("Decision is no longer pending acceptance");
+    }
+
+    auditEventId = await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.DECISION_ACCEPTED,
+        workspaceId: input.verifiedWorkspaceId,
+        actorId: input.verifiedActorId,
+        actorType: "user",
+        entityType: "OperatorItem",
+        entityId: input.decisionId,
+        payload: {
+          decisionType: decision.decisionType,
+          expectedImpact: decision.impactExpected,
+          confidence: decision.confidence,
+          rationale: input.rationale || "",
+          previousStatus: "pending",
+          newStatus: "in_progress",
+        },
+        visibility: "internal",
+      },
+      tx
+    );
   });
 
   logger.info("Decision accepted", {

@@ -19,14 +19,14 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 | AUDIT-02 | HIGH | PARTIAL / STUB_OR_PLACEHOLDER | Audit logging is NOT centralized: 5 parallel mechanisms — infra/audit.emitAuditEvent (DB+h… | OPEN | |
 | APPR-01 | HIGH | PARTIAL / UNSAFE_OR_BYPASSABLE | The >100000 approval-threshold workflow (canCompleteWithApprovalStatus/enforceApprovalRequ… | OPEN | |
 | APPR-02 | HIGH | STUB_OR_PLACEHOLDER / UNSAFE | /api/override writes the override justification to a process-global in-memory array (overr… | OPEN | |
-| CONC-01 | HIGH | UNSAFE_OR_BYPASSABLE | Core governed transitions are last-write-wins plain update({where:{id}}) with no version/s… | OPEN | |
-| DEC-01 | HIGH | UNSAFE_OR_BYPASSABLE | Re-accept hole: validateDecisionForAcceptance allows status 'pending' OR 'in_progress' (hu… | OPEN | |
+| CONC-01 | HIGH | UNSAFE_OR_BYPASSABLE | Core governed transitions are last-write-wins plain update({where:{id}}) with no version/s… | IN_PROGRESS | acceptDecision guarded updateMany (dec-01 2/2); reject/outcome-verify tracked |
+| DEC-01 | HIGH | UNSAFE_OR_BYPASSABLE | Re-accept hole: validateDecisionForAcceptance allows status 'pending' OR 'in_progress' (hu… | CLOSED_PROVEN | dec-01-reaccept.db 2/2 (re-accept blocked + concurrent one-winner) |
 | OUT-01 | CRITICAL | FAKE_COMPLETE | Outcome 'success' is model-vs-model fabrication, not measured business metrics. accuracySc… | FIXED_PENDING_TEST | out-01-02 3/3: honesty-labeled (measured=false) + schema-drift fixed |
 | OUT-02 | CRITICAL | MISSING | The core product promise 're-evaluate when outcomes do NOT improve' is NOT wired. recordOu… | CLOSED_PROVEN | out-01-02-outcome-reeval.db 3/3: adverse outcome triggers failed_implementation re-eval |
 | REEVAL-01 | HIGH | PARTIAL / MISSING | Of 9 CLAUDE.md mandatory adaptive triggers, 4 are wired (new critical evidence, unresolved… | OPEN | |
 | SHOCK-01 | HIGH | STUB_OR_PLACEHOLDER | createShockEvent does NOT persist the ShockEvent (comment falsely claims 'model does not e… | OPEN | |
 | EVID-01 | HIGH | DEAD_CODE_OR_UNREACHABLE / MISSING | The AI/deterministic anti-gaming precheck (runProofPrecheck/computeProofPrecheck) has ZERO… | OPEN | |
-| GAME-01 | HIGH | UNSAFE_OR_BYPASSABLE | /api/owner/tasks/complete accepts client-supplied maxProofAgeDays (nullable). Passing null… | OPEN | |
+| GAME-01 | HIGH | UNSAFE_OR_BYPASSABLE | /api/owner/tasks/complete accepts client-supplied maxProofAgeDays (nullable). Passing null… | CLOSED_PROVEN | game-01-proof-freshness 3/3 |
 | EVID-02 | MEDIUM | PARTIAL / MISLABELED | decision-evidence 'verified' is a passthrough boolean (verified: f.verified ?? false) — no… | OPEN | |
 | AI-01 | HIGH | GENERIC_ADVICE_ENGINE | A canned generic-advice engine is LIVE on /api/diagnosis: BASE_RECOMMENDATIONS are 6 hardc… | OPEN | |
 | AI-02 | HIGH | DEAD_CODE_OR_UNREACHABLE | The fine-grained abstention/danger/constraint safety gate (governance/abstention-engine.ts… | OPEN | |
@@ -102,3 +102,16 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 - **Fix:** new `resolveWorkspaceTier(workspaceId)` in `entitlement.service` reads the workspace's ACTIVE subscription plan and maps it to a tier, failing SAFE to "free" (least privilege) when there is no active subscription. The actions route and both middlewares now use it; no route reads `x-tier`.
 - **Test:** `src/__tests__/security/bill-01-server-side-tier.db.test.ts` (3/3): no-subscription → free; active enterprise plan → enterprise; resolver takes only a workspaceId (no header to spoof).
 - **Remaining risk:** `currentPeriodEnd` expiry is not yet enforced (BILL-02, tracked); rate-limit store is still in-memory (tracked).
+
+### DEC-01 — decision re-accept hole — CLOSED_PROVEN
+- **Root cause:** validator allowed `pending` OR `in_progress`; acceptDecision set `in_progress`, so an accepted decision re-passed validation → repeatable re-accept.
+- **Fix:** validator allows only `pending`; acceptDecision transitions via a status-guarded `updateMany(where:{id,workspaceId,status:"pending"})` (count!==1 ⇒ reject) inside a transaction with atomic audit (also closes CONC-01 for this path + extends AUDIT-01 to the decision-accept path).
+- **Test:** `src/__tests__/security/dec-01-reaccept.db.test.ts` (2/2): 2nd accept rejected + exactly one DECISION_ACCEPTED audit; 3 concurrent accepts → exactly one success.
+
+### GAME-01 — owner-nullable proof freshness gate — CLOSED_PROVEN
+- **Root cause:** `/api/owner/tasks/complete` accepted client `maxProofAgeDays` (nullable); null skipped the staleness check entirely and there was no server ceiling.
+- **Fix:** `resolveEffectiveProofAgeDays()` clamps the client value server-side — only a positive value ≤ the 30-day default is honored; null/undefined/non-positive/out-of-range fall back to the default. The client can only TIGHTEN the window, never disable or loosen it.
+- **Test:** `src/__tests__/security/game-01-proof-freshness.test.ts` (3/3): null/undefined→30; 999→30; 0/-5→30; a ~64-day-old accepted proof is `proof_stale` under the resolved window even when the client asked to disable the gate.
+
+### CONC-01 — last-write-wins on governed transitions — IN_PROGRESS
+- `acceptDecision` now uses a guarded `updateMany` (proven above). `rejectDecision`, `approveOutcomeVerification`, and operator `updateItem` (already workspace-scoped) remain plain by-id updates — tracked; the guarded-updateMany pattern is established.

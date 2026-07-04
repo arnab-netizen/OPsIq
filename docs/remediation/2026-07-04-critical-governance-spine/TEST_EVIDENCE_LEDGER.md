@@ -34,3 +34,8 @@ Every command run + result. DB commands use local PostgreSQL (opsiq_test, /tmp s
 
 ### BILL-01 (Phase F)
 - `vitest run bill-01-server-side-tier.db.test.ts` → **3/3 PASS**. tsc → 0 errors.
+
+### DEC-01 / GAME-01 (Phase G)
+- `vitest run dec-01-reaccept.db.test.ts` → **2/2 PASS**.
+- `vitest run game-01-proof-freshness.test.ts` → **3/3 PASS**.
+- Regression: decision-acceptance + human-decision + task-completion + completion-bypass suites → **23/23 PASS** (the 34 failures in a wider `proof` glob were pre-existing QUARANTINED runtime-proof/demo-backfill tests, unchanged by this work). tsc → 0 errors.
