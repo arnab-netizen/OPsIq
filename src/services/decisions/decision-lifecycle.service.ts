@@ -7,6 +7,7 @@
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -96,41 +97,39 @@ export async function transitionDecisionState(
   // status we READ above; guard the write on that exact status (and workspace) so a racing transition
   // cannot clobber this one. If the row moved under us, count is 0 and we reject the now-stale
   // transition instead of silently overwriting a governed record.
-  const result = await db.operatorItem.updateMany({
-    where: { id: decisionId, workspaceId, status: decision.status },
-    data: updateData,
-  });
-
-  if (result.count !== 1) {
-    throw new ValidationError(
-      `Decision ${decisionId} was modified concurrently; transition ${fromState} → ${toState} is no longer valid from status "${decision.status}"`
-    );
-  }
-
   const newStatus = updateData.status as string;
-
-  // Emit audit event for state transition
   const eventName = getAuditEventName(fromState, toState);
-  await emitAuditEvent({
-    eventName: eventName as any,
-    entityType: "OperatorItem",
-    entityId: decisionId,
-    workspaceId,
-    actorId: actorId || undefined,
-    payload: {
-      fromState,
-      toState,
-      reason: reason || null,
-    },
-    visibility: "internal",
-  }).catch((error) => {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.warn("Failed to emit audit event for decision transition", {
-      decisionId,
-      fromState,
-      toState,
-      error: governed.operatorMessage,
+
+  // AUDIT-01 + concurrency: apply the guarded transition and write its audit event in ONE
+  // transaction (fail-closed). A failed audit rolls the transition back — no post-commit swallow.
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await tx.operatorItem.updateMany({
+      where: { id: decisionId, workspaceId, status: decision.status },
+      data: updateData,
     });
+
+    if (result.count !== 1) {
+      throw new ValidationError(
+        `Decision ${decisionId} was modified concurrently; transition ${fromState} → ${toState} is no longer valid from status "${decision.status}"`
+      );
+    }
+
+    await emitAuditEvent(
+      {
+        eventName: eventName as any,
+        entityType: "OperatorItem",
+        entityId: decisionId,
+        workspaceId,
+        actorId: actorId || undefined,
+        payload: {
+          fromState,
+          toState,
+          reason: reason || null,
+        },
+        visibility: "internal",
+      },
+      tx
+    );
   });
 
   logger.info("Decision transitioned", {

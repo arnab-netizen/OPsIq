@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 import { ValidationError, NotFoundError, UnauthorizedError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -84,52 +85,59 @@ export async function approveOutcomeVerification(
     );
   }
 
-  // Update database
+  // AUDIT-01 + concurrency: verify via a status-guarded updateMany (only a row still in
+  // `currentStatus` in this workspace transitions) inside one transaction with the audit event.
+  // Fail-closed — a failed audit rolls the verification back (was a last-write-wins update +
+  // swallowed post-commit audit).
   const now = new Date();
-  const updatedDecision = await db.operatorItem.update({
-    where: { id: decisionId },
-    data: {
-      verificationStatus: input.verificationStatus,
-      verifiedAt: now,
-      verifiedBy: actorId,
-      verificationEvidence: {
-        ...(decision.verificationEvidence as Record<string, unknown>),
-        adminVerification: {
-          approvedBy: actorId,
-          approvedAt: now.toISOString(),
-          reason: input.reason,
-          previousStatus: currentStatus,
-        },
+  const updateData: Record<string, any> = {
+    verificationStatus: input.verificationStatus,
+    verifiedAt: now,
+    verifiedBy: actorId,
+    verificationEvidence: {
+      ...(decision.verificationEvidence as Record<string, unknown>),
+      adminVerification: {
+        approvedBy: actorId,
+        approvedAt: now.toISOString(),
+        reason: input.reason,
+        previousStatus: currentStatus,
       },
-      auditTrail: buildAuditTrail(
-        (decision.auditTrail as any[]) || [],
-        actorId,
-        "OUTCOME_VERIFIED",
-        undefined,
-        undefined,
-        `${input.verificationStatus === "verified" ? "Verified" : "Disputed"}: ${input.reason}`
-      ),
     },
-  });
+    auditTrail: buildAuditTrail(
+      (decision.auditTrail as any[]) || [],
+      actorId,
+      "OUTCOME_VERIFIED",
+      undefined,
+      undefined,
+      `${input.verificationStatus === "verified" ? "Verified" : "Disputed"}: ${input.reason}`
+    ),
+  };
 
-  // Emit audit event
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OUTCOME_VERIFIED || "outcome.verified",
-    actorId,
-    entityType: "decision",
-    entityId: decisionId,
-    workspaceId,
-    payload: {
-      verificationStatus: input.verificationStatus,
-      previousStatus: currentStatus,
-      reason: input.reason,
-    },
-    visibility: "internal",
-  }).catch((error) => {
-    logger.warn("Failed to emit audit event for outcome verification", {
-      decisionId,
-      error: error instanceof Error ? error.message : String(error),
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.operatorItem.updateMany({
+      where: { id: decisionId, workspaceId, verificationStatus: decision.verificationStatus },
+      data: updateData,
     });
+    if (res.count !== 1) {
+      throw new ValidationError("Outcome verification state changed concurrently; please retry");
+    }
+
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OUTCOME_VERIFIED || "outcome.verified",
+        actorId,
+        entityType: "decision",
+        entityId: decisionId,
+        workspaceId,
+        payload: {
+          verificationStatus: input.verificationStatus,
+          previousStatus: currentStatus,
+          reason: input.reason,
+        },
+        visibility: "internal",
+      },
+      tx
+    );
   });
 
   logger.info("Outcome verified", {
@@ -142,7 +150,7 @@ export async function approveOutcomeVerification(
 
   return {
     decisionId,
-    verificationStatus: updatedDecision.verificationStatus || "unverified",
+    verificationStatus: input.verificationStatus || "unverified",
     verifiedAt: now.toISOString(),
     message: `Outcome ${input.verificationStatus === "verified" ? "approved" : "disputed"} successfully`,
   };

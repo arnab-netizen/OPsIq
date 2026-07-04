@@ -141,35 +141,45 @@ export async function rejectDecision(input: VerifiedRejectionInput): Promise<Rej
 
   const now = new Date();
 
-  // Update decision status to blocked with reason
-  const updated = await db.operatorItem.update({
-    where: { id: input.decisionId },
-    data: {
-      status: "blocked",
-      blockStage: "decision_gate",
-      blockReason: input.reason,
-      lastUpdatedByUserId: input.verifiedActorId,
-      updatedAt: now,
-    },
-  });
+  // AUDIT-01: reject via a workspace-guarded updateMany inside one transaction with the audit
+  // event (fail-closed — a failed audit rolls the state change back). Already-blocked/terminal
+  // rows do not re-transition.
+  let auditEventId = "";
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    const res = await tx.operatorItem.updateMany({
+      where: { id: input.decisionId, workspaceId: input.verifiedWorkspaceId, status: { in: ["pending", "in_progress"] } },
+      data: {
+        status: "blocked",
+        blockStage: "decision_gate",
+        blockReason: input.reason,
+        lastUpdatedByUserId: input.verifiedActorId,
+        updatedAt: now,
+      },
+    });
+    if (res.count !== 1) {
+      throw new ValidationError("Decision is not in a rejectable state");
+    }
 
-  // Emit audit event
-  const auditEventId = await emitAuditEvent({
-    eventName: AUDIT_EVENTS.DECISION_REJECTED,
-    workspaceId: input.verifiedWorkspaceId,
-    actorId: input.verifiedActorId,
-    actorType: "user",
-    entityType: "OperatorItem",
-    entityId: input.decisionId,
-    payload: {
-      decisionType: decision.decisionType,
-      expectedImpact: decision.impactExpected,
-      confidence: decision.confidence,
-      reason: input.reason,
-      previousStatus: decision.status,
-      newStatus: updated.status,
-    },
-    visibility: "internal",
+    auditEventId = await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.DECISION_REJECTED,
+        workspaceId: input.verifiedWorkspaceId,
+        actorId: input.verifiedActorId,
+        actorType: "user",
+        entityType: "OperatorItem",
+        entityId: input.decisionId,
+        payload: {
+          decisionType: decision.decisionType,
+          expectedImpact: decision.impactExpected,
+          confidence: decision.confidence,
+          reason: input.reason,
+          previousStatus: decision.status,
+          newStatus: "blocked",
+        },
+        visibility: "internal",
+      },
+      tx
+    );
   });
 
   logger.info("Decision rejected", {
