@@ -21,6 +21,12 @@ export interface OutcomeSnapshot {
     confidenceGain: number;
   };
   accuracyScore: number;
+  // OUT-01: honesty labels. `accuracyScore` is derived from the model's own
+  // confidence change, NOT a measured business KPI, so it must never be presented
+  // to an owner as a measured result. `measured=false` marks this as a model estimate;
+  // `accuracyBasis` names what the score actually reflects.
+  accuracyBasis: "model_confidence_delta";
+  measured: false;
   timestamp: string;
 }
 
@@ -34,6 +40,11 @@ export interface ActionOutcome {
   valueRecoveredINR: number | null;
   delta: string;
   accuracyScore: number;
+  // OUT-01: model estimate, not measured (see OutcomeSnapshot).
+  accuracyBasis: "model_confidence_delta";
+  measured: false;
+  // OUT-02: whether this outcome routed into governed re-evaluation.
+  reassessmentTriggered: boolean;
   timestamp: string;
 }
 
@@ -112,8 +123,16 @@ export async function recordOutcome(
   let predictedConfidence = 50;
   let predictedLossINR: number | null = null;
 
-  if (action.outcomeSnapshot && typeof action.outcomeSnapshot === "object") {
-    const snapshot = action.outcomeSnapshot as Record<string, unknown>;
+  // SCHEMA fix: Action has no `outcomeSnapshot` column (only `metadata Json?`); the
+  // previous code wrote/read a non-existent field and threw at runtime. Persist the
+  // outcome snapshot under metadata.outcomeSnapshot instead.
+  const actionMetadata: Record<string, unknown> =
+    action.metadata && typeof action.metadata === "object" && !Array.isArray(action.metadata)
+      ? (action.metadata as Record<string, unknown>)
+      : {};
+  const priorSnapshot = actionMetadata.outcomeSnapshot;
+  if (priorSnapshot && typeof priorSnapshot === "object") {
+    const snapshot = priorSnapshot as Record<string, unknown>;
     if (typeof snapshot.predictedImpactLevel === "string") {
       predictedImpactLevel = snapshot.predictedImpactLevel;
     }
@@ -169,14 +188,17 @@ export async function recordOutcome(
       confidenceGain: confidenceImprovement,
     },
     accuracyScore,
+    accuracyBasis: "model_confidence_delta",
+    measured: false,
     timestamp,
   };
 
-    // Store outcome snapshot in action record
+    // Store outcome snapshot in the action's metadata JSON (Action has no dedicated
+    // outcomeSnapshot column). Preserve any existing metadata keys.
     await db.action.update({
       where: { id: actionId },
       data: {
-        outcomeSnapshot,
+        metadata: { ...actionMetadata, outcomeSnapshot } as object,
       },
     });
 
@@ -203,6 +225,39 @@ export async function recordOutcome(
       });
     });
 
+    // OUT-02: a regressed or low-accuracy outcome is a failed implementation and MUST
+    // route into governed re-evaluation (BusinessConditionProfile / InterventionMode /
+    // InterventionPhase / priorities / review cadence / health). Previously recordOutcome
+    // computed the regression and did nothing with it — the reassessment loop was unwired.
+    const regressed = actualIndex > predictedIndex;
+    const lowAccuracy = accuracyScore < 40;
+    let reassessmentTriggered = false;
+    if (regressed || lowAccuracy) {
+      try {
+        const { triggerReEvaluation } = await import("@/services/re-evaluation");
+        await triggerReEvaluation({
+          changeType: "failed_implementation",
+          entityType: "action",
+          entityId: actionId,
+          engagementId,
+          workspaceId: auditWorkspaceId,
+          severity: regressed ? "high" : "medium",
+          description: regressed
+            ? `Action ${actionId} outcome ${deltaDescription}`
+            : `Action ${actionId} outcome has low model accuracy (${accuracyScore})`,
+          triggeredBy: actorId || "system",
+          correlationId: `outcome:${actionId}`,
+        });
+        reassessmentTriggered = true;
+      } catch (error) {
+        logger.error("Failed to trigger re-evaluation after adverse outcome", {
+          actionId,
+          engagementId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     const result = {
       actionId,
       engagementId,
@@ -213,6 +268,9 @@ export async function recordOutcome(
       valueRecoveredINR,
       delta: deltaDescription,
       accuracyScore,
+      accuracyBasis: "model_confidence_delta" as const,
+      measured: false as const,
+      reassessmentTriggered,
       timestamp,
     };
 
@@ -255,10 +313,17 @@ export async function getEngagementOutcomes(engagementId: string, workspaceId: s
 
   const monthlyRevenue = condition?.estimatedMonthlyRevenue ?? null;
 
+  const outcomeSnapshotOf = (a: typeof completedActions[0]): Record<string, unknown> | null => {
+    const m = a.metadata;
+    if (!m || typeof m !== "object" || Array.isArray(m)) return null;
+    const snap = (m as Record<string, unknown>).outcomeSnapshot;
+    return snap && typeof snap === "object" ? (snap as Record<string, unknown>) : null;
+  };
+
   const outcomes: ActionOutcome[] = completedActions
-    .filter((a: typeof completedActions[0]) => a.outcomeSnapshot && typeof a.outcomeSnapshot === "object")
+    .filter((a: typeof completedActions[0]) => outcomeSnapshotOf(a) !== null)
     .map((a: typeof completedActions[0]) => {
-      const snapshot = a.outcomeSnapshot as Record<string, unknown>;
+      const snapshot = outcomeSnapshotOf(a)!;
       return {
         actionId: a.id,
         engagementId: a.engagementId,
@@ -272,6 +337,9 @@ export async function getEngagementOutcomes(engagementId: string, workspaceId: s
             ? (snapshot.delta as Record<string, unknown>).impactImprovement || "unknown"
             : "unknown",
         accuracyScore: typeof snapshot.accuracyScore === "number" ? snapshot.accuracyScore : 0,
+        accuracyBasis: "model_confidence_delta" as const,
+        measured: false as const,
+        reassessmentTriggered: snapshot.reassessmentTriggered === true,
         timestamp: typeof snapshot.timestamp === "string" ? snapshot.timestamp : new Date().toISOString(),
       };
     });

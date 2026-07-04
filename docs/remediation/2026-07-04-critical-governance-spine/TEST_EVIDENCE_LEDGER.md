@@ -27,3 +27,7 @@ Every command run + result. DB commands use local PostgreSQL (opsiq_test, /tmp s
 ### AUDIT-01 (Phase D)
 - `vitest run audit-01-atomic-audit.db.test.ts` → **2/2 PASS** (forced audit failure rolls back mutation).
 - `npx tsc --noEmit` after Phase D → **0 errors**.
+
+### OUT-01 / OUT-02 (Phase E)
+- `vitest run out-01-02-outcome-reeval.db.test.ts` → **3/3 PASS**.
+- Regression: 15 outcome test files → **228/228 PASS**. tsc → 0 errors.

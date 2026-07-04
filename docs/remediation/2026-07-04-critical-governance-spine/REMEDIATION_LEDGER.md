@@ -21,8 +21,8 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 | APPR-02 | HIGH | STUB_OR_PLACEHOLDER / UNSAFE | /api/override writes the override justification to a process-global in-memory array (overr… | OPEN | |
 | CONC-01 | HIGH | UNSAFE_OR_BYPASSABLE | Core governed transitions are last-write-wins plain update({where:{id}}) with no version/s… | OPEN | |
 | DEC-01 | HIGH | UNSAFE_OR_BYPASSABLE | Re-accept hole: validateDecisionForAcceptance allows status 'pending' OR 'in_progress' (hu… | OPEN | |
-| OUT-01 | CRITICAL | FAKE_COMPLETE | Outcome 'success' is model-vs-model fabrication, not measured business metrics. accuracySc… | OPEN | |
-| OUT-02 | CRITICAL | MISSING | The core product promise 're-evaluate when outcomes do NOT improve' is NOT wired. recordOu… | OPEN | |
+| OUT-01 | CRITICAL | FAKE_COMPLETE | Outcome 'success' is model-vs-model fabrication, not measured business metrics. accuracySc… | FIXED_PENDING_TEST | out-01-02 3/3: honesty-labeled (measured=false) + schema-drift fixed |
+| OUT-02 | CRITICAL | MISSING | The core product promise 're-evaluate when outcomes do NOT improve' is NOT wired. recordOu… | CLOSED_PROVEN | out-01-02-outcome-reeval.db 3/3: adverse outcome triggers failed_implementation re-eval |
 | REEVAL-01 | HIGH | PARTIAL / MISSING | Of 9 CLAUDE.md mandatory adaptive triggers, 4 are wired (new critical evidence, unresolved… | OPEN | |
 | SHOCK-01 | HIGH | STUB_OR_PLACEHOLDER | createShockEvent does NOT persist the ShockEvent (comment falsely claims 'model does not e… | OPEN | |
 | EVID-01 | HIGH | DEAD_CODE_OR_UNREACHABLE / MISSING | The AI/deterministic anti-gaming precheck (runProofPrecheck/computeProofPrecheck) has ZERO… | OPEN | |
@@ -85,3 +85,14 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 - **Fix (this phase):** `emitAuditEvent(input, client?)` now accepts a Prisma tx client so audit can be atomic. Operator governed writes (`updateItem`, `applyOverride`) now run the state change + audit in ONE `db.$transaction` with NO swallow — a failed audit rolls the mutation back. Also fixed the actor id (`createdBy`→`createdByUserId`/`lastUpdatedByUserId`) so audit references a real actor (previously actorId was `"system"` and the create silently FK-failed and was swallowed).
 - **Test:** `src/__tests__/security/audit-01-atomic-audit.db.test.ts` (2/2): forced audit failure rolls back both updateItem and applyOverride (row unchanged).
 - **Remaining (tracked → extended in Phase G):** decision-lifecycle transition + decision-acceptance still write audit post-commit. `emitAuditEvent(tx)` capability now available to convert them. Low-risk create-audit paths (addItems) remain best-effort by design.
+
+### OUT-02 — outcome → re-evaluation not wired — CLOSED_PROVEN
+- **Root cause:** `recordOutcome` computed regression (`deltaDescription`) but never called `triggerReEvaluation`; `failed_implementation`/`kpi_deterioration` change types had no caller.
+- **Fix:** `recordOutcome` now fires `triggerReEvaluation({changeType:"failed_implementation"})` when the outcome regressed OR accuracy < 40 (correlationId-idempotent). Result carries `reassessmentTriggered`.
+- **Test:** `src/__tests__/security/out-01-02-outcome-reeval.db.test.ts` (3/3): regressed → re-eval fired with failed_implementation; improved/high-accuracy → not fired.
+
+### OUT-01 — fabricated outcomes — FIXED_PENDING_TEST (honesty-labeled) + schema-drift fixed
+- **Root cause:** `accuracyScore = 100 - |confidenceΔ - 10|` is a model-confidence delta, not a measured KPI, yet was surfaced as an outcome. ALSO the snapshot was written to a non-existent `Action.outcomeSnapshot` column (only `metadata Json?` exists) — the write threw at runtime.
+- **Fix:** (1) Snapshot + result now carry `measured: false` and `accuracyBasis: "model_confidence_delta"` so owner-facing layers can never present the score as a measured business result. (2) Snapshot persisted/read via `Action.metadata.outcomeSnapshot` (schema-drift fixed; recordOutcome no longer throws).
+- **Test:** same file (3/3): result labeled `measured:false`, `accuracyBasis:"model_confidence_delta"`.
+- **Remaining risk:** full grounding of accuracy/value in persisted KPI snapshots (vs model confidence) is a larger follow-up; the score is now explicitly labeled unmeasured rather than fabricated-as-real. Tracked.
