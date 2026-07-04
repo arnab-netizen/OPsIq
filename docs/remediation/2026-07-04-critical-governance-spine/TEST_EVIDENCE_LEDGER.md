@@ -13,3 +13,9 @@ Every command run + result. DB commands use local PostgreSQL (opsiq_test, /tmp s
 
 ### SEC-01
 - `vitest run src/__tests__/security/sec-01-resolve-server-role.test.ts` (TEST_WITH_DB=true) → **7/7 PASS**.
+
+### SEC-02 / SEC-04 (Phase B)
+- `vitest run sec-02-operator-cross-tenant-write.db.test.ts` → **5/5 PASS**.
+- `vitest run sec-04-db-tenant-backstop.db.test.ts` → **4/4 PASS**.
+- Regression: `vitest run owner-business-isolation.db + decision-transition-toctou.db + intervention-route.rbac` → **16/16 PASS**.
+- `npx tsc --noEmit` after Phase A+B → **0 errors**.

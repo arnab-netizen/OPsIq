@@ -9,9 +9,9 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 | ID | Sev | Class | Finding (short) | Status | Closure evidence |
 |----|-----|-------|-----------------|--------|------------------|
 | SEC-01 | CRITICAL | UNSAFE_OR_BYPASSABLE / FAKE_COMPLETE | resolveServerRole() unconditionally returns "admin" for EVERY authenticated user. This def… | CLOSED_PROVEN | sec-01-resolve-server-role.test.ts 7/7 |
-| SEC-02 | CRITICAL | UNSAFE_OR_BYPASSABLE | Cross-tenant governed-decision write via POST /api/operator. Chain: (1) resolveServerRole=… | OPEN | |
+| SEC-02 | CRITICAL | UNSAFE_OR_BYPASSABLE | Cross-tenant governed-decision write via POST /api/operator. Chain: (1) resolveServerRole=… | CLOSED_PROVEN | sec-02-operator-cross-tenant-write.db 5/5 |
 | SEC-03 | HIGH | UNSAFE_OR_BYPASSABLE / PARTIAL | requireWorkspaceContext() returns workspaceId = session.user.id — a placeholder still wire… | OPEN | |
-| SEC-04 | HIGH | UNSAFE_OR_BYPASSABLE (defense-in-depth absent) | The Prisma workspace-enforcement extension is INERT. WORKSPACE_OWNED_MODELS/GLOBAL_MODELS … | OPEN | |
+| SEC-04 | HIGH | UNSAFE_OR_BYPASSABLE (defense-in-depth absent) | The Prisma workspace-enforcement extension is INERT. WORKSPACE_OWNED_MODELS/GLOBAL_MODELS … | CLOSED_PROVEN | sec-04-db-tenant-backstop.db 4/4 + regression 16/16 |
 | SEC-05 | MEDIUM | PARTIAL | Commit 3dd002f ('stop trusting client x-workspace-id') only partially applied. ~30 handler… | OPEN | |
 | SEC-06 | MEDIUM | PARTIAL | Three incompatible role vocabularies coexist (admin/operator/viewer; system_admin/.../view… | OPEN | |
 | IDEM-01 | CRITICAL | FAKE_COMPLETE | withIdempotency() in src/infra/idempotency.ts unconditionally runs the operation and retur… | OPEN | |
@@ -60,3 +60,15 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 - **Fix:** derive the effective legacy `UserRole` from the real `getPolicyContext()` (active membership + workspace-scoped role assignments) via the real capability layer: `APPROVAL_DECIDE`/`OVERRIDE_DECIDE` → admin; `ACTION_UPDATE`/`DECISION_CLOSE`/`RECOMMENDATION_CREATE` → operator; else viewer; no context → null (fail closed).
 - **Test:** `src/__tests__/security/sec-01-resolve-server-role.test.ts` (7/7): null on no-membership, viewer for role-less member, admin only for approval-capable roles, no admin for analyst/client_team_member.
 - **Remaining risk:** the legacy `access.ts` UserRole model still coexists with the RoleName model (SEC-06) — tracked; role now derived, not faked.
+
+### SEC-02 — cross-tenant operator write — CLOSED_PROVEN
+- **Root cause:** `updateItem`/`applyOverride` took an OPTIONAL workspaceId; when undefined they matched by id alone and wrote unscoped. The operator route, on a foreign/missing item, skipped every guard and fell through to that unscoped write. `applyOverride`'s `select` also referenced a non-existent `createdBy` field.
+- **Fix:** `updateItem`/`applyOverride` now REQUIRE a non-empty workspaceId and scope the read by `{id, workspaceId}` (store.ts); the operator route throws `NotFoundError` when the item is not in the caller's workspace instead of proceeding; override route passes `item.workspaceId`. Fixed the bad `select` (`createdByUserId`).
+- **Test:** `src/__tests__/security/sec-02-operator-cross-tenant-write.db.test.ts` (5/5): foreign-workspace update rejected + row untouched; empty-scope rejected; own-workspace update succeeds; foreign override rejected.
+- **Remaining risk:** the `session.user.id`-as-workspace placeholder (SEC-03) still routes operator items through a per-user pseudo-workspace; item mutation is now workspace-scoped regardless. SEC-03 tracked separately.
+
+### SEC-04 / GAP-TEN-01 — inert DB tenant backstop — CLOSED_PROVEN (scope downgraded with proof)
+- **Root cause:** model set keyed camelCase while Prisma passes PascalCase → every check short-circuited (inert), and the set listed models with no direct workspaceId.
+- **Fix:** rebuilt `WORKSPACE_OWNED_MODELS` from the schema (117 models with a REQUIRED direct workspaceId, PascalCase, matching Prisma), excluding the 3 nullable-workspaceId audit/learning models (documented exemption) and `User` (membership-scoped, pre-workspace at signup). Enforces two compatible high-value invariants: (1) create/createMany requires workspaceId; (2) updateMany/deleteMany requires a non-empty WHERE (no all-tenant wipe). By-id write & read scoping downgraded-with-proof to the service layer (SEC-02) + route guards — see TENANT_MODEL_CLASSIFICATION.md.
+- **Test:** `src/__tests__/security/sec-04-db-tenant-backstop.db.test.ts` (4/4): empty-where deleteMany/updateMany blocked; scoped create+deleteMany allowed; global model unaffected. Regression shard (owner isolation + TOCTOU + RBAC route) 16/16.
+- **Remaining risk:** DB-level read isolation for indirectly-scoped models (Action/Evidence/Finding — SCHEMA-01) still relies on route/service guards; tracked.

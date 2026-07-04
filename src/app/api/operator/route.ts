@@ -1,4 +1,4 @@
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, NotFoundError } from "@/infra/errors";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   getItems,
@@ -75,32 +75,37 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   // Check idempotency (need workspace context first)
   // Will be set after we get workspace from item
 
-  // Capture before state for audit
+  // Capture before state for audit. getItems() is scoped to the caller's resolved
+  // workspace context, so a foreign item (another tenant's) is never returned here.
   const allItemsBefore = await getItems();
   const beforeItem = allItemsBefore.find((i) => i.id === id);
 
-  // Initialize logger with workspace context from item
-  if (beforeItem && beforeItem.workspaceId) {
-    workspaceId = beforeItem.workspaceId;
-    logger = createEventLogger("api_operator_post", workspaceId);
+  // SEC-02: fail closed. Previously a missing beforeItem (e.g. an item in another
+  // workspace) skipped every guard below and fell through to an UNSCOPED write.
+  // If the item is not in the caller's workspace, reject — never write.
+  if (!beforeItem || !beforeItem.workspaceId) {
+    throw new NotFoundError("OperatorItem", id);
+  }
 
-    // Check capability: decision_engine
-    const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
-    if (!capabilityCheck.allowed) {
-      throw new PlanLimitError("decision_engine", capabilityCheck.reason || "Plan limit exceeded");
-    }
+  workspaceId = beforeItem.workspaceId;
+  logger = createEventLogger("api_operator_post", workspaceId);
 
-    // Check idempotency after we have workspace context
-    const idempotencyCheck = await checkIdempotencyKey({
-      idempotencyKey,
-      operationName: "updateOperatorItem",
-      actorId: actorId || "unknown",
-      payload: body,
-    });
+  // Check capability: decision_engine
+  const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("decision_engine", capabilityCheck.reason || "Plan limit exceeded");
+  }
 
-    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return idempotencyCheck.cachedResponse.body;
-    }
+  // Check idempotency after we have workspace context
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "updateOperatorItem",
+    actorId: actorId || "unknown",
+    payload: body,
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return idempotencyCheck.cachedResponse.body;
   }
 
   // Validate status transition
@@ -226,7 +231,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     updatePayload.executionStatus = 'started';
   }
 
-  await updateItem(id, updatePayload, workspaceId || undefined);
+  await updateItem(id, updatePayload, beforeItem.workspaceId);
 
   // Capture after state and log audit event
   const allItemsAfter = await getItems();

@@ -1,84 +1,77 @@
 import { Prisma } from "@/generated/prisma/client";
 
 /**
- * Models that belong to a workspace and MUST be scoped by workspaceId.
- * All other models are treated as global/system models and don't require scoping.
+ * SEC-04 / GAP-TEN-01 — DB-level tenant backstop (corrected).
+ *
+ * Previously this extension keyed its model set in camelCase while Prisma passes
+ * `model` in PascalCase ("Engagement"), so nothing ever matched and the backstop
+ * was INERT while still being registered on the client (false confidence). It also
+ * listed models that have no direct `workspaceId` column at all.
+ *
+ * This version is generated from the schema: the set below is every model with a
+ * REQUIRED direct `workspaceId` column (PascalCase, matching Prisma's `model`
+ * argument). The 3 models with a *nullable* workspaceId — AuditEvent,
+ * RecommendationLegacy, BehavioralLearningArtifact — are intentionally EXCLUDED so
+ * that audit-event append/cleanup (which legitimately writes tenant-less rows) is
+ * not broken. Global/system models are not workspace-owned and are never checked.
+ *
+ * SCOPE (documented downgrade — see docs/remediation/.../TENANT_MODEL_CLASSIFICATION.md):
+ * Prisma cannot express a `workspaceId` filter in a single `update`/`delete` whose
+ * `where` is a bare unique id, and legitimate bulk writes are frequently scoped by
+ * an INDIRECT key (engagementId, businessId, clientId). So this backstop enforces
+ * only the invariants that are both SAFE (no false positives on legitimate code) and
+ * HIGH-VALUE against accidental cross-tenant damage:
+ *   1. create / createMany MUST include a workspaceId in the row data.
+ *   2. updateMany / deleteMany MUST carry a non-empty WHERE (never an all-tenant wipe).
+ *   3. update / delete / read scoping for workspace-owned models is enforced at the
+ *      SERVICE layer (e.g. src/services/operator/store.ts requires workspaceId; route
+ *      guards withCanonicalEnforcement + assertEngagementAccess + enforceWorkspaceScoping).
+ * The extension is no longer inert: (1) and (2) actually execute and throw.
  */
-const WORKSPACE_OWNED_MODELS = new Set([
-  "operatorItem", // decisions
-  "alert",
-  "engagement",
-  "clientAccount",
-  "lead",
-  "user", // workspace members
-  "workspaceMembership",
-  "evidence",
-  "finding",
-  "recommendation",
-  "action",
-  "actionLifecycle",
-  "deliverable",
-  "engagementMembership",
-  "businessConditionProfile",
-  "interventionState",
-  "decisionLifecycle",
-  "auditEvent", // audit events are workspace-scoped
-  "learningRecord",
-  "businessImpact",
-  "executionDrift",
-  "decisionConfidence",
-  "decisionControl",
-  "decisionEvidence",
-  "executionCertainty",
-  "kpi",
-  "outcome",
-  "shock",
-  "shockEvent",
-  "thresholdAlert",
-  "override",
-  "clientContact",
-  "businessCondition",
-  "stage",
-  "reviewCycle",
-  "roleAssignment",
-  "reEvaluation",
-  "interventionDesign",
-  "scenario",
-  "constraint",
-  "reportGeneration",
+const WORKSPACE_OWNED_MODELS = new Set<string>([
+  "AIProposalSandbox", "AggregateLock", "BillingAccount", "BrowserImportConsent", "BrowserImportSession", "BudgetAuthority",
+  "BudgetLine", "BudgetPeriod", "BudgetPlanSnapshot", "BudgetReassessment", "BusinessConditionProfile", "CanonicalEvent",
+  "ControlledLearningAdmission", "ControlledLearningAttributionReview", "ControlledLearningCandidate", "ControlledLearningCandidateAuditEntry", "ControlledLearningConsentRecord", "ControlledLearningHarmEvent",
+  "ControlledLearningPrivacyControl", "ControlledLearningRegressionResult", "ControlledLearningRejection", "ControlledLearningRetentionPolicy", "ControlledLearningReview", "ControlledLearningRollbackEvent",
+  "ControlledLearningRolloutFlag", "DelegatedTask", "Engagement", "Escalation", "ExternalConnection", "ExternalConnectionConsent",
+  "ExternalDataLineage", "ExternalImportTemplate", "ExternalRawRecord", "FactReviewAction", "FundedInitiativeOutcome", "OperatorItem",
+  "OwnerActionOutcome", "OwnerApprovalMemory", "OwnerArchetypeMetric", "OwnerAttentionEvent", "OwnerBudgetAction", "OwnerBudgetOverride",
+  "OwnerBusiness", "OwnerCapacitySnapshot", "OwnerCashflowAction", "OwnerCashflowCycle", "OwnerCashflowFinding", "OwnerCashflowSnapshot",
+  "OwnerCashflowVerification", "OwnerComplianceItem", "OwnerDataIntake", "OwnerDoNotRepeatRule", "OwnerEmployeeWorkloadSnapshot", "OwnerEquipment",
+  "OwnerFinanceAction", "OwnerFinanceCycle", "OwnerFinanceFinding", "OwnerFinanceVerification", "OwnerFinancialSnapshot", "OwnerGuidanceSnapshot",
+  "OwnerInputQualityAssessment", "OwnerInputRecord", "OwnerMarketingAction", "OwnerMarketingCycle", "OwnerMarketingFinding", "OwnerMarketingSnapshot",
+  "OwnerMarketingVerification", "OwnerMetricSnapshot", "OwnerOperationsAction", "OwnerOperationsCycle", "OwnerOperationsFinding", "OwnerOperationsSnapshot",
+  "OwnerOperationsVerification", "OwnerProcess", "OwnerReassessmentEvent", "OwnerSalesAction", "OwnerSalesCycle", "OwnerSalesFinding",
+  "OwnerSalesSnapshot", "OwnerSalesVerification", "OwnerSelfEvaluation", "OwnerServiceEconomics", "OwnerSopAction", "OwnerSopCycle",
+  "OwnerSopDocument", "OwnerSopFinding", "OwnerSopSnapshot", "OwnerSopVerification", "OwnerStaffSkill", "OwnerStandingInstruction",
+  "OwnerStrategyAction", "OwnerStrategyCycle", "OwnerStrategyFinding", "OwnerStrategySnapshot", "OwnerStrategyVerification", "OwnerSupplierInventorySnapshot",
+  "OwnerTrainingRecommendation", "OwnerWorkingCapitalItem", "OwnerWorkloadSnapshot", "PrivateModeAccess", "Proof", "ProofRequirement",
+  "Recommendation", "RecommendationBusinessImpact", "RecommendationExpiryPolicy", "RecoveryAction", "RecoveryCycle", "RecoveryFinding",
+  "RecoveryVerification", "SnapshotData", "SpendEntry", "TaskStatusHistory", "ThresholdConfig", "UsageEvent",
+  "VendorRecord", "WorkOrder", "WorkspaceMembership",
 ]);
 
-/**
- * Global models that do NOT require workspaceId scoping.
- * These are system-wide configuration or reference data.
- */
-const GLOBAL_MODELS = new Set([
-  "workspace",
-  "workspaceRole",
-  "auditEventType",
-  "capability",
-  "problem",
-  "intervention",
-  "businessIntervention",
-  "metrics",
-  "systemConfig",
-  "idempotencyKey",
-  "session",
-  "token",
-  // Add any other truly global models
-]);
+function whereHasAnyConstraint(where: unknown): boolean {
+  if (!where || typeof where !== "object") return false;
+  return Object.keys(where as Record<string, unknown>).length > 0;
+}
 
-interface QueryContext {
-  workspaceId?: string;
+function createDataHasWorkspaceId(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const rows = Array.isArray(data) ? data : [data];
+  return rows.every(
+    (row) =>
+      row &&
+      typeof row === "object" &&
+      "workspaceId" in (row as Record<string, unknown>) &&
+      Boolean((row as Record<string, unknown>).workspaceId)
+  );
 }
 
 /**
- * Enforce workspace isolation on all queries.
- * Strategy:
- * 1. BLOCK: All write operations (create, update, delete) on workspace models without workspaceId
- * 2. BLOCK: All write operations with conflicting workspaceId
- * 3. LOG: Unscoped reads (these are potential data leaks but less critical than writes)
- * 4. ALLOW: Global model operations without workspaceId
+ * Build the workspace-isolation backstop Prisma client extension.
+ * Fails closed on the two compatible, high-value invariants; passes everything
+ * else through to be enforced at the service layer.
  */
 export function createWorkspaceEnforcementMiddleware() {
   return Prisma.defineExtension((client) =>
@@ -86,178 +79,36 @@ export function createWorkspaceEnforcementMiddleware() {
       query: {
         $allModels: {
           async $allOperations({ operation, model, args, query }) {
-            // NOTE (GAP-TEN-01): Prisma v7 passes `model` as PascalCase
-            // (e.g. "Engagement"); the sets below are keyed camelCase, so today
-            // NOTHING matches and this DB-level tenant backstop is inert. Fixing
-            // the casing alone is NOT safe to flip in one slice: several
-            // production paths legitimately write workspace-owned models without
-            // a direct workspaceId (e.g. signup creates `User` before any
-            // workspace exists — src/app/api/auth/signup/route.ts; audit-event
-            // cleanup deletes without a workspace filter). Enabling enforcement
-            // requires first re-classifying models (User is membership-scoped,
-            // not directly workspace-owned) and scoping every query. Until then
-            // the LIVE tenant protection is route-level: withCanonicalEnforcement
-            // (ctx.verifiedWorkspaceId) + assertEngagementAccess + capability
-            // gates. Do not claim DB-level isolation is enforced. See
-            // docs/full-repo-commercial-audit/FULL_REPO_GAP_REGISTER.md.
-            const isWorkspaceOwned = WORKSPACE_OWNED_MODELS.has(model as string);
-            const isGlobal = GLOBAL_MODELS.has(model as string);
-
-            // Skip enforcement for global models
-            if (!isWorkspaceOwned || isGlobal) {
+            // `model` is PascalCase (e.g. "OperatorItem"). Match the set directly.
+            if (!WORKSPACE_OWNED_MODELS.has(model as string)) {
               return query(args);
             }
 
-            // CRITICAL: Block unsafe writes
-            if (
-              operation === "update" ||
-              operation === "updateMany" ||
-              operation === "delete" ||
-              operation === "deleteMany"
-            ) {
-              const where = args.where;
-              if (!where) {
-                throw new Error(
-                  `WORKSPACE ISOLATION VIOLATION: ${operation} on ${model} requires WHERE clause`
-                );
-              }
-              if (!isWorkspaceIdInWhere(where)) {
-                throw new Error(
-                  `WORKSPACE ISOLATION VIOLATION: ${operation} on ${model} WHERE must include workspaceId`
-                );
-              }
-              // Validate no conflicting workspaceId in data (only for update operations)
-              if (
-                (operation === "update" || operation === "updateMany") &&
-                args.data &&
-                typeof args.data === "object" &&
-                "workspaceId" in args.data &&
-                args.data.workspaceId
-              ) {
-                const whereWorkspaceId = extractWorkspaceId(where);
-                if (
-                  whereWorkspaceId &&
-                  whereWorkspaceId !== args.data.workspaceId
-                ) {
-                  throw new Error(
-                    `WORKSPACE ISOLATION VIOLATION: Conflicting workspaceId in update on ${model}`
-                  );
-                }
-              }
-            }
+            const a = args as { data?: unknown; where?: unknown };
 
-            // CRITICAL: Block unsafe creates
+            // Invariant 1: no unscoped INSERT of a workspace-owned row.
             if (operation === "create" || operation === "createMany") {
-              const data = Array.isArray(args.data) ? args.data : [args.data];
-              for (const item of data) {
-                if (
-                  !item ||
-                  typeof item !== "object" ||
-                  !("workspaceId" in item) ||
-                  !item.workspaceId
-                ) {
-                  throw new Error(
-                    `WORKSPACE ISOLATION VIOLATION: create ${model} requires workspaceId in data`
-                  );
-                }
-              }
-            }
-
-            // CRITICAL: BLOCK unscoped reads (fail-closed - no exceptions)
-            if (
-              operation === "findFirst" ||
-              operation === "findMany" ||
-              operation === "count" ||
-              operation === "aggregate" ||
-              operation === "groupBy"
-            ) {
-              const where = args.where;
-              if (!isWorkspaceIdInWhere(where)) {
+              if (!createDataHasWorkspaceId(a.data)) {
                 throw new Error(
-                  `WORKSPACE ISOLATION VIOLATION: ${operation} on ${model} requires workspaceId in WHERE clause. ` +
-                  `This is a CRITICAL security violation. The query has been BLOCKED.`
+                  `WORKSPACE ISOLATION VIOLATION: ${operation} on ${model} requires workspaceId in data`
                 );
               }
             }
 
-            // Execute the actual query
+            // Invariant 2: no all-tenant bulk mutation (empty/absent WHERE).
+            if (operation === "updateMany" || operation === "deleteMany") {
+              if (!whereHasAnyConstraint(a.where)) {
+                throw new Error(
+                  `WORKSPACE ISOLATION VIOLATION: ${operation} on ${model} requires a non-empty WHERE ` +
+                  `(refusing an all-tenant bulk mutation)`
+                );
+              }
+            }
+
             return query(args);
           },
         },
       },
     })
   );
-}
-
-/**
- * Check if workspaceId is present in a WHERE clause
- */
-function isWorkspaceIdInWhere(where: any): boolean {
-  if (!where || typeof where !== "object") {
-    return false;
-  }
-
-  // Direct check
-  if ("workspaceId" in where) {
-    return true;
-  }
-
-  // Check in AND conditions
-  if (Array.isArray(where.AND)) {
-    return where.AND.some((condition: any) => isWorkspaceIdInWhere(condition));
-  }
-
-  // Check in OR conditions (should be rare for workspace scoping)
-  if (Array.isArray(where.OR)) {
-    return where.OR.every((condition: any) => isWorkspaceIdInWhere(condition));
-  }
-
-  return false;
-}
-
-/**
- * Validate that workspaceId is consistent if provided in both where and data
- */
-function validateWorkspaceIdConsistency(
-  model: string,
-  where: any,
-  data: any
-): void {
-  const whereWorkspaceId = extractWorkspaceId(where);
-  const dataWorkspaceId = data?.workspaceId;
-
-  if (
-    whereWorkspaceId &&
-    dataWorkspaceId &&
-    whereWorkspaceId !== dataWorkspaceId
-  ) {
-    throw new Error(
-      `Workspace isolation error: workspaceId mismatch on ${model}. WHERE has ${whereWorkspaceId}, data has ${dataWorkspaceId}`
-    );
-  }
-}
-
-/**
- * Extract workspaceId from a WHERE clause
- */
-function extractWorkspaceId(where: any): string | null {
-  if (!where || typeof where !== "object") {
-    return null;
-  }
-
-  if ("workspaceId" in where) {
-    const id = where.workspaceId;
-    if (typeof id === "string") return id;
-    if (id && typeof id === "object" && "equals" in id) return id.equals;
-  }
-
-  // Check in AND conditions
-  if (Array.isArray(where.AND)) {
-    for (const condition of where.AND) {
-      const id = extractWorkspaceId(condition);
-      if (id) return id;
-    }
-  }
-
-  return null;
 }

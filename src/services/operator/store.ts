@@ -165,8 +165,14 @@ export async function getItems(): Promise<OperatorItem[]> {
 export async function updateItem(
   id: string,
   updates: Partial<OperatorItem>,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<void> {
+  // SEC-02: workspace scope is mandatory. A missing/empty workspaceId previously
+  // caused the findFirst below to match by id alone and the update to run unscoped,
+  // allowing cross-tenant writes. Fail closed.
+  if (!workspaceId) {
+    throw new Error("updateItem requires a workspaceId for tenant isolation");
+  }
   const updateData: Record<string, any> = {};
 
   if (updates.problem !== undefined) updateData.problem = updates.problem;
@@ -200,9 +206,10 @@ export async function updateItem(
   if (updates.auditTrail !== undefined) updateData.auditTrail = updates.auditTrail;
   if (updates.blockingDependencies !== undefined) updateData.blockingDependencies = updates.blockingDependencies && updates.blockingDependencies.length > 0 ? updates.blockingDependencies : null;
 
-  // Fetch current item first to verify workspace and capture state
+  // Fetch current item first to verify workspace and capture state.
+  // Always scoped by workspaceId (now mandatory) — a foreign item resolves to null.
   const item = await db.operatorItem.findFirst({
-    where: { id, ...(workspaceId && { workspaceId }) }
+    where: { id, workspaceId }
   });
   if (!item) throw new NotFoundError("OperatorItem", id);
 
@@ -267,19 +274,23 @@ export function getCalibrationRecords(): CalibrationRecord[] {
 export async function applyOverride(
   id: string,
   newAction: string,
-  workspaceId?: string,
+  workspaceId: string,
   actorId?: string
 ): Promise<void> {
-  // Fetch item to get workspaceId if not provided
+  // SEC-02/SEC-05: workspace scope is mandatory — reject unscoped override writes.
+  if (!workspaceId) {
+    throw new Error("applyOverride requires a workspaceId for tenant isolation");
+  }
+  // Fetch item scoped to the caller's workspace; a foreign item resolves to null.
   const item = await db.operatorItem.findFirst({
-    where: { id, ...(workspaceId && { workspaceId }) },
-    select: { id: true, workspaceId: true, action: true, createdBy: true },
+    where: { id, workspaceId },
+    select: { id: true, workspaceId: true, action: true, createdByUserId: true },
   });
 
   if (!item) throw new NotFoundError("OperatorItem", id);
 
   const resolvedWorkspaceId = workspaceId || item.workspaceId;
-  const resolvedActorId = actorId || item.createdBy || "system";
+  const resolvedActorId = actorId || item.createdByUserId || "system";
 
   await db.operatorItem.update({
     where: { id },

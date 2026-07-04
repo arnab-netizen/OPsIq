@@ -107,7 +107,8 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
   addOverride(overrideRecord);
   const beforeItem = item;
-  await applyOverride(operatorItemId, overriddenAction);
+  // SEC-02/SEC-05: scope the override write to the item's (caller-resolved) workspace.
+  await applyOverride(operatorItemId, overriddenAction, item.workspaceId, actorId);
 
   // Capture after state
   const itemsAfter = await getItems();
