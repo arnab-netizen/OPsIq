@@ -68,3 +68,4 @@ test.db
 # Playwright artifacts
 test-results/
 playwright-report/
+dbenv.sh

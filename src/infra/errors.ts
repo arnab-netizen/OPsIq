@@ -49,7 +49,8 @@ type OtherErrorCode =
   | "STORAGE_ERROR"
   | "SCHEDULER_ERROR"
   | "INTERNAL_ERROR"
-  | "BAD_REQUEST";
+  | "BAD_REQUEST"
+  | "FEATURE_DISABLED";
 
 export type ErrorCode =
   | Layer1ErrorCode
@@ -626,6 +627,36 @@ export class NotFoundError extends AppError {
       correlationId
     );
     this.name = "NotFoundError";
+  }
+}
+
+/**
+ * Raised when a code path is intentionally disabled (fail-closed) rather than
+ * left to throw an opaque internal error. Used to safely retire a subsystem that
+ * is not owner-use-ready without exposing broken behaviour. 501 Not Implemented,
+ * non-retryable — a client retry will never succeed while the feature is off.
+ */
+export class FeatureDisabledError extends AppError {
+  constructor(feature: string, reason: string, correlationId?: string) {
+    super(
+      "FEATURE_DISABLED",
+      `${feature} is not available: ${reason}`,
+      501,
+      {
+        telemetryClass: "SYSTEM_DEGRADED",
+        auditClass: "CLIENT_ERROR",
+        severity: "LOW",
+        retryable: false,
+        securityRelevant: false,
+        infrastructureRelevant: false,
+        abuseRelevant: false,
+        handlerAllowed: false,
+        mutationAllowed: false,
+      },
+      { feature },
+      correlationId
+    );
+    this.name = "FeatureDisabledError";
   }
 }
 

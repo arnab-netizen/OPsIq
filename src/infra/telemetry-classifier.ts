@@ -431,6 +431,16 @@ function classifyOtherError(code: Exclude<ErrorCode, Layer1ErrorCode | Layer2Err
         securityRelevant: false,
         infrastructureRelevant: false,
       };
+
+    case "FEATURE_DISABLED":
+      return {
+        eventType: "AUTH_FAILURE",
+        telemetryClass: "VALIDATION_ERROR",
+        authLayer: "unknown",
+        severity: "LOW",
+        securityRelevant: false,
+        infrastructureRelevant: false,
+      };
   }
 }
 

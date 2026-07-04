@@ -4,7 +4,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
-import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ForbiddenError, FeatureDisabledError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import {
   optimisticUpdate,
@@ -537,6 +537,34 @@ export async function validateEvidence(
   return updated;
 }
 
+// ─── Evidence bundles (DEC-EVID-01: SAFELY DISABLED FOR OWNER USE) ───────────
+//
+// Evidence bundles group `EvidenceItem` rows — a model that is DIVORCED from the
+// canonical `Evidence` proof pipeline this service actually writes (`db.evidence`).
+// No active service writes `EvidenceItem`, and no verification / recommendation /
+// scoring path reads `EvidenceBundle`, so bundles cannot (and must not) act as a
+// parallel proof truth. The bundle code below also carries irreconcilable schema
+// drift (references a non-existent `workspaceId` column on both bundle tables,
+// mismatched relation/field names, and validates against `db.evidence` while
+// writing an `evidenceItemId` FK that resolves against `EvidenceItem`) — it has
+// never functioned against the current schema.
+//
+// Re-enabling requires a deliberate model-reconciliation (merge `EvidenceItem`
+// into canonical `Evidence`, or vice-versa) with its own migration and proof
+// tests. Until then every bundle entry point fails closed at THIS single
+// chokepoint so no route (present or future) can reach the broken code path or
+// expose a competing proof surface. See docs EVIDENCE_BUNDLE_AND_PRECHECK_CLOSURE.
+// Unconditional fail-closed. Typed `: never` so the disabled entry points below
+// carry no unreachable (and drift-broken) database code — the subsystem is off,
+// not half-implemented. Flip this to a real implementation only as part of the
+// EvidenceItem/Evidence reconciliation described above.
+function assertEvidenceBundlesEnabled(): never {
+  throw new FeatureDisabledError(
+    "Evidence bundles",
+    "grouping is disabled pending reconciliation of the EvidenceItem and canonical Evidence models; canonical evidence, verification and proof are unaffected"
+  );
+}
+
 export interface CreateEvidenceBundleInput {
   engagementId: string;
   title: string;
@@ -560,210 +588,53 @@ export interface RemoveEvidenceFromBundleInput {
   evidenceItemId: string;
 }
 
+// Every entry point below is a fail-closed disabled surface. The parameters are
+// retained so the disablement is transparent at the call sites (routes) and so
+// re-enabling is a body change, not a signature change.
+
 export async function createEvidenceBundle(
-  input: CreateEvidenceBundleInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string
-) {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
-
-  const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
-  });
-  if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
-
-  const bundle = await db.evidenceBundle.create({
-    data: {
-      engagementId: input.engagementId,
-      title: input.title,
-      description: input.description ?? null,
-      createdBy: userId,
-      workspaceId: validatedWorkspaceId,
-    },
-  });
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_CREATED,
-    actorId: userId,
-    entityType: "evidence_bundle",
-    entityId: bundle.id,
-    payload: {
-      engagementId: input.engagementId,
-      title: input.title,
-    },
-    visibility: "internal",
-  });
-
-  return bundle;
+  _input: CreateEvidenceBundleInput,
+  _authContext: CanonicalAuthContext,
+  _workspaceId: string
+): Promise<never> {
+  assertEvidenceBundlesEnabled();
 }
 
-export async function getEvidenceBundleById(bundleId: string, workspaceId: string) {
-  enforceWorkspaceId(workspaceId, "getEvidenceBundleById", "evidence_bundle");
-
-  const bundle = await db.evidenceBundle.findUnique({
-    where: { id: bundleId, workspaceId },
-    include: {
-      items: {
-        where: { removedAt: null },
-        include: { evidence: true },
-      },
-    },
-  });
-  if (!bundle) throw new NotFoundError("EvidenceBundle", bundleId);
-  return bundle;
+export async function getEvidenceBundleById(
+  _bundleId: string,
+  _workspaceId: string
+): Promise<never> {
+  assertEvidenceBundlesEnabled();
 }
 
-export async function listEvidenceBundles(engagementId: string, workspaceId: string) {
-  enforceWorkspaceId(workspaceId, "listEvidenceBundles", "evidence_bundle");
-
-  // Check engagement exists
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId, workspaceId },
-    select: { id: true },
-  });
-  if (!engagement) throw new NotFoundError("Engagement", engagementId);
-
-  return db.evidenceBundle.findMany({
-    where: { engagementId, workspaceId, status: "active" },
-    include: {
-      items: {
-        where: { removedAt: null },
-        select: { id: true, evidenceId: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+export async function listEvidenceBundles(
+  _engagementId: string,
+  _workspaceId: string
+): Promise<never> {
+  assertEvidenceBundlesEnabled();
 }
 
 export async function addEvidenceToBundle(
-  input: AddEvidenceToBundleInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string
-) {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
-
-  const bundle = await db.evidenceBundle.findUnique({
-    where: { id: input.bundleId, workspaceId: validatedWorkspaceId },
-  });
-  if (!bundle) throw new NotFoundError("EvidenceBundle", input.bundleId);
-
-  const evidence = await db.evidence.findUnique({
-    where: { id: input.evidenceItemId, workspaceId: validatedWorkspaceId },
-  });
-  if (!evidence) throw new NotFoundError("Evidence", input.evidenceItemId);
-
-  const existing = await db.evidenceBundleItem.findFirst({
-    where: {
-      bundleId: input.bundleId,
-      evidenceId: input.evidenceItemId,
-      removedAt: null,
-      workspaceId: validatedWorkspaceId,
-    },
-  });
-  if (existing) {
-    throw new ValidationError("Evidence is already in this bundle");
-  }
-
-  const item = await db.evidenceBundleItem.create({
-    data: {
-      bundleId: input.bundleId,
-      evidenceId: input.evidenceItemId,
-      addedBy: userId,
-      workspaceId: validatedWorkspaceId,
-    },
-  });
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_ITEM_ADDED,
-    actorId: userId,
-    entityType: "evidence_bundle_item",
-    entityId: item.id,
-    payload: {
-      bundleId: input.bundleId,
-      evidenceId: input.evidenceItemId,
-    },
-    visibility: "internal",
-  });
-
-  return item;
+  _input: AddEvidenceToBundleInput,
+  _authContext: CanonicalAuthContext,
+  _workspaceId: string
+): Promise<never> {
+  assertEvidenceBundlesEnabled();
 }
 
 export async function removeEvidenceFromBundle(
-  input: RemoveEvidenceFromBundleInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string
-) {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
-
-  const item = await db.evidenceBundleItem.findFirst({
-    where: {
-      bundleId: input.bundleId,
-      evidenceId: input.evidenceItemId,
-      workspaceId: validatedWorkspaceId,
-    },
-  });
-  if (!item) throw new NotFoundError("EvidenceBundleItem", "notfound");
-
-  if (item.removedAt !== null) {
-    throw new ValidationError("Item is already removed from bundle");
-  }
-
-  const updated = await db.evidenceBundleItem.update({
-    where: { id: item.id, workspaceId: validatedWorkspaceId },
-    data: { removedAt: new Date() },
-  });
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_ITEM_REMOVED,
-    actorId: userId,
-    entityType: "evidence_bundle_item",
-    entityId: item.id,
-    payload: {
-      bundleId: item.bundleId,
-      evidenceId: item.evidenceId,
-    },
-    visibility: "internal",
-  });
-
-  return updated;
+  _input: RemoveEvidenceFromBundleInput,
+  _authContext: CanonicalAuthContext,
+  _workspaceId: string
+): Promise<never> {
+  assertEvidenceBundlesEnabled();
 }
 
 export async function updateEvidenceBundle(
-  bundleId: string,
-  input: UpdateEvidenceBundleInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string
-) {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
-
-  const bundle = await db.evidenceBundle.findUnique({
-    where: { id: bundleId, workspaceId: validatedWorkspaceId },
-  });
-  if (!bundle) throw new NotFoundError("EvidenceBundle", bundleId);
-
-  if (bundle.version !== input.version) {
-    throw new Error("Bundle was modified. Please refresh and try again.");
-  }
-
-  const updates: any = { version: { increment: 1 } };
-  if (input.title) updates.title = input.title;
-  if (input.description !== undefined) updates.description = input.description;
-  if (input.status) updates.status = input.status;
-
-  const updated = await db.evidenceBundle.update({
-    where: { id: bundleId, workspaceId: validatedWorkspaceId },
-    data: updates,
-  });
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_UPDATED,
-    actorId: userId,
-    entityType: "evidence_bundle",
-    entityId: bundleId,
-    workspaceId: validatedWorkspaceId,
-    payload: updates,
-    visibility: "internal",
-  });
-
-  return updated;
+  _bundleId: string,
+  _input: UpdateEvidenceBundleInput,
+  _authContext: CanonicalAuthContext,
+  _workspaceId: string
+): Promise<never> {
+  assertEvidenceBundlesEnabled();
 }
