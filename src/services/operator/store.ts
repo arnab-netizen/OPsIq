@@ -445,27 +445,29 @@ export async function addBlockedDecision(params: {
     data.problemType = params.problemType;
   }
 
-  const created = await db.operatorItem.create({ data });
-
-  // Emit audit event for blocked decision
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.OPERATOR_ITEM_BLOCKED,
-    actorId: params.createdBy,
-    entityType: "operator_item",
-    entityId: created.id,
-    workspaceId: params.workspaceId,
-    payload: {
-      blockStage: params.blockStage,
-      blockReason: params.blockReason,
-      problem: params.problem,
-    },
-    visibility: "internal",
-  }).catch((error) => {
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.warn("Failed to emit audit event for blocked decision", {
-      itemId: created.id,
-      error: governed.operatorMessage,
-    });
+  // AUDIT DURABILITY (GAP-AUDIT-01): a blocked-decision record and its audit
+  // event must land together or not at all — a lost block record is a
+  // governance hole. Write both inside one transaction (fail-closed): if the
+  // audit write fails, the blocked-decision row rolls back.
+  const created = await db.$transaction(async (tx: typeof db) => {
+    const row = await tx.operatorItem.create({ data });
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.OPERATOR_ITEM_BLOCKED,
+        actorId: params.createdBy,
+        entityType: "operator_item",
+        entityId: row.id,
+        workspaceId: params.workspaceId,
+        payload: {
+          blockStage: params.blockStage,
+          blockReason: params.blockReason,
+          problem: params.problem,
+        },
+        visibility: "internal",
+      },
+      tx,
+    );
+    return row;
   });
 
   return created.id;
