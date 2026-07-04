@@ -94,6 +94,50 @@ export interface CanonicalAuthContext {
 }
 
 /**
+ * Real workspace/membership facts for the verified-session snapshot (M1 honesty fix).
+ *
+ * The session snapshot previously hardcoded `workspace.isActive: true`, the workspace id as its name, and a `now`
+ * join date. This reads the REAL values from the DB via a single indexed lookup so the "verified" snapshot no
+ * longer asserts workspace/membership facts it never checked. Exported so it is unit/DB-testable in isolation.
+ */
+export interface WorkspaceSnapshotFacts {
+  workspaceName: string;
+  workspaceIsActive: boolean;
+  membershipIsActive: boolean;
+  membershipJoinedAt: Date;
+}
+
+export async function resolveWorkspaceSnapshotFacts(
+  workspaceId: string,
+  userId: string
+): Promise<WorkspaceSnapshotFacts> {
+  const membership = await db.workspaceMembership.findFirst({
+    where: { workspaceId, userId },
+    select: {
+      isActive: true,
+      addedAt: true,
+      workspace: { select: { name: true, isActive: true } },
+    },
+  });
+  if (!membership) {
+    // The wrapper already proved an active membership derived this workspaceId (STEP 1.5); a missing row here is a
+    // real integrity fault, surfaced honestly rather than papered over with fabricated defaults.
+    throw new ClassifiedApiError(
+      "Workspace membership not found while building verified session snapshot",
+      "workspace_context_invalid",
+      "workspace_snapshot_facts_lookup",
+      403
+    );
+  }
+  return {
+    workspaceName: membership.workspace.name,
+    workspaceIsActive: membership.workspace.isActive,
+    membershipIsActive: membership.isActive,
+    membershipJoinedAt: membership.addedAt,
+  };
+}
+
+/**
  * Service Auth Envelope: Minimal verified auth data for service layer
  *
  * Services receive ONLY verified decisions from routes/wrappers.
@@ -542,7 +586,12 @@ export function withCanonicalEnforcement(
         throw new Error("Auth allowed but session or policy is null");
       }
 
-      // PHASE E: Create immutable snapshot of auth state
+      // PHASE E: Create immutable snapshot of auth state. Fetch the REAL workspace/membership facts first (M1) so
+      // the snapshot records verified state instead of hardcoded `isActive: true` / a fabricated name+join date.
+      const workspaceFacts = await resolveWorkspaceSnapshotFacts(
+        decision.context!.verifiedWorkspaceId,
+        session.user.id
+      );
       const sessionSnapshotBuilder = new CanonicalVerifiedSessionBuilder({
         traceId: traceManager.getTrace().traceId,
         correlationId,
@@ -550,6 +599,10 @@ export function withCanonicalEnforcement(
         policyContext: policy,
         workspaceId: decision.context!.verifiedWorkspaceId,
         capabilities: decision.context!.verifiedCapabilities as Set<CapabilityName>,
+        workspaceName: workspaceFacts.workspaceName,
+        workspaceIsActive: workspaceFacts.workspaceIsActive,
+        membershipIsActive: workspaceFacts.membershipIsActive,
+        membershipJoinedAt: workspaceFacts.membershipJoinedAt,
       });
 
       const sessionSnapshot = sessionSnapshotBuilder.finalize();

@@ -52,6 +52,15 @@ function createMockPolicyContext(): PolicyContext {
   };
 }
 
+// Real workspace/membership facts the wrapper now fetches and passes into the builder (M1). These are the values a
+// live request would carry; the immutability/isActive assertions below deliberately pass an active workspace.
+const MOCK_WORKSPACE_FACTS = {
+  workspaceName: "Test Workspace",
+  workspaceIsActive: true,
+  membershipIsActive: true,
+  membershipJoinedAt: new Date("2026-01-01T00:00:00Z"),
+};
+
 describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
   // ─── TEST GROUP 1: MID-REQUEST REVOCATION ──────────────────────────────
 
@@ -70,6 +79,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo,
         policyContext,
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities,
       });
 
@@ -96,6 +106,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -118,6 +129,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities,
       });
 
@@ -140,6 +152,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -165,6 +178,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -194,6 +208,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -220,6 +235,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -246,6 +262,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -258,6 +275,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         },
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -289,6 +307,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set<CapabilityName>(["AUDIT_READ" as CapabilityName]),
       });
 
@@ -298,6 +317,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set<CapabilityName>(["WORKSPACE_ADMIN" as CapabilityName]),
       });
 
@@ -333,6 +353,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo,
         policyContext,
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities,
       });
 
@@ -345,6 +366,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo,
         policyContext,
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities,
       });
 
@@ -401,6 +423,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -422,6 +445,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo: createMockSessionInfo(),
         policyContext: createMockPolicyContext(),
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities: new Set(),
       });
 
@@ -451,6 +475,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
         sessionInfo,
         policyContext,
         workspaceId: "ws-1",
+        ...MOCK_WORKSPACE_FACTS,
         capabilities,
       });
 
