@@ -28,12 +28,20 @@ export interface GuardrailResult {
   violations: GuardrailViolation[];
 }
 
+/**
+ * Impact magnitude above which a decision requires an explicit, AUTHORIZED
+ * approval before it may proceed (HIGH_IMPACT_APPROVAL). Exported so route
+ * handlers can detect a granted high-impact approval and record it in the audit
+ * trail without duplicating the literal.
+ */
+export const HIGH_IMPACT_APPROVAL_THRESHOLD = 100000;
+
 // Guardrail rule definitions
 const GUARDRAILS = {
   HIGH_IMPACT_APPROVAL: {
     ruleId: "HIGH_IMPACT_APPROVAL",
     description: "High-impact decisions require explicit approval",
-    threshold: 100000,
+    threshold: HIGH_IMPACT_APPROVAL_THRESHOLD,
     severity: "block",
     overrideAllowed: true,
   },
