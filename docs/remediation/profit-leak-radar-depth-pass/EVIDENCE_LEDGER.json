@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-07-04",
+  "branch": "claude/profit-leak-radar-depth-pass",
+  "baseMain": "0438927c",
+  "capability": "Profit-Leak Radar",
+  "classification": "PROFIT_LEAK_RADAR_REAL_AND_OWNER_VISIBLE",
+  "code": [
+    "src/domain/owner-mode/profit-leak-radar.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts (integration + discount/b2bRevenue read)",
+    "src/domain/owner-mode/opportunity-decision-envelope.ts (active-cash/margin-leak gate)"
+  ],
+  "ownerVisibleVia": "GET /api/owner/now-view (payload.topProfitLeak)",
+  "leakTypes": ["DISCOUNT_LEAK","LOW_MARGIN_B2B","REPEAT_CUSTOMER_DECLINE","COMPLAINT_REVENUE_RISK","STAFF_PRODUCTIVITY_DROP","DELIVERY_DELAY_COST","REWORK_REDO_COST","CAPACITY_UNDERUSE","EQUIPMENT_UNDERUSE","OWNER_BOTTLENECK_COST","CASH_RISK_GROWTH","WEAK_PROOF_REWORK_RISK","PRICING_UNDERCHARGE","CUSTOMER_CHURN_RISK","DATA_INSUFFICIENT"],
+  "typecheck": { "command": "npx tsc --noEmit", "errors": 0 },
+  "tests": {
+    "unit": { "file": "src/__tests__/owner-mode/profit-leak-radar.test.ts", "passed": 16 },
+    "dbSimulation": { "file": "src/__tests__/owner-mode/profit-leak-radar-simulation.db.test.ts", "passed": 3 },
+    "broadRegression": { "files": 91, "passed": 794, "failed": 0 }
+  },
+  "integration": {
+    "ownerNowView": "topProfitLeak exposed (single highest-value leak, no flood)",
+    "constraintEngine": "each leak links relatedConstraint",
+    "ownerWorkloadBudget": "OWNER_BOTTLENECK_COST fed from workload budget",
+    "opportunityEnvelope": "active cash/margin leak owner-gates + caps opportunity upside",
+    "reassessment": "recomputed each now-view read; state changes shift the top leak"
+  },
+  "honesty": {
+    "noFabricatedRoi": "real discount/revenue figures reported; recoverable portion = owner judgment",
+    "missingMargin": "no 0..1 margin source -> LOW confidence / NEEDS_DATA, never invented",
+    "noSignal": "DATA_INSUFFICIENT with exact missing data"
+  },
+  "browserE2E": "unchanged / not proven this pass",
+  "classification_overall": "HIGH_VALUE_PRIVATE_OWNER_SYSTEM_PROVEN + REMEDIATION_PARTIAL_CONTINUE_REQUIRED"
+}

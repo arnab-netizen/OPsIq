@@ -8,7 +8,20 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Constraint / Bottleneck Engine depth pass (latest)
+## Profit-Leak Radar depth pass (latest)
+- **Branch:** `claude/profit-leak-radar-depth-pass` · **Base/main:** `0438927c`.
+- **Profit-Leak Radar:** `PROFIT_LEAK_RADAR_REAL_AND_OWNER_VISIBLE` — deterministic highest-value-leak
+  detection (discount/pricing/low-margin-B2B/cash-risk-growth/complaints/rework/churn/delivery/
+  owner-bottleneck/idle-capacity + DATA_INSUFFICIENT), fed by live now-view signals, surfaced via
+  `/api/owner/now-view` (`payload.topProfitLeak`), linked to the Constraint Engine, feeding the
+  Opportunity envelope + Owner Workload Budget. No fabricated ROI/margin (real discount figures only;
+  NEEDS_DATA where margin absent). 19 tests (16 unit + 3 DB). Broad regression 91 files / 794 tests pass.
+- **Still missing/partial:** Anti-Gaming Analytics, Evidence Credibility Graph, Business-Control SLOs,
+  Process Intelligence; delivery/major-client-loss/startup event-signal ingestion; authenticated browser
+  E2E; APPR-01 breadth.
+- Details: `docs/remediation/profit-leak-radar-depth-pass/`.
+
+## Constraint / Bottleneck Engine depth pass (prior)
 - **Branch:** `claude/constraint-bottleneck-engine-depth-pass` · **Base/main:** `394427e7`.
 - **Constraint Engine:** `CONSTRAINT_ENGINE_REAL_AND_OWNER_VISIBLE` — deterministic single-binding-
   constraint identification (CASH/OWNER/QUALITY/CAPACITY/EQUIPMENT/DELIVERY/PRICING/STAFF/
