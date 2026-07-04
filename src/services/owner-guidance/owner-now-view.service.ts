@@ -33,6 +33,7 @@ import { EvidenceConfidenceLevel } from "@/domain/business-impact/recommendation
 import { buildBeginnerExplanation, type BeginnerExplanation } from "@/domain/owner-guidance/beginner-mode";
 import { archetypeGuidance, type ArchetypeGuidance } from "@/domain/owner-guidance/archetype-guidance";
 import { computeOwnerWorkloadBudget, type OwnerWorkloadBudget } from "@/domain/owner-guidance/owner-workload-budget";
+import { identifyConstraints, type ConstraintFinding, type ConstraintSignals } from "@/domain/owner-mode/constraint-engine";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -141,6 +142,8 @@ export interface OwnerNowViewPayload {
   generatedFromLiveData: boolean;
   /** Owner Workload Budget — how much owner attention today, and how much was saved. */
   workloadBudget: OwnerWorkloadBudget;
+  /** The single binding constraint limiting the business right now (or null). */
+  topConstraint: ConstraintFinding | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -235,7 +238,7 @@ export async function assembleGuidanceContext(
   workspaceId: string,
   businessId: string | null,
   deps: GuidanceDeps
-): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance }> {
+): Promise<{ ctx: GuidanceContext; state: BusinessStateSnapshot; ag: ArchetypeGuidance; raw: { cashState?: string; finState?: string } }> {
   const scope = businessId ? { workspaceId, businessId } : { workspaceId };
   const order = { createdAt: "desc" as const };
   const periodOrder = { periodEnd: "desc" as const };
@@ -366,7 +369,7 @@ export async function assembleGuidanceContext(
     growthReadinessTier: growthGatePassed ? "GROWTH_READY" : "STABILIZE_FIRST",
   };
 
-  return { ctx, state, ag };
+  return { ctx, state, ag, raw: { cashState, finState } };
 }
 
 function buildBeginner(view: OwnerNowView, steps: GuidanceStep[]): BeginnerExplanation {
@@ -396,7 +399,7 @@ export async function getOwnerNowView(
   injected?: GuidanceDeps
 ): Promise<OwnerNowViewPayload> {
   const deps = injected ?? (await resolveDefaultDeps());
-  const { ctx, state, ag } = await assembleGuidanceContext(workspaceId, businessId, deps);
+  const { ctx, state, ag, raw } = await assembleGuidanceContext(workspaceId, businessId, deps);
 
   // Owner Workload Budget signals — concrete owner-decision surfaces (workspace-scoped).
   // opportunityApprovalsPending has no persisted queue yet (decisions are computed on demand),
@@ -410,6 +413,32 @@ export async function getOwnerNowView(
     pendingReassessments,
     opportunityApprovalsPending: 0,
   });
+
+  // Constraint / Bottleneck Engine — identify the single binding constraint from the SAME
+  // live signals (workspace-scoped). Only signals actually backed by current snapshots are
+  // passed; unbacked event signals (delivery/discount/major-client-loss/startup) stay absent
+  // so the engine never fabricates them here — it fires them only when a real source provides them.
+  const constraintSignals: ConstraintSignals = {
+    workspaceId,
+    // Honest: pass the RAW survival state, or null when the snapshot is absent — never
+    // fabricate a cash crisis from missing data (that path returns DATA_INSUFFICIENT).
+    cashState: raw.cashState ?? null,
+    marginSafe: raw.finState ? SAFE_STATES.has(raw.finState) : null,
+    ownerBottleneckItems: workloadBudget.ownerBottleneckItems,
+    ownerDecisionsRequired: workloadBudget.ownerDecisionsRequired,
+    ownerReviewsRequired: workloadBudget.reviewsRequired,
+    ownerOverloaded: ctx.ownerOverloaded,
+    staffOverloaded: ctx.staffOverloaded,
+    overdueProofCount: state.overdueProofCount,
+    capacityUtilizationPct: state.capacityUtilizationPct,
+    supplierInventoryRiskScore: state.supplierInventoryRiskScore,
+    complaintsCount: state.complaintsCount,
+    reworkCount: state.reworkCount,
+    churnRiskScore: state.churnRiskScore,
+    missingCriticalData: ctx.missingCriticalData,
+    evaluatedAt: new Date(deps.now()).toISOString(),
+  };
+  const topConstraint = identifyConstraints(constraintSignals).topConstraint;
 
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
@@ -436,7 +465,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

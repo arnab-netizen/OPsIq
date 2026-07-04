@@ -16,6 +16,7 @@
 
 import type { ScreenResult, ScreenVerdict } from "@/domain/owner-mode/opportunity-contract-guardrails";
 import { type CapacityStatus, capacityBlocksGrowth } from "@/domain/owner-mode/equipment-capacity";
+import { type ConstraintType, GROWTH_BLOCKING_CONSTRAINTS } from "@/domain/owner-mode/constraint-engine";
 
 export type DecisionConfidence = "HIGH" | "MEDIUM" | "LOW";
 export type RiskClass = "LOW" | "MEDIUM" | "HIGH";
@@ -35,6 +36,12 @@ export interface OpportunityEnvelopeInput {
   estimatedCapitalOutlay?: number | null;
   /** Threshold above which a capital move always needs explicit owner approval. */
   capitalApprovalThreshold?: number;
+  /**
+   * The business's CURRENT binding constraint (from the Constraint Engine). When it is a
+   * growth-blocking constraint (cash/capacity/quality/owner/equipment/delivery), an expansion
+   * opportunity must be owner-gated and its upside capped — you do not scale into a bottleneck.
+   */
+  currentConstraint?: ConstraintType | null;
 }
 
 export interface OpportunityDecisionEnvelope {
@@ -107,6 +114,17 @@ export function buildOpportunityEnvelope(input: OpportunityEnvelopeInput): Oppor
   if ((input.estimatedCapitalOutlay ?? 0) >= threshold) ownerApprovalReasons.push(`capital outlay >= ${threshold}`);
   if (thinMargin) ownerApprovalReasons.push("margin is within the thin-margin buffer of the floor");
   if (capacityConstrained) ownerApprovalReasons.push("capacity is constrained");
+
+  // Constraint-Engine integration: do not scale into the current binding constraint. When a
+  // growth-blocking constraint (cash/capacity/quality/owner/equipment/delivery) is active, an
+  // expansion opportunity is owner-gated and its upside is capped (never STRONG while blocked).
+  const constraintBlocksGrowth =
+    input.currentConstraint != null && GROWTH_BLOCKING_CONSTRAINTS.has(input.currentConstraint);
+  if (constraintBlocksGrowth && verdict !== "reject") {
+    ownerApprovalReasons.push(`current binding constraint is ${input.currentConstraint} — relieve it before scaling`);
+    if (upsideBand === "STRONG") upsideBand = "MODERATE";
+  }
+
   const ownerApprovalRequired = verdict !== "reject" && ownerApprovalReasons.length > 0;
 
   const downsideRisk = verdict === "reject"
