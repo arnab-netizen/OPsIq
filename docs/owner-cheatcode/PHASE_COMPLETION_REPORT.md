@@ -345,6 +345,52 @@ Phase 4 — prove/wire Capital Allocation Engine + Financial Governor (both FOUN
 
 ---
 
+## Phase 4 — Capital Allocation + Financial Governor (prove-existing assessment)
+
+### Phase
+Phase 4. Both engines are FOUND (not to be duplicated). This is a prove-existing assessment; opens GAP-009 for the unproven scenarios + wealth-loop wiring.
+
+### Branch / HEAD / Working tree
+`claude/owner-cheatcode-full-implementation`; HEAD at commit time; clean after commit.
+
+### Scope completed
+Verified the existing Financial Governor and Capital Allocation engines pass and cover 3 of the 5 Phase-4 exit-gate scenarios; recorded the honest remainder as GAP-009. No code built (avoids duplicate engine).
+
+### Existing systems reviewed (evidence)
+- Financial Governor: `src/domain/owner-budget/spend-governance.ts` (`evaluateSpend` → AUTO_LOG/REQUIRE_PROOF/REQUIRE_OWNER_APPROVAL/HOLD/INVESTIGATE; SOD, split-spend, vendor, proof).
+- Capital Allocation: `src/domain/owner-budget/capital-allocation.ts` (`rankCapitalAllocation`, survival-first + confidence gate; defensive modes block offensive spend).
+- Discount safety: `src/domain/owner-finance/margin-safety-gate.ts` (`evaluateMarginSafety` → `BLOCKED_BELOW_FLOOR`).
+- Expansion: `capital-allocation.ts` (scale gated) + `src/domain/execution/scale-readiness.ts` (`NotScaleReadyError`).
+
+### Tests run
+- `npx vitest run src/__tests__/owner-budget/engine.test.ts` → **27 passed** (Financial Governor + Capital Allocation).
+- Existing coverage confirmed: `src/__tests__/owner-finance/margin-safety-gate.test.ts` (discount blocking).
+
+### Exit-gate scenario status (honest)
+| Scenario | Status | Evidence |
+|---|---|---|
+| Unsafe spending blocked/downgraded | PROVEN | `spend-governance.ts` + `engine.test.ts` |
+| Broad discounting blocked | PROVEN | `margin-safety-gate.ts` + its test |
+| Premature expansion blocked | PROVEN | `capital-allocation.ts` gate + `scale-readiness.ts` |
+| Premature hiring (affordability) | NOT YET PROVEN | GAP-009 |
+| Vanity marketing downgraded | NOT YET PROVEN | GAP-009 |
+
+### Known gaps / Gap register updates
+GAP-009 opened (Medium): prove hiring-affordability + vanity-marketing gating (reuse `owner-finance/risk-rules.ts` + `capital-allocation.ts`, no duplicate governor) and wire Phase 2/3 wealth-loop outputs into the capital/next-move path.
+
+### Hostile audit result
+- §4 Financial-safety: unsafe spend / below-floor discount / premature scale are blocked by existing engines (PASS for the proven scenarios).
+- §8 Minimum-code: no duplicate governor built; honest gap recorded instead of overclaiming. PASS.
+- §9 No-gaps: Phase 4 explicitly NOT marked complete — GAP-009 (Medium) tracks the remainder with closure criteria. Since GAP-009 is Medium (not critical/high) with phase-bound closure, the loop may proceed while it stays scheduled.
+
+### Honest classification
+Phase 4 = `RUNTIME_WIRED_NOT_FULLY_PROVEN` (engines FOUND + tested; 3/5 exit scenarios proven; hiring/vanity + wealth-loop wiring open as GAP-009). Not complete.
+
+### Next phase
+Close GAP-009 (hiring/vanity gating tests + Phase 2/3 → capital/next-move wiring), then advance to Phase 5+ prove/extend (playbook A/B/C/D tiers — GAP-007) and the command-center runtime surface.
+
+---
+
 ## Template (for subsequent phases)
 
 ### Phase
