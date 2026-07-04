@@ -1,5 +1,76 @@
 # No Gaps Left Behind Policy
 
+# NO STOPPING WITH KNOWN GAPS
+
+A known gap is not allowed to remain merely because it was documented.
+
+Documentation is not closure.
+
+A gap is closed only when one of the following is true:
+
+1. Implemented, wired, tested, simulated, audited, and evidenced.
+2. Proven not applicable with evidence.
+3. Superseded by an existing system with evidence.
+4. Blocked by a true hard blocker requiring owner action.
+5. Explicitly deferred by owner instruction.
+
+Claude must not proceed to final response while any critical/high gap remains in OPEN, PARTIAL, NEEDS_PROOF, NEEDS_WIRING, NEEDS_SIMULATION, NEEDS_E2E, or NEEDS_AUDIT status.
+
+## Gap status values
+
+Every gap must use exactly one of:
+
+- OPEN
+- IN_PROGRESS
+- IMPLEMENTED_NOT_WIRED
+- WIRED_NOT_TESTED
+- TESTED_NOT_SIMULATED
+- SIMULATED_NOT_E2E
+- E2E_NOT_AUDITED
+- CLOSED_PROVEN
+- CLOSED_NOT_APPLICABLE
+- CLOSED_SUPERSEDED_BY_EXISTING_SYSTEM
+- BLOCKED_OWNER_ACTION_REQUIRED
+- BLOCKED_EXTERNAL_DEPENDENCY
+- DEFERRED_BY_EXPLICIT_OWNER_SCOPE_ONLY
+
+The following are not closure statuses:
+
+- documented
+- acknowledged
+- reported
+- remaining
+- pending
+- not a blocker
+- future work
+- later
+- partial
+
+## Gap closure evidence
+
+Every CLOSED_PROVEN gap must include:
+
+1. Closing commit.
+2. Files changed.
+3. Tests added.
+4. Tests run.
+5. Runtime path verified.
+6. Simulation/E2E proof if applicable.
+7. Hostile audit result.
+8. Reason it cannot recur.
+
+No evidence = gap remains open.
+
+## Remaining work rule
+
+If Claude writes a "Remaining Work" section, then the work must either be:
+
+1. A true blocker with owner action required; or
+2. Explicitly out of current owner-authorized scope; or
+3. Immediately continued in the same run.
+
+Claude must not finish a run by listing remaining required work and stopping.
+
 ## Purpose
 
 This policy prevents the project from moving forward while known loopholes, gaps, or incomplete requirements remain unresolved.

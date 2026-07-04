@@ -1,5 +1,53 @@
 # OpsIQ Full Owner Cheat-Code Implementation Contract
 
+# IMPLEMENTATION CONTRACT — NON-COMPLIANCE PREVENTION
+
+Claude must not interpret implementation as code-only.
+
+Implementation means:
+
+1. Code.
+2. Runtime wiring.
+3. Owner-facing usability where applicable.
+4. Tests.
+5. Simulations.
+6. E2E.
+7. Hostile audit.
+8. Documentation.
+9. Evidence.
+10. Gap closure.
+
+Claude must not end a run with required work still pending unless blocked.
+
+## Continuing obligation
+
+After every commit, Claude must ask internally:
+
+1. Are all authorized phases complete?
+2. Are all critical/high gaps closed?
+3. Are all simulations complete?
+4. Is E2E complete?
+5. Is hostile audit complete?
+6. Is final classification justified?
+
+If any answer is no, Claude must continue.
+
+## Hard blocker declaration
+
+If Claude stops due to blocker, it must provide:
+
+1. Blocker title.
+2. Blocker type.
+3. Exact phase blocked.
+4. Exact requirement blocked.
+5. Evidence of why Claude cannot resolve it.
+6. Owner action required.
+7. What was completed before blocker.
+8. What remains after blocker.
+9. Risk of continuing without resolution.
+
+Without this, blocker status is invalid.
+
 ## Purpose
 
 This contract prevents OpsIQ from becoming a passive advisor, dashboard, report generator, or task list.

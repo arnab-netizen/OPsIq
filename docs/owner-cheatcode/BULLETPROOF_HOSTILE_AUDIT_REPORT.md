@@ -1,5 +1,65 @@
 # Bulletproof Hostile Audit Report — OpsIQ Full Owner Cheat-Code Files
 
+# FINAL HOSTILE AUDIT REPORT — REQUIRED STRUCTURE
+
+The final hostile audit must not be a narrative summary.
+
+It must contain:
+
+1. Scope audited.
+2. Branch and HEAD.
+3. Phase-state table.
+4. Gap-state table.
+5. Evidence manifest table.
+6. Test command table.
+7. Simulation result table.
+8. E2E result table.
+9. Runtime surface table.
+10. Owner workload transfer proof table.
+11. Financial safety proof table.
+12. Proof/fake-work resistance table.
+13. Startup Mode proof table.
+14. Domain Hardening proof table.
+15. Cross-domain proof table.
+16. Remaining gaps.
+17. Final classification.
+
+## Required final classification values
+
+Use exactly one:
+
+1. FULL_OWNER_MODE_PROVEN
+2. WEALTH_SLICE_PROVEN_ONLY
+3. STARTUP_MODE_PROVEN_ONLY
+4. DOMAIN_HARDENING_PARTIAL
+5. OWNER_MODE_PARTIAL_CONTINUE_REQUIRED
+6. BLOCKED_OWNER_ACTION_REQUIRED
+7. BLOCKED_EXTERNAL_DEPENDENCY
+
+If classification is not FULL_OWNER_MODE_PROVEN, Claude must continue unless blocked.
+
+## Audit fail conditions
+
+The audit fails if:
+
+1. Any required phase is partial.
+2. Any critical/high gap remains.
+3. Startup Mode is partial but called complete.
+4. Domain Hardening is partial but called complete.
+5. Wealth Slice is partial but called complete.
+6. E2E is missing.
+7. Simulation is missing.
+8. Runtime surface is missing.
+9. Owner workload transfer is unproven.
+10. Scores lack input/confidence disclosure.
+11. Business wisdom lacks source-tier proof.
+12. Financial governor is not applied.
+13. Proof validation can be bypassed.
+14. Existing engines were assumed proven but not re-run.
+15. Claude stopped with "remaining work."
+
+---
+
 ## Verdict
 
 The original file set was strong but not bulletproof. It contained broad requirements that a model or contractor could satisfy superficially with documents, dashboards, stubs, provisional scores, or generic task creation. The V2 hardening closes those loopholes by requiring runtime evidence, source ledgers, score integrity, workload-transfer proof, no silent deferral, phase classifications, and minimum-code justification after every slice.

@@ -2,6 +2,48 @@
 
 Claude must update this file after each phase.
 
+# REQUIRED PHASE COMPLETION REPORT TEMPLATE
+
+Claude must maintain this table.
+
+| Phase | Name | Status | Runtime Wired | Tests Green | Simulation Green | E2E Green | Hostile Audit Green | Open Critical/High Gaps | Evidence Commit |
+|---|---|---|---|---|---|---|---|---|---|
+
+Allowed status values:
+
+- NOT_STARTED
+- IN_PROGRESS
+- IMPLEMENTED_NOT_WIRED
+- WIRED_NOT_TESTED
+- TESTED_NOT_SIMULATED
+- SIMULATED_NOT_E2E_PROVEN
+- E2E_PROVEN_NOT_AUDITED
+- AUDITED_WITH_GAPS
+- COMPLETE
+- BLOCKED_OWNER_ACTION_REQUIRED
+- BLOCKED_EXTERNAL_DEPENDENCY
+- DEFERRED_BY_EXPLICIT_OWNER_SCOPE_ONLY
+
+## Report integrity rule
+
+A phase may be marked COMPLETE only if:
+
+1. Runtime Wired = YES or NOT_APPLICABLE_WITH_REASON.
+2. Tests Green = YES.
+3. Simulation Green = YES or NOT_APPLICABLE_WITH_REASON.
+4. E2E Green = YES or NOT_APPLICABLE_WITH_REASON.
+5. Hostile Audit Green = YES.
+6. Open Critical/High Gaps = 0.
+7. Evidence Commit is present.
+
+If not, status must remain partial.
+
+## No final completion with partial phases
+
+If any required phase is not COMPLETE, the final classification must not be FULL_OWNER_MODE_PROVEN.
+
+Claude must then continue to the next incomplete required phase unless a true blocker exists.
+
 ---
 
 ## Session status summary (2026-07-04)

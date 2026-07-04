@@ -1,5 +1,71 @@
 # OpsIQ Full Owner Cheat-Code Testing Matrix
 
+# TESTING COMPLETION ENFORCEMENT
+
+A test suite passing is not enough unless it tests the required behavior end to end.
+
+## Required proof levels
+
+Each feature must identify the highest proof level reached:
+
+- L0_DOC_ONLY
+- L1_STATIC_TYPES
+- L2_UNIT
+- L3_SERVICE_INTEGRATION
+- L4_RUNTIME_API
+- L5_UI_OR_COMMAND_SURFACE
+- L6_SIMULATION
+- L7_E2E
+- L8_HOSTILE_AUDIT_GREEN
+
+A feature is complete only at L8 unless explicitly marked not applicable with reason.
+
+## Required simulation scenarios
+
+Before FULL_OWNER_MODE_PROVEN, run simulations for:
+
+1. Local service/laundry survival and growth.
+2. Beginner startup validation.
+3. Staff fake completion.
+4. Marketing waste / paid ads request.
+5. Premature expansion request.
+6. Weak business model / stop-pivot recommendation.
+7. Capital allocation under cash pressure.
+8. Compliance-sensitive action with insufficient local authority.
+9. Owner override of financial guardrail.
+10. Cross-domain conflict: growth vs cash safety.
+11. Staff/manager attempting to bypass proof.
+12. Owner workload overload caused by OpsIQ.
+13. Good business but bad timing.
+14. Bad business with attractive revenue.
+15. Domain conflict between sales growth and operations capacity.
+
+Each scenario must verify:
+
+1. Business state.
+2. Missing data disclosure.
+3. Wealth score inputs.
+4. Business model quality score.
+5. Opportunity cost review.
+6. Financial governor.
+7. Capital allocation if relevant.
+8. Business wisdom source tier.
+9. Next Best Move.
+10. Work Package.
+11. Owner workload transfer.
+12. Proof requirement.
+13. Outcome/learning rule.
+14. Block/downgrade where unsafe.
+15. Final owner-facing decision.
+
+## E2E owner journey
+
+Before FULL_OWNER_MODE_PROVEN, prove:
+
+business state → wealth path → business model quality → risk-adjusted score → opportunity cost → financial governor → capital allocation → next best move → work package → guided action → proof → outcome measurement → learning update → command-center reflection.
+
+If any link is missing, E2E is failed.
+
 ## Required test categories
 
 Each relevant implementation slice must include applicable tests from this matrix.

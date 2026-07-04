@@ -2,6 +2,123 @@
 
 You are continuing OpsIQ Owner Mode build work.
 
+# MANDATORY NON-STOP EXECUTION RULE
+
+You must not stop after implementing a slice.
+
+You must not stop after producing a report.
+
+You must not stop after closing some gaps.
+
+You must not stop after building only the Wealth Slice.
+
+You must not stop after Startup Mode partial validation.
+
+You must not stop after one domain hardening pass.
+
+You must continue implementing, wiring, testing, simulating, E2E-proving, hostile-auditing, documenting, committing, and repeating until every authorized requirement in execution.md and docs/owner-cheatcode/* is complete, unless you hit a true hard blocker.
+
+A true hard blocker is only:
+
+1. Missing owner decision.
+2. Missing credentials/secrets.
+3. Missing external infrastructure.
+4. Repo permission limitation.
+5. Unsafe destructive change risk.
+6. Contradictory requirements requiring owner resolution.
+
+The following are not hard blockers:
+
+1. Large scope.
+2. More tests needed.
+3. Simulations pending.
+4. E2E pending.
+5. UI wiring pending.
+6. Existing engines needing re-verification.
+7. Domain hardening remaining.
+8. Startup Mode incomplete.
+9. Need to update docs.
+10. Need to fix failing tests.
+11. Need to inspect existing code.
+12. Need to run more commands.
+
+If any of those remain, continue working.
+
+## Required execution order
+
+You must complete the full authorized Owner Cheat-Code scope in this order unless an earlier phase is blocked:
+
+1. File/control structure verification.
+2. Repo inventory and baseline.
+3. Business State Model.
+4. Wealth Path Classifier.
+5. Business Model Quality Score.
+6. Risk-Adjusted Wealth Score.
+7. Opportunity Cost Review.
+8. Financial Governor.
+9. Capital Allocation Engine.
+10. Business Wisdom & Proven Playbook Layer.
+11. Next Best Move Engine.
+12. Workload Execution Engine.
+13. Work Package Generator.
+14. Guided Action Runner.
+15. Proof Validation.
+16. Outcome Measurement.
+17. Causality-Aware Learning.
+18. Owner Workload Transfer Score.
+19. Scale Readiness Gate.
+20. Compliance / Local Context Confidence Gate.
+21. Startup Mode Validation Workbench.
+22. Startup Mode Launch Workbench.
+23. Startup Mode 30/60/90 Execution System.
+24. Finance Domain Hardening.
+25. Sales / Customer Domain Hardening.
+26. Marketing / Growth Domain Hardening.
+27. Operations / Delivery / Quality Domain Hardening.
+28. Workforce / Training / Accountability Domain Hardening.
+29. Compliance / Risk / Governance Domain Hardening.
+30. Strategy / Expansion / Scaling Domain Hardening.
+31. Cross-Domain Owner Command Center Wiring.
+32. Full Simulation Suite.
+33. Full E2E Owner Journey.
+34. Whole-Repo Hostile Audit.
+35. Final Evidence Manifest.
+36. Final Classification.
+
+You may commit after each slice, but you must continue to the next incomplete required phase.
+
+## Completion enforcement
+
+If you write "remaining work," you must either:
+
+1. Continue and do it immediately; or
+2. Mark it as a true blocker with exact owner action required.
+
+You must not end with "remaining work" unless blocked.
+
+## Anti-overclaim rule
+
+You must not use the following labels unless fully proven:
+
+- COMPLETE
+- FULL_OWNER_MODE_PROVEN
+- OWNER_CHEAT_CODE_COMPLETE
+- STARTUP_MODE_COMPLETE
+- DOMAIN_HARDENING_COMPLETE
+- READY_FOR_PUBLIC_SAAS
+- READY_FOR_PRODUCT_HUNT
+
+If proof is partial, state partial and continue.
+
+## Final answer requirement
+
+Your final answer is allowed only when there is either:
+
+1. FULL_OWNER_MODE_PROVEN with evidence; or
+2. TRUE HARD BLOCKER with exact blocker details and owner action required.
+
+Any other ending is invalid.
+
 Read and obey these files before making changes:
 
 1. `execution.md`

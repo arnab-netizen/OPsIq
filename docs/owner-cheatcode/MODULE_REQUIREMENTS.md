@@ -1,5 +1,44 @@
 # OpsIQ Owner Cheat-Code Module Requirements
 
+# MODULE COMPLETION CONTRACT
+
+Every module listed in this file must satisfy the full module lifecycle:
+
+1. Requirement defined.
+2. Existing implementation inspected.
+3. Minimum implementation completed.
+4. Runtime wiring completed.
+5. Owner-facing or command-surface visibility completed where applicable.
+6. Tests completed.
+7. Adversarial tests completed.
+8. Simulation completed where applicable.
+9. E2E completed where applicable.
+10. Hostile audit completed.
+11. Evidence manifest completed.
+12. Gap register updated.
+13. Phase report updated.
+
+A module that is implemented but not wired is not complete.
+
+A module that is wired but not tested is not complete.
+
+A module that is tested but not simulated is not complete.
+
+A module that is simulated but not E2E-proven where applicable is not complete.
+
+A module that is not hostile-audited is not complete.
+
+## Required module dependency rule
+
+Downstream modules must not be marked complete unless upstream modules are complete or formally blocked.
+
+For example:
+
+1. Startup Mode cannot be complete unless Wealth Scoring, Financial Governor, Work Package, Proof, Outcome, and Owner Workload Transfer are complete.
+2. Domain Hardening cannot be complete unless the domain plugs into Business State, Wealth Path, Financial Governor, Workload Execution, Proof, Outcome, and Owner Command Center.
+3. Owner Command Center cannot be complete unless it surfaces the full decision/action/proof/outcome loop.
+4. Full Owner Mode cannot be complete unless Startup Mode, Domain Hardening, simulations, E2E, and hostile audit are complete.
+
 ## 1. Business State Service
 
 Must produce a canonical business state with known, unknown, missing, and confidence fields.

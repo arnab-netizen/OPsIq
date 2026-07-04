@@ -1,5 +1,67 @@
 # Gap Register
 
+# GAP REGISTER — REQUIRED FORMAT
+
+Every gap must use this format:
+
+## GAP-XXX: [Title]
+
+Severity:
+- CRITICAL / HIGH / MEDIUM / LOW
+
+Status:
+- OPEN
+- IN_PROGRESS
+- IMPLEMENTED_NOT_WIRED
+- WIRED_NOT_TESTED
+- TESTED_NOT_SIMULATED
+- SIMULATED_NOT_E2E
+- E2E_NOT_AUDITED
+- CLOSED_PROVEN
+- CLOSED_NOT_APPLICABLE
+- CLOSED_SUPERSEDED_BY_EXISTING_SYSTEM
+- BLOCKED_OWNER_ACTION_REQUIRED
+- BLOCKED_EXTERNAL_DEPENDENCY
+- DEFERRED_BY_EXPLICIT_OWNER_SCOPE_ONLY
+
+Affected phase(s):
+
+Requirement violated:
+
+Why this matters:
+
+Evidence found:
+
+Closure requirements:
+
+Closure evidence:
+- Commit:
+- Files:
+- Tests:
+- Runtime proof:
+- Simulation:
+- E2E:
+- Hostile audit:
+- Why recurrence is prevented:
+
+## Gap register integrity rule
+
+A gap cannot be closed by saying:
+- implemented
+- tested
+- documented
+- not a blocker
+- remaining
+- future work
+- partial
+- covered elsewhere
+
+It can be closed only with evidence matching the closure requirements.
+
+If Claude discovers a gap while auditing, it must either close it immediately or keep working on it unless blocked.
+
+---
+
 This file must be maintained by Claude during implementation.
 
 No critical or high gap may remain open when moving to a later phase.

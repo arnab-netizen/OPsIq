@@ -1,5 +1,189 @@
 # OpsIQ Full Owner Cheat-Code Execution Plan
 
+# NON-STOP FULL-SCOPE COMPLETION ENFORCEMENT ADDENDUM
+
+This execution file is not a suggestion, planning brief, or optional roadmap.
+
+Claude must treat this file as a binding implementation contract.
+
+The core failure mode this addendum prevents is: implementing only the easiest slice, reporting honest partial completion, and stopping while authorized phases remain unfinished.
+
+That is not acceptable.
+
+## 1. Absolute stop rule
+
+Claude may stop only under one of these conditions:
+
+1. FULL AUTHORIZED SCOPE COMPLETE:
+   Every phase currently authorized by this execution file is implemented, wired, tested, simulated, E2E-proven, hostile-audited, documented, and no critical/high gaps remain open.
+
+2. TRUE HARD BLOCKER:
+   A blocker exists that Claude cannot resolve without owner action, secret access, external credentials, unavailable infrastructure, missing repository permissions, or a decision that materially changes product scope.
+
+3. SAFETY BLOCK:
+   Continuing would risk data loss, security regression, broken auth/workspace isolation, destructive DB migration, or unauthorized external execution.
+
+4. OWNER-INSTRUCTED STOP:
+   The owner explicitly instructs Claude to stop.
+
+Claude must not stop merely because:
+- a slice is implemented;
+- tests for that slice pass;
+- a status report was written;
+- a branch is pushed;
+- some gaps were closed;
+- the current work is large;
+- the next phase is harder;
+- another phase was not explicitly re-requested;
+- implementation has reached a convenient checkpoint.
+
+If authorized work remains and there is no true hard blocker, Claude must continue.
+
+## 2. No partial-completion stopping
+
+The following classifications are allowed only as interim status labels, not stopping points:
+
+- PARTIAL
+- SCENARIO_PROVEN_PARTIAL_DOMAIN
+- OWNER_WEALTH_SLICE_IMPLEMENTED_PARTIAL_RUNTIME_PROOF
+- WEALTH_PATH_CORE_SLICE_COMPLETE_PENDING_FULL_OWNER_PROOF
+- STARTUP_MODE_PARTIAL
+- DOMAIN_HARDENING_STARTED
+- RUNTIME_SURFACING_PARTIAL
+- SIMULATION_PENDING
+- E2E_PENDING
+- HOSTILE_AUDIT_PENDING
+
+If Claude reports any interim classification, it must immediately continue to the next unresolved phase unless a true hard blocker exists.
+
+## 3. Complete means end-to-end complete
+
+Claude must not use the word COMPLETE unless all relevant completion gates are satisfied.
+
+For any claimed COMPLETE status, Claude must prove all of the following:
+
+1. Implementation exists.
+2. Runtime wiring exists.
+3. Owner-facing surface exists where applicable.
+4. Service/API path exists where applicable.
+5. Tests exist.
+6. Tests pass.
+7. Negative/adversarial tests exist.
+8. Simulation exists.
+9. E2E proof exists where applicable.
+10. Hostile audit is green.
+11. Gap register has no open critical/high gaps.
+12. Phase completion report contains evidence.
+13. No silent deferrals remain.
+14. No mocked-only path is treated as real proof.
+15. No docs-only path is treated as implementation.
+16. No UI-only path is treated as runtime proof.
+17. No unit-test-only path is treated as E2E proof.
+18. Owner workload transfer is proven where relevant.
+19. Financial/capital safety is proven where relevant.
+20. Proof/audit/workspace/auth safety is preserved.
+
+If any of the above are missing, the status is PARTIAL and Claude must continue.
+
+## 4. No "done because honest about remaining work"
+
+Being honest about remaining work is required, but it does not authorize stopping.
+
+If remaining work is known, Claude must do one of the following:
+
+1. Continue and close it.
+2. Register it as a blocker with exact blocker reason and owner action required.
+3. Register it as deferred only if this execution file explicitly allows deferral.
+
+"Remaining work enumerated" is not completion.
+
+## 5. No silent scope narrowing
+
+Claude must not reinterpret a full-scope instruction as a smaller slice unless the owner explicitly narrows scope.
+
+If the execution file includes Wealth Slice, Startup Mode, Domain Hardening, simulations, E2E, and hostile audit, Claude must continue through all of them unless blocked.
+
+Claude must not decide that only the Wealth Slice is required because it is the first or easiest part.
+
+## 6. Phase-lock rule
+
+Claude must maintain a phase-state table.
+
+Each phase must be marked exactly one of:
+
+- NOT_STARTED
+- IN_PROGRESS
+- IMPLEMENTED_NOT_WIRED
+- WIRED_NOT_TESTED
+- TESTED_NOT_SIMULATED
+- SIMULATED_NOT_E2E_PROVEN
+- E2E_PROVEN_NOT_AUDITED
+- AUDITED_WITH_GAPS
+- COMPLETE
+- BLOCKED_OWNER_ACTION_REQUIRED
+- BLOCKED_EXTERNAL_DEPENDENCY
+- DEFERRED_BY_EXPLICIT_OWNER_SCOPE_ONLY
+
+Claude may not move to a later major milestone while an earlier required phase remains below COMPLETE, unless the phase is formally blocked or explicitly deferred by owner scope.
+
+## 7. Evidence manifest required
+
+For every phase marked COMPLETE, Claude must provide an evidence manifest containing:
+
+1. Phase ID.
+2. Requirement summary.
+3. Files changed.
+4. Runtime path/API route/UI path if applicable.
+5. Tests added.
+6. Tests run.
+7. Simulation run.
+8. E2E run.
+9. Hostile audit result.
+10. Gap register entries closed.
+11. Remaining limitations.
+12. Exact command output summary.
+13. Commit hash containing the proof.
+
+No evidence manifest = phase not complete.
+
+## 8. Continuous loop instruction
+
+Claude must work in this loop until the full authorized scope is complete:
+
+1. Read current phase state.
+2. Select the highest-priority incomplete required phase.
+3. Inspect existing implementation.
+4. Reuse existing systems.
+5. Implement minimum required code.
+6. Wire runtime path.
+7. Add/extend tests.
+8. Run tests.
+9. Add/extend simulations.
+10. Run simulations.
+11. Run E2E proof where applicable.
+12. Run hostile audit.
+13. Fix failures.
+14. Update gap register.
+15. Update phase completion report.
+16. Commit.
+17. Repeat.
+
+Claude must not stop after step 16 if incomplete required phases remain.
+
+## 9. Failure is not a stopping condition
+
+If tests, simulations, E2E, or audit fail, Claude must fix the cause and rerun.
+
+Failure is not a reason to stop unless the failure reveals a true hard blocker requiring owner action.
+
+Claude must not write "remaining work" and stop after discovering a failure.
+
+## 10. Final completion statement restriction
+
+Claude may only state FULL_OWNER_MODE_PROVEN if all required phases are COMPLETE and evidence-backed.
+
+If not, Claude must state NOT FULL_OWNER_MODE_PROVEN and must continue unless a true hard blocker exists.
+
 ## Classification
 
 This is the controlling execution file for the full personal-use Owner Mode build.

@@ -1,5 +1,45 @@
 # Minimum Required Code Policy
 
+# MINIMUM CODE DOES NOT MEAN MINIMUM PROOF
+
+Claude must use the minimum required code to implement the required behavior.
+
+Claude must not use "minimum required code" as an excuse to skip:
+
+1. Runtime wiring.
+2. Tests.
+3. Simulations.
+4. E2E proof.
+5. Hostile audit.
+6. Documentation updates.
+7. Gap closure evidence.
+8. Owner workload transfer proof.
+
+Minimum code means:
+
+1. Reuse existing systems.
+2. Avoid duplicate engines.
+3. Avoid unnecessary abstractions.
+4. Avoid premature integrations.
+5. Avoid broad rewrites.
+6. Avoid new dependencies unless justified.
+7. Implement the smallest correct slice of the required behavior.
+
+It does not mean implementing only a partial feature.
+
+## Required minimum-code justification
+
+Every new service/module/file must state:
+
+1. Existing systems inspected.
+2. Why existing systems could not fully satisfy the requirement.
+3. Why this new code is the minimum required.
+4. How duplication was avoided.
+5. What tests prove it.
+6. What runtime path uses it.
+
+If this justification is missing, the implementation is incomplete.
+
 ## Purpose
 
 This policy prevents Claude from overbuilding, duplicating systems, or creating fragile abstractions while implementing the full Owner Mode system.
