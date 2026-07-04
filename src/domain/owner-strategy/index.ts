@@ -24,3 +24,5 @@ export * from "./work-package.types";
 export * from "./work-package";
 export * from "./startup-mode.types";
 export * from "./startup-mode";
+export * from "./command-center.types";
+export * from "./command-center";

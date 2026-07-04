@@ -23,8 +23,13 @@ import type {
   StartupLaunchResult,
 } from "./startup-mode.types";
 
-/** Reject any idea scoring at/below this risk-adjusted floor (low probability). */
-const RISK_ADJUSTED_FLOOR = 35;
+/**
+ * Reject any idea whose STRUCTURAL (pre-evidence) score is at/below this floor.
+ * We judge on the raw structural score, not the evidence-weighted risk-adjusted
+ * score, because unvalidated ideas are inherently low-evidence — that is exactly
+ * what the validation step fixes. Screening on evidence here would be circular.
+ */
+const STRUCTURAL_FLOOR = 35;
 
 function expansionToScalability(s: WealthPathInput): "low" | "medium" | "high" | undefined {
   switch (s.expansionPath) {
@@ -121,12 +126,12 @@ export function evaluateIdea(intake: StartupIntake, idea: StartupIdea): IdeaEval
     accepted = false;
     reasons.push("It is an owner-dependent job, but the owner wants a long-term scalable vehicle.");
   }
-  if (risk.riskAdjustedScore <= RISK_ADJUSTED_FLOOR) {
+  if (risk.rawScore <= STRUCTURAL_FLOOR) {
     accepted = false;
-    reasons.push(`Low risk-adjusted score (${risk.riskAdjustedScore}) — low probability of success.`);
+    reasons.push(`Weak structural score (${risk.rawScore}) — low probability even after validation.`);
   }
 
-  if (accepted) reasons.push(`Passes: risk-adjusted ${risk.riskAdjustedScore}, ${path.label}.`);
+  if (accepted) reasons.push(`Passes screening: structural ${risk.rawScore}, risk-adjusted ${risk.riskAdjustedScore} (low until validated), ${path.label}.`);
   if (coversSurvival === false) warnings.push("Estimated profit does not cover monthly survival need — plan a runway.");
   if (startupCost === null || capital === undefined) warnings.push("Capital or startup cost unknown — sufficiency not fully assessed.");
   if (intake.canSell === false) warnings.push("Owner reports they cannot sell — sales capability is a launch risk.");

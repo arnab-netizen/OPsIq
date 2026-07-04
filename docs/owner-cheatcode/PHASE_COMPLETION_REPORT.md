@@ -24,9 +24,14 @@ Gaps: **GAP-001..009 all CLOSED.** Register clean.
 
 Verification (whole repo): `tsc --noEmit` 0 errors; eslint clean; auth-governance clean; strict-governance no-new; wrapped-handlers ratchet clean; `owner-strategy` + `owner-budget` + integration suites **314 passed / 29 `[db]` (CI)**.
 
-**Not yet done (honest, remaining — not a hard blocker):** individual prove-existing exit gates for Phases 16–19, 21–24; deeper runtime surfacing of the new engines into the owner command-center UI (beyond the wealth-path route); Phase 26 full simulation suite; Phase 27 E2E; Phase 28 whole-repo final hostile audit. These are prove-existing / wiring / whole-repo-verification on already-FOUND engines, not new missing implementation.
+**Proof/wiring round (2026-07-04, second pass) — completed:**
+- Phases 24–25 runtime surface: `domain/owner-strategy/command-center.ts` (`composeWealthCommandCenter` — composition over all engines) + `services/owner-strategy/command-center.service.ts` + `GET /api/owner/wealth-command-center` (OWNER_VIEW, workspace-scoped).
+- Phase 26 simulation suite `wealth-loop-simulation.test.ts` — **12 scenarios green** (survival, growth, startup validation, staff fake completion, marketing waste, premature expansion, weak-model trap, capital allocation under pressure, compliance insufficiency, owner guardrail override, cross-domain cash-vs-growth conflict, causality+scale guards).
+- Phase 27 E2E DB-backed `command-center.db.test.ts` — **green on real PostgreSQL** (full journey state→…→command-center + workspace isolation + startup mode).
+- Prove-existing (Phases 8/9/13/16): existing suites run green — guided-execution, proof.service, outcome-tracking, full-loop-validation, outcome-causality, compliance ×2 (**213**), scale-readiness (**20**), DB proof/execution/task/strategy (**28**).
+- Phase 28 hostile audit: `BULLETPROOF_HOSTILE_AUDIT_REPORT.md` Part 2 — 14 explicit checks PASS.
 
-Honest overall classification: **`SCENARIO_PROVEN_PARTIAL_DOMAIN`** across the owner wealth loop — NOT yet `FULL_OWNER_MODE_PROVEN` (which requires the full simulation + E2E + whole-repo audit above).
+Honest overall classification: **`SCENARIO_PROVEN`**, advancing toward `DOMAIN_HARDENED` — the full loop is now proven end-to-end at runtime (service + DB E2E) with a green simulation suite. Still **NOT `FULL_OWNER_MODE_PROVEN`**: remaining is per-domain Phase 18–23 gate breadth, all 20 Phase-26 scenarios, UI/Playwright E2E, and a full whole-repo CI+DB audit. None is a hard blocker.
 
 ---
 

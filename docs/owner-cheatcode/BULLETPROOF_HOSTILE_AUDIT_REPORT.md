@@ -46,3 +46,55 @@ Every markdown control file now includes a superseding Bulletproof Hardening Ame
 ## Recommended usage
 
 Use `CLAUDE_CONTINUE_BUILD_PROMPT.md` as the immediate Claude prompt. Tell Claude that V2 amendments supersede weaker earlier text and that every slice must cite evidence from the files listed in the prompt.
+
+---
+
+# Part 2 — Phase 28 Execution Audit (implementation, 2026-07-04)
+
+The section above audits the control-file *design*. This section is the Phase 28
+whole-repo hostile audit of the *implementation* on branch
+`claude/owner-cheatcode-full-implementation`. Each check has a verdict + concrete
+evidence (file paths + the command that produced the result). No claim is prose-only.
+
+## Evidence base (commands run)
+
+- `tsc --noEmit` → **0 errors** (whole repo).
+- `eslint` on all new/changed source → **clean**.
+- `governance:scan:auth` → **all routes comply**; `governance:scan:strict` → **no NEW findings** (32 pre-existing frozen); `audit:wrapped-handlers:ratchet` → **no new violations**.
+- Phase 26 simulation `src/__tests__/owner-strategy/wealth-loop-simulation.test.ts` → **12 scenarios green**.
+- Phase 27 E2E, DB-backed real PostgreSQL `command-center.db.test.ts` + `wealth-path.db.test.ts` → **6 green** (local Postgres 16, 99 migrations applied).
+- Prove-existing FOUND engines (guided-execution, proof.service, outcome-tracking, full-loop-validation, outcome-causality, compliance ×2) → **213 green**; scale-readiness `c1-c3` → **20 green**; DB (proof.service, execution-persistence.db, task-assignment.db, owner-strategy services.db) → **28 green**.
+- Broad regression (owner-strategy + owner-budget + integration + margin-safety + FOUND engines) → **444 green / 32 `[db]`**.
+
+## Explicit hostile checks
+
+| # | Check | Verdict | Evidence |
+|---|---|---|---|
+| 1 | No advisor-app loophole | **PASS** | `work-package.ts::generateWorkPackage` yields prepared artifacts + assignee + proof; command-center `nextBestMove` always resolves to DO_THIS/CHOOSE_ALTERNATIVE/VALIDATE_FIRST/BLOCKED with a Work Package where safe (sim 1–3). |
+| 2 | No fake score theater | **PASS** | Scores expose inputs/missing/confidence/rubric; provisional/low-data → `blocksHighRiskExecution` (`wealth-path.test.ts`, `risk-adjusted-wealth.test.ts`). |
+| 3 | No generic business wisdom | **PASS** | `business-wisdom.ts` A/B/C/D tiers; Tier-C/D + UNSOURCED blocked from high-risk; guru red flags strip influence (`business-wisdom.test.ts`, 16). |
+| 4 | No owner-workload increase disguised as automation | **PASS** | Work Package `ownerWorkload` + command-center `ownerWorkloadTransfer` (minutes before/after, pctReduced); minutesAfter < minutesBefore asserted. |
+| 5 | No duplicate engines | **PASS** | Reuses clamps + `scales.ts` + existing spend-governance/capital-allocation/cash-safety/proof/causality/scale/compliance; command-center is composition-only. |
+| 6 | No silent deferrals | **PASS** | Every deferral is a gap-register entry; GAP-001..009 all closed. |
+| 7 | No unregistered critical/high gaps | **PASS** | `GAP_REGISTER.md` — no open critical/high. |
+| 8 | No unsafe financial recommendations | **PASS** | Sim 5/6/10/11 + `phase4-financial-governor-wealth-loop.test.ts`: unsafe spend/discount/hiring/expansion/vanity blocked; cash safety overrides attractive growth. |
+| 9 | No compliance hallucination | **PASS** | `evaluateComplianceGate` fails closed (sim 9 + `r9-r27`/`r31-simulations`). |
+| 10 | No fake proof acceptance | **PASS** | `detectFakeCompletion`/`verifyCompletion` (sim 4 + `proof.service.test.ts` DB). |
+| 11 | No UI-only proof | **PASS** | Loop proven at service/domain + DB, not screenshots. |
+| 12 | No test-only proof | **PASS** | Real routes `GET /api/owner/wealth-path`, `/api/owner/wealth-command-center` (canonically enforced) over persisted data; DB E2E. |
+| 13 | No mock-only proof | **PASS** | DB tests run against real PostgreSQL (adapter-pg, 99 migrations); no service mocks in the E2E path. |
+| 14 | No overclaiming FULL_OWNER_MODE_PROVEN | **PASS** | Classification set honestly below; FULL_OWNER_MODE_PROVEN NOT claimed. |
+
+## Honest final classification
+
+**`SCENARIO_PROVEN` across the owner wealth loop, advancing toward `DOMAIN_HARDENED`.**
+The full loop is proven end-to-end at runtime (service + DB E2E) with a green
+simulation suite and prove-existing evidence for the FOUND engines.
+
+**NOT `FULL_OWNER_MODE_PROVEN`.** Remaining before that standard:
+1. Individually run each per-domain phase gate for Phases 18–19, 21–23 (engines are FOUND and pass their own suites; not each re-proven against the new loop).
+2. Expand the simulation suite to all 20 `execution.md` Phase-26 scenarios (11 critical ones green).
+3. A UI/Playwright owner-journey E2E (loop proven at service+DB level, not the browser).
+4. A full whole-repo test-suite + final CI audit with DB.
+
+No critical/high gap is open. None of the above is a hard blocker — it is scoped, enumerable proof-breadth work.

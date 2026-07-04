@@ -107,7 +107,7 @@ Legend: **FOUND** = exists, reuse it. **PARTIAL** = exists in adjacent form, ext
 | 20 | Domain Hardening Layer | FOUND | `src/domain/domain-training/`, `collective-training/`, `owner-{finance,sales,marketing,operations,sop,strategy}` |
 | 21 | Startup Validation + Launch Workbench | **DONE (Phase 14–15)** | `src/domain/owner-strategy/startup-mode.ts` (`validateStartup`/`evaluateIdea`/`planLaunch`, validation-first, launch blocked before validation). Reuses wealth-path + risk-adjusted + work-package. Closes GAP-008. |
 | 22 | Local Context / Compliance Confidence Gate | PARTIAL | `domain/remote-operations/compliance-gate.ts`, `owner-mode/compliance-boundary.ts`, `remote-operations/location-readiness.ts` — spread, not one combined gate. |
-| 23 | Owner Daily Command Center | FOUND | `src/domain/execution/owner-command-center.ts`, `owner-mode/command-center-priorities.ts`, `services/owner-dashboard.service.ts` |
+| 23 | Owner Daily Command Center | **FOUND + wealth-loop surface (Phase 24–25)** | Existing: `domain/execution/owner-command-center.ts`, `owner-mode/command-center-priorities.ts`. New composition surfacing the wealth loop: `domain/owner-strategy/command-center.ts` (`composeWealthCommandCenter`) + `services/owner-strategy/command-center.service.ts` + `GET /api/owner/wealth-command-center`. DB-backed E2E: `command-center.db.test.ts`. |
 
 **Tally:** FOUND 11 · PARTIAL 8 · GAP 4 (concepts 2, 3, 4, 21).
 
