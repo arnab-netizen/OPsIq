@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { randomUUID } from "crypto";
+import type { Prisma } from "@/generated/prisma/client";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -75,22 +77,43 @@ export async function createShockEvent(
   const detection = await detectShockFromCurrentState(input.engagementId, workspaceId);
   const detectionConfirmed = detection.shockDetected;
 
-  // Note: ShockEvent model does not exist in schema - not persisting to database
-  const shockEventId = `shock-${input.engagementId}-${Date.now()}`;
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.SHOCK_EVENT_RECORDED,
-    actorId,
-    entityType: "ShockEvent",
-    entityId: shockEventId,
-    payload: {
-      engagementId: input.engagementId,
-      type: type,
-      severity: input.severity,
-      detectionConfirmed,
-      detectionSeverity: detection.severity,
-      detectionIndicators: detection.indicators,
-    },
+  // SHOCK-01: persist the ShockEvent (the model exists — the prior "does not exist" comment
+  // was false, so created shocks never appeared in listShockEventsForEngagement). The record
+  // and its audit event are written atomically (AUDIT-01). Scoped by engagement (which was
+  // already verified to belong to `workspaceId`).
+  const shockEventId = randomUUID();
+  await db.$transaction(async (tx: Prisma.TransactionClient) => {
+    await tx.shockEvent.create({
+      data: {
+        id: shockEventId,
+        engagementId: input.engagementId,
+        type,
+        severity: input.severity,
+        happenedAt: happenedAtDate,
+        notes: input.notes ?? null,
+        reportedBy: actorId ?? null,
+        createdBy: actorId ?? null,
+        updatedAt: new Date(),
+      },
+    });
+    await emitAuditEvent(
+      {
+        eventName: AUDIT_EVENTS.SHOCK_EVENT_RECORDED,
+        actorId,
+        workspaceId,
+        entityType: "ShockEvent",
+        entityId: shockEventId,
+        payload: {
+          engagementId: input.engagementId,
+          type: type,
+          severity: input.severity,
+          detectionConfirmed,
+          detectionSeverity: detection.severity,
+          detectionIndicators: detection.indicators,
+        },
+      },
+      tx
+    );
   });
 
   // Trigger re-evaluation due to shock event
