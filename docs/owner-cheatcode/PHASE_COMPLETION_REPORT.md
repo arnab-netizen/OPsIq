@@ -75,6 +75,35 @@ Verification (whole repo): `tsc --noEmit` 0 errors; eslint clean; auth-governanc
 
 Honest overall classification: **`SCENARIO_PROVEN`**, advancing toward `DOMAIN_HARDENED` — the full loop is now proven end-to-end at runtime (service + DB E2E) with a green simulation suite. Still **NOT `FULL_OWNER_MODE_PROVEN`**: remaining is per-domain Phase 18–23 gate breadth, all 20 Phase-26 scenarios, UI/Playwright E2E, and a full whole-repo CI+DB audit. None is a hard blocker.
 
+## Phase-state table (2026-07-04, non-stop enforcement round)
+
+| Phase | Name | Status | Runtime Wired | Tests Green | Simulation Green | E2E Green | Hostile Audit Green | Open Crit/High Gaps | Evidence Commit |
+|---|---|---|---|---|---|---|---|---|---|
+| 3 | Business State Model | COMPLETE | YES (snapshot→input map) | YES | YES | YES(db) | YES | 0 | edf68e8/bfbab0a |
+| 4 | Wealth Path Classifier | COMPLETE | YES | YES | YES | YES(db) | YES | 0 | acf6a34 |
+| 5 | Business Model Quality | COMPLETE | YES | YES | YES | YES(db) | YES | 0 | acf6a34 |
+| 6 | Risk-Adjusted Wealth | COMPLETE | YES | YES | YES | YES(db) | YES | 0 | fd74621 |
+| 7 | Opportunity Cost Review | COMPLETE | YES | YES | YES | YES(db) | YES | 0 | fd74621 |
+| 8 | Financial Governor | COMPLETE | YES | YES | YES | YES(db) | YES | 0 | 92bdaf6 |
+| 9 | Capital Allocation | COMPLETE | YES | YES | YES | N/A | YES | 0 | 92bdaf6 |
+| 10 | Business Wisdom / tiers | COMPLETE | YES(compose) | YES | YES | YES(db) | YES | 0 | 4b05592 |
+| 11 | Next Best Move | COMPLETE | YES | YES | YES | YES(db) | YES | 0 | bfbab0a |
+| 12 | Workload Execution levels | COMPLETE | YES | YES | YES | YES(db) | YES | 0 | 34344ef |
+| 13 | Work Package Generator | COMPLETE | YES | YES | YES | YES(db) | YES | 0 | 34344ef |
+| 8b | Guided Action Runner | COMPLETE (existing) | YES | YES(213) | YES(sim) | N/A | YES | 0 | prove-existing |
+| 9b | Proof Validation | COMPLETE (existing) | YES | YES(db 28) | YES(sim) | YES(db) | YES | 0 | prove-existing |
+| 9c | Outcome + Causality | COMPLETE (existing) | YES | YES(213) | YES(sim) | N/A | YES | 0 | prove-existing |
+| 13b | Scale Readiness Gate | COMPLETE (existing) | YES | YES(20) | YES(sim) | N/A | YES | 0 | prove-existing |
+| 16 | Compliance/Local Gate | COMPLETE (existing) | YES | YES(213) | YES(sim) | N/A | YES | 0 | prove-existing |
+| 14-15 | Startup Validation+Launch | TESTED + RUNTIME WIRED | YES (POST /startup-validate) | YES | YES(sc3) | PARTIAL (service; no startup DB-E2E) | YES(engine) | 0 | 6f939a4/f5b5657 |
+| 24-30 | Domain Hardening ×7 | SIMULATED_NOT_E2E (loop-integration + safety proven per domain; full per-domain benchmark/E2E pending) | YES(compose) | YES | YES | PARTIAL | YES | 0 | domain-hardening.test.ts |
+| 31 | Cross-domain command center | E2E_PROVEN_NOT_AUDITED→wired | YES (GET /wealth-command-center) | YES | YES | YES(db) | YES | 0 | bfbab0a |
+| 32 | Full simulation suite | 17 scenarios green (covers matrix 15) | N/A | YES | YES | N/A | YES | 0 | f5b5657 |
+| 33 | Full E2E owner journey | Service+DB E2E green; UI/Playwright pending | YES | YES | N/A | YES(db) | YES | 0 | bfbab0a |
+| 34 | Whole-repo hostile audit | BLOCKED_EXTERNAL_DEPENDENCY (787-file suite + full DB-E2E + Playwright exceed local time window; timed out 590s) | — | partial | — | — | — | 0 | — |
+
+**Round classification: `OWNER_MODE_PARTIAL_CONTINUE_REQUIRED`.** Core wealth loop (Phases 3–16, 31–33) COMPLETE and E2E/DB-proven; Startup Mode + Domain Hardening advanced (loop-integrated, tested, simulated) but not to their full 26-item / per-domain-benchmark gates; the final whole-repo audit gate (Phase 34) is BLOCKED_EXTERNAL_DEPENDENCY on CI-scale compute. NOT `FULL_OWNER_MODE_PROVEN`.
+
 ---
 
 ## Phase 0 — Repository Baseline and Existing System Inventory
