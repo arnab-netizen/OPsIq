@@ -20,6 +20,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import fs from "fs";
 import path from "path";
 import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
+import { isPublicRouteExempted } from "@/domain/constants/public-route-exemptions";
 
 describe("PHASE I10: Runtime Enforcement Scanner - ALL Routes", () => {
   beforeAll(async () => {
@@ -93,6 +94,19 @@ describe("PHASE I10: Runtime Enforcement Scanner - ALL Routes", () => {
         file: filePath,
         status: "EXEMPT",
         reason: exemptions[filePath],
+      };
+    }
+
+    // TEST-02: also honor the canonical PUBLIC_ROUTE_EXEMPTIONS registry (single source of
+    // truth). Routes there are either public (auth/signup) or protected by their own
+    // non-session mechanism (OPSIQ_DIAGNOSTIC_KEY / SCHEDULER_INTERNAL_TOKEN, constant-time,
+    // fail-closed) rather than the canonical session wrapper.
+    const apiPath = "/api/" + filePath.replace(/\/route\.ts$/, "");
+    if (isPublicRouteExempted(apiPath)) {
+      return {
+        file: filePath,
+        status: "EXEMPT",
+        reason: `Canonical PUBLIC_ROUTE_EXEMPTIONS: ${apiPath}`,
       };
     }
 

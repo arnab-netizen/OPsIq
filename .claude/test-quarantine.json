@@ -6,8 +6,8 @@
     "recovery_branch_sha": "f16e0712",
     "introduced_by_recovery": 0
   },
-  "total_files": 23,
-  "total_failing_tests": 52,
+  "total_files": 21,
+  "total_failing_tests": 50,
   "nondeterministic_files": 3,
   "files": [
     {
@@ -64,22 +64,6 @@
       "cluster": "error-sanitization-expectation",
       "classification": "PRE_EXISTING_ON_MAIN / STALE_EXPECTATION",
       "reason": "Expects 'dead-letter queue' substring in a now-sanitized operator message.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts",
-      "failed": 1,
-      "cluster": "route-enforcement",
-      "classification": "PRE_EXISTING_ON_MAIN / RUNTIME_DEFECT_OR_STALE_EXEMPTION",
-      "reason": "Scanner reports 14 UNWRAPPED routes (auth/signup + internal/* diagnostics) lacking withEnforcement.",
-      "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
-    },
-    {
-      "path": "src/__tests__/security/route-scanner.test.ts",
-      "failed": 1,
-      "cluster": "route-enforcement",
-      "classification": "PRE_EXISTING_ON_MAIN / RUNTIME_DEFECT_OR_STALE_EXEMPTION",
-      "reason": "Unprotected routes found outside the exemption registry (same root as enforcement-scanner).",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
     },
     {
@@ -194,5 +178,6 @@
       "reason": "Deterministic single-test conflict surfaced when CI first ran the DB-backed maintained suite past the (previously red) governance/lint gates on 2026-06-24 (CI run 28065415725: 1 failed / 10692 passed / 6 skipped). Case 'P2 fix — non-governance cases do NOT fire > 2 items each with only 1 weak LEGAL_TEXT term ... boundary guard' asserts .not.toBe(LEGAL_GOVERNANCE_RISK), but consulting-engine/diagnosis-engine.ts fin_isLegalGovernanceByText fires because the item 'RBI ... regulatory intervention increasingly probable' matches STRONG_LEGAL_TEXT (P3-G terms 'regulatory intervention' / 'rbi.*intervention'), making it substantive. This is a genuine semantic conflict between the P2 false-positive guard and the P3-G RBI-intervention detection -- a consulting-engine product judgment OUTSIDE Owner Mode scope, with regression risk to real RBI-takeover/licence-revocation cases either way. NOT authored by the Owner Mode Decision OS branch; the file's other 17 tests pass. Quarantined (owner-approved) to make the blocking lane green; still runs in the visible non-blocking lane. Resolve under the consulting-engine heuristic owner, not Owner Mode.",
       "follow_up": "FULL_SUITE_TEST_DEBT_RECOVERY"
     }
-  ]
+  ],
+  "_remediation_note": "TEST-02: route-scanner + phase-i10-enforcement-scanner un-quarantined into the blocking lane after fixing the exemption registry (reassessment-scan token-auth exemption; scanners now consult the canonical PUBLIC_ROUTE_EXEMPTIONS). 0 unprotected/unwrapped routes remain."
 }

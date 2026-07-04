@@ -46,9 +46,9 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 | STUB-02 | MEDIUM | STUB_OR_PLACEHOLDER | api/public/engagements, /actions, /kpis return hardcoded mock arrays (mockEngagements/mock… | OPEN | |
 | DEAD-01 | LOW | DEAD_CODE_OR_UNREACHABLE | Four large mock-data-generator components (execution-workspace-shell, portfolio-command-ce… | OPEN | |
 | TEST-01 | HIGH | FAKE_COMPLETE (coverage false-confidence) | 97 test files live in src/__ignored_tests__/ and are globally excluded from vitest (vitest… | OPEN | |
-| TEST-02 | HIGH | PARTIAL / UNSAFE | ci.yml runs a real DB suite with TEST_WITH_DB=true but EXCLUDES 23 quarantined files (52 f… | OPEN | |
+| TEST-02 | HIGH | PARTIAL / UNSAFE | ci.yml runs a real DB suite with TEST_WITH_DB=true but EXCLUDES 23 quarantined files (52 f… | CLOSED_PROVEN | scanners un-quarantined to blocking lane, both green (route-scanner 4/4, phase-i10 5/5) |
 | TEST-03 | MEDIUM | PARTIAL | The default `npm test` (no TEST_WITH_DB) additionally excludes all *.integration.test.ts (… | OPEN | |
-| TEST-04 | HIGH | FAKE_COMPLETE | ACTIVE tests counted in the '13,994 passing' figure assert constants under governance-guar… | OPEN | |
+| TEST-04 | HIGH | FAKE_COMPLETE | ACTIVE tests counted in the '13,994 passing' figure assert constants under governance-guar… | OPEN | 614 documented fakes: large triage tracked (not counted as readiness proof) |
 | WRAP-01 | MEDIUM | PARTIAL | audit-wrapped-handlers reports 29 wrapped route files calling Response.json() directly ins… | OPEN | |
 
 ## Detailed remediation entries
@@ -125,3 +125,12 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 - **Root cause:** `/decisions` rendered `DecisionInboxTable` which hardcoded `setDecisions([])` (and fetched the wrong endpoint) — it could never show a decision, while the real inbox at `/dashboard/inbox` was unlinked.
 - **Fix:** `/decisions` now `redirect()`s to the operational `/dashboard/inbox`.
 - **Evidence:** page source is a server-side redirect to the working inbox; the dead cosmetic table is no longer reachable from that URL.
+
+### TEST-02 — quarantined route-protection scanner — CLOSED_PROVEN
+- **Root cause:** the route-scanner (`security/route-scanner.test.ts`) and enforcement-scanner (`phase-i10-enforcement-scanner.test.ts`) were red and quarantined non-blocking; route-scanner flagged `/api/internal/reassessment-scan` and phase-i10 flagged 15 routes (auth/signup + internal diagnostics).
+- **Investigation:** every flagged route is legitimately non-session-auth: `/api/internal/reassessment-scan` uses a fail-closed constant-time SCHEDULER_INTERNAL_TOKEN; `auth/signup` is public; the internal `*-proof`/debug/diagnostic routes are OPSIQ_DIAGNOSTIC_KEY-gated or expose only build metadata (already in the canonical PUBLIC_ROUTE_EXEMPTIONS registry).
+- **Fix:** added `reassessment-scan` to the canonical exemption registry (SCHEDULER_TOKEN category) with a documented reason; made phase-i10 consult the shared `PUBLIC_ROUTE_EXEMPTIONS` (single source of truth). Removed both scanner files from `.claude/test-quarantine.json` so they now run in the CI BLOCKING lane.
+- **Test:** route-scanner 4/4, phase-i10-enforcement-scanner 5/5 — 0 unprotected/unwrapped routes outside the documented registry. A newly-added unwrapped route will now fail CI.
+
+### TEST-04 — 614 inline fake tests / false green — OPEN (tracked, not closed)
+- The team's `.claude/A2_FAKE_TEST_INVENTORY.md` documents 614 fakes still inline in active files (e.g. `api/decisions.test.ts` 50 `expect(true)` + 37 quarantined empty bodies). Converting/deleting them is a large, separate triage. NOT closed here; explicitly NOT counted as readiness proof in this remediation. New real regression tests added by this remediation are DB-backed and assert real behavior.

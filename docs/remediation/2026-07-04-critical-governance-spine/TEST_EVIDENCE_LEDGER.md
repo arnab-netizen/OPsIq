@@ -39,3 +39,7 @@ Every command run + result. DB commands use local PostgreSQL (opsiq_test, /tmp s
 - `vitest run dec-01-reaccept.db.test.ts` → **2/2 PASS**.
 - `vitest run game-01-proof-freshness.test.ts` → **3/3 PASS**.
 - Regression: decision-acceptance + human-decision + task-completion + completion-bypass suites → **23/23 PASS** (the 34 failures in a wider `proof` glob were pre-existing QUARANTINED runtime-proof/demo-backfill tests, unchanged by this work). tsc → 0 errors.
+
+### TEST-02 (Phase J)
+- `vitest run route-scanner.test.ts` → **4/4 PASS**; `vitest run phase-i10-enforcement-scanner.test.ts` → **5/5 PASS**.
+- Both removed from `.claude/test-quarantine.json` (now 21 files / 50 tests quarantined). tsc → 0 errors.

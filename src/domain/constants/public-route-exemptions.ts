@@ -55,6 +55,11 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
   WEBHOOK_SIGNED: [
     "/api/webhooks/stripe", // Signature verification is mandatory
   ],
+  SCHEDULER_TOKEN: [
+    // Not session-auth: authorized by a strong SCHEDULER_INTERNAL_TOKEN (constant-time
+    // compared, fail-closed / disabled when the token is unset). Invoked by the caller's scheduler.
+    "/api/internal/reassessment-scan",
+  ],
 } as const;
 
 export const EXEMPTION_REASONS = {
@@ -74,6 +79,7 @@ export const EXEMPTION_REASONS = {
   "/api/auth/logout": "Session termination - accepts both authenticated and unauthenticated requests",
   "/api/auth/signup": "User signup endpoint - public registration, no auth required",
   "/api/webhooks/stripe": "Webhook with mandatory HMAC-SHA256 signature verification - Stripe signature validates request legitimacy",
+  "/api/internal/reassessment-scan": "Scheduler endpoint authorized by SCHEDULER_INTERNAL_TOKEN (constant-time compare, fail-closed when unset) instead of session auth",
   "/api/internal/build-info": "Build metadata endpoint - safe public deployment info (commit SHA, environment)",
   "/api/internal/debug-engagements-p2007": "Internal debug and proof endpoint - development and testing only",
   "/api/internal/debug-engagements-prisma": "Internal debug and proof endpoint - development and testing only",
