@@ -638,15 +638,17 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     warnings: dataWarnings,
   };
 
-  // Get or create client (ClientAccount does not have workspaceId; isolation via Engagement)
+  // Get or create client — scoped to the verified workspace (DEC-TEN-01). The previous
+  // findFirst({ name }) matched clients across ALL workspaces (a cross-tenant read).
   let client = await db.clientAccount.findFirst({
-    where: { name: input.businessName },
+    where: { name: input.businessName, workspaceId: validatedWorkspaceId },
   });
 
   if (!client) {
     client = await db.clientAccount.create({
       data: {
         id: randomUUID(),
+        workspaceId: validatedWorkspaceId,
         name: input.businessName,
         industry: input.businessType,
         visibility: "internal",

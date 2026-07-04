@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { randomUUID } from "crypto";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -80,6 +81,7 @@ export async function createLead(
     async () => {
       const lead = await db.leadRecord.create({
         data: {
+          id: randomUUID(),
           companyName: input.companyName,
           contactName: input.contactName ?? null,
           contactEmail: input.contactEmail ?? null,
@@ -91,6 +93,7 @@ export async function createLead(
           createdBy: userId,
           status: "new",
           workspaceId: validatedWorkspaceId,
+          updatedAt: new Date(),
         },
       });
       return { id: lead.id, companyName: lead.companyName };
@@ -249,10 +252,12 @@ export async function linkLeadToEngagement(
 export async function getLeadById(leadId: string, workspaceId: string) {
   enforceWorkspaceId(workspaceId, "getLeadById", "lead_record");
 
-  const lead = await db.leadRecord.findUnique({
+  // Scoped by workspaceId (DEC-TEN-01) — findFirst because {id, workspaceId} is not a
+  // Prisma unique; `clientAccount` is the real relation name (was `client`).
+  const lead = await db.leadRecord.findFirst({
     where: { id: leadId, workspaceId },
     include: {
-      client: { select: { id: true, name: true } },
+      clientAccount: { select: { id: true, name: true } },
       engagement: { select: { id: true, code: true, title: true } },
     },
   });

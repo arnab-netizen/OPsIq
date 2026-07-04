@@ -444,6 +444,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         demoClient = await tx.clientAccount.create({
           data: {
             id: randomUUID(),
+            workspaceId: membership.workspaceId,
             name: DEMO_CLIENT_NAME,
             legalName: "Demo Manufacturing Corporation",
             industry: "Manufacturing",

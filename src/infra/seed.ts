@@ -127,6 +127,7 @@ async function seedDemoData(db: PrismaClient) {
     client = await db.clientAccount.create({
       data: {
         id: clientId,
+        workspaceId: workspace.id,
         name: "Demo Manufacturing Corp",
         legalName: "Demo Manufacturing Corporation",
         industry: "Manufacturing",

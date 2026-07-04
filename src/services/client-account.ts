@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { randomUUID } from "crypto";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -53,6 +54,7 @@ export async function createClient(
     async () => {
       const client = await db.clientAccount.create({
         data: {
+          id: randomUUID(),
           name: input.name,
           legalName: input.legalName ?? null,
           industry: input.industry ?? null,
@@ -62,6 +64,7 @@ export async function createClient(
           notes: input.notes ?? null,
           createdBy: actorId,
           workspaceId: validatedWorkspaceId,
+          updatedAt: new Date(),
         },
       });
       return { id: client.id, name: client.name };
@@ -177,10 +180,13 @@ export async function getClientById(clientId: string, workspaceId: string, hasIn
 
   const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
 
-  const client = await db.clientAccount.findUnique({
+  // Scoped by workspaceId (DEC-TEN-01) — findFirst because {id, workspaceId} is not a
+  // Prisma unique. `clientContacts` is the real relation name (was `contacts`); ClientContact
+  // has no workspaceId, so it is scoped transitively through the workspace-scoped parent.
+  const client = await db.clientAccount.findFirst({
     where: { id: clientId, workspaceId },
     include: {
-      contacts: { where: { isActive: true, workspaceId }, orderBy: { isPrimary: "desc" } },
+      clientContacts: { where: { isActive: true }, orderBy: { isPrimary: "desc" } },
       _count: { select: { engagements: true } },
     },
   });
