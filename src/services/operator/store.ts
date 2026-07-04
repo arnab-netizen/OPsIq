@@ -34,12 +34,18 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       throw new Error("OperatorItem createdBy is required for audit trail");
     }
 
+    // SCHEMA fix: the domain OperatorItem uses `createdBy`/`lastUpdatedBy` and carries
+    // `decisionType`/`problemType`/`baselineValue`/`projectedWithoutAction`, but the Prisma
+    // model has NO such columns (the id fields are `createdByUserId`/`lastUpdatedByUserId`).
+    // The previous mapping wrote those non-existent fields, so `create` threw a
+    // PrismaClientValidationError on every addItems call. Map to the real columns and drop
+    // the fields with no column.
     const data: any = {
       id: item.id,
       workspaceId: item.workspaceId,
       ownerUserId: item.ownerUserId,
-      createdBy: item.createdBy,
-      lastUpdatedBy: item.lastUpdatedBy || null,
+      createdByUserId: item.createdBy,
+      lastUpdatedByUserId: item.lastUpdatedBy || null,
       problem: item.problem,
       action: item.action,
       impactExpected: item.impactExpected,
@@ -49,10 +55,10 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       priorityScore: item.priorityScore,
       status: item.status,
       dueAt: item.dueAt ? new Date(item.dueAt) : null,
-      decisionType: item.decisionType || "general",
-      expectedOutcome: item.expectedOutcome,
-      actualOutcome: item.actualOutcome,
+      expectedOutcome: item.expectedOutcome ?? null,
+      actualOutcome: item.actualOutcome ?? null,
       blockingDependencies: item.blockingDependencies && item.blockingDependencies.length > 0 ? item.blockingDependencies : null,
+      updatedAt: new Date(),
     };
 
     if (item.explanation) {
@@ -79,37 +85,28 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     if (item.engineVersion) {
       data.engineVersion = item.engineVersion;
     }
-    if (item.problemType) {
-      data.problemType = item.problemType;
-    }
-    if (item.baselineValue !== null && item.baselineValue !== undefined) {
-      data.baselineValue = item.baselineValue;
-    }
-    if (item.projectedWithoutAction !== null && item.projectedWithoutAction !== undefined) {
-      data.projectedWithoutAction = item.projectedWithoutAction;
-    }
 
-    const created = await db.operatorItem.create({ data });
-
-    // Emit audit event for operator item creation
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.OPERATOR_ITEM_CREATED,
-      actorId: item.createdBy,
-      entityType: "operator_item",
-      entityId: created.id,
-      workspaceId: item.workspaceId,
-      payload: {
-        problem: item.problem,
-        action: item.action,
-        priority: item.priorityScore,
-      },
-      visibility: "internal",
-    }).catch((error) => {
-      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-      logger.warn("Failed to emit audit event for operator item creation", {
-        itemId: created.id,
-        error: governed.operatorMessage,
-      });
+    // GAP-AUDIT-02: create the governed decision and its audit event ATOMICALLY. Previously
+    // the create committed and the audit was best-effort (.catch → warn), so a decision could
+    // persist with the audit trail silently lost. Now a failed audit rolls back the create.
+    await db.$transaction(async (tx: Prisma.TransactionClient) => {
+      const created = await tx.operatorItem.create({ data });
+      await emitAuditEvent(
+        {
+          eventName: AUDIT_EVENTS.OPERATOR_ITEM_CREATED,
+          actorId: item.createdBy,
+          entityType: "operator_item",
+          entityId: created.id,
+          workspaceId: item.workspaceId,
+          payload: {
+            problem: item.problem,
+            action: item.action,
+            priority: item.priorityScore,
+          },
+          visibility: "internal",
+        },
+        tx
+      );
     });
   }
 }
