@@ -40,7 +40,12 @@ approval gating, `access.ts`, the 6 tenancy routes, the wealth page, the
 middleware comment) touch workspace listing or member counts.
 
 ## Final regression run (item 15) — result
-_(Filled in when the clean-DB full run completes.)_
+On a freshly-reset `opsiq_test` DB (schema drop + `prisma migrate deploy`, no
+intervening probes), the full DB-backed suite with all committed audit changes:
+**805 files passed | 1 skipped (806); 13,994 tests passed | 13 skipped; EXIT 0.**
+Zero failures. This confirms the committed fixes (GAP-FIN-01, GAP-TEN-02,
+GAP-WIRE-01, and the GAP-TEN-01 doc comment) introduce no regressions, and that
+item 13's lone failure was purely DB pollution from the audit's own probes.
 
 ## Notes
 - The blocking CI lane (`ci.yml`) mirrors item 5 (full DB-backed suite, quarantine excluded) plus governance/tsc/build/ratchet gates, on push to main/claude/** and PRs to main.
