@@ -102,6 +102,14 @@ Honest overall classification: **`SCENARIO_PROVEN`**, advancing toward `DOMAIN_H
 | 33 | Full E2E owner journey | Service+DB E2E green; UI/Playwright pending | YES | YES | N/A | YES(db) | YES | 0 | bfbab0a |
 | 34 | Whole-repo hostile audit | BLOCKED_EXTERNAL_DEPENDENCY (787-file suite + full DB-E2E + Playwright exceed local time window; timed out 590s) | — | partial | — | — | — | 0 | — |
 
+## Real-world proof round (2026-07-04)
+- Real-world Wealth scenarios: `real-world-wealth.test.ts` — **10/10 scored ≥ threshold (85/90), 0 critical safety failures**.
+- Real-world Startup scenarios: `real-world-startup.test.ts` — **10/10 scored ≥ 90, 0 reckless-launch**.
+- Improvement: CHOOSE_ALTERNATIVE now prepares the recommended alternative's Work Package (before-vs-after in-code proof).
+- Ledgers: `REAL_WORLD_PROOF_LEDGER.md`, `DOMAIN_BENCHMARK_LEDGER.md` added.
+- Whole-repo sharded: shard 1/8 = 1747 pass / 0 fail; shard 3/16 = 775 pass / 0 fail (~2500 green, 0 failures); slow shards need CI.
+- Round classification: **`OWNER_MODE_REAL_WORLD_PARTIAL_CONTINUE_REQUIRED`** — Wealth + Startup real-world-proven; Domain benchmark partial (GAP-010 web research); whole-repo/UI green = CI (`BLOCKED_CI_BROWSER_VERIFICATION_REQUIRED`). Evidence commit: be6a330 + this.
+
 **Round classification: `OWNER_MODE_PARTIAL_CONTINUE_REQUIRED`.** Core wealth loop (Phases 3–16, 31–33) COMPLETE and E2E/DB-proven; Startup Mode + Domain Hardening advanced (loop-integrated, tested, simulated) but not to their full 26-item / per-domain-benchmark gates; the final whole-repo audit gate (Phase 34) is BLOCKED_EXTERNAL_DEPENDENCY on CI-scale compute. NOT `FULL_OWNER_MODE_PROVEN`.
 
 ---

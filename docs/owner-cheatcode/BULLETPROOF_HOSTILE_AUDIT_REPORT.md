@@ -206,3 +206,33 @@ No open critical/high gaps. Remaining is proof-breadth: full per-domain benchmar
 **`OWNER_MODE_PARTIAL_CONTINUE_REQUIRED`** — with Phase 34 (whole-repo hostile audit / full 787-file suite + full DB-E2E + Playwright to green) recorded as **`BLOCKED_EXTERNAL_DEPENDENCY`**: that suite exceeds the local single-execution time window (non-DB subset alone timed out at 590s). Owner action required: run the full suite in CI (the `ci.yml` + `owner-*` + `db-verification` workflows already exist) to produce the whole-repo green signal.
 
 **NOT `FULL_OWNER_MODE_PROVEN`.** All locally-achievable implementation, runtime wiring, unit/service/integration/simulation/DB-E2E, and per-domain loop-integration + safety proofs are done and green; the outstanding gates require CI-scale compute or unbounded per-domain benchmarking documentation.
+
+---
+
+# Part 4 — Real-World Operating Proof Round (2026-07-04)
+
+**Scope:** real-world messy-input scenario proof + before-vs-after + domain benchmark. See `REAL_WORLD_PROOF_LEDGER.md` + `DOMAIN_BENCHMARK_LEDGER.md`.
+
+## Real-world scenario results (scored 0-100)
+| Suite | Scenarios | Threshold | Result |
+|---|---|---|---|
+| `real-world-wealth.test.ts` | 10 (messy owner cases) | 85 / 90 high-risk | 10/10 GREEN, 0 critical safety failures |
+| `real-world-startup.test.ts` | 10 (beginner cases) | 90 | 10/10 GREEN, 0 reckless-launch |
+| `wealth-loop-simulation.test.ts` | 17 (matrix 1-15) | — | GREEN |
+| `domain-hardening.test.ts` | 8 (7 domains + cross) | — | GREEN |
+
+## Before-vs-after improvement (proven in-code)
+Rubric surfaced a real gap: on CHOOSE_ALTERNATIVE the old composition returned only a suggestion. Fixed — OpsIQ now PREPARES the recommended alternative's Work Package (artifacts + proof + workload transfer). Baseline OpsIQ (pre-wealth-loop) lacked: wealth-path classification, risk-adjusted scoring, opportunity cost, Work Package + owner-workload transfer, wealth-path block. New OpsIQ produces all of these — asserted by the "better-than-baseline" rubric dimension in every real-world scenario (score 10/10 on that dimension).
+
+## Whole-repo sharded verification
+Full single-run times out; sharded green evidence: shard 1/8 = **1747 passed / 0 fail** (91 files); shard 3/16 = **775 passed / 0 fail** (43 files); ~2500 tests green with zero failures. Some shards (2/8, 6/16) exceed the local ~5-min window → remainder must run in CI.
+
+## Domain benchmark
+7 domains assessed EQUAL_FOR_OWNER_USE_CASE or better on owner operating outcome (repo-local basis + provisional product knowledge). Verified named-app benchmark = **GAP-010 BENCHMARK_RESEARCH_REQUIRED** (no web access).
+
+## Final classification (Part 4)
+**`OWNER_MODE_REAL_WORLD_PARTIAL_CONTINUE_REQUIRED`**, with two recorded external blockers:
+- **GAP-010 / `BLOCKED_EXTERNAL_BENCHMARK_RESEARCH_REQUIRED`** — verified commercial-app benchmark needs web access.
+- **`BLOCKED_CI_BROWSER_VERIFICATION_REQUIRED`** — whole-repo full-suite green + Playwright UI E2E exceed the local execution window (proven: multiple shards time out).
+
+Wealth Phase and Startup Mode are **real-world scenario-proven** (20/20 scored ≥ threshold, zero critical safety failures). Domain Hardening is benchmark-proven-partial (owner-outcome basis). **NOT `FULL_OWNER_MODE_REAL_WORLD_PROVEN`** — that requires the two external items above.
