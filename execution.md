@@ -1,2849 +1,1551 @@
-OpsIQ Final Hostile-Audited Owner Mode Reality Loop Contract
+# OpsIQ Full Owner Cheat-Code Execution Plan
 
-**Version:** 2.0 — Phases 0–28 COMPLETE_VERIFIED (LANE_B run 27793720853)
-**Branch:** claude/sleepy-dirac-m4bdb9
-**Next:** Configure DATABASE_URL for LANE_B DB runtime verification
+## Classification
 
-## CONTROLLING PURPOSE
+This is the controlling execution file for the full personal-use Owner Mode build.
 
-This file is the strict execution contract for building OpsIQ into a **dynamic long-term business partner** for Owner Mode.
+This is not an MVP plan.
 
-The purpose is not to create a nicer report generator.
+This is not a public-SaaS plan.
 
-The purpose is to make OpsIQ capable of this loop:
+This is not a launch plan.
 
-```text
-input quality
-→ diagnosis
-→ recommendation
-→ owner decision
-→ action
-→ execution evidence
-→ evidence verification
-→ expected benefit/outcome
-→ outcome measurement
-→ harm tracking
-→ failure adjudication
-→ causal attribution
-→ reassessment
-→ corrective action
-→ learning eligibility
-→ decision memory
-→ business timeline
-→ dashboard proof
-→ repeat
-```
+This is not a UI-polish plan.
 
-OpsIQ must move from:
+This is not a prompt-only exercise.
 
-```text
-Input
-→ Diagnosis
-→ Recommendation
-→ End
-```
+This file defines the required full implementation path for OpsIQ to become a personal-use business command-and-control system that can help an owner start, run, manage, stabilize, grow, scale, and improve the probability of long-term wealth creation.
 
-to:
-
-```text
-Input
-→ Diagnosis
-→ Recommendation
-→ Owner Decision
-→ Action
-→ Evidence
-→ Verification
-→ Outcome
-→ Reassessment
-→ Corrected Recommendation
-→ Verified Learning Eligibility
-→ Future Better Recommendation
-```
-
-If the above loop is not implemented and proven, OpsIQ is still a one-shot advisor, not a long-term business partner.
+OpsIQ must prove it can carry out every required owner-mode function before public SaaS, billing, Product Hunt, external launch, enterprise polish, or growth marketing work resumes.
 
 ---
 
-# SINGLE LOOP COMMAND
+## Absolute Product Objective
 
-The user may instruct Claude with:
+OpsIQ must function as a practical business-owner cheat code.
 
-```text
-/continue-build
-```
+That does not mean guaranteed success or guaranteed wealth.
 
-This command means exactly:
+It means OpsIQ must maximize the owner’s probability of success and wealth by:
 
-```text
-1. Read this execution.md completely.
-2. Do not ask questions.
-3. Inspect current repo state.
-4. Run a hostile audit of current implementation against this file.
-5. Confirm exact current status and next incomplete slice.
-6. Run pre-slice breakage checks.
-7. If anything is already broken, document whether it is pre-existing.
-8. If the next slice can be safely implemented, implement only the next incomplete slice.
-9. Do not skip dependency order.
-10. Do not implement public SaaS, billing, Product Hunt, external intelligence, ML, cohort priors, forecasting, or Decision Intelligence UI.
-11. Run post-slice tests/proofs.
-12. If anything broke, stop and fix it before continuing.
-13. If DB-backed, obtain LANE_B real PostgreSQL proof before COMPLETE_VERIFIED.
-14. Write/update closeout report.
-15. Commit only the slice changes if committing is available.
-16. Stop after the slice unless explicitly instructed to continue.
-```
+1. Building a truthful current-state model of the business.
+2. Identifying the highest-probability wealth path.
+3. Separating good businesses from weak, dead-end, trap, or owner-job businesses.
+4. Ranking actions by risk-adjusted expected value.
+5. Protecting cash and downside risk.
+6. Allocating capital intelligently.
+7. Choosing the highest-leverage next action.
+8. Preparing or performing as much work as safely possible.
+9. Generating the actual artifacts needed to execute.
+10. Assigning work to staff/system/owner only where appropriate.
+11. Enforcing proof and rejecting fake completion.
+12. Measuring outcomes.
+13. Learning from results.
+14. Warning the owner when a business, idea, action, expansion, or strategy is not worth the owner’s time, cash, or risk.
 
-One loop command must perform:
+OpsIQ must not merely advise.
 
-```text
-hostile audit
-→ status confirmation
-→ baseline proof
-→ next-slice implementation
-→ regression check
-→ fix if broken
-→ closeout
-```
+OpsIQ must not merely generate reports.
 
-No silent continuation. No broad implementation. No false completion.
+OpsIQ must not merely create dashboards.
+
+OpsIQ must not merely create plans.
+
+OpsIQ must carry as much of the workload as safely possible.
 
 ---
 
-# AI ROLE LIMITATION — SUPPORT ONLY
+## Non-Negotiable Build Rules
 
-OpsIQ uses AI as a support layer only. AI must never be the source of truth.
+Claude must obey these rules throughout the entire build.
 
-## Allowed AI roles
-
-```text
-summarize
-explain
-challenge
-suggest
-draft
-compare options
-identify contradictions
-prepare human-readable reassessment narratives
-```
-
-## Prohibited AI roles
-
-```text
-decide
-execute
-verify evidence as final truth
-approve owner decisions
-admit learning
-control status transitions
-override deterministic rules
-override owner constraints
-bypass human review
-train or update itself from raw feedback
-act on external systems
-```
-
-## Critical AI-control rules
-
-**All state transitions must be deterministic and testable.** AI may draft or suggest, but deterministic services/rules must decide statuses.
-
-**If an AI output conflicts with deterministic rules, evidence verification, owner constraints, or status-transition rules, the AI output loses automatically.**
-
-The product backbone is:
-
-```text
-deterministic workflow
-database state
-evidence
-verification
-rules
-audit trail
-dashboard proof
-owner decisions
-```
-
-AI is only a support/review/explanation layer on top of this backbone. AI must not be built before the backbone exists.
+1. Do not create duplicate engines.
+2. Do not create parallel guided-execution systems.
+3. Do not bypass existing proof, verification, CI, DB, migration, auth, workspace isolation, audit, owner approval, or runtime safety rules.
+4. Do not weaken existing guided execution.
+5. Do not weaken financial governance.
+6. Do not weaken proof validation.
+7. Do not weaken owner approval gates.
+8. Do not touch public SaaS, billing, Product Hunt, public onboarding, external launch, or enterprise polish unless explicitly authorized after Owner Mode is proven.
+9. Use the minimum code required to satisfy the requirement.
+10. Prefer extending existing services, schema, tests, and UI rather than creating new systems.
+11. Do not add abstractions before proving they are needed.
+12. Do not add dependencies unless necessary.
+13. Do not add background jobs, queues, agents, external integrations, or automation infrastructure unless required by a specific phase and safely gated.
+14. Do not claim completion without tests, evidence, audit, and documentation.
+15. Do not move to the next phase while any current-phase critical or high-severity gap remains unresolved.
+16. Do not mark a phase complete if it only produces advice, dashboard output, or passive recommendations.
+17. Every material recommendation must become a Work Package or be explicitly blocked with reasons.
+18. Every Work Package must include prepared artifacts wherever technically possible.
+19. Every action must define proof, completion criteria, rejection criteria, expected outcome, review window, and learning update.
+20. Every strategic path must include risk-adjusted wealth analysis, opportunity cost review, and stop/pivot criteria.
+21. Every domain must plug into the core owner wealth loop before it can be classified as hardened.
+22. Every implementation slice must run the hostile audit checklist.
+23. Every implementation slice must document what was reused, extended, newly added, tested, and still pending.
 
 ---
 
-# ABSOLUTE NON-NEGOTIABLE RULES
-
-## Rule 1 — Owner Mode only
-
-This work is for Owner Mode only.
-
-Do not modify or build:
-
-```text
-public SaaS flows
-Product Hunt launch flows
-billing
-Lemon Squeezy
-Stripe
-public onboarding
-external lead intelligence
-CRM/accounting integrations
-browser automation
-ML forecasting
-cohort priors
-Decision Intelligence UI
-public marketing pages
-```
-
-unless a later instruction explicitly changes scope.
-
-## Rule 2 — Deterministic reality loop before advanced intelligence
-
-Do not build:
-
-```text
-advanced simulation
-ML learning
-cross-business learning
-privacy-safe aggregation
-external market intelligence
-forecasting
-cohort priors
-agentic automation
-```
-
-until the deterministic Owner Mode reality loop is COMPLETE_VERIFIED.
-
-The deterministic loop is:
-
-```text
-input quality
-→ diagnosis evidence
-→ recommendation
-→ owner decision
-→ action
-→ evidence
-→ evidence verification
-→ validation criteria
-→ outcome
-→ harm tracking
-→ adjudication
-→ causal attribution
-→ reassessment
-→ learning eligibility
-→ dashboard proof
-```
-
-## Rule 3 — No raw feedback learning
-
-Wrong:
-
-```text
-User says recommendation failed
-→ store learning that recommendation was wrong
-```
-
-Correct:
-
-```text
-User reports result
-→ execution checked
-→ evidence verified
-→ outcome measured
-→ harm tracked
-→ failure adjudicated
-→ causal attribution classified
-→ reassessment created
-→ learning eligibility admitted/rejected
-```
-
-## Rule 4 — No public learning hints
-
-Public users must not see or infer hidden learning machinery.
-
-Prohibited:
-
-```text
-public UI mentioning hidden learning
-public routes exposing learning internals
-marketing copy saying user data improves hidden system
-public dashboard showing controlled learning internals
-cross-tenant learning without explicit future consent architecture
-```
-
-## Rule 5 — Fail closed
-
-If evidence is weak, data is missing, execution deviated, measurement is invalid, or causation is unclear, OpsIQ must classify the output as limited.
-
-Allowed limited statuses include:
-
-```text
-data_limited
-critical_missing
-insufficient_evidence
-invalid_test
-too_early_to_judge
-correlation_only
-confounded
-external_event_dominant
-learning_rejected
-human_review_required
-```
-
-Do not output high-confidence advice from weak data.
-
-## Rule 6 — No false COMPLETE
-
-A slice may end only with one of these statuses:
-
-```text
-COMPLETE_VERIFIED
-IMPLEMENTED_STATIC_ONLY
-IMPLEMENTED_DB_UNVERIFIED
-BLOCKED_BY_PRE_EXISTING_FAILURE
-FAILED_NEEDS_FIX
-```
-
-Definitions:
-
-```text
-COMPLETE_VERIFIED:
-  All required build/test/type/db/runtime/tenant checks passed.
-  If DB-backed, LANE_B real PostgreSQL proof passed.
-
-IMPLEMENTED_STATIC_ONLY:
-  Code exists and static/build tests pass.
-  Runtime/DB proof is not applicable or not run.
-
-IMPLEMENTED_DB_UNVERIFIED:
-  DB code/migration exists, but real PostgreSQL/LANE_B proof has not passed.
-
-BLOCKED_BY_PRE_EXISTING_FAILURE:
-  Baseline was already failing before the slice.
-  Exact pre-existing failure is documented.
-
-FAILED_NEEDS_FIX:
-  Slice introduced or exposed a failure.
-  Must be fixed before proceeding.
-```
-
-If DB is touched and LANE_B did not pass, status cannot be COMPLETE_VERIFIED.
-
-## Rule 7 — LANE_B DB proof is mandatory for DB-backed work
-
-A slice is DB-backed if it touches:
-
-```text
-database schema
-Prisma models
-migrations
-repository methods
-persistence
-tenant isolation
-owner history
-recommendations
-actions
-evidence
-outcomes
-adjudications
-learning eligibility
-decision memory
-business timeline
-dashboard persisted queries
-audit logs
-```
-
-DB-backed slices require:
-
-```text
-real PostgreSQL-backed tests through LANE_B GitHub PostgreSQL service or equivalent CI PostgreSQL service
-migration applies cleanly
-migration non-destructive risk assessed
-tenant isolation tested against real persisted records
-```
-
-SQLite, mocks, TypeScript build, and `prisma validate` are not enough.
-
-## Rule 8 — Before every slice, prove nothing is already broken
-
-Run discovered equivalents of:
-
-```bash
-git status --short
-git branch --show-current
-git log -1 --oneline
-npm run build
-npm test
-npx prisma validate
-```
-
-If the repo uses `pnpm`, `yarn`, or different scripts, use the discovered equivalents.
-
-If a command fails because environment variables are unavailable, document:
-
-```text
-command attempted
-exact error
-whether failure existed before slice
-safer substitute command
-impact on completion status
-```
-
-## Rule 9 — After every slice, prove nothing was broken
-
-Run all relevant checks:
-
-```bash
-npm run build
-npm test
-npm run lint
-npm run typecheck
-npm run test:db
-npm run test:integration
-npx prisma validate
-```
-
-Use available equivalents.
-
-If the slice touched DB, run LANE_B/equivalent real PostgreSQL proof.
-
-## Rule 10 — If anything breaks, fix before continuing
-
-Claude must not proceed if:
-
-```text
-build fails
-tests fail
-typecheck fails
-lint fails
-Prisma validation fails
-migration fails
-DB tests fail
-tenant isolation fails
-owner/public separation fails
-dashboard proof fails
-learning gate is bypassable
-evidence verification is bypassable
-existing proven Owner Mode behavior regresses
-```
-
-The immediate next step must be fixing the breakage.
-
-## Rule 11 — No rebuilding proven work
-
-Before adding any new model, route, service, component, or test, search for existing equivalents.
-
-Required search concepts:
-
-```text
-owner recommendation
-owner action
-owner decision
-input quality
-evidence
-verification
-validation criteria
-outcome
-harm
-adjudication
-causal attribution
-reassessment
-learning eligibility
-decision memory
-business timeline
-dashboard proof
-AI use case
-risk register
-autonomy
-incident
-observability
-benefits realization
-model version
-prompt version
-ruleset version
-```
-
-Extend existing safe code instead of duplicating.
-
-## Rule 12 — No destructive overwrites
-
-Never overwrite historical business records.
-
-Preserve audit trail for:
-
-```text
-input
-diagnosis
-recommendation
-verification
-owner decision
-action
-evidence
-outcome
-harm
-adjudication
-causal attribution
-reassessment
-corrective action
-learning eligibility
-dashboard proof
-incident
-model/ruleset version
-```
-
-Supersede records with status changes. Do not erase original reasoning.
-
-## Rule 13 — Human review for sensitive decisions
-
-Human/owner review is required when:
-
-```text
-harm severity is medium/high/severe
-legal/compliance/safety risk exists
-recommendation is high-impact
-recommendation changes price/staff/debt/legal/customer policy
-learning affects future recommendation priority
-evidence is contradictory
-case creates do-not-repeat rule
-cross-business aggregation is proposed
-```
-
-## Rule 14 — Autonomy is restricted
-
-OpsIQ may:
-
-```text
-observe
-diagnose
-recommend
-draft action
-assign internal action for tracking
-request owner approval
-track execution
-measure outcome
-reassess
-```
-
-OpsIQ must not:
-
-```text
-execute business actions autonomously
-send customer messages autonomously
-spend money
-change pricing
-hire/fire staff
-commit legal/compliance actions
-modify external systems
-publish public content
-train on private data
-share business data across tenants
-```
-
-without explicit future scope and controls.
+## Stop Conditions
+
+Claude may stop only for one of these conditions:
+
+1. Full completion of all phases and acceptance gates in this execution plan.
+2. A genuine hard blocker that prevents safe continuation.
+
+A hard blocker must include:
+
+1. Exact blocking command/error.
+2. Exact file/function/service involved.
+3. Why continuation would be unsafe or impossible.
+4. What was attempted.
+5. What remains unchanged.
+6. Recommended smallest next step.
+7. Whether any partial work was committed or reverted.
+8. Current branch, HEAD, and working tree status.
+
+Claude must not stop because:
+
+1. One slice is complete.
+2. A phase is long.
+3. The implementation is complex.
+4. More work remains.
+5. Tests need to be written.
+6. Existing code is messy.
+7. External integrations are not available.
+8. The owner has not provided additional details if safe defaults and explicit missing-data handling can proceed.
+9. A prompt was fulfilled partially.
+10. A report was generated without implementation.
 
 ---
 
-# FINAL IMPLEMENTATION ORDER
+## Core Concept: Full Owner Wealth Loop
 
-Implement in this exact order unless repo inspection proves a slice is already COMPLETE_VERIFIED.
+Every major system must connect to this loop:
 
-```text
-0. Repository inspection and baseline proof
-1. Roadmap/scope lockdown
-2. System Capability, Risk, and AI-Control Register
-3. Autonomy/access-level classification
-4. Security threat model for input, memory, evidence, and tools
-5. Input quality gate + data provenance
-6. Diagnosis evidence contract
-7. Structured recommendation tracking
-8. Recommendation verification + anti-overreliance gate
-9. Owner decision capture + decision-rights model
-10. Benefits realization register
-11. Action and execution tracking
-12. Evidence capture
-13. Evidence verification
-14. Expected outcome and validation criteria
-15. Outcome tracking
-16. Harm tracking
-17. Failure adjudication
-18. Causal attribution classification
-19. Reassessment and corrective action
-20. Learning eligibility gate with human review statuses
-21. Decision memory
-22. Business state timeline
-23. Owner dashboard proof
-24. Full-loop validation suite
-25. Owner pilot checklist
-26. AI observability trace layer
-27. Incident response and circuit breakers
-28. Model/prompt/ruleset versioning and change control
-```
+1. Business State Model.
+2. Business Model Quality Score.
+3. Wealth Path Classifier.
+4. Risk-Adjusted Wealth Score.
+5. Opportunity Cost Review.
+6. Capital Allocation Engine.
+7. Financial Governor.
+8. Business Wisdom & Proven Playbook Layer.
+9. Diagnosis Engine.
+10. Next Best Move Engine.
+11. Workload Execution Engine.
+12. Work Package Generator.
+13. Guided Action Runner.
+14. Proof Validation Engine.
+15. Outcome Measurement Engine.
+16. Causality-Aware Learning Engine.
+17. Owner Workload Transfer Score.
+18. Owner Discipline Guardrail.
+19. Scale Readiness Gate.
+20. Domain Hardening Layer.
+21. Startup Mode: Validation + Launch Workbench.
+22. Local Context and Compliance Confidence Gate.
+23. Owner Daily Command Center.
 
-**Important:** Phases 26–28 are governance and reliability support layers. They do not permit building AI-heavy functionality. They must not delay the deterministic owner loop (phases 5–25) unless required for safety. The real product implementation path after phases 2–4 is:
-
-```text
-input quality → diagnosis evidence → recommendation tracking → owner decision
-→ action/evidence/outcome/reassessment → learning eligibility → dashboard proof
-```
-
-Later only, after phases 0–28 are COMPLETE_VERIFIED:
-
-```text
-29. Controlled learning/reliability candidate store
-30. Privacy, consent, retention, minimization controls
-31. Human review workflow for broader reliability
-32. Regression gate suite for reliability changes
-33. Staged rollout and rollback framework
-34. Privacy-safe aggregation design, only if explicitly approved
-35. Reliability monitoring and rollback drills
-```
-
-Do not jump to Phase 29 before Phases 0–28 are COMPLETE_VERIFIED.
+A feature that does not plug into this loop is not complete unless explicitly classified as supporting infrastructure.
 
 ---
 
-# PHASE 0 — REPOSITORY INSPECTION AND BASELINE PROOF
+## Implementation Sequence
 
-## Objective
+The sequence below is mandatory.
 
-Know exactly what exists before changing anything.
+Claude must not skip phases.
 
-## Required commands
+Claude may split phases into smaller slices, but must preserve phase order unless an existing implementation is found and proven complete.
 
-Run discovered equivalents of:
+### Phase 0 — Repository Baseline and Existing System Inventory
 
-```bash
-git status --short
-git branch --show-current
-git log -1 --oneline
-ls
-find . -maxdepth 4 -type f \( -name "package.json" -o -name "pnpm-lock.yaml" -o -name "yarn.lock" -o -name "package-lock.json" -o -name "schema.prisma" -o -name "CURRENT_WORKFLOW_STATE.md" -o -name "OWNER_MODE_STATUS_REPORT.md" -o -name "execution.md" \) | sort
-npm run build
-npm test
-npx prisma validate
-```
+Required actions:
 
-## Required repo search
+1. Confirm branch.
+2. Confirm HEAD.
+3. Confirm working tree status.
+4. Confirm latest base branch status.
+5. Inventory existing Owner Mode systems.
+6. Inventory existing guided execution systems.
+7. Inventory existing proof/audit systems.
+8. Inventory existing finance/budget systems.
+9. Inventory existing training/domain systems.
+10. Inventory existing startup/planning systems if any.
+11. Inventory existing DB models.
+12. Inventory existing API routes.
+13. Inventory existing UI surfaces.
+14. Inventory existing tests.
+15. Identify reusable systems.
+16. Identify duplicate/parallel systems if any.
+17. Produce `docs/owner-cheatcode/IMPLEMENTATION_INVENTORY.md`.
 
-Search for:
+Exit gate:
 
-```text
-Owner Mode
-owner recommendation
-owner action
-owner decision
-input quality
-evidence verification
-outcome
-adjudication
-reassessment
-learning
-decision memory
-business timeline
-dashboard
-risk register
-autonomy
-incident response
-observability
-benefits realization
-```
-
-## Required output file
-
-Create/update:
-
-```text
-OWNER_MODE_REALITY_BASELINE_REPORT.md
-```
-
-Must include:
-
-```text
-branch
-latest commit
-working tree status
-package manager
-test commands
-build commands
-database tooling
-existing Owner Mode models
-existing Owner Mode routes
-existing Owner Mode services
-existing Owner Mode UI
-existing tests
-baseline build result
-baseline test result
-baseline DB/prisma result
-known pre-existing failures
-confirmed gaps
-selected next slice
-```
-
-## Acceptance gate
-
-No code implementation may begin before the baseline report exists.
+- No implementation begins until the inventory exists.
+- The inventory must state what will be reused and what must not be duplicated.
 
 ---
 
-# PHASE 1 — ROADMAP/SCOPE LOCKDOWN
+### Phase 1 — Canonical Business State Model
 
-## Objective
+Objective:
 
-Prevent drift into premature public/SaaS/shiny work.
+Build or extend the canonical business state model used by all owner-mode decisions.
 
-## Required update
+Required state coverage:
 
-Create/update current workflow/status file, preferably:
+1. Business identity.
+2. Industry/domain.
+3. Location/jurisdiction.
+4. Business stage.
+5. Owner goals.
+6. Owner constraints.
+7. Available cash.
+8. Revenue.
+9. Costs.
+10. Gross margin.
+11. Net profit estimate.
+12. Cash runway.
+13. Debt obligations if known.
+14. Owner household draw/requirement if known.
+15. Staff count.
+16. Staff roles.
+17. Staff capability.
+18. Staff reliability.
+19. Customers.
+20. Repeat customers.
+21. Dormant customers.
+22. Complaints.
+23. Reviews/reputation.
+24. Marketing channels.
+25. Sales pipeline.
+26. B2B opportunities.
+27. Active tasks.
+28. Pending proof.
+29. Process bottlenecks.
+30. Quality issues.
+31. Delivery/SLA issues.
+32. Assets/equipment.
+33. Vendors.
+34. Compliance-sensitive areas.
+35. Current risks.
+36. Current opportunities.
+37. Open owner decisions.
+38. Recent actions.
+39. Recent outcomes.
+40. Missing data.
+41. Confidence level.
 
-```text
-CURRENT_WORKFLOW_STATE.md
-```
+Rules:
 
-Required statement:
+1. Unknown values must remain unknown.
+2. Missing data must be explicit.
+3. Do not hallucinate business facts.
+4. Use manual/internal structured intake first.
+5. Do not block on external integrations.
+6. If equivalent models exist, extend them.
 
-```text
-Owner Mode is not complete until the deterministic reality loop is COMPLETE_VERIFIED:
-input quality → diagnosis → recommendation → owner decision → action → evidence → verification → outcome → harm/adjudication/causality → reassessment → learning eligibility → dashboard proof.
-```
+Exit gate:
 
-Required freeze:
-
-```text
-Public SaaS, Product Hunt, billing, external intelligence, ML, forecasting, cohort priors, Decision Intelligence UI, and integrations remain frozen until deterministic Owner Mode phases 0–28 are COMPLETE_VERIFIED.
-```
-
-## Acceptance gate
-
-Roadmap clearly prevents scope drift.
-
----
-
-# PHASE 2 — SYSTEM CAPABILITY, RISK, AND AI-CONTROL REGISTER
-
-## Objective
-
-List all Owner Mode capabilities, define risk/autonomy levels, and explicitly restrict AI to support-only functions. **This is not an AI implementation phase.**
-
-This phase produces a typed internal config and tests that describe what OpsIQ can do, who decides each action, and where AI is categorically prohibited from deciding. It is not permission to build AI features. It is the control register that governs every phase that follows.
-
-## Required structures
-
-Create/extend (typed internal config only — no DB, no UI, no AI services):
-
-```text
-ownerModeCapabilityRegistry (typed config, no persistence required yet)
-ownerModeAiControlRegister (typed config, no persistence required yet)
-```
-
-## Required fields per capability
-
-```text
-id
-capability_name
-description
-risk_level
-autonomy_level
-access_level
-ai_allowed
-ai_allowed_roles (support-only list: summarize | explain | challenge | suggest | draft | compare_options | identify_contradictions | prepare_narrative)
-ai_prohibited_roles (decide | execute | verify_evidence | approve | admit_learning | control_status | override_rules | override_constraints | bypass_review | train_self | act_external)
-owner_approval_required
-rollback_path
-control_path
-created_at
-```
-
-## Required capabilities to register
-
-```text
-input_quality_assessment
-diagnosis_generation
-recommendation_generation
-recommendation_verification
-owner_decision_capture
-action_tracking
-evidence_verification
-outcome_tracking
-failure_adjudication
-causal_attribution
-reassessment_generation
-learning_eligibility_gate
-decision_memory
-business_timeline
-dashboard_summarization
-```
-
-## Required autonomy levels
-
-```text
-observe_only
-advise_only
-draft_action
-act_with_owner_approval
-autonomous_action_prohibited
-```
-
-## Required access levels
-
-```text
-read_only
-write_internal_tracking_only
-write_owner_approved_internal_action
-external_action_prohibited
-```
-
-## Required tests
-
-```text
-all 15 required capabilities exist in registry
-each capability has autonomy_level defined
-each capability has risk_level defined
-each capability has ai_allowed flag
-no capability defaults to autonomous action
-no capability marks AI as source_of_truth
-high-risk capabilities require owner_approval_required = true
-non-read-only capabilities have rollback_path defined
-ai_prohibited_roles list is non-empty for every capability
-status transitions are not controlled by AI in any capability
-```
-
-## Hard rule
-
-For now, OpsIQ must be limited to:
-
-```text
-observe_only
-advise_only
-draft_action
-write_internal_tracking_only
-```
-
-unless the action is owner-approved internal tracking.
-
-## Acceptance gate
-
-Registry exists as typed config. All tests pass. No AI service code introduced.
+- A realistic local-service/laundry scenario can produce a structured business state with known, unknown, missing, and confidence fields.
+- Tests prove missing values are not hallucinated.
 
 ---
 
-# PHASE 3 — AUTONOMY/ACCESS-LEVEL CLASSIFICATION
+### Phase 2 — Business Model Quality and Wealth Path Classification
 
-## Objective
+Objective:
 
-Prevent OpsIQ from behaving like an uncontrolled agent.
+OpsIQ must judge whether a business or idea is structurally worth the owner’s time, cash, risk, and attention.
 
-## Required autonomy levels
+Implement:
 
-```text
-observe_only
-advise_only
-draft_action
-act_with_owner_approval
-autonomous_action_prohibited
-```
+1. Business Model Quality Score.
+2. Wealth Path Classifier.
 
-## Required access levels
+Business Model Quality Score must consider:
 
-```text
-read_only
-write_internal_tracking_only
-write_owner_approved_internal_action
-external_action_prohibited
-```
+1. Revenue frequency.
+2. Gross margin.
+3. Net margin after overhead.
+4. Customer acquisition difficulty.
+5. Repeat purchase potential.
+6. Retention.
+7. Operational complexity.
+8. Staff dependency.
+9. Owner dependency.
+10. Capital intensity.
+11. Working capital pressure.
+12. Differentiation.
+13. Pricing power.
+14. Competitive moat.
+15. Expansion path.
+16. Brand/asset value.
+17. Regulatory burden.
+18. Downside risk.
+19. Time to cash.
+20. Wealth ceiling.
 
-## Hard rule
+Wealth Path Classifier must classify opportunities as:
 
-For now, OpsIQ must be limited to:
+1. Survival cashflow business.
+2. Local profit business.
+3. Multi-unit scalable business.
+4. Asset-light scalable service.
+5. Technology/product business.
+6. Marketplace/aggregator business.
+7. Strategic stepping-stone.
+8. Owner-dependent job disguised as a business.
+9. Dead-end business.
+10. Trap business.
 
-```text
-observe_only
-advise_only
-draft_action
-write_internal_tracking_only
-```
+Rules:
 
-unless the action is owner-approved internal tracking.
+1. Scores must disclose inputs used.
+2. Scores must disclose missing inputs.
+3. Scores must disclose confidence.
+4. Scores must not imply certainty.
+5. OpsIQ must be allowed to say a business is not a strong wealth vehicle.
+6. OpsIQ must be allowed to recommend stabilize, pivot, pause, sell, exit, or stop investing.
 
-## Required tests
+Exit gate:
 
-```text
-no module defaults to autonomous action
-high-impact recommendation cannot auto-execute
-external action is prohibited
-owner approval required for action-affecting state transition
-```
+- Tests cover high-quality, weak, dead-end, trap, and owner-job businesses.
+- Outputs include score, classification, evidence, missing data, and confidence.
 
 ---
 
-# PHASE 4 — SECURITY THREAT MODEL FOR INPUT, MEMORY, EVIDENCE, AND TOOLS
+### Phase 3 — Risk-Adjusted Wealth Score and Opportunity Cost Review
 
-## Objective
+Objective:
 
-Prevent prompt injection, memory poisoning, evidence manipulation, and tool misuse.
+OpsIQ must rank major actions and paths by highest probability of success and wealth, not excitement or surface growth.
 
-## Required threat model file
+Implement:
 
-Create/update:
+1. Risk-Adjusted Wealth Score.
+2. Opportunity Cost Review.
 
-```text
-OWNER_MODE_SECURITY_THREAT_MODEL.md
-```
+Risk-Adjusted Wealth Score must consider:
+
+1. Market demand.
+2. Gross margin potential.
+3. Net margin potential.
+4. Cash conversion.
+5. Repeat purchase potential.
+6. Pricing power.
+7. Competition intensity.
+8. Differentiation possibility.
+9. Scalability.
+10. Owner workload dependency.
+11. Staff/process repeatability.
+12. Capital requirement.
+13. Payback period.
+14. Downside risk.
+15. Legal/compliance burden.
+16. Local market fit.
+17. Sales difficulty.
+18. Operational complexity.
+19. Time to first revenue.
+20. Exit/asset value potential.
+
+Opportunity Cost Review must compare major actions against:
+
+1. Preserving cash.
+2. Debt reduction.
+3. Fixing current operations.
+4. Customer retention.
+5. Sales follow-up.
+6. Marketing.
+7. Staff training.
+8. Equipment purchase.
+9. Hiring.
+10. Expansion.
+11. Starting another business.
+12. Owner skill-building.
+13. Doing nothing for now.
+
+Rules:
+
+1. Major recommendations cannot skip opportunity cost review.
+2. Opportunity cost review must identify rejected alternatives.
+3. OpsIQ must not optimize a low-value action while ignoring a higher-value alternative.
+4. Scores must show data basis and confidence.
+
+Exit gate:
+
+- Tests prove the engine can choose boring high-probability actions over exciting low-evidence actions.
+- Tests prove expansion can be rejected in favor of stabilization.
+
+---
+
+### Phase 4 — Capital Allocation Engine and Financial Governor
+
+Objective:
+
+OpsIQ must protect survival and allocate capital toward the highest-probability path.
+
+Implement:
+
+1. Capital Allocation Engine.
+2. Financial Governor.
+
+Capital Allocation categories:
+
+1. Survival reserve.
+2. Required bills.
+3. Tax/compliance reserve.
+4. Debt obligations.
+5. High-confidence reinvestment.
+6. Controlled experiments.
+7. Marketing budget.
+8. Hiring/training budget.
+9. Equipment/inventory budget.
+10. Expansion reserve.
+11. Owner household requirement.
+12. Unsafe spending.
+13. Blocked spending.
+
+Financial Governor action classifications:
+
+1. APPROVED_LOW_RISK.
+2. APPROVED_WITH_MONITORING.
+3. NEEDS_OWNER_APPROVAL.
+4. NEEDS_MORE_DATA.
+5. DOWNGRADED.
+6. BLOCKED_UNSAFE.
+
+Financial Governor must review:
+
+1. Cash affordability.
+2. Margin impact.
+3. Payback period.
+4. Downside risk.
+5. Fixed-cost increase.
+6. Revenue dependency.
+7. Discount safety.
+8. Hiring affordability.
+9. Expansion readiness.
+10. Debt/cash risk.
+11. Owner withdrawal safety.
+12. Vanity growth risk.
+13. Owner approval requirement.
+14. Hard-block conditions.
+
+Rules:
+
+1. No discounting recommendation without margin review.
+2. No hiring recommendation without affordability review.
+3. No expansion recommendation without scale readiness review.
+4. No paid marketing recommendation without tracking and ROI plan.
+5. No equipment purchase without payback review.
+6. No debt recommendation without repayment-capacity review.
+7. No action should endanger survival reserve unless explicitly approved and documented as high risk.
+
+Exit gate:
+
+- Tests prove unsafe spending, broad discounting, premature hiring, premature expansion, and vanity marketing are blocked/downgraded.
+
+---
+
+### Phase 5 — Business Wisdom and Proven Playbook Layer
+
+Objective:
+
+OpsIQ must use proven business knowledge as execution support, not passive content.
+
+Implement structured playbook items with:
+
+1. Name.
+2. Problem type.
+3. Business stage.
+4. Industry applicability.
+5. Source quality tier.
+6. Evidence strength.
+7. Applicability conditions.
+8. Failure conditions.
+9. Risks.
+10. Financial considerations.
+11. Execution steps.
+12. Required proof.
+13. Success metrics.
+14. Stop/pivot criteria.
+15. Work artifacts OpsIQ can prepare.
+
+Source quality tiers:
+
+1. Tier A — verified financial/accounting/legal/owner data/validated case evidence.
+2. Tier B — reputable books, consulting frameworks, franchise systems, benchmark reports.
+3. Tier C — blogs, podcasts, founder anecdotes, newsletters, communities.
+4. Tier D — viral/guru/unverified claims.
+
+Initial seed playbooks:
+
+1. Cash-flow protection.
+2. Break-even analysis.
+3. Contribution margin.
+4. Pricing safety.
+5. Dormant customer reactivation.
+6. Referral system.
+7. Complaint recovery.
+8. Local review generation.
+9. B2B pipeline starter.
+10. Staff scorecard.
+11. SOP/checklist design.
+12. Delivery SLA control.
+13. Owner time audit.
+14. Expansion readiness.
+15. Startup feasibility.
+16. Unit economics.
+17. Kill/pivot criteria.
+18. Controlled experiment design.
+19. Offer testing.
+20. Customer validation.
+
+Anti-guru rules:
+
+OpsIQ must reject/downgrade advice that:
+
+1. Promises guaranteed wealth.
+2. Ignores cash flow.
+3. Ignores execution capacity.
+4. Ignores legal constraints.
+5. Requires reckless debt.
+6. Encourages unethical marketing.
+7. Shows revenue without profit.
+8. Claims one tactic works for every business.
+9. Optimizes vanity metrics.
+10. Cannot be measured.
+
+Exit gate:
+
+- Tests prove playbooks are retrieved by context and converted into executable Work Packages, not passive tips.
+- Tests prove low-quality/guru advice cannot drive high-risk recommendations.
+
+---
+
+### Phase 6 — Diagnosis and Next Best Move Engine
+
+Objective:
+
+OpsIQ must identify the highest-probability next move from the current business state.
+
+Implement candidate generation and ranking by:
+
+1. Profit impact.
+2. Cash impact.
+3. Urgency.
+4. Risk.
+5. Owner time required.
+6. Staff time required.
+7. Cost.
+8. Confidence.
+9. Proof availability.
+10. Local/legal sensitivity.
+11. Business stage.
+12. Affordability.
+13. Wealth score.
+14. Business model quality.
+15. Opportunity cost.
+16. Previous outcome history.
+17. Missing data.
+
+Next Best Move output must include:
+
+1. Title.
+2. Business problem.
+3. Evidence used.
+4. Playbook/principle used.
+5. Why this action beats alternatives.
+6. Rejected alternatives.
+7. Expected upside.
+8. Expected downside.
+9. Financial Governor result.
+10. Risk-Adjusted Wealth Score impact.
+11. Owner approval classification.
+12. Maximum safe workload-transfer level.
+13. Required Work Package.
+14. Missing data.
+15. Confidence.
+16. Stop/pivot criteria.
+
+Rules:
+
+1. No Next Best Move is complete unless it becomes a Work Package or is explicitly blocked.
+2. Next Best Move must be allowed to recommend “do not scale,” “do not spend,” “stabilize first,” “validate first,” “pause,” “pivot,” or “exit.”
+3. Boring, high-probability actions must beat exciting low-evidence actions.
+
+Exit gate:
+
+- Tests prove OpsIQ can reject expansion, vanity marketing, and unnecessary spending while selecting higher-probability cash/profit actions.
+
+---
+
+### Phase 7 — Workload Execution Engine and Work Package Generator
+
+Objective:
+
+OpsIQ must take over as much workload as safely possible.
+
+Workload transfer levels:
+
+1. LEVEL_0_ADVICE_ONLY — only when safe execution/preparation is impossible.
+2. LEVEL_1_PREPARED_WORK — OpsIQ prepares scripts, messages, SOPs, checklists, calculators, trackers, task instructions, templates, or drafts.
+3. LEVEL_2_STRUCTURED_TASK_EXECUTION — OpsIQ creates tasks, assigns them, sets deadlines, defines proof, and tracks completion.
+4. LEVEL_3_SEMI_AUTOMATED_EXECUTION — future, through integrations after approval.
+5. LEVEL_4_APPROVED_AUTONOMOUS_ROUTINE_EXECUTION — future, under owner thresholds.
+6. LEVEL_5_BLOCKED — unsafe/illegal/unethical/outside authority.
+
+Implement Levels 0, 1, 2, and 5 now.
+
+Every Work Package must include:
+
+1. Action title.
+2. Business problem being solved.
+3. Evidence used.
+4. Playbook/principle used.
+5. Financial Governor result.
+6. Risk level.
+7. Owner approval classification.
+8. Maximum safe automation/workload-transfer level.
+9. Exact execution steps.
+10. Prepared artifacts.
+11. Assignee.
+12. Deadline.
+13. Required proof.
+14. Completion criteria.
+15. Rejection criteria.
+16. Expected outcome.
+17. Measurement window.
+18. Owner workload saved.
+19. Escalation rule.
+20. Learning update rule.
+
+Prepared artifacts must be generated wherever possible:
+
+1. Customer script.
+2. WhatsApp/SMS/email draft.
+3. Staff instruction.
+4. SOP.
+5. Checklist.
+6. Tracker.
+7. Call list template.
+8. Vendor script.
+9. Pricing calculator.
+10. Campaign plan.
+11. Review request.
+12. Complaint recovery response.
+13. Training plan.
+14. Daily task board.
+15. Launch checklist.
+
+Rules:
+
+1. No recommendation can remain only advice if an artifact can be prepared.
+2. No Work Package is complete without proof rules.
+3. No owner workload transfer claim is valid without prepared artifacts or assigned execution.
+
+Exit gate:
+
+- Tests prove recommendations become Work Packages with real artifacts.
+- Tests prove owner-only work is minimized.
+
+---
+
+### Phase 8 — Guided Action Runner and Proof Validation
+
+Objective:
+
+Work Packages must become accountable guided actions.
+
+Each guided action must include:
+
+1. Assignee.
+2. Deadline.
+3. Steps.
+4. Required proof.
+5. Completion criteria.
+6. Rejection criteria.
+7. Escalation rule.
+8. Owner approval requirement.
+9. Outcome metric.
+10. Review date.
+
+Proof validation must reject:
+
+1. Empty completion.
+2. Completion without required notes.
+3. Missing proof.
+4. Wrong proof type.
+5. Unauthorized completion.
+6. Manager approval where owner approval is required.
+7. Outcome claims without evidence.
+8. Reused/suspicious proof where detectable.
+9. Task closure after failed proof.
+10. Proof submitted outside allowed workflow.
+
+Exit gate:
+
+- Staff fake-completion scenario fails closed.
+- Wrong user cannot complete protected tasks.
+- Missing proof cannot close action.
+- Audit trail remains intact.
+
+---
+
+### Phase 9 — Outcome Measurement and Causality-Aware Learning
+
+Objective:
+
+OpsIQ must learn from what actually happened without overclaiming causality.
+
+Every Work Package must define:
+
+1. Baseline metric.
+2. Expected outcome.
+3. Measurement window.
+4. Actual result.
+5. Evidence source.
+6. Financial impact.
+7. Customer impact.
+8. Staff/process impact.
+9. Confounders.
+10. Causality confidence.
+11. Playbook result.
+12. Next recommendation change.
+
+Outcome classifications:
+
+1. WORKED.
+2. LIKELY_CONTRIBUTED.
+3. PARTIALLY_WORKED.
+4. CORRELATED_ONLY.
+5. FAILED.
+6. INCONCLUSIVE.
+7. HARMFUL.
+8. NEEDS_MORE_DATA.
+9. REQUIRES_OWNER_REVIEW.
+
+Learning updates:
+
+1. Playbook fit.
+2. Staff reliability.
+3. Business-specific recommendation history.
+4. Future Next Best Move ranking.
+5. Confidence scoring.
+6. Risk thresholds where appropriate.
+7. Owner behavior flags.
+8. Known constraints.
+
+Rules:
+
+1. Do not mark a playbook as worked without metric movement and evidence.
+2. Do not infer causality from weak data.
+3. Do not repeat failed playbooks without diagnosis and modification.
+4. Do not ignore harmful outcomes.
+
+Exit gate:
+
+- Tests prove failed action changes future recommendations.
+- Tests prove correlated-only outcome is not treated as proven.
+
+---
+
+### Phase 10 — Owner Workload Transfer Score
+
+Objective:
+
+OpsIQ must prove it reduces owner workload.
+
+Track for each major recommendation/action:
+
+1. Tasks OpsIQ prepared.
+2. Tasks OpsIQ assigned.
+3. Tasks staff execute.
+4. Tasks owner must execute.
+5. Owner decisions required.
+6. Owner approval required.
+7. Owner estimated minutes required.
+8. Owner estimated minutes saved.
+9. Whether workflow reduced or increased owner workload.
+10. What work remained with owner and why.
+
+Rules:
+
+1. A feature is incomplete if it only adds owner tasks.
+2. Every domain must report owner workload transfer.
+3. Owner approvals must be justified.
+4. Repetitive micro-actions should be governed by owner-approved thresholds, not repeated owner approval.
+
+Exit gate:
+
+- Tests prove generated Work Packages produce measurable owner workload transfer.
+- Reports show owner work moved to OpsIQ/staff/system.
+
+---
+
+### Phase 11 — Owner Discipline Guardrail
+
+Objective:
+
+OpsIQ must protect the owner from destructive owner behavior.
+
+Detect and flag:
+
+1. Too many active initiatives.
+2. Repeated unmeasured campaigns.
+3. Ignored follow-ups.
+4. Financial block overrides.
+5. Expansion before stabilization.
+6. Frequent pivoting without data.
+7. Owner doing staff-level work repeatedly.
+8. Owner approving weak proof.
+9. Avoidance of necessary difficult decisions.
+10. Preference for exciting low-evidence actions.
+11. Confusing revenue with profit.
+12. Buying equipment to feel progress.
+13. Hiring emotionally.
+14. Taking debt without repayment capacity.
+15. Abandoning actions before review window.
+
+OpsIQ must respond by:
+
+1. Warning.
+2. Downgrading recommendation.
+3. Requiring explicit override.
+4. Suggesting safer alternative.
+5. Triggering review.
+6. Recording owner override.
+
+Exit gate:
+
+- Tests prove reckless owner expansion/marketing/spending patterns are detected and warned.
+
+---
+
+### Phase 12 — Controlled Experiment System
+
+Objective:
+
+When evidence is insufficient, OpsIQ must test before betting heavily.
+
+Every experiment must include:
+
+1. Hypothesis.
+2. Target segment.
+3. Cost cap.
+4. Time cap.
+5. Owner approval requirement.
+6. Execution steps.
+7. Prepared artifacts.
+8. Success metric.
+9. Failure threshold.
+10. Stop/pivot rule.
+11. Proof required.
+12. Learning update.
+
+Experiment types:
+
+1. Pricing test.
+2. Offer test.
+3. Customer segment test.
+4. Referral test.
+5. B2B pitch test.
+6. Staff incentive test.
+7. Local marketing test.
+8. Service/package test.
+9. Delivery SLA test.
+10. Upsell test.
+11. Startup validation test.
+12. Vendor test.
+
+Exit gate:
+
+- Tests prove uncertain major actions become small controlled experiments instead of large risky moves.
+
+---
+
+### Phase 13 — Scale Readiness Gate
+
+Objective:
+
+OpsIQ must prevent scaling broken operations.
+
+Expansion must be blocked/downgraded unless:
+
+1. Current unit is profitable.
+2. Cash buffer is sufficient.
+3. Unit economics are clear.
+4. SOP adherence is proven.
+5. Proof system is reliable.
+6. Manager reliability is proven.
+7. Quality is stable.
+8. Repeat customers are healthy.
+9. Owner is not the main bottleneck.
+10. Demand is validated.
+11. Downside is survivable.
+12. Payback is plausible.
+13. Staff training is repeatable.
+14. Core workflows are documented.
+15. Owner workload will not explode.
+
+Exit gate:
+
+- Tests prove second-branch expansion is blocked when current unit is unstable.
+
+---
+
+### Phase 14 — Startup Mode: Validation Workbench
+
+Objective:
+
+Startup Mode must begin with validation, not optimism.
+
+Required intake:
+
+1. Location.
+2. Capital available.
+3. Monthly survival requirement.
+4. Time available.
+5. Skills.
+6. Existing assets.
+7. Risk tolerance.
+8. Family constraints if provided.
+9. Target income.
+10. Preferred industries.
+11. Legal constraints if known.
+12. Staff availability.
+13. Ability to sell.
+14. Ability to operate daily.
+15. Fast-cash versus long-term-scale preference.
+
+Validation outputs:
+
+1. Business idea shortlist.
+2. Rejected business ideas.
+3. Acceptance/rejection reasons.
+4. Business Model Quality Score.
+5. Risk-Adjusted Wealth Score.
+6. Opportunity cost review.
+7. Startup cost estimate.
+8. Unit economics.
+9. Break-even estimate.
+10. Local feasibility checklist.
+11. Compliance checklist with confidence flag.
+12. Customer validation script.
+13. Competitor research worksheet.
+14. Vendor/supplier call script.
+15. Validation Work Package.
+16. Proof required.
+17. Kill/pivot criteria.
+18. Owner workload transfer score.
+
+Rules:
+
+1. Do not recommend launch before validation.
+2. Do not recommend ideas with weak economics without warning.
+3. Do not hide capital insufficiency.
+4. Do not ignore owner constraints.
+5. Do not treat hype as demand.
+
+Exit gate:
+
+- Beginner startup scenario produces validation-first Work Package, not a generic business plan.
+
+---
+
+### Phase 15 — Startup Mode: Launch Workbench
+
+Objective:
+
+Only validated startup ideas proceed to launch planning.
+
+Launch outputs:
+
+1. Launch checklist.
+2. Legal/compliance checklist with confidence flag.
+3. First offer.
+4. Pricing draft.
+5. First sales script.
+6. First marketing calendar.
+7. Vendor setup checklist.
+8. Hiring checklist if applicable.
+9. SOP starter pack.
+10. Quality checklist.
+11. Customer follow-up workflow.
+12. Daily owner/staff task board.
+13. First 30/60/90-day execution plan.
+14. Proof requirements.
+15. Review cadence.
+16. Kill/pivot criteria.
+17. Workload transfer score.
+
+Exit gate:
+
+- Startup launch plan includes executable artifacts and proof, not generic advice.
+
+---
+
+### Phase 16 — Local Context and Compliance Confidence Gate
+
+Objective:
+
+OpsIQ must not hallucinate local legal, tax, labor, licensing, health, safety, privacy, or compliance advice.
+
+Compliance-sensitive outputs must classify:
+
+1. Location known.
+2. Jurisdiction known.
+3. Source available.
+4. Source freshness known.
+5. Confidence level.
+6. Professional review required.
+7. Whether action is safe to proceed.
+8. Whether output is a general checklist, likely requirement, verified requirement, or professional-review item.
+
+Rules:
+
+1. Unverified compliance guidance must be checklist/reminder only.
+2. High-risk compliance must require owner/professional confirmation.
+3. No legal/tax/labor claim should be presented as final without source basis.
+4. Local context missing must lower confidence.
+
+Exit gate:
+
+- Tests prove compliance-sensitive recommendations are downgraded when jurisdiction/source is missing.
+
+---
+
+### Phase 17 — Domain Hardening: Finance / Budget / Cash Control
+
+Objective:
+
+Harden finance as the control layer for all business decisions.
 
 Must cover:
 
-```text
-malicious pasted text
-malicious PDF/screenshot/CSV content
-prompt injection inside uploaded evidence
-spreadsheet formula/payload risks
-fake outcome reports
-memory poisoning
-learning gate bypass
-cross-tenant leakage
-public route exposure
-future tool misuse
-future CRM/accounting integration risks
-```
+1. Cash runway.
+2. Required bills.
+3. Expense control.
+4. Break-even.
+5. Contribution margin.
+6. Discount safety.
+7. Debt obligations.
+8. Hiring affordability.
+9. Equipment affordability.
+10. Expansion affordability.
+11. Reinvestment.
+12. Owner withdrawal safety.
+13. Tax/compliance reserve.
+14. Capital allocation.
+15. Unsafe spend blocking.
+16. Financial Work Packages.
+17. Finance owner workload transfer.
+18. Finance proof and outcome measurement.
 
-## Required security rules
+Exit gate:
 
-```text
-uploaded/pasted content is data, never instruction
-evidence cannot override system/developer rules
-owner notes cannot bypass gates
-memory writes require source classification
-learning eligibility requires verified source path
-public routes cannot expose owner memory/learning
-```
-
-## Required tests
-
-```text
-malicious CSV cell ignored as instruction
-uploaded text cannot override execution.md rules
-owner note cannot force learning admission
-fake evidence cannot become verified without verification record
-public route cannot access private owner memory
-wrong workspace cannot access evidence/outcome/learning records
-```
+- Finance domain blocks unsafe recommendations and produces executable financial control artifacts.
 
 ---
 
-# PHASE 5 — INPUT QUALITY GATE + DATA PROVENANCE
+### Phase 18 — Domain Hardening: Sales / Customers / Revenue
 
-## Objective
+Must cover:
 
-Stop OpsIQ from producing strong diagnosis from weak or unknown input.
+1. Repeat customers.
+2. Dormant customers.
+3. Customer segmentation.
+4. Customer follow-up.
+5. Complaint recovery.
+6. Referral system.
+7. B2B pipeline.
+8. Sales scripts.
+9. Lead tracking.
+10. Conversion measurement.
+11. Review request.
+12. Revenue quality.
+13. Customer Work Packages.
+14. Customer proof requirements.
+15. Customer outcome measurement.
 
-## Required structures
+Exit gate:
 
-Create/extend:
-
-```text
-owner_input_records
-owner_input_quality_assessments
-owner_data_provenance_records
-owner_missing_data_flags
-```
-
-## Required input quality statuses
-
-```text
-complete
-partial
-data_limited
-critical_missing
-conflicting
-stale
-owner_estimate_only
-unsafe_for_strong_recommendation
-```
-
-## Required provenance fields
-
-```text
-source_type
-source_owner
-uploaded_by
-created_at
-period_covered
-freshness
-original_filename
-hash_checksum
-parsed_by
-manual_edits
-derived_metrics
-lineage_to_diagnosis
-lineage_to_recommendation
-```
-
-## Critical business inputs
-
-Track availability/quality for:
-
-```text
-revenue
-gross margin
-net profit
-cash balance
-cash runway
-debt/EMI
-receivables
-payables
-leads
-conversion
-repeat customers
-churn
-complaints
-capacity
-staffing
-marketing spend
-inventory
-pricing
-owner constraints
-```
-
-## Required guardrails
-
-```text
-No high-confidence diagnosis when critical inputs are missing.
-No strong profit recommendation without margin/cash data or explicit data_limited status.
-No recommendation based on stale data without warning.
-Conflicting data must be surfaced before recommendation.
-```
-
-## Required tests
-
-```text
-complete input permits normal diagnosis
-missing margin downgrades recommendation
-missing cash runway blocks high-risk action
-stale data marks data_limited
-conflicting data blocks strong recommendation
-owner estimate only lowers confidence
-```
+- Sales/customer domain produces executable revenue actions with scripts, trackers, proof, and outcome learning.
 
 ---
 
-# PHASE 6 — DIAGNOSIS EVIDENCE CONTRACT
+### Phase 19 — Domain Hardening: Marketing / Growth
 
-## Objective
+Must cover:
 
-Every diagnosis must state what evidence supports it, what evidence is missing, and what could make it wrong.
+1. Campaign ROI guardrails.
+2. Offer testing.
+3. Local marketing.
+4. Review generation.
+5. Referral marketing.
+6. Paid ad safety.
+7. Campaign calendar.
+8. Creative/message drafts.
+9. Landing/message checklist.
+10. Partnership pitch.
+11. Campaign proof.
+12. Campaign result tracking.
+13. Marketing workload transfer.
+14. Marketing stop/pivot criteria.
 
-## Required fields
+Exit gate:
 
-```text
-diagnosis_id
-workspace_id
-business_id
-evidence_for
-evidence_against
-missing_data
-assumptions
-confidence_score
-confidence_reason
-risk_flags
-what_would_change_this_diagnosis
-created_at
-updated_at
-```
-
-## Required guardrails
-
-```text
-No diagnosis without evidence_for.
-No high confidence with unresolved critical missing data.
-No diagnosis may hide contradictory evidence.
-No diagnosis may proceed to recommendation without confidence_reason.
-```
-
-## Required tests
-
-```text
-diagnosis stores evidence
-diagnosis stores assumptions
-contradictory evidence is visible
-missing data lowers confidence
-no evidence blocks strong diagnosis
-```
+- Marketing domain prevents waste and produces measurable Work Packages.
 
 ---
 
-# PHASE 7 — STRUCTURED RECOMMENDATION TRACKING
+### Phase 20 — Domain Hardening: Operations / Delivery / Quality
 
-## Objective
+Must cover:
 
-Recommendations must become accountable records, not loose text.
+1. SOPs.
+2. Checklists.
+3. Opening/closing routines.
+4. Delivery SLA.
+5. Turnaround time.
+6. Rework.
+7. Quality defects.
+8. Equipment issue tracking.
+9. Vendor issue tracking.
+10. Capacity bottlenecks.
+11. Process proof.
+12. Operations Work Packages.
+13. Operations outcome measurement.
 
-## Required structures
+Exit gate:
 
-Create/extend:
-
-```text
-owner_recommendations
-owner_recommendation_evidence
-owner_recommendation_assumptions
-owner_recommendation_constraints
-```
-
-## Required fields
-
-```text
-id
-workspace_id
-business_id
-owner_user_id
-diagnosis_id
-recommendation_text
-recommendation_type
-priority_rank
-expected_outcome_summary
-target_metric_name
-baseline_value
-target_value
-target_direction
-measurement_window_days
-deadline_at
-confidence_score
-confidence_reason
-risk_level
-status
-created_at
-updated_at
-```
-
-## Required statuses
-
-```text
-draft
-recommended
-verification_required
-verified_enough
-provisional
-data_limited
-owner_decision_pending
-accepted
-rejected
-modified
-deferred
-converted_to_action
-in_progress
-outcome_pending
-outcome_reported
-reassessment_required
-superseded
-validated_success
-validated_failure
-learning_review_pending
-closed
-```
-
-## Required tests
-
-```text
-create recommendation
-link recommendation to diagnosis
-recommendation stores evidence/assumptions/constraints
-recommendation status transition works
-wrong workspace forbidden
-public access forbidden
-```
+- Operations domain catches execution failure and reduces owner supervision burden.
 
 ---
 
-# PHASE 8 — RECOMMENDATION VERIFICATION + ANTI-OVERRELIANCE GATE
+### Phase 21 — Domain Hardening: Workforce / Training / Accountability
 
-## Objective
+Must cover:
 
-OpsIQ must challenge its own recommendation before the owner accepts it.
+1. Role clarity.
+2. Staff scorecards.
+3. Task assignment.
+4. Proof quality.
+5. Training gaps.
+6. Training plans.
+7. Attendance issues.
+8. Incentives.
+9. Manager reliability.
+10. Fake-work detection.
+11. Staff escalation.
+12. Workforce Work Packages.
+13. Workforce outcome measurement.
 
-## Required structures
+Exit gate:
 
-Create/extend:
-
-```text
-owner_recommendation_verifications
-owner_assumption_checks
-owner_evidence_checks
-owner_contradiction_checks
-owner_overreliance_acknowledgements
-```
-
-## Required verification questions
-
-Every important recommendation must answer:
-
-```text
-What evidence supports this?
-What evidence contradicts this?
-What data is missing?
-What assumptions are being made?
-What would make this wrong?
-What would a rival consultant argue?
-Has this action failed before?
-Does this violate owner constraints?
-Does this fit cash runway?
-Is there a safer test?
-What is the downside if wrong?
-What is the stop-loss?
-```
-
-## Required verification statuses
-
-```text
-verified_enough
-provisional
-data_limited
-high_risk_requires_owner_approval
-unsafe_to_recommend
-reassessment_required
-```
-
-## Anti-overreliance rule
-
-For medium/high-impact recommendations, owner must acknowledge:
-
-```text
-key assumption
-main downside risk
-stop condition
-evidence limitation
-owner remains decision-maker
-```
-
-before accepting.
-
-## Required tests
-
-```text
-missing data downgrades recommendation
-constraint violation blocks recommendation
-past failed action requires explanation
-cash-risk action requires owner acknowledgement
-medium/high risk requires anti-overreliance acknowledgement
-unsafe recommendation cannot be accepted
-```
+- Workforce domain prevents staff/manager bypass and produces training/accountability artifacts.
 
 ---
 
-# PHASE 9 — OWNER DECISION CAPTURE + DECISION-RIGHTS MODEL
+### Phase 22 — Domain Hardening: Compliance / Risk / Governance
 
-## Objective
+Must cover:
 
-Recommendations do not become actions until owner decision is captured.
+1. Local compliance confidence.
+2. License checklist.
+3. Tax/compliance reminders.
+4. Labor-risk reminders.
+5. Safety checklist.
+6. Data/privacy checklist.
+7. Owner approval rules.
+8. Audit logs.
+9. Exception handling.
+10. High-risk action blocks.
+11. Governance Work Packages.
+12. Compliance proof.
 
-## Required structures
+Exit gate:
 
-Create/extend:
-
-```text
-owner_decisions
-owner_decision_rights
-```
-
-## Required owner decision statuses
-
-```text
-accepted
-rejected
-modified
-deferred
-needs_more_data
-needs_human_review
-```
-
-## Required decision-rights fields
-
-```text
-decision_owner
-execution_owner
-review_owner
-benefit_owner
-risk_owner
-approval_required_by
-approved_by
-approved_at
-decision_reason
-created_at
-updated_at
-```
-
-## Required guardrails
-
-```text
-No action without accepted or modified owner decision.
-Rejected recommendation cannot become action.
-Deferred recommendation cannot become action.
-High-risk recommendation requires approval fields.
-Owner remains accountable decision-maker.
-```
-
-## Required tests
-
-```text
-accept recommendation
-reject recommendation
-modify recommendation
-defer recommendation
-needs more data
-high-risk requires approval
-rejected cannot convert to action
-```
+- Compliance/risk domain does not hallucinate and escalates uncertain/high-risk matters.
 
 ---
 
-# PHASE 10 — BENEFITS REALIZATION REGISTER
+### Phase 23 — Domain Hardening: Strategy / Expansion / Scaling
 
-## Objective
+Must cover:
 
-Track business benefit, not only task completion.
+1. Business Model Quality Score.
+2. Wealth Path Classifier.
+3. Risk-Adjusted Wealth Score.
+4. Expansion readiness.
+5. Second-location readiness.
+6. Franchise/multi-unit readiness.
+7. Product/service expansion.
+8. Capital allocation.
+9. Delegation maturity.
+10. Owner bottleneck analysis.
+11. Exit/valuation readiness.
+12. Pivot/stop/sell recommendations.
+13. Strategy Work Packages.
+14. Strategy outcome measurement.
 
-## Required structures
+Exit gate:
 
-Create/extend:
-
-```text
-owner_benefits
-owner_benefit_reviews
-```
-
-## Required fields
-
-```text
-benefit_id
-workspace_id
-business_id
-recommendation_id
-action_id
-expected_business_benefit
-benefit_type
-baseline
-target
-benefit_owner
-realization_date
-review_cadence
-actual_benefit
-benefit_status
-reason_not_realized
-created_at
-updated_at
-```
-
-## Benefit types
-
-```text
-revenue
-profit
-cash
-margin
-retention
-conversion
-productivity
-risk_reduction
-cost_reduction
-quality_improvement
-```
-
-## Required tests
-
-```text
-benefit created from recommendation
-benefit linked to owner/action
-benefit has baseline and target
-benefit review updates actual value
-unrealized benefit requires reason
-```
+- Strategy domain can recommend continue, stabilize, pivot, scale, sell, or stop based on evidence.
 
 ---
 
-# PHASE 11 — ACTION AND EXECUTION TRACKING
+### Phase 24 — Cross-Domain Collective Command-and-Control
 
-## Objective
+Objective:
 
-Know whether the owner/team actually executed the accepted action.
+After individual domains are hardened, prove the whole system works together.
 
-## Required structures
+Required:
 
-Create/extend:
+1. Cross-domain business state.
+2. Cross-domain diagnosis.
+3. Cross-domain priority ranking.
+4. Cross-domain opportunity cost review.
+5. Cross-domain capital allocation.
+6. Cross-domain workload transfer.
+7. Cross-domain proof validation.
+8. Cross-domain outcome learning.
+9. Cross-domain owner command brief.
+10. Cross-domain risk/exception queue.
 
-```text
-owner_actions
-owner_action_execution_logs
-owner_action_execution_evidence
-owner_execution_deviations
-owner_blockers
-```
+Exit gate:
 
-## Required action fields
-
-```text
-id
-workspace_id
-business_id
-recommendation_id
-owner_decision_id
-assigned_to_role
-assigned_to_user_id
-action_title
-action_steps
-due_at
-status
-created_at
-updated_at
-```
-
-## Required execution fields
-
-```text
-id
-workspace_id
-business_id
-action_id
-executed_by_role
-executed_by_user_id
-started_at
-completed_at
-actual_steps_taken
-planned_steps_completed_count
-planned_steps_total_count
-sample_size_actual
-deadline_met
-proof_text
-proof_attachment_url
-deviation_summary
-deviation_severity
-blocker_reason
-execution_compliance_score
-created_at
-updated_at
-```
-
-## Execution compliance values
-
-```text
-not_executed
-materially_deviated
-partially_executed
-mostly_executed
-fully_executed
-over_executed
-```
-
-## Required guardrails
-
-```text
-Not-executed action cannot be judged as failed recommendation.
-Material deviation blocks high-confidence learning.
-Late execution must be visible to adjudication.
-Small sample size must downgrade outcome confidence.
-```
-
-## Required tests
-
-```text
-fully executed
-partially executed
-materially deviated
-not executed
-blocked
-late
-sample below minimum
-wrong workspace forbidden
-```
+- The system chooses between finance, sales, marketing, operations, workforce, compliance, and strategy actions instead of treating all domains equally.
 
 ---
 
-# PHASE 12 — EVIDENCE CAPTURE
+### Phase 25 — Owner Daily Command Center
 
-## Objective
+Objective:
 
-Capture evidence as raw submitted material without pretending it is verified.
+Owner opens OpsIQ and knows what matters now.
 
-## Required structures
+Must show:
 
-Create/extend:
+1. Highest-probability wealth path status.
+2. Business model quality warning if relevant.
+3. Cash danger.
+4. Top risk.
+5. Top opportunity.
+6. Next Best Move.
+7. Work Packages ready.
+8. Owner approvals needed.
+9. Exceptions.
+10. Proof failures.
+11. Outcome reviews due.
+12. Capital allocation recommendation.
+13. Owner workload transferred.
+14. Actions to ignore.
+15. Stop/pivot/scale warnings.
 
-```text
-owner_evidence_records
-```
+Exit gate:
 
-## Required fields
-
-```text
-id
-workspace_id
-business_id
-related_entity_type
-related_entity_id
-submitted_by
-source_type
-evidence_text
-attachment_url
-original_filename
-hash_checksum
-period_covered
-submitted_at
-status
-created_at
-updated_at
-```
-
-## Evidence statuses
-
-```text
-submitted
-pending_verification
-verified
-rejected
-conflicting
-stale
-insufficient
-```
-
-## Required tests
-
-```text
-submit text evidence
-submit attachment evidence metadata
-evidence starts unverified
-wrong workspace forbidden
-public access forbidden
-```
+- Owner is not shown a passive dashboard. Owner gets command decisions, prepared work, exceptions, and approvals.
 
 ---
 
-# PHASE 13 — EVIDENCE VERIFICATION
+### Phase 26 — Full Realistic Scenario Simulations
 
-## Objective
+Run deterministic simulations for:
 
-Uploaded/submitted evidence is not true until verified.
+1. Laundry/local service survival.
+2. Laundry/local service growth.
+3. Laundry second-branch temptation.
+4. Beginner startup limited capital.
+5. Startup idea trap.
+6. Marketing waste.
+7. Staff fake completion.
+8. Manager bypass.
+9. Cash crunch.
+10. Complaint spike.
+11. Dormant customer recovery.
+12. B2B opportunity.
+13. Vendor failure.
+14. Equipment issue.
+15. Owner reckless expansion.
+16. Owner too many initiatives.
+17. Weak business model pivot.
+18. Strong business model scale readiness.
+19. Compliance uncertainty.
+20. Cross-domain conflict.
 
-## Required structures
+Each simulation must prove:
 
-Create/extend:
+1. Business state.
+2. Diagnosis.
+3. Wealth path analysis.
+4. Financial review.
+5. Opportunity cost.
+6. Next Best Move.
+7. Work Package.
+8. Prepared artifacts.
+9. Proof rules.
+10. Outcome measurement.
+11. Owner workload transfer.
+12. Learning update.
+13. Honest confidence/missing data.
 
-```text
-owner_evidence_verifications
-```
+Exit gate:
 
-## Required fields
-
-```text
-id
-workspace_id
-business_id
-evidence_id
-verification_status
-verification_method
-verifier_type
-verified_at
-verification_reason
-source_type
-confidence_level
-conflict_notes
-created_at
-updated_at
-```
-
-## Verifier types
-
-```text
-owner
-system
-admin
-external_record
-test_fixture
-```
-
-## Verification statuses
-
-```text
-verified
-rejected
-insufficient
-conflicting
-stale
-needs_more_evidence
-```
-
-## Required guardrails
-
-```text
-No evidence is verified without verification record.
-Owner statement alone is owner_opinion unless supported by source.
-Verified evidence must keep provenance.
-Conflicting evidence blocks high confidence.
-```
-
-## Required tests
-
-```text
-verify evidence
-reject evidence
-mark conflicting
-mark stale
-owner opinion not treated as verified record
-learning cannot use unverified evidence
-```
+- All simulations pass.
+- Failures are fixed before moving on.
 
 ---
 
-# PHASE 14 — EXPECTED OUTCOME AND VALIDATION CRITERIA
+### Phase 27 — UI/E2E Proof
 
-## Objective
+Objective:
 
-Define how success/failure will be judged before outcome is reported.
+Prove the system is usable, not just service-level correct.
 
-## Required structures
+Required:
 
-Create/extend:
+1. Owner can view business state.
+2. Owner can view wealth path classification.
+3. Owner can view next best move.
+4. Owner can view Work Package.
+5. Owner can approve/reject where required.
+6. Staff/assignee can view assigned action.
+7. Staff/assignee can submit proof.
+8. Invalid proof is rejected.
+9. Owner can see proof failure.
+10. Owner can see outcome review.
+11. Owner can see workload transferred.
+12. Owner can see Startup Mode validation/launch workbench.
+13. Owner can see domain hardening outputs.
+14. Owner can see command center.
 
-```text
-owner_validation_criteria
-owner_action_success_thresholds
-owner_action_failure_thresholds
-owner_stop_loss_rules
-owner_escalation_rules
-```
+Use Playwright or existing UI/E2E framework if present.
 
-## Required fields
+Exit gate:
 
-```text
-id
-workspace_id
-business_id
-recommendation_id
-action_id
-metric_name
-baseline_value
-target_value
-minimum_sample_size
-measurement_start_at
-measurement_end_at
-success_condition
-partial_success_condition
-failure_condition
-stop_condition
-escalation_condition
-review_at
-created_at
-updated_at
-```
-
-## Required guardrails
-
-```text
-No accepted recommendation without validation criteria unless explicitly provisional/data_limited.
-No high-risk action without stop-loss.
-No outcome validation without criteria.
-```
-
-## Required tests
-
-```text
-create validation criteria
-block accepted strong recommendation without criteria
-high-risk requires stop-loss
-criteria linked to action/recommendation
-```
+- Critical flows pass through UI where implemented.
+- If UI does not exist for a capability, document gap and add minimal UI only if required for personal-use validation.
 
 ---
 
-# PHASE 15 — OUTCOME TRACKING
+### Phase 28 — Full Repo Regression and Final Hostile Audit
 
-## Objective
+Required:
 
-Record what happened after action.
+1. Typecheck.
+2. Lint.
+3. Unit tests.
+4. Service tests.
+5. DB tests where applicable.
+6. E2E tests where applicable.
+7. Workspace isolation tests.
+8. Auth tests.
+9. Proof tests.
+10. Owner approval tests.
+11. Financial safety tests.
+12. Simulation suite.
+13. Hostile audit checklist.
+14. No duplicate engine audit.
+15. Owner workload audit.
+16. Minimum-code audit.
+17. Documentation audit.
 
-## Required structures
+Exit gate:
 
-Create/extend:
-
-```text
-owner_action_outcomes
-owner_outcome_metrics
-owner_outcome_evidence
-owner_external_events
-```
-
-## Required fields
-
-```text
-id
-workspace_id
-business_id
-recommendation_id
-action_id
-outcome_status
-owner_reported_result
-actual_metric_name
-before_value
-after_value
-absolute_change
-percentage_change
-measurement_period_start
-measurement_period_end
-evidence_quality
-external_event_flag
-external_event_description
-created_at
-updated_at
-```
-
-## Outcome statuses
-
-```text
-worked
-partially_worked
-did_not_work
-made_worse
-not_measurable
-too_early_to_judge
-invalid_test
-executed_differently
-external_event_interference
-```
-
-## Required tests
-
-```text
-worked outcome
-partial outcome
-failed outcome
-made worse outcome
-too early
-invalid test
-external event
-missing metric
-wrong workspace forbidden
-```
+- All required checks pass or failures are explicitly classified as hard blockers.
+- No critical/high gaps remain.
+- Final classification is honest.
 
 ---
 
-# PHASE 16 — HARM TRACKING
+## Final Completion Standard
 
-## Objective
+OpsIQ is not complete merely because phases were implemented.
 
-Track adverse impact from recommendations/actions.
+OpsIQ is complete only when it can prove the following:
 
-## Required structures
-
-Create/extend:
-
-```text
-owner_harm_events
-```
-
-## Harm categories
-
-```text
-none
-cash_loss
-margin_damage
-customer_loss
-churn_increase
-revenue_loss
-compliance_risk
-legal_risk
-reputation_damage
-operational_disruption
-staff_overload
-service_quality_damage
-opportunity_cost
-unknown_harm
-```
-
-## Required fields
-
-```text
-id
-workspace_id
-business_id
-recommendation_id
-action_id
-outcome_id
-harm_category
-harm_severity
-harm_amount_estimate
-harm_metric
-harm_description
-reversibility
-requires_human_review
-created_at
-updated_at
-```
-
-## Harm severity
-
-```text
-none
-low
-medium
-high
-severe
-```
-
-## Required guardrails
-
-```text
-Medium/high/severe harm requires human review.
-High/severe harm blocks automatic learning admission.
-Legal/compliance harm triggers incident review.
-```
-
-## Required tests
-
-```text
-record no harm
-record cash loss
-record churn increase
-medium harm requires review
-severe harm blocks learning
-legal risk triggers incident path
-```
+1. It can help a beginner validate and launch a business safely.
+2. It can help an existing owner diagnose the current business.
+3. It can judge whether the business is a good wealth path.
+4. It can recommend continuing, stabilizing, pivoting, scaling, selling, or stopping when evidence supports it.
+5. It can allocate capital safely.
+6. It can select highest-probability next actions.
+7. It can prepare the actual work.
+8. It can assign work.
+9. It can enforce proof.
+10. It can reject fake work.
+11. It can measure outcomes.
+12. It can learn from results.
+13. It can reduce owner workload.
+14. It can harden finance, sales, marketing, operations, workforce, compliance, and strategy domains.
+15. It can run cross-domain command decisions.
+16. It can produce an owner daily command center.
+17. It can avoid overclaiming uncertain legal/compliance/business outcomes.
+18. It can preserve all existing safety, auth, workspace, DB, audit, and CI guarantees.
+19. It can pass realistic and adversarial simulations.
+20. It can honestly disclose remaining limitations.
 
 ---
 
-# PHASE 17 — FAILURE ADJUDICATION
-
-## Objective
-
-Classify why outcome succeeded, failed, or cannot be judged.
-
-## Required structures
-
-Create/extend:
-
-```text
-owner_failure_adjudications
-owner_failure_reasons
-owner_adjudication_evidence
-```
-
-## Failure classes
-
-```text
-wrong_diagnosis
-wrong_priority
-wrong_action
-wrong_timing
-wrong_segment
-wrong_assumption
-constraint_ignored
-bad_execution
-partial_execution
-not_executed
-missing_data
-bad_measurement
-too_early_to_judge
-external_event
-insufficient_evidence
-owner_preference_conflict
-safety_or_compliance_risk
-valid_recommendation_but_unproven
-```
-
-## Deterministic rules
-
-```text
-if action not_executed → invalid_test / not_executed
-if execution materially_deviated → bad_execution
-if no verified evidence → insufficient_evidence
-if measurement period incomplete → too_early_to_judge
-if external event flag true → external_event
-if owner constraint violated → constraint_ignored
-if execution valid + metric worsened → reassessment_required
-if execution valid + success threshold passed → validated_success
-```
-
-## Required guardrails
-
-```text
-No learning before adjudication.
-No reassessment without adjudication.
-No validated failure if execution invalid.
-No validated success if evidence insufficient.
-```
-
-## Required tests
-
-```text
-good recommendation badly executed
-bad recommendation properly executed
-missing metric
-too early
-external event
-constraint ignored
-made worse
-not executed but reported failed
-```
-
----
-
-# PHASE 18 — CAUSAL ATTRIBUTION CLASSIFICATION
-
-## Objective
-
-Prevent false learning from mere correlation.
-
-## Required structures
-
-Create/extend:
-
-```text
-owner_causal_attribution_reviews
-```
-
-## Attribution classes
-
-```text
-not_assessed
-correlation_only
-plausible_contributor
-likely_caused
-confounded
-external_event_dominant
-insufficient_evidence
-```
-
-## Required guardrails
+# BULLETPROOF HARDENING AMENDMENT — V2
 
-```text
-Learning cannot claim action effectiveness if attribution is correlation_only.
-High-confidence learning requires likely_caused or multiple verified supporting cases later.
-External_event_dominant blocks action-effectiveness learning.
-Confounded requires human review before any learning admission.
-```
-
-## Required tests
-
-```text
-correlation only blocks learning
-plausible contributor allows low/medium eligibility
-likely caused allows high eligibility if other gates pass
-external event dominant blocks learning
-confounded requires human review
-```
-
----
-
-# PHASE 19 — REASSESSMENT AND CORRECTIVE ACTION
-
-## Objective
-
-When a recommendation fails or is disputed, OpsIQ must reopen diagnosis and produce corrected action.
-
-## Required structures
-
-Create/extend:
-
-```text
-owner_reassessment_events
-owner_corrective_diagnoses
-owner_corrective_actions
-owner_hypothesis_revisions
-```
-
-## Required reassessment flow
-
-```text
-failed/disputed outcome
-→ evidence verification
-→ harm tracking
-→ failure adjudication
-→ causal attribution
-→ original diagnosis reopened
-→ assumptions checked
-→ new evidence added
-→ hypotheses re-ranked
-→ corrected diagnosis
-→ corrective action
-→ new validation criteria
-```
-
-## Required tests
-
-```text
-price increase partially failed
-execution invalid customer reactivation
-missing margin caused flawed recommendation
-external event invalidates outcome
-harmful action triggers human review
-```
-
----
-
-# PHASE 20 — LEARNING ELIGIBILITY GATE WITH HUMAN REVIEW STATUSES
-
-## Objective
-
-Decide whether a case is eligible to become business-specific learning.
-
-## Required structures
-
-Create/extend:
-
-```text
-owner_learning_eligibility_reviews
-owner_learning_admission_decisions
-owner_learning_rejection_reasons
-```
-
-## Eligibility statuses
-
-```text
-not_reviewed
-rejected
-eligible_low_confidence
-eligible_medium_confidence
-eligible_high_confidence
-needs_more_cases
-quarantined
-human_review_pending
-human_approved
-human_rejected
-```
-
-## Rejection reasons
-
-```text
-opinion_only
-not_executed
-material_execution_deviation
-missing_metric
-unverified_evidence
-invalid_measurement_window
-external_event_contamination
-single_weak_case
-case_too_unique
-insufficient_evidence
-contradictory_evidence
-causation_not_supported
-harm_review_required
-privacy_controls_missing
-```
-
-## Required guardrails
-
-```text
-No learning from opinion-only feedback.
-No learning from unexecuted actions.
-No learning from materially deviated execution.
-No learning from unverified evidence.
-No learning without adjudication.
-No learning without causal attribution.
-No high-confidence learning without human review if impact is broad or harm exists.
-```
-
-## Required tests
-
-```text
-reject opinion only
-reject not executed
-reject material deviation
-reject unverified evidence
-reject correlation only
-human review required for harm
-admit eligible valid local learning
-quarantine contradictory case
-```
-
----
-
-# PHASE 21 — DECISION MEMORY
-
-## Objective
-
-Remember business-specific history with evidence links.
-
-## Required structures
-
-Create/extend:
-
-```text
-owner_decision_memory
-owner_business_decision_history
-owner_recommendation_history
-owner_do_not_repeat_rules
-owner_preference_constraints
-```
-
-## Memory categories
-
-```text
-owner_goal
-owner_constraint
-accepted_recommendation
-rejected_recommendation
-successful_action
-failed_action
-invalid_test
-corrected_diagnosis
-repeated_execution_issue
-do_not_repeat
-owner_preference
-business_specific_rule
-```
-
-## Required guardrail
-
-Do not repeat previously failed advice unless explaining:
-
-```text
-why situation changed
-what changed
-how execution differs
-why prior failure does not invalidate new action
-```
-
-## Required tests
-
-```text
-stores accepted/rejected/success/failed actions
-do-not-repeat blocks repeat
-repeat allowed only with changed context explanation
-wrong workspace forbidden
-```
-
----
-
-# PHASE 22 — BUSINESS STATE TIMELINE
-
-## Objective
-
-Shift from snapshot diagnosis to trend-based support.
-
-## Required structures
-
-Create/extend:
-
-```text
-owner_business_state_snapshots
-owner_business_metrics_timeline
-owner_metric_events
-owner_trend_detections
-```
-
-## Required metrics
-
-```text
-revenue
-gross_profit
-net_profit
-cash_balance
-cash_runway_days
-debt
-emi_burden
-receivables
-payables
-leads
-conversion_rate
-repeat_customer_rate
-churn
-average_order_value
-customer_count
-marketing_spend
-cost_per_lead
-cost_per_acquisition
-inventory
-staff_count
-staff_productivity
-capacity_utilization
-complaints
-refunds
-rework_rate
-delivery_delay_rate
-```
-
-## Required trend detections
-
-```text
-revenue rising but profit falling
-cash falling despite sales rising
-leads rising but conversion falling
-new customers rising but repeat rate falling
-marketing spend rising but CAC worsening
-staff count rising but productivity falling
-complaints rising before churn rises
-debt burden increasing faster than cash generation
-```
-
-## Required tests
-
-```text
-create monthly snapshot
-compare month vs previous
-compare month vs 3-month average
-detect revenue up/profit down
-detect cash runway worsening
-detect leads up/conversion down
-```
-
----
-
-# PHASE 23 — OWNER DASHBOARD PROOF
-
-## Objective
-
-If the owner cannot see/use the loop, it does not exist.
-
-## Required dashboard display
-
-Owner dashboard must show:
-
-```text
-input quality status
-critical missing data
-diagnosis status
-recommendations
-verification status
-owner decision status
-actions
-execution status
-evidence status
-outcome status
-benefit status
-harm flag if any
-adjudication status
-reassessment queue
-learning eligibility status
-business trend warnings
-incidents requiring owner attention
-```
-
-## Required guardrails
-
-```text
-Do not expose hidden controlled learning internals.
-Do not expose public learning hints.
-Show owner-useful statuses, not internal machinery.
-Wrong workspace forbidden.
-```
-
-## Required tests
-
-```text
-dashboard loads
-shows active recommendation
-shows missing data
-shows action status
-shows evidence verification
-shows outcome
-shows reassessment required
-does not expose hidden learning internals publicly
-```
-
----
-
-# PHASE 24 — FULL-LOOP VALIDATION SUITE
-
-## Objective
-
-Prove the full loop, not only first-pass diagnosis.
-
-## Required full-loop test
-
-At minimum:
-
-```text
-input record
-→ input quality
-→ diagnosis
-→ recommendation
-→ recommendation verification
-→ owner decision
-→ benefit record
-→ action
-→ execution
-→ evidence
-→ evidence verification
-→ validation criteria
-→ outcome
-→ harm tracking
-→ adjudication
-→ causal attribution
-→ reassessment
-→ learning eligibility
-→ decision memory
-→ business timeline
-→ dashboard proof
-```
-
-## Required scenario cases
-
-```text
-cash crisis
-high revenue / low profit
-high leads / low conversion
-repeat customer decline
-bad marketing ROI
-staff productivity failure
-pricing action failure
-inventory/cash lockup
-debt pressure
-partial execution
-external market shock
-missing data
-owner constraint conflict
-harmful recommendation
-prompt injection attempt
-unverified evidence attempt
-```
-
-## Required tests
-
-```text
-root-cause accuracy
-first-action usefulness
-constraint awareness
-missing-data abstention
-execution feasibility
-outcome tracking
-harm tracking
-failure adjudication
-causal attribution
-corrective diagnosis
-learning rejection
-learning eligibility
-trend detection
-dashboard proof
-tenant isolation
-LANE_B DB proof
-```
-
----
-
-# PHASE 25 — OWNER PILOT CHECKLIST
-
-## Objective
-
-Prepare controlled real-business Owner Mode use before public SaaS.
-
-## Required file
-
-Create/update:
-
-```text
-OWNER_MODE_REAL_BUSINESS_PILOT_CHECKLIST.md
-```
-
-## Required sections
-
-```text
-required business inputs
-input quality checklist
-first 30-day operating cadence
-minimum metrics
-owner decision process
-action tracking process
-evidence submission process
-evidence verification process
-outcome reporting process
-harm reporting process
-failure reassessment process
-learning eligibility process
-dashboard review process
-weekly review process
-monthly review process
-pilot success criteria
-pilot stop conditions
-```
-
-## Candidate business types to support
-
-Do not hardcode, but support:
-
-```text
-laundry/dry-cleaning
-commercial housekeeping
-boutique/clothing
-food/beverage
-local service business
-```
-
----
-
-# PHASE 26 — AI OBSERVABILITY TRACE LAYER
-
-## Objective
-
-Trace every advisory cycle end-to-end so AI contributions are auditable and separate from deterministic decisions.
-
-## Required structures
-
-Create/extend:
-
-```text
-owner_ai_traces
-owner_ai_trace_events
-```
-
-## Required trace fields
-
-```text
-trace_id
-workspace_id
-business_id
-user_id
-module
-event_type
-timestamp
-inputs_used
-decision_made
-confidence_score
-risk_flags
-blocked_gates
-latency_ms
-error_code
-model_provider
-model_name
-model_version
-prompt_template_version
-ruleset_version
-retrieval_context_version
-created_at
-```
-
-## Required traced events
-
-```text
-input_received
-input_quality_assessed
-diagnosis_generated
-recommendation_generated
-recommendation_verified
-owner_decision_recorded
-action_created
-evidence_submitted
-evidence_verified
-outcome_reported
-harm_recorded
-adjudication_completed
-causal_attribution_completed
-reassessment_created
-learning_eligibility_decided
-dashboard_updated
-```
-
-## Required tests
-
-```text
-trace created for full loop
-blocked gate appears in trace
-model/ruleset version recorded when applicable
-wrong workspace forbidden
-trace does not expose public learning data
-```
-
----
-
-# PHASE 27 — INCIDENT RESPONSE AND CIRCUIT BREAKERS
-
-## Objective
-
-Define what happens when OpsIQ harms, leaks, or misleads.
-
-## Required structures/files
-
-Create/update:
-
-```text
-OWNER_MODE_INCIDENT_RESPONSE.md
-owner_incident_events
-owner_circuit_breakers
-```
-
-## Required incident classes
-
-```text
-harmful_recommendation
-privacy_leak
-cross_tenant_exposure
-learning_gate_bypass
-wrong_high_confidence_advice
-dashboard_misreporting
-evidence_verification_bypass
-db_migration_data_loss
-prompt_injection_success
-security_gate_failure
-```
-
-## Required fields
-
-```text
-incident_id
-severity
-trigger
-detected_at
-affected_workspace_id
-affected_business_id
-containment_step
-feature_flag_shutdown
-rollback_step
-owner_notification_required
-post_incident_review_required
-status
-created_at
-updated_at
-```
-
-## Circuit breaker triggers
-
-```text
-high/severe harm
-learning gate bypass
-tenant isolation failure
-prompt injection success
-evidence verification bypass
-dashboard wrong outcome status
-DB migration data loss risk
-```
-
-## Required tests
-
-```text
-learning bypass triggers incident
-tenant isolation failure path exists
-severe harm triggers circuit breaker
-evidence bypass triggers incident
-rollback path documented
-```
-
----
-
-# PHASE 28 — MODEL/PROMPT/RULESET VERSIONING AND CHANGE CONTROL
-
-## Objective
-
-Prevent invisible changes to AI support layer from degrading deterministic advice.
-
-## Required structures
-
-Create/extend:
-
-```text
-owner_model_change_log
-owner_prompt_template_versions
-owner_ruleset_versions
-owner_evaluation_versions
-```
-
-## Required fields
-
-```text
-id
-version_type
-version_name
-previous_version
-new_version
-change_reason
-risk_level
-regression_required
-regression_result
-feature_flag
-rollback_plan
-approved_by
-created_at
-```
-
-## Required behavior
-
-Before changing model/provider/prompt/ruleset:
-
-```text
-run regression suite
-compare outputs
-check genericness
-check safety overrides
-check owner constraints
-check tenant isolation
-feature-flag rollout
-define rollback plan
-```
-
-## Required tests
-
-```text
-version change recorded
-high-risk change requires regression
-rollback plan required
-output trace records version
-```
-
----
-
-# LATER-USE PRIVATE CONTROLLED LEARNING & RELIABILITY SYSTEM
-
-Do not implement this until Phases 0–28 are COMPLETE_VERIFIED.
-
-## Later hard gates
-
-```text
-verified outcomes only
-no public learning hints
-no unverified feedback ingestion
-tenant isolation
-privacy-safe aggregation
-consent/retention controls
-causal attribution
-harm tracking
-human review
-regression gates
-staged rollout
-rollback
-LANE_B DB verification
-no false COMPLETE
-```
-
-## Later structures
-
-```text
-controlled_learning_candidates
-controlled_learning_reviews
-controlled_learning_admissions
-controlled_learning_rejections
-controlled_learning_harm_events
-controlled_learning_attribution_reviews
-controlled_learning_privacy_controls
-controlled_learning_consent_records
-controlled_learning_retention_policies
-controlled_learning_rollout_flags
-controlled_learning_regression_results
-controlled_learning_rollback_events
-```
-
-## Later pipeline
-
-```text
-verified owner outcome
-→ evidence verification
-→ execution verification
-→ adjudication
-→ harm classification
-→ causal attribution
-→ privacy/consent/retention check
-→ human review when required
-→ regression test candidate
-→ staged rollout
-→ monitor
-→ admit / quarantine / rollback
-```
-
-## Later prohibitions
-
-```text
-No unverified feedback ingestion.
-No model training from raw owner comments.
-No cross-tenant data use without explicit consent and anonymization.
-No public UI hints of hidden learning.
-No high-impact learning without human review.
-No reliability rollout without rollback plan.
-No DB-backed reliability slice without LANE_B proof.
-No COMPLETE without proof.
-```
-
----
-
-# CROSS-CUTTING TEST REQUIREMENTS
-
-Every relevant slice must include tests for:
-
-```text
-authenticated owner can access own records
-wrong workspace forbidden
-unauthenticated user rejected
-public route cannot access owner records
-tenant isolation preserved
-audit trail preserved
-invalid status transition blocked
-DB persistence works if DB-backed
-dashboard query does not leak hidden internals
-```
-
-Status transition tests must block:
-
-```text
-recommendation → learning without adjudication
-not_executed action → validated failure
-opinion-only evidence → verified outcome
-unverified evidence → learning eligibility
-correlation_only attribution → high confidence learning
-medium/high/severe harm → automatic learning admission
-rejected owner decision → action creation
-public user → owner memory access
-```
-
----
-
-# REQUIRED CLOSEOUT AFTER EVERY SLICE
-
-Create/update:
-
-```text
-OWNER_MODE_REALITY_LOOP_CLOSEOUT.md
-```
-
-Append:
-
-```text
-slice_name
-status
-branch
-commit_before
-commit_after
-files_changed
-models_added_or_changed
-routes_added_or_changed
-services_added_or_changed
-ui_added_or_changed
-tests_added_or_changed
-commands_run
-command_results
-LANE_B_status_if_DB_backed
-known_limitations
-regressions_found
-regressions_fixed
-security_findings
-tenant_isolation_findings
-dashboard_proof_status
-next_required_slice
-```
-
-No closeout, no completion.
-
----
-
-# REQUIRED COMMIT RULE
-
-After each verified slice:
-
-```bash
-git status --short
-git add <only files changed for this slice>
-git commit -m "<clear slice message>"
-```
-
-If committing is unavailable, document:
-
-```text
-commit not made
-reason
-exact files changed
-diff summary
-```
-
----
-
-# HARD STOP CONDITIONS
-
-Claude must stop and report immediately if:
-
-```text
-current repo state cannot be inspected
-baseline cannot be established
-scope requires public/SaaS/billing/Product Hunt changes
-DB-backed slice lacks LANE_B proof but is being called COMPLETE_VERIFIED
-database migration risk is unclear
-Prisma schema conflicts are unresolved
-auth/tenant isolation cannot be verified
-public route exposes owner data
-input can override instructions
-evidence verification can be bypassed
-learning eligibility can be bypassed
-owner decision can be skipped
-action can be created from rejected recommendation
-not-executed action can validate recommendation failure
-harm is observed but not recorded
-medium/high/severe harm bypasses human review
-causal attribution is missing before learning eligibility
-cross-business learning is attempted
-privacy/consent/retention controls are required but missing
-rollout lacks feature flag or rollback plan
-model/prompt/ruleset change lacks regression gate
-build/test/typecheck fails and cannot be fixed safely
-existing proven Owner Mode behavior regresses
-```
-
----
-
-# FINAL COMPLETION STANDARD
-
-Owner Mode can be called COMPLETE_VERIFIED only when all below are true:
-
-```text
-1. Repository baseline was inspected and documented.
-2. Roadmap freezes premature public/SaaS/billing/Product Hunt/external intelligence work.
-3. System Capability, Risk, and AI-Control Register exists with all 15 capabilities, autonomy levels, risk levels, and AI-control prohibitions.
-4. Autonomy/access classifications exist and block autonomous business action.
-5. Security threat model covers input, memory, evidence, and tools.
-6. Input quality and provenance gate exists.
-7. Diagnosis evidence contract exists.
-8. Recommendations are structured and tracked.
-9. Recommendations are verified before owner decision.
-10. Anti-overreliance acknowledgement exists for medium/high-impact recommendations.
-11. Owner decision and decision-rights are captured.
-12. Benefits realization register exists.
-13. Actions and execution are tracked.
-14. Evidence is captured separately from verification.
-15. Evidence verification records verifier metadata.
-16. Validation criteria and stop/escalation rules exist.
-17. Outcomes are tracked.
-18. Harm events are tracked.
-19. Failure adjudication exists.
-20. Causal attribution classification exists.
-21. Reassessment and corrective action exist.
-22. Learning eligibility gate exists and cannot be bypassed.
-23. Decision memory exists.
-24. Business state timeline exists.
-25. Owner dashboard proves the loop without exposing hidden learning internals.
-26. Full-loop validation suite passes.
-27. Owner pilot checklist exists.
-28. AI observability trace layer exists.
-29. Incident response and circuit breakers exist.
-30. Model/prompt/ruleset versioning and change control exist.
-31. Owner/public separation is proven.
-32. Tenant isolation is proven.
-33. DB-backed slices have LANE_B real PostgreSQL proof.
-34. No false COMPLETE has been claimed.
-35. AI is confirmed support-only in every phase: no AI controls status transitions, no AI verifies evidence, no AI approves decisions, no AI admits learning.
-```
-
-Anything less is not complete.
-
----
-
-# FINAL INSTRUCTION TO CLAUDE
-
-Implement only the next incomplete slice.
-
-Before implementation:
-
-```text
-inspect repo
-hostile audit current state
-confirm exact status
-run baseline checks
-```
-
-During implementation:
-
-```text
-make smallest safe change
-preserve proven work
-avoid unrelated scope
-write tests
-protect tenant boundaries
-preserve audit trail
-```
-
-After implementation:
-
-```text
-run all relevant checks
-run LANE_B if DB-backed
-fix breakage immediately
-write closeout
-commit if available
-stop
-```
-
-Do not claim completion without proof.
-
-Do not proceed if broken.
-
-Do not skip the loop.
+This amendment supersedes any weaker wording above. If any earlier section conflicts with this amendment, this amendment wins.
+
+## A. Anti-interpretation rule
+
+Claude must not treat broad phrases such as “implement,” “prove,” “harden,” “complete,” “business wisdom,” “wealth acceleration,” “owner workload transfer,” or “domain ready” as satisfied by prose, stubs, placeholders, UI-only cards, static mock data, unchecked assumptions, or tests that do not exercise runtime behavior.
+
+Every claim must be backed by one of these evidence types:
+
+1. Source file path and exported function/class/component.
+2. Database model/migration path where DB behavior is involved.
+3. API route/service path where runtime behavior is involved.
+4. UI path/component and Playwright/E2E proof where user-facing behavior is involved.
+5. Test file path and exact command that passed.
+6. Scenario file/fixture path and actual result.
+7. Gap register entry with severity, owner impact, and closure proof.
+
+No evidence = not complete.
+
+## B. No fake completion rule
+
+A phase, domain, service, or feature must not be marked complete if any of the following is true:
+
+1. It only creates documentation.
+2. It only creates types/interfaces without used runtime behavior.
+3. It only creates seed data without a retrieval/application path.
+4. It only creates tests for mocked logic while the real service path remains untested.
+5. It only creates UI with no working service/API behind it.
+6. It only creates backend logic with no owner-visible/use-case path where one is required.
+7. It leaves TODO, FIXME, placeholder, dummy, sample-only, or “later” code in the critical path.
+8. It leaves a critical/high gap open.
+9. It leaves a medium gap without phase-bound owner-impact analysis and scheduled closure.
+10. It creates owner advice without a Work Package where safe execution/preparation is possible.
+
+## C. Full-version but small-slice rule
+
+This is not an MVP. However, Claude must not attempt a giant unsafe rewrite. Full-version means every required module and domain must eventually pass its gates before Owner Mode is classified complete. Implementation must still proceed in small, reversible, tested slices using minimum required code.
+
+Permitted classification after a slice:
+
+1. `NOT_STARTED`
+2. `INVENTORIED_ONLY`
+3. `PARTIAL_RUNTIME_SLICE`
+4. `RUNTIME_WIRED_NOT_FULLY_PROVEN`
+5. `SCENARIO_PROVEN_PARTIAL_DOMAIN`
+6. `DOMAIN_HARDENED`
+7. `FULL_OWNER_MODE_PROVEN`
+
+Claude must not use vague classifications such as “mostly done,” “ready,” “complete enough,” “implemented,” or “should work.”
+
+## D. Score integrity rule
+
+Any score, ranking, classifier, or recommendation must expose:
+
+1. Inputs used.
+2. Missing inputs.
+3. Assumptions, if any.
+4. Confidence.
+5. Data source.
+6. Calculation or deterministic scoring rubric.
+7. Reason rejected alternatives lost.
+8. What new evidence would change the result.
+
+If the score is based mainly on defaults or missing data, it must be labeled `PROVISIONAL_LOW_CONFIDENCE` and must not trigger high-risk execution.
+
+## E. Owner workload proof rule
+
+OpsIQ must prove workload transfer with concrete artifacts and system actions. A statement that workload was reduced is invalid unless it lists:
+
+1. Owner task avoided.
+2. Artifact OpsIQ generated.
+3. Task OpsIQ created or assigned.
+4. Follow-up OpsIQ scheduled or prepared.
+5. Proof OpsIQ required.
+6. Decision still required from owner and why it could not be safely automated.
+7. Estimated owner minutes before.
+8. Estimated owner minutes after.
+9. Whether owner burden increased, decreased, or merely shifted.
+
+## F. Source and business-wisdom integrity rule
+
+Business wisdom, regulations, benchmarks, local market facts, competitor claims, and “tried and tested” advice must not be treated as truth unless source quality is recorded.
+
+For each external knowledge item, record:
+
+1. Source title/name.
+2. Source type.
+3. URL or citation reference if available.
+4. Retrieval/access date where applicable.
+5. Source quality tier.
+6. Jurisdiction/industry/stage applicability.
+7. Known limitations.
+8. Whether it is universal principle, local rule, benchmark, case pattern, or unverified tactic.
+9. Whether it is allowed to influence high-risk recommendations.
+
+If no source is available, classify the item as `UNSOURCED_HEURISTIC` and block it from high-risk, legal, tax, hiring/firing, debt, expansion, or compliance-sensitive actions.
+
+## G. No silent deferral rule
+
+Claude may defer work only by creating a gap register entry containing:
+
+1. Exact missing requirement.
+2. Severity.
+3. Owner/business risk if deferred.
+4. Why it cannot be completed now.
+5. Whether safe progress can continue.
+6. Phase by which it must be closed.
+7. Test/evidence required for closure.
+
+Unregistered deferral is prohibited.
+
+## H. Runtime-first rule
+
+For any owner-facing feature, completion requires the full path unless explicitly classified as non-UI infrastructure:
+
+1. Data/model or deterministic input fixture.
+2. Service logic.
+3. Financial/risk gate where applicable.
+4. Work Package/proof/outcome hooks where applicable.
+5. API/server action where applicable.
+6. UI or command-center surface where applicable.
+7. Unit/service tests.
+8. DB tests if persistent.
+9. E2E test if user-facing critical path.
+
+## I. Personal-use priority rule
+
+Because OpsIQ is for personal use until proven, personal Owner Mode business usefulness outranks public-product polish. Do not build subscription, billing, multi-tenant commercialization polish, marketing pages, Product Hunt assets, public onboarding, enterprise sales features, or generalized SaaS features while any Owner Mode required phase is incomplete.
+
+## J. Minimum-code enforcement rule
+
+Before adding a new model, service, dependency, route, component, or abstraction, Claude must document why existing code cannot be reused. If equivalent capability exists, extending it is mandatory unless extension would create greater risk.
+
+Each slice report must include a “minimum-code justification” listing:
+
+1. New files added.
+2. Existing files modified.
+3. Why each new file was necessary.
+4. Why no smaller change would satisfy the gate.
+5. Dependencies added, or explicit statement that none were added.
+
+## K. Stop/pivot/sell/exit honesty rule
+
+OpsIQ must not assume the owner should continue, grow, or scale a business. For every strategic path, OpsIQ must be able to recommend:
+
+1. Continue.
+2. Stabilize.
+3. Validate.
+4. Pivot.
+5. Pause.
+6. Sell.
+7. Exit.
+8. Stop investing.
+9. Use only as cashflow.
+10. Redirect capital/time to a higher-probability path.
+
+If the current business is a poor wealth vehicle, OpsIQ must say so directly with evidence and safer next actions.
