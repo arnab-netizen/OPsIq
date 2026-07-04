@@ -1,6 +1,20 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Badge } from "@/ui/primitives";
 import FirstDiagnosisCta from "@/components/dashboard/FirstDiagnosisCta";
+
+// UI-01: this server component fetches its own protected API, which authenticates from
+// the session cookie. A server-side fetch does NOT inherit the incoming request cookies,
+// so without this the API returned 401 and every list rendered empty (a false-empty
+// dashboard). Forward the caller's cookies on every self-fetch.
+async function authFetchInit(): Promise<RequestInit> {
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ");
+  return { cache: "no-store", headers: { cookie: cookieHeader } };
+}
 
 const HEALTH_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   healthy: "success",
@@ -38,7 +52,7 @@ const STATUS_BADGE_VARIANTS: Record<string, "default" | "success" | "warning" | 
 async function fetchEngagements() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements`,
-    { cache: "no-store" }
+    await authFetchInit()
   );
   if (!res.ok) return [];
   return res.json();
@@ -47,7 +61,7 @@ async function fetchEngagements() {
 async function fetchAllActions() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements`,
-    { cache: "no-store" }
+    await authFetchInit()
   );
   if (!res.ok) return [];
   const engagements = await res.json();
@@ -56,7 +70,7 @@ async function fetchAllActions() {
   for (const eng of engagements) {
     const actRes = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${eng.id}/actions`,
-      { cache: "no-store" }
+      await authFetchInit()
     );
     if (actRes.ok) {
       const acts = await actRes.json();
@@ -69,7 +83,7 @@ async function fetchAllActions() {
 async function fetchAllFindings() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements`,
-    { cache: "no-store" }
+    await authFetchInit()
   );
   if (!res.ok) return [];
   const engagements = await res.json();
@@ -78,7 +92,7 @@ async function fetchAllFindings() {
   for (const eng of engagements) {
     const findRes = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${eng.id}/findings`,
-      { cache: "no-store" }
+      await authFetchInit()
     );
     if (findRes.ok) {
       const finds = await findRes.json();

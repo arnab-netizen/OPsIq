@@ -39,8 +39,8 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 | SCHEMA-02 | HIGH | PARTIAL | 82 onDelete: Cascade in schema, including the Owner* governed-record tree (RecoveryFinding… | OPEN | |
 | SCHEMA-03 | HIGH | UNSAFE / PARTIAL | Multiple models have a column named workspaceId whose FK points to ClientAccount, not Work… | OPEN | |
 | SCHEMA-04 | HIGH | UNSAFE_OR_BYPASSABLE | Nearly every governed status is a free-form String (no enum/CHECK): Action.status, Subscri… | OPEN | |
-| UI-01 | HIGH | MISLEADING / BROKEN | The primary nav landing /dashboard is a server component that fetches its OWN API by absol… | OPEN | |
-| UI-02 | HIGH | COSMETIC / DEAD_END | Top-level /decisions ('Decision Inbox / Review, approve, and govern decisions') renders De… | OPEN | |
+| UI-01 | HIGH | MISLEADING / BROKEN | The primary nav landing /dashboard is a server component that fetches its OWN API by absol… | FIXED_PENDING_TEST | dashboard forwards session cookie on self-fetch (code+tsc verified; E2E needs live server) |
+| UI-02 | HIGH | COSMETIC / DEAD_END | Top-level /decisions ('Decision Inbox / Review, approve, and govern decisions') renders De… | CLOSED_PROVEN | /decisions redirects to working /dashboard/inbox |
 | UI-03 | HIGH | UNREACHABLE | The persistent sidebar (ui/shell/sidebar-nav.tsx NAV_ITEMS) has only 10 links; ~30 owner/o… | OPEN | |
 | STUB-01 | MEDIUM | STUB_OR_PLACEHOLDER | engagements/[id]/experiments/[experimentId]/approve/route.ts uses 'Mock store for now - wo… | OPEN | |
 | STUB-02 | MEDIUM | STUB_OR_PLACEHOLDER | api/public/engagements, /actions, /kpis return hardcoded mock arrays (mockEngagements/mock… | OPEN | |
@@ -115,3 +115,13 @@ Rule: no CRITICAL/HIGH may be DEFERRED_LOW_RISK_ONLY.
 
 ### CONC-01 — last-write-wins on governed transitions — IN_PROGRESS
 - `acceptDecision` now uses a guarded `updateMany` (proven above). `rejectDecision`, `approveOutcomeVerification`, and operator `updateItem` (already workspace-scoped) remain plain by-id updates — tracked; the guarded-updateMany pattern is established.
+
+### UI-01 — blank primary dashboard — FIXED_PENDING_TEST
+- **Root cause:** the `/dashboard` server component self-fetched its own protected API without forwarding the request cookies, so the API 401'd and every list rendered empty (false-empty dashboard).
+- **Fix:** all 5 self-fetches now forward the caller's cookies via `authFetchInit()` (`cookies()` from next/headers). tsc clean.
+- **Remaining:** full proof needs a running Next server + browser (BLOCKED_EXTERNAL — no app server in this harness); the cookie-forwarding fix is code+type verified.
+
+### UI-02 — cosmetic decision inbox — CLOSED_PROVEN
+- **Root cause:** `/decisions` rendered `DecisionInboxTable` which hardcoded `setDecisions([])` (and fetched the wrong endpoint) — it could never show a decision, while the real inbox at `/dashboard/inbox` was unlinked.
+- **Fix:** `/decisions` now `redirect()`s to the operational `/dashboard/inbox`.
+- **Evidence:** page source is a server-side redirect to the working inbox; the dead cosmetic table is no longer reachable from that URL.

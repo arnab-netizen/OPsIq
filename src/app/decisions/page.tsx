@@ -1,25 +1,15 @@
-import { DecisionInboxTable } from "@/components/decisions/DecisionInboxTable";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Decision Inbox | Rebilix",
   description: "Govern and approve business decisions",
 };
 
+// UI-02: the former DecisionInboxTable at this route hardcoded `setDecisions([])` and
+// could never show a decision (it also fetched the wrong endpoint). The real, working
+// inbox lives at /dashboard/inbox (a server component that enforces the session +
+// workspace and fetches /api/decisions/list). Redirect here so the pretty URL lands on
+// the operational inbox instead of a permanently-empty cosmetic table.
 export default function DecisionsPage() {
-  return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Decision Inbox</h1>
-          <p className="text-gray-600 mt-2">
-            Review, approve, and govern decisions across your organization
-          </p>
-        </div>
-
-        {/* Inbox Table */}
-        <DecisionInboxTable />
-      </div>
-    </div>
-  );
+  redirect("/dashboard/inbox");
 }
