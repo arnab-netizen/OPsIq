@@ -46,6 +46,11 @@ export interface ActorProofStats {
   overdue: number;
   /** Submissions in a short window (flood heuristic), if known. */
   recentBurst?: number;
+  /** Supporting proof IDs per category (for fair adjudication). Present on the live path. */
+  weakProofIds?: string[];
+  rejectedProofIds?: string[];
+  duplicateProofIds?: string[];
+  overdueProofIds?: string[];
 }
 
 export interface ReviewerStats {
@@ -56,6 +61,9 @@ export interface ReviewerStats {
   acceptedWeak: number;
   /** Proofs where the reviewer is also the submitter. */
   selfReviewCount: number;
+  /** Supporting proof IDs (for fair adjudication). Present on the live path. */
+  acceptedWeakProofIds?: string[];
+  selfReviewProofIds?: string[];
 }
 
 /**
@@ -147,6 +155,12 @@ export interface GamingSignal {
    * signal has no per-proof evidence (then it is never suppressed — fail visible).
    */
   supportingProofIds?: string[];
+  /**
+   * Whether the signal's per-proof evidence is COMPLETE (proof IDs identify the whole basis),
+   * PARTIAL (some proof IDs but not the whole basis), or BLOCKED_BY_DATA (no persisted proof-level
+   * source — the signal stays fail-visible and cannot be adjudication-suppressed yet).
+   */
+  sourceCompleteness?: "COMPLETE" | "PARTIAL" | "BLOCKED_BY_DATA";
   signalScore: number;
   evaluatedAt: string;
 }
@@ -185,6 +199,8 @@ function sigScore(sev: GamingSeverity, type: GamingSignalType, count: number): n
 
 /** A single proof row's fields needed for gaming aggregation. */
 export interface ProofEventRow {
+  /** Proof id — used to attach a per-proof evidence list to each signal (for fair adjudication). */
+  id?: string;
   submittedByUserId: string | null;
   reviewedByUserId: string | null;
   status: string;
@@ -204,20 +220,25 @@ const OVERDUE_AGE_MS = 48 * 60 * 60 * 1000;
 export function aggregateProofEvents(rows: ProofEventRow[], nowMs: number): { actors: ActorProofStats[]; reviewers: ReviewerStats[] } {
   const actorMap = new Map<string, ActorProofStats>();
   const reviewerMap = new Map<string, ReviewerStats>();
+  const pushId = (arr: string[] | undefined, id: string | undefined): string[] => {
+    const out = arr ?? [];
+    if (id) out.push(id);
+    return out;
+  };
   for (const p of rows) {
     if (p.submittedByUserId) {
-      const a = actorMap.get(p.submittedByUserId) ?? { actorId: p.submittedByUserId, totalProofs: 0, weakOrReviewNeeded: 0, rejected: 0, duplicateFlagged: 0, overdue: 0 };
+      const a = actorMap.get(p.submittedByUserId) ?? { actorId: p.submittedByUserId, totalProofs: 0, weakOrReviewNeeded: 0, rejected: 0, duplicateFlagged: 0, overdue: 0, weakProofIds: [], rejectedProofIds: [], duplicateProofIds: [], overdueProofIds: [] };
       a.totalProofs++;
-      if (WEAK_STATUSES.has(p.status)) a.weakOrReviewNeeded++;
-      if (p.status === "REJECTED") a.rejected++;
-      if (p.duplicateFlagged) a.duplicateFlagged++;
-      if (OVERDUE_PENDING.has(p.status) && nowMs - p.createdAt.getTime() > OVERDUE_AGE_MS) a.overdue++;
+      if (WEAK_STATUSES.has(p.status)) { a.weakOrReviewNeeded++; a.weakProofIds = pushId(a.weakProofIds, p.id); }
+      if (p.status === "REJECTED") { a.rejected++; a.rejectedProofIds = pushId(a.rejectedProofIds, p.id); }
+      if (p.duplicateFlagged) { a.duplicateFlagged++; a.duplicateProofIds = pushId(a.duplicateProofIds, p.id); }
+      if (OVERDUE_PENDING.has(p.status) && nowMs - p.createdAt.getTime() > OVERDUE_AGE_MS) { a.overdue++; a.overdueProofIds = pushId(a.overdueProofIds, p.id); }
       actorMap.set(p.submittedByUserId, a);
     }
     if (p.reviewedByUserId) {
-      const r = reviewerMap.get(p.reviewedByUserId) ?? { reviewerId: p.reviewedByUserId, accepted: 0, acceptedWeak: 0, selfReviewCount: 0 };
-      if (p.status === "ACCEPTED") { r.accepted++; if (p.duplicateFlagged) r.acceptedWeak++; }
-      if (p.submittedByUserId && p.submittedByUserId === p.reviewedByUserId) r.selfReviewCount++;
+      const r = reviewerMap.get(p.reviewedByUserId) ?? { reviewerId: p.reviewedByUserId, accepted: 0, acceptedWeak: 0, selfReviewCount: 0, acceptedWeakProofIds: [], selfReviewProofIds: [] };
+      if (p.status === "ACCEPTED") { r.accepted++; if (p.duplicateFlagged) { r.acceptedWeak++; r.acceptedWeakProofIds = pushId(r.acceptedWeakProofIds, p.id); } }
+      if (p.submittedByUserId && p.submittedByUserId === p.reviewedByUserId) { r.selfReviewCount++; r.selfReviewProofIds = pushId(r.selfReviewProofIds, p.id); }
       reviewerMap.set(p.reviewedByUserId, r);
     }
   }
@@ -298,6 +319,13 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
   const push = (f: Omit<GamingSignal, "workspaceId" | "evaluatedAt" | "signalScore">): void => {
     out.push({ ...f, workspaceId: ws, evaluatedAt: at, signalScore: sigScore(f.severity, f.signalType, f.patternCount) });
   };
+  // Attach a per-proof evidence list so a signal can be fairly adjudicated. When the proof-level
+  // source is present the signal is COMPLETE (and suppressible); when absent it stays BLOCKED_BY_DATA
+  // (fail-visible, never suppressed) with an honest missing-source note.
+  const withEvidence = (ids: string[] | undefined): Pick<GamingSignal, "supportingProofIds" | "sourceCompleteness" | "missingData"> =>
+    ids && ids.length > 0
+      ? { supportingProofIds: ids.slice(0, 50), sourceCompleteness: "COMPLETE", missingData: [] }
+      : { supportingProofIds: undefined, sourceCompleteness: "BLOCKED_BY_DATA", missingData: ["no persisted proof-level source for this signal — cannot be adjudication-suppressed yet"] };
 
   // ── Fake / reused / suspicious proof-DISPUTE-derived patterns ──────────────
   // Driven by the governed proof.disputed trail + persisted tamper/duplicate fields. Conservative:
@@ -311,7 +339,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
         reasonCodes: [repeated ? "REPEATED_SUSPECTED_FAKE_OR_REUSED_PROOF_DISPUTE" : "SINGLE_SEVERE_WARNING", ...(a.reusedCount > 0 ? ["DUPLICATE_FILE_HASH"] : [])],
         severity: repeated ? "CRITICAL" : "HIGH", confidence: "HIGH",
         evidence: [`${a.suspectedFakeCount} proof(s) disputed as suspected fake/reused${a.reusedCount > 0 ? `; ${a.reusedCount} duplicate-flagged` : ""}`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : []), ...(a.auditRefs.length ? [`audit refs: ${a.auditRefs.slice(0, 10).join(", ")}`] : [])],
-        patternCount: a.suspectedFakeCount, isRepeatedPattern: repeated, missingData: [], supportingProofIds: a.proofIds,
+        patternCount: a.suspectedFakeCount, isRepeatedPattern: repeated, missingData: [], supportingProofIds: a.proofIds, sourceCompleteness: "COMPLETE",
         ownerExplanation: repeated
           ? "This operator repeatedly has proof disputed as suspected fake or reused — a serious, repeated credibility pattern. This is not an accusation; it needs owner review and adjudication."
           : "This operator had proof disputed as suspected fake or reused — a single severe warning (not yet a repeated pattern). Needs owner review before any conclusion.",
@@ -330,7 +358,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "WRONG_OR_INSUFFICIENT_PROOF_PATTERN",
         reasonCodes: ["REPEATED_WRONG_OR_INSUFFICIENT_PROOF_DISPUTE"], severity: a.wrongInsufficientCount >= 4 ? "HIGH" : "MEDIUM", confidence: "HIGH",
         evidence: [`${a.wrongInsufficientCount} proof(s) disputed as wrong/insufficient`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
-        patternCount: a.wrongInsufficientCount, isRepeatedPattern: true, missingData: [], supportingProofIds: a.proofIds,
+        patternCount: a.wrongInsufficientCount, isRepeatedPattern: true, missingData: [], supportingProofIds: a.proofIds, sourceCompleteness: "COMPLETE",
         ownerExplanation: "This operator repeatedly submits proof that is later ruled wrong or insufficient — the proof requirement or the work itself is not up to standard.",
         businessImpact: "Wrong/insufficient proof predicts rework and hides true completion status.",
         relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
@@ -347,7 +375,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "TAMPER_SUSPECTED_PROOF_PATTERN",
         reasonCodes: ["REPEATED_TAMPER_SUSPECTED_PROOF"], severity: "CRITICAL", confidence: "MEDIUM",
         evidence: [`${a.tamperSuspectedCount} tamper-suspected proof(s) from this operator`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
-        patternCount: a.tamperSuspectedCount, isRepeatedPattern: true, missingData: [], supportingProofIds: a.proofIds,
+        patternCount: a.tamperSuspectedCount, isRepeatedPattern: true, missingData: [], supportingProofIds: a.proofIds, sourceCompleteness: "COMPLETE",
         ownerExplanation: "This operator repeatedly submits tamper-suspected proof — the evidence may be forged. Not an accusation; needs owner review and adjudication.",
         businessImpact: "Forged/tampered proof is the highest-risk credibility failure — completion cannot be trusted.",
         relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
@@ -368,7 +396,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
         actorId: r.reviewerId, actorRole: r.role ?? "manager", signalType: "MANAGER_ACCEPTED_SUSPICIOUS_PROOF",
         reasonCodes: [repeated ? "REPEATED_ACCEPTED_SUSPICIOUS_PROOF" : "SINGLE_SEVERE_WARNING"], severity: repeated ? "CRITICAL" : "HIGH", confidence: "HIGH",
         evidence: [`${r.acceptedSuspiciousCount} proof(s) this reviewer accepted were later disputed as suspected fake/reused`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
-        patternCount: r.acceptedSuspiciousCount, isRepeatedPattern: repeated, missingData: [], supportingProofIds: r.proofIds,
+        patternCount: r.acceptedSuspiciousCount, isRepeatedPattern: repeated, missingData: [], supportingProofIds: r.proofIds, sourceCompleteness: "COMPLETE",
         ownerExplanation: "A manager/reviewer accepted proof that was later disputed as suspected fake/reused — the review gate let suspicious evidence through.",
         businessImpact: "If the review gate passes fake/reused proof, no acceptance can be trusted.",
         relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
@@ -384,7 +412,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
         actorId: r.reviewerId, actorRole: r.role ?? "manager", signalType: "REVIEW_QUALITY_CONCERN",
         reasonCodes: [r.acceptedTamperCount >= 1 ? "ACCEPTED_TAMPER_SUSPECTED_PROOF" : "REPEATED_REVIEW_ERROR"], severity: "HIGH", confidence: "MEDIUM",
         evidence: [r.acceptedTamperCount >= 1 ? `${r.acceptedTamperCount} tamper-suspected proof(s) accepted by this reviewer` : `${r.reviewErrorCount} of this reviewer's acceptances were disputed as review errors`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
-        patternCount: Math.max(r.acceptedTamperCount, r.reviewErrorCount), isRepeatedPattern: r.reviewErrorCount >= RUBBER_STAMP_THRESHOLD, missingData: [], supportingProofIds: r.proofIds,
+        patternCount: Math.max(r.acceptedTamperCount, r.reviewErrorCount), isRepeatedPattern: r.reviewErrorCount >= RUBBER_STAMP_THRESHOLD, missingData: [], supportingProofIds: r.proofIds, sourceCompleteness: "COMPLETE",
         ownerExplanation: "This reviewer's review quality is a concern — they accepted tamper-suspected proof or had repeated review errors.",
         businessImpact: "Weak review lets untrustworthy proof pass, driving rework and complaints downstream.",
         relatedProfitLeak: null, relatedConstraint: input.currentConstraint === "MANAGER" ? "MANAGER" : null,
@@ -405,7 +433,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "REUSED_PROOF_PATTERN",
         reasonCodes: ["EXACT_REUSED_HASH", "REUSED_ACROSS_DIFFERENT_TASKS"], severity: "HIGH", confidence: "HIGH",
         evidence: [`${a.crossTaskReuseCount} of this operator's proofs reuse a ${a.matchType.toLowerCase()} across different jobs`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
-        patternCount: a.crossTaskReuseCount, isRepeatedPattern: true, missingData: [], supportingProofIds: a.proofIds,
+        patternCount: a.crossTaskReuseCount, isRepeatedPattern: true, missingData: [], supportingProofIds: a.proofIds, sourceCompleteness: "COMPLETE",
         ownerExplanation: "The same proof artifact is reused by this operator across different jobs — the work may not actually be happening each time. This needs review, not an accusation.",
         businessImpact: "Reused proof fakes completion, hiding undone work until a complaint surfaces.",
         relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
@@ -425,7 +453,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
       push({
         actorId: r.reviewerId, actorRole: r.role ?? "reviewer", signalType: "SELF_REVIEW_ATTEMPT",
         reasonCodes: ["SELF_REVIEW"], severity: "HIGH", confidence: "HIGH",
-        evidence: [`${r.selfReviewCount} proof(s) reviewed by their own submitter`], patternCount: r.selfReviewCount, missingData: [],
+        evidence: [`${r.selfReviewCount} proof(s) reviewed by their own submitter`, ...((r.selfReviewProofIds ?? []).length ? [`proof refs: ${(r.selfReviewProofIds ?? []).slice(0, 10).join(", ")}`] : [])], patternCount: r.selfReviewCount, ...withEvidence(r.selfReviewProofIds),
         ownerExplanation: "A reviewer accepted work they submitted themselves — separation of duty is being bypassed.",
         businessImpact: "Self-review defeats verification: bad work can be signed off as done.",
         relatedProfitLeak: null, relatedConstraint: null,
@@ -439,7 +467,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
       push({
         actorId: r.reviewerId, actorRole: r.role ?? "manager", signalType: "MANAGER_RUBBER_STAMP",
         reasonCodes: ["ACCEPTED_WEAK_OR_DUPLICATE_PROOF"], severity: "HIGH", confidence: "MEDIUM",
-        evidence: [`${r.acceptedWeak} weak/duplicate proof(s) accepted by this reviewer`], patternCount: r.acceptedWeak, missingData: [],
+        evidence: [`${r.acceptedWeak} weak/duplicate proof(s) accepted by this reviewer`, ...((r.acceptedWeakProofIds ?? []).length ? [`proof refs: ${(r.acceptedWeakProofIds ?? []).slice(0, 10).join(", ")}`] : [])], patternCount: r.acceptedWeak, ...withEvidence(r.acceptedWeakProofIds),
         ownerExplanation: "A manager is approving weak or reused proof — completion is being rubber-stamped, not verified.",
         businessImpact: "Rubber-stamping lets unreliable work pass, driving rework and complaints downstream.",
         relatedProfitLeak: input.topProfitLeakType && ["REWORK_REDO_COST", "COMPLAINT_REVENUE_RISK", "WEAK_PROOF_REWORK_RISK"].includes(input.topProfitLeakType) ? input.topProfitLeakType : null,
@@ -460,7 +488,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
       push({
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "REUSED_PROOF_PATTERN",
         reasonCodes: ["DUPLICATE_FILE_HASH"], severity: "HIGH", confidence: "HIGH",
-        evidence: [`${a.duplicateFlagged} duplicate-flagged proof(s) from this actor`], patternCount: a.duplicateFlagged, missingData: [],
+        evidence: [`${a.duplicateFlagged} duplicate-flagged proof(s) from this actor`], patternCount: a.duplicateFlagged, ...withEvidence(a.duplicateProofIds),
         ownerExplanation: "The same proof is being reused across jobs — the work may not actually be happening each time.",
         businessImpact: "Reused proof fakes completion, hiding undone work until a complaint surfaces.",
         relatedProfitLeak: null, relatedConstraint: input.currentConstraint === "STAFF" ? "STAFF" : null,
@@ -474,7 +502,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
       push({
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "REPEATED_REJECTED_PROOF",
         reasonCodes: ["REPEATED_REJECTION"], severity: "MEDIUM", confidence: "HIGH",
-        evidence: [`${a.rejected} rejected proof(s) from this actor`], patternCount: a.rejected, missingData: [],
+        evidence: [`${a.rejected} rejected proof(s) from this actor`], patternCount: a.rejected, ...withEvidence(a.rejectedProofIds),
         ownerExplanation: "This person's proof keeps getting rejected — either the work or the evidence is not up to standard.",
         businessImpact: "Repeated rejections waste review time and delay verified completion.",
         relatedProfitLeak: null, relatedConstraint: input.currentConstraint === "STAFF" ? "STAFF" : null,
@@ -488,7 +516,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
       push({
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "REPEATED_WEAK_PROOF",
         reasonCodes: ["REPEATED_WEAK_OR_REVIEW_NEEDED"], severity: a.weakOrReviewNeeded >= 8 ? "HIGH" : "MEDIUM", confidence: "HIGH",
-        evidence: [`${a.weakOrReviewNeeded} weak/review-needed proof(s) from this actor`], patternCount: a.weakOrReviewNeeded, missingData: [],
+        evidence: [`${a.weakOrReviewNeeded} weak/review-needed proof(s) from this actor`], patternCount: a.weakOrReviewNeeded, ...withEvidence(a.weakProofIds),
         ownerExplanation: "This person repeatedly submits weak proof that needs human review — it is slowing verification and creating review load.",
         businessImpact: "Weak proof predicts rework and complaints and piles work onto the owner/manager review queue.",
         relatedProfitLeak: input.topProfitLeakType && ["WEAK_PROOF_REWORK_RISK", "STAFF_PRODUCTIVITY_DROP", "REWORK_REDO_COST"].includes(input.topProfitLeakType) ? input.topProfitLeakType : null,
@@ -502,7 +530,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
       push({
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "LATE_COMPLETION_PATTERN",
         reasonCodes: ["REPEATED_OVERDUE_PROOF"], severity: a.overdue >= 8 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
-        evidence: [`${a.overdue} overdue proof(s) from this actor`], patternCount: a.overdue, missingData: [],
+        evidence: [`${a.overdue} overdue proof(s) from this actor`], patternCount: a.overdue, ...withEvidence(a.overdueProofIds),
         ownerExplanation: "This person is repeatedly late submitting proof — completion and cash are being delayed.",
         businessImpact: "Late completion holds up cash and ties up work-in-progress.",
         relatedProfitLeak: null, relatedConstraint: input.currentConstraint === "STAFF" ? "STAFF" : null,
@@ -517,7 +545,7 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
       push({
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "OWNER_REVIEW_BURDEN_CREATED_BY_STAFF",
         reasonCodes: ["STAFF_DRIVEN_REVIEW_LOAD"], severity: "MEDIUM", confidence: "HIGH",
-        evidence: [`${a.weakOrReviewNeeded} of this actor's proofs need human review`], patternCount: a.weakOrReviewNeeded, missingData: [],
+        evidence: [`${a.weakOrReviewNeeded} of this actor's proofs need human review`], patternCount: a.weakOrReviewNeeded, ...withEvidence(a.weakProofIds),
         ownerExplanation: "This operator is generating most of the owner/manager review load through weak proof.",
         businessImpact: "Concentrated review burden is an owner-workload leak — fixing one operator frees the most owner time.",
         relatedProfitLeak: "OWNER_BOTTLENECK_COST", relatedConstraint: input.currentConstraint === "OWNER" ? "OWNER" : null,
