@@ -39,6 +39,7 @@ import { aggregateProofEvents, identifyGamingSignals, aggregateSuspiciousProof, 
 import { evaluateFastCompletion, evaluateEscalationTiming, type TimingSignal, type CompletionTimingRow, type EscalationTimingRow } from "@/domain/owner-mode/timing-evidence";
 import { buildProcessIntelligence, type ProcessIntelligenceAnalysis } from "@/domain/owner-mode/process-intelligence";
 import { buildProcessCorrections, type ProcessCorrectionRouting } from "@/domain/owner-mode/bottleneck-correction-routing";
+import { buildSopChecklistCorrections, type SopChecklistCorrectionAnalysis } from "@/domain/owner-mode/sop-checklist-correction-engine";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -272,6 +273,13 @@ export interface OwnerNowViewPayload {
    * PROPOSED — never auto-approved; only the DATA_INSUFFICIENT no-op is auto-executable.
    */
   processCorrections: ProcessCorrectionRouting | null;
+  /**
+   * SOP / Checklist Correction Engine — routed corrections turned into governed DRAFT SOP/checklist
+   * changes (what step changes, why, which area, proof requirement, approval, success metric, review
+   * cadence). Derived from `processCorrections` + `processIntelligence`; null whenever those are null.
+   * Every draft is DRAFT/PROPOSED/NEEDS_DATA — never auto-approved, never auto-applied.
+   */
+  sopChecklistCorrections: SopChecklistCorrectionAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -943,6 +951,12 @@ export async function getOwnerNowView(
     ? buildProcessCorrections(processIntelligence, workspaceId)
     : null;
 
+  // SOP / Checklist Correction Engine — turn the corrections into governed draft SOP/checklist changes.
+  // Pure derivation; every draft is DRAFT/PROPOSED/NEEDS_DATA (never auto-approved, never auto-applied).
+  const sopChecklistCorrections: SopChecklistCorrectionAnalysis | null = (processIntelligence && processCorrections)
+    ? buildSopChecklistCorrections(processIntelligence, processCorrections, workspaceId)
+    : null;
+
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -968,7 +982,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

@@ -38,6 +38,32 @@ const PAYLOAD = {
       priorityRank: 1, requiredApprovalLevel: "OWNER", requiresOwnerApproval: true, autoExecutable: false, status: "PROPOSED",
     },
   },
+  sopChecklistCorrections: {
+    drafts: [
+      {
+        sourceCorrectionKey: "ws-1:QUALITY_FAILURE_LOOP:UPDATE_CHECKLIST:PROOF_REVIEW",
+        correctionType: "UPDATE_CHECKLIST", affectedStage: "PROOF_REVIEW", sopArea: "ACCEPTANCE_QUALITY_CHECKLIST",
+        proposedChangeTitle: "Tighten the acceptance/quality checklist for this job type",
+        proposedChangeBody: "Add the specific check that keeps being missed to the acceptance checklist.",
+        reason: "Customers keep complaining about quality on work that was signed off.",
+        supportingProofIds: [], supportingOperationalEventIds: ["c1"], supportingEscalationIds: [],
+        approvalLevel: "OWNER", ownerApprovalRequired: true, managerApprovalRequired: true,
+        successMetric: "Quality complaint / rework events fall over the review window", reviewAfterDays: 14,
+        status: "DRAFT", missingData: [],
+      },
+    ],
+    topDraft: {
+      sourceCorrectionKey: "ws-1:QUALITY_FAILURE_LOOP:UPDATE_CHECKLIST:PROOF_REVIEW",
+      correctionType: "UPDATE_CHECKLIST", affectedStage: "PROOF_REVIEW", sopArea: "ACCEPTANCE_QUALITY_CHECKLIST",
+      proposedChangeTitle: "Tighten the acceptance/quality checklist for this job type",
+      proposedChangeBody: "Add the specific check that keeps being missed to the acceptance checklist.",
+      reason: "Customers keep complaining about quality on work that was signed off.",
+      supportingProofIds: [], supportingOperationalEventIds: ["c1"], supportingEscalationIds: [],
+      approvalLevel: "OWNER", ownerApprovalRequired: true, managerApprovalRequired: true,
+      successMetric: "Quality complaint / rework events fall over the review window", reviewAfterDays: 14,
+      status: "DRAFT", missingData: [],
+    },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -62,6 +88,10 @@ describe("OwnerProcessIntelligencePage", () => {
     await findByTestId("process-corrections-panel");
     expect(container.textContent ?? "").toMatch(/Recommended corrections/i);
     expect(container.textContent ?? "").toMatch(/Owner approval required/i);
+    // The SOP/checklist draft surface renders too.
+    await findByTestId("sop-corrections-panel");
+    expect(container.textContent ?? "").toMatch(/Proposed SOP \/ checklist changes/i);
+    expect(container.textContent ?? "").toMatch(/acceptance\/quality checklist/i);
     const back = container.querySelector('[data-testid="back-to-now"]') as HTMLAnchorElement;
     expect(back.getAttribute("href")).toBe("/owner/now");
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/api/owner/now-view"))).toBe(true);

@@ -221,3 +221,96 @@ export function ProcessCorrectionsPanel({ data }: { data: ProcessCorrectionsView
     </section>
   );
 }
+
+export interface SopChecklistCorrectionView {
+  sourceCorrectionKey: string;
+  correctionType: string;
+  affectedStage: string;
+  sopArea: string;
+  proposedChangeTitle: string;
+  proposedChangeBody: string;
+  reason: string;
+  supportingProofIds: string[];
+  supportingOperationalEventIds: string[];
+  supportingEscalationIds: string[];
+  approvalLevel: string;
+  ownerApprovalRequired: boolean;
+  managerApprovalRequired: boolean;
+  successMetric: string;
+  reviewAfterDays: number;
+  status: string;
+  missingData: string[];
+}
+
+export interface SopChecklistCorrectionsView {
+  drafts: SopChecklistCorrectionView[];
+  topDraft: SopChecklistCorrectionView | null;
+}
+
+const SOP_AREA_LABEL: Record<string, string> = {
+  PRESSING_WASH_CHECKLIST: "Pressing/wash checklist",
+  ACCEPTANCE_QUALITY_CHECKLIST: "Acceptance/quality checklist",
+  PROOF_REQUIREMENT_CHECKLIST: "Proof-requirement checklist",
+  DELIVERY_HANDOFF_CHECKLIST: "Delivery hand-off checklist",
+  REVIEW_PROCESS_STEP: "Process-step review",
+  DATA_CAPTURE_CHECKLIST: "Data-capture checklist",
+  TRAINING_HANDOFF: "Training handoff",
+  NONE: "—",
+};
+
+/**
+ * SopChecklistCorrectionsPanel — governed DRAFT SOP/checklist changes routed from the corrections.
+ * Prop-driven; no business logic (drafting is server-side). Each draft shows the proposed change, the
+ * SOP/checklist area, the reason, evidence, required approval, the success metric, and the review cadence.
+ * Nothing is APPROVED or auto-applied here; drafts await owner/manager approval.
+ */
+export function SopChecklistCorrectionsPanel({ data }: { data: SopChecklistCorrectionsView | null }) {
+  const list = data?.drafts ?? [];
+  if (list.length === 0) {
+    return (
+      <div data-testid="sop-corrections-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No SOP/checklist changes proposed yet — drafts appear once a correction implies a checklist or
+        process-step change.
+      </div>
+    );
+  }
+  return (
+    <section data-testid="sop-corrections-panel" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <strong data-testid="sop-title">Proposed SOP / checklist changes</strong>
+      <ol data-testid="sop-list" style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+        {list.map((d) => {
+          const evidenceCount = d.supportingProofIds.length + d.supportingOperationalEventIds.length + d.supportingEscalationIds.length;
+          return (
+            <li key={d.sourceCorrectionKey} data-testid="sop-item" data-sop-area={d.sopArea}
+              style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <strong data-testid="sop-item-title">{d.proposedChangeTitle}</strong>
+                <span data-testid="sop-item-area"><Badge variant="default">{SOP_AREA_LABEL[d.sopArea] ?? d.sopArea}</Badge></span>
+                <span data-testid="sop-item-status"><Badge variant={d.status === "NEEDS_DATA" ? "warning" : "muted"}>{d.status}</Badge></span>
+              </div>
+              <p style={{ margin: 0, fontSize: 13 }} data-testid="sop-item-body">{d.proposedChangeBody}</p>
+              <p style={{ margin: 0, fontSize: 12, color: "#374151" }} data-testid="sop-item-reason">Why: {d.reason}</p>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+                <span data-testid="sop-item-approval">
+                  <Badge variant={d.ownerApprovalRequired ? "destructive" : "default"}>
+                    {APPROVAL_LABEL[d.approvalLevel] ?? d.approvalLevel}
+                  </Badge>
+                </span>
+                <span style={{ color: "#6b7280" }} data-testid="sop-item-evidence">Evidence: {evidenceCount} item(s)</span>
+                <span style={{ color: "#6b7280" }} data-testid="sop-item-metric">Success: {d.successMetric}</span>
+                <span style={{ color: "#6b7280" }}>Review in {d.reviewAfterDays}d</span>
+              </div>
+              {d.missingData.length > 0 && (
+                <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="sop-item-missing">Missing data: {d.missingData.join("; ")}</p>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+        These are draft changes. Owner/manager approval is required before any SOP or checklist change is
+        adopted; nothing here is applied automatically.
+      </p>
+    </section>
+  );
+}

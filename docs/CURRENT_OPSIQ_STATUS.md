@@ -8,7 +8,23 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Bottleneck → Correction Routing depth pass (latest)
+## SOP / Checklist Correction Engine depth pass (latest)
+- **Base:** `origin/main` @ `9f6b84ae` (Bottleneck Correction Routing, PR #130, merged).
+- **Branch:** `claude/sop-checklist-correction-engine-depth-pass`.
+- **Classification:** `SOP_CHECKLIST_CORRECTION_ENGINE_REAL_AND_OWNER_VISIBLE`.
+- **Routed corrections now become governed DRAFT SOP/checklist changes.** A pure
+  `buildSopChecklistCorrections` maps each applicable correction to a 22-field draft (SOP/checklist area,
+  proposed change, reason, evidence, inherited approval, success metric, review cadence, status) and
+  surfaces them on the Owner Now View (`sopChecklistCorrections`) and the `/owner/process-intelligence`
+  page under "SOP & checklist changes".
+- **Governance:** every draft is DRAFT/PROPOSED/NEEDS_DATA — never APPROVED, never auto-applied; approval
+  inherited from the correction and never weakened; training NOT built here (handoff placeholder only);
+  no HR/discipline action; no fraud/negligence labels; no hidden score. **No schema change.**
+- **Verification:** tsc 0 · governance 31-frozen/0-new · lint ratchet clean · 13 domain + 4 component +
+  2 page tests + laundry DB simulation (wired into CI LANE_B/LANE_A). Details:
+  `docs/remediation/sop-checklist-correction-engine-depth-pass/`.
+
+## Bottleneck → Correction Routing depth pass
 - **Base:** `origin/main` @ `d8c01058` (Process Intelligence UI Surface, PR #129, merged).
 - **Branch:** `claude/bottleneck-correction-routing-depth-pass`.
 - **Classification:** `BOTTLENECK_CORRECTION_ROUTING_REAL_AND_OWNER_VISIBLE`.
