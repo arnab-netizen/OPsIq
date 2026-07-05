@@ -4157,6 +4157,38 @@ model Proof {
   @@map("proofs")
 }
 
+/// Minimal per-event operational complaint/rework record (one generic model handles both via
+/// eventType — no ambiguity). Links accepted proof to the real complaint/rework that contradicted
+/// it so the business impact of bad accepted work becomes measurable. Deliberately NOT a CRM/
+/// ticketing/refund/customer-profile model. createdAt is the server-trusted time; occurredAt is
+/// the (untrusted) user-reported time.
+model OperationalEvent {
+  id                    String    @id @db.Uuid
+  workspaceId           String    @map("workspace_id") @db.Uuid
+  eventType             String    @map("event_type") // COMPLAINT | REWORK
+  relatedProofId        String?   @map("related_proof_id") @db.Uuid
+  relatedActionId       String?   @map("related_action_id") @db.Uuid
+  businessId            String?   @map("business_id") @db.Uuid
+  category              String
+  severity              String    @default("MEDIUM")
+  status                String    @default("OPEN") // OPEN | RESOLVED
+  source                String    @default("owner") // owner | manager | staff | customer_reported | system
+  description           String    @db.Text
+  reportedByUserId      String?   @map("reported_by_user_id") @db.Uuid
+  occurredAt            DateTime? @map("occurred_at")
+  resolvedAt            DateTime? @map("resolved_at")
+  outcome               String?
+  estimatedImpactAmount Float?    @map("estimated_impact_amount")
+  impactCurrency        String?   @map("impact_currency")
+  impactConfidence      String    @default("NEEDS_DATA") @map("impact_confidence") // MEASURED | ESTIMATED | NEEDS_DATA
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @default(now()) @map("updated_at")
+
+  @@index([workspaceId, eventType])
+  @@index([workspaceId, relatedProofId])
+  @@map("operational_events")
+}
+
 model Escalation {
   id             String    @id @db.Uuid
   workspaceId    String    @map("workspace_id") @db.Uuid

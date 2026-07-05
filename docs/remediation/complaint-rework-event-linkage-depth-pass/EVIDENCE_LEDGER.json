@@ -1,0 +1,66 @@
+{
+  "pass": "complaint-rework-event-linkage-depth-pass",
+  "branch": "claude/complaint-rework-event-linkage-depth-pass",
+  "base": "origin/main@9381efab",
+  "pr116MergeStatus": "merged (merge commit 9381efab on main)",
+  "classification": [
+    "COMPLAINT_REWORK_EVENT_LINKAGE_REAL_AND_OWNER_VISIBLE",
+    "PROOF_OUTCOME_INTEGRITY_STRENGTHENED",
+    "EVIDENCE_CREDIBILITY_STRENGTHENED",
+    "PROFIT_LEAK_RADAR_STRENGTHENED"
+  ],
+  "schemaChange": {
+    "table": "operational_events",
+    "columns": "id, workspace_id, event_type (COMPLAINT|REWORK), related_proof_id?, related_action_id?, business_id?, category, severity, status, source, description, reported_by_user_id?, occurred_at?, resolved_at?, outcome?, estimated_impact_amount?, impact_currency?, impact_confidence, created_at, updated_at",
+    "indexes": ["(workspace_id, event_type)", "(workspace_id, related_proof_id)"],
+    "migration": "prisma/migrations/20260705140000_operational_event/migration.sql",
+    "additive": true,
+    "backfillSafe": true,
+    "destructive": false,
+    "auditConstantsAdded": ["operational_event.recorded", "operational_event.linked"]
+  },
+  "servicesApi": {
+    "recordOperationalEvent": "governed create + atomic audit; workspace-verified relatedProofId; fail-closed",
+    "linkOperationalEventToProof": "workspace-verified event+proof; idempotent; audited",
+    "getComplaintReworkLinks": "reads events + accepted proofs → linkage analysis (90-day)",
+    "route": "POST /api/complaint-rework (action: record | link)"
+  },
+  "becameMeasurable": [
+    "proof->complaint (PROOF_TO_COMPLAINT_LINK LINKED, was NOT_MEASURABLE)",
+    "proof->rework (via linked rework events)"
+  ],
+  "integration": {
+    "proofOutcomeLinkage": "linked complaint/rework flips proof->complaint/rework LINKED + folds into integrity measurement",
+    "businessControlSlo": "PROOF_OUTCOME_INTEGRITY consumes linked complaint/rework",
+    "credibility": "ACCEPTED_PROOF_WITH_COMPLAINT / ACCEPTED_PROOF_WITH_REWORK per submitter",
+    "profitLeakRadar": "COMPLAINT_REVENUE_RISK / REWORK_REDO_COST, MEASURED impact when amount supplied else qualitative",
+    "constraintEngine": "linked quality complaint/rework -> QUALITY",
+    "ownerNowView": "complaintReworkLinks block + topProfitLeak/topConstraint/topCredibilityConcern reflect it",
+    "reassessment": "idempotent via the existing dispute flow (not duplicated)"
+  },
+  "noFake": {
+    "records": "complaints/rework are recorded by a governed service, never fabricated",
+    "financial": "impact NEEDS_DATA unless a real amount supplied (impactConfidence MEASURED/ESTIMATED)",
+    "timing": "server createdAt trusted; user occurredAt stored untrusted",
+    "crossWorkspace": "workspace-scoped; isolation DB-tested"
+  },
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid",
+    "governanceStrict": "31 frozen, 0 new",
+    "changedAreaSuites": "90 files / 742 tests pass",
+    "newTests": 20,
+    "dbSimulation": "4/4 pass",
+    "migrationApplied": "operational_events created cleanly on local DB",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "financial impact qualitative unless amount entered",
+    "delivery/pricing complaint -> constraint wiring",
+    "fake-proof -> anti-gaming link",
+    "UI + browser E2E",
+    "Process Intelligence (out of scope)"
+  ]
+}

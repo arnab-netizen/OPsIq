@@ -26,10 +26,13 @@ interface FindManyArgs {
 }
 interface AuditRow { id: string; entityId: string | null; occurredAt: Date; actorId: string | null; payload: unknown }
 interface ProofRow { id: string; submittedByUserId: string | null; proofType: string; taskId: string | null; resubmissionOfId: string | null; status: string; createdAt: Date }
+interface EventRow { eventType: string; relatedProofId: string | null }
 
 export interface ProofOutcomeDb {
   auditEvent: { findMany(a: FindManyArgs): Promise<AuditRow[]> };
   proof: { findMany(a: FindManyArgs): Promise<ProofRow[]> };
+  /** Optional — present on the live client; enables proof→complaint/rework measurability. */
+  operationalEvent?: { findMany(a: FindManyArgs): Promise<EventRow[]> };
 }
 
 export interface ProofOutcomeDeps {
@@ -97,5 +100,22 @@ export async function getProofOutcomeLinkage(
     taskId: p.taskId, resubmissionOfId: p.resubmissionOfId, status: p.status, createdAt: p.createdAt,
   }));
 
-  return buildProofOutcomeLinkage({ workspaceId, reviewAudits, proofs, nowMs, evaluatedAt });
+  // Complaint/rework events linked to an accepted-class proof → flip proof→complaint/rework
+  // measurable + fold into the integrity measurement. Only on the live client (operationalEvent present).
+  let linkedComplaintCount = 0;
+  let linkedReworkCount = 0;
+  if (typeof deps.db.operationalEvent?.findMany === "function") {
+    const acceptedClass = new Set(proofRows.filter((p) => ["ACCEPTED", "DISPUTED", "OVERRIDDEN_NOT_VERIFIED"].includes(p.status)).map((p) => p.id));
+    const events = await safe(deps.db.operationalEvent.findMany({
+      where: { workspaceId, relatedProofId: { not: null }, createdAt: { gte: since } },
+      select: { eventType: true, relatedProofId: true }, take: 5000,
+    }), [] as EventRow[]);
+    for (const e of events) {
+      if (!e.relatedProofId || !acceptedClass.has(e.relatedProofId)) continue;
+      if (e.eventType === "COMPLAINT") linkedComplaintCount++;
+      else if (e.eventType === "REWORK") linkedReworkCount++;
+    }
+  }
+
+  return buildProofOutcomeLinkage({ workspaceId, reviewAudits, proofs, linkedComplaintCount, linkedReworkCount, nowMs, evaluatedAt });
 }

@@ -153,8 +153,12 @@ describe("profit-leak radar — dispute-derived leaks", () => {
   it("a customer-complaint dispute fires COMPLAINT_REVENUE_RISK, disclosing the missing complaint model", () => {
     const leak = identifyProfitLeaks(base({ disputeComplaintCount: 1 })).leaks.find((x) => x.leakType === "COMPLAINT_REVENUE_RISK")!;
     expect(leak).toBeTruthy();
-    expect(leak.missingData.join(" ")).toMatch(/no per-event complaint model/i);
+    expect(leak.missingData.join(" ")).toMatch(/qualitative/i);
     expect(leak.estimatedImpact.rangeLow).toBeUndefined(); // no fabricated revenue figure
+
+    // With a real measured amount, the impact is quantified (not fabricated).
+    const measured = identifyProfitLeaks(base({ disputeComplaintCount: 1, disputeComplaintImpactAmount: 250 })).leaks.find((x) => x.leakType === "COMPLAINT_REVENUE_RISK")!;
+    expect(measured.estimatedImpact.rangeLow).toBe(250);
   });
 
   it("a wrong/fake/manager-error dispute fires WEAK_PROOF_REWORK_RISK and can be the top leak", () => {

@@ -41,6 +41,7 @@ import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domai
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
 import type { ProofOutcomeLinkageReport } from "@/domain/owner-mode/proof-outcome-linkage";
 import type { DisputeRiskAnalysis } from "@/domain/owner-mode/dispute-risk";
+import type { ComplaintReworkAnalysis } from "@/domain/execution/complaint-rework";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -107,6 +108,8 @@ export interface GuidanceDeps {
    * in which case dispute-derived leaks/constraints simply do not fire (no fabrication).
    */
   disputeRisk?: (workspaceId: string) => Promise<DisputeRiskAnalysis>;
+  /** Optional — the live complaint/rework → proof linkage source. Absent on a fake-DI unit test. */
+  complaintRework?: (workspaceId: string) => Promise<ComplaintReworkAnalysis>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
@@ -115,6 +118,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getControlCorrelations } = await import("@/services/owner-mode/control-correlation.service");
   const { getProofOutcomeLinkage } = await import("@/services/owner-mode/proof-outcome-linkage.service");
   const { getDisputeRiskAnalysis } = await import("@/services/owner-mode/dispute-risk.service");
+  const { getComplaintReworkLinks } = await import("@/services/execution/complaint-rework.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
@@ -122,6 +126,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
     correlations: (workspaceId: string) => getControlCorrelations(workspaceId),
     proofOutcome: (workspaceId: string) => getProofOutcomeLinkage(workspaceId),
     disputeRisk: (workspaceId: string) => getDisputeRiskAnalysis(workspaceId),
+    complaintRework: (workspaceId: string) => getComplaintReworkLinks(workspaceId),
   };
 }
 
@@ -198,6 +203,8 @@ export interface OwnerNowViewPayload {
   proofOutcomeLinkage: ProofOutcomeLinkageReport | null;
   /** Dispute-derived business-risk signals (category → profit/constraint), or null if unavailable. */
   disputeRisk: DisputeRiskAnalysis | null;
+  /** Proof↔complaint/rework linkage (per-event model), or null if unavailable. */
+  complaintReworkLinks: ComplaintReworkAnalysis | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -485,6 +492,14 @@ export async function getOwnerNowView(
   }
   const da = disputeRisk?.aggregates;
 
+  // Complaint/Rework → proof linkage (per-event model). Feeds the same profit/constraint drivers
+  // (with measured impact when supplied) + credibility, and makes proof→complaint/rework measurable.
+  let complaintReworkLinks: ComplaintReworkAnalysis | null = null;
+  if (typeof deps.complaintRework === "function") {
+    complaintReworkLinks = await deps.complaintRework(workspaceId);
+  }
+  const cr = complaintReworkLinks?.aggregates;
+
   // Constraint / Bottleneck Engine — identify the single binding constraint from the SAME
   // live signals (workspace-scoped). Only signals actually backed by current snapshots are
   // passed; unbacked event signals (delivery/discount/major-client-loss/startup) stay absent
@@ -506,8 +521,8 @@ export async function getOwnerNowView(
     complaintsCount: state.complaintsCount,
     reworkCount: state.reworkCount,
     churnRiskScore: state.churnRiskScore,
-    // Dispute-derived quality/staff/manager drivers (from governed proof disputes).
-    disputeQualityCount: da?.disputeQualityCount ?? 0,
+    // Dispute-derived + linked complaint/rework quality/staff/manager drivers.
+    disputeQualityCount: (da?.disputeQualityCount ?? 0) + (cr?.qualityCount ?? 0),
     disputeStaffCount: da?.disputeStaffCount ?? 0,
     disputeManagerCount: da?.disputeManagerCount ?? 0,
     missingCriticalData: ctx.missingCriticalData,
@@ -536,10 +551,12 @@ export async function getOwnerNowView(
     ownerReviewsRequired: workloadBudget.reviewsRequired,
     ownerDecisionsRequired: workloadBudget.ownerDecisionsRequired,
     currentConstraint: topConstraint?.constraintType ?? null,
-    // Dispute-derived rework/complaint/weak-proof drivers (from governed proof disputes).
-    disputeReworkCount: da?.disputeReworkCount ?? 0,
-    disputeComplaintCount: da?.disputeComplaintCount ?? 0,
+    // Dispute-derived + linked complaint/rework drivers (with measured impact when supplied).
+    disputeReworkCount: (da?.disputeReworkCount ?? 0) + (cr?.reworkLinkedCount ?? 0),
+    disputeComplaintCount: (da?.disputeComplaintCount ?? 0) + (cr?.complaintLinkedCount ?? 0),
     disputeWeakProofCount: da?.disputeWeakProofCount ?? 0,
+    disputeReworkImpactAmount: cr?.measuredReworkImpact ?? null,
+    disputeComplaintImpactAmount: cr?.measuredComplaintImpact ?? null,
     missingCriticalData: ctx.missingCriticalData,
     evaluatedAt: new Date(deps.now()).toISOString(),
   };
@@ -586,7 +603,10 @@ export async function getOwnerNowView(
       // whose accepted proof was reversed is no longer "reliable". Undefined on the fake-DI path.
       submitterContradictions: proofOutcomeReport?.submitterContradictions.map((c) => ({ actorId: c.actorId, contradictedCount: c.contradictedCount })),
       contradictedProofCount: proofOutcomeReport?.workspaceContradictedCount,
-      missingSources: ["per-proof complaint linkage not persisted (period-aggregate only)"],
+      // Real linked complaint/rework events per submitter (per-event model) → credibility concern.
+      submitterComplaints: complaintReworkLinks?.submitterComplaints,
+      submitterReworks: complaintReworkLinks?.submitterReworks,
+      missingSources: complaintReworkLinks && complaintReworkLinks.aggregates.complaintLinkedCount > 0 ? [] : ["no complaint event linked to accepted proof yet"],
       evaluatedAt: new Date(nowMs).toISOString(),
     }).topConcern;
 
@@ -674,7 +694,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
