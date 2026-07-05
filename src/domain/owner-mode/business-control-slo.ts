@@ -18,6 +18,7 @@ import type { ConstraintType } from "@/domain/owner-mode/constraint-engine";
 import type { ProfitLeakType } from "@/domain/owner-mode/profit-leak-radar";
 import type { GamingSignalType } from "@/domain/owner-mode/anti-gaming-analytics";
 import type { CredibilitySignalType } from "@/domain/owner-mode/evidence-credibility-graph";
+import type { CorrelationLatencyStat, AuditDurabilityStat } from "@/domain/owner-mode/control-correlation";
 
 export type SLOStatus = "PASS" | "WARN" | "FAIL" | "NOT_MEASURABLE";
 export type SLOConfidence = "HIGH" | "MEDIUM" | "LOW" | "NEEDS_DATA";
@@ -48,10 +49,10 @@ export interface BusinessControlInput {
   nowViewSignalsPresent?: { workload: boolean; constraint: boolean; profitLeak: boolean; gaming: boolean; credibility: boolean };
   /** A recent opportunity envelope's field presence (completeness), or null if none. */
   opportunityEnvelopeFields?: { ownerApprovalRequired: boolean; successMetric: boolean; stopLoss: boolean; reassessmentTrigger: boolean; confidence: boolean; cashImpact: boolean } | null;
-  /** Honest source-availability flags (false → NOT_MEASURABLE). */
-  auditCorrelationAvailable?: boolean;
-  reassessmentLatencyAvailable?: boolean;
-  shockLatencyAvailable?: boolean;
+  /** Measured runtime correlations (from the control-correlation service). Absent/null → NOT_MEASURABLE. */
+  auditDurability?: AuditDurabilityStat | null;
+  reassessmentLatency?: CorrelationLatencyStat | null;
+  shockHandlingLatency?: CorrelationLatencyStat | null;
   startupDataAvailable?: boolean;
   /** Test-backed isolation status (from the isolation test suite), or null. */
   isolationTestPassed?: boolean | null;
@@ -231,16 +232,49 @@ export function evaluateBusinessControlSLOs(input: BusinessControlInput): Busine
     add(notMeasurable("NOW_VIEW_SIGNAL_COMPLETENESS", "Now-view exposes all control signals", "5/5 signals", ["now-view signal presence map"], ws, at));
   }
 
-  // 11–14. Honestly NOT_MEASURABLE controls (no persisted source yet).
-  add(input.auditCorrelationAvailable
-    ? passByDesign("AUDIT_DURABILITY", "Governed state changes have matching audit", "100% of governed mutations audited", ["atomic audit (AUDIT-01)"], ws, at, "Audit is emitted in the same transaction as each governed mutation (atomic-audit guarantee).")
-    : notMeasurable("AUDIT_DURABILITY", "Governed state changes have matching audit", "100% mutations audited", ["per-mutation state-change↔audit correlation index (not persisted)"], ws, at, "Architecturally guaranteed by atomic audit (AUDIT-01), but not yet measurable as a runtime rate."));
-  add(input.reassessmentLatencyAvailable
-    ? passByDesign("REASSESSMENT_LATENCY", "Trigger-to-reassessment latency", "within target", ["reassessment events"], ws, at, "Reassessment events are timestamped.")
-    : notMeasurable("REASSESSMENT_LATENCY", "Trigger-to-reassessment latency", "within target", ["trigger↔reassessment timestamp linkage (not persisted)"], ws, at));
-  add(input.shockLatencyAvailable
-    ? passByDesign("SHOCK_HANDLING_LATENCY", "Shock-to-owner-visible latency", "within target", ["shock events"], ws, at, "Shock events are timestamped.")
-    : notMeasurable("SHOCK_HANDLING_LATENCY", "Shock-to-owner-visible latency", "within target", ["shock↔reassessment timestamp linkage (not persisted)"], ws, at));
+  // 11. AUDIT_DURABILITY — measured governed-mutation → audit coverage (partial: shock class).
+  if (input.auditDurability && input.auditDurability.measurable) {
+    const d = input.auditDurability;
+    const cov = d.coveragePct ?? 0;
+    const status: SLOStatus = cov >= 100 ? "PASS" : "FAIL";
+    const gap = d.totalMutations - d.auditedMutations;
+    add({ sloType: "AUDIT_DURABILITY", sliName: "Governed state changes have a matching audit", status,
+      target: "100% of governed mutations audited",
+      actualValue: `${cov}% (${d.auditedMutations}/${d.totalMutations} ${d.mutationClass})`,
+      measurementWindow: "90-day rolling (shock mutation class — partial)", confidence: "MEDIUM",
+      sourceDataRefs: ["ShockEvent ↔ AuditEvent(SHOCK_EVENT_RECORDED) correlation"],
+      missingData: status === "PASS" ? [] : [`${gap} governed mutation(s) with no matching audit`],
+      ownerExplanation: status === "PASS"
+        ? `Every governed change in the measured class (${d.totalMutations} ${d.mutationClass}) left an audit record. Partial: metered over the shock class only — other classes are guaranteed by atomic audit (AUDIT-01) but not yet independently metered.`
+        : `${gap} governed change(s) have no audit record — the atomic-audit guarantee is not holding for the shock class.`,
+      businessImpact: "A missing audit means a governed change cannot be proven or reconstructed.",
+      degradedBehavior: status === "PASS" ? null : "Some governed changes are unauditable.",
+      recommendedAction: status === "PASS" ? "No action — audit coverage is intact." : "Investigate the unaudited mutations; the atomic-audit path may be bypassed.",
+      ownerActionRequired: status === "FAIL" });
+  } else {
+    add(notMeasurable("AUDIT_DURABILITY", "Governed state changes have a matching audit", "100% mutations audited",
+      ["a governed mutation ↔ audit correlation in the window (no shock-class mutation recorded)"], ws, at,
+      "Architecturally guaranteed by atomic audit (AUDIT-01); no shock-class mutation in the 90-day window to meter it yet."));
+  }
+
+  // 12. REASSESSMENT_LATENCY — measured trigger → reassessment-close latency.
+  add(input.reassessmentLatency && input.reassessmentLatency.measurable
+    ? latencySlo("REASSESSMENT_LATENCY", "Trigger-to-reassessment-close latency", input.reassessmentLatency,
+        "OwnerReassessmentEvent createdAt → closed (updatedAt)",
+        "A reassessment left open too long means OpsIQ's own correction loop is not closing.",
+        "Close or escalate the overdue reassessment(s) — the control loop is stuck.")
+    : notMeasurable("REASSESSMENT_LATENCY", "Trigger-to-reassessment-close latency", "close within 7 days",
+        ["reassessment events in the measurement window (none recorded)"], ws, at));
+
+  // 13. SHOCK_HANDLING_LATENCY — measured shock-recorded → re-evaluation-audit latency.
+  add(input.shockHandlingLatency && input.shockHandlingLatency.measurable
+    ? latencySlo("SHOCK_HANDLING_LATENCY", "Shock-to-re-evaluation latency", input.shockHandlingLatency,
+        "ShockEvent recorded → AuditEvent(CONDITION_CHANGED)",
+        "A shock that is not re-evaluated promptly means the business reacts late to a real event.",
+        "Investigate why the shock did not trigger a recorded re-evaluation.")
+    : notMeasurable("SHOCK_HANDLING_LATENCY", "Shock-to-re-evaluation latency", "handle within 15 minutes",
+        ["shock events in the measurement window (none recorded)"], ws, at));
+
   add(input.startupDataAvailable
     ? passByDesign("STARTUP_VALIDATION_COMPLETENESS", "Startup recommendations carry validation + cash safety", "all fields present", ["startup controller"], ws, at, "Startup recommendation fields present.")
     : notMeasurable("STARTUP_VALIDATION_COMPLETENESS", "Startup recommendations carry validation + cash safety", "all fields present", ["an active startup recommendation (Startup Mode not in use)"], ws, at));
@@ -317,6 +351,59 @@ function freshnessSlo(
     recommendedAction: stressed ? "Relieve the linked issue in the now-view before growth." : "No action.", ownerActionRequired: false,
     ...rel,
   } as any;
+}
+
+/** Format a duration in ms as a compact, owner-readable string. */
+function fmtDur(ms: number): string {
+  if (ms < 60_000) return `${Math.round(ms / 1000)}s`;
+  if (ms < 3_600_000) return `${Math.round(ms / 60_000)}m`;
+  if (ms < 86_400_000) return `${Math.round(ms / 3_600_000)}h`;
+  return `${Math.round(ms / 86_400_000)}d`;
+}
+
+/**
+ * Grade a measured correlation latency stat into PASS/WARN/FAIL. Any overdue/unhandled source
+ * (a FAILED link) is a control-loop failure → FAIL. Otherwise grade on median vs target. When
+ * sources exist but nothing has closed yet (no measured latency, none overdue), the loop is
+ * in-flight → WARN (never a fabricated PASS).
+ */
+function latencySlo(
+  sloType: SLOType, sliName: string, stat: CorrelationLatencyStat, source: string, impact: string, failAction: string
+): Omit<BusinessControlSLO, "workspaceId" | "evaluatedAt" | "relatedConstraint" | "relatedProfitLeak" | "relatedGamingSignal" | "relatedCredibilityConcern"> {
+  const median = stat.medianLatencyMs;
+  const target = stat.targetMs;
+  let status: SLOStatus;
+  let actualValue: string;
+  const missingData: string[] = [];
+  if (stat.failedCount >= 1) {
+    status = "FAIL";
+    actualValue = `${stat.failedCount} overdue/unhandled${median != null ? `; median ${fmtDur(median)}` : ""}`;
+    missingData.push(`${stat.failedCount} source(s) past target with no completed target record`);
+  } else if (median == null) {
+    status = "WARN";
+    actualValue = `${stat.openCount} in flight, none closed yet`;
+    missingData.push("sources in flight — no completed latency to measure yet");
+  } else if (median > 2 * target) {
+    status = "FAIL"; actualValue = `median ${fmtDur(median)} (target ${fmtDur(target)})`;
+  } else if (median > target) {
+    status = "WARN"; actualValue = `median ${fmtDur(median)} (target ${fmtDur(target)})`;
+  } else {
+    status = "PASS"; actualValue = `median ${fmtDur(median)} (target ${fmtDur(target)})`;
+  }
+  return {
+    sloType, sliName, status, target: `median within ${fmtDur(target)} · 0 overdue`, actualValue,
+    measurementWindow: stat.windowLabel, confidence: median != null ? "HIGH" : "MEDIUM",
+    sourceDataRefs: [source], missingData,
+    ownerExplanation: status === "PASS"
+      ? `${sliName} is healthy (${actualValue}) across ${stat.linkedCount} measured link(s).`
+      : status === "WARN"
+        ? `${sliName}: ${actualValue} — watch this; the control loop is slow or still open.`
+        : `${sliName}: ${actualValue} — the control loop is failing to close on time.`,
+    businessImpact: impact,
+    degradedBehavior: status === "PASS" ? null : "OpsIQ's own correction loop lags real events.",
+    recommendedAction: status === "PASS" ? "No action — the control loop closes on time." : failAction,
+    ownerActionRequired: status === "FAIL",
+  };
 }
 
 function notMeasurableBody(sloType: SLOType, sliName: string, target: string, missing: string[], impact: string) {

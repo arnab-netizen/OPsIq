@@ -1,0 +1,62 @@
+{
+  "pass": "runtime-control-correlation-depth-pass",
+  "branch": "claude/opsiq-hostile-audit-jye6h4",
+  "base": "origin/main@47a7741d",
+  "classification": "RUNTIME_CONTROL_CORRELATION_REAL_AND_OWNER_VISIBLE",
+  "auditDurabilityScope": "PARTIAL_MEASUREMENT_SHOCK_MUTATION_CLASS",
+  "schemaChange": {
+    "table": "proofs",
+    "column": "tamper_suspected BOOLEAN NOT NULL DEFAULT false",
+    "index": "(workspace_id, tamper_suspected)",
+    "migration": "prisma/migrations/20260705000000_proof_tamper_suspected/migration.sql",
+    "backfillSafe": true,
+    "destructive": false
+  },
+  "correlationsConverted": [
+    { "sloType": "REASSESSMENT_LATENCY", "correlationType": "TRIGGER_TO_REASSESSMENT_CORRELATION", "source": "OwnerReassessmentEvent.createdAt", "target": "OwnerReassessmentEvent.updatedAt (closed_*)", "was": "NOT_MEASURABLE", "now": "PASS/WARN/FAIL" },
+    { "sloType": "SHOCK_HANDLING_LATENCY", "correlationType": "SHOCK_TO_HANDLING_CORRELATION", "source": "ShockEvent.createdAt", "target": "AuditEvent(condition.changed) entityId=shock.id", "was": "NOT_MEASURABLE", "now": "PASS/WARN/FAIL" },
+    { "sloType": "AUDIT_DURABILITY", "correlationType": "GOVERNED_MUTATION_AUDIT_CORRELATION", "source": "ShockEvent", "target": "AuditEvent(shock.event_recorded) entityId=shock.id", "was": "NOT_MEASURABLE", "now": "PASS/FAIL (partial: shock class)" }
+  ],
+  "stillNotMeasurable": [
+    { "correlationType": "PROOF_TO_OUTCOME_CORRELATION", "reason": "no persisted join between delegated-task Proof and recommendation/action OwnerActionOutcome; complaint/rework are period aggregates (ownerMetricSnapshot)" },
+    { "sloType": "AUDIT_DURABILITY (non-shock classes)", "reason": "atomic-audit guaranteed (AUDIT-01) but no queryable row-audit key per class yet" },
+    { "sloType": "STARTUP_VALIDATION_COMPLETENESS", "reason": "Startup Mode not in use" },
+    { "sloType": "CROSS_WORKSPACE_ISOLATION_PROOF", "reason": "test-backed, not a runtime metric" }
+  ],
+  "tamperPersistence": {
+    "correlationType": "PROOF_TAMPER_SIGNAL_PERSISTENCE",
+    "setBy": "runProofPrecheck on POSSIBLE_TAMPER_RISK (atomic with status transition)",
+    "consumedBy": "aggregateCredibility -> itemCounts.tamperSuspected -> TAMPER_SUSPECTED_PROOF"
+  },
+  "filesCreated": [
+    "src/domain/owner-mode/control-correlation.ts",
+    "src/services/owner-mode/control-correlation.service.ts",
+    "prisma/migrations/20260705000000_proof_tamper_suspected/migration.sql",
+    "src/__tests__/owner-mode/control-correlation.test.ts",
+    "src/__tests__/owner-mode/control-correlation-simulation.db.test.ts"
+  ],
+  "filesChanged": [
+    "prisma/schema.prisma",
+    "src/services/execution/proof-precheck.service.ts",
+    "src/domain/owner-mode/evidence-credibility-graph.ts",
+    "src/domain/owner-mode/business-control-slo.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts",
+    "src/__tests__/owner-mode/business-control-slo.test.ts",
+    "src/__tests__/services/execution/proof-precheck.service.test.ts",
+    "docs/CURRENT_OPSIQ_STATUS.md"
+  ],
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid",
+    "governanceStrict": "31 frozen, 0 new",
+    "changedAreaSuites": "79 files / 667 tests pass",
+    "newTests": 23,
+    "dbSimulation": "3/3 pass",
+    "fullSuite": "14454 pass, 45 fail (14 files, all outside changed area, verified pre-existing on 47a7741d), 84 skipped"
+  },
+  "noFake": {
+    "timestamps": "every latency from two persisted timestamps; absent target => MISSING_TARGET/FAILED, null timestamp",
+    "green": "clean workspace stays NOT_MEASURABLE; no data => not measurable, never PASS",
+    "crossWorkspace": "all queries workspace-scoped (shocks via engagement.workspaceId); isolation DB-tested"
+  }
+}

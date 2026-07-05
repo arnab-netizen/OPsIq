@@ -90,6 +90,33 @@ describe("business-control SLOs", () => {
     expect(reeval.missingData.join(" ")).toMatch(/reassessment/i);
   });
 
+  const latStat = (over: Record<string, unknown> = {}) => ({
+    measurable: true, linkedCount: 1, openCount: 0, failedCount: 0,
+    medianLatencyMs: 60_000, maxLatencyMs: 60_000, targetMs: 15 * 60_000, windowLabel: "w", ...over,
+  });
+
+  it("AUDIT_DURABILITY PASS at 100% coverage, FAIL below (measured, partial shock class)", () => {
+    const pass = get(evaluateBusinessControlSLOs(inp({ auditDurability: { measurable: true, mutationClass: "shock_event", totalMutations: 3, auditedMutations: 3, unauditedMutationIds: [], coveragePct: 100 } })), "AUDIT_DURABILITY");
+    expect(pass.status).toBe("PASS");
+    expect(pass.actualValue).toMatch(/100%/);
+    const fail = get(evaluateBusinessControlSLOs(inp({ auditDurability: { measurable: true, mutationClass: "shock_event", totalMutations: 3, auditedMutations: 2, unauditedMutationIds: ["x"], coveragePct: 67 } })), "AUDIT_DURABILITY");
+    expect(fail.status).toBe("FAIL");
+    expect(fail.ownerActionRequired).toBe(true);
+  });
+
+  it("REASSESSMENT_LATENCY grades PASS within target, WARN over, FAIL when overdue", () => {
+    expect(get(evaluateBusinessControlSLOs(inp({ reassessmentLatency: latStat({ medianLatencyMs: 2 * 24 * 3600_000, targetMs: 7 * 24 * 3600_000 }) })), "REASSESSMENT_LATENCY").status).toBe("PASS");
+    expect(get(evaluateBusinessControlSLOs(inp({ reassessmentLatency: latStat({ medianLatencyMs: 8 * 24 * 3600_000, targetMs: 7 * 24 * 3600_000 }) })), "REASSESSMENT_LATENCY").status).toBe("WARN");
+    const fail = get(evaluateBusinessControlSLOs(inp({ reassessmentLatency: latStat({ failedCount: 2, medianLatencyMs: null, targetMs: 7 * 24 * 3600_000 }) })), "REASSESSMENT_LATENCY");
+    expect(fail.status).toBe("FAIL");
+    expect(fail.ownerActionRequired).toBe(true);
+  });
+
+  it("SHOCK_HANDLING_LATENCY PASS when re-eval is prompt, FAIL when a shock is unhandled", () => {
+    expect(get(evaluateBusinessControlSLOs(inp({ shockHandlingLatency: latStat() })), "SHOCK_HANDLING_LATENCY").status).toBe("PASS");
+    expect(get(evaluateBusinessControlSLOs(inp({ shockHandlingLatency: latStat({ failedCount: 1, linkedCount: 0, medianLatencyMs: null }) })), "SHOCK_HANDLING_LATENCY").status).toBe("FAIL");
+  });
+
   it("overall FAIL and a deterministic, explainable top control risk", () => {
     const a = evaluateBusinessControlSLOs(inp({ topGamingSignalType: "SELF_REVIEW_ATTEMPT", topGamingSeverity: "HIGH", workloadBudget: { ownerDecisionsRequired: 20, approvalsRequired: 0, reviewsRequired: 0, ownerBottleneckItems: 0 } }));
     const b = evaluateBusinessControlSLOs(inp({ topGamingSignalType: "SELF_REVIEW_ATTEMPT", topGamingSeverity: "HIGH", workloadBudget: { ownerDecisionsRequired: 20, approvalsRequired: 0, reviewsRequired: 0, ownerBottleneckItems: 0 } }));

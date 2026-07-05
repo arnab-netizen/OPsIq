@@ -108,6 +108,11 @@ export async function runProofPrecheck(
 
   const now = deps.now();
   const ledgerId = uuid();
+  // PROOF_TAMPER_SIGNAL_PERSISTENCE: when the deterministic precheck flags tamper risk, persist
+  // it on the proof (atomically with the governed status transition) so tamper-suspected proof is
+  // queryable and drives the credibility graph + Business-Control SLOs from real data. Only the
+  // tamper outcome sets it; other outcomes leave the default false untouched (no fabricated flag).
+  const tamperSuspected = outcome === AiProofPrecheckOutcome.POSSIBLE_TAMPER_RISK;
   await deps.db.$transaction(async (tx) => {
     const updated = await tx.proof.updateMany({
       where: {
@@ -115,7 +120,9 @@ export async function runProofPrecheck(
         workspaceId: command.workspaceId,
         status: ProofStatus.SUBMITTED,
       },
-      data: { status: target, updatedAt: now },
+      data: tamperSuspected
+        ? { status: target, updatedAt: now, tamperSuspected: true }
+        : { status: target, updatedAt: now },
     });
     if (updated.count !== 1) {
       throw new PrecheckConflictError(
