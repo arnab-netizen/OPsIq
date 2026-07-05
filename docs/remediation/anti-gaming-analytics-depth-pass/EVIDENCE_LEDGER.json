@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-07-05",
+  "branch": "claude/anti-gaming-analytics-depth-pass",
+  "baseMain": "59c85033",
+  "capability": "Cross-Event Anti-Gaming Analytics",
+  "classification": "ANTI_GAMING_ANALYTICS_REAL_AND_OWNER_VISIBLE",
+  "consolidation": { "branchesOnMain": 5, "mergedThisPass": ["claude/profit-leak-radar-depth-pass (ff)"], "mainAfter": "59c85033" },
+  "code": [
+    "src/domain/owner-mode/anti-gaming-analytics.ts",
+    "src/services/owner-mode/gaming-analytics.service.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts (integration, DI-safe proof.findMany)"
+  ],
+  "ownerVisibleVia": "GET /api/owner/now-view (payload.topGamingSignal) + getGamingAnalysis service",
+  "signalTypesDetected": ["REPEATED_WEAK_PROOF","REPEATED_REJECTED_PROOF","REUSED_PROOF_PATTERN","LATE_COMPLETION_PATTERN","SELF_REVIEW_ATTEMPT","MANAGER_RUBBER_STAMP","OWNER_REVIEW_BURDEN_CREATED_BY_STAFF","PROOF_FLOOD_LOW_QUALITY","DATA_INSUFFICIENT"],
+  "signalTypesPendingSource": ["MISSING_PROOF_PATTERN","SUSPICIOUS_FAST_COMPLETION","COMPLAINT_AFTER_ACCEPTED_PROOF","REWORK_AFTER_ACCEPTED_PROOF","PAYLOAD_TAMPER_ATTEMPT","CROSS_WORKSPACE_TAMPER_ATTEMPT","MANAGER_IGNORES_ESCALATION"],
+  "typecheck": { "command": "npx tsc --noEmit", "errors": 0 },
+  "tests": {
+    "unit": { "file": "src/__tests__/owner-mode/anti-gaming-analytics.test.ts", "passed": 12 },
+    "dbSimulation": { "file": "src/__tests__/owner-mode/anti-gaming-analytics-simulation.db.test.ts", "passed": 4 },
+    "broadRegression": { "files": 93, "passed": 810, "failed": 0 }
+  },
+  "honesty": { "noBlackBoxScore": "reason codes + events, no hidden staff score", "thresholds": "repetition required; one event is not a pattern", "noSignal": "DATA_INSUFFICIENT with exact missing data" },
+  "browserE2E": "unchanged / not proven this pass",
+  "classification_overall": "HIGH_VALUE_PRIVATE_OWNER_SYSTEM_PROVEN + REMEDIATION_PARTIAL_CONTINUE_REQUIRED"
+}

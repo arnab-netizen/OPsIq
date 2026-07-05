@@ -8,6 +8,21 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
+## Anti-Gaming Analytics depth pass (latest)
+- **Consolidation:** all 5 prior depth passes are on `main` (`59c85033`) — owner-use spine, opportunity
+  envelope, Owner Workload Budget, Constraint Engine, Profit-Leak Radar (fast-forward merged this pass).
+- **Branch:** `claude/anti-gaming-analytics-depth-pass`.
+- **Anti-Gaming Analytics:** `ANTI_GAMING_ANALYTICS_REAL_AND_OWNER_VISIBLE` — deterministic cross-event
+  staff/manager/operator pattern detection from real Proof/review data (self-review, rubber-stamp,
+  repeated weak/reused/rejected/late proof, staff-driven review burden, proof flood + DATA_INSUFFICIENT),
+  owner-callable + surfaced via `/api/owner/now-view` (`payload.topGamingSignal`), linked to the
+  Constraint Engine + Profit-Leak Radar. Transparent reason codes (no black-box staff score), honest
+  repetition thresholds. 16 tests (12 unit + 4 DB). Broad regression 93 files / 810 tests pass.
+- **Still missing/partial:** complaint/tamper/escalation-linked gaming types (need persisted sources);
+  Evidence Credibility Graph, Business-Control SLOs, Process Intelligence; authenticated browser E2E;
+  APPR-01 breadth.
+- Details: `docs/remediation/anti-gaming-analytics-depth-pass/` + `docs/remediation/pr-merge-consolidation/`.
+
 ## Profit-Leak Radar depth pass (latest)
 - **Branch:** `claude/profit-leak-radar-depth-pass` · **Base/main:** `0438927c`.
 - **Profit-Leak Radar:** `PROFIT_LEAK_RADAR_REAL_AND_OWNER_VISIBLE` — deterministic highest-value-leak
