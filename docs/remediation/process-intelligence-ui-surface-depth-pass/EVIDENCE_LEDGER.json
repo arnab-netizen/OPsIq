@@ -1,0 +1,41 @@
+{
+  "pass": "process-intelligence-ui-surface-depth-pass",
+  "branch": "claude/process-intelligence-ui-surface-depth-pass",
+  "base": "origin/main@466f72f7",
+  "pr128MergeStatus": "merged (squash commit 466f72f7 on main)",
+  "classification": ["PROCESS_INTELLIGENCE_UI_REAL_AND_OWNER_VISIBLE", "OWNER_MODE_EXCELLENCE_DEEPENED"],
+  "schemaChange": "NONE",
+  "route": "/owner/process-intelligence (client page; reuses GET /api/owner/now-view)",
+  "component": "src/components/owner/ProcessIntelligencePanel.tsx (prop-driven, no business logic)",
+  "ownerNowViewIntegration": "header link 'Where the process is breaking' -> /owner/process-intelligence; page links back to /owner/now",
+  "rendersTopBreakdownElements": ["title", "affectedStage", "severity", "confidence", "evidenceCount", "representativeRefs", "relatedProfitLeak", "relatedConstraint", "relatedSLO", "recommendedCorrection", "requiredApprovalLevel", "missingData"],
+  "dataInsufficientHonest": true,
+  "filesCreated": [
+    "src/components/owner/ProcessIntelligencePanel.tsx",
+    "src/app/(authenticated)/owner/process-intelligence/page.tsx",
+    "src/__tests__/components/process-intelligence-panel.test.tsx",
+    "src/__tests__/app/owner-process-intelligence-page.test.tsx",
+    "tests/browser/44-owner-process-intelligence.spec.ts"
+  ],
+  "filesChanged": [
+    "src/app/(authenticated)/owner/now/page.tsx (link)",
+    "scripts/seed-e2e-proof-risk.ts (complaint/rework events -> real breakdown)",
+    ".github/workflows/owner-pilot-e2e.yml (run spec 44)"
+  ],
+  "safety": {"noFraudNegligenceLabel": true, "noHiddenScore": true, "conciseEvidenceNotRawLogs": true, "honestDataInsufficient": true},
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid (no schema change)",
+    "governanceStrict": "31 frozen, 0 new",
+    "nextBuild": "exit 0 (/owner/process-intelligence in manifest)",
+    "componentTests": "5/5",
+    "pageTests": "2/2",
+    "playwright": "4/4 local (real REWORK_LOOP breakdown; browser-proven)",
+    "domainRegression": "process-intelligence.test.ts 15/15",
+    "changedAreaRegression": "components + app + owner-mode + owner-guidance 91 files / 992 tests pass (18 db skipped)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "browserE2E": "PROVEN locally 4/4; wired into owner-pilot-e2e CI lane (confirmed on PR)",
+  "remaining": ["read-only surface (no action buttons)", "correction routing is the next pass"]
+}

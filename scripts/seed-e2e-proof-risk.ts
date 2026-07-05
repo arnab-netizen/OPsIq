@@ -74,8 +74,28 @@ async function main() {
     where: { workspaceId: E2E_WORKSPACE_ID, sourceRef: `SELF_REVIEW_ATTEMPT:${E2E_PROOF_RISK_STAFF_ID}` },
   });
 
+  // Complaint + rework operational events linked to the accepted proofs → a real Process Intelligence
+  // breakdown (QUALITY_FAILURE_LOOP / REWORK_LOOP) so the process-intelligence UI renders a top finding.
+  const OP_EVENTS: Array<[string, string, string, string]> = [
+    ["53000000-0000-4000-8000-0000000000e1", "COMPLAINT", "quality", E2E_PROOF_RISK_PROOF_1],
+    ["53000000-0000-4000-8000-0000000000e2", "COMPLAINT", "quality", E2E_PROOF_RISK_PROOF_2],
+    ["53000000-0000-4000-8000-0000000000e3", "REWORK", "quality", E2E_PROOF_RISK_PROOF_1],
+    ["53000000-0000-4000-8000-0000000000e4", "REWORK", "quality", E2E_PROOF_RISK_PROOF_2],
+  ];
+  for (const [id, eventType, category, proofId] of OP_EVENTS) {
+    await prisma.operationalEvent.upsert({
+      where: { id },
+      update: { status: "OPEN", relatedProofId: proofId },
+      create: {
+        id, workspaceId: E2E_WORKSPACE_ID, eventType, category, severity: "MEDIUM", status: "OPEN",
+        source: "customer_reported", description: `${category} ${eventType} (E2E process-intelligence fixture)`,
+        relatedProofId: proofId, occurredAt: hoursAgo(4), createdAt: hoursAgo(4), updatedAt: hoursAgo(4),
+      },
+    });
+  }
+
   // eslint-disable-next-line no-console
-  console.log(`Seeded E2E proof-risk self-review finding for staff ${E2E_PROOF_RISK_STAFF_ID} in workspace ${E2E_WORKSPACE_ID}.`);
+  console.log(`Seeded E2E proof-risk self-review + process-intelligence fixture for staff ${E2E_PROOF_RISK_STAFF_ID} in workspace ${E2E_WORKSPACE_ID}.`);
   await pool.end();
 }
 

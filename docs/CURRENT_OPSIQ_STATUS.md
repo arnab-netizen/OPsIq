@@ -8,7 +8,27 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Process Intelligence v1 depth pass (latest)
+## Process Intelligence UI Surface depth pass (latest)
+- **Base:** `origin/main` @ `466f72f7` (Process Intelligence v1, PR #128, merged).
+- **Branch:** `claude/process-intelligence-ui-surface-depth-pass`.
+- **Classification:** `PROCESS_INTELLIGENCE_UI_REAL_AND_OWNER_VISIBLE` (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **Process Intelligence v1 is now usable from the owner UI.** A minimal `/owner/process-intelligence`
+  page (linked from the Owner Now View) renders the single top process breakdown via the prop-driven
+  `ProcessIntelligencePanel`: plain title, affected stage, severity + confidence, concise evidence
+  (counts + a few refs), related profit leak / constraint / SLO, why it's breaking, the one recommended
+  correction, the required approval level, and missing data. DATA_INSUFFICIENT renders honestly. Reuses
+  `/api/owner/now-view` (already carries `processIntelligence`) — **no new route, no schema change, no
+  business logic in the UI**.
+- **Browser-proven:** `44-owner-process-intelligence.spec.ts` 4/4 local against the real app + backend
+  (real owner login → a real REWORK_LOOP breakdown with correction + MANAGER approval, back-navigation,
+  Now-View link); wired into the `owner-pilot-e2e` CI lane.
+- **Safety:** no unsupported fraud/negligence label; no hidden staff score; concise evidence (not raw
+  logs); honest DATA_INSUFFICIENT. **Still read-only** (correction routing is the next pass).
+- **Verification:** tsc 0 · prisma valid · governance 31-frozen/0-new · `next build` exit 0 · 5 component
+  + 2 page + 4 Playwright + 15 domain-regression · changed-area regression 992. Details:
+  `docs/remediation/process-intelligence-ui-surface-depth-pass/`.
+
+## Process Intelligence v1 depth pass
 - **Base:** `origin/main` @ `d7a5103b` (Timing Write-Path Population PR #127 merged).
 - **Branch:** `claude/process-intelligence-v1-depth-pass`.
 - **Classification:** `PROCESS_INTELLIGENCE_V1_REAL_AND_OWNER_VISIBLE` (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).

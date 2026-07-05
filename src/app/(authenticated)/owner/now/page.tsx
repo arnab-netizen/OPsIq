@@ -67,6 +67,7 @@ export default function OwnerNowViewPage() {
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1 style={{ margin: 0 }}>Owner Now View</h1>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <Link href="/owner/process-intelligence" data-testid="process-intelligence-link">Where the process is breaking</Link>
           <Link href="/owner/adjudication" data-testid="proof-risk-queue-link">Proof-risk review queue</Link>
           <Button onClick={() => void load()}>Refresh</Button>
         </div>
