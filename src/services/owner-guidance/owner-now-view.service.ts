@@ -38,6 +38,7 @@ import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } f
 import { aggregateProofEvents, identifyGamingSignals, type GamingSignal, type ProofEventRow } from "@/domain/owner-mode/anti-gaming-analytics";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
+import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -86,12 +87,24 @@ export interface GuidanceDeps {
   db: GuidanceDb;
   uuid: () => string;
   now: () => number;
+  /**
+   * Optional — the live control-correlation report source. Present on the live path (wired to
+   * getControlCorrelations); absent on a fake-DI unit test, in which case the correlation-backed
+   * SLOs (AUDIT_DURABILITY / REASSESSMENT_LATENCY / SHOCK_HANDLING_LATENCY) stay NOT_MEASURABLE.
+   */
+  correlations?: (workspaceId: string) => Promise<ControlCorrelationReport>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { db } = await import("@/lib/db");
   const { randomUUID } = await import("crypto");
-  return { db: db as unknown as GuidanceDb, uuid: () => randomUUID(), now: () => Date.now() };
+  const { getControlCorrelations } = await import("@/services/owner-mode/control-correlation.service");
+  return {
+    db: db as unknown as GuidanceDb,
+    uuid: () => randomUUID(),
+    now: () => Date.now(),
+    correlations: (workspaceId: string) => getControlCorrelations(workspaceId),
+  };
 }
 
 /**
@@ -161,6 +174,8 @@ export interface OwnerNowViewPayload {
   topCredibilityConcern: CredibilityFinding | null;
   /** Whether OpsIQ's own business-control loop is operating reliably (SLOs). */
   businessControlHealth: BusinessControlHealth;
+  /** Measured runtime control correlations (reassessment/shock/audit linkage), or null if unavailable. */
+  controlCorrelations: ControlCorrelationReport | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -503,7 +518,7 @@ export async function getOwnerNowView(
     // One workspace-scoped query feeds both anti-gaming and the credibility graph.
     const proofRows = await deps.db.proof.findMany({
       where: { workspaceId },
-      select: { submittedByUserId: true, reviewedByUserId: true, proofType: true, status: true, duplicateFlagged: true, createdAt: true, reviewedAt: true },
+      select: { submittedByUserId: true, reviewedByUserId: true, proofType: true, status: true, duplicateFlagged: true, tamperSuspected: true, createdAt: true, reviewedAt: true },
     });
     const nowMs = deps.now();
     const { actors, reviewers } = aggregateProofEvents(proofRows, nowMs);
@@ -533,9 +548,18 @@ export async function getOwnerNowView(
     overdueReviewCount = proofRows.filter((p) => WEAK.has(p.status) && p.createdAt.getTime() < OVERDUE_BEFORE).length;
   }
 
+  // Runtime control correlations — measure OpsIQ's own control loop linkage (reassessment
+  // close latency, shock→re-eval latency, governed-mutation→audit coverage) from real persisted
+  // timestamps. Only on the live path (deps.correlations present); a fake-DI unit test omits it,
+  // so the correlation-backed SLOs stay honestly NOT_MEASURABLE.
+  let controlCorrelations: ControlCorrelationReport | null = null;
+  if (typeof deps.correlations === "function") {
+    controlCorrelations = await deps.correlations(workspaceId);
+  }
+
   // Business-Control SLOs — grade OpsIQ's own control loop from the signals above (+ proof
-  // counts). Honest NOT_MEASURABLE where the source is not persisted (audit correlation,
-  // reassessment/shock timing, startup data, runtime isolation).
+  // counts + measured correlations). Honest NOT_MEASURABLE where the source is not persisted
+  // (startup data, runtime isolation, or no correlated events in the window).
   const businessControlHealth = evaluateBusinessControlSLOs({
     workspaceId,
     workloadBudget: {
@@ -562,11 +586,12 @@ export async function getOwnerNowView(
       gaming: !!topGamingSignal,
       credibility: !!topCredibilityConcern,
     },
+    // Measured runtime correlations (live path only); null → those SLOs stay NOT_MEASURABLE.
+    auditDurability: controlCorrelations?.auditDurability ?? null,
+    reassessmentLatency: controlCorrelations?.reassessmentLatency ?? null,
+    shockHandlingLatency: controlCorrelations?.shockHandlingLatency ?? null,
     // Honest: these sources are not persisted for a runtime metric yet.
     opportunityEnvelopeFields: null,
-    auditCorrelationAvailable: false,
-    reassessmentLatencyAvailable: false,
-    shockLatencyAvailable: false,
     startupDataAvailable: false,
     isolationTestPassed: null,
     evaluatedAt: new Date(deps.now()).toISOString(),
@@ -597,7 +622,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

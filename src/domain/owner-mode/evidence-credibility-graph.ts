@@ -308,6 +308,8 @@ export interface CredibilityProofRow {
   proofType: string;
   status: string;
   duplicateFlagged: boolean;
+  /** Persisted deterministic tamper signal (Proof.tamperSuspected). */
+  tamperSuspected?: boolean;
   createdAt: Date;
   reviewedAt: Date | null;
 }
@@ -332,6 +334,7 @@ export function aggregateCredibility(rows: CredibilityProofRow[], nowMs: number)
     if (isRejected) itemCounts.rejected++;
     if (p.duplicateFlagged) itemCounts.reused++;
     if (isStale) itemCounts.stale++;
+    if (p.tamperSuspected) itemCounts.tamperSuspected++;
 
     if (p.submittedByUserId) {
       const s = subs.get(p.submittedByUserId) ?? { actorId: p.submittedByUserId, total: 0, accepted: 0, weakOrReviewNeeded: 0, rejected: 0, reused: 0, stale: 0 };

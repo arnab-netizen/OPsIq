@@ -8,7 +8,26 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Business-Control SLO depth pass (latest)
+## Runtime Control Correlation depth pass (latest)
+- **Base:** `origin/main` @ `47a7741d` (Business-Control SLO PR #112 merged).
+- **Branch:** `claude/opsiq-hostile-audit-jye6h4`.
+- **Classification:** `RUNTIME_CONTROL_CORRELATION_REAL_AND_OWNER_VISIBLE` (audit-durability partial, disclosed).
+- **Converted NOT_MEASURABLE → measured** (from real persisted timestamps, no fake correlations):
+  `REASSESSMENT_LATENCY` (OwnerReassessmentEvent createdAt→closed), `SHOCK_HANDLING_LATENCY`
+  (ShockEvent recorded→`CONDITION_CHANGED` audit), `AUDIT_DURABILITY` (ShockEvent→`SHOCK_EVENT_RECORDED`
+  audit coverage — PARTIAL: shock mutation class). Pure domain (`control-correlation.ts`) + DB service
+  (`control-correlation.service.ts`, 90-day workspace-scoped window) + now-view wiring
+  (`payload.controlCorrelations` + measured `businessControlHealth`).
+- **New persisted signal:** `Proof.tamperSuspected` (backfill-safe column + index; migration
+  `20260705000000_proof_tamper_suspected`) set atomically on precheck `POSSIBLE_TAMPER_RISK`, consumed by
+  the Evidence Credibility Graph (`TAMPER_SUSPECTED_PROOF`).
+- **Still NOT_MEASURABLE (documented):** `PROOF_TO_OUTCOME_CORRELATION` (no persisted proof↔outcome join);
+  audit durability for non-shock classes (atomic-audit-guaranteed, not yet metered); startup/runtime-isolation.
+- **Verification:** tsc 0 · prisma valid · governance strict 0-new · changed-area 79 files/667 tests green
+  · 23 new tests (14 unit + 4 SLO + 2 precheck + 3 DB simulation).
+- Details: `docs/remediation/runtime-control-correlation-depth-pass/`.
+
+## Business-Control SLO depth pass
 - **Consolidation:** Evidence Credibility Graph (PR #111) CI-green + fast-forward merged to `main`
   (`6a840314`); all prior depth passes remain on main.
 - **Branch:** `claude/business-control-slo-depth-pass`.

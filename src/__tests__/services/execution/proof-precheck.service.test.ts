@@ -15,11 +15,12 @@ const WS = "ws-1";
 function makeDeps(opts: { committedStatus?: ProofStatus } = {}) {
   const committed = { status: opts.committedStatus ?? ProofStatus.SUBMITTED };
   let pending = { status: committed.status };
-  const calls = { audits: [] as Record<string, unknown>[], updates: 0 };
+  const calls = { audits: [] as Record<string, unknown>[], updates: 0, updateData: [] as Record<string, unknown>[] };
   const tx: PrecheckTx = {
     proof: {
       updateMany: async (args) => {
         calls.updates += 1;
+        calls.updateData.push(args.data as Record<string, unknown>);
         const w = args.where as { status: ProofStatus; workspaceId: string };
         const match = w.status === committed.status && w.workspaceId === WS;
         if (match) pending = { status: (args.data as { status: ProofStatus }).status };
@@ -105,6 +106,37 @@ describe("runProofPrecheck", () => {
       deps
     );
     expect(r.outcome).toBe(O.FAIL_WRONG_FORMAT);
+  });
+
+  it("persists tamperSuspected=true atomically when the precheck flags tamper risk", async () => {
+    const { deps, calls } = makeDeps();
+    const r = await runProofPrecheck(
+      {
+        proofId: "p1",
+        workspaceId: WS,
+        requirement: photo,
+        submission: { proofType: ProofType.PHOTO, fields: { caption: "ok" }, submittedByUserId: "emp-1" },
+        signals: { tamperRisk: true },
+      },
+      deps
+    );
+    expect(r.outcome).toBe(O.POSSIBLE_TAMPER_RISK);
+    expect(r.status).toBe(ProofStatus.NEEDS_HUMAN_REVIEW);
+    expect(calls.updateData[0].tamperSuspected).toBe(true);
+  });
+
+  it("does NOT set tamperSuspected on a clean proof (no fabricated flag)", async () => {
+    const { deps, calls } = makeDeps();
+    await runProofPrecheck(
+      {
+        proofId: "p1",
+        workspaceId: WS,
+        requirement: photo,
+        submission: { proofType: ProofType.PHOTO, fields: { caption: "ok" }, submittedByUserId: "emp-1" },
+      },
+      deps
+    );
+    expect(calls.updateData[0].tamperSuspected).toBeUndefined();
   });
 
   it("fails closed when the proof is not in SUBMITTED state", async () => {

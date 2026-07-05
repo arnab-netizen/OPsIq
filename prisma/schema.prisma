@@ -4138,6 +4138,7 @@ model Proof {
   submittedByUserId   String?   @map("submitted_by_user_id") @db.Uuid
   fileHash            String?   @map("file_hash")
   duplicateFlagged    Boolean   @default(false) @map("duplicate_flagged")
+  tamperSuspected     Boolean   @default(false) @map("tamper_suspected")
   submittedAt         DateTime? @map("submitted_at")
   reviewReason        String?   @map("review_reason")
   reviewedByUserId    String?   @map("reviewed_by_user_id") @db.Uuid
@@ -4150,6 +4151,7 @@ model Proof {
   @@index([workspaceId, status])
   @@index([workspaceId, fileHash])
   @@index([workspaceId, businessId])
+  @@index([workspaceId, tamperSuspected])
   @@map("proofs")
 }
 
