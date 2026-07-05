@@ -44,7 +44,7 @@ import type { DisputeRiskAnalysis } from "@/domain/owner-mode/dispute-risk";
 import type { ComplaintReworkAnalysis } from "@/domain/execution/complaint-rework";
 import type { OperationalEventAgingSummary } from "@/domain/execution/operational-event-aging";
 import type { ReusedHashAnalysis } from "@/domain/execution/reused-hash-precheck";
-import { clearsFinding, AdjudicationSourceType } from "@/domain/execution/proof-risk-adjudication";
+import { clearsFinding, isFindingSuppressed, AdjudicationSourceType } from "@/domain/execution/proof-risk-adjudication";
 import type { ProofRiskAdjudicationView } from "@/services/execution/proof-risk-adjudication.service";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
@@ -223,6 +223,17 @@ export interface OwnerNowViewPayload {
   reusedProofFindings: ReusedHashAnalysis | null;
   /** Governed owner proof-risk adjudications (workspace-scoped), or null if unavailable. */
   proofRiskAdjudications: ProofRiskAdjudicationView[] | null;
+  /** Adjudication-state summary (active / cleared / inconclusive counts + top active action). */
+  proofRiskAdjudicationSummary: ProofRiskAdjudicationSummary | null;
+}
+
+export interface ProofRiskAdjudicationSummary {
+  total: number;
+  activeCount: number;
+  clearedCount: number;
+  inconclusiveCount: number;
+  latest: ProofRiskAdjudicationView[];
+  topActiveAction: { outcome: string; sourceType: string; recommendedNextAction: string } | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -479,6 +490,38 @@ function buildBeginner(view: OwnerNowView, steps: GuidanceStep[]): BeginnerExpla
   });
 }
 
+/** Recompute the dispute-risk aggregates from a (possibly adjudication-filtered) list of risks. */
+function recomputeDisputeAggregates(risks: Array<{ profitLeakType: string | null; constraintType: string | null }>) {
+  const agg = { total: risks.length, disputeReworkCount: 0, disputeComplaintCount: 0, disputeWeakProofCount: 0, disputeQualityCount: 0, disputeStaffCount: 0, disputeManagerCount: 0 };
+  for (const r of risks) {
+    if (r.profitLeakType === "REWORK_REDO_COST") agg.disputeReworkCount++;
+    else if (r.profitLeakType === "COMPLAINT_REVENUE_RISK") agg.disputeComplaintCount++;
+    else if (r.profitLeakType === "WEAK_PROOF_REWORK_RISK") agg.disputeWeakProofCount++;
+    if (r.constraintType === "QUALITY") agg.disputeQualityCount++;
+    else if (r.constraintType === "STAFF") agg.disputeStaffCount++;
+    else if (r.constraintType === "MANAGER") agg.disputeManagerCount++;
+  }
+  return agg;
+}
+
+/** Summarize proof-risk adjudications (active vs cleared vs inconclusive) for the owner now-view. */
+function summarizeAdjudications(list: ProofRiskAdjudicationView[]): ProofRiskAdjudicationSummary {
+  const CLEARED = new Set(["ACCEPT_AS_VALID", "DISMISS_FALSE_POSITIVE"]);
+  let cleared = 0, inconclusive = 0, active = 0;
+  let topActive: ProofRiskAdjudicationView | null = null;
+  for (const a of list) {
+    if (CLEARED.has(a.outcome)) cleared++;
+    else if (a.outcome === "MARK_INCONCLUSIVE_NEEDS_DATA") { inconclusive++; }
+    else { active++; }
+    if (!CLEARED.has(a.outcome) && a.ownerActionRequired && !topActive) topActive = a;
+  }
+  return {
+    total: list.length, activeCount: active, clearedCount: cleared, inconclusiveCount: inconclusive,
+    latest: list.slice(0, 5),
+    topActiveAction: topActive ? { outcome: topActive.outcome, sourceType: topActive.sourceType, recommendedNextAction: topActive.recommendedNextAction } : null,
+  };
+}
+
 /** Produce the live Owner Now View: assemble, diff vs prior snapshot, run orchestrator, persist. */
 export async function getOwnerNowView(
   workspaceId: string,
@@ -508,7 +551,36 @@ export async function getOwnerNowView(
   if (typeof deps.disputeRisk === "function") {
     disputeRisk = await deps.disputeRisk(workspaceId);
   }
-  const da = disputeRisk?.aggregates;
+
+  // Governed owner proof-risk adjudications — the owner's fair, audited decisions. A CLEARING
+  // decision (accept-as-valid / dismiss-false-positive) suppresses that EXACT finding from
+  // re-surfacing (reduces owner noise) without deleting evidence; a NEW supporting proof re-surfaces
+  // it. Confirm / require-fresh / training / owner-review / inconclusive all keep the risk visible.
+  // Cleared proof IDs are indexed PER SOURCE TYPE so a clearing decision only eases its own source.
+  let proofRiskAdjudications: ProofRiskAdjudicationView[] | null = null;
+  if (typeof deps.proofRiskAdjudications === "function") {
+    proofRiskAdjudications = await deps.proofRiskAdjudications(workspaceId);
+  }
+  const clearedBySource = new Map<string, Set<string>>();
+  for (const adj of proofRiskAdjudications ?? []) {
+    if (!clearsFinding(adj.outcome)) continue;
+    const set = clearedBySource.get(adj.sourceType) ?? new Set<string>();
+    if (adj.sourceRef) set.add(adj.sourceRef);
+    for (const pid of adj.proofIds) set.add(pid);
+    clearedBySource.set(adj.sourceType, set);
+  }
+  const clearedReused = clearedBySource.get(AdjudicationSourceType.REUSED_HASH_FINDING) ?? new Set<string>();
+  const clearedGaming = clearedBySource.get(AdjudicationSourceType.ANTI_GAMING_SIGNAL) ?? new Set<string>();
+  const clearedCredibility = clearedBySource.get(AdjudicationSourceType.CREDIBILITY_CONCERN) ?? new Set<string>();
+  const clearedDispute = clearedBySource.get(AdjudicationSourceType.PROOF_DISPUTE) ?? new Set<string>();
+
+  // PROOF_DISPUTE clearing: drop the cleared dispute(s) from the dispute-derived profit/constraint
+  // signals (reduces owner-review burden) — but the proof.disputed audit + PROOF_OUTCOME_INTEGRITY
+  // are audit-derived and stay untouched (a cleared dispute is never marked "good work").
+  const activeDisputeRisks = (disputeRisk?.risks ?? []).filter((r) => !clearedDispute.has(r.proofId));
+  const da = disputeRisk
+    ? recomputeDisputeAggregates(activeDisputeRisks)
+    : undefined;
 
   // Complaint/Rework → proof linkage (per-event model). Feeds the same profit/constraint drivers
   // (with measured impact when supplied) + credibility, and makes proof→complaint/rework measurable.
@@ -596,31 +668,17 @@ export async function getOwnerNowView(
     proofOutcomeReport = await deps.proofOutcome(workspaceId);
   }
 
-  // Governed owner proof-risk adjudications — the owner's fair, audited decisions about flagged
-  // reused/fake/suspicious proof. A CLEARING decision (accept-as-valid / dismiss-false-positive /
-  // escalate-for-training) suppresses that finding from re-surfacing (reduces owner noise) without
-  // deleting any evidence; confirm / require-fresh-proof keep the risk visible.
-  let proofRiskAdjudications: ProofRiskAdjudicationView[] | null = null;
-  if (typeof deps.proofRiskAdjudications === "function") {
-    proofRiskAdjudications = await deps.proofRiskAdjudications(workspaceId);
-  }
-  const clearedProofIds = new Set<string>();
-  for (const adj of proofRiskAdjudications ?? []) {
-    if (adj.sourceType !== AdjudicationSourceType.REUSED_HASH_FINDING || !clearsFinding(adj.outcome)) continue;
-    if (adj.sourceRef) clearedProofIds.add(adj.sourceRef);
-    for (const pid of adj.proofIds) clearedProofIds.add(pid);
-  }
-
   // Deterministic reused-hash / duplicate-proof precheck — workspace-scoped, policy-aware (excludes
   // legitimate same-task reuse, ignores cross-workspace). Live path only; feeds the anti-gaming +
   // credibility signals with an explainable, per-operator reuse count and the matched proof IDs.
   let reusedProofFindings: ReusedHashAnalysis | null = null;
   if (typeof deps.reusedHash === "function") {
     const raw = await deps.reusedHash(workspaceId);
-    // Suppress findings the owner has cleared (accept/dismiss/training) — evidence is retained in the
-    // adjudication record + audit, but it no longer re-surfaces as live risk.
-    if (clearedProofIds.size > 0) {
-      const findings = raw.findings.filter((f) => !clearedProofIds.has(f.proofId));
+    // Suppress findings the owner has cleared (accept/dismiss) for the reused-hash source — evidence
+    // is retained in the adjudication record + audit, but a cleared proof no longer re-surfaces (a NEW
+    // reused proof has a fresh id not in the cleared set, so it still surfaces).
+    if (clearedReused.size > 0) {
+      const findings = raw.findings.filter((f) => !clearedReused.has(f.proofId));
       const submitter = new Map<string, { count: number; proofIds: string[] }>();
       for (const f of findings) {
         if (!f.actorId) continue;
@@ -631,7 +689,7 @@ export async function getOwnerNowView(
         ...raw, findings,
         submitterReuse: [...submitter.entries()].map(([actorId, v]) => ({ actorId, count: v.count, proofIds: v.proofIds })),
         needsReviewCount: findings.length,
-        topFinding: findings.length > 0 ? raw.topFinding && !clearedProofIds.has(raw.topFinding.proofId) ? raw.topFinding : findings[0] : null,
+        topFinding: findings.length > 0 ? (raw.topFinding && !clearedReused.has(raw.topFinding.proofId) ? raw.topFinding : findings[0]) : null,
       };
     } else {
       reusedProofFindings = raw;
@@ -667,17 +725,20 @@ export async function getOwnerNowView(
     // Deterministic reused-hash reuse per operator (from the precheck) — authoritative reused-proof source.
     const reusedHashActors = (reusedProofFindings?.submitterReuse ?? []).map((s) => ({ actorId: s.actorId, crossTaskReuseCount: s.count, proofIds: s.proofIds, matchType: "HASH" }));
 
-    topGamingSignal = identifyGamingSignals({
+    const gamingAnalysis = identifyGamingSignals({
       workspaceId, actors, reviewers, suspiciousProofActors, suspiciousReviewers,
       reusedHashActors: reusedProofFindings ? reusedHashActors : undefined,
       currentConstraint: topConstraint?.constraintType ?? null,
       topProfitLeakType: topProfitLeak?.leakType ?? null,
       evaluatedAt: new Date(nowMs).toISOString(),
-    }).topSignal;
+    });
+    // Suppress a gaming signal the owner cleared (accept/dismiss) for the ANTI_GAMING_SIGNAL source —
+    // only when every supporting proof is cleared; a new supporting proof re-surfaces it.
+    topGamingSignal = gamingAnalysis.signals.find((s) => !isFindingSuppressed(s.supportingProofIds, clearedGaming)) ?? null;
 
     // Evidence Credibility Graph — which proof/staff/reviewer/process can be trusted, and why.
     const credAggregates = aggregateCredibility(proofRows, nowMs);
-    topCredibilityConcern = buildEvidenceCredibility({
+    const credibilityAnalysis = buildEvidenceCredibility({
       workspaceId, ...credAggregates,
       currentConstraint: topConstraint?.constraintType ?? null,
       topProfitLeakType: topProfitLeak?.leakType ?? null,
@@ -693,7 +754,10 @@ export async function getOwnerNowView(
       submitterReusedHash: reusedProofFindings?.submitterReuse,
       missingSources: complaintReworkLinks && complaintReworkLinks.aggregates.complaintLinkedCount > 0 ? [] : ["no complaint event linked to accepted proof yet"],
       evaluatedAt: new Date(nowMs).toISOString(),
-    }).topConcern;
+    });
+    // Suppress a credibility concern the owner cleared (accept/dismiss) for the CREDIBILITY_CONCERN
+    // source — only when every supporting proof is cleared; a new supporting proof re-surfaces it.
+    topCredibilityConcern = credibilityAnalysis.findings.find((f) => !isFindingSuppressed(f.supportingProofIds, clearedCredibility)) ?? null;
 
     // Proof counts for the Business-Control SLOs (from the same rows — no extra query).
     const WEAK = new Set(["NEEDS_HUMAN_REVIEW", "AI_PRECHECK_FAILED"]);
@@ -790,7 +854,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

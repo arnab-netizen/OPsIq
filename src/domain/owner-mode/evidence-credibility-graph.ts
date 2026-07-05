@@ -114,6 +114,12 @@ export interface CredibilityFinding {
   ownerActionRequired: boolean;
   managerActionSufficient: boolean;
   reassessmentTrigger: string | null;
+  /**
+   * The proof IDs backing this concern, when known — used to suppress it after an owner adjudication
+   * clears exactly those proofs (a new supporting proof re-surfaces it). Absent when the concern has
+   * no per-proof evidence (then it is never suppressed — fail visible).
+   */
+  supportingProofIds?: string[];
   /** Secondary, explained — never the primary output. */
   credibilityScore: number;
   evaluatedAt: string;
@@ -323,7 +329,7 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
       signalType: "REUSED_PROOF", severity: s.count >= 2 ? "HIGH" : "MEDIUM", confidence: "HIGH",
       reasonCodes: ["EXACT_REUSED_HASH", "REUSED_ACROSS_DIFFERENT_TASKS"],
       evidence: [`${s.count} of this operator's proof(s) reuse an artifact across different jobs`, ...(s.proofIds.length ? [`proof refs: ${s.proofIds.slice(0, 10).join(", ")}`] : [])],
-      patternCount: s.count, missingData: [],
+      patternCount: s.count, missingData: [], supportingProofIds: s.proofIds,
       ownerExplanation: "This operator reused the same proof artifact across different jobs — some completions may be backed by old evidence. This needs review, not an accusation.",
       businessImpact: "Reused proof hides undone work until a complaint surfaces.",
       relatedGamingSignal: "REUSED_PROOF_PATTERN", relatedProfitLeak: null,
