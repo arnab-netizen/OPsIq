@@ -1,0 +1,54 @@
+{
+  "pass": "bottleneck-correction-routing-depth-pass",
+  "title": "Bottleneck correction routing depth pass",
+  "classification": "BOTTLENECK_CORRECTION_ROUTING_REAL_AND_OWNER_VISIBLE",
+  "schemaChange": false,
+  "correctionTypes": [
+    "REQUIRE_FRESH_PROOF",
+    "UPDATE_CHECKLIST",
+    "REVIEW_PROCESS_STEP",
+    "ASSIGN_TRAINING_REVIEW",
+    "ESCALATE_TO_MANAGER",
+    "ESCALATE_TO_OWNER",
+    "RESOLVE_OPERATIONAL_EVENT",
+    "COLLECT_MISSING_DATA",
+    "NO_ACTION_DATA_INSUFFICIENT"
+  ],
+  "correctionShapeFields": 22,
+  "filesCreated": [
+    "src/domain/owner-mode/bottleneck-correction-routing.ts",
+    "src/__tests__/owner-mode/bottleneck-correction-routing.test.ts",
+    "src/__tests__/components/process-corrections-panel.test.tsx",
+    "src/__tests__/execution/bottleneck-correction-routing-simulation.db.test.ts"
+  ],
+  "filesChanged": [
+    "src/services/owner-guidance/owner-now-view.service.ts",
+    "src/components/owner/ProcessIntelligencePanel.tsx",
+    "src/app/(authenticated)/owner/process-intelligence/page.tsx",
+    "src/__tests__/app/owner-process-intelligence-page.test.tsx",
+    "tests/browser/44-owner-process-intelligence.spec.ts"
+  ],
+  "tests": {
+    "domain": 15,
+    "component": 4,
+    "page": 2,
+    "dbSimulationCases": 2,
+    "browserAssertions": 1
+  },
+  "gates": {
+    "tsc": "exit 0",
+    "governanceStrict": "31 frozen, 0 new",
+    "lintRatchet": "PASS"
+  },
+  "governance": {
+    "everyCorrectionProposed": true,
+    "autoExecutableOnlyForNoOp": true,
+    "approvalCanOnlyEscalate": true,
+    "ownerApprovalNeverHidden": true,
+    "noFabricatedAssignments": true,
+    "noFraudNegligenceLabels": true,
+    "noHiddenStaffScore": true,
+    "emitsAuditEvents": false,
+    "reason": "read-model derivation on the now-view read path; no mutation"
+  }
+}

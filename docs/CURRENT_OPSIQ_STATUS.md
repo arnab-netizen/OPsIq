@@ -8,7 +8,25 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Process Intelligence UI Surface depth pass (latest)
+## Bottleneck → Correction Routing depth pass (latest)
+- **Base:** `origin/main` @ `d8c01058` (Process Intelligence UI Surface, PR #129, merged).
+- **Branch:** `claude/bottleneck-correction-routing-depth-pass`.
+- **Classification:** `BOTTLENECK_CORRECTION_ROUTING_REAL_AND_OWNER_VISIBLE`.
+- **Process Intelligence findings now route into proposed, trackable correction actions.** A pure
+  `buildProcessCorrections` derives, per finding, one or more of nine governed correction types
+  (REQUIRE_FRESH_PROOF, UPDATE_CHECKLIST, REVIEW_PROCESS_STEP, ASSIGN_TRAINING_REVIEW, ESCALATE_TO_MANAGER,
+  ESCALATE_TO_OWNER, RESOLVE_OPERATIONAL_EVENT, COLLECT_MISSING_DATA, NO_ACTION_DATA_INSUFFICIENT) with a
+  22-field shape, and surfaces them on the Owner Now View (`processCorrections`) and the
+  `/owner/process-intelligence` page under "What to do about it".
+- **Governance:** every correction is PROPOSED (never auto-approved); only the no-op is auto-executable;
+  required approval can only escalate the gate, never weaken it, and owner approval is shown explicitly;
+  no fabricated assignments; no fraud/negligence labels; no hidden score. **No schema change** (pure
+  derivation, backfill-safe).
+- **Verification:** tsc 0 · governance 31-frozen/0-new · lint ratchet clean · 15 domain + 4 component +
+  2 page tests + laundry DB simulation + a browser corrections assertion in `owner-pilot-e2e`. Details:
+  `docs/remediation/bottleneck-correction-routing-depth-pass/`.
+
+## Process Intelligence UI Surface depth pass
 - **Base:** `origin/main` @ `466f72f7` (Process Intelligence v1, PR #128, merged).
 - **Branch:** `claude/process-intelligence-ui-surface-depth-pass`.
 - **Classification:** `PROCESS_INTELLIGENCE_UI_REAL_AND_OWNER_VISIBLE` (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).
