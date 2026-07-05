@@ -8,7 +8,28 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Runtime Control Correlation depth pass (latest)
+## Proof ↔ Outcome Linkage + Reassessment Creation depth pass (latest)
+- **Base:** `origin/main` @ `26a52182` (Runtime Control Correlation PR #113 merged).
+- **Branch:** `claude/proof-outcome-reassessment-linkage-depth-pass`.
+- **Classification:** `PROOF_OUTCOME_REASSESSMENT_LINKAGE_REAL_AND_OWNER_VISIBLE` (+ `PROOF_TO_OUTCOME_SLO_MEASURABILITY_IMPROVED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`).
+- **Real, keyed, DB-backed linkages** (no fabrication, from the `proof.reviewed` audit trail):
+  `PROOF_TO_BAD_RESULT_LINK` (accepted proof → later DISPUTED/OVERRIDDEN — a single audit row with
+  `fromStatus=ACCEPTED` proves the reversal), `PROOF_TO_REWORK_LINK` (`resubmissionOfId`), and
+  `OUTCOME_TO_REASSESSMENT_LINK` (via the new creation service). Pure domain
+  (`proof-outcome-linkage.ts`) + DB service + now-view wiring (`payload.proofOutcomeLinkage`).
+- **Reassessment creation service** (`createReassessmentEvent`, was missing): atomic row +
+  `OWNER_REASSESSMENT_CREATED` audit, idempotent, keyed to `sourceProofId`/`outcomeId`. Gives the
+  correction loop a real governed entry point and makes `REASSESSMENT_LATENCY` measurable.
+- **Became measurable:** `PROOF_OUTCOME_INTEGRITY` SLO (accepted-then-reversed rate); credibility now
+  fires `ACCEPTED_PROOF_WITH_BAD_OUTCOME` and stops calling a contradicted submitter "reliable".
+- **Still NOT_MEASURABLE (documented):** `PROOF_TO_COMPLAINT_LINK` (period-aggregate complaints only);
+  `PROOF_TO_OUTCOME_LINK` to recommendation/action outcomes (disjoint trees).
+- **Schema:** additive `owner_reassessment_events.sourceProofId` (backfill-safe) + index; migration
+  `20260705120000_reassessment_source_proof`.
+- **Verification:** tsc 0 · prisma valid · governance strict 0-new · changed-area 89 files/734 tests
+  green · 22 new tests. Browser E2E untouched. Details: `docs/remediation/proof-outcome-reassessment-linkage-depth-pass/`.
+
+## Runtime Control Correlation depth pass
 - **Base:** `origin/main` @ `47a7741d` (Business-Control SLO PR #112 merged).
 - **Branch:** `claude/opsiq-hostile-audit-jye6h4`.
 - **Classification:** `RUNTIME_CONTROL_CORRELATION_REAL_AND_OWNER_VISIBLE` (audit-durability partial, disclosed).

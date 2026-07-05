@@ -19,6 +19,7 @@ import type { ProfitLeakType } from "@/domain/owner-mode/profit-leak-radar";
 import type { GamingSignalType } from "@/domain/owner-mode/anti-gaming-analytics";
 import type { CredibilitySignalType } from "@/domain/owner-mode/evidence-credibility-graph";
 import type { CorrelationLatencyStat, AuditDurabilityStat } from "@/domain/owner-mode/control-correlation";
+import type { ProofOutcomeMeasurement } from "@/domain/owner-mode/proof-outcome-linkage";
 
 export type SLOStatus = "PASS" | "WARN" | "FAIL" | "NOT_MEASURABLE";
 export type SLOConfidence = "HIGH" | "MEDIUM" | "LOW" | "NEEDS_DATA";
@@ -26,7 +27,8 @@ export type SLOType =
   | "AUDIT_DURABILITY" | "PROOF_REVIEW_COMPLETION" | "WEAK_PROOF_REVIEW_RATE" | "EVIDENCE_CREDIBILITY_RISK"
   | "ANTI_GAMING_RISK" | "REASSESSMENT_LATENCY" | "SHOCK_HANDLING_LATENCY" | "OWNER_WORKLOAD_BURDEN"
   | "OWNER_BOTTLENECK" | "CONSTRAINT_FRESHNESS" | "PROFIT_LEAK_FRESHNESS" | "OPPORTUNITY_DECISION_COMPLETENESS"
-  | "STARTUP_VALIDATION_COMPLETENESS" | "NOW_VIEW_SIGNAL_COMPLETENESS" | "CROSS_WORKSPACE_ISOLATION_PROOF";
+  | "STARTUP_VALIDATION_COMPLETENESS" | "NOW_VIEW_SIGNAL_COMPLETENESS" | "CROSS_WORKSPACE_ISOLATION_PROOF"
+  | "PROOF_OUTCOME_INTEGRITY";
 
 type Sev = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "POSITIVE";
 
@@ -53,6 +55,8 @@ export interface BusinessControlInput {
   auditDurability?: AuditDurabilityStat | null;
   reassessmentLatency?: CorrelationLatencyStat | null;
   shockHandlingLatency?: CorrelationLatencyStat | null;
+  /** Measured proof→outcome integrity (accepted-then-contradicted rate), or null → NOT_MEASURABLE. */
+  proofOutcome?: ProofOutcomeMeasurement | null;
   startupDataAvailable?: boolean;
   /** Test-backed isolation status (from the isolation test suite), or null. */
   isolationTestPassed?: boolean | null;
@@ -274,6 +278,31 @@ export function evaluateBusinessControlSLOs(input: BusinessControlInput): Busine
         "Investigate why the shock did not trigger a recorded re-evaluation.")
     : notMeasurable("SHOCK_HANDLING_LATENCY", "Shock-to-re-evaluation latency", "handle within 15 minutes",
         ["shock events in the measurement window (none recorded)"], ws, at));
+
+  // 13b. PROOF_OUTCOME_INTEGRITY — measured accepted-proof → contradiction rate.
+  if (input.proofOutcome && input.proofOutcome.measurable) {
+    const po = input.proofOutcome;
+    const rate = po.contradictionRate ?? 0;
+    const pct = Math.round(rate * 100);
+    const status: SLOStatus = po.contradictedCount === 0 ? "PASS" : rate >= 0.2 || po.contradictedCount >= 3 ? "FAIL" : "WARN";
+    add({ sloType: "PROOF_OUTCOME_INTEGRITY", sliName: "Accepted proof held up (not later reversed)", status,
+      target: "0% of accepted proof later disputed/overridden",
+      actualValue: `${pct}% reversed (${po.contradictedCount}/${po.acceptedProofCount})${po.reworkCount > 0 ? `, ${po.reworkCount} rework` : ""}`,
+      measurementWindow: "90-day rolling (proof.reviewed audit trail)", confidence: "HIGH",
+      sourceDataRefs: ["Proof ACCEPTED→DISPUTED/OVERRIDDEN via proof.reviewed audit"],
+      missingData: [],
+      ownerExplanation: po.contradictedCount === 0
+        ? `Every accepted proof in the window held up — none was later disputed or overridden (${po.acceptedProofCount} accepted).`
+        : `${po.contradictedCount} of ${po.acceptedProofCount} accepted proof(s) were later reversed — sign-offs are not fully trustworthy.`,
+      businessImpact: "Accepted-then-reversed proof means bad work was certified as done and only caught later.",
+      degradedBehavior: status === "PASS" ? null : "Some accepted completions are not real — rework and complaints follow.",
+      recommendedAction: status === "PASS" ? "No action — accepted proof is holding up." : "Re-verify the reversed items and tighten who can accept proof; coach the operators involved.",
+      ownerActionRequired: status === "FAIL" });
+  } else {
+    add(notMeasurable("PROOF_OUTCOME_INTEGRITY", "Accepted proof held up (not later reversed)", "0% reversed",
+      ["accepted proof in the window (none to assess for later contradiction)"], ws, at,
+      "Becomes measurable once proof is accepted and its later review transitions are recorded."));
+  }
 
   add(input.startupDataAvailable
     ? passByDesign("STARTUP_VALIDATION_COMPLETENESS", "Startup recommendations carry validation + cash safety", "all fields present", ["startup controller"], ws, at, "Startup recommendation fields present.")

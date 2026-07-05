@@ -71,6 +71,14 @@ export interface CredibilityInput {
   currentConstraint?: ConstraintType | null;
   topProfitLeakType?: ProfitLeakType | null;
   topGamingSignalType?: GamingSignalType | null;
+  /**
+   * Real proof→outcome contradictions (accepted proof later DISPUTED/OVERRIDDEN), per submitter,
+   * from the Proof↔Outcome Linkage. When present, a submitter whose accepted proof was reversed
+   * is no longer "reliable" and raises an ACCEPTED_PROOF_WITH_BAD_OUTCOME concern.
+   */
+  submitterContradictions?: Array<{ actorId: string; contradictedCount: number }>;
+  /** Workspace total of accepted-then-contradicted proofs (for the workspace-level concern). */
+  contradictedProofCount?: number;
   /** Sources not yet persisted (complaint/rework/outcome ↔ proof linkage). */
   missingSources?: string[];
   evaluatedAt: string;
@@ -172,9 +180,48 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
     }
   }
 
+  // ── Proof→outcome contradiction (accepted proof later reversed) — strongest trust signal ──
+  const contradictionBySubmitter = new Map<string, number>(
+    (input.submitterContradictions ?? []).map((c) => [c.actorId, c.contradictedCount])
+  );
+  let attributedContradictions = 0;
+  for (const c of input.submitterContradictions ?? []) {
+    if (c.contradictedCount < 1) continue;
+    attributedContradictions += c.contradictedCount;
+    push({
+      entityType: "SUBMITTER", entityId: c.actorId, entityLabel: "staff",
+      signalType: "ACCEPTED_PROOF_WITH_BAD_OUTCOME", severity: c.contradictedCount >= 2 ? "HIGH" : "MEDIUM", confidence: "HIGH",
+      reasonCodes: ["ACCEPTED_PROOF_LATER_CONTRADICTED"],
+      evidence: [`${c.contradictedCount} of this operator's accepted proof(s) were later disputed/overridden`], patternCount: c.contradictedCount, missingData: [],
+      ownerExplanation: "This operator had accepted proof that was later reversed — their sign-offs cannot be taken at face value.",
+      businessImpact: "Proof that is accepted then reversed means bad work was certified as done and only caught later.",
+      relatedGamingSignal: null, relatedProfitLeak: input.topProfitLeakType && ["REWORK_REDO_COST", "COMPLAINT_REVENUE_RISK", "WEAK_PROOF_REWORK_RISK"].includes(input.topProfitLeakType) ? input.topProfitLeakType : null,
+      relatedConstraint: input.currentConstraint === "QUALITY" || input.currentConstraint === "STAFF" ? input.currentConstraint : null,
+      recommendedResponse: "Re-verify this operator's other recent accepted proof and require independent review before sign-off.",
+      ownerActionRequired: true, managerActionSufficient: false,
+      reassessmentTrigger: "Re-open outcome checks on this operator's accepted items.",
+    });
+  }
+  const unattributedContradictions = Math.max(0, (input.contradictedProofCount ?? 0) - attributedContradictions);
+  if (unattributedContradictions >= 1) {
+    push({
+      entityType: "WORKSPACE", entityId: null, entityLabel: "workspace",
+      signalType: "ACCEPTED_PROOF_WITH_BAD_OUTCOME", severity: "HIGH", confidence: "MEDIUM",
+      reasonCodes: ["ACCEPTED_PROOF_LATER_CONTRADICTED"],
+      evidence: [`${unattributedContradictions} accepted proof(s) in the workspace were later disputed/overridden`], patternCount: unattributedContradictions, missingData: [],
+      ownerExplanation: "Accepted proof was later reversed — earlier sign-offs in the workspace could not be trusted.",
+      businessImpact: "Accepted-then-reversed proof means bad work was certified and only caught later.",
+      relatedGamingSignal: null, relatedProfitLeak: null, relatedConstraint: input.currentConstraint === "QUALITY" ? "QUALITY" : null,
+      recommendedResponse: "Re-verify the reversed items and tighten who can accept proof.",
+      ownerActionRequired: true, managerActionSufficient: false,
+      reassessmentTrigger: "Re-open outcome checks on the reversed items.",
+    });
+  }
+
   // ── Submitter credibility ──────────────────────────────────────────────────
   for (const s of input.submitters) {
     const unreliableCount = s.weakOrReviewNeeded + s.rejected + s.reused;
+    const contradicted = contradictionBySubmitter.get(s.actorId) ?? 0;
     if (unreliableCount >= UNRELIABLE_THRESHOLD) {
       push({
         entityType: "SUBMITTER", entityId: s.actorId, entityLabel: s.role ?? "staff",
@@ -190,14 +237,19 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
         ownerActionRequired: false, managerActionSufficient: true,
         reassessmentTrigger: "Re-evaluate this operator's credibility after coaching.",
       });
-    } else if (s.accepted >= RELIABLE_MIN_ACCEPTED && s.weakOrReviewNeeded === 0 && s.rejected === 0 && s.reused === 0) {
-      // RELIABLE only when there is NO contradiction data — stated honestly.
+    } else if (s.accepted >= RELIABLE_MIN_ACCEPTED && s.weakOrReviewNeeded === 0 && s.rejected === 0 && s.reused === 0 && contradicted === 0) {
+      // RELIABLE requires no contradiction: a submitter whose accepted proof was later reversed
+      // is handled above (ACCEPTED_PROOF_WITH_BAD_OUTCOME) and never reaches this branch.
+      const outcomeChecked = input.submitterContradictions !== undefined;
       push({
         entityType: "SUBMITTER", entityId: s.actorId, entityLabel: s.role ?? "staff",
-        signalType: "RELIABLE_SUBMITTER_PATTERN", severity: "POSITIVE", confidence: "MEDIUM",
-        reasonCodes: ["REPEATED_ACCEPTED_NO_CONTRADICTION"], evidence: [`${s.accepted} accepted proofs, 0 weak/rejected/reused`], patternCount: s.accepted,
-        missingData: ["complaint/rework/outcome ↔ proof linkage (to confirm no downstream contradiction)"],
-        ownerExplanation: "This operator's proof is consistently accepted with no weak/reused history — reliable on proof (downstream outcome contradiction is not yet tracked).",
+        signalType: "RELIABLE_SUBMITTER_PATTERN", severity: "POSITIVE", confidence: outcomeChecked ? "HIGH" : "MEDIUM",
+        reasonCodes: [outcomeChecked ? "REPEATED_ACCEPTED_NO_CONTRADICTION_CHECKED" : "REPEATED_ACCEPTED_NO_CONTRADICTION"],
+        evidence: [`${s.accepted} accepted proofs, 0 weak/rejected/reused${outcomeChecked ? ", 0 later contradicted" : ""}`], patternCount: s.accepted,
+        missingData: outcomeChecked ? ["per-proof complaint linkage (still period-aggregate only)"] : ["complaint/rework/outcome ↔ proof linkage (to confirm no downstream contradiction)"],
+        ownerExplanation: outcomeChecked
+          ? "This operator's proof is consistently accepted, never weak/reused, and none was later reversed — reliable (contradiction now tracked; per-proof complaints still not)."
+          : "This operator's proof is consistently accepted with no weak/reused history — reliable on proof (downstream outcome contradiction is not yet tracked).",
         businessImpact: "A reliable submitter needs less review — safe to trust and delegate more.",
         relatedGamingSignal: null, relatedProfitLeak: null, relatedConstraint: null,
         recommendedResponse: "Trust and consider lighter review for this operator; keep monitoring as outcome linkage becomes available.",

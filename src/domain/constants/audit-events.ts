@@ -271,6 +271,9 @@ export const AUDIT_EVENTS = {
   OWNER_FINANCE_ACTION_COMPLETED: "owner.finance_action_completed",
   OWNER_FINANCE_REASSESSMENT_TRIGGERED: "owner.finance_reassessment_triggered",
   OWNER_FINANCE_OUTCOME_VERIFIED: "owner.finance_outcome_verified",
+  // Owner reassessment lifecycle — created by the reassessment-event creation service when a
+  // supported trigger occurs (bad outcome / accepted-proof contradiction).
+  OWNER_REASSESSMENT_CREATED: "owner.reassessment_created",
 
   // Owner Budget (Dynamic Budget, Capital Allocation & Profit Governance)
   OWNER_BUDGET_PERIOD_CREATED: "owner.budget_period_created",

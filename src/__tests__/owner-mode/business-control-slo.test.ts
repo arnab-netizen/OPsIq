@@ -117,6 +117,24 @@ describe("business-control SLOs", () => {
     expect(get(evaluateBusinessControlSLOs(inp({ shockHandlingLatency: latStat({ failedCount: 1, linkedCount: 0, medianLatencyMs: null }) })), "SHOCK_HANDLING_LATENCY").status).toBe("FAIL");
   });
 
+  const poStat = (over: Record<string, unknown> = {}) => ({
+    measurable: true, acceptedProofCount: 10, contradictedCount: 0, reworkCount: 0, contradictionRate: 0, medianContradictionLatencyMs: null, ...over,
+  });
+
+  it("PROOF_OUTCOME_INTEGRITY PASS when no accepted proof reversed, WARN on some, FAIL on high rate", () => {
+    expect(get(evaluateBusinessControlSLOs(inp({ proofOutcome: poStat() })), "PROOF_OUTCOME_INTEGRITY").status).toBe("PASS");
+    expect(get(evaluateBusinessControlSLOs(inp({ proofOutcome: poStat({ contradictedCount: 1, contradictionRate: 0.1 }) })), "PROOF_OUTCOME_INTEGRITY").status).toBe("WARN");
+    const fail = get(evaluateBusinessControlSLOs(inp({ proofOutcome: poStat({ contradictedCount: 4, contradictionRate: 0.4 }) })), "PROOF_OUTCOME_INTEGRITY");
+    expect(fail.status).toBe("FAIL");
+    expect(fail.actualValue).toMatch(/40% reversed/);
+    expect(fail.ownerActionRequired).toBe(true);
+  });
+
+  it("PROOF_OUTCOME_INTEGRITY NOT_MEASURABLE when there is no accepted proof to assess", () => {
+    expect(get(evaluateBusinessControlSLOs(inp()), "PROOF_OUTCOME_INTEGRITY").status).toBe("NOT_MEASURABLE");
+    expect(get(evaluateBusinessControlSLOs(inp({ proofOutcome: poStat({ measurable: false, acceptedProofCount: 0, contradictionRate: null }) })), "PROOF_OUTCOME_INTEGRITY").status).toBe("NOT_MEASURABLE");
+  });
+
   it("overall FAIL and a deterministic, explainable top control risk", () => {
     const a = evaluateBusinessControlSLOs(inp({ topGamingSignalType: "SELF_REVIEW_ATTEMPT", topGamingSeverity: "HIGH", workloadBudget: { ownerDecisionsRequired: 20, approvalsRequired: 0, reviewsRequired: 0, ownerBottleneckItems: 0 } }));
     const b = evaluateBusinessControlSLOs(inp({ topGamingSignalType: "SELF_REVIEW_ATTEMPT", topGamingSeverity: "HIGH", workloadBudget: { ownerDecisionsRequired: 20, approvalsRequired: 0, reviewsRequired: 0, ownerBottleneckItems: 0 } }));

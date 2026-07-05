@@ -3574,6 +3574,7 @@ model OwnerReassessmentEvent {
   failureAdjudicationId         String?
   causalAttributionId           String?
   harmEventId                   String?
+  sourceProofId                 String?       @db.Uuid // proof whose accepted-then-contradicted reversal triggered this reassessment (proof→reassessment linkage)
   trigger                       String // failed_outcome | disputed_outcome | harmful_outcome | external_event_invalidation | execution_invalidation | owner_dispute | evidence_retraction | new_contradicting_evidence
   triggerDescription            String        @db.Text
   status                        String // pending | in_progress | diagnosis_reopened | corrective_action_issued | closed_no_correction_needed | closed_with_correction | blocked_awaiting_human_review
@@ -3592,6 +3593,7 @@ model OwnerReassessmentEvent {
   @@index([businessId])
   @@index([trigger])
   @@index([status])
+  @@index([workspaceId, sourceProofId])
   @@map("owner_reassessment_events")
 }
 
