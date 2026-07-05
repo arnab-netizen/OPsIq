@@ -152,6 +152,7 @@ jobs:
             src/__tests__/phase-3-db-smoke-verification.test.ts \
             src/__tests__/domain/owner-mode/controlled-learning-candidate.db.test.ts \
             src/__tests__/api/owner/controlled-learning-admission.db.test.ts \
+            src/__tests__/execution/bottleneck-correction-routing-simulation.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -296,6 +297,7 @@ jobs:
             src/__tests__/phase-3-db-smoke-verification.test.ts \
             src/__tests__/domain/owner-mode/controlled-learning-candidate.db.test.ts \
             src/__tests__/api/owner/controlled-learning-admission.db.test.ts \
+            src/__tests__/execution/bottleneck-correction-routing-simulation.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
