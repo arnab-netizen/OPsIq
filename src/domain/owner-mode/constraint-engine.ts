@@ -42,6 +42,13 @@ export interface ConstraintSignals {
   /** Quality. */
   complaintsCount?: number;
   reworkCount?: number;
+  /**
+   * Dispute-derived counts (from governed proof disputes) — a disputed accepted proof is a real,
+   * attributed quality/staff/manager signal that can bind the business.
+   */
+  disputeQualityCount?: number;
+  disputeStaffCount?: number;
+  disputeManagerCount?: number;
   /** Retention / accounts. */
   churnRiskScore?: number; // 0..1
   majorClientLoss?: boolean;
@@ -298,6 +305,57 @@ export function identifyConstraints(s: ConstraintSignals): ConstraintAnalysis {
       ownerApprovalRequired: true, riskLevel: "HIGH", cashImpact: "Avoids fines/rework from non-compliance.",
       operationalBurden: "Low — external verification.", successMetric: "Local requirements confirmed by an authoritative source.",
       stopLoss: "Do not commit spend until local requirements are confirmed.", reassessmentTrigger: "Re-evaluate once local verification is obtained.",
+    });
+  }
+
+  // Dispute-derived constraints — a governed proof dispute is a real, attributed quality/staff/
+  // manager signal. It competes for the binding constraint; no fabricated metric is used.
+  const dQuality = s.disputeQualityCount ?? 0;
+  const dStaff = s.disputeStaffCount ?? 0;
+  const dManager = s.disputeManagerCount ?? 0;
+  if (dQuality > 0) {
+    F({
+      constraintType: "QUALITY", domain: "quality", severity: dQuality >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
+      evidence: [`${dQuality} accepted proof(s) disputed for quality/rework/bad outcome`], missingData: [],
+      businessImpact: "Quality is failing after acceptance — rework and complaints follow and cap throughput.",
+      ownerExplanation: "Accepted work is being disputed for quality — quality control is a binding constraint right now.",
+      recommendedAction: "Run a quality-control intervention on the disputed task type and tighten its proof requirement.",
+      ownerApprovalRequired: false, riskLevel: dQuality >= 3 ? "HIGH" : "MEDIUM",
+      cashImpact: "Indirect — quality failures drive rework/refund cost.",
+      operationalBurden: "Medium — QC + SOP correction.",
+      successMetric: "Quality disputes fall to zero on the next similar jobs.",
+      stopLoss: "If quality keeps failing after the fix, pause that task type until the SOP is corrected.",
+      reassessmentTrigger: "Re-evaluate if quality disputes recur.",
+    });
+  }
+  if (dStaff > 0) {
+    F({
+      constraintType: "STAFF", domain: "staff", severity: dStaff >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
+      evidence: [`${dStaff} accepted proof(s) disputed as wrong/insufficient/fake proof by staff`], missingData: [],
+      businessImpact: "Staff are producing work whose proof does not hold up — an execution-reliability constraint.",
+      ownerExplanation: "Disputed proof traces to staff execution — the binding constraint is staff reliability, not demand.",
+      recommendedAction: "Coach the operators behind the disputes and verify their work before assigning more.",
+      ownerApprovalRequired: false, riskLevel: dStaff >= 3 ? "HIGH" : "MEDIUM",
+      cashImpact: "Indirect — unreliable execution drives rework/complaints.",
+      operationalBurden: "Medium — coaching + verification.",
+      successMetric: "Staff-attributed disputes fall to zero.",
+      stopLoss: "If fake proof is confirmed, escalate to an anti-gaming review.",
+      reassessmentTrigger: "Re-evaluate if staff disputes recur.",
+    });
+  }
+  if (dManager > 0) {
+    F({
+      constraintType: "MANAGER", domain: "management", severity: dManager >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
+      evidence: [`${dManager} accepted proof(s) disputed as a manager review error`], missingData: [],
+      businessImpact: "A manager accepted proof that should not have passed — the review gate is a binding constraint.",
+      ownerExplanation: "Disputes trace to manager review errors — the approval gate itself is letting weak work through.",
+      recommendedAction: "Coach the reviewer and tighten the approval policy for the disputed task type.",
+      ownerApprovalRequired: false, riskLevel: dManager >= 3 ? "HIGH" : "MEDIUM",
+      cashImpact: "Indirect — bad approvals drive downstream rework/complaints.",
+      operationalBurden: "Low-medium — reviewer coaching + policy.",
+      successMetric: "Manager-review-error disputes fall to zero.",
+      stopLoss: "If review errors persist, require independent double-review for high-risk proof.",
+      reassessmentTrigger: "Re-evaluate if manager review errors recur.",
     });
   }
 

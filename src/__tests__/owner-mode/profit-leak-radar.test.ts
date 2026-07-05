@@ -139,3 +139,32 @@ describe("profit-leak radar — opportunity integration (do not scale through a 
     expect(e.upsideBand).toBe("STRONG");
   });
 });
+
+describe("profit-leak radar — dispute-derived leaks", () => {
+  it("a rework/quality dispute fires REWORK_REDO_COST with qualitative (NEEDS_DATA) impact", () => {
+    const l = identifyProfitLeaks(base({ disputeReworkCount: 2 }));
+    const leak = l.leaks.find((x) => x.leakType === "REWORK_REDO_COST")!;
+    expect(leak).toBeTruthy();
+    expect(leak.evidence.join(" ")).toMatch(/disputed as rework/i);
+    expect(leak.estimatedImpact.tier).toBe("NEEDS_DATA"); // no fabricated redo cost
+    expect(leak.relatedConstraint).toBe("QUALITY");
+  });
+
+  it("a customer-complaint dispute fires COMPLAINT_REVENUE_RISK, disclosing the missing complaint model", () => {
+    const leak = identifyProfitLeaks(base({ disputeComplaintCount: 1 })).leaks.find((x) => x.leakType === "COMPLAINT_REVENUE_RISK")!;
+    expect(leak).toBeTruthy();
+    expect(leak.missingData.join(" ")).toMatch(/no per-event complaint model/i);
+    expect(leak.estimatedImpact.rangeLow).toBeUndefined(); // no fabricated revenue figure
+  });
+
+  it("a wrong/fake/manager-error dispute fires WEAK_PROOF_REWORK_RISK and can be the top leak", () => {
+    const top = identifyProfitLeaks(base({ disputeWeakProofCount: 4 })).topLeak!;
+    expect(top.leakType).toBe("WEAK_PROOF_REWORK_RISK");
+    expect(top.severity).toBe("HIGH");
+  });
+
+  it("no disputes → no dispute-derived leak fabricated", () => {
+    const leaks = identifyProfitLeaks(base()).leaks;
+    expect(leaks.some((x) => x.evidence.join(" ").match(/disputed/i))).toBe(false);
+  });
+});

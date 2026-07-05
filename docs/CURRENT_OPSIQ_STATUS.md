@@ -8,7 +8,27 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Governed Proof Dispute Surface depth pass (latest)
+## Dispute → Profit/Constraint Wiring depth pass (latest)
+- **Base:** `origin/main` @ `dc18ca6e` (Governed Proof Dispute Surface PR #115 merged).
+- **Branch:** `claude/dispute-profit-constraint-wiring-depth-pass`.
+- **Classification:** `DISPUTE_PROFIT_CONSTRAINT_WIRING_REAL_AND_OWNER_VISIBLE` (+ `PROFIT_LEAK_RADAR_STRENGTHENED`, `CONSTRAINT_ENGINE_STRENGTHENED`).
+- **Live proof disputes now move the business-risk layer, not only proof integrity.** The
+  `proof.disputed` audit trail is mapped (pure `dispute-risk.ts` + DB service) into Profit-Leak +
+  Constraint drivers: REWORK/QUALITY/BAD_OUTCOME→REWORK_REDO_COST+QUALITY;
+  CUSTOMER_COMPLAINT→COMPLAINT_REVENUE_RISK; WRONG/FAKE/MANAGER_ERROR→WEAK_PROOF_REWORK_RISK +
+  STAFF/MANAGER. Both engines gained dispute count inputs + dispute-attributed findings that compete
+  in the existing top-leak/top-constraint selection; the now-view feeds the counts and exposes a
+  `disputeRisk` block. `OTHER` is not overclassified.
+- **No fabrication:** financial impact is always qualitative (NEEDS_DATA) — no per-event complaint/
+  rework model, so no revenue/churn/redo number is invented; missing model disclosed on each signal.
+  Credibility + `PROOF_OUTCOME_INTEGRITY` unchanged (not duplicated); reassessment not duplicated.
+- **No schema change** — reads the `proof.disputed` audit trail.
+- **Still missing:** per-event complaint/rework model (impact stays qualitative); direct fake-proof→
+  anti-gaming link; UI + browser E2E.
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance strict 0-new · changed-area
+  87 files/724 tests green · 17 new tests. Details: `docs/remediation/dispute-profit-constraint-wiring-depth-pass/`.
+
+## Governed Proof Dispute Surface depth pass
 - **Base:** `origin/main` @ `ab4d1baa` (Proof↔Outcome Linkage PR #114 merged).
 - **Branch:** `claude/governed-proof-dispute-surface-depth-pass`.
 - **Classification:** `GOVERNED_PROOF_DISPUTE_REAL_AND_OWNER_VISIBLE` (+ `PROOF_OUTCOME_INTEGRITY_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`).

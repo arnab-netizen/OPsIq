@@ -40,6 +40,7 @@ import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
 import type { ProofOutcomeLinkageReport } from "@/domain/owner-mode/proof-outcome-linkage";
+import type { DisputeRiskAnalysis } from "@/domain/owner-mode/dispute-risk";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -100,6 +101,12 @@ export interface GuidanceDeps {
    * contradiction signal + PROOF_OUTCOME_INTEGRITY SLO stay honestly unlinked/NOT_MEASURABLE.
    */
   proofOutcome?: (workspaceId: string) => Promise<ProofOutcomeLinkageReport>;
+  /**
+   * Optional — the live dispute→risk source (maps governed proof-dispute categories into
+   * Profit-Leak + Constraint signals). Present on the live path; absent on a fake-DI unit test,
+   * in which case dispute-derived leaks/constraints simply do not fire (no fabrication).
+   */
+  disputeRisk?: (workspaceId: string) => Promise<DisputeRiskAnalysis>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
@@ -107,12 +114,14 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { randomUUID } = await import("crypto");
   const { getControlCorrelations } = await import("@/services/owner-mode/control-correlation.service");
   const { getProofOutcomeLinkage } = await import("@/services/owner-mode/proof-outcome-linkage.service");
+  const { getDisputeRiskAnalysis } = await import("@/services/owner-mode/dispute-risk.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
     now: () => Date.now(),
     correlations: (workspaceId: string) => getControlCorrelations(workspaceId),
     proofOutcome: (workspaceId: string) => getProofOutcomeLinkage(workspaceId),
+    disputeRisk: (workspaceId: string) => getDisputeRiskAnalysis(workspaceId),
   };
 }
 
@@ -187,6 +196,8 @@ export interface OwnerNowViewPayload {
   controlCorrelations: ControlCorrelationReport | null;
   /** Measured proof→outcome linkage (accepted-proof contradiction/rework), or null if unavailable. */
   proofOutcomeLinkage: ProofOutcomeLinkageReport | null;
+  /** Dispute-derived business-risk signals (category → profit/constraint), or null if unavailable. */
+  disputeRisk: DisputeRiskAnalysis | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -465,6 +476,15 @@ export async function getOwnerNowView(
     opportunityApprovalsPending: 0,
   });
 
+  // Dispute → Business Risk — map governed proof-dispute categories (from the proof.disputed audit
+  // trail) into Profit-Leak + Constraint drivers. Live path only; a fake-DI unit test omits it, so
+  // dispute-derived leaks/constraints simply do not fire (no fabrication).
+  let disputeRisk: DisputeRiskAnalysis | null = null;
+  if (typeof deps.disputeRisk === "function") {
+    disputeRisk = await deps.disputeRisk(workspaceId);
+  }
+  const da = disputeRisk?.aggregates;
+
   // Constraint / Bottleneck Engine — identify the single binding constraint from the SAME
   // live signals (workspace-scoped). Only signals actually backed by current snapshots are
   // passed; unbacked event signals (delivery/discount/major-client-loss/startup) stay absent
@@ -486,6 +506,10 @@ export async function getOwnerNowView(
     complaintsCount: state.complaintsCount,
     reworkCount: state.reworkCount,
     churnRiskScore: state.churnRiskScore,
+    // Dispute-derived quality/staff/manager drivers (from governed proof disputes).
+    disputeQualityCount: da?.disputeQualityCount ?? 0,
+    disputeStaffCount: da?.disputeStaffCount ?? 0,
+    disputeManagerCount: da?.disputeManagerCount ?? 0,
     missingCriticalData: ctx.missingCriticalData,
     evaluatedAt: new Date(deps.now()).toISOString(),
   };
@@ -512,6 +536,10 @@ export async function getOwnerNowView(
     ownerReviewsRequired: workloadBudget.reviewsRequired,
     ownerDecisionsRequired: workloadBudget.ownerDecisionsRequired,
     currentConstraint: topConstraint?.constraintType ?? null,
+    // Dispute-derived rework/complaint/weak-proof drivers (from governed proof disputes).
+    disputeReworkCount: da?.disputeReworkCount ?? 0,
+    disputeComplaintCount: da?.disputeComplaintCount ?? 0,
+    disputeWeakProofCount: da?.disputeWeakProofCount ?? 0,
     missingCriticalData: ctx.missingCriticalData,
     evaluatedAt: new Date(deps.now()).toISOString(),
   };
@@ -646,7 +674,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
