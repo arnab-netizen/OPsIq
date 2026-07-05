@@ -35,6 +35,7 @@ import { archetypeGuidance, type ArchetypeGuidance } from "@/domain/owner-guidan
 import { computeOwnerWorkloadBudget, type OwnerWorkloadBudget } from "@/domain/owner-guidance/owner-workload-budget";
 import { identifyConstraints, type ConstraintFinding, type ConstraintSignals } from "@/domain/owner-mode/constraint-engine";
 import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } from "@/domain/owner-mode/profit-leak-radar";
+import { aggregateProofEvents, identifyGamingSignals, type GamingSignal, type ProofEventRow } from "@/domain/owner-mode/anti-gaming-analytics";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -66,7 +67,11 @@ interface GuidanceDb {
   ownerMetricSnapshot: { findFirst(args: unknown): Promise<MetricRow | null> };
   ownerSupplierInventorySnapshot: { findFirst(args: unknown): Promise<SupplierRow | null> };
   ownerBusiness: { findFirst(args: unknown): Promise<BusinessRow | null> };
-  proof: { count(args: unknown): Promise<number> };
+  proof: {
+    count(args: unknown): Promise<number>;
+    /** Optional — present on the live client; enables anti-gaming analytics. */
+    findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<ProofEventRow[]>;
+  };
   ownerActionOutcome: { count(args: unknown): Promise<number> };
   ownerReassessmentEvent: { count(args: unknown): Promise<number> };
   ownerGuidanceSnapshot: {
@@ -148,6 +153,8 @@ export interface OwnerNowViewPayload {
   topConstraint: ConstraintFinding | null;
   /** The single highest-value profit leak right now (or null). */
   topProfitLeak: ProfitLeakFinding | null;
+  /** The single highest-risk staff/manager/operator gaming pattern (or null). */
+  topGamingSignal: GamingSignal | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -478,6 +485,24 @@ export async function getOwnerNowView(
   };
   const topProfitLeak = identifyProfitLeaks(profitLeakSignals).topLeak;
 
+  // Cross-Event Anti-Gaming Analytics — the single highest-risk staff/manager pattern from the
+  // workspace's proof/review events, linked to the current constraint + profit leak. Only runs
+  // when the client exposes proof.findMany (the live path); a DI mock without it → null (no fake).
+  let topGamingSignal: GamingSignal | null = null;
+  if (typeof deps.db.proof.findMany === "function") {
+    const proofRows = await deps.db.proof.findMany({
+      where: { workspaceId },
+      select: { submittedByUserId: true, reviewedByUserId: true, status: true, duplicateFlagged: true, createdAt: true },
+    });
+    const { actors, reviewers } = aggregateProofEvents(proofRows, deps.now());
+    topGamingSignal = identifyGamingSignals({
+      workspaceId, actors, reviewers,
+      currentConstraint: topConstraint?.constraintType ?? null,
+      topProfitLeakType: topProfitLeak?.leakType ?? null,
+      evaluatedAt: new Date(deps.now()).toISOString(),
+    }).topSignal;
+  }
+
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -503,7 +528,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
