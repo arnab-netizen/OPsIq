@@ -1,0 +1,54 @@
+{
+  "pass": "process-intelligence-v1-depth-pass",
+  "branch": "claude/process-intelligence-v1-depth-pass",
+  "base": "origin/main@d7a5103b",
+  "pr127MergeStatus": "merged (squash commit d7a5103b on main)",
+  "classification": [
+    "PROCESS_INTELLIGENCE_V1_REAL_AND_OWNER_VISIBLE",
+    "OWNER_MODE_EXCELLENCE_DEEPENED"
+  ],
+  "schemaChange": "NONE — pure read model over existing now-view signals/events",
+  "findingTypesImplemented": [
+    "REWORK_LOOP", "QUALITY_FAILURE_LOOP", "DELIVERY_HANDOFF_DELAY", "REVIEW_BOTTLENECK",
+    "OWNER_APPROVAL_BOTTLENECK", "PROOF_QUALITY_BREAKDOWN", "ESCALATION_RESPONSE_BREAKDOWN",
+    "STAFF_TRAINING_GAP", "MANAGER_REVIEW_GAP", "DATA_INSUFFICIENT"
+  ],
+  "findingShapeFields": 20,
+  "ownerNowViewIntegration": "processIntelligence { topFinding, findings, evaluatedAt } on the now-view payload (live path only; null on fake-DI path)",
+  "trustedInputChain": [
+    "topGamingSignal (post-suppression)", "topCredibilityConcern (post-suppression)", "timingEvidence (fast-completion / ignores-escalation)",
+    "reusedProofFindings", "complaintRework + operationalEventHealth", "proof-review counts", "ownerBottleneckItems", "topProfitLeak", "topConstraint", "proofRiskAdjudications"
+  ],
+  "adjudicationRespect": "consumes post-suppression top signals -> cleared finding cannot drive an active process failure; confirm/require-fresh keeps it active and attaches its adjudication id",
+  "integrations": {
+    "profitLeak": "relatedProfitLeak linked where the top leak matches",
+    "constraint": "relatedConstraint linked (QUALITY/DELIVERY/OWNER/MANAGER/STAFF)",
+    "slo": "relatedSLO (OPERATIONAL_EVENT_RESOLUTION / PROOF_OUTCOME_INTEGRITY / OWNER_WORKLOAD_BURDEN / ANTI_GAMING_RISK / EVIDENCE_CREDIBILITY_RISK)",
+    "ownerWorkload": "OWNER_APPROVAL_BOTTLENECK from ownerBottleneckItems / OWNER_REVIEW_BURDEN signal"
+  },
+  "safety": {
+    "noFabricatedFinancialImpact": true,
+    "impactIsATypeNotAmount": true,
+    "noFraudNegligenceLabel": true,
+    "noHiddenStaffScore": true,
+    "crossWorkspaceIsolation": "inputs per-workspace; clean workspace DATA_INSUFFICIENT, no bleed (tested)"
+  },
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid (no schema change)",
+    "governanceStrict": "31 frozen, 0 new",
+    "nextBuild": "exit 0",
+    "unitTests": "15 (process-intelligence.test.ts)",
+    "dbSimTests": "2 (process-intelligence-simulation)",
+    "unitRegression": "owner-mode + owner-guidance 71 files / 706 tests pass (18 db skipped)",
+    "dbRegression": "owner-guidance + execution 25 files / 158 tests pass",
+    "browserE2E": "untouched this pass",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "v1 surfaces the top breakdown from now-view top signals + event health (not every historical failure)",
+    "no stage-duration mining; no process-intelligence UI (payload block only)",
+    "next: minimal UI surface + bottleneck->correction routing"
+  ]
+}

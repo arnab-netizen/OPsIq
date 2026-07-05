@@ -8,7 +8,29 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Timing Write-Path Population depth pass (latest)
+## Process Intelligence v1 depth pass (latest)
+- **Base:** `origin/main` @ `d7a5103b` (Timing Write-Path Population PR #127 merged).
+- **Branch:** `claude/process-intelligence-v1-depth-pass`.
+- **Classification:** `PROCESS_INTELLIGENCE_V1_REAL_AND_OWNER_VISIBLE` (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **OpsIQ now names where the process is actually breaking.** A pure `buildProcessIntelligence` domain
+  module reads the trusted event/proof/risk/timing/adjudication chain the Now View already computes and
+  surfaces the single top breakdown with evidence + a specific correction + required approval level,
+  exposed as a `processIntelligence` block on the now-view payload. **No schema change.**
+- **Failure types (v1):** REWORK_LOOP, QUALITY_FAILURE_LOOP, DELIVERY_HANDOFF_DELAY, REVIEW_BOTTLENECK,
+  OWNER_APPROVAL_BOTTLENECK, PROOF_QUALITY_BREAKDOWN, ESCALATION_RESPONSE_BREAKDOWN, STAFF_TRAINING_GAP,
+  MANAGER_REVIEW_GAP, else DATA_INSUFFICIENT (with exact missing data).
+- **Adjudication-respecting:** consumes the already-suppressed top signals, so a cleared proof-risk
+  finding cannot drive an active process failure; confirm/require-fresh keeps it active + attaches its
+  adjudication id. Findings link to profit leak / constraint / SLO / owner workload where relevant.
+- **Safety:** no fabricated financial impact (impact is a TYPE, never an amount); no fraud/negligence
+  label; no hidden staff score; cross-workspace isolation tested (clean workspace → DATA_INSUFFICIENT).
+- **Still missing:** surfaces the top breakdown from the now-view's top signals + event health (not
+  every historical failure); no stage-duration mining; no process-intelligence UI (payload block only).
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance 31-frozen/0-new · `next build`
+  exit 0 · 15 unit + 2 DB-sim tests · owner-mode+owner-guidance unit regression 706 · DB regression 158.
+  Details: `docs/remediation/process-intelligence-v1-depth-pass/`.
+
+## Timing Write-Path Population depth pass
 - **Base:** `origin/main` @ `e59eb2fe` (Owner Adjudication Browser E2E PR #126 merged).
 - **Branch:** `claude/timing-write-path-population-depth-pass`.
 - **Classification:** `TIMING_WRITE_PATH_POPULATION_REAL_AND_OWNER_VISIBLE` (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).

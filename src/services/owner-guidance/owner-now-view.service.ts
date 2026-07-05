@@ -37,6 +37,7 @@ import { identifyConstraints, type ConstraintFinding, type ConstraintSignals } f
 import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } from "@/domain/owner-mode/profit-leak-radar";
 import { aggregateProofEvents, identifyGamingSignals, aggregateSuspiciousProof, type GamingSignal, type ProofEventRow, type SuspiciousDisputeRecord, type SuspiciousProofRow } from "@/domain/owner-mode/anti-gaming-analytics";
 import { evaluateFastCompletion, evaluateEscalationTiming, type TimingSignal, type CompletionTimingRow, type EscalationTimingRow } from "@/domain/owner-mode/timing-evidence";
+import { buildProcessIntelligence, type ProcessIntelligenceAnalysis } from "@/domain/owner-mode/process-intelligence";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -257,6 +258,12 @@ export interface OwnerNowViewPayload {
    * so the owner sees exactly what is measurable and what is still blocked. Null on the fake-DI path.
    */
   timingEvidence: { fastCompletion: TimingSignal | null; escalationTiming: TimingSignal | null } | null;
+  /**
+   * Process Intelligence v1 — the single highest-value process breakdown (where work is stuck / failing)
+   * over the trusted event/proof/risk/timing/adjudication chain, with evidence + a specific correction +
+   * required approval level. Null on the fake-DI path. A cleared adjudication cannot drive it.
+   */
+  processIntelligence: ProcessIntelligenceAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -883,6 +890,45 @@ export async function getOwnerNowView(
     evaluatedAt: new Date(deps.now()).toISOString(),
   });
 
+  // Process Intelligence v1 — where the process is actually breaking, over the already-derived,
+  // already-adjudication-suppressed signal/event chain. Pure read model; a cleared proof-risk finding
+  // (suppressed top signal → null) cannot drive an active process failure; confirm/require-fresh does.
+  const processIntelligence: ProcessIntelligenceAnalysis | null = totalProofCount === null ? null : buildProcessIntelligence({
+    workspaceId,
+    topGamingSignal: topGamingSignal
+      ? { signalType: topGamingSignal.signalType, actorId: topGamingSignal.actorId, actorRole: topGamingSignal.actorRole, severity: topGamingSignal.severity, supportingProofIds: topGamingSignal.supportingProofIds, ownerExplanation: topGamingSignal.ownerExplanation }
+      : null,
+    topCredibilityConcern: topCredibilityConcern
+      ? { signalType: topCredibilityConcern.signalType, entityId: topCredibilityConcern.entityId, entityType: topCredibilityConcern.entityType, severity: topCredibilityConcern.severity, supportingProofIds: topCredibilityConcern.supportingProofIds }
+      : null,
+    timingEvidence: (fastCompletionSignal || escalationTimingSignal)
+      ? {
+          fastCompletion: fastCompletionSignal ? { status: fastCompletionSignal.status, actorId: fastCompletionSignal.actorId, severity: fastCompletionSignal.severity, supportingProofIds: fastCompletionSignal.supportingProofIds } : null,
+          escalationTiming: escalationTimingSignal ? { status: escalationTimingSignal.status, actorId: escalationTimingSignal.actorId, severity: escalationTimingSignal.severity, supportingProofIds: escalationTimingSignal.supportingProofIds } : null,
+        }
+      : null,
+    reusedProofFindings: reusedProofFindings ? { submitterReuse: reusedProofFindings.submitterReuse } : null,
+    complaintRework: complaintReworkLinks
+      ? {
+          submitterComplaints: complaintReworkLinks.submitterComplaints,
+          submitterReworks: complaintReworkLinks.submitterReworks,
+          aggregates: { complaintLinkedCount: complaintReworkLinks.aggregates.complaintLinkedCount, reworkLinkedCount: complaintReworkLinks.aggregates.reworkLinkedCount, qualityCount: complaintReworkLinks.aggregates.qualityCount, deliveryCount: complaintReworkLinks.aggregates.deliveryCount },
+          eventHealth: {
+            activeCount: complaintReworkLinks.eventHealth.activeCount,
+            overdueCount: complaintReworkLinks.eventHealth.overdueCount,
+            overdueSevereCount: complaintReworkLinks.eventHealth.overdueSevereCount,
+            events: complaintReworkLinks.eventHealth.events.map((e) => ({ eventId: e.eventId, eventType: e.eventType, category: e.category, active: e.active, overdue: e.overdue })),
+          },
+        }
+      : null,
+    proofRiskAdjudications: proofRiskAdjudications?.map((a) => ({ id: a.id, sourceType: a.sourceType, sourceRef: a.sourceRef, status: a.status, outcome: a.outcome })) ?? null,
+    weakProofCount, overdueReviewCount,
+    ownerBottleneckItems: workloadBudget.ownerBottleneckItems,
+    topProfitLeakType: topProfitLeak?.leakType ?? null,
+    topConstraintType: topConstraint?.constraintType ?? null,
+    evaluatedAt: new Date(deps.now()).toISOString(),
+  });
+
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -908,7 +954,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
