@@ -37,6 +37,7 @@ import { identifyConstraints, type ConstraintFinding, type ConstraintSignals } f
 import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } from "@/domain/owner-mode/profit-leak-radar";
 import { aggregateProofEvents, identifyGamingSignals, type GamingSignal, type ProofEventRow } from "@/domain/owner-mode/anti-gaming-analytics";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
+import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -158,6 +159,8 @@ export interface OwnerNowViewPayload {
   topGamingSignal: GamingSignal | null;
   /** The single highest evidence-credibility concern (or null). */
   topCredibilityConcern: CredibilityFinding | null;
+  /** Whether OpsIQ's own business-control loop is operating reliably (SLOs). */
+  businessControlHealth: BusinessControlHealth;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -493,6 +496,9 @@ export async function getOwnerNowView(
   // when the client exposes proof.findMany (the live path); a DI mock without it → null (no fake).
   let topGamingSignal: GamingSignal | null = null;
   let topCredibilityConcern: CredibilityFinding | null = null;
+  let totalProofCount: number | null = null;
+  let weakProofCount: number | null = null;
+  let overdueReviewCount: number | null = null;
   if (typeof deps.db.proof.findMany === "function") {
     // One workspace-scoped query feeds both anti-gaming and the credibility graph.
     const proofRows = await deps.db.proof.findMany({
@@ -518,7 +524,53 @@ export async function getOwnerNowView(
       missingSources: ["complaint/rework/outcome ↔ proof linkage not persisted"],
       evaluatedAt: new Date(nowMs).toISOString(),
     }).topConcern;
+
+    // Proof counts for the Business-Control SLOs (from the same rows — no extra query).
+    const WEAK = new Set(["NEEDS_HUMAN_REVIEW", "AI_PRECHECK_FAILED"]);
+    const OVERDUE_BEFORE = nowMs - PROOF_OVERDUE_AGE_MS;
+    totalProofCount = proofRows.length;
+    weakProofCount = proofRows.filter((p) => WEAK.has(p.status)).length;
+    overdueReviewCount = proofRows.filter((p) => WEAK.has(p.status) && p.createdAt.getTime() < OVERDUE_BEFORE).length;
   }
+
+  // Business-Control SLOs — grade OpsIQ's own control loop from the signals above (+ proof
+  // counts). Honest NOT_MEASURABLE where the source is not persisted (audit correlation,
+  // reassessment/shock timing, startup data, runtime isolation).
+  const businessControlHealth = evaluateBusinessControlSLOs({
+    workspaceId,
+    workloadBudget: {
+      ownerDecisionsRequired: workloadBudget.ownerDecisionsRequired,
+      approvalsRequired: workloadBudget.approvalsRequired,
+      reviewsRequired: workloadBudget.reviewsRequired,
+      ownerBottleneckItems: workloadBudget.ownerBottleneckItems,
+    },
+    topConstraintType: topConstraint?.constraintType ?? null,
+    topConstraintSeverity: topConstraint?.severity ?? null,
+    topProfitLeakType: topProfitLeak?.leakType ?? null,
+    topProfitLeakSeverity: topProfitLeak?.severity ?? null,
+    topGamingSignalType: topGamingSignal?.signalType ?? null,
+    topGamingSeverity: topGamingSignal?.severity ?? null,
+    topCredibilitySignalType: topCredibilityConcern?.signalType ?? null,
+    topCredibilitySeverity: topCredibilityConcern?.severity ?? null,
+    totalProofCount, weakProofCount, overdueReviewCount,
+    // "Present" = the signal computed at all (a DATA_INSUFFICIENT finding still means the
+    // pipeline ran and is exposed — that is an honest data gap, not a now-view completeness gap).
+    nowViewSignalsPresent: {
+      workload: true,
+      constraint: !!topConstraint,
+      profitLeak: !!topProfitLeak,
+      gaming: !!topGamingSignal,
+      credibility: !!topCredibilityConcern,
+    },
+    // Honest: these sources are not persisted for a runtime metric yet.
+    opportunityEnvelopeFields: null,
+    auditCorrelationAvailable: false,
+    reassessmentLatencyAvailable: false,
+    shockLatencyAvailable: false,
+    startupDataAvailable: false,
+    isolationTestPassed: null,
+    evaluatedAt: new Date(deps.now()).toISOString(),
+  });
 
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
@@ -545,7 +597,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
