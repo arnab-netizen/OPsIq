@@ -64,6 +64,26 @@ const PAYLOAD = {
       status: "DRAFT", missingData: [],
     },
   },
+  trainingAssignments: {
+    assignments: [
+      {
+        sourceProcessFindingKey: "ws-1:ESCALATION_RESPONSE_BREAKDOWN", sourceCorrectionKey: "ws-1:ESCALATION_RESPONSE_BREAKDOWN:ESCALATE_TO_OWNER:mgr-1",
+        trainingType: "ESCALATION_RESPONSE_REVIEW", assignedToUserId: "mgr-1", assignedRole: null, assignedByRole: "system-proposed",
+        approvalLevel: "OWNER", reason: "Escalations are arriving but not acknowledged in time.",
+        supportingProofIds: [], supportingOperationalEventIds: [], supportingEscalationIds: ["esc1"],
+        relatedSopChecklistCorrectionKey: null, successMetric: "Escalation acknowledgement time improves over the review window",
+        reviewAfterDays: 14, status: "PROPOSED", ownerVisibleExplanation: "Review escalation handling with this manager.",
+      },
+    ],
+    topAssignment: {
+      sourceProcessFindingKey: "ws-1:ESCALATION_RESPONSE_BREAKDOWN", sourceCorrectionKey: "ws-1:ESCALATION_RESPONSE_BREAKDOWN:ESCALATE_TO_OWNER:mgr-1",
+      trainingType: "ESCALATION_RESPONSE_REVIEW", assignedToUserId: "mgr-1", assignedRole: null, assignedByRole: "system-proposed",
+      approvalLevel: "OWNER", reason: "Escalations are arriving but not acknowledged in time.",
+      supportingProofIds: [], supportingOperationalEventIds: [], supportingEscalationIds: ["esc1"],
+      relatedSopChecklistCorrectionKey: null, successMetric: "Escalation acknowledgement time improves over the review window",
+      reviewAfterDays: 14, status: "PROPOSED", ownerVisibleExplanation: "Review escalation handling with this manager.",
+    },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -92,6 +112,10 @@ describe("OwnerProcessIntelligencePage", () => {
     await findByTestId("sop-corrections-panel");
     expect(container.textContent ?? "").toMatch(/Proposed SOP \/ checklist changes/i);
     expect(container.textContent ?? "").toMatch(/acceptance\/quality checklist/i);
+    // The training/review recommendations render too.
+    await findByTestId("training-assignments-panel");
+    expect(container.textContent ?? "").toMatch(/Training .* review recommendations/i);
+    expect(container.textContent ?? "").toMatch(/Escalation response review/i);
     const back = container.querySelector('[data-testid="back-to-now"]') as HTMLAnchorElement;
     expect(back.getAttribute("href")).toBe("/owner/now");
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/api/owner/now-view"))).toBe(true);

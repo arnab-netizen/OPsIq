@@ -40,6 +40,7 @@ import { evaluateFastCompletion, evaluateEscalationTiming, type TimingSignal, ty
 import { buildProcessIntelligence, type ProcessIntelligenceAnalysis } from "@/domain/owner-mode/process-intelligence";
 import { buildProcessCorrections, type ProcessCorrectionRouting } from "@/domain/owner-mode/bottleneck-correction-routing";
 import { buildSopChecklistCorrections, type SopChecklistCorrectionAnalysis } from "@/domain/owner-mode/sop-checklist-correction-engine";
+import { buildTrainingAssignments, type TrainingAssignmentAnalysis } from "@/domain/owner-mode/staff-training-assignment-engine";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -280,6 +281,13 @@ export interface OwnerNowViewPayload {
    * Every draft is DRAFT/PROPOSED/NEEDS_DATA — never auto-approved, never auto-applied.
    */
   sopChecklistCorrections: SopChecklistCorrectionAnalysis | null;
+  /**
+   * Staff Training Assignment Engine — process/correction findings turned into governed, evidence-backed
+   * training/review recommendations (what training, who, why, linked SOP correction, approval, success
+   * metric). Derived from the findings + corrections + SOP drafts; null whenever those are null. Every
+   * assignment is PROPOSED/NEEDS_DATA — never auto-assigned; coaching/review only, no HR/discipline.
+   */
+  trainingAssignments: TrainingAssignmentAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -957,6 +965,12 @@ export async function getOwnerNowView(
     ? buildSopChecklistCorrections(processIntelligence, processCorrections, workspaceId)
     : null;
 
+  // Staff Training Assignment Engine — turn findings/corrections/SOP drafts into governed, evidence-backed
+  // training/review recommendations. Pure derivation; every assignment is PROPOSED/NEEDS_DATA, coaching only.
+  const trainingAssignments: TrainingAssignmentAnalysis | null = (processIntelligence && processCorrections && sopChecklistCorrections)
+    ? buildTrainingAssignments(processIntelligence, processCorrections, sopChecklistCorrections, workspaceId)
+    : null;
+
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -982,7 +996,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

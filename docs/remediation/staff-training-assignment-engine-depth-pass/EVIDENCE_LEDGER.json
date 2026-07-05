@@ -1,0 +1,14 @@
+{
+  "pass": "staff-training-assignment-engine-depth-pass",
+  "title": "Staff training assignment engine depth pass",
+  "classification": "STAFF_TRAINING_ASSIGNMENT_ENGINE_REAL_AND_OWNER_VISIBLE",
+  "schemaChange": false,
+  "trainingTypes": ["PROOF_QUALITY_REVIEW","PROCESS_STEP_RETRAINING","MANAGER_REVIEW_QUALITY","ESCALATION_RESPONSE_REVIEW","DELIVERY_HANDOFF_REVIEW","CHECKLIST_CHANGE_BRIEFING","DATA_COLLECTION_BRIEFING"],
+  "assignmentShapeFields": 18,
+  "statuses": ["PROPOSED","APPROVED","ASSIGNED","COMPLETED","DISMISSED","NEEDS_DATA"],
+  "filesCreated": ["src/domain/owner-mode/staff-training-assignment-engine.ts","src/__tests__/owner-mode/staff-training-assignment-engine.test.ts","src/__tests__/components/training-assignments-panel.test.tsx","src/__tests__/execution/staff-training-assignment-simulation.db.test.ts"],
+  "filesChanged": ["src/services/owner-guidance/owner-now-view.service.ts","src/components/owner/ProcessIntelligencePanel.tsx","src/app/(authenticated)/owner/process-intelligence/page.tsx","src/__tests__/app/owner-process-intelligence-page.test.tsx",".github/workflows/db-verification.yml"],
+  "tests": { "domain": 13, "component": 4, "page": 2, "dbSimulationCases": 2 },
+  "gates": { "tsc": "exit 0", "governanceStrict": "31 frozen, 0 new", "lintRatchet": "PASS" },
+  "governance": { "everyAssignmentProposedOrNeedsData": true, "neverAutoAssigned": true, "noHrPunishmentFiringPayroll": true, "noFraudNegligenceLabels": true, "noHiddenStaffScore": true, "targetsRealOrRoleNeverFabricated": true, "emitsAuditEvents": false }
+}
