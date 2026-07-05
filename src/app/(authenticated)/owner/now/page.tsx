@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Badge, Button } from "@/ui/primitives";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- guidance payload is the service contract (untyped here); load() on mount is intentional */
@@ -65,7 +66,10 @@ export default function OwnerNowViewPage() {
     <main style={{ padding: 24, maxWidth: 920, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1 style={{ margin: 0 }}>Owner Now View</h1>
-        <Button onClick={() => void load()}>Refresh</Button>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <Link href="/owner/adjudication" data-testid="proof-risk-queue-link">Proof-risk review queue</Link>
+          <Button onClick={() => void load()}>Refresh</Button>
+        </div>
       </header>
 
       <section style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
