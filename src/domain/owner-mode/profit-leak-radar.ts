@@ -59,6 +59,13 @@ export interface ProfitLeakSignals {
   ownerReviewsRequired?: number;
   ownerDecisionsRequired?: number;
   cashRiskGrowth?: boolean;
+  /**
+   * Dispute-derived counts (from governed proof disputes) — a disputed accepted proof is a real,
+   * attributed rework/complaint/weak-proof signal. No revenue/churn figure is derived from these.
+   */
+  disputeReworkCount?: number;
+  disputeComplaintCount?: number;
+  disputeWeakProofCount?: number;
   /** The current binding constraint, to link a leak to it. */
   currentConstraint?: ConstraintType | null;
   missingCriticalData?: string[];
@@ -334,6 +341,57 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
       stopLoss: "If repricing loses key customers, revisit cost structure instead.",
       reassessmentTrigger: "Re-evaluate margin after the price change.",
       relatedConstraint: s.currentConstraint === "PRICING" ? "PRICING" : null,
+    });
+  }
+
+  // Dispute-derived leaks — a governed proof dispute is a real, attributed contradiction. Impact is
+  // qualitative (NEEDS_DATA): no per-event complaint/rework model exists, so no revenue/redo figure.
+  const dRework = s.disputeReworkCount ?? 0;
+  const dComplaint = s.disputeComplaintCount ?? 0;
+  const dWeakProof = s.disputeWeakProofCount ?? 0;
+  if (dRework > 0) {
+    F({
+      leakType: "REWORK_REDO_COST", domain: "quality", severity: dRework >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
+      evidence: [`${dRework} accepted proof(s) disputed as rework/quality failure`], missingData: ["no per-event rework model — redo cost is qualitative only"],
+      estimatedImpact: { tier: "NEEDS_DATA", note: "Redo cost is real but unmeasured — no per-event rework model yet." },
+      cashImpact: "Rework consumes paid labour/materials twice.", marginImpact: "Direct margin loss on the redone jobs.",
+      ownerExplanation: "Accepted work was disputed and had to be redone — a cost-of-poor-quality leak surfaced by a real dispute.",
+      recommendedAction: "Fix the SOP/proof requirement behind the disputed jobs and re-verify recent similar work.",
+      ownerApprovalRequired: false, riskLevel: dRework >= 3 ? "HIGH" : "MEDIUM", operationalBurden: "Medium — SOP + proof fix.",
+      successMetric: "Disputed-rework rate falls to zero on the next similar jobs.",
+      stopLoss: "If rework persists after the fix, escalate to a process redesign.",
+      reassessmentTrigger: "Re-evaluate if rework disputes recur.",
+      relatedConstraint: "QUALITY",
+    });
+  }
+  if (dComplaint > 0) {
+    F({
+      leakType: "COMPLAINT_REVENUE_RISK", domain: "customer", severity: dComplaint >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
+      evidence: [`${dComplaint} accepted proof(s) disputed as customer complaints`], missingData: ["no per-event complaint model — revenue/churn impact is not measured"],
+      estimatedImpact: { tier: "NEEDS_DATA", note: "Revenue/relationship risk is real but unmeasured — no complaint model to size it." },
+      cashImpact: "Complaints risk refunds and lost repeat revenue.", marginImpact: "Recovery effort + possible refunds erode margin.",
+      ownerExplanation: "A customer complained about accepted work — revenue/relationship risk, magnitude not yet measured.",
+      recommendedAction: "Run customer recovery on the affected job and fix the underlying quality cause.",
+      ownerApprovalRequired: true, riskLevel: "HIGH", operationalBurden: "Medium — customer recovery.",
+      successMetric: "The affected customer is retained and the cause is corrected.",
+      stopLoss: "Do not discount below the viable price to retain the customer.",
+      reassessmentTrigger: "Re-evaluate if complaint disputes recur.",
+      relatedConstraint: "QUALITY",
+    });
+  }
+  if (dWeakProof > 0) {
+    F({
+      leakType: "WEAK_PROOF_REWORK_RISK", domain: "evidence", severity: dWeakProof >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
+      evidence: [`${dWeakProof} accepted proof(s) disputed as wrong/insufficient/fake or a review error`], missingData: [],
+      estimatedImpact: { tier: "NEEDS_DATA", note: "Weak-proof rework risk is real but unmeasured." },
+      cashImpact: "Weak proof hides undone work until it resurfaces as rework/complaints.", marginImpact: "Indirect — drives later rework.",
+      ownerExplanation: "Accepted proof was disputed as wrong/insufficient/fake — the proof requirement or reviewer let weak evidence pass.",
+      recommendedAction: "Tighten the proof requirement, coach the operator/reviewer, and re-verify recent proof of this type.",
+      ownerApprovalRequired: false, riskLevel: dWeakProof >= 3 ? "HIGH" : "MEDIUM", operationalBurden: "Medium — proof + coaching.",
+      successMetric: "Weak-proof disputes fall to zero and acceptances hold up.",
+      stopLoss: "If fake proof is confirmed, escalate to an anti-gaming review.",
+      reassessmentTrigger: "Re-evaluate if weak-proof disputes recur.",
+      relatedConstraint: s.currentConstraint === "STAFF" || s.currentConstraint === "MANAGER" ? s.currentConstraint : "STAFF",
     });
   }
 

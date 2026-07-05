@@ -123,3 +123,25 @@ describe("constraint engine — opportunity integration (do not scale into a bot
     expect(e.upsideBand).toBe("STRONG");
   });
 });
+
+describe("constraint engine — dispute-derived constraints", () => {
+  it("quality disputes fire a QUALITY constraint", () => {
+    const c = identifyConstraints(base({ disputeQualityCount: 2 }));
+    expect(c.constraints.some((x) => x.constraintType === "QUALITY" && x.evidence.join(" ").match(/disputed for quality/i))).toBe(true);
+  });
+
+  it("staff-attributed disputes fire a STAFF constraint; manager-review-error fires MANAGER", () => {
+    expect(identifyConstraints(base({ disputeStaffCount: 2 })).constraints.some((x) => x.constraintType === "STAFF")).toBe(true);
+    expect(identifyConstraints(base({ disputeManagerCount: 2 })).constraints.some((x) => x.constraintType === "MANAGER")).toBe(true);
+  });
+
+  it("repeated quality disputes can become the binding (top) constraint on an otherwise-safe business", () => {
+    const top = identifyConstraints(base({ disputeQualityCount: 3 })).topConstraint!;
+    expect(top.constraintType).toBe("QUALITY");
+    expect(top.severity).toBe("HIGH");
+  });
+
+  it("no disputes → no dispute-derived constraint fabricated", () => {
+    expect(identifyConstraints(base()).constraints.some((x) => x.evidence.join(" ").match(/disputed/i))).toBe(false);
+  });
+});

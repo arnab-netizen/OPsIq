@@ -1,0 +1,67 @@
+{
+  "pass": "dispute-profit-constraint-wiring-depth-pass",
+  "branch": "claude/dispute-profit-constraint-wiring-depth-pass",
+  "base": "origin/main@dc18ca6e",
+  "pr115MergeStatus": "merged (merge commit dc18ca6e on main)",
+  "classification": [
+    "DISPUTE_PROFIT_CONSTRAINT_WIRING_REAL_AND_OWNER_VISIBLE",
+    "PROFIT_LEAK_RADAR_STRENGTHENED",
+    "CONSTRAINT_ENGINE_STRENGTHENED"
+  ],
+  "schemaChange": "NONE (reads the proof.disputed audit trail)",
+  "disputeCategoryMapping": {
+    "REWORK_REQUIRED": { "profitLeak": "REWORK_REDO_COST", "constraint": "QUALITY" },
+    "QUALITY_FAILURE": { "profitLeak": "REWORK_REDO_COST", "constraint": "QUALITY" },
+    "BAD_OUTCOME": { "profitLeak": "REWORK_REDO_COST", "constraint": "QUALITY" },
+    "CUSTOMER_COMPLAINT": { "profitLeak": "COMPLAINT_REVENUE_RISK", "constraint": "QUALITY", "note": "revenue/churn NOT measured (no complaint model)" },
+    "WRONG_OR_INSUFFICIENT_PROOF": { "profitLeak": "WEAK_PROOF_REWORK_RISK", "constraint": "STAFF" },
+    "SUSPECTED_FAKE_OR_REUSED_PROOF": { "profitLeak": "WEAK_PROOF_REWORK_RISK", "constraint": "STAFF" },
+    "MANAGER_REVIEW_ERROR": { "profitLeak": "WEAK_PROOF_REWORK_RISK", "constraint": "MANAGER" },
+    "OTHER": { "profitLeak": null, "constraint": null, "note": "not overclassified" }
+  },
+  "integration": {
+    "profitLeakRadar": "dispute count inputs + dispute-attributed leaks compete in topLeak selection",
+    "constraintEngine": "dispute count inputs + dispute-attributed constraints compete in topConstraint selection",
+    "ownerNowView": "topProfitLeak/topConstraint can be dispute-derived; disputeRisk block on payload",
+    "credibility": "unchanged (ACCEPTED_PROOF_WITH_BAD_OUTCOME), not duplicated",
+    "slo": "PROOF_OUTCOME_INTEGRITY unchanged (direct proof SLO)",
+    "reassessment": "not duplicated"
+  },
+  "noFake": {
+    "financial": "impact always NEEDS_DATA (no complaint/rework model); no revenue/churn/redo number",
+    "overclassification": "OTHER category not mapped",
+    "records": "no complaint/rework rows invented",
+    "crossWorkspace": "workspace-scoped; isolation DB-tested"
+  },
+  "filesCreated": [
+    "src/domain/owner-mode/dispute-risk.ts",
+    "src/services/owner-mode/dispute-risk.service.ts",
+    "src/__tests__/owner-mode/dispute-risk.test.ts",
+    "src/__tests__/owner-mode/dispute-risk-simulation.db.test.ts"
+  ],
+  "filesChanged": [
+    "src/domain/owner-mode/profit-leak-radar.ts",
+    "src/domain/owner-mode/constraint-engine.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts",
+    "src/__tests__/owner-mode/profit-leak-radar.test.ts",
+    "src/__tests__/owner-mode/constraint-engine.test.ts",
+    "docs/CURRENT_OPSIQ_STATUS.md"
+  ],
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid (no schema change)",
+    "governanceStrict": "31 frozen, 0 new",
+    "changedAreaSuites": "87 files / 724 tests pass",
+    "newTests": 17,
+    "dbSimulation": "3/3 pass",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "per-event complaint/rework model (financial impact stays qualitative)",
+    "direct fake-proof dispute -> anti-gaming signal link",
+    "UI + browser E2E",
+    "Process Intelligence (out of scope)"
+  ]
+}
