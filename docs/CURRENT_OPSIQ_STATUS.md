@@ -8,7 +8,27 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Proof ↔ Outcome Linkage + Reassessment Creation depth pass (latest)
+## Governed Proof Dispute Surface depth pass (latest)
+- **Base:** `origin/main` @ `ab4d1baa` (Proof↔Outcome Linkage PR #114 merged).
+- **Branch:** `claude/governed-proof-dispute-surface-depth-pass`.
+- **Classification:** `GOVERNED_PROOF_DISPUTE_REAL_AND_OWNER_VISIBLE` (+ `PROOF_OUTCOME_INTEGRITY_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`).
+- **Live ACCEPTED → DISPUTED flow now exists** — closes the PR #114 gap. `disputeAcceptedProof` service +
+  `POST /api/proof/dispute`: an owner/authorized reviewer disputes a previously-accepted proof (8
+  categories, reason required), reversing it with atomic `proof.reviewed` + `proof.disputed` audits and
+  a governed idempotent reassessment keyed to the proof (`sourceProofId`). The `proof.reviewed(ACCEPTED
+  →DISPUTED)` audit is exactly what the PR #114 linkage reader consumes, so credibility
+  (`ACCEPTED_PROOF_WITH_BAD_OUTCOME`), the `PROOF_OUTCOME_INTEGRITY` SLO, and the now-view update
+  automatically — no orphan path.
+- **Safety:** server-authoritative load; capability gate (`PROOF_REVIEW`, owner-only `VERIFY_FINAL_OUTCOME`
+  for override); SoD (no self-dispute); ACCEPTED-only; cross-workspace fail-closed; idempotent; atomic audit.
+- **No schema change** — dispute record persisted as the `proof.disputed` audit event; category is governed
+  metadata, never a faked complaint/rework row.
+- **Still missing:** per-event complaint/rework model (`relatedComplaintId`/`relatedReworkId` = missing-source);
+  dispute-category → profit-leak/constraint wiring; UI + browser E2E.
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance strict 0-new · changed-area 85 files/707
+  tests green · 18 new tests. Details: `docs/remediation/governed-proof-dispute-surface-depth-pass/`.
+
+## Proof ↔ Outcome Linkage + Reassessment Creation depth pass
 - **Base:** `origin/main` @ `26a52182` (Runtime Control Correlation PR #113 merged).
 - **Branch:** `claude/proof-outcome-reassessment-linkage-depth-pass`.
 - **Classification:** `PROOF_OUTCOME_REASSESSMENT_LINKAGE_REAL_AND_OWNER_VISIBLE` (+ `PROOF_TO_OUTCOME_SLO_MEASURABILITY_IMPROVED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`).

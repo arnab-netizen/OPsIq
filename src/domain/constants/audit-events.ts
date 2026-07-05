@@ -363,6 +363,9 @@ export const AUDIT_EVENTS = {
   // Proof requirement / submission / review (Slice 8)
   PROOF_SUBMITTED: "proof.submitted",
   PROOF_REVIEWED: "proof.reviewed",
+  // Governed dispute of a previously-accepted proof (owner/authorized reviewer). Carries the full
+  // dispute record (category, reason, source, reassessment link) as the persisted dispute event.
+  PROOF_DISPUTED: "proof.disputed",
 
   // Employee blocker / escalation (Slice 9)
   ESCALATION_RAISED: "escalation.raised",

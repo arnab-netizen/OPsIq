@@ -1,0 +1,77 @@
+{
+  "pass": "governed-proof-dispute-surface-depth-pass",
+  "branch": "claude/governed-proof-dispute-surface-depth-pass",
+  "base": "origin/main@ab4d1baa",
+  "pr114MergeStatus": "merged (merge commit ab4d1baa on main)",
+  "classification": [
+    "GOVERNED_PROOF_DISPUTE_REAL_AND_OWNER_VISIBLE",
+    "PROOF_OUTCOME_INTEGRITY_STRENGTHENED",
+    "EVIDENCE_CREDIBILITY_STRENGTHENED"
+  ],
+  "schemaChange": "NONE (reuses Proof.status/reviewedByUserId/reviewedAt/reviewReason; dispute record persisted as proof.disputed audit event)",
+  "auditConstantAdded": "proof.disputed",
+  "liveDisputePath": {
+    "service": "disputeAcceptedProof (src/services/execution/proof-dispute.service.ts)",
+    "route": "POST /api/proof/dispute",
+    "transition": "ACCEPTED -> DISPUTED (or owner-only OVERRIDDEN_NOT_VERIFIED)",
+    "atomicAudit": ["proof.reviewed(ACCEPTED->target)", "proof.disputed(full record)"],
+    "reassessment": "createReassessmentEvent, idempotent, keyed sourceProofId"
+  },
+  "disputeCategories": {
+    "CUSTOMER_COMPLAINT": "disputed_outcome",
+    "REWORK_REQUIRED": "failed_outcome",
+    "BAD_OUTCOME": "failed_outcome",
+    "QUALITY_FAILURE": "failed_outcome",
+    "WRONG_OR_INSUFFICIENT_PROOF": "evidence_retraction",
+    "SUSPECTED_FAKE_OR_REUSED_PROOF": "evidence_retraction",
+    "MANAGER_REVIEW_ERROR": "evidence_retraction",
+    "OTHER": "new_contradicting_evidence"
+  },
+  "safety": {
+    "authorization": "requirePermission(PROOF_REVIEW_LOW_RISK); override requires owner-only VERIFY_FINAL_OUTCOME",
+    "sod": "actor cannot dispute their own proof",
+    "workspaceScoped": "proof loaded by (id, workspaceId); cross-workspace fails closed",
+    "failClosed": ["missing reason", "invalid category", "proof not found", "non-accepted proof", "non-owner override"],
+    "idempotent": "already-disputed proof is a safe no-op; reassessment idempotent by sourceProofId",
+    "atomic": "proof reversal + both audits in one transaction (AUDIT-01)"
+  },
+  "integration": {
+    "proofOutcomeLinkage": "dispute writes proof.reviewed(ACCEPTED->DISPUTED) which the linkage reader consumes",
+    "credibility": "ACCEPTED_PROOF_WITH_BAD_OUTCOME on next read",
+    "slo": "PROOF_OUTCOME_INTEGRITY updates from live dispute",
+    "ownerNowView": "proofOutcomeLinkage + businessControlHealth + topCredibilityConcern"
+  },
+  "notFaked": {
+    "complaintRework": "no per-event complaint/rework model; relatedComplaintId/relatedReworkId = null (missing-source)",
+    "timestamps": "server occurredAt for both audits; no client timestamp trusted"
+  },
+  "filesCreated": [
+    "src/domain/execution/proof-dispute.ts",
+    "src/services/execution/proof-dispute.service.ts",
+    "src/app/api/proof/dispute/route.ts",
+    "src/__tests__/execution/proof-dispute.test.ts",
+    "src/__tests__/execution/proof-dispute.service.test.ts",
+    "src/__tests__/execution/proof-dispute-simulation.db.test.ts"
+  ],
+  "filesChanged": [
+    "src/domain/constants/audit-events.ts",
+    "docs/CURRENT_OPSIQ_STATUS.md"
+  ],
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid (no schema change)",
+    "governanceStrict": "31 frozen, 0 new",
+    "changedAreaSuites": "85 files / 707 tests pass",
+    "newTests": 18,
+    "dbSimulation": "5/5 pass",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "per-event complaint/rework model (proof->complaint still NOT_MEASURABLE)",
+    "dispute-category -> profit-leak/constraint wiring",
+    "UI + browser E2E",
+    "Process Intelligence (out of scope)"
+  ]
+}
