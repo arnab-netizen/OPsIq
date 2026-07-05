@@ -8,7 +8,29 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Adjudication Suppression Across All Proof-Risk Sources depth pass (latest)
+## Per-Proof Evidence Lists for Remaining Gaming/Credibility Signals depth pass (latest)
+- **Base:** `origin/main` @ `9985f87f` (Adjudication Suppression Across All Sources PR #122 merged).
+- **Branch:** `claude/proof-evidence-lists-for-risk-signals-depth-pass`.
+- **Classification:** `PROOF_EVIDENCE_LISTS_FOR_RISK_SIGNALS_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **Self-review, rubber-stamp, weak/rejected, reused, and reviewer-quality signals now carry per-proof
+  evidence — so they are adjudication-suppressible.** The aggregation collects `Proof.id` per category
+  and each signal exposes `supportingProofIds` + `sourceCompleteness = COMPLETE`; the existing per-source
+  suppression then applies unchanged (clearing suppresses the exact proofs; a new proof re-surfaces;
+  confirm/require-fresh/training stay visible). **No schema change** (proof rows already carry `id`).
+- **Honest blocked-by-data:** `SUSPICIOUS_FAST_COMPLETION` (no completion timestamps/baselines) and
+  `MANAGER_IGNORES_ESCALATION` (no escalation-timing source) stay **fail-visible** with
+  `sourceCompleteness = BLOCKED_BY_DATA` and a missing-source note — never hidden to force an SLO pass.
+  No fabricated proof IDs.
+- **Owner-visible / SLO:** now-view exposes the supporting proof count + representative refs +
+  completeness on `topGamingSignal`/`topCredibilityConcern`; `ANTI_GAMING_RISK`/`EVIDENCE_CREDIBILITY_RISK`
+  ease only when a proof-backed active signal is cleared with no newer proof.
+- **Still missing:** persisted completion/escalation timing for the blocked signals; per-proof linkage
+  for contradiction-count concerns; owner UI; browser E2E.
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance strict 0-new · owner-mode +
+  execution 699 unit + 826 DB tests green · 12 new tests · DB sim 5/5. Details:
+  `docs/remediation/proof-evidence-lists-for-risk-signals-depth-pass/`.
+
+## Adjudication Suppression Across All Proof-Risk Sources depth pass
 - **Base:** `origin/main` @ `428e18e6` (Owner Proof-Risk Adjudication PR #121 merged).
 - **Branch:** `claude/adjudication-suppression-all-sources-depth-pass`.
 - **Classification:** `ADJUDICATION_SUPPRESSION_ALL_SOURCES_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `BUSINESS_CONTROL_SLO_STRENGTHENED`, `OWNER_MODE_EXCELLENCE_DEEPENED`).

@@ -40,6 +40,9 @@ export interface SubmitterCredStats {
   rejected: number;
   reused: number;
   stale: number;
+  /** Supporting proof IDs for the unreliable-submitter basis (weak + rejected + reused). */
+  unreliableProofIds?: string[];
+  weakProofIds?: string[];
 }
 export interface ReviewerCredStats {
   reviewerId: string;
@@ -47,12 +50,17 @@ export interface ReviewerCredStats {
   accepted: number;
   acceptedWeak: number;
   selfReviewCount: number;
+  /** Supporting proof IDs (for fair adjudication). */
+  acceptedWeakProofIds?: string[];
+  selfReviewProofIds?: string[];
 }
 export interface ProofTypeCredStats {
   proofType: string;
   total: number;
   accepted: number;
   weakOrRejected: number;
+  /** Supporting proof IDs of the weak/rejected proofs of this type. */
+  weakOrRejectedProofIds?: string[];
 }
 export interface WorkspaceItemCounts {
   weak: number;
@@ -120,6 +128,8 @@ export interface CredibilityFinding {
    * no per-proof evidence (then it is never suppressed — fail visible).
    */
   supportingProofIds?: string[];
+  /** COMPLETE (proof IDs identify the basis) / PARTIAL / BLOCKED_BY_DATA (no proof-level source). */
+  sourceCompleteness?: "COMPLETE" | "PARTIAL" | "BLOCKED_BY_DATA";
   /** Secondary, explained — never the primary output. */
   credibilityScore: number;
   evaluatedAt: string;
@@ -161,6 +171,12 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
   const push = (f: Omit<CredibilityFinding, "workspaceId" | "evaluatedAt" | "credibilityScore">): void => {
     out.push({ ...f, workspaceId: ws, evaluatedAt: at, credibilityScore: credScore(f.severity, f.signalType, f.patternCount) });
   };
+  // Attach a per-proof evidence list so a concern can be fairly adjudicated. COMPLETE when the
+  // proof-level source is present (and suppressible); BLOCKED_BY_DATA otherwise (fail-visible).
+  const withEvidence = (ids: string[] | undefined): Pick<CredibilityFinding, "supportingProofIds" | "sourceCompleteness" | "missingData"> =>
+    ids && ids.length > 0
+      ? { supportingProofIds: ids.slice(0, 50), sourceCompleteness: "COMPLETE", missingData: [] }
+      : { supportingProofIds: undefined, sourceCompleteness: "BLOCKED_BY_DATA", missingData: ["no persisted proof-level source for this concern — cannot be adjudication-suppressed yet"] };
 
   // ── Reviewer credibility ───────────────────────────────────────────────────
   for (const r of input.reviewers) {
@@ -168,7 +184,7 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
       push({
         entityType: "REVIEWER", entityId: r.reviewerId, entityLabel: r.role ?? "reviewer",
         signalType: "SELF_REVIEW_BLOCKED_OR_ATTEMPTED", severity: "HIGH", confidence: "HIGH",
-        reasonCodes: ["SELF_REVIEW"], evidence: [`${r.selfReviewCount} proof(s) reviewed by their own submitter`], patternCount: r.selfReviewCount, missingData: [],
+        reasonCodes: ["SELF_REVIEW"], evidence: [`${r.selfReviewCount} proof(s) reviewed by their own submitter`, ...((r.selfReviewProofIds ?? []).length ? [`proof refs: ${(r.selfReviewProofIds ?? []).slice(0, 10).join(", ")}`] : [])], patternCount: r.selfReviewCount, ...withEvidence(r.selfReviewProofIds),
         ownerExplanation: "A reviewer signed off on work they submitted themselves — this proof cannot be trusted as independently verified.",
         businessImpact: "Self-reviewed proof is not real verification; bad work can be certified as done.",
         relatedGamingSignal: "SELF_REVIEW_ATTEMPT", relatedProfitLeak: null,
@@ -182,7 +198,7 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
       push({
         entityType: "REVIEWER", entityId: r.reviewerId, entityLabel: r.role ?? "manager",
         signalType: "REVIEW_QUALITY_CONCERN", severity: "HIGH", confidence: "MEDIUM",
-        reasonCodes: ["ACCEPTED_WEAK_OR_DUPLICATE_PROOF"], evidence: [`${r.acceptedWeak} weak/duplicate proof(s) accepted by this reviewer`], patternCount: r.acceptedWeak, missingData: [],
+        reasonCodes: ["ACCEPTED_WEAK_OR_DUPLICATE_PROOF"], evidence: [`${r.acceptedWeak} weak/duplicate proof(s) accepted by this reviewer`, ...((r.acceptedWeakProofIds ?? []).length ? [`proof refs: ${(r.acceptedWeakProofIds ?? []).slice(0, 10).join(", ")}`] : [])], patternCount: r.acceptedWeak, ...withEvidence(r.acceptedWeakProofIds),
         ownerExplanation: "This reviewer's acceptances are low-credibility — they are approving weak or reused proof.",
         businessImpact: "Low review quality lets unreliable work pass, driving rework and complaints.",
         relatedGamingSignal: "MANAGER_RUBBER_STAMP",
@@ -276,7 +292,7 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
         entityType: "SUBMITTER", entityId: s.actorId, entityLabel: s.role ?? "staff",
         signalType: "UNRELIABLE_SUBMITTER_PATTERN", severity: unreliableCount >= 8 ? "HIGH" : "MEDIUM", confidence: "HIGH",
         reasonCodes: ["REPEATED_WEAK_REJECTED_OR_REUSED_PROOF"],
-        evidence: [`${s.weakOrReviewNeeded} weak, ${s.rejected} rejected, ${s.reused} reused of ${s.total} proofs`], patternCount: unreliableCount, missingData: [],
+        evidence: [`${s.weakOrReviewNeeded} weak, ${s.rejected} rejected, ${s.reused} reused of ${s.total} proofs`, ...((s.unreliableProofIds ?? []).length ? [`proof refs: ${(s.unreliableProofIds ?? []).slice(0, 10).join(", ")}`] : [])], patternCount: unreliableCount, ...withEvidence(s.unreliableProofIds),
         ownerExplanation: "This operator's proof is repeatedly weak/rejected/reused — their completions cannot be taken at face value yet.",
         businessImpact: "Low-credibility proof predicts rework, complaints, and wasted review time.",
         relatedGamingSignal: s.reused >= REUSED_THRESHOLD ? "REUSED_PROOF_PATTERN" : "REPEATED_WEAK_PROOF",
@@ -310,7 +326,7 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
       push({
         entityType: "SUBMITTER", entityId: s.actorId, entityLabel: s.role ?? "staff",
         signalType: "REPEATED_OWNER_REVIEW_BURDEN", severity: "MEDIUM", confidence: "HIGH",
-        reasonCodes: ["STAFF_DRIVEN_REVIEW_LOAD"], evidence: [`${s.weakOrReviewNeeded} of this operator's proofs need human review`], patternCount: s.weakOrReviewNeeded, missingData: [],
+        reasonCodes: ["STAFF_DRIVEN_REVIEW_LOAD"], evidence: [`${s.weakOrReviewNeeded} of this operator's proofs need human review`, ...((s.weakProofIds ?? []).length ? [`proof refs: ${(s.weakProofIds ?? []).slice(0, 10).join(", ")}`] : [])], patternCount: s.weakOrReviewNeeded, ...withEvidence(s.weakProofIds),
         ownerExplanation: "This operator generates most of the review load through low-credibility proof.",
         businessImpact: "Concentrated review burden is an owner-workload leak — fixing this operator frees the most owner time.",
         relatedGamingSignal: "OWNER_REVIEW_BURDEN_CREATED_BY_STAFF", relatedProfitLeak: "OWNER_BOTTLENECK_COST",
@@ -329,7 +345,7 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
       signalType: "REUSED_PROOF", severity: s.count >= 2 ? "HIGH" : "MEDIUM", confidence: "HIGH",
       reasonCodes: ["EXACT_REUSED_HASH", "REUSED_ACROSS_DIFFERENT_TASKS"],
       evidence: [`${s.count} of this operator's proof(s) reuse an artifact across different jobs`, ...(s.proofIds.length ? [`proof refs: ${s.proofIds.slice(0, 10).join(", ")}`] : [])],
-      patternCount: s.count, missingData: [], supportingProofIds: s.proofIds,
+      patternCount: s.count, missingData: [], supportingProofIds: s.proofIds, sourceCompleteness: "COMPLETE",
       ownerExplanation: "This operator reused the same proof artifact across different jobs — some completions may be backed by old evidence. This needs review, not an accusation.",
       businessImpact: "Reused proof hides undone work until a complaint surfaces.",
       relatedGamingSignal: "REUSED_PROOF_PATTERN", relatedProfitLeak: null,
@@ -346,7 +362,7 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
       push({
         entityType: "PROOF_TYPE", entityId: pt.proofType, entityLabel: pt.proofType,
         signalType: "WEAK_PROOF_NEEDS_REVIEW", severity: "MEDIUM", confidence: "MEDIUM",
-        reasonCodes: ["PROOF_TYPE_LOW_ACCEPTANCE"], evidence: [`${pt.weakOrRejected}/${pt.total} of "${pt.proofType}" proofs are weak/rejected`], patternCount: pt.weakOrRejected, missingData: [],
+        reasonCodes: ["PROOF_TYPE_LOW_ACCEPTANCE"], evidence: [`${pt.weakOrRejected}/${pt.total} of "${pt.proofType}" proofs are weak/rejected`, ...((pt.weakOrRejectedProofIds ?? []).length ? [`proof refs: ${(pt.weakOrRejectedProofIds ?? []).slice(0, 10).join(", ")}`] : [])], patternCount: pt.weakOrRejected, ...withEvidence(pt.weakOrRejectedProofIds),
         ownerExplanation: `The "${pt.proofType}" proof type is unreliable — it repeatedly fails review, so the requirement or capture method may be wrong.`,
         businessImpact: "An unreliable proof type wastes review time and hides true completion status.",
         relatedGamingSignal: null, relatedProfitLeak: null,
@@ -460,26 +476,28 @@ export function aggregateCredibility(rows: CredibilityProofRow[], nowMs: number)
     if (isStale) itemCounts.stale++;
     if (p.tamperSuspected) itemCounts.tamperSuspected++;
 
+    const isUnreliable = isWeak || isRejected || p.duplicateFlagged;
     if (p.submittedByUserId) {
-      const s = subs.get(p.submittedByUserId) ?? { actorId: p.submittedByUserId, total: 0, accepted: 0, weakOrReviewNeeded: 0, rejected: 0, reused: 0, stale: 0 };
+      const s = subs.get(p.submittedByUserId) ?? { actorId: p.submittedByUserId, total: 0, accepted: 0, weakOrReviewNeeded: 0, rejected: 0, reused: 0, stale: 0, unreliableProofIds: [], weakProofIds: [] };
       s.total++;
       if (isAccepted) s.accepted++;
-      if (isWeak) s.weakOrReviewNeeded++;
+      if (isWeak) { s.weakOrReviewNeeded++; if (p.id) s.weakProofIds!.push(p.id); }
       if (isRejected) s.rejected++;
       if (p.duplicateFlagged) s.reused++;
       if (isStale) s.stale++;
+      if (isUnreliable && p.id) s.unreliableProofIds!.push(p.id);
       subs.set(p.submittedByUserId, s);
     }
     if (p.reviewedByUserId) {
-      const r = revs.get(p.reviewedByUserId) ?? { reviewerId: p.reviewedByUserId, accepted: 0, acceptedWeak: 0, selfReviewCount: 0 };
-      if (isAccepted) { r.accepted++; if (p.duplicateFlagged) r.acceptedWeak++; }
-      if (p.submittedByUserId && p.submittedByUserId === p.reviewedByUserId) r.selfReviewCount++;
+      const r = revs.get(p.reviewedByUserId) ?? { reviewerId: p.reviewedByUserId, accepted: 0, acceptedWeak: 0, selfReviewCount: 0, acceptedWeakProofIds: [], selfReviewProofIds: [] };
+      if (isAccepted) { r.accepted++; if (p.duplicateFlagged) { r.acceptedWeak++; if (p.id) r.acceptedWeakProofIds!.push(p.id); } }
+      if (p.submittedByUserId && p.submittedByUserId === p.reviewedByUserId) { r.selfReviewCount++; if (p.id) r.selfReviewProofIds!.push(p.id); }
       revs.set(p.reviewedByUserId, r);
     }
-    const t = types.get(p.proofType) ?? { proofType: p.proofType, total: 0, accepted: 0, weakOrRejected: 0 };
+    const t = types.get(p.proofType) ?? { proofType: p.proofType, total: 0, accepted: 0, weakOrRejected: 0, weakOrRejectedProofIds: [] };
     t.total++;
     if (isAccepted) t.accepted++;
-    if (isWeak || isRejected) t.weakOrRejected++;
+    if (isWeak || isRejected) { t.weakOrRejected++; if (p.id) t.weakOrRejectedProofIds!.push(p.id); }
     types.set(p.proofType, t);
   }
 
