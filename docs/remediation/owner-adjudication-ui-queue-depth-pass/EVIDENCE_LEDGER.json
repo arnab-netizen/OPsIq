@@ -1,0 +1,57 @@
+{
+  "pass": "owner-adjudication-ui-queue-depth-pass",
+  "branch": "claude/owner-adjudication-ui-queue-depth-pass",
+  "base": "origin/main@5e5bdb7a",
+  "pr124MergeStatus": "merged (squash commit 5e5bdb7a on main)",
+  "classification": [
+    "OWNER_ADJUDICATION_UI_QUEUE_REAL_BUT_NOT_BROWSER_PROVEN",
+    "OWNER_MODE_EXCELLENCE_DEEPENED"
+  ],
+  "schemaChange": "NONE — UI + read-model over the existing tables/service/route",
+  "capabilityDelivered": "in-app owner Proof-risk review queue: list active findings, see evidence, pick one of 7 governed outcomes with a required reason, submit via the existing canonical route, see cleared/kept/inconclusive + audit status",
+  "filesCreated": [
+    "src/domain/owner-mode/adjudication-queue.ts",
+    "src/app/api/owner/proof-risk/queue/route.ts",
+    "src/components/owner/AdjudicationQueue.tsx",
+    "src/app/(authenticated)/owner/adjudication/page.tsx",
+    "src/__tests__/owner-mode/adjudication-queue.test.ts",
+    "src/__tests__/components/adjudication-queue.test.tsx",
+    "src/__tests__/app/owner-adjudication-page.test.tsx"
+  ],
+  "filesChanged": ["src/app/(authenticated)/owner/now/page.tsx (added queue link)"],
+  "route": "GET /api/owner/proof-risk/queue (OWNER_VIEW, workspace-scoped)",
+  "page": "/owner/adjudication",
+  "component": "src/components/owner/AdjudicationQueue.tsx (prop-driven, no business logic)",
+  "queueSources": ["reusedProofFindings", "topGamingSignal", "topCredibilityConcern", "timingEvidence (active)", "proofRiskAdjudications (status)"],
+  "outcomesSupported": ["REQUIRE_FRESH_PROOF", "ACCEPT_AS_VALID", "DISMISS_FALSE_POSITIVE", "CONFIRM_SUSPICIOUS_PATTERN", "ESCALATE_FOR_TRAINING", "ESCALATE_FOR_OWNER_REVIEW", "MARK_INCONCLUSIVE_NEEDS_DATA"],
+  "noBusinessLogicInUI": "flatten is a pure server-side domain fn (buildAdjudicationQueue); outcome effects enforced by the existing service; component only renders + posts",
+  "backendRouteReused": "POST /api/proof-risk/adjudicate (unchanged)",
+  "safety": {
+    "noFraudTheftNegligenceLabel": true,
+    "noHiddenStaffScore": true,
+    "reasonRequired": true,
+    "fairnessNote": "review flag, not an accusation; owner review required before personnel action",
+    "sanitizedErrors": true,
+    "noUIOnlyUnauditedMutation": true,
+    "blockedByDataFailVisibleNotAdjudicable": true
+  },
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid (no schema change)",
+    "governanceStrict": "31 frozen, 0 new",
+    "nextBuild": "exit 0 — /owner/adjudication + /api/owner/proof-risk/queue in the manifest",
+    "domainTests": "9/9 (adjudication-queue.test.ts)",
+    "componentTests": "9/9 (adjudication-queue.test.tsx)",
+    "pageTests": "3/3 (owner-adjudication-page.test.tsx)",
+    "regression": "owner-mode + components + execution 83 files / 781 tests pass (23 db skipped)",
+    "browserE2E": "NOT run — unproven (jsdom component + page proof only)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "Playwright/browser E2E to make the queue browser-proven",
+    "populate work_started_at / acknowledged_at from write paths",
+    "pagination/filtering + surfacing every historical finding",
+    "Process Intelligence (out of scope)"
+  ]
+}

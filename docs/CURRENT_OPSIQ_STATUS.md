@@ -8,7 +8,32 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Completion / Escalation Timing Evidence depth pass (latest)
+## Owner Adjudication UI / Queue depth pass (latest)
+- **Base:** `origin/main` @ `5e5bdb7a` (Completion / Escalation Timing Evidence PR #124 merged).
+- **Branch:** `claude/owner-adjudication-ui-queue-depth-pass`.
+- **Classification:** `OWNER_ADJUDICATION_UI_QUEUE_REAL_BUT_NOT_BROWSER_PROVEN` (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **The owner can now review and adjudicate proof-risk findings in the app** at `/owner/adjudication`
+  (linked from the Owner Now View) — no raw API calls. The queue lists active findings (reused-hash,
+  top anti-gaming signal, top credibility concern, active timing signals) with why each was raised, the
+  supporting-proof count + a few refs, the actor, severity, source completeness, current adjudication
+  status, and the recommended action. The owner picks one of the **seven** governed outcomes, enters a
+  **required reason**, and submits via the existing canonical `POST /api/proof-risk/adjudicate` route.
+- **No business logic in the UI:** the flatten is a pure server-side domain fn (`buildAdjudicationQueue`)
+  behind `GET /api/owner/proof-risk/queue`; outcome effects are enforced by the existing service; the
+  component only renders + posts. **No schema change.**
+- **Safety:** no fraud/theft/negligence label; no hidden staff score; sanitized errors; BLOCKED_BY_DATA
+  findings render but are not adjudicable (fail-visible). Standing note: "review flag, not an
+  accusation — owner review required before any personnel action."
+- **Still missing:** browser E2E (jsdom component + page proof only); pagination/filtering; surfacing
+  every historical finding (currently the now-view's top signals + all reused-hash submitters + active
+  timing signals).
+- **Browser E2E status:** **unproven** (no Playwright run this pass).
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance strict 31-frozen/0-new ·
+  `next build` exit 0 (new page + route in the manifest) · 21 UI/read-model tests (9 domain + 9
+  component + 3 page) · owner-mode + components + execution regression 781 pass. Details:
+  `docs/remediation/owner-adjudication-ui-queue-depth-pass/`.
+
+## Completion / Escalation Timing Evidence depth pass
 - **Base:** `origin/main` @ `ff741bac` (Per-Proof Evidence Lists for Risk Signals PR #123 merged).
 - **Branch:** `claude/completion-escalation-timing-evidence-depth-pass`.
 - **Classification:** `COMPLETION_ESCALATION_TIMING_EVIDENCE_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `OWNER_MODE_EXCELLENCE_DEEPENED`).
