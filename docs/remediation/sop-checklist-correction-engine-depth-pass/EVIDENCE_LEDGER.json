@@ -1,0 +1,48 @@
+{
+  "pass": "sop-checklist-correction-engine-depth-pass",
+  "title": "SOP checklist correction engine depth pass",
+  "classification": "SOP_CHECKLIST_CORRECTION_ENGINE_REAL_AND_OWNER_VISIBLE",
+  "schemaChange": false,
+  "baseMainHead": "9f6b84ae",
+  "draftShapeFields": 22,
+  "draftStatuses": ["DRAFT", "PROPOSED", "APPROVED", "REJECTED", "NEEDS_DATA"],
+  "sopAreas": [
+    "PRESSING_WASH_CHECKLIST", "ACCEPTANCE_QUALITY_CHECKLIST", "PROOF_REQUIREMENT_CHECKLIST",
+    "DELIVERY_HANDOFF_CHECKLIST", "REVIEW_PROCESS_STEP", "DATA_CAPTURE_CHECKLIST", "TRAINING_HANDOFF", "NONE"
+  ],
+  "routing": {
+    "UPDATE_CHECKLIST": "ACCEPTANCE_QUALITY_CHECKLIST | DELIVERY_HANDOFF_CHECKLIST",
+    "REVIEW_PROCESS_STEP": "REVIEW_PROCESS_STEP | DELIVERY_HANDOFF_CHECKLIST (delivery stage)",
+    "REQUIRE_FRESH_PROOF": "PROOF_REQUIREMENT_CHECKLIST",
+    "COLLECT_MISSING_DATA": "DATA_CAPTURE_CHECKLIST (NEEDS_DATA)",
+    "ASSIGN_TRAINING_REVIEW": "TRAINING_HANDOFF (placeholder — no training assignment)",
+    "NO_ACTION_DATA_INSUFFICIENT": "NEEDS_DATA note",
+    "ESCALATE_TO_MANAGER|ESCALATE_TO_OWNER|RESOLVE_OPERATIONAL_EVENT": "no SOP draft"
+  },
+  "filesCreated": [
+    "src/domain/owner-mode/sop-checklist-correction-engine.ts",
+    "src/__tests__/owner-mode/sop-checklist-correction-engine.test.ts",
+    "src/__tests__/components/sop-checklist-corrections-panel.test.tsx",
+    "src/__tests__/execution/sop-checklist-correction-simulation.db.test.ts"
+  ],
+  "filesChanged": [
+    "src/services/owner-guidance/owner-now-view.service.ts",
+    "src/components/owner/ProcessIntelligencePanel.tsx",
+    "src/app/(authenticated)/owner/process-intelligence/page.tsx",
+    "src/__tests__/app/owner-process-intelligence-page.test.tsx",
+    ".github/workflows/db-verification.yml"
+  ],
+  "tests": { "domain": 13, "component": 4, "page": 2, "dbSimulationCases": 2 },
+  "gates": { "tsc": "exit 0", "governanceStrict": "31 frozen, 0 new", "lintRatchet": "PASS" },
+  "governance": {
+    "everyDraftProposedOrDraftOrNeedsData": true,
+    "neverApproved": true,
+    "neverAutoApplied": true,
+    "approvalInheritedNotWeakened": true,
+    "noTrainingAssignmentHere": true,
+    "noHrDisciplineAction": true,
+    "noFraudNegligenceLabels": true,
+    "noHiddenStaffScore": true,
+    "emitsAuditEvents": false
+  }
+}
