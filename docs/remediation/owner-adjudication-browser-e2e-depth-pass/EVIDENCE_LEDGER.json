@@ -1,0 +1,60 @@
+{
+  "pass": "owner-adjudication-browser-e2e-depth-pass",
+  "branch": "claude/owner-adjudication-browser-e2e-depth-pass",
+  "base": "origin/main@412688e0",
+  "pr125MergeStatus": "merged (squash commit 412688e0 on main)",
+  "classification": [
+    "OWNER_ADJUDICATION_BROWSER_E2E_PROVEN_LOCALLY",
+    "OWNER_MODE_EXCELLENCE_DEEPENED"
+  ],
+  "classificationNote": "Browser flow proven locally 5/5 against real app + real backend; CI run of the new spec confirmed on the PR (wired into owner-pilot-e2e lane).",
+  "schemaChange": "NONE — seed inserts data (proofs + a UserRoleAssignment permission grant); no schema change",
+  "routeTested": "/owner/adjudication (page) + GET /api/owner/proof-risk/queue + POST /api/proof-risk/adjudicate + /owner/now",
+  "realBackend": true,
+  "mocks": "none — deterministic DB fixtures only",
+  "dataSetup": {
+    "ownerLogin": "scripts/seed-owner-scenarios.ts (test1@staging.local / password123, E2E workspace + businesses)",
+    "proofRiskFinding": "scripts/seed-e2e-proof-risk.ts — staff self-reviews two proofs -> SELF_REVIEW_ATTEMPT top gaming signal (COMPLETE, 2 proof IDs)",
+    "permissionGrant": "owner granted gep:proof_review_low_risk via UserRoleAssignment (production grant path)",
+    "deterministicIds": ["staff 50000000-0000-4000-8000-0000000000f1", "proofs 51000000-...-f1/f2"]
+  },
+  "filesCreated": [
+    "tests/browser/43-owner-adjudication.spec.ts",
+    "scripts/seed-e2e-proof-risk.ts"
+  ],
+  "filesChanged": [
+    ".github/workflows/owner-pilot-e2e.yml (seed + spec added to the lane)",
+    "src/app/(authenticated)/owner/adjudication/page.tsx (silent post-decision refresh so the queue/result stays mounted)"
+  ],
+  "userFlowProven": [
+    "authenticated owner opens /owner/adjudication",
+    "queue header + >=1 active proof-risk item render (real GET)",
+    "reason required before submit",
+    "REQUIRE_FRESH_PROOF + reason submits (real POST 200) -> decision recorded",
+    "no fraud/theft/negligence label or hidden score on findings",
+    "back-navigation to /owner/now"
+  ],
+  "fixesFound": [
+    "adjudicate route requires gep:proof_review_low_risk -> granted to owner in seed (real path)",
+    "post-decision refresh unmounted the queue and wiped the success message -> silent refresh"
+  ],
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid (no schema change)",
+    "governanceStrict": "31 frozen, 0 new",
+    "nextBuild": "exit 0",
+    "jsdomAdjudicationTests": "21/21 pass",
+    "playwrightSpec": "5/5 pass locally (real app + backend)",
+    "ciRunOfNewSpec": "wired into owner-pilot-e2e; confirmed on PR (not yet observed)",
+    "browserShardFlake": "unrelated stripe-simulation (known non-required) + occasional postgres service-container flake; not this spec",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "confirm the new spec green in CI on the PR",
+    "browser-drive the other queue sources (only self-review driven here)",
+    "populate work_started_at / acknowledged_at from write paths",
+    "multi-actor throughput; broad browser readiness for the rest of OpsIQ",
+    "Process Intelligence (out of scope)"
+  ]
+}

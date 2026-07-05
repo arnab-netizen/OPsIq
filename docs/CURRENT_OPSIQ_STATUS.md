@@ -8,7 +8,29 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Owner Adjudication UI / Queue depth pass (latest)
+## Owner Adjudication Browser E2E depth pass (latest)
+- **Base:** `origin/main` @ `412688e0` (Owner Adjudication UI / Queue PR #125 merged).
+- **Branch:** `claude/owner-adjudication-browser-e2e-depth-pass`.
+- **Classification:** `OWNER_ADJUDICATION_BROWSER_E2E_PROVEN` (locally 5/5; CI confirmed on the PR) (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **The owner proof-risk adjudication loop is now browser-proven** — a real Chromium drives the real app
+  + backend through the whole flow: log in → open `/owner/adjudication` → see an active finding (seeded
+  self-review, with its supporting-proof count) → be forced to enter a reason → submit `REQUIRE_FRESH_PROOF`
+  via the real `POST /api/proof-risk/adjudicate` (HTTP 200) → "Decision recorded" → back to `/owner/now`.
+  No fraud/theft/negligence label or hidden score on the findings.
+- **Real backend, no mocks.** Deterministic fixtures only: `seed-owner-scenarios.ts` + new
+  `seed-e2e-proof-risk.ts` (a self-review finding + the owner's `gep:proof_review_low_risk` grant via the
+  real `UserRoleAssignment` path). **No schema change.** The spec + seed are wired into the existing
+  `owner-pilot-e2e` CI lane (no new lane).
+- **Two real bugs found by the E2E and fixed (not hidden):** (1) the adjudicate route requires
+  `gep:proof_review_low_risk` — granted to the owner in the seed; (2) the page's post-decision refresh
+  unmounted the queue and wiped the success message — made a silent refresh.
+- **Still unproven:** CI run of the new spec (confirmed on the PR); only self-review is browser-driven
+  (other queue sources stay jsdom/domain-tested); broad browser-readiness for the rest of OpsIQ.
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance 31-frozen/0-new · `next build`
+  exit 0 · jsdom adjudication 21/21 · **Playwright `43-owner-adjudication.spec.ts` 5/5 local**. Details:
+  `docs/remediation/owner-adjudication-browser-e2e-depth-pass/`.
+
+## Owner Adjudication UI / Queue depth pass
 - **Base:** `origin/main` @ `5e5bdb7a` (Completion / Escalation Timing Evidence PR #124 merged).
 - **Branch:** `claude/owner-adjudication-ui-queue-depth-pass`.
 - **Classification:** `OWNER_ADJUDICATION_UI_QUEUE_REAL_BUT_NOT_BROWSER_PROVEN` (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).
