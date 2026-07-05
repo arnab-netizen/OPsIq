@@ -82,6 +82,12 @@ export interface CredibilityInput {
   /** Real complaint/rework events linked to a submitter's accepted proof (per-event model). */
   submitterComplaints?: Array<{ actorId: string; count: number }>;
   submitterReworks?: Array<{ actorId: string; count: number }>;
+  /**
+   * Deterministic reused-hash reuse per submitter (from the dedicated reused-hash precheck) — a
+   * proof artifact reused across different jobs. When present it drives an attributed REUSED_PROOF
+   * concern (supersedes the coarse workspace duplicate-flag count, which is not per-operator).
+   */
+  submitterReusedHash?: Array<{ actorId: string; count: number; proofIds: string[] }>;
   /** Sources not yet persisted (complaint/rework/outcome ↔ proof linkage). */
   missingSources?: string[];
   evaluatedAt: string;
@@ -309,6 +315,25 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
     }
   }
 
+  // ── Deterministic reused-hash concern (attributed to the submitter) ──────────
+  for (const s of input.submitterReusedHash ?? []) {
+    if (s.count < 1) continue;
+    push({
+      entityType: "SUBMITTER", entityId: s.actorId, entityLabel: "staff",
+      signalType: "REUSED_PROOF", severity: s.count >= 2 ? "HIGH" : "MEDIUM", confidence: "HIGH",
+      reasonCodes: ["EXACT_REUSED_HASH", "REUSED_ACROSS_DIFFERENT_TASKS"],
+      evidence: [`${s.count} of this operator's proof(s) reuse an artifact across different jobs`, ...(s.proofIds.length ? [`proof refs: ${s.proofIds.slice(0, 10).join(", ")}`] : [])],
+      patternCount: s.count, missingData: [],
+      ownerExplanation: "This operator reused the same proof artifact across different jobs — some completions may be backed by old evidence. This needs review, not an accusation.",
+      businessImpact: "Reused proof hides undone work until a complaint surfaces.",
+      relatedGamingSignal: "REUSED_PROOF_PATTERN", relatedProfitLeak: null,
+      relatedConstraint: input.currentConstraint === "STAFF" ? "STAFF" : null,
+      recommendedResponse: "Require a fresh, job-specific proof per task; re-verify the reused jobs.",
+      ownerActionRequired: false, managerActionSufficient: true,
+      reassessmentTrigger: "Re-verify jobs backed by reused proof.",
+    });
+  }
+
   // ── Proof-type credibility ─────────────────────────────────────────────────
   for (const pt of input.proofTypes) {
     if (pt.total >= 4 && pt.weakOrRejected / pt.total >= 0.5) {
@@ -329,7 +354,9 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
 
   // ── Workspace-level item concerns (only if no stronger entity concern) ──────
   const ic = input.itemCounts;
-  if (ic.reused >= REUSED_THRESHOLD) {
+  // The deterministic per-submitter reused-hash concern (above) supersedes the coarse workspace
+  // duplicate-flag count; emit the workspace-level concern only when that source is absent.
+  if (!input.submitterReusedHash && ic.reused >= REUSED_THRESHOLD) {
     push({
       entityType: "WORKSPACE", entityId: null, entityLabel: "workspace",
       signalType: "REUSED_PROOF", severity: "MEDIUM", confidence: "HIGH",

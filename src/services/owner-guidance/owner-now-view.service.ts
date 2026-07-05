@@ -43,6 +43,7 @@ import type { ProofOutcomeLinkageReport } from "@/domain/owner-mode/proof-outcom
 import type { DisputeRiskAnalysis } from "@/domain/owner-mode/dispute-risk";
 import type { ComplaintReworkAnalysis } from "@/domain/execution/complaint-rework";
 import type { OperationalEventAgingSummary } from "@/domain/execution/operational-event-aging";
+import type { ReusedHashAnalysis } from "@/domain/execution/reused-hash-precheck";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -111,6 +112,8 @@ export interface GuidanceDeps {
   disputeRisk?: (workspaceId: string) => Promise<DisputeRiskAnalysis>;
   /** Optional — the live complaint/rework → proof linkage source. Absent on a fake-DI unit test. */
   complaintRework?: (workspaceId: string) => Promise<ComplaintReworkAnalysis>;
+  /** Optional — the deterministic reused-hash / duplicate-proof precheck. Absent on a fake-DI unit test. */
+  reusedHash?: (workspaceId: string) => Promise<ReusedHashAnalysis>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
@@ -120,6 +123,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getProofOutcomeLinkage } = await import("@/services/owner-mode/proof-outcome-linkage.service");
   const { getDisputeRiskAnalysis } = await import("@/services/owner-mode/dispute-risk.service");
   const { getComplaintReworkLinks } = await import("@/services/execution/complaint-rework.service");
+  const { getReusedHashFindings } = await import("@/services/execution/reused-hash-precheck.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
@@ -128,6 +132,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
     proofOutcome: (workspaceId: string) => getProofOutcomeLinkage(workspaceId),
     disputeRisk: (workspaceId: string) => getDisputeRiskAnalysis(workspaceId),
     complaintRework: (workspaceId: string) => getComplaintReworkLinks(workspaceId),
+    reusedHash: (workspaceId: string) => getReusedHashFindings(workspaceId),
   };
 }
 
@@ -208,6 +213,8 @@ export interface OwnerNowViewPayload {
   complaintReworkLinks: ComplaintReworkAnalysis | null;
   /** Operational-event resolution + aging health (open/overdue/resolved), or null if unavailable. */
   operationalEventHealth: OperationalEventAgingSummary | null;
+  /** Deterministic reused-hash / duplicate-proof findings (workspace-scoped), or null if unavailable. */
+  reusedProofFindings: ReusedHashAnalysis | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -581,6 +588,14 @@ export async function getOwnerNowView(
     proofOutcomeReport = await deps.proofOutcome(workspaceId);
   }
 
+  // Deterministic reused-hash / duplicate-proof precheck — workspace-scoped, policy-aware (excludes
+  // legitimate same-task reuse, ignores cross-workspace). Live path only; feeds the anti-gaming +
+  // credibility signals with an explainable, per-operator reuse count and the matched proof IDs.
+  let reusedProofFindings: ReusedHashAnalysis | null = null;
+  if (typeof deps.reusedHash === "function") {
+    reusedProofFindings = await deps.reusedHash(workspaceId);
+  }
+
   // Cross-Event Anti-Gaming Analytics — the single highest-risk staff/manager pattern from the
   // workspace's proof/review events, linked to the current constraint + profit leak. Only runs
   // when the client exposes proof.findMany (the live path); a DI mock without it → null (no fake).
@@ -607,8 +622,12 @@ export async function getOwnerNowView(
       .map((p) => ({ id: p.id, submittedByUserId: p.submittedByUserId, reviewedByUserId: p.reviewedByUserId, duplicateFlagged: p.duplicateFlagged, tamperSuspected: p.tamperSuspected, status: p.status }));
     const { suspiciousProofActors, suspiciousReviewers } = aggregateSuspiciousProof(disputeRecords, suspiciousRows);
 
+    // Deterministic reused-hash reuse per operator (from the precheck) — authoritative reused-proof source.
+    const reusedHashActors = (reusedProofFindings?.submitterReuse ?? []).map((s) => ({ actorId: s.actorId, crossTaskReuseCount: s.count, proofIds: s.proofIds, matchType: "HASH" }));
+
     topGamingSignal = identifyGamingSignals({
       workspaceId, actors, reviewers, suspiciousProofActors, suspiciousReviewers,
+      reusedHashActors: reusedProofFindings ? reusedHashActors : undefined,
       currentConstraint: topConstraint?.constraintType ?? null,
       topProfitLeakType: topProfitLeak?.leakType ?? null,
       evaluatedAt: new Date(nowMs).toISOString(),
@@ -628,6 +647,8 @@ export async function getOwnerNowView(
       // Real linked complaint/rework events per submitter (per-event model) → credibility concern.
       submitterComplaints: complaintReworkLinks?.submitterComplaints,
       submitterReworks: complaintReworkLinks?.submitterReworks,
+      // Deterministic reused-hash reuse per submitter (from the precheck) → attributed REUSED_PROOF concern.
+      submitterReusedHash: reusedProofFindings?.submitterReuse,
       missingSources: complaintReworkLinks && complaintReworkLinks.aggregates.complaintLinkedCount > 0 ? [] : ["no complaint event linked to accepted proof yet"],
       evaluatedAt: new Date(nowMs).toISOString(),
     }).topConcern;
@@ -727,7 +748,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
