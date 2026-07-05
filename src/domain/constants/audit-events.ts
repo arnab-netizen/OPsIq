@@ -366,6 +366,9 @@ export const AUDIT_EVENTS = {
   // Governed dispute of a previously-accepted proof (owner/authorized reviewer). Carries the full
   // dispute record (category, reason, source, reassessment link) as the persisted dispute event.
   PROOF_DISPUTED: "proof.disputed",
+  // Per-event operational complaint/rework (minimal model) — governed creation + proof linkage.
+  OPERATIONAL_EVENT_RECORDED: "operational_event.recorded",
+  OPERATIONAL_EVENT_LINKED: "operational_event.linked",
 
   // Employee blocker / escalation (Slice 9)
   ESCALATION_RAISED: "escalation.raised",

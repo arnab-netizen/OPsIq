@@ -79,6 +79,9 @@ export interface CredibilityInput {
   submitterContradictions?: Array<{ actorId: string; contradictedCount: number }>;
   /** Workspace total of accepted-then-contradicted proofs (for the workspace-level concern). */
   contradictedProofCount?: number;
+  /** Real complaint/rework events linked to a submitter's accepted proof (per-event model). */
+  submitterComplaints?: Array<{ actorId: string; count: number }>;
+  submitterReworks?: Array<{ actorId: string; count: number }>;
   /** Sources not yet persisted (complaint/rework/outcome ↔ proof linkage). */
   missingSources?: string[];
   evaluatedAt: string;
@@ -202,6 +205,40 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
       reassessmentTrigger: "Re-open outcome checks on this operator's accepted items.",
     });
   }
+  // ── Accepted proof followed by a linked complaint/rework event (per-event model). ──
+  for (const c of input.submitterComplaints ?? []) {
+    if (c.count < 1) continue;
+    push({
+      entityType: "SUBMITTER", entityId: c.actorId, entityLabel: "staff",
+      signalType: "ACCEPTED_PROOF_WITH_COMPLAINT", severity: c.count >= 2 ? "HIGH" : "MEDIUM", confidence: "HIGH",
+      reasonCodes: ["ACCEPTED_PROOF_LINKED_TO_COMPLAINT"],
+      evidence: [`${c.count} complaint event(s) linked to this operator's accepted proof`], patternCount: c.count, missingData: [],
+      ownerExplanation: "A customer complained about work this operator's accepted proof signed off — the acceptance did not hold up.",
+      businessImpact: "Complaints after accepted proof mean bad work reached the customer and risks revenue/relationship.",
+      relatedGamingSignal: null, relatedProfitLeak: input.topProfitLeakType === "COMPLAINT_REVENUE_RISK" ? "COMPLAINT_REVENUE_RISK" : null,
+      relatedConstraint: input.currentConstraint === "QUALITY" ? "QUALITY" : null,
+      recommendedResponse: "Run customer recovery and re-verify this operator's recent accepted work.",
+      ownerActionRequired: true, managerActionSufficient: false,
+      reassessmentTrigger: "Re-open outcome checks on this operator's complaint-linked items.",
+    });
+  }
+  for (const r of input.submitterReworks ?? []) {
+    if (r.count < 1) continue;
+    push({
+      entityType: "SUBMITTER", entityId: r.actorId, entityLabel: "staff",
+      signalType: "ACCEPTED_PROOF_WITH_REWORK", severity: r.count >= 2 ? "HIGH" : "MEDIUM", confidence: "HIGH",
+      reasonCodes: ["ACCEPTED_PROOF_LINKED_TO_REWORK"],
+      evidence: [`${r.count} rework event(s) linked to this operator's accepted proof`], patternCount: r.count, missingData: [],
+      ownerExplanation: "Work this operator's accepted proof signed off had to be redone — the acceptance did not hold up.",
+      businessImpact: "Rework after accepted proof is cost of poor quality that the sign-off should have caught.",
+      relatedGamingSignal: null, relatedProfitLeak: input.topProfitLeakType && ["REWORK_REDO_COST", "WEAK_PROOF_REWORK_RISK"].includes(input.topProfitLeakType) ? input.topProfitLeakType : null,
+      relatedConstraint: input.currentConstraint === "QUALITY" || input.currentConstraint === "STAFF" ? input.currentConstraint : null,
+      recommendedResponse: "Fix the SOP/proof behind the redo and re-verify this operator's recent accepted work.",
+      ownerActionRequired: false, managerActionSufficient: true,
+      reassessmentTrigger: "Re-open outcome checks on this operator's rework-linked items.",
+    });
+  }
+
   const unattributedContradictions = Math.max(0, (input.contradictedProofCount ?? 0) - attributedContradictions);
   if (unattributedContradictions >= 1) {
     push({

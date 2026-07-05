@@ -72,6 +72,13 @@ export interface ProofOutcomeLinkageInput {
   workspaceId: string;
   reviewAudits: ProofReviewAuditRow[];
   proofs: LinkageProofRow[];
+  /**
+   * Counts of complaint/rework OperationalEvents linked to accepted proof (from the complaint/rework
+   * linkage). When > 0, the previously-NOT_MEASURABLE proof→complaint / proof→rework links become
+   * LINKED and count as contradictions of accepted proof.
+   */
+  linkedComplaintCount?: number;
+  linkedReworkCount?: number;
   nowMs: number;
   evaluatedAt: string;
 }
@@ -204,12 +211,33 @@ export function buildProofOutcomeLinkage(input: ProofOutcomeLinkageInput): Proof
     });
   }
 
-  // ── Honestly NOT_MEASURABLE linkages (documented missing model, never fabricated). ──
-  links.push(notMeasurableLink(
-    workspaceId, "PROOF_TO_COMPLAINT_LINK", "Proof(ACCEPTED)", "CustomerComplaint(per-event)", evaluatedAt,
-    ["no per-event/per-proof complaint model exists — complaints are period aggregates only (ownerMetricSnapshot.complaintCount)"],
-    "Cannot yet tie a specific accepted proof to a specific customer complaint."
-  ));
+  // ── PROOF_TO_COMPLAINT_LINK — measurable once complaint events are linked to accepted proof. ──
+  const linkedComplaint = input.linkedComplaintCount ?? 0;
+  const linkedRework = input.linkedReworkCount ?? 0;
+  if (linkedComplaint > 0) {
+    links.push({
+      workspaceId, sourceEntityType: "Proof(ACCEPTED)", sourceEntityId: null, sourceTimestamp: null,
+      targetEntityType: "OperationalEvent(COMPLAINT)", targetEntityId: null, targetTimestamp: null,
+      linkType: "PROOF_TO_COMPLAINT_LINK", status: "LINKED", actorId: null,
+      evidence: [`${linkedComplaint} complaint event(s) linked to accepted proof`], missingData: [],
+      latencyMs: null, ownerImplication: "Accepted work drew customer complaints — the sign-off did not hold up.", evaluatedAt,
+    });
+  } else {
+    links.push(notMeasurableLink(
+      workspaceId, "PROOF_TO_COMPLAINT_LINK", "Proof(ACCEPTED)", "OperationalEvent(COMPLAINT)", evaluatedAt,
+      ["no complaint event is linked to an accepted proof yet (record + link one via the complaint/rework service)"],
+      "Cannot yet tie a specific accepted proof to a specific customer complaint."
+    ));
+  }
+  if (linkedRework > 0) {
+    links.push({
+      workspaceId, sourceEntityType: "Proof(ACCEPTED)", sourceEntityId: null, sourceTimestamp: null,
+      targetEntityType: "OperationalEvent(REWORK)", targetEntityId: null, targetTimestamp: null,
+      linkType: "PROOF_TO_REWORK_LINK", status: "LINKED", actorId: null,
+      evidence: [`${linkedRework} rework event(s) linked to accepted proof`], missingData: [],
+      latencyMs: null, ownerImplication: "Accepted work had to be redone — a linked rework event contradicts the sign-off.", evaluatedAt,
+    });
+  }
   links.push(notMeasurableLink(
     workspaceId, "PROOF_TO_OUTCOME_LINK", "Proof(ACCEPTED)", "OwnerActionOutcome(recommendation/action)", evaluatedAt,
     ["a delegated-task Proof and a recommendation/action OwnerActionOutcome are disjoint entity trees with no persisted join key"],
@@ -217,6 +245,9 @@ export function buildProofOutcomeLinkage(input: ProofOutcomeLinkageInput): Proof
   ));
 
   const acceptedProofCount = acceptedProofIds.size;
+  // A linked complaint/rework on accepted proof is a contradiction too — fold it into the integrity
+  // measurement so PROOF_OUTCOME_INTEGRITY consumes complaint/rework linkage.
+  const totalContradicted = contradictedCount + linkedComplaint + linkedRework;
   const measurable = acceptedProofCount > 0;
   return {
     workspaceId,
@@ -224,9 +255,9 @@ export function buildProofOutcomeLinkage(input: ProofOutcomeLinkageInput): Proof
     measurement: {
       measurable,
       acceptedProofCount,
-      contradictedCount,
-      reworkCount: workspaceReworkCount,
-      contradictionRate: measurable ? contradictedCount / acceptedProofCount : null,
+      contradictedCount: totalContradicted,
+      reworkCount: workspaceReworkCount + linkedRework,
+      contradictionRate: measurable ? Math.min(1, totalContradicted / acceptedProofCount) : null,
       medianContradictionLatencyMs: median(contradictionLatencies),
     },
     submitterContradictions: [...perSubmitter.values()],

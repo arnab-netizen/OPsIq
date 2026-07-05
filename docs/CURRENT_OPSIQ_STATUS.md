@@ -8,7 +8,27 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Dispute → Profit/Constraint Wiring depth pass (latest)
+## Complaint / Rework Event Linkage depth pass (latest)
+- **Base:** `origin/main` @ `9381efab` (Dispute → Profit/Constraint Wiring PR #116 merged).
+- **Branch:** `claude/complaint-rework-event-linkage-depth-pass`.
+- **Classification:** `COMPLAINT_REWORK_EVENT_LINKAGE_REAL_AND_OWNER_VISIBLE` (+ `PROOF_OUTCOME_INTEGRITY_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `PROFIT_LEAK_RADAR_STRENGTHENED`).
+- **Per-event complaint/rework is now real + linkable to accepted proof — the business impact of bad
+  accepted work is measurable.** One minimal generic `OperationalEvent` table (COMPLAINT|REWORK,
+  additive migration) + service (`recordOperationalEvent` / `linkOperationalEventToProof` /
+  `getComplaintReworkLinks`, governed/audited/fail-closed/idempotent) + `POST /api/complaint-rework`.
+- **Became measurable:** `proof→complaint` and `proof→rework` (LINKED, were NOT_MEASURABLE), attributed
+  to the operator. `PROOF_OUTCOME_INTEGRITY` now consumes linked complaint/rework; credibility raises
+  `ACCEPTED_PROOF_WITH_COMPLAINT` / `_WITH_REWORK`; the radar surfaces COMPLAINT_REVENUE_RISK /
+  REWORK_REDO_COST (MEASURED impact when an amount is supplied, else qualitative); constraint engine
+  gets QUALITY. Now-view exposes a `complaintReworkLinks` block.
+- **No fabrication:** events are recorded by a governed service (never invented); no financial figure
+  unless a real amount is entered (NEEDS_DATA otherwise); server `createdAt` trusted, user `occurredAt`
+  untrusted; reassessment idempotent (via the existing dispute flow); not a CRM/ticketing/refund module.
+- **Still missing:** delivery/pricing complaint → constraint wiring; fake-proof → anti-gaming link; UI + browser E2E.
+- **Verification:** tsc 0 · prisma valid · governance strict 0-new · migration applies cleanly · changed-area
+  90 files/742 tests green · 20 new tests. Details: `docs/remediation/complaint-rework-event-linkage-depth-pass/`.
+
+## Dispute → Profit/Constraint Wiring depth pass
 - **Base:** `origin/main` @ `dc18ca6e` (Governed Proof Dispute Surface PR #115 merged).
 - **Branch:** `claude/dispute-profit-constraint-wiring-depth-pass`.
 - **Classification:** `DISPUTE_PROFIT_CONSTRAINT_WIRING_REAL_AND_OWNER_VISIBLE` (+ `PROFIT_LEAK_RADAR_STRENGTHENED`, `CONSTRAINT_ENGINE_STRENGTHENED`).

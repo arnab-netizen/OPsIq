@@ -104,7 +104,7 @@ describe("proof-outcome linkage — rework + not-measurable disclosure", () => {
     const complaint = r.links.find((l) => l.linkType === "PROOF_TO_COMPLAINT_LINK")!;
     const outcome = r.links.find((l) => l.linkType === "PROOF_TO_OUTCOME_LINK")!;
     expect(complaint.status).toBe("NOT_MEASURABLE");
-    expect(complaint.missingData.join(" ")).toMatch(/period aggregate/i);
+    expect(complaint.missingData.join(" ")).toMatch(/no complaint event is linked/i);
     expect(outcome.status).toBe("NOT_MEASURABLE");
     expect(outcome.missingData.join(" ")).toMatch(/disjoint entity trees/i);
   });

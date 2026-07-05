@@ -66,6 +66,9 @@ export interface ProfitLeakSignals {
   disputeReworkCount?: number;
   disputeComplaintCount?: number;
   disputeWeakProofCount?: number;
+  /** Real measured impact from linked complaint/rework events (currency units); null → qualitative. */
+  disputeReworkImpactAmount?: number | null;
+  disputeComplaintImpactAmount?: number | null;
   /** The current binding constraint, to link a leak to it. */
   currentConstraint?: ConstraintType | null;
   missingCriticalData?: string[];
@@ -349,11 +352,15 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
   const dRework = s.disputeReworkCount ?? 0;
   const dComplaint = s.disputeComplaintCount ?? 0;
   const dWeakProof = s.disputeWeakProofCount ?? 0;
+  const reworkAmt = s.disputeReworkImpactAmount ?? null;
   if (dRework > 0) {
     F({
-      leakType: "REWORK_REDO_COST", domain: "quality", severity: dRework >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
-      evidence: [`${dRework} accepted proof(s) disputed as rework/quality failure`], missingData: ["no per-event rework model — redo cost is qualitative only"],
-      estimatedImpact: { tier: "NEEDS_DATA", note: "Redo cost is real but unmeasured — no per-event rework model yet." },
+      leakType: "REWORK_REDO_COST", domain: "quality", severity: dRework >= 3 ? "HIGH" : "MEDIUM", confidence: reworkAmt != null ? "HIGH" : "MEDIUM",
+      evidence: [`${dRework} accepted proof(s) disputed as rework/quality failure${reworkAmt != null ? ` (~${cur}${reworkAmt} measured redo cost)` : ""}`],
+      missingData: reworkAmt != null ? [] : ["no measured redo cost on the linked rework — impact is qualitative"],
+      estimatedImpact: reworkAmt != null
+        ? { tier: "MEDIUM", rangeLow: reworkAmt, rangeHigh: reworkAmt, note: "Measured redo cost from the linked rework event(s)." }
+        : { tier: "NEEDS_DATA", note: "Redo cost is real but unmeasured — no per-event rework amount supplied." },
       cashImpact: "Rework consumes paid labour/materials twice.", marginImpact: "Direct margin loss on the redone jobs.",
       ownerExplanation: "Accepted work was disputed and had to be redone — a cost-of-poor-quality leak surfaced by a real dispute.",
       recommendedAction: "Fix the SOP/proof requirement behind the disputed jobs and re-verify recent similar work.",
@@ -364,11 +371,15 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
       relatedConstraint: "QUALITY",
     });
   }
+  const complaintAmt = s.disputeComplaintImpactAmount ?? null;
   if (dComplaint > 0) {
     F({
-      leakType: "COMPLAINT_REVENUE_RISK", domain: "customer", severity: dComplaint >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
-      evidence: [`${dComplaint} accepted proof(s) disputed as customer complaints`], missingData: ["no per-event complaint model — revenue/churn impact is not measured"],
-      estimatedImpact: { tier: "NEEDS_DATA", note: "Revenue/relationship risk is real but unmeasured — no complaint model to size it." },
+      leakType: "COMPLAINT_REVENUE_RISK", domain: "customer", severity: dComplaint >= 3 ? "HIGH" : "MEDIUM", confidence: complaintAmt != null ? "HIGH" : "MEDIUM",
+      evidence: [`${dComplaint} accepted proof(s) with linked customer complaints${complaintAmt != null ? ` (~${cur}${complaintAmt} measured impact)` : ""}`],
+      missingData: complaintAmt != null ? [] : ["no measured complaint impact — revenue/churn impact is qualitative"],
+      estimatedImpact: complaintAmt != null
+        ? { tier: "MEDIUM", rangeLow: complaintAmt, rangeHigh: complaintAmt, note: "Measured impact from the linked complaint event(s)." }
+        : { tier: "NEEDS_DATA", note: "Revenue/relationship risk is real but unmeasured — no complaint amount supplied." },
       cashImpact: "Complaints risk refunds and lost repeat revenue.", marginImpact: "Recovery effort + possible refunds erode margin.",
       ownerExplanation: "A customer complained about accepted work — revenue/relationship risk, magnitude not yet measured.",
       recommendedAction: "Run customer recovery on the affected job and fix the underlying quality cause.",
