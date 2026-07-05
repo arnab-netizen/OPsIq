@@ -69,3 +69,6 @@ test.db
 test-results/
 playwright-report/
 dbenv.sh
+
+# Generated simulation run outputs (produced by test/simulation harnesses)
+*.run.json
