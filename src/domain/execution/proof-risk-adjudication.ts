@@ -66,7 +66,9 @@ const EFFECTS: Record<AdjudicationOutcome, OutcomeEffect> = {
     recommendedNextAction: "Keep the risk active: require independent verification of this operator's work before further delegation. This is a review decision, not an accusation.",
   },
   [AdjudicationOutcome.ESCALATE_FOR_TRAINING]: {
-    status: "TRAINING", ownerActionRequired: false, keepsRisk: false, triggersReassessment: false,
+    // Training is NOT a clearing decision: the finding stays visible as an action item (just not the
+    // highest risk unless its severity warrants it) so the coaching is not forgotten.
+    status: "TRAINING", ownerActionRequired: false, keepsRisk: true, triggersReassessment: false,
     recommendedNextAction: "Coach the operator on the correct proof standard; treat as a training/process issue, not punishment.",
   },
   [AdjudicationOutcome.ESCALATE_FOR_OWNER_REVIEW]: {
@@ -156,12 +158,28 @@ export function planAdjudication(req: AdjudicationRequest): AdjudicationValidati
   };
 }
 
-/** Outcomes that CLEAR a finding from surfacing (reduce owner noise) — evidence/audit are retained. */
+/**
+ * Outcomes that CLEAR a finding from surfacing (reduce owner noise) — evidence/audit are retained,
+ * and NEW evidence after the decision re-surfaces the risk. Only an explicit accept/dismiss clears;
+ * require-fresh / confirm / training / owner-review / inconclusive all keep the finding visible.
+ */
 export const CLEARING_OUTCOMES: ReadonlySet<string> = new Set<string>([
-  AdjudicationOutcome.ACCEPT_AS_VALID, AdjudicationOutcome.DISMISS_FALSE_POSITIVE, AdjudicationOutcome.ESCALATE_FOR_TRAINING,
+  AdjudicationOutcome.ACCEPT_AS_VALID, AdjudicationOutcome.DISMISS_FALSE_POSITIVE,
 ]);
 
-/** Whether an adjudication status suppresses the linked finding from re-surfacing (unless new evidence). */
+/** Whether an adjudication outcome suppresses the linked finding from re-surfacing (unless new evidence). */
 export function clearsFinding(outcome: string): boolean {
   return CLEARING_OUTCOMES.has(outcome);
+}
+
+/**
+ * Decide whether a proof-risk finding is suppressed by clearing adjudications of its OWN source type.
+ * A finding is suppressed only when it has known supporting proof IDs AND every one of them is covered
+ * by a clearing adjudication of the same source — so a NEW supporting proof (new evidence) that is not
+ * yet cleared re-surfaces the finding. A finding with no known supporting proof IDs is never suppressed
+ * (OpsIQ cannot confirm it is the same evidence — fail visible, not hidden).
+ */
+export function isFindingSuppressed(supportingProofIds: readonly string[] | undefined, clearedProofIds: ReadonlySet<string>): boolean {
+  if (!supportingProofIds || supportingProofIds.length === 0) return false;
+  return supportingProofIds.every((id) => clearedProofIds.has(id));
 }

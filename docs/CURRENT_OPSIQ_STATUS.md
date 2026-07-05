@@ -8,7 +8,30 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Owner Proof-Risk Adjudication Surface depth pass (latest)
+## Adjudication Suppression Across All Proof-Risk Sources depth pass (latest)
+- **Base:** `origin/main` @ `428e18e6` (Owner Proof-Risk Adjudication PR #121 merged).
+- **Branch:** `claude/adjudication-suppression-all-sources-depth-pass`.
+- **Classification:** `ADJUDICATION_SUPPRESSION_ALL_SOURCES_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `BUSINESS_CONTROL_SLO_STRENGTHENED`, `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **Owner decisions now reduce noise consistently across all 4 proof-risk sources without hiding real
+  risk.** Every adjudicatable signal is tagged with its **supporting proof IDs**; the now-view indexes
+  cleared proofs **per source type** and suppresses a signal only when **every** supporting proof is
+  cleared — so a **new** supporting proof re-surfaces the risk (never a permanent hide) and clearing one
+  source never eases another. **No schema change** (pure logic).
+- **Per source:** ANTI_GAMING_SIGNAL / CREDIBILITY_CONCERN / REUSED_HASH_FINDING clearing suppress
+  `topGamingSignal` / `topCredibilityConcern` / reused findings respectively; PROOF_DISPUTE clearing
+  eases the dispute-derived profit/constraint noise but `PROOF_OUTCOME_INTEGRITY` + the `proof.disputed`
+  audit are **never erased** (bad proof is never marked good). Clearing is now only ACCEPT/DISMISS —
+  training/confirm/require-fresh/owner-review/inconclusive stay visible.
+- **Owner-visible / SLO:** now-view adds a `proofRiskAdjudicationSummary` (active/cleared/inconclusive +
+  top active action); `ANTI_GAMING_RISK`/`EVIDENCE_CREDIBILITY_RISK` ease only on a cleared active signal
+  with no other evidence, stay on confirm/new evidence.
+- **Still missing:** per-proof evidence lists for the remaining gaming/credibility signal types
+  (self-review, rubber-stamp) so they too can be suppressed; owner UI; browser E2E.
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance strict 0-new · owner-mode +
+  execution 692 unit + 814 DB tests green · 8 new tests · DB sim 7/7. Details:
+  `docs/remediation/adjudication-suppression-all-sources-depth-pass/`.
+
+## Owner Proof-Risk Adjudication Surface depth pass
 - **Base:** `origin/main` @ `7ebfeb74` (Reused-Hash Proof Precheck PR #120 merged).
 - **Branch:** `claude/owner-proof-risk-adjudication-depth-pass`.
 - **Classification:** `OWNER_PROOF_RISK_ADJUDICATION_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `OWNER_MODE_EXCELLENCE_DEEPENED`).

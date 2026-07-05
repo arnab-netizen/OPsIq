@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  planAdjudication, clearsFinding,
+  planAdjudication, clearsFinding, isFindingSuppressed,
   AdjudicationOutcome, AdjudicationSourceType,
 } from "@/domain/execution/proof-risk-adjudication";
 import {
@@ -49,12 +49,22 @@ describe("proof-risk adjudication — domain", () => {
     expect(confirm.ok && confirm.plan.keepsRisk).toBe(true);
   });
 
-  it("classifies clearing outcomes (reduce owner noise) vs risk-keeping outcomes", () => {
+  it("classifies clearing outcomes (only accept/dismiss) vs risk-keeping outcomes (incl. training)", () => {
     expect(clearsFinding(AdjudicationOutcome.DISMISS_FALSE_POSITIVE)).toBe(true);
     expect(clearsFinding(AdjudicationOutcome.ACCEPT_AS_VALID)).toBe(true);
-    expect(clearsFinding(AdjudicationOutcome.ESCALATE_FOR_TRAINING)).toBe(true);
+    // Training now KEEPS the finding visible as an action item (not a clearing decision).
+    expect(clearsFinding(AdjudicationOutcome.ESCALATE_FOR_TRAINING)).toBe(false);
     expect(clearsFinding(AdjudicationOutcome.CONFIRM_SUSPICIOUS_PATTERN)).toBe(false);
     expect(clearsFinding(AdjudicationOutcome.REQUIRE_FRESH_PROOF)).toBe(false);
+  });
+
+  it("isFindingSuppressed: only when EVERY supporting proof is cleared (new evidence resurfaces)", () => {
+    const cleared = new Set(["p1", "p2"]);
+    expect(isFindingSuppressed(["p1", "p2"], cleared)).toBe(true);   // all cleared → suppressed
+    expect(isFindingSuppressed(["p1", "p3"], cleared)).toBe(false);  // p3 is new evidence → resurfaces
+    expect(isFindingSuppressed([], cleared)).toBe(false);            // no supporting ids → never suppressed
+    expect(isFindingSuppressed(undefined, cleared)).toBe(false);     // unknown evidence → fail visible
+    expect(isFindingSuppressed(["p1"], new Set())).toBe(false);      // nothing cleared → visible
   });
 });
 

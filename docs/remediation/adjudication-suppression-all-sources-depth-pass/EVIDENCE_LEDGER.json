@@ -1,0 +1,73 @@
+{
+  "pass": "adjudication-suppression-all-sources-depth-pass",
+  "branch": "claude/adjudication-suppression-all-sources-depth-pass",
+  "base": "origin/main@428e18e6",
+  "pr121MergeStatus": "merged (squash commit 428e18e6 on main)",
+  "classification": [
+    "ADJUDICATION_SUPPRESSION_ALL_SOURCES_REAL_AND_OWNER_VISIBLE",
+    "ANTI_GAMING_ANALYTICS_STRENGTHENED",
+    "EVIDENCE_CREDIBILITY_STRENGTHENED",
+    "BUSINESS_CONTROL_SLO_STRENGTHENED",
+    "OWNER_MODE_EXCELLENCE_DEEPENED"
+  ],
+  "schemaChange": "NONE — pure logic over existing proof_risk_adjudications records",
+  "sourceTypesCovered": ["REUSED_HASH_FINDING", "ANTI_GAMING_SIGNAL", "CREDIBILITY_CONCERN", "PROOF_DISPUTE"],
+  "clearingOutcomes": ["ACCEPT_AS_VALID", "DISMISS_FALSE_POSITIVE"],
+  "activeOutcomes": ["REQUIRE_FRESH_PROOF", "CONFIRM_SUSPICIOUS_PATTERN", "ESCALATE_FOR_TRAINING", "ESCALATE_FOR_OWNER_REVIEW", "MARK_INCONCLUSIVE_NEEDS_DATA"],
+  "trainingReclassified": "ESCALATE_FOR_TRAINING now KEEPS the finding visible (action item), no longer clears",
+  "suppressionModel": {
+    "key": "per-source cleared proof-ID index (clearedBySource)",
+    "rule": "isFindingSuppressed — suppress only when EVERY supporting proof of a signal is cleared for its own source type",
+    "newEvidence": "a new supporting proof is not in the cleared set -> the signal re-surfaces (never a permanent hide)",
+    "perSourceScope": "clearing one source never eases another"
+  },
+  "signalTagging": {
+    "GamingSignal.supportingProofIds": "populated in fake/reused/tamper/manager branches",
+    "CredibilityFinding.supportingProofIds": "populated in the reused-hash concern",
+    "reusedHashFinding": "proofId (existing)",
+    "proofDispute": "risk.proofId (filtered from dispute-derived aggregates)"
+  },
+  "perSourceBehavior": {
+    "REUSED_HASH_FINDING": "cleared proofIds filtered from findings + anti-gaming/credibility feed; new reused proof re-surfaces",
+    "ANTI_GAMING_SIGNAL": "cleared signal dropped from topGamingSignal; confirm/require-fresh stay",
+    "CREDIBILITY_CONCERN": "cleared concern dropped from topCredibilityConcern; confirm/inconclusive stay",
+    "PROOF_DISPUTE": "cleared dispute dropped from dispute-derived profit/constraint (reduces owner-review burden); PROOF_OUTCOME_INTEGRITY + proof.disputed audit NEVER erased"
+  },
+  "ownerNowView": {
+    "proofRiskAdjudicationSummary": "active/cleared/inconclusive counts, latest decisions, top active action",
+    "topGamingSignal": "respects suppression",
+    "topCredibilityConcern": "respects suppression",
+    "reusedProofFindings": "respects suppression"
+  },
+  "sloImpact": {
+    "ANTI_GAMING_RISK": "eases only when active top gaming signal cleared and no other evidence",
+    "EVIDENCE_CREDIBILITY_RISK": "eases only when active top credibility concern cleared and no other evidence",
+    "PROOF_OUTCOME_INTEGRITY": "audit-derived; never eased by a dispute adjudication"
+  },
+  "safety": {
+    "noFraudLabel": true,
+    "noHiddenScore": true,
+    "noEvidenceDeleted": true,
+    "proofStatusNeverRewritten": true,
+    "crossWorkspaceIsolation": "per-workspace adjudications; clean workspace no state (tested)"
+  },
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid (no schema change)",
+    "governanceStrict": "31 frozen, 0 new",
+    "newTests": 8,
+    "domainUnit": "11/11 pass (proof-risk-adjudication.test.ts)",
+    "dbSimulation": "7/7 pass (adjudication-suppression) + 4/4 (prior adjudication sim unbroken)",
+    "ownerModePlusExecutionUnit": "71 files / 692 tests pass (21 db skipped)",
+    "changedAreaDb": "99 files / 814 tests pass",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "per-proof evidence lists for the remaining gaming/credibility signal types (self-review, rubber-stamp) so they can be suppressed",
+    "owner UI for the adjudication queue",
+    "browser E2E",
+    "Process Intelligence (out of scope)"
+  ]
+}
