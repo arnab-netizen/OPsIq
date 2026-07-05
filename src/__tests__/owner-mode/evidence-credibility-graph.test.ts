@@ -39,6 +39,29 @@ describe("evidence credibility graph — detection", () => {
     expect(f.some((x) => x.signalType === "REUSED_PROOF")).toBe(true);
   });
 
+  it("accepted-then-contradicted proof raises ACCEPTED_PROOF_WITH_BAD_OUTCOME per submitter", () => {
+    const top = buildEvidenceCredibility(inp({ submitterContradictions: [{ actorId: "s1", contradictedCount: 2 }], contradictedProofCount: 2 })).topConcern!;
+    expect(top.signalType).toBe("ACCEPTED_PROOF_WITH_BAD_OUTCOME");
+    expect(top.entityId).toBe("s1");
+    expect(top.reasonCodes).toContain("ACCEPTED_PROOF_LATER_CONTRADICTED");
+    expect(top.ownerActionRequired).toBe(true);
+  });
+
+  it("a contradicted submitter is NOT reported reliable; a checked-clean submitter is HIGH-confidence reliable", () => {
+    const contradicted = buildEvidenceCredibility(inp({
+      submitters: [{ actorId: "s1", total: 5, accepted: 5, weakOrReviewNeeded: 0, rejected: 0, reused: 0, stale: 0 }],
+      submitterContradictions: [{ actorId: "s1", contradictedCount: 1 }], contradictedProofCount: 1,
+    })).findings;
+    expect(contradicted.some((x) => x.signalType === "RELIABLE_SUBMITTER_PATTERN")).toBe(false);
+    expect(contradicted.some((x) => x.signalType === "ACCEPTED_PROOF_WITH_BAD_OUTCOME")).toBe(true);
+    const reliable = buildEvidenceCredibility(inp({
+      submitters: [{ actorId: "s2", total: 5, accepted: 5, weakOrReviewNeeded: 0, rejected: 0, reused: 0, stale: 0 }],
+      submitterContradictions: [],
+    })).findings.find((x) => x.signalType === "RELIABLE_SUBMITTER_PATTERN")!;
+    expect(reliable).toBeTruthy();
+    expect(reliable.confidence).toBe("HIGH");
+  });
+
   it("STALE_PROOF from stale accepted proofs", () => {
     const f = buildEvidenceCredibility(inp({ itemCounts: { weak: 0, rejected: 0, reused: 0, stale: 3, tamperSuspected: 0 } })).findings;
     expect(f.some((x) => x.signalType === "STALE_PROOF")).toBe(true);

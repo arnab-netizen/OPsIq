@@ -39,6 +39,7 @@ import { aggregateProofEvents, identifyGamingSignals, type GamingSignal, type Pr
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
+import type { ProofOutcomeLinkageReport } from "@/domain/owner-mode/proof-outcome-linkage";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -93,17 +94,25 @@ export interface GuidanceDeps {
    * SLOs (AUDIT_DURABILITY / REASSESSMENT_LATENCY / SHOCK_HANDLING_LATENCY) stay NOT_MEASURABLE.
    */
   correlations?: (workspaceId: string) => Promise<ControlCorrelationReport>;
+  /**
+   * Optional — the live proof→outcome linkage source (accepted-proof contradiction/rework).
+   * Present on the live path; absent on a fake-DI unit test, in which case the credibility
+   * contradiction signal + PROOF_OUTCOME_INTEGRITY SLO stay honestly unlinked/NOT_MEASURABLE.
+   */
+  proofOutcome?: (workspaceId: string) => Promise<ProofOutcomeLinkageReport>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { db } = await import("@/lib/db");
   const { randomUUID } = await import("crypto");
   const { getControlCorrelations } = await import("@/services/owner-mode/control-correlation.service");
+  const { getProofOutcomeLinkage } = await import("@/services/owner-mode/proof-outcome-linkage.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
     now: () => Date.now(),
     correlations: (workspaceId: string) => getControlCorrelations(workspaceId),
+    proofOutcome: (workspaceId: string) => getProofOutcomeLinkage(workspaceId),
   };
 }
 
@@ -176,6 +185,8 @@ export interface OwnerNowViewPayload {
   businessControlHealth: BusinessControlHealth;
   /** Measured runtime control correlations (reassessment/shock/audit linkage), or null if unavailable. */
   controlCorrelations: ControlCorrelationReport | null;
+  /** Measured proof→outcome linkage (accepted-proof contradiction/rework), or null if unavailable. */
+  proofOutcomeLinkage: ProofOutcomeLinkageReport | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -506,6 +517,13 @@ export async function getOwnerNowView(
   };
   const topProfitLeak = identifyProfitLeaks(profitLeakSignals).topLeak;
 
+  // Proof→Outcome Linkage — accepted-proof contradiction (later DISPUTED/OVERRIDDEN) + rework,
+  // from the proof.reviewed audit trail. Live path only; feeds credibility + the integrity SLO.
+  let proofOutcomeReport: ProofOutcomeLinkageReport | null = null;
+  if (typeof deps.proofOutcome === "function") {
+    proofOutcomeReport = await deps.proofOutcome(workspaceId);
+  }
+
   // Cross-Event Anti-Gaming Analytics — the single highest-risk staff/manager pattern from the
   // workspace's proof/review events, linked to the current constraint + profit leak. Only runs
   // when the client exposes proof.findMany (the live path); a DI mock without it → null (no fake).
@@ -536,7 +554,11 @@ export async function getOwnerNowView(
       currentConstraint: topConstraint?.constraintType ?? null,
       topProfitLeakType: topProfitLeak?.leakType ?? null,
       topGamingSignalType: topGamingSignal?.signalType ?? null,
-      missingSources: ["complaint/rework/outcome ↔ proof linkage not persisted"],
+      // Real accepted-proof contradictions (from the proof.reviewed audit trail) — a submitter
+      // whose accepted proof was reversed is no longer "reliable". Undefined on the fake-DI path.
+      submitterContradictions: proofOutcomeReport?.submitterContradictions.map((c) => ({ actorId: c.actorId, contradictedCount: c.contradictedCount })),
+      contradictedProofCount: proofOutcomeReport?.workspaceContradictedCount,
+      missingSources: ["per-proof complaint linkage not persisted (period-aggregate only)"],
       evaluatedAt: new Date(nowMs).toISOString(),
     }).topConcern;
 
@@ -590,6 +612,8 @@ export async function getOwnerNowView(
     auditDurability: controlCorrelations?.auditDurability ?? null,
     reassessmentLatency: controlCorrelations?.reassessmentLatency ?? null,
     shockHandlingLatency: controlCorrelations?.shockHandlingLatency ?? null,
+    // Measured proof→outcome integrity (live path only); null → PROOF_OUTCOME_INTEGRITY NOT_MEASURABLE.
+    proofOutcome: proofOutcomeReport?.measurement ?? null,
     // Honest: these sources are not persisted for a runtime metric yet.
     opportunityEnvelopeFields: null,
     startupDataAvailable: false,
@@ -622,7 +646,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

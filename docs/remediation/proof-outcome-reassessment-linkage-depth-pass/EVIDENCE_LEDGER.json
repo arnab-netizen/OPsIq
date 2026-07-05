@@ -1,0 +1,84 @@
+{
+  "pass": "proof-outcome-reassessment-linkage-depth-pass",
+  "branch": "claude/proof-outcome-reassessment-linkage-depth-pass",
+  "base": "origin/main@26a52182",
+  "pr113MergeStatus": "merged (merge commit 26a52182 on main)",
+  "classification": [
+    "PROOF_OUTCOME_REASSESSMENT_LINKAGE_REAL_AND_OWNER_VISIBLE",
+    "PROOF_TO_OUTCOME_SLO_MEASURABILITY_IMPROVED",
+    "EVIDENCE_CREDIBILITY_STRENGTHENED"
+  ],
+  "schemaChange": {
+    "table": "owner_reassessment_events",
+    "column": "sourceProofId UUID (nullable)",
+    "index": "(workspaceId, sourceProofId)",
+    "migration": "prisma/migrations/20260705120000_reassessment_source_proof/migration.sql",
+    "backfillSafe": true,
+    "destructive": false,
+    "auditConstantAdded": "owner.reassessment_created"
+  },
+  "linkagesImplemented": [
+    { "type": "PROOF_TO_BAD_RESULT_LINK", "status": "REAL_MEASURED", "source": "proof.reviewed(ACCEPTED)", "target": "proof.reviewed(fromStatus=ACCEPTED -> DISPUTED/OVERRIDDEN_NOT_VERIFIED)", "keyed": "proofId (audit.entityId)" },
+    { "type": "PROOF_TO_REWORK_LINK", "status": "REAL_MEASURED", "source": "Proof.resubmissionOfId", "target": "resubmission Proof", "keyed": "resubmissionOfId" },
+    { "type": "OUTCOME_TO_REASSESSMENT_LINK", "status": "REAL_MEASURED", "via": "createReassessmentEvent (sourceProofId / outcomeId)" },
+    { "type": "PROOF_TO_COMPLAINT_LINK", "status": "NOT_MEASURABLE", "reason": "complaints are period aggregates only (ownerMetricSnapshot.complaintCount); no per-event/per-proof complaint model" },
+    { "type": "PROOF_TO_OUTCOME_LINK", "status": "NOT_MEASURABLE", "reason": "delegated-task Proof and recommendation/action OwnerActionOutcome are disjoint entity trees with no join key" }
+  ],
+  "slosConvertedToMeasured": [
+    { "sloType": "PROOF_OUTCOME_INTEGRITY", "was": "NOT_MEASURABLE/absent", "now": "PASS/WARN/FAIL from contradiction rate" },
+    { "sloType": "REASSESSMENT_LATENCY", "improved": "gains real reassessment events to measure via the creation service" }
+  ],
+  "slosStillNotMeasurable": [
+    "PROOF_TO_COMPLAINT_LINK (no per-event complaint model)",
+    "PROOF_TO_OUTCOME_LINK to recommendation/action outcomes (disjoint trees)",
+    "AUDIT_DURABILITY for non-shock mutation classes",
+    "runtime cross-workspace isolation metering",
+    "STARTUP_VALIDATION_COMPLETENESS"
+  ],
+  "credibility": {
+    "newSignal": "ACCEPTED_PROOF_WITH_BAD_OUTCOME (from real contradictions)",
+    "reliableCaveat": "contradicted submitter never RELIABLE_SUBMITTER_PATTERN; checked-clean submitter now HIGH confidence"
+  },
+  "reassessmentService": {
+    "name": "createReassessmentEvent",
+    "atomicAudit": "OWNER_REASSESSMENT_CREATED in same transaction (AUDIT-01)",
+    "idempotent": "reuses an open reassessment for the same (workspace, trigger, source key)",
+    "serverTimestamp": true
+  },
+  "ownerVisible": "/api/owner/now-view -> proofOutcomeLinkage, businessControlHealth.PROOF_OUTCOME_INTEGRITY, topCredibilityConcern",
+  "filesCreated": [
+    "src/domain/owner-mode/proof-outcome-linkage.ts",
+    "src/services/owner-mode/proof-outcome-linkage.service.ts",
+    "src/services/owner-mode/reassessment-event.service.ts",
+    "prisma/migrations/20260705120000_reassessment_source_proof/migration.sql",
+    "src/__tests__/owner-mode/proof-outcome-linkage.test.ts",
+    "src/__tests__/owner-mode/reassessment-event.service.test.ts",
+    "src/__tests__/owner-mode/proof-outcome-linkage-simulation.db.test.ts"
+  ],
+  "filesChanged": [
+    "prisma/schema.prisma",
+    "src/domain/constants/audit-events.ts",
+    "src/domain/owner-mode/evidence-credibility-graph.ts",
+    "src/domain/owner-mode/business-control-slo.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts",
+    "src/__tests__/owner-mode/business-control-slo.test.ts",
+    "src/__tests__/owner-mode/evidence-credibility-graph.test.ts",
+    "docs/CURRENT_OPSIQ_STATUS.md"
+  ],
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid",
+    "governanceStrict": "31 frozen, 0 new",
+    "changedAreaSuites": "89 files / 734 tests pass",
+    "newTests": 22,
+    "dbSimulation": "4/4 pass",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "noFake": {
+    "timestamps": "contradiction latency from two audit occurredAt values; no user timestamp",
+    "green": "no accepted proof => NOT_MEASURABLE; accepted-never-reversed => PASS not fake failure",
+    "crossWorkspace": "all queries workspace-scoped; isolation DB-tested"
+  }
+}
