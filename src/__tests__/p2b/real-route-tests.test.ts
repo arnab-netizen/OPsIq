@@ -73,6 +73,21 @@ vi.mock("@/services/auth", () => ({
     },
     invalidReason: undefined,
   })),
+  // resolveServerRole() imports getPolicyContext() (the raw PolicyContext, not the
+  // fact wrapper) and derives the legacy role from capabilities. Use a real RoleName
+  // ("admin" is not one) so admin_or_portfolio_manager's APPROVAL_DECIDE/ACTION_UPDATE
+  // resolve to an edit-capable role and the operator route is authorized.
+  getPolicyContext: vi.fn(async () => ({
+    userId: testActorIdForMock,
+    roles: [
+      {
+        role: "admin_or_portfolio_manager",
+        scope: "workspace",
+        scopeId: testWorkspaceIdForMock,
+      },
+    ],
+    engagementMemberships: [],
+  })),
 }));
 
 /**

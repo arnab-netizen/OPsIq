@@ -230,7 +230,10 @@ export async function updateItem(
     await emitAuditEvent(
       {
         eventName: AUDIT_EVENTS.OPERATOR_ITEM_UPDATED,
-        actorId: item.lastUpdatedByUserId || item.createdByUserId || "system",
+        // actor_id is a nullable uuid column — an unattributed/system mutation must be
+        // recorded as null (actorType stays the audit default), never the literal "system"
+        // string, which is not a valid uuid and made the atomic audit write (AUDIT-01) throw.
+        actorId: item.lastUpdatedByUserId || item.createdByUserId || null,
         entityType: "operator_item",
         entityId: id,
         workspaceId: item.workspaceId,
