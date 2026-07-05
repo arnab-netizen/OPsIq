@@ -8,7 +8,24 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## SOP / Checklist Correction Engine depth pass (latest)
+## Staff Training Assignment Engine depth pass (latest)
+- **Base:** `origin/main` (after SOP/Checklist Correction Engine, PR #131, merged).
+- **Branch:** `claude/staff-training-assignment-engine-depth-pass`.
+- **Classification:** `STAFF_TRAINING_ASSIGNMENT_ENGINE_REAL_AND_OWNER_VISIBLE`.
+- **Process/correction findings now become governed training/review recommendations.** A pure
+  `buildTrainingAssignments` maps each breakdown to one of seven training types (PROOF_QUALITY_REVIEW,
+  PROCESS_STEP_RETRAINING, MANAGER_REVIEW_QUALITY, ESCALATION_RESPONSE_REVIEW, DELIVERY_HANDOFF_REVIEW,
+  CHECKLIST_CHANGE_BRIEFING, DATA_COLLECTION_BRIEFING) with an 18-field shape (who, why, evidence, linked
+  SOP correction, approval, success metric, review cadence), surfaced on the Owner Now View
+  (`trainingAssignments`) and the `/owner/process-intelligence` page under "Training & review".
+- **Governance:** every recommendation is PROPOSED/NEEDS_DATA — never auto-assigned; coaching/review only;
+  no firing/payroll/discipline; targets are real ids or a role (never fabricated); no fraud/negligence
+  labels; no hidden score. **No schema change.**
+- **Verification:** tsc 0 · governance 31-frozen/0-new · lint ratchet clean · 13 domain + 4 component +
+  2 page tests + laundry DB simulation (wired into CI LANE_B/LANE_A). Details:
+  `docs/remediation/staff-training-assignment-engine-depth-pass/`.
+
+## SOP / Checklist Correction Engine depth pass
 - **Base:** `origin/main` @ `9f6b84ae` (Bottleneck Correction Routing, PR #130, merged).
 - **Branch:** `claude/sop-checklist-correction-engine-depth-pass`.
 - **Classification:** `SOP_CHECKLIST_CORRECTION_ENGINE_REAL_AND_OWNER_VISIBLE`.

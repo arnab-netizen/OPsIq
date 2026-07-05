@@ -314,3 +314,93 @@ export function SopChecklistCorrectionsPanel({ data }: { data: SopChecklistCorre
     </section>
   );
 }
+
+export interface TrainingAssignmentView {
+  sourceProcessFindingKey: string;
+  sourceCorrectionKey: string | null;
+  trainingType: string;
+  assignedToUserId: string | null;
+  assignedRole: string | null;
+  assignedByRole: string;
+  approvalLevel: string;
+  reason: string;
+  supportingProofIds: string[];
+  supportingOperationalEventIds: string[];
+  supportingEscalationIds: string[];
+  relatedSopChecklistCorrectionKey: string | null;
+  successMetric: string;
+  reviewAfterDays: number;
+  status: string;
+  ownerVisibleExplanation: string;
+}
+
+export interface TrainingAssignmentsView {
+  assignments: TrainingAssignmentView[];
+  topAssignment: TrainingAssignmentView | null;
+}
+
+const TRAINING_TYPE_LABEL: Record<string, string> = {
+  PROOF_QUALITY_REVIEW: "Proof quality review",
+  PROCESS_STEP_RETRAINING: "Process-step retraining",
+  MANAGER_REVIEW_QUALITY: "Manager review quality",
+  ESCALATION_RESPONSE_REVIEW: "Escalation response review",
+  DELIVERY_HANDOFF_REVIEW: "Delivery hand-off review",
+  CHECKLIST_CHANGE_BRIEFING: "Checklist change briefing",
+  DATA_COLLECTION_BRIEFING: "Data collection briefing",
+};
+
+/**
+ * TrainingAssignmentsPanel — governed, evidence-backed training/review recommendations routed from the
+ * process breakdowns. Prop-driven; no business logic (routing is server-side). Each recommendation shows
+ * the training type, who it is for (real user or role — never fabricated), the reason, evidence, any
+ * linked SOP change, the required approval, the success metric, and the review cadence. Nothing is
+ * assigned automatically; these are proposals — coaching/review only, never discipline.
+ */
+export function TrainingAssignmentsPanel({ data }: { data: TrainingAssignmentsView | null }) {
+  const list = data?.assignments ?? [];
+  if (list.length === 0) {
+    return (
+      <div data-testid="training-assignments-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No training recommendations yet — recommendations appear once a process breakdown implies coaching
+        or a review.
+      </div>
+    );
+  }
+  return (
+    <section data-testid="training-assignments-panel" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <strong data-testid="ta-title">Training &amp; review recommendations</strong>
+      <ol data-testid="ta-list" style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+        {list.map((t, i) => {
+          const evidenceCount = t.supportingProofIds.length + t.supportingOperationalEventIds.length + t.supportingEscalationIds.length;
+          const who = t.assignedToUserId ? `Person: ${t.assignedToUserId}` : t.assignedRole ? `Team: ${t.assignedRole}` : "Unassigned";
+          return (
+            <li key={`${t.sourceProcessFindingKey}:${t.trainingType}:${i}`} data-testid="ta-item" data-training-type={t.trainingType}
+              style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <span data-testid="ta-item-type"><Badge variant="default">{TRAINING_TYPE_LABEL[t.trainingType] ?? t.trainingType}</Badge></span>
+                <span data-testid="ta-item-status"><Badge variant={t.status === "NEEDS_DATA" ? "warning" : "muted"}>{t.status}</Badge></span>
+                <span style={{ fontSize: 12, color: "#6b7280" }} data-testid="ta-item-who">{who}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: 13 }} data-testid="ta-item-explanation">{t.ownerVisibleExplanation}</p>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+                <span data-testid="ta-item-approval">
+                  <Badge variant={t.approvalLevel === "OWNER" ? "destructive" : "default"}>
+                    {APPROVAL_LABEL[t.approvalLevel] ?? t.approvalLevel}
+                  </Badge>
+                </span>
+                <span style={{ color: "#6b7280" }} data-testid="ta-item-evidence">Evidence: {evidenceCount} item(s)</span>
+                <span style={{ color: "#6b7280" }} data-testid="ta-item-metric">Success: {t.successMetric}</span>
+                <span style={{ color: "#6b7280" }}>Review in {t.reviewAfterDays}d</span>
+                {t.relatedSopChecklistCorrectionKey && <span style={{ color: "#6b7280" }} data-testid="ta-item-sop">Linked SOP change</span>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+        These are proposed reviews and coaching, not disciplinary actions. Owner/manager approval is
+        required before any training is assigned; nothing here is assigned automatically.
+      </p>
+    </section>
+  );
+}
