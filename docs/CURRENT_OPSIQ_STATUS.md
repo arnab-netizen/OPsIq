@@ -8,7 +8,31 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Complaint / Rework Event Linkage depth pass (latest)
+## Operational Event Resolution / Aging + Delivery/Pricing Constraint Wiring depth pass (latest)
+- **Base:** `origin/main` @ `57c1769b` (Complaint/Rework Event Linkage PR #117 merged).
+- **Branch:** `claude/operational-event-resolution-aging-depth-pass`.
+- **Classification:** `OPERATIONAL_EVENT_RESOLUTION_AGING_REAL_AND_OWNER_VISIBLE` (+ `CONSTRAINT_ENGINE_STRENGTHENED`, `PROFIT_LEAK_RADAR_STRENGTHENED`, `BUSINESS_CONTROL_SLO_STRENGTHENED`).
+- **Complaint/rework events are now resolvable, age-sensitive, and business-actionable.** Status FSM
+  (OPEN | IN_REVIEW | RESOLVED | DISMISSED | DUPLICATE) + severity-scaled overdue windows (CRITICAL 24h
+  / HIGH 48h / MEDIUM 120h / LOW 240h from server `createdAt`) + governed status-change service
+  (`resolve`/`dismiss`/`in_review`/`duplicate`, audited `operational_event.status_changed`, fail-closed,
+  idempotent, concurrency-safe) + `POST /api/complaint-rework` actions. Two additive columns
+  (`resolved_by_user_id`, `resolution_note`).
+- **Became measurable / actionable:** open vs overdue vs resolved; overdue-severe **escalation**; a
+  new `OPERATIONAL_EVENT_RESOLUTION` SLO (PASS/WARN/FAIL/NOT_MEASURABLE). Live-risk aggregates now count
+  **active** events only, so resolving clears the top leak/constraint — while `PROOF_OUTCOME_INTEGRITY`
+  stays FAIL (a resolved complaint does not un-fail a sign-off that didn't hold). Now-view exposes an
+  `operationalEventHealth` block.
+- **Delivery/pricing wiring:** linked delivery/late-service complaint → DELIVERY constraint +
+  DELIVERY_DELAY_COST leak; billing/pricing complaint → PRICING constraint + PRICING_UNDERCHARGE leak —
+  both **NEEDS_DATA** until a real amount/margin is entered (no fabricated figure).
+- **Still missing:** customer-retention wiring from complaints (needs repeat data); fake-proof →
+  anti-gaming link; UI + browser E2E.
+- **Verification:** tsc 0 · prisma valid · governance strict 0-new · migration additive · changed-area
+  694 unit + 104/661 DB tests green · 23 new tests · DB sim 4/4. Details:
+  `docs/remediation/operational-event-resolution-aging-depth-pass/`.
+
+## Complaint / Rework Event Linkage depth pass
 - **Base:** `origin/main` @ `9381efab` (Dispute → Profit/Constraint Wiring PR #116 merged).
 - **Branch:** `claude/complaint-rework-event-linkage-depth-pass`.
 - **Classification:** `COMPLAINT_REWORK_EVENT_LINKAGE_REAL_AND_OWNER_VISIBLE` (+ `PROOF_OUTCOME_INTEGRITY_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `PROFIT_LEAK_RADAR_STRENGTHENED`).

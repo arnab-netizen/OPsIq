@@ -69,6 +69,14 @@ export interface ProfitLeakSignals {
   /** Real measured impact from linked complaint/rework events (currency units); null → qualitative. */
   disputeReworkImpactAmount?: number | null;
   disputeComplaintImpactAmount?: number | null;
+  /**
+   * Delivery/late-service complaints (per-event model) linked to accepted proof → DELIVERY_DELAY_COST.
+   * Billing/pricing complaints → a pricing leak. Impact is MEASURED only when an amount is supplied.
+   */
+  deliveryComplaintCount?: number;
+  deliveryComplaintImpactAmount?: number | null;
+  pricingComplaintCount?: number;
+  pricingComplaintImpactAmount?: number | null;
   /** The current binding constraint, to link a leak to it. */
   currentConstraint?: ConstraintType | null;
   missingCriticalData?: string[];
@@ -279,12 +287,20 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
     });
   }
 
-  // DELIVERY_DELAY_COST (explicit signal only).
-  if (s.deliveryDelaySignal) {
+  // DELIVERY_DELAY_COST — an explicit delay signal OR real delivery/late-service complaints.
+  const deliveryComplaints = s.deliveryComplaintCount ?? 0;
+  const deliveryAmt = s.deliveryComplaintImpactAmount ?? null;
+  if (s.deliveryDelaySignal || deliveryComplaints > 0) {
     F({
-      leakType: "DELIVERY_DELAY_COST", domain: "operations", severity: "MEDIUM", confidence: "MEDIUM",
-      evidence: ["delivery delay/runner-failure signal"], missingData: [],
-      estimatedImpact: { tier: "MEDIUM", note: "Late delivery drives complaints and repeat loss — a retention cost." },
+      leakType: "DELIVERY_DELAY_COST", domain: "operations", severity: deliveryComplaints >= 3 ? "HIGH" : "MEDIUM", confidence: deliveryAmt != null ? "HIGH" : "MEDIUM",
+      evidence: [
+        s.deliveryDelaySignal ? "delivery delay/runner-failure signal" : "",
+        deliveryComplaints > 0 ? `${deliveryComplaints} delivery/late-service complaint(s) linked to accepted proof${deliveryAmt != null ? ` (~${cur}${deliveryAmt} measured)` : ""}` : "",
+      ].filter(Boolean),
+      missingData: deliveryComplaints > 0 && deliveryAmt == null ? ["no measured delivery-failure cost — impact is qualitative"] : [],
+      estimatedImpact: deliveryAmt != null
+        ? { tier: "MEDIUM", rangeLow: deliveryAmt, rangeHigh: deliveryAmt, note: "Measured cost from the linked delivery complaint event(s)." }
+        : { tier: "MEDIUM", note: "Late delivery drives complaints and repeat loss — a retention cost." },
       cashImpact: "Lost repeat revenue from broken delivery promises.", marginImpact: "Indirect via churn.",
       ownerExplanation: "Delivery delays are leaking repeat revenue through complaints.",
       recommendedAction: "Fix the slowest delivery step and set a same-day cutoff before adding volume.",
@@ -292,6 +308,30 @@ export function identifyProfitLeaks(s: ProfitLeakSignals): ProfitLeakAnalysis {
       successMetric: "On-time delivery rises and delivery complaints fall.",
       stopLoss: "If delays persist, cap intake to delivery capacity.", reassessmentTrigger: "Re-evaluate if delivery complaints continue.",
       relatedConstraint: s.currentConstraint === "DELIVERY" ? "DELIVERY" : null,
+    });
+  }
+
+  // Pricing complaint (per-event model) → a pricing leak. Sized only when a real amount is supplied;
+  // otherwise NEEDS_DATA (never a fabricated undercharge/discount figure).
+  const pricingComplaints = s.pricingComplaintCount ?? 0;
+  const pricingAmt = s.pricingComplaintImpactAmount ?? null;
+  if (pricingComplaints > 0) {
+    F({
+      leakType: "PRICING_UNDERCHARGE", domain: "pricing", severity: pricingComplaints >= 3 ? "HIGH" : "MEDIUM", confidence: pricingAmt != null ? "HIGH" : "NEEDS_DATA",
+      evidence: [`${pricingComplaints} billing/pricing complaint(s) linked to accepted proof${pricingAmt != null ? ` (~${cur}${pricingAmt} measured)` : ""}`],
+      missingData: pricingAmt != null ? [] : ["gross margin / correct price for the disputed line — pricing impact is qualitative without it"],
+      estimatedImpact: pricingAmt != null
+        ? { tier: "MEDIUM", rangeLow: pricingAmt, rangeHigh: pricingAmt, note: "Measured pricing impact from the linked billing/pricing complaint event(s)." }
+        : { tier: "NEEDS_DATA", note: "Billing/pricing is disputed but the margin/price impact is unmeasured — no amount or margin supplied." },
+      cashImpact: "Billing/pricing disputes risk refunds, write-offs, or systematic undercharging.",
+      marginImpact: pricingAmt != null ? "Directly affects margin on the disputed line." : "Unknown without margin/price data.",
+      ownerExplanation: "Customers are disputing billing/pricing on accepted work — a pricing-clarity or under/over-charge risk.",
+      recommendedAction: "Review the billing/price on the disputed line; correct the pricing or clarify the invoice.",
+      ownerApprovalRequired: true, riskLevel: "MEDIUM", operationalBurden: "Low — pricing/billing review on one line.",
+      successMetric: "The disputed line is repriced/clarified and billing complaints fall.",
+      stopLoss: "If a price correction risks losing key customers, revisit the cost structure instead.",
+      reassessmentTrigger: "Re-evaluate if billing/pricing complaints recur.",
+      relatedConstraint: s.currentConstraint === "PRICING" ? "PRICING" : null,
     });
   }
 

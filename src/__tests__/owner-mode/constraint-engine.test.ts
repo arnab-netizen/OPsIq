@@ -36,6 +36,20 @@ describe("constraint engine — detection", () => {
     expect(top.constraintType).toBe("STAFF");
   });
 
+  it("DELIVERY bottleneck from linked delivery/late-service complaints (per-event model)", () => {
+    const a = identifyConstraints(base({ complaintDeliveryCount: 2 }));
+    const d = a.constraints.find((c) => c.constraintType === "DELIVERY");
+    expect(d).toBeTruthy();
+    expect(d!.evidence.some((e) => /delivery\/late-service complaint/i.test(e))).toBe(true);
+  });
+
+  it("PRICING bottleneck from a billing/pricing complaint stays NEEDS_DATA without margin evidence (no fabricated margin)", () => {
+    const p = identifyConstraints(base({ marginSafe: null, complaintPricingCount: 1 })).constraints.find((c) => c.constraintType === "PRICING");
+    expect(p).toBeTruthy();
+    expect(p!.confidence).toBe("NEEDS_DATA");
+    expect(p!.missingData.some((m) => /gross margin/i.test(m))).toBe(true);
+  });
+
   it("DELIVERY bottleneck from delivery-delay signal", () => {
     const a = identifyConstraints(base({ deliveryDelaySignal: true }));
     expect(a.constraints.some((c) => c.constraintType === "DELIVERY")).toBe(true);

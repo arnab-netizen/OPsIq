@@ -369,6 +369,8 @@ export const AUDIT_EVENTS = {
   // Per-event operational complaint/rework (minimal model) — governed creation + proof linkage.
   OPERATIONAL_EVENT_RECORDED: "operational_event.recorded",
   OPERATIONAL_EVENT_LINKED: "operational_event.linked",
+  // Governed status transition of an operational event (OPEN→IN_REVIEW→RESOLVED/DISMISSED/DUPLICATE).
+  OPERATIONAL_EVENT_STATUS_CHANGED: "operational_event.status_changed",
 
   // Employee blocker / escalation (Slice 9)
   ESCALATION_RAISED: "escalation.raised",

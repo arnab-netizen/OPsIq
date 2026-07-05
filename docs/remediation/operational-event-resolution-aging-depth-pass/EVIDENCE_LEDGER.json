@@ -1,0 +1,81 @@
+{
+  "pass": "operational-event-resolution-aging-depth-pass",
+  "branch": "claude/operational-event-resolution-aging-depth-pass",
+  "base": "origin/main@57c1769b",
+  "pr117MergeStatus": "merged (squash commit 57c1769b on main)",
+  "classification": [
+    "OPERATIONAL_EVENT_RESOLUTION_AGING_REAL_AND_OWNER_VISIBLE",
+    "CONSTRAINT_ENGINE_STRENGTHENED",
+    "PROFIT_LEAK_RADAR_STRENGTHENED",
+    "BUSINESS_CONTROL_SLO_STRENGTHENED"
+  ],
+  "schemaChange": {
+    "table": "operational_events",
+    "columnsAdded": ["resolved_by_user_id (uuid, nullable)", "resolution_note (text, nullable)"],
+    "statusVocabulary": "OPEN | IN_REVIEW | RESOLVED | DISMISSED | DUPLICATE (existing status column)",
+    "migration": "prisma/migrations/20260705150000_operational_event_resolution/migration.sql",
+    "additive": true,
+    "backfillSafe": true,
+    "destructive": false,
+    "auditConstantsAdded": ["operational_event.status_changed"]
+  },
+  "statusResolution": {
+    "domain": "operational-event-aging.ts — status FSM (fail-closed note/reason, terminal-lock, IN_REVIEW->OPEN reopen), severity-scaled overdue thresholds, escalation for overdue-severe",
+    "service": [
+      "resolveOperationalEvent (note required)",
+      "dismissOperationalEvent (note + reason required)",
+      "markOperationalEventInReview",
+      "markOperationalEventDuplicate (note required)",
+      "getOperationalEventAgingSummary",
+      "getOpenOperationalEvents"
+    ],
+    "governance": "workspace-scoped, atomic audit, idempotent (same-status no-op), concurrency-safe (optimistic guard on read status)",
+    "route": "POST /api/complaint-rework (action: resolve | dismiss | in_review | duplicate)"
+  },
+  "aging": {
+    "ageSource": "server createdAt (occurredAt untrusted context)",
+    "thresholdsMs": { "CRITICAL": 86400000, "HIGH": 172800000, "MEDIUM": 432000000, "LOW": 864000000 },
+    "overdueSevereEscalates": true
+  },
+  "activeVsHistorical": {
+    "liveRisk": "profit leak + constraint + credibility count ACTIVE (OPEN/IN_REVIEW) events only",
+    "historical": "proof->complaint measurability + PROOF_OUTCOME_INTEGRITY count all ever-linked events (resolution does not un-fail a sign-off)"
+  },
+  "deliveryPricingWiring": {
+    "delivery": "complaintDeliveryCount -> DELIVERY constraint + DELIVERY_DELAY_COST leak (measured only with amount)",
+    "pricing": "complaintPricingCount -> PRICING constraint (NEEDS_DATA w/o margin) + PRICING_UNDERCHARGE leak (NEEDS_DATA w/o amount)",
+    "quality": "unchanged (QUALITY)"
+  },
+  "sloIntegration": {
+    "new": "OPERATIONAL_EVENT_RESOLUTION: PASS/WARN(overdue)/FAIL(overdue severe)/NOT_MEASURABLE",
+    "unchanged": "PROOF_OUTCOME_INTEGRITY continues consuming linked complaint/rework",
+    "nowViewCompleteness": "left at 5 core signals; event health graded by the dedicated resolution SLO"
+  },
+  "ownerNowView": "operationalEventHealth block (open/overdue/resolved, top active event, escalation)",
+  "noFake": {
+    "records": "events recorded + resolved by governed services, never fabricated",
+    "financial": "delivery/pricing impact NEEDS_DATA unless a real amount supplied",
+    "timing": "server createdAt trusted; user occurredAt stored untrusted",
+    "crossWorkspace": "workspace-scoped; isolation DB-tested"
+  },
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid",
+    "governanceStrict": "31 frozen, 0 new",
+    "newTests": 23,
+    "agingDomainTests": "8/8 pass",
+    "dbSimulation": "4/4 pass (new) + 4/4 (prior complaint-rework sim unbroken)",
+    "changedAreaUnit": "72 files / 694 tests pass (71 db skipped without TEST_WITH_DB)",
+    "changedAreaDb": "owner-guidance + execution 16 files / 104 tests pass; owner-mode 76 files / 661 tests pass",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "financial impact qualitative unless amount entered",
+    "customer-retention wiring from complaints (needs repeat-customer data)",
+    "fake-proof -> anti-gaming link",
+    "UI + browser E2E",
+    "Process Intelligence (out of scope)"
+  ]
+}

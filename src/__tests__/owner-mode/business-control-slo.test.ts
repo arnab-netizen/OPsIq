@@ -135,6 +135,17 @@ describe("business-control SLOs", () => {
     expect(get(evaluateBusinessControlSLOs(inp({ proofOutcome: poStat({ measurable: false, acceptedProofCount: 0, contradictionRate: null }) })), "PROOF_OUTCOME_INTEGRITY").status).toBe("NOT_MEASURABLE");
   });
 
+  it("OPERATIONAL_EVENT_RESOLUTION PASS/WARN/FAIL by open+overdue, NOT_MEASURABLE with no events", () => {
+    const pass = get(evaluateBusinessControlSLOs(inp({ operationalEventHealth: { activeCount: 2, overdueCount: 0, overdueSevereCount: 0, totalCount: 3, escalationTriggered: false } })), "OPERATIONAL_EVENT_RESOLUTION");
+    expect(pass.status).toBe("PASS");
+    const warn = get(evaluateBusinessControlSLOs(inp({ operationalEventHealth: { activeCount: 2, overdueCount: 1, overdueSevereCount: 0, totalCount: 3, escalationTriggered: false } })), "OPERATIONAL_EVENT_RESOLUTION");
+    expect(warn.status).toBe("WARN");
+    const fail = get(evaluateBusinessControlSLOs(inp({ operationalEventHealth: { activeCount: 2, overdueCount: 1, overdueSevereCount: 1, totalCount: 3, escalationTriggered: true } })), "OPERATIONAL_EVENT_RESOLUTION");
+    expect(fail.status).toBe("FAIL");
+    expect(fail.ownerActionRequired).toBe(true);
+    expect(get(evaluateBusinessControlSLOs(inp()), "OPERATIONAL_EVENT_RESOLUTION").status).toBe("NOT_MEASURABLE");
+  });
+
   it("overall FAIL and a deterministic, explainable top control risk", () => {
     const a = evaluateBusinessControlSLOs(inp({ topGamingSignalType: "SELF_REVIEW_ATTEMPT", topGamingSeverity: "HIGH", workloadBudget: { ownerDecisionsRequired: 20, approvalsRequired: 0, reviewsRequired: 0, ownerBottleneckItems: 0 } }));
     const b = evaluateBusinessControlSLOs(inp({ topGamingSignalType: "SELF_REVIEW_ATTEMPT", topGamingSeverity: "HIGH", workloadBudget: { ownerDecisionsRequired: 20, approvalsRequired: 0, reviewsRequired: 0, ownerBottleneckItems: 0 } }));

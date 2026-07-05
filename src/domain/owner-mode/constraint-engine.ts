@@ -56,6 +56,16 @@ export interface ConstraintSignals {
   /** Pricing / margin. */
   marginSafe?: boolean | null;
   discountLeak?: boolean;
+  /**
+   * Delivery/late-service complaints (or redelivery rework) linked to accepted proof — a real,
+   * per-event delivery signal. Binds a DELIVERY constraint even without a separate delay metric.
+   */
+  complaintDeliveryCount?: number;
+  /**
+   * Billing/pricing complaints linked to accepted proof — a real pricing-dispute signal. Binds a
+   * PRICING constraint at low confidence (NEEDS_DATA) unless margin/amount evidence also exists.
+   */
+  complaintPricingCount?: number;
   /** Delivery. */
   deliveryDelaySignal?: boolean;
   /** Startup. */
@@ -212,11 +222,15 @@ export function identifyConstraints(s: ConstraintSignals): ConstraintAnalysis {
     });
   }
 
-  // DELIVERY (only when an explicit delivery-delay signal exists).
-  if (s.deliveryDelaySignal) {
+  // DELIVERY — an explicit delay signal OR real delivery/late-service complaints (per-event model).
+  const deliveryComplaints = s.complaintDeliveryCount ?? 0;
+  if (s.deliveryDelaySignal || deliveryComplaints > 0) {
     F({
-      constraintType: "DELIVERY", domain: "operations", severity: "MEDIUM", confidence: "MEDIUM",
-      evidence: ["delivery delay/runner-failure signal"], missingData: [],
+      constraintType: "DELIVERY", domain: "operations", severity: deliveryComplaints >= 3 ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
+      evidence: [
+        s.deliveryDelaySignal ? "delivery delay/runner-failure signal" : "",
+        deliveryComplaints > 0 ? `${deliveryComplaints} delivery/late-service complaint(s) linked to accepted proof` : "",
+      ].filter(Boolean), missingData: [],
       businessImpact: "Late delivery drives complaints and repeat-customer loss.",
       ownerExplanation: "Delivery is the current limit: jobs are done but not delivered on time, which shows up as complaints and churn.",
       recommendedAction: "Fix the slowest delivery step (routing/runner scheduling) and set a same-day cutoff before adding volume.",
@@ -226,17 +240,26 @@ export function identifyConstraints(s: ConstraintSignals): ConstraintAnalysis {
     });
   }
 
-  // PRICING / MARGIN.
-  if (s.marginSafe === false || s.discountLeak || s.lowMarginB2BAccount) {
+  // PRICING / MARGIN — margin/discount evidence, OR real billing/pricing complaints (lower confidence).
+  const pricingComplaints = s.complaintPricingCount ?? 0;
+  if (s.marginSafe === false || s.discountLeak || s.lowMarginB2BAccount || pricingComplaints > 0) {
+    // A pricing complaint alone (no margin/discount evidence) binds at NEEDS_DATA — never a fabricated
+    // margin claim: OpsIQ names the pricing dispute but flags the missing margin data.
+    const hasMarginEvidence = s.marginSafe === false || s.discountLeak || s.lowMarginB2BAccount;
+    const confidence: ConstraintConfidence = hasMarginEvidence ? "MEDIUM" : "NEEDS_DATA";
     F({
-      constraintType: "PRICING", domain: "profitability", severity: s.marginSafe === false ? "HIGH" : "MEDIUM", confidence: "MEDIUM",
-      evidence: [s.marginSafe === false ? "margin below safe level" : "", s.discountLeak ? "discount leakage" : "", s.lowMarginB2BAccount ? "low-margin B2B account" : ""].filter(Boolean),
-      missingData: s.marginSafe == null ? ["current gross margin by service/segment"] : [],
-      businessImpact: "Work is being done at or below viable margin — effort is not converting to profit.",
-      ownerExplanation: "Pricing/margin is the limit: you are busy but thin-margin work is eating the profit.",
-      recommendedAction: "Identify the lowest-margin line/account and reprice it or stop discounting it this month.",
+      constraintType: "PRICING", domain: "profitability", severity: s.marginSafe === false ? "HIGH" : "MEDIUM", confidence,
+      evidence: [
+        s.marginSafe === false ? "margin below safe level" : "", s.discountLeak ? "discount leakage" : "",
+        s.lowMarginB2BAccount ? "low-margin B2B account" : "",
+        pricingComplaints > 0 ? `${pricingComplaints} billing/pricing complaint(s) linked to accepted proof` : "",
+      ].filter(Boolean),
+      missingData: hasMarginEvidence ? (s.marginSafe == null ? ["current gross margin by service/segment"] : []) : ["current gross margin by service/segment (pricing dispute is qualitative without it)"],
+      businessImpact: hasMarginEvidence ? "Work is being done at or below viable margin — effort is not converting to profit." : "Customers are disputing billing/pricing — a pricing-clarity or under/over-charge risk, size unknown without margin data.",
+      ownerExplanation: hasMarginEvidence ? "Pricing/margin is the limit: you are busy but thin-margin work is eating the profit." : "Pricing is being disputed by customers — review the billing/pricing on the affected jobs; OpsIQ can't size the margin impact without your margin data.",
+      recommendedAction: "Identify the disputed/lowest-margin line and reprice or clarify billing on it this month.",
       ownerApprovalRequired: true, riskLevel: "MEDIUM", cashImpact: "Directly improves profit per job.",
-      operationalBurden: "Low — pricing change on one line.", successMetric: "The loss-making line is repriced/paused and blended margin recovers.",
+      operationalBurden: "Low — pricing/billing change on one line.", successMetric: "The disputed/loss-making line is repriced/clarified and blended margin recovers.",
       stopLoss: "If repricing loses key customers, revisit cost structure instead of price.", reassessmentTrigger: "Re-evaluate margin after the pricing change lands.",
     });
   }
