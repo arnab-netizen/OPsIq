@@ -44,6 +44,8 @@ import type { DisputeRiskAnalysis } from "@/domain/owner-mode/dispute-risk";
 import type { ComplaintReworkAnalysis } from "@/domain/execution/complaint-rework";
 import type { OperationalEventAgingSummary } from "@/domain/execution/operational-event-aging";
 import type { ReusedHashAnalysis } from "@/domain/execution/reused-hash-precheck";
+import { clearsFinding, AdjudicationSourceType } from "@/domain/execution/proof-risk-adjudication";
+import type { ProofRiskAdjudicationView } from "@/services/execution/proof-risk-adjudication.service";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -114,6 +116,8 @@ export interface GuidanceDeps {
   complaintRework?: (workspaceId: string) => Promise<ComplaintReworkAnalysis>;
   /** Optional — the deterministic reused-hash / duplicate-proof precheck. Absent on a fake-DI unit test. */
   reusedHash?: (workspaceId: string) => Promise<ReusedHashAnalysis>;
+  /** Optional — governed owner proof-risk adjudications (suppress cleared findings). Absent on a fake-DI test. */
+  proofRiskAdjudications?: (workspaceId: string) => Promise<ProofRiskAdjudicationView[]>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
@@ -124,6 +128,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getDisputeRiskAnalysis } = await import("@/services/owner-mode/dispute-risk.service");
   const { getComplaintReworkLinks } = await import("@/services/execution/complaint-rework.service");
   const { getReusedHashFindings } = await import("@/services/execution/reused-hash-precheck.service");
+  const { getProofRiskAdjudications } = await import("@/services/execution/proof-risk-adjudication.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
@@ -133,6 +138,7 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
     disputeRisk: (workspaceId: string) => getDisputeRiskAnalysis(workspaceId),
     complaintRework: (workspaceId: string) => getComplaintReworkLinks(workspaceId),
     reusedHash: (workspaceId: string) => getReusedHashFindings(workspaceId),
+    proofRiskAdjudications: (workspaceId: string) => getProofRiskAdjudications(workspaceId),
   };
 }
 
@@ -215,6 +221,8 @@ export interface OwnerNowViewPayload {
   operationalEventHealth: OperationalEventAgingSummary | null;
   /** Deterministic reused-hash / duplicate-proof findings (workspace-scoped), or null if unavailable. */
   reusedProofFindings: ReusedHashAnalysis | null;
+  /** Governed owner proof-risk adjudications (workspace-scoped), or null if unavailable. */
+  proofRiskAdjudications: ProofRiskAdjudicationView[] | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -588,12 +596,46 @@ export async function getOwnerNowView(
     proofOutcomeReport = await deps.proofOutcome(workspaceId);
   }
 
+  // Governed owner proof-risk adjudications — the owner's fair, audited decisions about flagged
+  // reused/fake/suspicious proof. A CLEARING decision (accept-as-valid / dismiss-false-positive /
+  // escalate-for-training) suppresses that finding from re-surfacing (reduces owner noise) without
+  // deleting any evidence; confirm / require-fresh-proof keep the risk visible.
+  let proofRiskAdjudications: ProofRiskAdjudicationView[] | null = null;
+  if (typeof deps.proofRiskAdjudications === "function") {
+    proofRiskAdjudications = await deps.proofRiskAdjudications(workspaceId);
+  }
+  const clearedProofIds = new Set<string>();
+  for (const adj of proofRiskAdjudications ?? []) {
+    if (adj.sourceType !== AdjudicationSourceType.REUSED_HASH_FINDING || !clearsFinding(adj.outcome)) continue;
+    if (adj.sourceRef) clearedProofIds.add(adj.sourceRef);
+    for (const pid of adj.proofIds) clearedProofIds.add(pid);
+  }
+
   // Deterministic reused-hash / duplicate-proof precheck — workspace-scoped, policy-aware (excludes
   // legitimate same-task reuse, ignores cross-workspace). Live path only; feeds the anti-gaming +
   // credibility signals with an explainable, per-operator reuse count and the matched proof IDs.
   let reusedProofFindings: ReusedHashAnalysis | null = null;
   if (typeof deps.reusedHash === "function") {
-    reusedProofFindings = await deps.reusedHash(workspaceId);
+    const raw = await deps.reusedHash(workspaceId);
+    // Suppress findings the owner has cleared (accept/dismiss/training) — evidence is retained in the
+    // adjudication record + audit, but it no longer re-surfaces as live risk.
+    if (clearedProofIds.size > 0) {
+      const findings = raw.findings.filter((f) => !clearedProofIds.has(f.proofId));
+      const submitter = new Map<string, { count: number; proofIds: string[] }>();
+      for (const f of findings) {
+        if (!f.actorId) continue;
+        const s = submitter.get(f.actorId) ?? { count: 0, proofIds: [] };
+        s.count++; s.proofIds.push(f.proofId); submitter.set(f.actorId, s);
+      }
+      reusedProofFindings = {
+        ...raw, findings,
+        submitterReuse: [...submitter.entries()].map(([actorId, v]) => ({ actorId, count: v.count, proofIds: v.proofIds })),
+        needsReviewCount: findings.length,
+        topFinding: findings.length > 0 ? raw.topFinding && !clearedProofIds.has(raw.topFinding.proofId) ? raw.topFinding : findings[0] : null,
+      };
+    } else {
+      reusedProofFindings = raw;
+    }
   }
 
   // Cross-Event Anti-Gaming Analytics — the single highest-risk staff/manager pattern from the
@@ -748,7 +790,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

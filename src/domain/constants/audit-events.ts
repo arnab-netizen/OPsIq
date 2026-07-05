@@ -371,6 +371,8 @@ export const AUDIT_EVENTS = {
   OPERATIONAL_EVENT_LINKED: "operational_event.linked",
   // Governed status transition of an operational event (OPEN→IN_REVIEW→RESOLVED/DISMISSED/DUPLICATE).
   OPERATIONAL_EVENT_STATUS_CHANGED: "operational_event.status_changed",
+  // Governed owner/reviewer adjudication of a flagged proof-risk finding (reused/fake/suspicious).
+  PROOF_RISK_ADJUDICATED: "proof_risk.adjudicated",
 
   // Employee blocker / escalation (Slice 9)
   ESCALATION_RAISED: "escalation.raised",

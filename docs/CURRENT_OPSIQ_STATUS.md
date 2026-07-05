@@ -8,7 +8,30 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Dedicated Reused-Hash / Duplicate-Proof Precheck depth pass (latest)
+## Owner Proof-Risk Adjudication Surface depth pass (latest)
+- **Base:** `origin/main` @ `7ebfeb74` (Reused-Hash Proof Precheck PR #120 merged).
+- **Branch:** `claude/owner-proof-risk-adjudication-depth-pass`.
+- **Classification:** `OWNER_PROOF_RISK_ADJUDICATION_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **Flagged reused/fake/suspicious proof is now resolvable, audited, fair, and owner-controlled.** A
+  governed `adjudicateProofRiskFinding` service + `POST /api/proof-risk/adjudicate` records the owner's
+  decision (7 outcomes: REQUIRE_FRESH_PROOF, ACCEPT_AS_VALID, DISMISS_FALSE_POSITIVE,
+  CONFIRM_SUSPICIOUS_PATTERN, ESCALATE_FOR_TRAINING, ESCALATE_FOR_OWNER_REVIEW,
+  MARK_INCONCLUSIVE_NEEDS_DATA) over 4 sources (reused-hash / anti-gaming / credibility / dispute).
+  New additive `proof_risk_adjudications` table (unique idempotency key); atomic `proof_risk.adjudicated`
+  audit; idempotent (identical no-op / changed-outcome update).
+- **Fair + safe:** a reason is required and may not assert fraud/theft; no hidden score; no evidence
+  deleted; proof status is never rewritten (that stays in the dispute flow). Referenced proofIds are
+  workspace-verified; cross-workspace refs rejected.
+- **Now-view integration:** exposes a `proofRiskAdjudications` block; a CLEARING decision
+  (accept/dismiss/training) suppresses the reused-hash finding from re-surfacing (and from the
+  anti-gaming + credibility feed) so owner noise drops and `ANTI_GAMING_RISK`/`EVIDENCE_CREDIBILITY_RISK`
+  ease; CONFIRM/REQUIRE_FRESH keep the risk visible + maintain a governed reassessment.
+- **Still missing:** now-view auto-suppression for the other 3 source types; owner UI; browser E2E.
+- **Verification:** tsc 0 · prisma valid · governance strict 0-new · migration additive · owner-mode +
+  execution 691 unit + 806 DB tests green · 14 new tests · DB sim 4/4. Details:
+  `docs/remediation/owner-proof-risk-adjudication-depth-pass/`.
+
+## Dedicated Reused-Hash / Duplicate-Proof Precheck depth pass
 - **Base:** `origin/main` @ `c0186f3f` (Fake-Proof → Anti-Gaming Link PR #119 merged).
 - **Branch:** `claude/reused-hash-proof-precheck-depth-pass`.
 - **Classification:** `REUSED_HASH_PROOF_PRECHECK_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`).

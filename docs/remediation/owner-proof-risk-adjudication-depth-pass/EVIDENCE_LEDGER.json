@@ -1,0 +1,75 @@
+{
+  "pass": "owner-proof-risk-adjudication-depth-pass",
+  "branch": "claude/owner-proof-risk-adjudication-depth-pass",
+  "base": "origin/main@7ebfeb74",
+  "pr120MergeStatus": "merged (squash commit 7ebfeb74 on main)",
+  "classification": [
+    "OWNER_PROOF_RISK_ADJUDICATION_REAL_AND_OWNER_VISIBLE",
+    "ANTI_GAMING_ANALYTICS_STRENGTHENED",
+    "EVIDENCE_CREDIBILITY_STRENGTHENED",
+    "OWNER_MODE_EXCELLENCE_DEEPENED"
+  ],
+  "schemaChange": {
+    "table": "proof_risk_adjudications",
+    "columns": "id, workspace_id, idempotency_key, source_type, source_ref, proof_ids[], actor_ids[], adjudicated_by_user_id?, adjudicated_by_role?, outcome, reason, owner_action_required, recommended_next_action, status, created_at, updated_at",
+    "unique": "(workspace_id, idempotency_key)",
+    "index": "(workspace_id, source_type)",
+    "migration": "prisma/migrations/20260705160000_proof_risk_adjudication/migration.sql",
+    "additive": true,
+    "backfillSafe": true,
+    "destructive": false,
+    "auditConstantAdded": "proof_risk.adjudicated"
+  },
+  "outcomes": ["REQUIRE_FRESH_PROOF", "ACCEPT_AS_VALID", "DISMISS_FALSE_POSITIVE", "CONFIRM_SUSPICIOUS_PATTERN", "ESCALATE_FOR_TRAINING", "ESCALATE_FOR_OWNER_REVIEW", "MARK_INCONCLUSIVE_NEEDS_DATA"],
+  "sourceTypes": ["REUSED_HASH_FINDING", "ANTI_GAMING_SIGNAL", "CREDIBILITY_CONCERN", "PROOF_DISPUTE"],
+  "servicesApi": {
+    "adjudicateProofRiskFinding": "governed: authz + workspace + proofIds membership + atomic audit + idempotent upsert + reassessment for keep-risk outcomes",
+    "getProofRiskAdjudications": "owner-visible read (workspace-scoped)",
+    "route": "POST /api/proof-risk/adjudicate (canonical enforcement + PROOF_REVIEW_LOW_RISK)"
+  },
+  "effects": {
+    "REQUIRE_FRESH_PROOF": "ACTIVE, ownerActionRequired, keepsRisk, reassessment",
+    "ACCEPT_AS_VALID": "CLEARED, suppresses re-surfacing, evidence retained",
+    "DISMISS_FALSE_POSITIVE": "CLEARED, suppresses re-surfacing, evidence retained",
+    "CONFIRM_SUSPICIOUS_PATTERN": "CONFIRMED, keepsRisk, ownerActionRequired, reassessment, no fraud language",
+    "ESCALATE_FOR_TRAINING": "TRAINING (not punishment), cleared from live risk",
+    "ESCALATE_FOR_OWNER_REVIEW": "OWNER_REVIEW, ownerActionRequired",
+    "MARK_INCONCLUSIVE_NEEDS_DATA": "INCONCLUSIVE, conservative status kept"
+  },
+  "idempotency": "unique (workspaceId, idempotencyKey); identical resubmit no-op; changed outcome/reason = governed update + fresh audit",
+  "integration": {
+    "ownerNowView": "proofRiskAdjudications block; clearing outcomes suppress reused-hash finding from surfacing + from anti-gaming/credibility feed; confirm/require-fresh stay visible",
+    "antiGaming": "cleared finding no longer drives REUSED_PROOF_PATTERN; confirmed stays",
+    "credibility": "cleared finding no longer drives attributed REUSED_PROOF concern",
+    "slo": "ANTI_GAMING_RISK / EVIDENCE_CREDIBILITY_RISK ease when the finding is cleared (no other evidence)",
+    "reassessment": "REQUIRE_FRESH/CONFIRM maintain a governed reassessment (evidence_retraction trigger, keyed to source proof)",
+    "audit": "atomic proof_risk.adjudicated in the same transaction",
+    "proofStatus": "never rewritten (stays in the governed dispute flow)"
+  },
+  "safety": {
+    "noFraudLabel": "reason rejects fraud/theft language; never emitted",
+    "noHiddenScore": true,
+    "noEvidenceDeleted": true,
+    "crossWorkspaceIsolation": "proofIds verified in-workspace; clean workspace no adjudication (tested)"
+  },
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid",
+    "governanceStrict": "31 frozen, 0 new",
+    "newTests": 14,
+    "unitTests": "10/10 pass (4 domain + 6 service)",
+    "dbSimulation": "4/4 pass",
+    "ownerModePlusExecutionUnit": "71 files / 691 tests pass (20 db skipped)",
+    "changedAreaDb": "98 files / 806 tests pass",
+    "migrationApplied": "proof_risk_adjudications created cleanly on local DB",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "now-view auto-suppression for ANTI_GAMING_SIGNAL / CREDIBILITY_CONCERN / PROOF_DISPUTE sources",
+    "owner UI surface for the adjudication queue",
+    "browser E2E",
+    "Process Intelligence (out of scope)"
+  ]
+}
