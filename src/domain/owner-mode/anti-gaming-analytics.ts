@@ -17,6 +17,7 @@
 
 import type { ConstraintType } from "@/domain/owner-mode/constraint-engine";
 import type { ProfitLeakType } from "@/domain/owner-mode/profit-leak-radar";
+import type { CredibilitySignalType } from "@/domain/owner-mode/evidence-credibility-graph";
 
 export type GamingSignalType =
   | "REPEATED_WEAK_PROOF" | "REPEATED_REJECTED_PROOF" | "REUSED_PROOF_PATTERN" | "MISSING_PROOF_PATTERN"
@@ -24,7 +25,11 @@ export type GamingSignalType =
   | "SELF_REVIEW_ATTEMPT" | "MANAGER_RUBBER_STAMP" | "MANAGER_IGNORES_ESCALATION"
   | "COMPLAINT_AFTER_ACCEPTED_PROOF" | "REWORK_AFTER_ACCEPTED_PROOF" | "PAYLOAD_TAMPER_ATTEMPT"
   | "CROSS_WORKSPACE_TAMPER_ATTEMPT" | "OWNER_REVIEW_BURDEN_CREATED_BY_STAFF"
-  | "STAFF_PATTERN_LINKED_TO_PROFIT_LEAK" | "DATA_INSUFFICIENT";
+  | "STAFF_PATTERN_LINKED_TO_PROFIT_LEAK"
+  // Fake / reused / suspicious proof-DISPUTE-derived behaviour patterns (conservative — no fraud label).
+  | "SUSPECTED_FAKE_OR_REUSED_PROOF_PATTERN" | "TAMPER_SUSPECTED_PROOF_PATTERN"
+  | "WRONG_OR_INSUFFICIENT_PROOF_PATTERN" | "MANAGER_ACCEPTED_SUSPICIOUS_PROOF" | "REVIEW_QUALITY_CONCERN"
+  | "DATA_INSUFFICIENT";
 
 export type GamingSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 export type GamingConfidence = "HIGH" | "MEDIUM" | "LOW" | "NEEDS_DATA";
@@ -53,10 +58,47 @@ export interface ReviewerStats {
   selfReviewCount: number;
 }
 
+/**
+ * Per-operator suspicious-proof aggregates, derived from the governed proof-DISPUTE trail
+ * (SUSPECTED_FAKE_OR_REUSED_PROOF / WRONG_OR_INSUFFICIENT_PROOF categories) joined to the proof's
+ * submitter, plus the persisted `tamper_suspected` / duplicate-flagged proof fields. Every count
+ * carries the supporting proof IDs + `proof.disputed` audit refs — never a hidden score.
+ */
+export interface SuspiciousProofActorStats {
+  actorId: string;
+  role?: string | null;
+  /** Proof disputed as SUSPECTED_FAKE_OR_REUSED_PROOF, attributed to its submitter. */
+  suspectedFakeCount: number;
+  /** Proof disputed as WRONG_OR_INSUFFICIENT_PROOF. */
+  wrongInsufficientCount: number;
+  /** Persisted tamper_suspected proof by this submitter. */
+  tamperSuspectedCount: number;
+  /** Duplicate-flagged (reused) proof by this submitter. */
+  reusedCount: number;
+  proofIds: string[];
+  auditRefs: string[];
+}
+/** Per-reviewer suspicious-acceptance aggregates (accepted proof later disputed fake, or tamper). */
+export interface SuspiciousReviewerStats {
+  reviewerId: string;
+  role?: string | null;
+  /** Accepted a proof later disputed as SUSPECTED_FAKE_OR_REUSED_PROOF. */
+  acceptedSuspiciousCount: number;
+  /** Accepted a proof disputed as MANAGER_REVIEW_ERROR (their own review error). */
+  reviewErrorCount: number;
+  /** Accepted a tamper-suspected proof. */
+  acceptedTamperCount: number;
+  proofIds: string[];
+  auditRefs: string[];
+}
+
 export interface AntiGamingInput {
   workspaceId: string;
   actors: ActorProofStats[];
   reviewers: ReviewerStats[];
+  /** Fake/reused/suspicious proof-dispute-derived aggregates (per submitter / reviewer). */
+  suspiciousProofActors?: SuspiciousProofActorStats[];
+  suspiciousReviewers?: SuspiciousReviewerStats[];
   currentConstraint?: ConstraintType | null;
   topProfitLeakType?: ProfitLeakType | null;
   /** Sources not yet persisted (e.g. complaint↔proof linkage) — for honest missing-data. */
@@ -85,6 +127,14 @@ export interface GamingSignal {
   managerActionSufficient: boolean;
   trainingOrProcessRecommendation: string | null;
   reassessmentTrigger: string | null;
+  /**
+   * Whether this is a REPEATED pattern (≥ threshold) vs a single severe warning. A single severe
+   * event (e.g. one suspected-fake dispute) surfaces as a warning with isRepeatedPattern=false —
+   * OpsIQ never claims a "pattern" from one event.
+   */
+  isRepeatedPattern?: boolean;
+  /** Related evidence-credibility concern type, when this behaviour maps to one (link, not duplicate). */
+  relatedCredibilityConcern?: CredibilitySignalType | null;
   signalScore: number;
   evaluatedAt: string;
 }
@@ -106,8 +156,11 @@ const FLOOD_THRESHOLD = 8;
 
 const SEVERITY_WEIGHT: Record<GamingSeverity, number> = { CRITICAL: 1000, HIGH: 100, MEDIUM: 10, LOW: 1 };
 const TYPE_PRIORITY: Record<GamingSignalType, number> = {
-  CROSS_WORKSPACE_TAMPER_ATTEMPT: 17, PAYLOAD_TAMPER_ATTEMPT: 16, SELF_REVIEW_ATTEMPT: 15,
-  MANAGER_RUBBER_STAMP: 14, REUSED_PROOF_PATTERN: 13, REPEATED_REJECTED_PROOF: 12,
+  // Fake/tamper proof-fraud patterns rank at the top — they are the most direct trust failures.
+  SUSPECTED_FAKE_OR_REUSED_PROOF_PATTERN: 22, TAMPER_SUSPECTED_PROOF_PATTERN: 21,
+  MANAGER_ACCEPTED_SUSPICIOUS_PROOF: 20, CROSS_WORKSPACE_TAMPER_ATTEMPT: 17, PAYLOAD_TAMPER_ATTEMPT: 16,
+  SELF_REVIEW_ATTEMPT: 15, MANAGER_RUBBER_STAMP: 14, REUSED_PROOF_PATTERN: 13, REPEATED_REJECTED_PROOF: 12,
+  REVIEW_QUALITY_CONCERN: 11, WRONG_OR_INSUFFICIENT_PROOF_PATTERN: 11,
   REPEATED_WEAK_PROOF: 11, COMPLAINT_AFTER_ACCEPTED_PROOF: 10, REWORK_AFTER_ACCEPTED_PROOF: 9,
   MISSING_PROOF_PATTERN: 8, LATE_COMPLETION_PATTERN: 7, PROOF_FLOOD_LOW_QUALITY: 6,
   MANAGER_IGNORES_ESCALATION: 5, OWNER_REVIEW_BURDEN_CREATED_BY_STAFF: 4,
@@ -159,6 +212,73 @@ export function aggregateProofEvents(rows: ProofEventRow[], nowMs: number): { ac
   return { actors: [...actorMap.values()], reviewers: [...reviewerMap.values()] };
 }
 
+/** A governed proof-dispute record (from the proof.disputed audit trail). */
+export interface SuspiciousDisputeRecord { proofId: string; disputeCategory: string; auditEventId: string }
+/** A proof row's identity fields, to attribute a dispute/tamper to its submitter + reviewer. */
+export interface SuspiciousProofRow {
+  id: string;
+  submittedByUserId: string | null;
+  reviewedByUserId: string | null;
+  duplicateFlagged: boolean;
+  tamperSuspected?: boolean;
+  status: string;
+}
+
+const ACCEPTED_CLASS = new Set(["ACCEPTED", "DISPUTED", "OVERRIDDEN_NOT_VERIFIED"]);
+
+/**
+ * Aggregate suspicious-proof behaviour per submitter + reviewer from the governed dispute trail and
+ * the persisted tamper/duplicate proof fields. Pure: the caller supplies dispute records + the proof
+ * rows they reference. Fabricates nothing — a proof with no dispute/tamper contributes no count, and
+ * a dispute whose proof is absent (e.g. cross-workspace) is skipped.
+ */
+export function aggregateSuspiciousProof(
+  records: SuspiciousDisputeRecord[],
+  rows: SuspiciousProofRow[]
+): { suspiciousProofActors: SuspiciousProofActorStats[]; suspiciousReviewers: SuspiciousReviewerStats[] } {
+  const proofById = new Map(rows.map((p) => [p.id, p]));
+  const actors = new Map<string, SuspiciousProofActorStats>();
+  const reviewers = new Map<string, SuspiciousReviewerStats>();
+  const actor = (id: string): SuspiciousProofActorStats =>
+    actors.get(id) ?? { actorId: id, suspectedFakeCount: 0, wrongInsufficientCount: 0, tamperSuspectedCount: 0, reusedCount: 0, proofIds: [], auditRefs: [] };
+  const reviewer = (id: string): SuspiciousReviewerStats =>
+    reviewers.get(id) ?? { reviewerId: id, acceptedSuspiciousCount: 0, reviewErrorCount: 0, acceptedTamperCount: 0, proofIds: [], auditRefs: [] };
+
+  // Persisted tamper/duplicate proof fields (independent of any dispute).
+  for (const p of rows) {
+    if (p.tamperSuspected && p.submittedByUserId) {
+      const a = actor(p.submittedByUserId); a.tamperSuspectedCount++; a.proofIds.push(p.id); actors.set(p.submittedByUserId, a);
+      if (p.reviewedByUserId && ACCEPTED_CLASS.has(p.status)) {
+        const r = reviewer(p.reviewedByUserId); r.acceptedTamperCount++; r.proofIds.push(p.id); reviewers.set(p.reviewedByUserId, r);
+      }
+    }
+    if (p.duplicateFlagged && p.submittedByUserId) {
+      const a = actor(p.submittedByUserId); a.reusedCount++; if (!a.proofIds.includes(p.id)) a.proofIds.push(p.id); actors.set(p.submittedByUserId, a);
+    }
+  }
+
+  // Governed disputes → attribute to the proof's submitter (and reviewer where the review is implicated).
+  for (const rec of records) {
+    const p = proofById.get(rec.proofId);
+    if (!p) continue; // absent/cross-workspace proof → never fabricate an attribution
+    if (rec.disputeCategory === "SUSPECTED_FAKE_OR_REUSED_PROOF") {
+      if (p.submittedByUserId) { const a = actor(p.submittedByUserId); a.suspectedFakeCount++; if (!a.proofIds.includes(p.id)) a.proofIds.push(p.id); a.auditRefs.push(rec.auditEventId); actors.set(p.submittedByUserId, a); }
+      if (p.reviewedByUserId) { const r = reviewer(p.reviewedByUserId); r.acceptedSuspiciousCount++; if (!r.proofIds.includes(p.id)) r.proofIds.push(p.id); r.auditRefs.push(rec.auditEventId); reviewers.set(p.reviewedByUserId, r); }
+    } else if (rec.disputeCategory === "WRONG_OR_INSUFFICIENT_PROOF") {
+      if (p.submittedByUserId) { const a = actor(p.submittedByUserId); a.wrongInsufficientCount++; if (!a.proofIds.includes(p.id)) a.proofIds.push(p.id); a.auditRefs.push(rec.auditEventId); actors.set(p.submittedByUserId, a); }
+    } else if (rec.disputeCategory === "MANAGER_REVIEW_ERROR") {
+      if (p.reviewedByUserId) { const r = reviewer(p.reviewedByUserId); r.reviewErrorCount++; if (!r.proofIds.includes(p.id)) r.proofIds.push(p.id); r.auditRefs.push(rec.auditEventId); reviewers.set(p.reviewedByUserId, r); }
+    }
+  }
+
+  return { suspiciousProofActors: [...actors.values()], suspiciousReviewers: [...reviewers.values()] };
+}
+
+// Fake/suspicious proof-dispute pattern thresholds — a single event is a warning, not a "pattern".
+const FAKE_PATTERN_THRESHOLD = 2;
+const WRONG_INSUFFICIENT_PATTERN_THRESHOLD = 2;
+const TAMPER_PATTERN_THRESHOLD = 2;
+
 export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysis {
   const at = input.evaluatedAt;
   const ws = input.workspaceId;
@@ -166,6 +286,104 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
   const push = (f: Omit<GamingSignal, "workspaceId" | "evaluatedAt" | "signalScore">): void => {
     out.push({ ...f, workspaceId: ws, evaluatedAt: at, signalScore: sigScore(f.severity, f.signalType, f.patternCount) });
   };
+
+  // ── Fake / reused / suspicious proof-DISPUTE-derived patterns ──────────────
+  // Driven by the governed proof.disputed trail + persisted tamper/duplicate fields. Conservative:
+  // no "fraud" label, no hidden score; a single event is a warning, repetition is a "pattern".
+  for (const a of input.suspiciousProofActors ?? []) {
+    const refs = a.proofIds.slice(0, 10);
+    if (a.suspectedFakeCount >= 1) {
+      const repeated = a.suspectedFakeCount >= FAKE_PATTERN_THRESHOLD;
+      push({
+        actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "SUSPECTED_FAKE_OR_REUSED_PROOF_PATTERN",
+        reasonCodes: [repeated ? "REPEATED_SUSPECTED_FAKE_OR_REUSED_PROOF_DISPUTE" : "SINGLE_SEVERE_WARNING", ...(a.reusedCount > 0 ? ["DUPLICATE_FILE_HASH"] : [])],
+        severity: repeated ? "CRITICAL" : "HIGH", confidence: "HIGH",
+        evidence: [`${a.suspectedFakeCount} proof(s) disputed as suspected fake/reused${a.reusedCount > 0 ? `; ${a.reusedCount} duplicate-flagged` : ""}`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : []), ...(a.auditRefs.length ? [`audit refs: ${a.auditRefs.slice(0, 10).join(", ")}`] : [])],
+        patternCount: a.suspectedFakeCount, isRepeatedPattern: repeated, missingData: [],
+        ownerExplanation: repeated
+          ? "This operator repeatedly has proof disputed as suspected fake or reused — a serious, repeated credibility pattern. This is not an accusation; it needs owner review and adjudication."
+          : "This operator had proof disputed as suspected fake or reused — a single severe warning (not yet a repeated pattern). Needs owner review before any conclusion.",
+        businessImpact: "Suspected fake/reused proof means work may be certified as done without being done — the highest-risk behaviour pattern.",
+        relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
+        relatedConstraint: input.currentConstraint === "STAFF" ? "STAFF" : null,
+        relatedCredibilityConcern: "ACCEPTED_PROOF_WITH_BAD_OUTCOME",
+        recommendedResponse: "Owner-review this operator's recent proof; require fresh, independently verified artifacts before assigning new work. Do not accuse without adjudication.",
+        ownerActionRequired: true, managerActionSufficient: false,
+        trainingOrProcessRecommendation: "Owner-led review + stricter unique-artifact proof requirement; escalate only through the owner's adjudication process.",
+        reassessmentTrigger: repeated ? "Open a reassessment of this operator's recent accepted work." : null,
+      });
+    }
+    if (a.wrongInsufficientCount >= WRONG_INSUFFICIENT_PATTERN_THRESHOLD) {
+      push({
+        actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "WRONG_OR_INSUFFICIENT_PROOF_PATTERN",
+        reasonCodes: ["REPEATED_WRONG_OR_INSUFFICIENT_PROOF_DISPUTE"], severity: a.wrongInsufficientCount >= 4 ? "HIGH" : "MEDIUM", confidence: "HIGH",
+        evidence: [`${a.wrongInsufficientCount} proof(s) disputed as wrong/insufficient`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
+        patternCount: a.wrongInsufficientCount, isRepeatedPattern: true, missingData: [],
+        ownerExplanation: "This operator repeatedly submits proof that is later ruled wrong or insufficient — the proof requirement or the work itself is not up to standard.",
+        businessImpact: "Wrong/insufficient proof predicts rework and hides true completion status.",
+        relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
+        relatedConstraint: input.currentConstraint === "STAFF" ? "STAFF" : null,
+        relatedCredibilityConcern: "WEAK_PROOF_NEEDS_REVIEW",
+        recommendedResponse: "Show the operator the acceptable proof standard and require it before assigning new work; coach before discipline.",
+        ownerActionRequired: false, managerActionSufficient: true,
+        trainingOrProcessRecommendation: "Coaching + clearer proof checklist for this task type.",
+        reassessmentTrigger: null,
+      });
+    }
+    if (a.tamperSuspectedCount >= TAMPER_PATTERN_THRESHOLD) {
+      push({
+        actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "TAMPER_SUSPECTED_PROOF_PATTERN",
+        reasonCodes: ["REPEATED_TAMPER_SUSPECTED_PROOF"], severity: "CRITICAL", confidence: "MEDIUM",
+        evidence: [`${a.tamperSuspectedCount} tamper-suspected proof(s) from this operator`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
+        patternCount: a.tamperSuspectedCount, isRepeatedPattern: true, missingData: [],
+        ownerExplanation: "This operator repeatedly submits tamper-suspected proof — the evidence may be forged. Not an accusation; needs owner review and adjudication.",
+        businessImpact: "Forged/tampered proof is the highest-risk credibility failure — completion cannot be trusted.",
+        relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
+        relatedConstraint: input.currentConstraint === "STAFF" ? "STAFF" : null,
+        relatedCredibilityConcern: "TAMPER_SUSPECTED_PROOF",
+        recommendedResponse: "Reject the tamper-suspected proof, require fresh verified artifacts, and owner-review this operator's recent work.",
+        ownerActionRequired: true, managerActionSufficient: false,
+        trainingOrProcessRecommendation: "Owner-led review; tighten proof capture to a tamper-evident method.",
+        reassessmentTrigger: "Open a reassessment of this operator's recent accepted work.",
+      });
+    }
+  }
+  for (const r of input.suspiciousReviewers ?? []) {
+    const refs = r.proofIds.slice(0, 10);
+    if (r.acceptedSuspiciousCount >= 1) {
+      const repeated = r.acceptedSuspiciousCount >= FAKE_PATTERN_THRESHOLD;
+      push({
+        actorId: r.reviewerId, actorRole: r.role ?? "manager", signalType: "MANAGER_ACCEPTED_SUSPICIOUS_PROOF",
+        reasonCodes: [repeated ? "REPEATED_ACCEPTED_SUSPICIOUS_PROOF" : "SINGLE_SEVERE_WARNING"], severity: repeated ? "CRITICAL" : "HIGH", confidence: "HIGH",
+        evidence: [`${r.acceptedSuspiciousCount} proof(s) this reviewer accepted were later disputed as suspected fake/reused`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
+        patternCount: r.acceptedSuspiciousCount, isRepeatedPattern: repeated, missingData: [],
+        ownerExplanation: "A manager/reviewer accepted proof that was later disputed as suspected fake/reused — the review gate let suspicious evidence through.",
+        businessImpact: "If the review gate passes fake/reused proof, no acceptance can be trusted.",
+        relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
+        relatedConstraint: input.currentConstraint === "MANAGER" ? "MANAGER" : null,
+        relatedCredibilityConcern: "REVIEW_QUALITY_CONCERN",
+        recommendedResponse: "Owner-review this reviewer's recent acceptances; require independent double-review for suspected-fake-prone task types.",
+        ownerActionRequired: true, managerActionSufficient: false,
+        trainingOrProcessRecommendation: "Reviewer coaching on detecting reused/tampered artifacts; tighten the approval policy.",
+        reassessmentTrigger: repeated ? "Open a reassessment of this reviewer's recent accepted items." : null,
+      });
+    } else if (r.acceptedTamperCount >= 1 || r.reviewErrorCount >= RUBBER_STAMP_THRESHOLD) {
+      push({
+        actorId: r.reviewerId, actorRole: r.role ?? "manager", signalType: "REVIEW_QUALITY_CONCERN",
+        reasonCodes: [r.acceptedTamperCount >= 1 ? "ACCEPTED_TAMPER_SUSPECTED_PROOF" : "REPEATED_REVIEW_ERROR"], severity: "HIGH", confidence: "MEDIUM",
+        evidence: [r.acceptedTamperCount >= 1 ? `${r.acceptedTamperCount} tamper-suspected proof(s) accepted by this reviewer` : `${r.reviewErrorCount} of this reviewer's acceptances were disputed as review errors`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
+        patternCount: Math.max(r.acceptedTamperCount, r.reviewErrorCount), isRepeatedPattern: r.reviewErrorCount >= RUBBER_STAMP_THRESHOLD, missingData: [],
+        ownerExplanation: "This reviewer's review quality is a concern — they accepted tamper-suspected proof or had repeated review errors.",
+        businessImpact: "Weak review lets untrustworthy proof pass, driving rework and complaints downstream.",
+        relatedProfitLeak: null, relatedConstraint: input.currentConstraint === "MANAGER" ? "MANAGER" : null,
+        relatedCredibilityConcern: "REVIEW_QUALITY_CONCERN",
+        recommendedResponse: "Spot-audit this reviewer's recent approvals and require a written reason per acceptance.",
+        ownerActionRequired: false, managerActionSufficient: true,
+        trainingOrProcessRecommendation: "Proof-review training; raise the proof bar for this reviewer.",
+        reassessmentTrigger: null,
+      });
+    }
+  }
 
   // ── Reviewer patterns ──────────────────────────────────────────────────────
   for (const r of input.reviewers) {

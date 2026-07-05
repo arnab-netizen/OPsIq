@@ -48,6 +48,12 @@ describe("business-control SLOs", () => {
     expect(s.relatedGamingSignal).toBe("SELF_REVIEW_ATTEMPT");
   });
 
+  it("ANTI_GAMING_RISK FAILs and links a fake/reused proof pattern", () => {
+    const s = get(evaluateBusinessControlSLOs(inp({ topGamingSignalType: "SUSPECTED_FAKE_OR_REUSED_PROOF_PATTERN", topGamingSeverity: "CRITICAL" })), "ANTI_GAMING_RISK");
+    expect(s.status).toBe("FAIL");
+    expect(s.relatedGamingSignal).toBe("SUSPECTED_FAKE_OR_REUSED_PROOF_PATTERN");
+  });
+
   it("EVIDENCE_CREDIBILITY_RISK WARN on a MEDIUM concern and links it", () => {
     const s = get(evaluateBusinessControlSLOs(inp({ topCredibilitySignalType: "REPEATED_OWNER_REVIEW_BURDEN", topCredibilitySeverity: "MEDIUM" })), "EVIDENCE_CREDIBILITY_RISK");
     expect(s.status).toBe("WARN");

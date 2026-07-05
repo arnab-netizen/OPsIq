@@ -8,7 +8,27 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Operational Event Resolution / Aging + Delivery/Pricing Constraint Wiring depth pass (latest)
+## Fake / Reused / Suspicious Proof Dispute → Anti-Gaming Link depth pass (latest)
+- **Base:** `origin/main` @ `e70f5986` (Operational Event Resolution / Aging PR #118 merged).
+- **Branch:** `claude/fake-proof-anti-gaming-link-depth-pass`.
+- **Classification:** `FAKE_PROOF_ANTI_GAMING_LINK_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `BUSINESS_CONTROL_SLO_STRENGTHENED`).
+- **Fake/reused/suspicious proof DISPUTES now feed Anti-Gaming Analytics as staff/manager behaviour
+  patterns.** New conservative signals (no fraud label, no hidden score): `SUSPECTED_FAKE_OR_REUSED_PROOF_PATTERN`,
+  `TAMPER_SUSPECTED_PROOF_PATTERN`, `WRONG_OR_INSUFFICIENT_PROOF_PATTERN`, `MANAGER_ACCEPTED_SUSPICIOUS_PROOF`,
+  `REVIEW_QUALITY_CONCERN`. Derived from the governed `proof.disputed` trail + persisted
+  `tamper_suspected`/`duplicateFlagged` fields — **no schema change, no new mutation, no new audit**.
+- **Detection honesty:** a single severe event is a WARNING (`isRepeatedPattern=false`); repetition (≥2)
+  is a pattern. Every signal carries reason codes + proof/audit refs; each links a related credibility
+  concern (not duplicated) and the profit-leak/constraint the dispute already drives (`WEAK_PROOF_REWORK_RISK`/`STAFF`/`MANAGER`).
+- **Owner-visible / SLO:** `topGamingSignal` surfaces the pattern; `ANTI_GAMING_RISK` FAILs on a
+  high/critical fake pattern; a high-risk repeated pattern carries a reassessment trigger. Cross-workspace
+  proof cannot influence a signal; clean workspace → `DATA_INSUFFICIENT`.
+- **Still missing:** dedicated reused-hash precheck; owner adjudication surface + UI; browser E2E.
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance strict 0-new · owner-mode
+  622 unit + 717 DB tests green · 13 new tests · DB sim 2/2. Details:
+  `docs/remediation/fake-proof-anti-gaming-link-depth-pass/`.
+
+## Operational Event Resolution / Aging + Delivery/Pricing Constraint Wiring depth pass
 - **Base:** `origin/main` @ `57c1769b` (Complaint/Rework Event Linkage PR #117 merged).
 - **Branch:** `claude/operational-event-resolution-aging-depth-pass`.
 - **Classification:** `OPERATIONAL_EVENT_RESOLUTION_AGING_REAL_AND_OWNER_VISIBLE` (+ `CONSTRAINT_ENGINE_STRENGTHENED`, `PROFIT_LEAK_RADAR_STRENGTHENED`, `BUSINESS_CONTROL_SLO_STRENGTHENED`).
