@@ -49,8 +49,10 @@ export default function OwnerAdjudicationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  // `silent` refreshes the data WITHOUT toggling the full-page loading state — used after a decision so
+  // the queue (and the just-submitted result message) stays mounted instead of blanking to a spinner.
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const { res, data } = await api("/api/owner/proof-risk/queue");
@@ -59,9 +61,9 @@ export default function OwnerAdjudicationPage() {
       setOutcomeOptions((data.outcomeOptions as OutcomeOption[]) ?? []);
       setSummary((data.summary as { totalItems: number; adjudicableItems: number; blockedByDataItems: number }) ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load the adjudication queue.");
+      if (!silent) setError(e instanceof Error ? e.message : "Failed to load the adjudication queue.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -85,8 +87,9 @@ export default function OwnerAdjudicationPage() {
       });
       if (!res.ok) return { ok: false, message: safeError(data, res.status) };
       const status = typeof data.status === "string" ? data.status : "recorded";
-      // Refresh so a cleared finding drops out and a still-active one keeps showing.
-      await load();
+      // Silent refresh so a cleared finding drops out and a still-active one keeps showing — without
+      // unmounting the queue (which would wipe the success message the component is about to display).
+      await load(true);
       return { ok: true, message: `Decision recorded (${status}).` };
     },
     [load]
