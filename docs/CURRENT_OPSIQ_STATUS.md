@@ -8,7 +8,33 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Per-Proof Evidence Lists for Remaining Gaming/Credibility Signals depth pass (latest)
+## Completion / Escalation Timing Evidence depth pass (latest)
+- **Base:** `origin/main` @ `ff741bac` (Per-Proof Evidence Lists for Risk Signals PR #123 merged).
+- **Branch:** `claude/completion-escalation-timing-evidence-depth-pass`.
+- **Classification:** `COMPLETION_ESCALATION_TIMING_EVIDENCE_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **The two previously blocked signals are now produced from persisted trusted timestamps.**
+  `SUSPICIOUS_FAST_COMPLETION` comes from `Proof.workStartedAt` + `Proof.submittedAt` compared to an
+  **observed per-proof-type baseline** (median of the workspace's own accepted, timed completions —
+  `baselineSource`/`baselineConfidence` reported). `MANAGER_IGNORES_ESCALATION` comes from
+  `Escalation.dueAt` + new `Escalation.acknowledgedAt` (+ `resolvedAt`), attributed per assigned manager.
+- **Schema (additive, backfill-safe):** `proofs.work_started_at`; `escalations.acknowledged_at`;
+  `escalations.acknowledged_by` — all nullable, no default. Legacy rows read as `TIMING_MISSING` /
+  unacknowledged (fail-visible), never fabricated.
+- **Statuses:** fast-completion `NO_SIGNAL`/`TIMING_MISSING`/`BASELINE_MISSING`/`FAST_COMPLETION_WARNING`/
+  `SUSPICIOUS_FAST_COMPLETION_PATTERN`/`DATA_INSUFFICIENT`; escalation `NO_SIGNAL`/`ESCALATION_TIMING_MISSING`/
+  `NO_MANAGER_ASSIGNMENT`/`ESCALATION_ACK_OVERDUE`/`ESCALATION_RESOLUTION_OVERDUE`/`MANAGER_IGNORES_ESCALATION_PATTERN`/
+  `DATA_INSUFFICIENT`.
+- **Adjudication / SLO:** active signals map into anti-gaming keeping their evidence ids (proof ids /
+  escalation ids) as the suppression key — clearing suppresses the exact ids, new evidence re-surfaces;
+  `ANTI_GAMING_RISK` reacts. Blocked statuses never hidden to force an SLO pass.
+- **Safety:** no fraud/theft/negligence label; no hidden score; no fabricated timestamps or baselines;
+  completion time never inferred from user text; missing data fail-visible, not treated as failure.
+- **Still missing:** populate the new timestamps from the write paths; owner UI; browser E2E.
+- **Verification:** tsc 0 · prisma valid · governance strict 31-frozen/0-new · owner-mode + owner-guidance
+  + execution 752 unit + 849 DB tests green · 18 new unit + 5 DB-sim tests. Details:
+  `docs/remediation/completion-escalation-timing-evidence-depth-pass/`.
+
+## Per-Proof Evidence Lists for Remaining Gaming/Credibility Signals depth pass
 - **Base:** `origin/main` @ `9985f87f` (Adjudication Suppression Across All Sources PR #122 merged).
 - **Branch:** `claude/proof-evidence-lists-for-risk-signals-depth-pass`.
 - **Classification:** `PROOF_EVIDENCE_LISTS_FOR_RISK_SIGNALS_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `OWNER_MODE_EXCELLENCE_DEEPENED`).

@@ -36,6 +36,7 @@ import { computeOwnerWorkloadBudget, type OwnerWorkloadBudget } from "@/domain/o
 import { identifyConstraints, type ConstraintFinding, type ConstraintSignals } from "@/domain/owner-mode/constraint-engine";
 import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } from "@/domain/owner-mode/profit-leak-radar";
 import { aggregateProofEvents, identifyGamingSignals, aggregateSuspiciousProof, type GamingSignal, type ProofEventRow, type SuspiciousDisputeRecord, type SuspiciousProofRow } from "@/domain/owner-mode/anti-gaming-analytics";
+import { evaluateFastCompletion, evaluateEscalationTiming, type TimingSignal, type CompletionTimingRow, type EscalationTimingRow } from "@/domain/owner-mode/timing-evidence";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -68,6 +69,23 @@ interface SupplierRow { worstStockoutRisk: string; riskScore: number; supplyCuto
 interface BusinessRow { businessType: string }
 interface GuidanceSnapshotRow extends BusinessStateSnapshot { payload: unknown }
 
+/** Proof row for the now-view analytics query — the credibility fields plus trusted timing fields. */
+interface NowViewProofRow extends CredibilityProofRow {
+  submittedAt?: Date | null;
+  workStartedAt?: Date | null;
+}
+/** Escalation row for the ignores-escalation timing signal (trusted timestamps only). */
+interface EscalationSelectRow {
+  id: string;
+  assignedTarget: string | null;
+  severity: string;
+  status: string;
+  createdAt: Date;
+  dueAt: Date | null;
+  acknowledgedAt: Date | null;
+  resolvedAt: Date | null;
+}
+
 interface GuidanceDb {
   ownerCashflowCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
   ownerFinanceCycle: { findFirst(args: unknown): Promise<CycleRow | null> };
@@ -79,8 +97,15 @@ interface GuidanceDb {
   ownerBusiness: { findFirst(args: unknown): Promise<BusinessRow | null> };
   proof: {
     count(args: unknown): Promise<number>;
-    /** Optional — present on the live client; enables anti-gaming + credibility analytics. */
-    findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<CredibilityProofRow[]>;
+    /** Optional — present on the live client; enables anti-gaming + credibility + timing analytics. */
+    findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<NowViewProofRow[]>;
+  };
+  /**
+   * Optional — the escalation table (present on the live client). Enables the
+   * MANAGER_IGNORES_ESCALATION timing signal; a DI mock without it → the signal is honestly absent.
+   */
+  escalation?: {
+    findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<EscalationSelectRow[]>;
   };
   ownerActionOutcome: { count(args: unknown): Promise<number> };
   ownerReassessmentEvent: { count(args: unknown): Promise<number> };
@@ -225,6 +250,13 @@ export interface OwnerNowViewPayload {
   proofRiskAdjudications: ProofRiskAdjudicationView[] | null;
   /** Adjudication-state summary (active / cleared / inconclusive counts + top active action). */
   proofRiskAdjudicationSummary: ProofRiskAdjudicationSummary | null;
+  /**
+   * Timing-evidence signals (fast-completion + ignores-escalation) from persisted trusted timestamps.
+   * Active statuses also surface via topGamingSignal; here the full status (incl. fail-visible
+   * TIMING_MISSING / BASELINE_MISSING / ESCALATION_TIMING_MISSING / NO_MANAGER_ASSIGNMENT) is exposed
+   * so the owner sees exactly what is measurable and what is still blocked. Null on the fake-DI path.
+   */
+  timingEvidence: { fastCompletion: TimingSignal | null; escalationTiming: TimingSignal | null } | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -701,6 +733,8 @@ export async function getOwnerNowView(
   // when the client exposes proof.findMany (the live path); a DI mock without it → null (no fake).
   let topGamingSignal: GamingSignal | null = null;
   let topCredibilityConcern: CredibilityFinding | null = null;
+  let fastCompletionSignal: TimingSignal | null = null;
+  let escalationTimingSignal: TimingSignal | null = null;
   let totalProofCount: number | null = null;
   let weakProofCount: number | null = null;
   let overdueReviewCount: number | null = null;
@@ -708,7 +742,7 @@ export async function getOwnerNowView(
     // One workspace-scoped query feeds both anti-gaming and the credibility graph.
     const proofRows = await deps.db.proof.findMany({
       where: { workspaceId },
-      select: { id: true, submittedByUserId: true, reviewedByUserId: true, proofType: true, status: true, duplicateFlagged: true, tamperSuspected: true, createdAt: true, reviewedAt: true },
+      select: { id: true, submittedByUserId: true, reviewedByUserId: true, proofType: true, status: true, duplicateFlagged: true, tamperSuspected: true, createdAt: true, reviewedAt: true, submittedAt: true, workStartedAt: true },
     });
     const nowMs = deps.now();
     const { actors, reviewers } = aggregateProofEvents(proofRows, nowMs);
@@ -725,12 +759,32 @@ export async function getOwnerNowView(
     // Deterministic reused-hash reuse per operator (from the precheck) — authoritative reused-proof source.
     const reusedHashActors = (reusedProofFindings?.submitterReuse ?? []).map((s) => ({ actorId: s.actorId, crossTaskReuseCount: s.count, proofIds: s.proofIds, matchType: "HASH" }));
 
+    // Timing-evidence signals from persisted trusted timestamps. Fast-completion uses the proof rows'
+    // workStartedAt/submittedAt; ignores-escalation uses the escalation table when the live client
+    // exposes it. Absent timing → the evaluators return a fail-visible blocked status (never faked).
+    const isoAt = new Date(nowMs).toISOString();
+    const completionRows: CompletionTimingRow[] = proofRows
+      .filter((p): p is typeof p & { id: string } => typeof p.id === "string")
+      .map((p) => ({ proofId: p.id, submittedByUserId: p.submittedByUserId, proofType: p.proofType, status: p.status, workStartedAt: p.workStartedAt ?? null, submittedAt: p.submittedAt ?? null }));
+    fastCompletionSignal = evaluateFastCompletion({ workspaceId, rows: completionRows, evaluatedAt: isoAt });
+
+    if (typeof deps.db.escalation?.findMany === "function") {
+      const escRows = await deps.db.escalation.findMany({
+        where: { workspaceId },
+        select: { id: true, assignedTarget: true, severity: true, status: true, createdAt: true, dueAt: true, acknowledgedAt: true, resolvedAt: true },
+      });
+      const timingRows: EscalationTimingRow[] = escRows.map((e) => ({ escalationId: e.id, assignedTarget: e.assignedTarget, severity: e.severity, status: e.status, createdAt: e.createdAt, dueAt: e.dueAt, acknowledgedAt: e.acknowledgedAt, resolvedAt: e.resolvedAt }));
+      escalationTimingSignal = evaluateEscalationTiming({ workspaceId, rows: timingRows, nowMs, evaluatedAt: isoAt });
+    }
+
     const gamingAnalysis = identifyGamingSignals({
       workspaceId, actors, reviewers, suspiciousProofActors, suspiciousReviewers,
       reusedHashActors: reusedProofFindings ? reusedHashActors : undefined,
+      fastCompletion: fastCompletionSignal,
+      escalationTiming: escalationTimingSignal,
       currentConstraint: topConstraint?.constraintType ?? null,
       topProfitLeakType: topProfitLeak?.leakType ?? null,
-      evaluatedAt: new Date(nowMs).toISOString(),
+      evaluatedAt: isoAt,
     });
     // Suppress a gaming signal the owner cleared (accept/dismiss) for the ANTI_GAMING_SIGNAL source —
     // only when every supporting proof is cleared; a new supporting proof re-surfaces it.
@@ -854,7 +908,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
