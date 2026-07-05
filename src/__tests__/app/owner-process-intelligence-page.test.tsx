@@ -5,7 +5,7 @@
  * renders the top breakdown, links back to the Owner Now View, and shows a safe error on failure.
  */
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, cleanup, waitFor } from "@testing-library/react";
+import { render, cleanup } from "@testing-library/react";
 import OwnerProcessIntelligencePage from "@/app/(authenticated)/owner/process-intelligence/page";
 
 const PAYLOAD = {
