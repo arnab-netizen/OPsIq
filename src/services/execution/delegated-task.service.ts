@@ -110,6 +110,12 @@ export async function applyTaskTransition(
   }
 
   const now = deps.now();
+  // Server-trusted work-start: stamp workStartedAt only on the FIRST start edge (ASSIGNED/ACKNOWLEDGED →
+  // IN_PROGRESS). A resume from BLOCKED → IN_PROGRESS must NOT overwrite the original start, so it is
+  // excluded. Never fabricated: a task that never starts leaves workStartedAt null (→ TIMING_MISSING).
+  const startsWork =
+    to === DelegatedTaskStatus.IN_PROGRESS &&
+    (task.status === DelegatedTaskStatus.ASSIGNED || task.status === DelegatedTaskStatus.ACKNOWLEDGED);
   await deps.db.$transaction(async (tx) => {
     const updated = await tx.delegatedTask.updateMany({
       // guard on id + workspace (isolation) + expected status (concurrency)
@@ -118,7 +124,7 @@ export async function applyTaskTransition(
         workspaceId: task.workspaceId,
         status: task.status,
       },
-      data: { status: to, updatedAt: now },
+      data: { status: to, updatedAt: now, ...(startsWork ? { workStartedAt: now } : {}) },
     });
     if (updated.count !== 1) {
       throw new TaskTransitionConflictError(

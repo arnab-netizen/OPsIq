@@ -15,6 +15,7 @@ import {
   EscalationContext,
   EscalationRoute,
   EscalationStatus,
+  planEscalationAcknowledgement,
   planEscalationResolution,
   routeEscalation,
 } from "@/domain/execution/escalation";
@@ -125,6 +126,65 @@ export async function raiseBlocker(
   });
 
   return { escalationId: command.escalationId, route, dueAt };
+}
+
+export interface AcknowledgeEscalationCommand {
+  escalationId: string;
+  workspaceId: string;
+  acknowledgedBy: string;
+}
+
+export interface AcknowledgeEscalationResult {
+  status: EscalationStatus;
+  /** True when the escalation was already acknowledged/handled — an idempotent no-op (no mutation). */
+  alreadyAcknowledged: boolean;
+}
+
+/**
+ * A manager/owner acknowledges an escalation: sets acknowledgedAt + acknowledgedBy and moves it
+ * OPEN → ACKNOWLEDGED, with an atomic audit write. Workspace-scoped + concurrency-guarded (only an OPEN
+ * row in this workspace is updated). Idempotent: a repeat acknowledgement matches 0 OPEN rows and is
+ * returned as a no-op success — it never errors and never overwrites the first acknowledgement time.
+ * Fail-closed: a non-existent / wrong-workspace / already-terminal escalation mutates nothing.
+ */
+export async function acknowledgeEscalation(
+  command: AcknowledgeEscalationCommand,
+  injected?: EscalationDeps
+): Promise<AcknowledgeEscalationResult> {
+  const deps = injected ?? (await resolveDefaultDeps());
+  const decision = planEscalationAcknowledgement(EscalationStatus.OPEN, command.acknowledgedBy);
+  if (!decision.allowed && !decision.alreadyAcknowledged) {
+    throw new EscalationResolutionError(decision.reason);
+  }
+
+  const now = deps.now();
+  const applied = await deps.db.$transaction(async (tx) => {
+    const updated = await tx.escalation.updateMany({
+      where: { id: command.escalationId, workspaceId: command.workspaceId, status: EscalationStatus.OPEN },
+      data: { status: EscalationStatus.ACKNOWLEDGED, acknowledgedAt: now, acknowledgedBy: command.acknowledgedBy },
+    });
+    if (updated.count !== 1) {
+      // Already acknowledged/handled, or not in this workspace → idempotent no-op (no audit, no mutation).
+      return false;
+    }
+    await tx.auditEvent.create({
+      data: {
+        id: uuid(),
+        workspaceId: command.workspaceId,
+        eventName: AUDIT_EVENTS.ESCALATION_ACKNOWLEDGED,
+        actorId: command.acknowledgedBy,
+        actorType: "user",
+        entityType: "escalation",
+        entityId: command.escalationId,
+        payload: { fromStatus: EscalationStatus.OPEN },
+        visibility: "internal",
+        occurredAt: now,
+      },
+    });
+    return true;
+  });
+
+  return { status: EscalationStatus.ACKNOWLEDGED, alreadyAcknowledged: !applied };
 }
 
 export interface ResolveEscalationCommand {

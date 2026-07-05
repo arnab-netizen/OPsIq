@@ -174,6 +174,32 @@ export function appearsInOwnerDashboard(route: EscalationRoute): boolean {
   );
 }
 
+export interface AcknowledgementDecision {
+  allowed: boolean;
+  /** True when the escalation is already acknowledged/resolved — the action is an idempotent no-op. */
+  alreadyAcknowledged: boolean;
+  reason: string;
+}
+
+/**
+ * An escalation may be ACKNOWLEDGED only from OPEN, by a named acknowledger. Acknowledging an already
+ * acknowledged/in-review/resolved escalation is an idempotent no-op (not an error), so a double-submit
+ * never fails and never overwrites the original acknowledgement time.
+ */
+export function planEscalationAcknowledgement(
+  from: EscalationStatus,
+  acknowledgedBy: string | null | undefined
+): AcknowledgementDecision {
+  if (!acknowledgedBy) {
+    return { allowed: false, alreadyAcknowledged: false, reason: "An acknowledger is required to acknowledge an escalation." };
+  }
+  if (from !== EscalationStatus.OPEN) {
+    // ACKNOWLEDGED / IN_REVIEW / RESOLVED are all "already handled" — idempotent success, no mutation.
+    return { allowed: false, alreadyAcknowledged: true, reason: `Escalation already ${from.toLowerCase()}.` };
+  }
+  return { allowed: true, alreadyAcknowledged: false, reason: "ok" };
+}
+
 export interface ResolutionDecision {
   allowed: boolean;
   reason: string;

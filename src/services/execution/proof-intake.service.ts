@@ -58,7 +58,7 @@ interface FindFirstArgs {
 }
 export interface ProofIntakeReadDb {
   delegatedTask: {
-    findFirst(a: FindFirstArgs): Promise<{ workspaceId: string; assignedUserId: string | null } | null>;
+    findFirst(a: FindFirstArgs): Promise<{ workspaceId: string; assignedUserId: string | null; workStartedAt: Date | null } | null>;
   };
   proof: {
     findFirst(a: FindFirstArgs): Promise<{ id: string; status: string; proofRequirementId: string | null } | null>;
@@ -113,7 +113,7 @@ export async function intakeProofSubmission(
   // 1. Task must exist in this workspace (never trust a client-claimed task).
   const task = await db.delegatedTask.findFirst({
     where: { id: taskId, workspaceId },
-    select: { workspaceId: true, assignedUserId: true },
+    select: { workspaceId: true, assignedUserId: true, workStartedAt: true },
   });
   if (!task) return { ok: false, reason: "Task not found." };
 
@@ -181,6 +181,8 @@ export async function intakeProofSubmission(
         submission: proofSubmission,
         actor: { role: TaskActorRole.EMPLOYEE, isAssignee, canReviewProof: false },
         existingHashes,
+        // Trusted work-start from the task (set when it first went IN_PROGRESS); null → TIMING_MISSING.
+        workStartedAt: task.workStartedAt,
       },
       deps.proof
     );

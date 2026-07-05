@@ -97,6 +97,12 @@ export interface SubmitProofCommand {
   actor: ProofActor;
   /** Existing file hashes in the workspace for duplicate detection. */
   existingHashes?: ReadonlySet<string>;
+  /**
+   * The task's server-trusted work-start time (DelegatedTask.workStartedAt), copied onto the proof so
+   * the fast-completion signal can measure a trusted duration (work start → submit). Absent/null when
+   * the task never started under governance → the proof's workStartedAt stays null (TIMING_MISSING).
+   */
+  workStartedAt?: Date | null;
 }
 
 export interface SubmitProofResult {
@@ -141,6 +147,8 @@ export async function submitProof(
         fileHash: submission.fileHash ?? null,
         duplicateFlagged,
         submittedAt: now,
+        // Trusted work-start copied from the task (never fabricated — null task start → left null).
+        ...(command.workStartedAt ? { workStartedAt: command.workStartedAt } : {}),
       },
     });
     if (updated.count !== 1) {
