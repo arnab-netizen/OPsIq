@@ -1,0 +1,58 @@
+{
+  "pass": "completion-escalation-timing-evidence-depth-pass",
+  "branch": "claude/completion-escalation-timing-evidence-depth-pass",
+  "base": "origin/main@ff741bac",
+  "pr123MergeStatus": "merged (squash commit ff741bac on main)",
+  "classification": [
+    "COMPLETION_ESCALATION_TIMING_EVIDENCE_REAL_AND_OWNER_VISIBLE",
+    "ANTI_GAMING_ANALYTICS_STRENGTHENED",
+    "OWNER_MODE_EXCELLENCE_DEEPENED"
+  ],
+  "schemaChange": "additive nullable columns only — proofs.work_started_at; escalations.acknowledged_at, escalations.acknowledged_by (backfill-safe, no existing column/index/row altered)",
+  "signalsUnblocked": {
+    "SUSPICIOUS_FAST_COMPLETION": "now produced from work_started_at + submitted_at vs an observed per-proof-type accepted-history baseline",
+    "MANAGER_IGNORES_ESCALATION": "now produced from escalation due_at + acknowledged_at (+ resolved_at) attributed per assigned manager"
+  },
+  "fastCompletionStatuses": ["NO_SIGNAL", "TIMING_MISSING", "BASELINE_MISSING", "FAST_COMPLETION_WARNING", "SUSPICIOUS_FAST_COMPLETION_PATTERN", "DATA_INSUFFICIENT"],
+  "escalationStatuses": ["NO_SIGNAL", "ESCALATION_TIMING_MISSING", "NO_MANAGER_ASSIGNMENT", "ESCALATION_ACK_OVERDUE", "ESCALATION_RESOLUTION_OVERDUE", "MANAGER_IGNORES_ESCALATION_PATTERN", "DATA_INSUFFICIENT"],
+  "baseline": {
+    "source": "OBSERVED_ACCEPTED_HISTORY per proofType (median of accepted, timed completions)",
+    "confidence": "HIGH>=8 / MEDIUM>=5 / LOW>=3 / NONE<3 samples",
+    "noFabrication": "fewer than 3 accepted timed samples -> BASELINE_MISSING; never an invented constant"
+  },
+  "outputShape": "16-field TimingSignal incl. timingEvidence[], baselineSource, baselineConfidence, sourceCompleteness, supportingProofIds (suppression key), status, reasonCodes, ownerExplanation",
+  "adjudicationIntegration": "active timing signals map into anti-gaming keeping evidence ids (proof ids for fast-completion, escalation ids for ignores-escalation); existing per-source suppression clears the exact ids; new id re-surfaces",
+  "ownerNowView": "topGamingSignal exposes the active signal; new timingEvidence block exposes both signals incl. fail-visible blocked statuses",
+  "sloImpact": {
+    "ANTI_GAMING_RISK": "FAIL/WARN when an active timing gaming signal is present; eases when cleared with no newer evidence",
+    "failVisible": "BLOCKED_BY_DATA / TIMING_MISSING / BASELINE_MISSING / ESCALATION_TIMING_MISSING never hidden to pass an SLO"
+  },
+  "safety": {
+    "noFraudLabel": true,
+    "noHiddenScore": true,
+    "noFabricatedTimestamps": true,
+    "noFabricatedBaselines": true,
+    "completionTimeNeverInferredFromText": true,
+    "missingDataNotTreatedAsFailure": true,
+    "crossWorkspaceIsolation": "per-workspace rows; clean workspace DATA_INSUFFICIENT, no bleed (tested)"
+  },
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid",
+    "governanceStrict": "31 frozen, 0 new",
+    "newUnitTests": 18,
+    "newDbSimTests": 5,
+    "unitChangedArea": "77 files / 752 tests pass (26 db skipped)",
+    "dbChangedArea": "103 files / 849 tests pass",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "populate work_started_at / acknowledged_at from the write paths so legacy rows leave TIMING_MISSING",
+    "owner UI for the timing signals + adjudication queue",
+    "per-proof linkage for contradiction-count concerns",
+    "browser E2E",
+    "Process Intelligence (out of scope)"
+  ]
+}

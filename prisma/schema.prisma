@@ -4141,6 +4141,11 @@ model Proof {
   fileHash            String?   @map("file_hash")
   duplicateFlagged    Boolean   @default(false) @map("duplicate_flagged")
   tamperSuspected     Boolean   @default(false) @map("tamper_suspected")
+  // Server-trusted time the operator was dispatched / marked work started for this proof's job.
+  // Nullable + backfill-safe: legacy rows are null → the fast-completion signal treats them as
+  // TIMING_MISSING (fail-visible), never fabricating a start time. Paired with submittedAt this
+  // yields a trusted measured duration (never inferred from user-supplied text).
+  workStartedAt       DateTime? @map("work_started_at")
   submittedAt         DateTime? @map("submitted_at")
   reviewReason        String?   @map("review_reason")
   reviewedByUserId    String?   @map("reviewed_by_user_id") @db.Uuid
@@ -4229,6 +4234,12 @@ model Escalation {
   status         String    @default("OPEN")
   createdBy      String?   @map("created_by") @db.Uuid
   dueAt          DateTime? @map("due_at")
+  // Server-trusted acknowledgement timing — set when the assigned manager/owner first acknowledges
+  // (OPEN → ACKNOWLEDGED/IN_REVIEW). Nullable + backfill-safe: legacy rows are null. Combined with
+  // dueAt/resolvedAt this yields trusted ack/resolution latency for the manager-ignores-escalation
+  // signal (never inferred from user-supplied text; a null ack past dueAt = unacknowledged).
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  acknowledgedBy String?   @map("acknowledged_by") @db.Uuid
   resolutionNote String?   @map("resolution_note")
   resolvedBy     String?   @map("resolved_by") @db.Uuid
   resolvedAt     DateTime? @map("resolved_at")

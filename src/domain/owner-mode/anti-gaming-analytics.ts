@@ -18,6 +18,7 @@
 import type { ConstraintType } from "@/domain/owner-mode/constraint-engine";
 import type { ProfitLeakType } from "@/domain/owner-mode/profit-leak-radar";
 import type { CredibilitySignalType } from "@/domain/owner-mode/evidence-credibility-graph";
+import { isActiveTimingSignal, type TimingSignal } from "@/domain/owner-mode/timing-evidence";
 
 export type GamingSignalType =
   | "REPEATED_WEAK_PROOF" | "REPEATED_REJECTED_PROOF" | "REUSED_PROOF_PATTERN" | "MISSING_PROOF_PATTERN"
@@ -115,6 +116,14 @@ export interface AntiGamingInput {
   reusedHashActors?: Array<{ actorId: string; role?: string | null; crossTaskReuseCount: number; proofIds: string[]; matchType: string }>;
   currentConstraint?: ConstraintType | null;
   topProfitLeakType?: ProfitLeakType | null;
+  /**
+   * Timing-evidence signals (fast-completion / ignores-escalation) evaluated from persisted trusted
+   * timestamps. When ACTIVE they surface as SUSPICIOUS_FAST_COMPLETION / MANAGER_IGNORES_ESCALATION
+   * gaming signals carrying their exact evidence ids; blocked/no-signal statuses do not fire here
+   * (they stay fail-visible context on the timing report) — never fabricated.
+   */
+  fastCompletion?: TimingSignal | null;
+  escalationTiming?: TimingSignal | null;
   /** Sources not yet persisted (e.g. complaint↔proof linkage) — for honest missing-data. */
   missingSources?: string[];
   evaluatedAt: string; // ISO
@@ -312,6 +321,57 @@ const FAKE_PATTERN_THRESHOLD = 2;
 const WRONG_INSUFFICIENT_PATTERN_THRESHOLD = 2;
 const TAMPER_PATTERN_THRESHOLD = 2;
 
+/**
+ * Map an ACTIVE timing-evidence signal to a gaming signal, preserving its exact evidence ids
+ * (supportingProofIds — proof ids for fast-completion, escalation ids for ignores-escalation) so the
+ * generalized adjudication suppression applies unchanged. Purely structural; adds no new judgement.
+ */
+export function mapTimingSignalToGaming(
+  sig: TimingSignal,
+  input: AntiGamingInput
+): Omit<GamingSignal, "workspaceId" | "evaluatedAt" | "signalScore"> {
+  const isFast = sig.signalType === "SUSPICIOUS_FAST_COMPLETION";
+  const repeated =
+    sig.status === "SUSPICIOUS_FAST_COMPLETION_PATTERN" || sig.status === "MANAGER_IGNORES_ESCALATION_PATTERN";
+  const evidence = [
+    ...sig.timingEvidence.slice(0, 5).map((e) => e.note),
+    ...(sig.baselineSource ? [`baseline: ${sig.baselineSource} (confidence ${sig.baselineConfidence})`] : []),
+    ...(sig.supportingProofIds.length ? [`${isFast ? "proof" : "escalation"} refs: ${sig.supportingProofIds.slice(0, 10).join(", ")}`] : []),
+  ];
+  return {
+    actorId: sig.actorId,
+    actorRole: sig.actorRole,
+    signalType: sig.signalType as GamingSignalType,
+    reasonCodes: sig.reasonCodes,
+    severity: sig.severity,
+    confidence: sig.confidence === "NEEDS_DATA" ? "NEEDS_DATA" : sig.confidence,
+    evidence,
+    patternCount: sig.patternCount,
+    isRepeatedPattern: repeated,
+    missingData: sig.missingData,
+    supportingProofIds: sig.supportingProofIds.length ? sig.supportingProofIds : undefined,
+    sourceCompleteness: sig.sourceCompleteness,
+    ownerExplanation: sig.ownerExplanation,
+    businessImpact: sig.businessImpact,
+    relatedProfitLeak: isFast && input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
+    relatedConstraint: isFast
+      ? input.currentConstraint === "STAFF" ? "STAFF" : null
+      : input.currentConstraint === "OWNER" || input.currentConstraint === "MANAGER" ? input.currentConstraint : null,
+    relatedCredibilityConcern: isFast ? "ACCEPTED_PROOF_WITH_BAD_OUTCOME" : null,
+    recommendedResponse: sig.recommendedResponse,
+    ownerActionRequired: sig.ownerActionRequired,
+    managerActionSufficient: !sig.ownerActionRequired,
+    trainingOrProcessRecommendation: isFast
+      ? "Review job pacing + proof standard with the operator; adjust the process before any discipline."
+      : "Set a hard escalation-acknowledgement SLA and review handling with the manager.",
+    reassessmentTrigger: repeated
+      ? isFast
+        ? "Re-verify the jobs backed by suspiciously fast proof."
+        : "Reassess the unhandled escalations and their downstream risk."
+      : null,
+  };
+}
+
 export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysis {
   const at = input.evaluatedAt;
   const ws = input.workspaceId;
@@ -445,6 +505,15 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
         reassessmentTrigger: "Re-verify the jobs backed by reused proof.",
       });
     }
+  }
+
+  // ── Timing-evidence signals (fast-completion / ignores-escalation) ─────────
+  // Produced from persisted trusted timestamps by the timing-evidence evaluators. Only ACTIVE
+  // statuses (warning/pattern/overdue) fire as gaming signals; each carries its exact evidence ids
+  // (proof ids or escalation ids) so it is fairly adjudication-suppressible. Blocked/no-signal
+  // statuses do not fire here — they remain fail-visible on the timing report.
+  for (const sig of [input.fastCompletion, input.escalationTiming]) {
+    if (sig && isActiveTimingSignal(sig)) push(mapTimingSignalToGaming(sig, input));
   }
 
   // ── Reviewer patterns ──────────────────────────────────────────────────────
