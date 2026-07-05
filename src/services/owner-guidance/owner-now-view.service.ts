@@ -35,7 +35,7 @@ import { archetypeGuidance, type ArchetypeGuidance } from "@/domain/owner-guidan
 import { computeOwnerWorkloadBudget, type OwnerWorkloadBudget } from "@/domain/owner-guidance/owner-workload-budget";
 import { identifyConstraints, type ConstraintFinding, type ConstraintSignals } from "@/domain/owner-mode/constraint-engine";
 import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } from "@/domain/owner-mode/profit-leak-radar";
-import { aggregateProofEvents, identifyGamingSignals, type GamingSignal, type ProofEventRow } from "@/domain/owner-mode/anti-gaming-analytics";
+import { aggregateProofEvents, identifyGamingSignals, aggregateSuspiciousProof, type GamingSignal, type ProofEventRow, type SuspiciousDisputeRecord, type SuspiciousProofRow } from "@/domain/owner-mode/anti-gaming-analytics";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -593,12 +593,22 @@ export async function getOwnerNowView(
     // One workspace-scoped query feeds both anti-gaming and the credibility graph.
     const proofRows = await deps.db.proof.findMany({
       where: { workspaceId },
-      select: { submittedByUserId: true, reviewedByUserId: true, proofType: true, status: true, duplicateFlagged: true, tamperSuspected: true, createdAt: true, reviewedAt: true },
+      select: { id: true, submittedByUserId: true, reviewedByUserId: true, proofType: true, status: true, duplicateFlagged: true, tamperSuspected: true, createdAt: true, reviewedAt: true },
     });
     const nowMs = deps.now();
     const { actors, reviewers } = aggregateProofEvents(proofRows, nowMs);
+
+    // Fake / reused / suspicious proof-DISPUTE → anti-gaming behaviour patterns. Join the governed
+    // dispute trail (disputeRisk.risks: proofId + category + audit ref) to the proof's submitter/
+    // reviewer + persisted tamper/duplicate fields. Derived from existing data — no new mutation.
+    const disputeRecords: SuspiciousDisputeRecord[] = (disputeRisk?.risks ?? []).map((r) => ({ proofId: r.proofId, disputeCategory: r.disputeCategory, auditEventId: r.sourceAuditEventId }));
+    const suspiciousRows: SuspiciousProofRow[] = proofRows
+      .filter((p): p is typeof p & { id: string } => typeof p.id === "string")
+      .map((p) => ({ id: p.id, submittedByUserId: p.submittedByUserId, reviewedByUserId: p.reviewedByUserId, duplicateFlagged: p.duplicateFlagged, tamperSuspected: p.tamperSuspected, status: p.status }));
+    const { suspiciousProofActors, suspiciousReviewers } = aggregateSuspiciousProof(disputeRecords, suspiciousRows);
+
     topGamingSignal = identifyGamingSignals({
-      workspaceId, actors, reviewers,
+      workspaceId, actors, reviewers, suspiciousProofActors, suspiciousReviewers,
       currentConstraint: topConstraint?.constraintType ?? null,
       topProfitLeakType: topProfitLeak?.leakType ?? null,
       evaluatedAt: new Date(nowMs).toISOString(),

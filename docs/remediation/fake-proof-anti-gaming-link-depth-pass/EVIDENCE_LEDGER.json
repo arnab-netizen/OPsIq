@@ -1,0 +1,68 @@
+{
+  "pass": "fake-proof-anti-gaming-link-depth-pass",
+  "branch": "claude/fake-proof-anti-gaming-link-depth-pass",
+  "base": "origin/main@e70f5986",
+  "pr118MergeStatus": "merged (squash commit e70f5986 on main)",
+  "classification": [
+    "FAKE_PROOF_ANTI_GAMING_LINK_REAL_AND_OWNER_VISIBLE",
+    "ANTI_GAMING_ANALYTICS_STRENGTHENED",
+    "EVIDENCE_CREDIBILITY_STRENGTHENED",
+    "BUSINESS_CONTROL_SLO_STRENGTHENED"
+  ],
+  "schemaChange": "NONE — derived signal from existing proof.disputed audit trail + persisted tamper_suspected/duplicateFlagged fields; no new mutation, no new audit",
+  "newSignalTypes": [
+    "SUSPECTED_FAKE_OR_REUSED_PROOF_PATTERN",
+    "TAMPER_SUSPECTED_PROOF_PATTERN",
+    "WRONG_OR_INSUFFICIENT_PROOF_PATTERN",
+    "MANAGER_ACCEPTED_SUSPICIOUS_PROOF",
+    "REVIEW_QUALITY_CONCERN"
+  ],
+  "sourceSignals": {
+    "disputeCategories": ["SUSPECTED_FAKE_OR_REUSED_PROOF", "WRONG_OR_INSUFFICIENT_PROOF", "MANAGER_REVIEW_ERROR"],
+    "persistedProofFields": ["tamper_suspected", "duplicateFlagged"],
+    "credibilityLink": "relatedCredibilityConcern (not duplicated)",
+    "auditRefs": ["proof.disputed", "proof.reviewed"]
+  },
+  "detection": {
+    "singleEvent": "WARNING (isRepeatedPattern=false, reasonCode SINGLE_SEVERE_WARNING)",
+    "repeated": "PATTERN (>=2), isRepeatedPattern=true",
+    "thresholds": { "fake": "1 warn / 2 pattern", "wrongInsufficient": 2, "tamper": 2, "managerAcceptedFake": 1 },
+    "transparency": "reason codes + proof IDs + audit refs on every signal; no hidden numeric score",
+    "noFraudLabel": "never emits fraud/fraudster/theft (asserted in tests)"
+  },
+  "aggregation": "aggregateSuspiciousProof — joins dispute records to proof submitter/reviewer + tamper/duplicate; absent/cross-workspace proof skipped (no fabrication)",
+  "integration": {
+    "antiGaming": "topGamingSignal can be the fake/reused/suspicious pattern (highest type priority)",
+    "credibility": "linked via relatedCredibilityConcern; not duplicated",
+    "profitLeak": "links WEAK_PROOF_REWORK_RISK where the dispute already drives it",
+    "constraint": "links STAFF / MANAGER where the dispute already drives it",
+    "slo": "ANTI_GAMING_RISK FAIL on high/critical fake pattern",
+    "reassessment": "high-risk repeated pattern carries a reassessment trigger (derived; no new mutation)",
+    "ownerNowView": "topGamingSignal surfaces it"
+  },
+  "safety": {
+    "noFraudLabel": true,
+    "noHiddenScore": true,
+    "ownerAdjudicationRequired": true,
+    "crossWorkspaceIsolation": "tested (absent proof skipped; clean workspace no signal)"
+  },
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid (no schema change)",
+    "governanceStrict": "31 frozen, 0 new",
+    "newTests": 13,
+    "domainTests": "10/10 pass",
+    "dbSimulation": "2/2 pass",
+    "ownerModeUnit": "63 files / 622 tests pass (15 db skipped)",
+    "ownerModePlusGuidanceDb": "85 files / 717 tests pass",
+    "browserE2E": "untouched (unproven)",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "dedicated reused-hash precheck (uses duplicateFlagged today)",
+    "owner adjudication surface + UI",
+    "browser E2E",
+    "Process Intelligence (out of scope)"
+  ]
+}

@@ -392,6 +392,8 @@ export function buildEvidenceCredibility(input: CredibilityInput): CredibilityGr
 // ── Aggregation from raw proof rows ──────────────────────────────────────────
 
 export interface CredibilityProofRow {
+  /** Proof id — optional here (unused by credibility aggregation), used by the anti-gaming join. */
+  id?: string;
   submittedByUserId: string | null;
   reviewedByUserId: string | null;
   proofType: string;
