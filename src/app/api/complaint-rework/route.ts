@@ -5,7 +5,14 @@ import { parseRequestBody } from "@/lib/validation";
 import { requirePermission } from "@/services/workspace/guided-execution-permissions.service";
 import { GuidedExecutionPermission } from "@/domain/workspace/guided-execution-permissions";
 import { OperationalEventType } from "@/domain/execution/complaint-rework";
-import { recordOperationalEvent, linkOperationalEventToProof } from "@/services/execution/complaint-rework.service";
+import {
+  recordOperationalEvent,
+  linkOperationalEventToProof,
+  resolveOperationalEvent,
+  dismissOperationalEvent,
+  markOperationalEventInReview,
+  markOperationalEventDuplicate,
+} from "@/services/execution/complaint-rework.service";
 
 export const runtime = "nodejs";
 
@@ -35,7 +42,27 @@ const linkSchema = z.object({
   eventId: z.string().trim().min(1),
   proofId: z.string().trim().min(1),
 });
-const bodySchema = z.discriminatedUnion("action", [recordSchema, linkSchema]);
+const resolveSchema = z.object({
+  action: z.literal("resolve"),
+  eventId: z.string().trim().min(1),
+  note: z.string().trim().min(3),
+});
+const dismissSchema = z.object({
+  action: z.literal("dismiss"),
+  eventId: z.string().trim().min(1),
+  note: z.string().trim().min(3),
+  reason: z.string().trim().min(3),
+});
+const inReviewSchema = z.object({
+  action: z.literal("in_review"),
+  eventId: z.string().trim().min(1),
+});
+const duplicateSchema = z.object({
+  action: z.literal("duplicate"),
+  eventId: z.string().trim().min(1),
+  note: z.string().trim().min(3),
+});
+const bodySchema = z.discriminatedUnion("action", [recordSchema, linkSchema, resolveSchema, dismissSchema, inReviewSchema, duplicateSchema]);
 
 function statusForReason(reason: string): number {
   if (/not found/i.test(reason)) return 404;
@@ -59,7 +86,18 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     return canonicalJson({ eventId: r.eventId }, { status: 200 });
   }
 
-  const r = await linkOperationalEventToProof({ workspaceId, actorId, eventId: input.eventId, proofId: input.proofId });
-  if (!r.ok) return canonicalJson({ error: r.reason }, { status: statusForReason(r.reason) });
-  return canonicalJson({ linked: true, deduped: r.deduped }, { status: 200 });
+  if (input.action === "link") {
+    const r = await linkOperationalEventToProof({ workspaceId, actorId, eventId: input.eventId, proofId: input.proofId });
+    if (!r.ok) return canonicalJson({ error: r.reason }, { status: statusForReason(r.reason) });
+    return canonicalJson({ linked: true, deduped: r.deduped }, { status: 200 });
+  }
+
+  // Governed status transitions (resolve / dismiss / in-review / duplicate).
+  const change =
+    input.action === "resolve" ? await resolveOperationalEvent({ workspaceId, actorId, eventId: input.eventId, note: input.note })
+    : input.action === "dismiss" ? await dismissOperationalEvent({ workspaceId, actorId, eventId: input.eventId, note: input.note, reason: input.reason })
+    : input.action === "duplicate" ? await markOperationalEventDuplicate({ workspaceId, actorId, eventId: input.eventId, note: input.note })
+    : await markOperationalEventInReview({ workspaceId, actorId, eventId: input.eventId });
+  if (!change.ok) return canonicalJson({ error: change.reason }, { status: statusForReason(change.reason) });
+  return canonicalJson({ status: input.action, deduped: change.deduped }, { status: 200 });
 });

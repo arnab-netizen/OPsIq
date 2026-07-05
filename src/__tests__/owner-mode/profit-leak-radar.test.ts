@@ -69,6 +69,25 @@ describe("profit-leak radar — detection", () => {
     expect(slow.some((x) => x.leakType === "STAFF_PRODUCTIVITY_DROP")).toBe(true);
   });
 
+  it("DELIVERY_DELAY_COST from a linked delivery complaint; measured only when an amount is supplied", () => {
+    const qual = identifyProfitLeaks(base({ deliveryComplaintCount: 2 })).leaks.find((x) => x.leakType === "DELIVERY_DELAY_COST");
+    expect(qual).toBeTruthy();
+    expect(qual!.estimatedImpact.rangeHigh).toBeUndefined(); // no fabricated figure
+    const measured = identifyProfitLeaks(base({ deliveryComplaintCount: 2, deliveryComplaintImpactAmount: 75 })).leaks.find((x) => x.leakType === "DELIVERY_DELAY_COST");
+    expect(measured!.estimatedImpact.rangeHigh).toBe(75);
+    expect(measured!.confidence).toBe("HIGH");
+  });
+
+  it("a pricing complaint drives a PRICING leak that stays NEEDS_DATA without an amount (no fabricated undercharge)", () => {
+    const noAmt = identifyProfitLeaks(base({ pricingComplaintCount: 1 })).leaks.find((x) => x.leakType === "PRICING_UNDERCHARGE");
+    expect(noAmt).toBeTruthy();
+    expect(noAmt!.estimatedImpact.tier).toBe("NEEDS_DATA");
+    expect(noAmt!.confidence).toBe("NEEDS_DATA");
+    expect(noAmt!.missingData.length).toBeGreaterThan(0);
+    const amt = identifyProfitLeaks(base({ pricingComplaintCount: 1, pricingComplaintImpactAmount: 120 })).leaks.find((x) => x.leakType === "PRICING_UNDERCHARGE");
+    expect(amt!.estimatedImpact.rangeHigh).toBe(120);
+  });
+
   it("DELIVERY_DELAY_COST when the delivery signal exists", () => {
     const l = identifyProfitLeaks(base({ deliveryDelaySignal: true }));
     expect(l.leaks.some((x) => x.leakType === "DELIVERY_DELAY_COST")).toBe(true);

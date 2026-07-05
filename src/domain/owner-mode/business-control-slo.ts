@@ -28,7 +28,7 @@ export type SLOType =
   | "ANTI_GAMING_RISK" | "REASSESSMENT_LATENCY" | "SHOCK_HANDLING_LATENCY" | "OWNER_WORKLOAD_BURDEN"
   | "OWNER_BOTTLENECK" | "CONSTRAINT_FRESHNESS" | "PROFIT_LEAK_FRESHNESS" | "OPPORTUNITY_DECISION_COMPLETENESS"
   | "STARTUP_VALIDATION_COMPLETENESS" | "NOW_VIEW_SIGNAL_COMPLETENESS" | "CROSS_WORKSPACE_ISOLATION_PROOF"
-  | "PROOF_OUTCOME_INTEGRITY";
+  | "PROOF_OUTCOME_INTEGRITY" | "OPERATIONAL_EVENT_RESOLUTION";
 
 type Sev = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "POSITIVE";
 
@@ -57,6 +57,11 @@ export interface BusinessControlInput {
   shockHandlingLatency?: CorrelationLatencyStat | null;
   /** Measured proof→outcome integrity (accepted-then-contradicted rate), or null → NOT_MEASURABLE. */
   proofOutcome?: ProofOutcomeMeasurement | null;
+  /**
+   * Operational-event resolution/aging health (open/overdue complaint/rework events), or null →
+   * NOT_MEASURABLE when no operational events exist.
+   */
+  operationalEventHealth?: { activeCount: number; overdueCount: number; overdueSevereCount: number; totalCount: number; escalationTriggered: boolean } | null;
   startupDataAvailable?: boolean;
   /** Test-backed isolation status (from the isolation test suite), or null. */
   isolationTestPassed?: boolean | null;
@@ -302,6 +307,31 @@ export function evaluateBusinessControlSLOs(input: BusinessControlInput): Busine
     add(notMeasurable("PROOF_OUTCOME_INTEGRITY", "Accepted proof held up (not later reversed)", "0% reversed",
       ["accepted proof in the window (none to assess for later contradiction)"], ws, at,
       "Becomes measurable once proof is accepted and its later review transitions are recorded."));
+  }
+
+  // 13c. OPERATIONAL_EVENT_RESOLUTION — open/overdue complaint/rework events (resolution + aging).
+  if (input.operationalEventHealth && input.operationalEventHealth.totalCount > 0) {
+    const h = input.operationalEventHealth;
+    const status: SLOStatus = h.overdueSevereCount > 0 ? "FAIL" : h.overdueCount > 0 ? "WARN" : "PASS";
+    add({ sloType: "OPERATIONAL_EVENT_RESOLUTION", sliName: "Complaint/rework events resolved within their window", status,
+      target: "0 overdue events (severity-scaled window)",
+      actualValue: `${h.activeCount} open, ${h.overdueCount} overdue${h.overdueSevereCount > 0 ? ` (${h.overdueSevereCount} severe)` : ""}`,
+      measurementWindow: "90-day rolling (operational_events, server createdAt)", confidence: "HIGH",
+      sourceDataRefs: ["operational_events (status + age vs severity threshold)"],
+      missingData: [],
+      ownerExplanation: status === "PASS"
+        ? h.activeCount > 0 ? `${h.activeCount} complaint/rework event(s) are open but still within their resolution window.` : "No open complaint/rework events."
+        : h.overdueSevereCount > 0
+          ? `${h.overdueSevereCount} severe complaint/rework event(s) are overdue — unresolved risk is compounding.`
+          : `${h.overdueCount} complaint/rework event(s) are past their resolution window.`,
+      businessImpact: "An overdue complaint/rework event is unresolved business risk that keeps leaking profit and eroding trust.",
+      degradedBehavior: status === "PASS" ? null : "Real customer/quality problems sit unresolved and compound.",
+      recommendedAction: status === "PASS" ? "No action — events are being resolved in time." : "Resolve or dismiss the overdue event(s) with a note; escalate the severe ones to reassessment.",
+      ownerActionRequired: status === "FAIL" });
+  } else {
+    add(notMeasurable("OPERATIONAL_EVENT_RESOLUTION", "Complaint/rework events resolved within their window", "0 overdue",
+      ["operational complaint/rework events (none recorded)"], ws, at,
+      "Becomes measurable once a complaint/rework event is recorded."));
   }
 
   add(input.startupDataAvailable

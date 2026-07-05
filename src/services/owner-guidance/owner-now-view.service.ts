@@ -42,6 +42,7 @@ import type { ControlCorrelationReport } from "@/domain/owner-mode/control-corre
 import type { ProofOutcomeLinkageReport } from "@/domain/owner-mode/proof-outcome-linkage";
 import type { DisputeRiskAnalysis } from "@/domain/owner-mode/dispute-risk";
 import type { ComplaintReworkAnalysis } from "@/domain/execution/complaint-rework";
+import type { OperationalEventAgingSummary } from "@/domain/execution/operational-event-aging";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -205,6 +206,8 @@ export interface OwnerNowViewPayload {
   disputeRisk: DisputeRiskAnalysis | null;
   /** Proof↔complaint/rework linkage (per-event model), or null if unavailable. */
   complaintReworkLinks: ComplaintReworkAnalysis | null;
+  /** Operational-event resolution + aging health (open/overdue/resolved), or null if unavailable. */
+  operationalEventHealth: OperationalEventAgingSummary | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -525,6 +528,9 @@ export async function getOwnerNowView(
     disputeQualityCount: (da?.disputeQualityCount ?? 0) + (cr?.qualityCount ?? 0),
     disputeStaffCount: da?.disputeStaffCount ?? 0,
     disputeManagerCount: da?.disputeManagerCount ?? 0,
+    // Linked delivery/pricing complaints (per-event model) → DELIVERY / PRICING constraints.
+    complaintDeliveryCount: cr?.deliveryCount ?? 0,
+    complaintPricingCount: cr?.pricingCount ?? 0,
     missingCriticalData: ctx.missingCriticalData,
     evaluatedAt: new Date(deps.now()).toISOString(),
   };
@@ -557,6 +563,12 @@ export async function getOwnerNowView(
     disputeWeakProofCount: da?.disputeWeakProofCount ?? 0,
     disputeReworkImpactAmount: cr?.measuredReworkImpact ?? null,
     disputeComplaintImpactAmount: cr?.measuredComplaintImpact ?? null,
+    // Linked delivery/pricing complaints (per-event model) → DELIVERY_DELAY_COST / pricing leak,
+    // sized only when a real amount was entered on the event (else qualitative / NEEDS_DATA).
+    deliveryComplaintCount: cr?.deliveryCount ?? 0,
+    deliveryComplaintImpactAmount: cr?.measuredDeliveryImpact ?? null,
+    pricingComplaintCount: cr?.pricingCount ?? 0,
+    pricingComplaintImpactAmount: cr?.measuredPricingImpact ?? null,
     missingCriticalData: ctx.missingCriticalData,
     evaluatedAt: new Date(deps.now()).toISOString(),
   };
@@ -662,6 +674,17 @@ export async function getOwnerNowView(
     shockHandlingLatency: controlCorrelations?.shockHandlingLatency ?? null,
     // Measured proof→outcome integrity (live path only); null → PROOF_OUTCOME_INTEGRITY NOT_MEASURABLE.
     proofOutcome: proofOutcomeReport?.measurement ?? null,
+    // Operational-event resolution/aging health (live path only); null → OPERATIONAL_EVENT_RESOLUTION
+    // NOT_MEASURABLE when no complaint/rework events exist.
+    operationalEventHealth: complaintReworkLinks
+      ? {
+          activeCount: complaintReworkLinks.eventHealth.activeCount,
+          overdueCount: complaintReworkLinks.eventHealth.overdueCount,
+          overdueSevereCount: complaintReworkLinks.eventHealth.overdueSevereCount,
+          totalCount: complaintReworkLinks.eventHealth.events.length,
+          escalationTriggered: complaintReworkLinks.eventHealth.escalationTriggered,
+        }
+      : null,
     // Honest: these sources are not persisted for a runtime metric yet.
     opportunityEnvelopeFields: null,
     startupDataAvailable: false,
@@ -694,7 +717,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import {
   recordOperationalEvent, linkOperationalEventToProof, getComplaintReworkLinks,
+  resolveOperationalEvent, dismissOperationalEvent, markOperationalEventInReview,
   type ComplaintReworkDeps,
 } from "@/services/execution/complaint-rework.service";
 import { OperationalEventType, ComplaintCategory } from "@/domain/execution/complaint-rework";
@@ -94,6 +95,46 @@ describe("linkOperationalEventToProof", () => {
   it("fails closed on a cross-workspace / missing proof", async () => {
     const { deps } = makeDeps({ event: { id: EVENT, workspaceId: WS, relatedProofId: null }, proof: null });
     const r = await linkOperationalEventToProof({ workspaceId: WS, actorId: ACTOR, eventId: EVENT, proofId: PROOF }, deps);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toMatch(/not found/i);
+  });
+});
+
+describe("operational-event status transitions", () => {
+  it("resolves an event with a note + writes a status-change audit; idempotent when already resolved", async () => {
+    const { deps, calls } = makeDeps({ event: { id: EVENT, workspaceId: WS, relatedProofId: null, status: "OPEN", severity: "HIGH" } });
+    const r = await resolveOperationalEvent({ workspaceId: WS, actorId: ACTOR, eventId: EVENT, note: "recleaned and redelivered" }, deps);
+    expect(r.ok && r.deduped).toBe(false);
+    expect(calls.updates[0].status).toBe("RESOLVED");
+    expect(calls.updates[0].resolutionNote).toBe("recleaned and redelivered");
+    expect(calls.updates[0].resolvedByUserId).toBe(ACTOR);
+    expect(calls.audits[0].eventName).toBe("operational_event.status_changed");
+    expect((calls.audits[0].payload as Record<string, unknown>).toStatus).toBe("RESOLVED");
+
+    // Already RESOLVED → idempotent no-op (no update/audit written).
+    const dep2 = makeDeps({ event: { id: EVENT, workspaceId: WS, relatedProofId: null, status: "RESOLVED", severity: "HIGH" } });
+    const again = await resolveOperationalEvent({ workspaceId: WS, actorId: ACTOR, eventId: EVENT, note: "x again" }, dep2.deps);
+    expect(again.ok && again.deduped).toBe(true);
+    expect(dep2.calls.updates).toHaveLength(0);
+  });
+
+  it("fails closed on resolve without a note and dismiss without a reason", async () => {
+    const { deps } = makeDeps({ event: { id: EVENT, workspaceId: WS, relatedProofId: null, status: "OPEN", severity: "HIGH" } });
+    expect((await resolveOperationalEvent({ workspaceId: WS, actorId: ACTOR, eventId: EVENT, note: "" }, deps)).ok).toBe(false);
+    expect((await dismissOperationalEvent({ workspaceId: WS, actorId: ACTOR, eventId: EVENT, note: "looked at it", reason: "" }, deps)).ok).toBe(false);
+  });
+
+  it("marks an event in review without a note", async () => {
+    const { deps, calls } = makeDeps({ event: { id: EVENT, workspaceId: WS, relatedProofId: null, status: "OPEN", severity: "MEDIUM" } });
+    const r = await markOperationalEventInReview({ workspaceId: WS, actorId: ACTOR, eventId: EVENT }, deps);
+    expect(r.ok).toBe(true);
+    expect(calls.updates[0].status).toBe("IN_REVIEW");
+    expect(calls.updates[0].resolvedAt).toBeNull();
+  });
+
+  it("fails closed on a cross-workspace / missing event", async () => {
+    const { deps } = makeDeps({ event: null });
+    const r = await resolveOperationalEvent({ workspaceId: WS, actorId: ACTOR, eventId: EVENT, note: "note here" }, deps);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/not found/i);
   });

@@ -14,6 +14,12 @@
 
 import type { ProfitLeakType } from "@/domain/owner-mode/profit-leak-radar";
 import type { ConstraintType } from "@/domain/owner-mode/constraint-engine";
+import {
+  buildOperationalEventAging,
+  isActiveStatus,
+  type AgingEventRow,
+  type OperationalEventAgingSummary,
+} from "@/domain/execution/operational-event-aging";
 
 export enum OperationalEventType { COMPLAINT = "COMPLAINT", REWORK = "REWORK" }
 
@@ -153,6 +159,9 @@ export interface OperationalEventRow {
   createdAt: Date;
   estimatedImpactAmount: number | null;
   impactConfidence: string;
+  /** Resolution provenance (present on the live path; optional for pure-domain callers). */
+  resolvedAt?: Date | null;
+  updatedAt?: Date;
 }
 /** The accepted-proof facts needed to attribute a linked event. */
 export interface LinkedProofRow { id: string; status: string; submittedByUserId: string | null }
@@ -189,6 +198,11 @@ export interface ComplaintReworkAnalysis {
   links: ProofEventLink[];
   submitterComplaints: Array<{ actorId: string; count: number }>;
   submitterReworks: Array<{ actorId: string; count: number }>;
+  /**
+   * Risk-driving aggregates — counted over ACTIVE (OPEN/IN_REVIEW) linked events only, so a resolved
+   * or dismissed event stops driving the live profit-leak / constraint / credibility picture. The
+   * measured impacts sum real amounts (null when none supplied — never fabricated).
+   */
   aggregates: {
     complaintLinkedCount: number;
     reworkLinkedCount: number;
@@ -197,9 +211,16 @@ export interface ComplaintReworkAnalysis {
     pricingCount: number;
     measuredComplaintImpact: number | null; // sum of real amounts, null if none measured
     measuredReworkImpact: number | null;
+    measuredDeliveryImpact: number | null;
+    measuredPricingImpact: number | null;
   };
-  /** proof→complaint / proof→rework are measurable once ≥1 linked event to an accepted proof exists. */
+  /**
+   * proof→complaint / proof→rework are MEASURABLE once ≥1 linked event to an accepted proof ever
+   * existed — a historical fact that survives resolution (unlike the active-risk aggregates).
+   */
   measurement: { proofComplaintMeasurable: boolean; proofReworkMeasurable: boolean };
+  /** Owner-facing resolution + aging health (open/overdue/resolved, top active event, escalation). */
+  eventHealth: OperationalEventAgingSummary;
   topLink: ProofEventLink | null;
   evaluatedAt: string;
 }
@@ -220,7 +241,11 @@ export function buildComplaintReworkAnalysis(
   const agg = {
     complaintLinkedCount: 0, reworkLinkedCount: 0, qualityCount: 0, deliveryCount: 0, pricingCount: 0,
     measuredComplaintImpact: null as number | null, measuredReworkImpact: null as number | null,
+    measuredDeliveryImpact: null as number | null, measuredPricingImpact: null as number | null,
   };
+  // Historical measurability (survives resolution) — counted over ALL linked+accepted events.
+  let allLinkedComplaintCount = 0;
+  let allLinkedReworkCount = 0;
 
   for (const e of events) {
     const risk = riskForEvent(e.eventType, e.category);
@@ -229,20 +254,33 @@ export function buildComplaintReworkAnalysis(
     const proofWasAccepted = !!proof && (proof.status === "ACCEPTED" || proof.status === "DISPUTED" || proof.status === "OVERRIDDEN_NOT_VERIFIED");
     const isComplaint = e.eventType === OperationalEventType.COMPLAINT;
     const measured = e.estimatedImpactAmount != null && e.estimatedImpactAmount > 0 ? e.estimatedImpactAmount : null;
+    const active = isActiveStatus(e.status);
 
     if (linkStatus === "LINKED" && proofWasAccepted) {
-      if (isComplaint) {
-        agg.complaintLinkedCount++;
-        if (measured != null) agg.measuredComplaintImpact = (agg.measuredComplaintImpact ?? 0) + measured;
-        if (proof?.submittedByUserId) subComplaint.set(proof.submittedByUserId, (subComplaint.get(proof.submittedByUserId) ?? 0) + 1);
-      } else {
-        agg.reworkLinkedCount++;
-        if (measured != null) agg.measuredReworkImpact = (agg.measuredReworkImpact ?? 0) + measured;
-        if (proof?.submittedByUserId) subRework.set(proof.submittedByUserId, (subRework.get(proof.submittedByUserId) ?? 0) + 1);
+      // Historical measurability counts every ever-linked event, regardless of resolution.
+      if (isComplaint) allLinkedComplaintCount++; else allLinkedReworkCount++;
+
+      // Live risk aggregates count only ACTIVE (OPEN/IN_REVIEW) events — a resolved/dismissed event
+      // stops driving the current profit-leak / constraint / credibility picture.
+      if (active) {
+        if (isComplaint) {
+          agg.complaintLinkedCount++;
+          if (measured != null) agg.measuredComplaintImpact = (agg.measuredComplaintImpact ?? 0) + measured;
+          if (proof?.submittedByUserId) subComplaint.set(proof.submittedByUserId, (subComplaint.get(proof.submittedByUserId) ?? 0) + 1);
+        } else {
+          agg.reworkLinkedCount++;
+          if (measured != null) agg.measuredReworkImpact = (agg.measuredReworkImpact ?? 0) + measured;
+          if (proof?.submittedByUserId) subRework.set(proof.submittedByUserId, (subRework.get(proof.submittedByUserId) ?? 0) + 1);
+        }
+        if (risk?.constraintType === "QUALITY") agg.qualityCount++;
+        else if (risk?.constraintType === "DELIVERY") {
+          agg.deliveryCount++;
+          if (measured != null) agg.measuredDeliveryImpact = (agg.measuredDeliveryImpact ?? 0) + measured;
+        } else if (risk?.constraintType === "PRICING") {
+          agg.pricingCount++;
+          if (measured != null) agg.measuredPricingImpact = (agg.measuredPricingImpact ?? 0) + measured;
+        }
       }
-      if (risk?.constraintType === "QUALITY") agg.qualityCount++;
-      else if (risk?.constraintType === "DELIVERY") agg.deliveryCount++;
-      else if (risk?.constraintType === "PRICING") agg.pricingCount++;
     }
 
     links.push({
@@ -263,15 +301,29 @@ export function buildComplaintReworkAnalysis(
     });
   }
 
+  // topLink ranks ACTIVE linked events first (live risk), falling back to any linked event.
   const linkedLinks = links.filter((l) => l.linkStatus === "LINKED" && l.proofWasAccepted);
-  const ranked = [...linkedLinks].sort((a, b) => (SEV_RANK[b.severity] ?? 0) - (SEV_RANK[a.severity] ?? 0));
+  const rankSev = (a: ProofEventLink, b: ProofEventLink): number => (SEV_RANK[b.severity] ?? 0) - (SEV_RANK[a.severity] ?? 0);
+  const activeLinked = linkedLinks.filter((l) => isActiveStatus(l.status)).sort(rankSev);
+  const anyLinked = [...linkedLinks].sort(rankSev);
+
+  // Owner-facing resolution + aging health, over ALL events (server-trusted createdAt).
+  const nowMs = Number.isFinite(Date.parse(evaluatedAt)) ? Date.parse(evaluatedAt) : 0;
+  const agingRows: AgingEventRow[] = events.map((e) => ({
+    id: e.id, eventType: e.eventType, category: e.category, severity: e.severity, status: e.status,
+    relatedProofId: e.relatedProofId, relatedActionId: e.relatedActionId, description: e.description,
+    createdAt: e.createdAt, resolvedAt: e.resolvedAt ?? null, updatedAt: e.updatedAt ?? e.createdAt,
+  }));
+  const eventHealth = buildOperationalEventAging(workspaceId, agingRows, nowMs, evaluatedAt);
+
   return {
     workspaceId, links,
     submitterComplaints: [...subComplaint.entries()].map(([actorId, count]) => ({ actorId, count })),
     submitterReworks: [...subRework.entries()].map(([actorId, count]) => ({ actorId, count })),
     aggregates: agg,
-    measurement: { proofComplaintMeasurable: agg.complaintLinkedCount > 0, proofReworkMeasurable: agg.reworkLinkedCount > 0 },
-    topLink: ranked[0] ?? null,
+    measurement: { proofComplaintMeasurable: allLinkedComplaintCount > 0, proofReworkMeasurable: allLinkedReworkCount > 0 },
+    eventHealth,
+    topLink: (activeLinked[0] ?? anyLinked[0]) ?? null,
     evaluatedAt,
   };
 }

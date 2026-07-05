@@ -4171,13 +4171,15 @@ model OperationalEvent {
   businessId            String?   @map("business_id") @db.Uuid
   category              String
   severity              String    @default("MEDIUM")
-  status                String    @default("OPEN") // OPEN | RESOLVED
+  status                String    @default("OPEN") // OPEN | IN_REVIEW | RESOLVED | DISMISSED | DUPLICATE
   source                String    @default("owner") // owner | manager | staff | customer_reported | system
   description           String    @db.Text
   reportedByUserId      String?   @map("reported_by_user_id") @db.Uuid
   occurredAt            DateTime? @map("occurred_at")
   resolvedAt            DateTime? @map("resolved_at")
-  outcome               String?
+  resolvedByUserId      String?   @map("resolved_by_user_id") @db.Uuid
+  resolutionNote        String?   @map("resolution_note") @db.Text
+  outcome               String?   // RESOLVED_FIXED | DISMISSED_NOT_VALID | DUPLICATE | ...
   estimatedImpactAmount Float?    @map("estimated_impact_amount")
   impactCurrency        String?   @map("impact_currency")
   impactConfidence      String    @default("NEEDS_DATA") @map("impact_confidence") // MEASURED | ESTIMATED | NEEDS_DATA

@@ -76,4 +76,23 @@ describe("complaint/rework — linkage analysis", () => {
     expect(a.links[0].missingData.length).toBeGreaterThan(0);
     expect(a.links.every((l) => l.workspaceId === "ws-1")).toBe(true);
   });
+
+  it("a resolved complaint stops driving live risk but stays historically measurable + counted as resolved", () => {
+    const a = buildComplaintReworkAnalysis("ws-1", [ev({ status: "RESOLVED", resolvedAt: NOW, updatedAt: NOW })], [proof()], AT);
+    // Live-risk aggregates drop to 0 (a resolved event no longer leaks profit / binds a constraint).
+    expect(a.aggregates.complaintLinkedCount).toBe(0);
+    expect(a.aggregates.qualityCount).toBe(0);
+    expect(a.submitterComplaints).toEqual([]);
+    // But proof→complaint stays measurable (historical) and the event shows as resolved.
+    expect(a.measurement.proofComplaintMeasurable).toBe(true);
+    expect(a.eventHealth.resolvedCount).toBe(1);
+    expect(a.eventHealth.activeCount).toBe(0);
+  });
+
+  it("exposes an aging summary (open/overdue) over server createdAt", () => {
+    const a = buildComplaintReworkAnalysis("ws-1", [ev()], [proof()], AT);
+    expect(a.eventHealth.openCount).toBe(1);
+    expect(a.eventHealth.activeCount).toBe(1);
+    expect(a.eventHealth.workspaceId).toBe("ws-1");
+  });
 });
