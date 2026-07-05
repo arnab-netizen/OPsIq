@@ -8,7 +8,26 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Owner Adjudication Browser E2E depth pass (latest)
+## Timing Write-Path Population depth pass (latest)
+- **Base:** `origin/main` @ `e59eb2fe` (Owner Adjudication Browser E2E PR #126 merged).
+- **Branch:** `claude/timing-write-path-population-depth-pass`.
+- **Classification:** `TIMING_WRITE_PATH_POPULATION_REAL_AND_OWNER_VISIBLE` (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).
+- **The timing evidence fields are now populated by real governed write paths** (not only seeded data):
+  `DelegatedTask.workStartedAt` (new nullable column) is stamped when a task first goes ACKNOWLEDGED →
+  IN_PROGRESS (`applyTaskTransition`, resume never overwrites), copied onto the proof at submission
+  alongside the already-server-set `submittedAt`; a new governed `acknowledgeEscalation` service +
+  `POST /api/escalation/acknowledge` route set `Escalation.acknowledgedAt`/`acknowledgedBy`
+  (workspace-scoped, authz via `PROOF_REVIEW_LOW_RISK`, idempotent, atomic `escalation.acknowledged`
+  audit, fail-closed). `resolvedAt` semantics unchanged.
+- **Honest missing data:** no work-start → TIMING_MISSING (submit time is never used as work start);
+  <3 accepted samples → BASELINE_MISSING; no fabricated timestamps/baselines; no fraud label; no hidden
+  score. Acknowledging escalations eases `MANAGER_IGNORES_ESCALATION`; a new overdue one re-surfaces it.
+- **Still missing:** legacy rows stay TIMING_MISSING/unacknowledged until touched; no task-start/acknowledge UI.
+- **Verification:** tsc 0 · prisma valid · governance 31-frozen/0-new · `next build` exit 0 · 10 unit +
+  6 DB-sim tests · owner-mode+execution unit regression 1243 · DB regression 218. Details:
+  `docs/remediation/timing-write-path-population-depth-pass/`.
+
+## Owner Adjudication Browser E2E depth pass
 - **Base:** `origin/main` @ `412688e0` (Owner Adjudication UI / Queue PR #125 merged).
 - **Branch:** `claude/owner-adjudication-browser-e2e-depth-pass`.
 - **Classification:** `OWNER_ADJUDICATION_BROWSER_E2E_PROVEN` (locally 5/5; CI confirmed on the PR) (+ `OWNER_MODE_EXCELLENCE_DEEPENED`).

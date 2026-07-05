@@ -1,0 +1,49 @@
+{
+  "pass": "timing-write-path-population-depth-pass",
+  "branch": "claude/timing-write-path-population-depth-pass",
+  "base": "origin/main@e59eb2fe",
+  "pr126MergeStatus": "merged (squash commit e59eb2fe on main)",
+  "classification": [
+    "TIMING_WRITE_PATH_POPULATION_REAL_AND_OWNER_VISIBLE",
+    "OWNER_MODE_EXCELLENCE_DEEPENED"
+  ],
+  "schemaChange": "additive nullable column DelegatedTask.workStartedAt (delegated_tasks.work_started_at); Proof.workStartedAt + Escalation.acknowledgedAt/acknowledgedBy already existed (PR #124)",
+  "writePathsPopulated": {
+    "Proof.submittedAt": "already server-set by submitProof on SUBMITTED transition (preserved)",
+    "Proof.workStartedAt": "copied from the task's workStartedAt at submission (null -> TIMING_MISSING)",
+    "DelegatedTask.workStartedAt": "stamped by applyTaskTransition on first ACKNOWLEDGED->IN_PROGRESS (resume never overwrites)",
+    "Escalation.acknowledgedAt/acknowledgedBy": "set by new acknowledgeEscalation service + POST /api/escalation/acknowledge (idempotent, audited, fail-closed)"
+  },
+  "newGovernedPath": {
+    "domain": "planEscalationAcknowledgement (OPEN->ACKNOWLEDGED; already-handled = idempotent no-op)",
+    "service": "acknowledgeEscalation (workspace-scoped, concurrency-guarded, atomic audit escalation.acknowledged, idempotent, fail-closed)",
+    "route": "POST /api/escalation/acknowledge (canonical enforcement + requirePermission PROOF_REVIEW_LOW_RISK)",
+    "auditConstant": "ESCALATION_ACKNOWLEDGED = escalation.acknowledged"
+  },
+  "noFabrication": {
+    "workStartMissing": "null work-start -> proof workStartedAt null -> TIMING_MISSING (submit time never used as work start)",
+    "baseline": "derived from observed accepted history; <3 samples -> BASELINE_MISSING",
+    "noFraudLabel": true,
+    "noHiddenScore": true,
+    "completionTimeNeverInferredFromText": true
+  },
+  "ownerNowViewIntegration": "existing timingEvidence + ANTI_GAMING_RISK wiring (PR #124) now consumes naturally-populated timing; acknowledging escalations eases MANAGER_IGNORES_ESCALATION; new overdue re-surfaces",
+  "verification": {
+    "tsc": "0 errors",
+    "prismaValidate": "valid",
+    "governanceStrict": "31 frozen, 0 new",
+    "nextBuild": "exit 0 (/api/escalation/acknowledge in manifest)",
+    "unitTests": "10 (7 acknowledgement + 3 work-start)",
+    "dbSimTests": "6 (timing-write-path-population-simulation)",
+    "unitRegression": "owner-mode + execution + domain 118 files / 1243 tests pass (27 db skipped)",
+    "dbRegression": "execution + owner-guidance 34 files / 218 tests pass",
+    "browserE2E": "untouched this pass",
+    "publicSaaS": "not built (out of scope)",
+    "productHunt": "not built (out of scope)"
+  },
+  "remaining": [
+    "legacy rows stay TIMING_MISSING / unacknowledged until touched by live write paths",
+    "no task-start / acknowledge UI (routes/services only)",
+    "Process Intelligence v1 (next pass)"
+  ]
+}

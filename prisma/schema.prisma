@@ -3907,6 +3907,10 @@ model DelegatedTask {
   status                      String    @default("DRAFT")
   priority                    String?
   dueAt                       DateTime? @map("due_at")
+  // Server-trusted time the task first transitioned to IN_PROGRESS (work actually started). Nullable +
+  // backfill-safe: null until a governed start; copied onto the task's Proof at submission so the
+  // fast-completion signal can measure a trusted duration. Never fabricated (no start → TIMING_MISSING).
+  workStartedAt               DateTime? @map("work_started_at")
   estimatedDurationMin        Int?      @map("estimated_duration_min")
   effortLevel                 String?   @map("effort_level")
   requiresTravel              Boolean   @default(false) @map("requires_travel")

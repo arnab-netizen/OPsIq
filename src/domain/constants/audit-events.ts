@@ -376,6 +376,7 @@ export const AUDIT_EVENTS = {
 
   // Employee blocker / escalation (Slice 9)
   ESCALATION_RAISED: "escalation.raised",
+  ESCALATION_ACKNOWLEDGED: "escalation.acknowledged",
   ESCALATION_RESOLVED: "escalation.resolved",
 
   // Employee guidance generation (Slice 10 — durable AI-guidance ledger at call site)
