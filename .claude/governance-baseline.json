@@ -1,6 +1,6 @@
 {
   "_comment": "Frozen pre-existing governance findings on main. Any error-severity finding NOT listed here fails a strict scan. Deterministic (sorted, no timestamps). Regenerate with: npm run governance:scan -- --update-baseline",
-  "total_frozen": 32,
+  "total_frozen": 31,
   "findings": [
     {
       "type": "raw-error-message",
@@ -69,7 +69,7 @@
       "type": "raw-error-message",
       "category": "RAW ERROR MESSAGE",
       "file": "src/app/api/internal/demo-engagement-proof/route.ts",
-      "line": 588,
+      "line": 589,
       "severity": "error",
       "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
       "reason": "internal diagnostic route; server-side error string, not operator-rendered"
@@ -279,15 +279,6 @@
       "line": 61,
       "severity": "error",
       "code": "`Transition not allowed: ${error instanceof Error ? error.message : String(error)}`",
-      "reason": "outcome service internal validation/log message; not operator-rendered"
-    },
-    {
-      "type": "raw-error-message",
-      "category": "RAW ERROR MESSAGE",
-      "file": "src/services/outcome/verification-approval.service.ts",
-      "line": 131,
-      "severity": "error",
-      "code": "error: error instanceof Error ? error.message : String(error),",
       "reason": "outcome service internal validation/log message; not operator-rendered"
     }
   ]

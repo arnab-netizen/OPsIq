@@ -250,10 +250,11 @@ export async function recordOutcome(
         });
         reassessmentTriggered = true;
       } catch (error) {
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         logger.error("Failed to trigger re-evaluation after adverse outcome", {
           actionId,
           engagementId,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
         });
       }
     }
