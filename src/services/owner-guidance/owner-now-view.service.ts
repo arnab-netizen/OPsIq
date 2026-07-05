@@ -36,6 +36,7 @@ import { computeOwnerWorkloadBudget, type OwnerWorkloadBudget } from "@/domain/o
 import { identifyConstraints, type ConstraintFinding, type ConstraintSignals } from "@/domain/owner-mode/constraint-engine";
 import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } from "@/domain/owner-mode/profit-leak-radar";
 import { aggregateProofEvents, identifyGamingSignals, type GamingSignal, type ProofEventRow } from "@/domain/owner-mode/anti-gaming-analytics";
+import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 
 const SAFE_STATES = new Set(["SAFE", "WATCH"]);
 const OVERDUE_PROOF_STATUSES = ["REQUIRED", "PENDING_SUBMISSION", "RESUBMISSION_REQUIRED", "DISPUTED", "NEEDS_HUMAN_REVIEW"];
@@ -69,8 +70,8 @@ interface GuidanceDb {
   ownerBusiness: { findFirst(args: unknown): Promise<BusinessRow | null> };
   proof: {
     count(args: unknown): Promise<number>;
-    /** Optional — present on the live client; enables anti-gaming analytics. */
-    findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<ProofEventRow[]>;
+    /** Optional — present on the live client; enables anti-gaming + credibility analytics. */
+    findMany?(args: { where: Record<string, unknown>; select: Record<string, boolean> }): Promise<CredibilityProofRow[]>;
   };
   ownerActionOutcome: { count(args: unknown): Promise<number> };
   ownerReassessmentEvent: { count(args: unknown): Promise<number> };
@@ -155,6 +156,8 @@ export interface OwnerNowViewPayload {
   topProfitLeak: ProfitLeakFinding | null;
   /** The single highest-risk staff/manager/operator gaming pattern (or null). */
   topGamingSignal: GamingSignal | null;
+  /** The single highest evidence-credibility concern (or null). */
+  topCredibilityConcern: CredibilityFinding | null;
 }
 
 /** Topic-specific, archetype-aware step builder (keyed by issue id, falls back by category). */
@@ -489,18 +492,32 @@ export async function getOwnerNowView(
   // workspace's proof/review events, linked to the current constraint + profit leak. Only runs
   // when the client exposes proof.findMany (the live path); a DI mock without it → null (no fake).
   let topGamingSignal: GamingSignal | null = null;
+  let topCredibilityConcern: CredibilityFinding | null = null;
   if (typeof deps.db.proof.findMany === "function") {
+    // One workspace-scoped query feeds both anti-gaming and the credibility graph.
     const proofRows = await deps.db.proof.findMany({
       where: { workspaceId },
-      select: { submittedByUserId: true, reviewedByUserId: true, status: true, duplicateFlagged: true, createdAt: true },
+      select: { submittedByUserId: true, reviewedByUserId: true, proofType: true, status: true, duplicateFlagged: true, createdAt: true, reviewedAt: true },
     });
-    const { actors, reviewers } = aggregateProofEvents(proofRows, deps.now());
+    const nowMs = deps.now();
+    const { actors, reviewers } = aggregateProofEvents(proofRows, nowMs);
     topGamingSignal = identifyGamingSignals({
       workspaceId, actors, reviewers,
       currentConstraint: topConstraint?.constraintType ?? null,
       topProfitLeakType: topProfitLeak?.leakType ?? null,
-      evaluatedAt: new Date(deps.now()).toISOString(),
+      evaluatedAt: new Date(nowMs).toISOString(),
     }).topSignal;
+
+    // Evidence Credibility Graph — which proof/staff/reviewer/process can be trusted, and why.
+    const credAggregates = aggregateCredibility(proofRows, nowMs);
+    topCredibilityConcern = buildEvidenceCredibility({
+      workspaceId, ...credAggregates,
+      currentConstraint: topConstraint?.constraintType ?? null,
+      topProfitLeakType: topProfitLeak?.leakType ?? null,
+      topGamingSignalType: topGamingSignal?.signalType ?? null,
+      missingSources: ["complaint/rework/outcome ↔ proof linkage not persisted"],
+      evaluatedAt: new Date(nowMs).toISOString(),
+    }).topConcern;
   }
 
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
@@ -528,7 +545,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
