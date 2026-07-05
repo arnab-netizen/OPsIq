@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/primitives";
-import { ProcessIntelligencePanel, type ProcessIntelligenceView } from "@/components/owner/ProcessIntelligencePanel";
+import { ProcessIntelligencePanel, ProcessCorrectionsPanel, type ProcessIntelligenceView, type ProcessCorrectionsView } from "@/components/owner/ProcessIntelligencePanel";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -36,6 +36,7 @@ function safeError(data: Record<string, unknown>, status: number): string {
 
 export default function OwnerProcessIntelligencePage() {
   const [pi, setPi] = useState<ProcessIntelligenceView | null>(null);
+  const [corrections, setCorrections] = useState<ProcessCorrectionsView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +47,7 @@ export default function OwnerProcessIntelligencePage() {
       const { res, data } = await api("/api/owner/now-view");
       if (!res.ok) throw new Error(safeError(data, res.status));
       setPi((data.processIntelligence as ProcessIntelligenceView) ?? null);
+      setCorrections((data.processCorrections as ProcessCorrectionsView) ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load the process view.");
     } finally {
@@ -79,7 +81,15 @@ export default function OwnerProcessIntelligencePage() {
           <Button onClick={() => void load()}>Retry</Button>
         </div>
       )}
-      {!loading && !error && <ProcessIntelligencePanel data={pi} />}
+      {!loading && !error && (
+        <>
+          <ProcessIntelligencePanel data={pi} />
+          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 16 }}>What to do about it</h2>
+            <ProcessCorrectionsPanel data={corrections} />
+          </section>
+        </>
+      )}
     </main>
   );
 }

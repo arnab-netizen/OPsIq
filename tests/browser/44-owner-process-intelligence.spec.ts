@@ -57,6 +57,23 @@ test.describe("44 — owner process intelligence UI (desktop, one login)", () =>
     expect(text).not.toMatch(/\bhidden score\b/);
   });
 
+  test("it routes the breakdown into proposed corrections (or an honest empty state) with no prohibited labels", async () => {
+    const panel = page.locator('[data-testid="process-corrections-panel"]');
+    const empty = page.locator('[data-testid="process-corrections-empty"]');
+    await expect(panel.or(empty).first()).toBeVisible({ timeout: 15000 });
+
+    // If corrections routed, each shows an instruction + an approval level + the PROPOSED status.
+    if (await panel.count()) {
+      const first = page.locator('[data-testid="pc-item"]').first();
+      await expect(first.getByTestId("pc-item-instruction")).toContainText(/.+/);
+      await expect(first.getByTestId("pc-item-approval")).toContainText(/(Owner|Manager|Staff)/i);
+      await expect(first.getByTestId("pc-item-status")).toContainText(/PROPOSED/);
+    }
+    const text = (await panel.or(empty).first().innerText()).toLowerCase();
+    expect(text).not.toMatch(/\b(fraud|theft|thief|negligent|negligence|lazy)\b/);
+    expect(text).not.toMatch(/auto-?applied|approved automatically/);
+  });
+
   test("the owner can navigate back to the Owner Now View", async () => {
     await page.getByTestId("back-to-now").click();
     await page.waitForURL(/\/owner\/now/, { timeout: 10000 });

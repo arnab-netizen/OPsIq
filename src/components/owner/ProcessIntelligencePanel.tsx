@@ -37,6 +37,40 @@ export interface ProcessIntelligenceView {
   findings: ProcessFindingView[];
 }
 
+export interface ProcessCorrectionView {
+  correctionId: string;
+  sourceFindingType: string;
+  correctionType: string;
+  title: string;
+  instruction: string;
+  affectedStage: string;
+  targetActorId: string | null;
+  targetManagerId: string | null;
+  severity: string;
+  priorityRank: number;
+  requiredApprovalLevel: string;
+  requiresOwnerApproval: boolean;
+  autoExecutable: boolean;
+  status: string;
+}
+
+export interface ProcessCorrectionsView {
+  corrections: ProcessCorrectionView[];
+  topCorrection: ProcessCorrectionView | null;
+}
+
+const CORRECTION_TYPE_LABEL: Record<string, string> = {
+  REQUIRE_FRESH_PROOF: "Require fresh proof",
+  UPDATE_CHECKLIST: "Update checklist",
+  REVIEW_PROCESS_STEP: "Review process step",
+  ASSIGN_TRAINING_REVIEW: "Assign training review",
+  ESCALATE_TO_MANAGER: "Escalate to manager",
+  ESCALATE_TO_OWNER: "Escalate to owner",
+  RESOLVE_OPERATIONAL_EVENT: "Resolve operational event",
+  COLLECT_MISSING_DATA: "Collect missing data",
+  NO_ACTION_DATA_INSUFFICIENT: "No action — data insufficient",
+};
+
 const TITLE: Record<string, string> = {
   REWORK_LOOP: "Rework loop — work redone repeatedly",
   QUALITY_FAILURE_LOOP: "Quality failure loop — complaints on accepted work",
@@ -134,5 +168,56 @@ export function ProcessIntelligencePanel({ data }: { data: ProcessIntelligenceVi
         This is a process signal, not an accusation. Owner review is required before any personnel action.
       </p>
     </article>
+  );
+}
+
+/**
+ * ProcessCorrectionsPanel — the proposed, trackable corrections routed from the process breakdowns.
+ * Prop-driven; no business logic (the routing is server-side). Each correction shows the action, the
+ * stage, the required approval, and — for owner-gated corrections — an explicit "owner approval required"
+ * marker. Nothing here is auto-approved; every real correction is a proposal awaiting a human.
+ */
+export function ProcessCorrectionsPanel({ data }: { data: ProcessCorrectionsView | null }) {
+  const list = data?.corrections ?? [];
+  if (list.length === 0) {
+    return (
+      <div data-testid="process-corrections-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No corrections proposed yet — corrections appear once a process breakdown is established.
+      </div>
+    );
+  }
+  return (
+    <section data-testid="process-corrections-panel" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <strong data-testid="pc-title">Recommended corrections</strong>
+      <ol data-testid="pc-list" style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+        {list.map((c) => (
+          <li key={c.correctionId} data-testid="pc-item" data-correction-type={c.correctionType}
+            style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "#6b7280" }}>#{c.priorityRank}</span>
+              <strong data-testid="pc-item-title">{c.title}</strong>
+              <span data-testid="pc-item-type"><Badge variant="default">{CORRECTION_TYPE_LABEL[c.correctionType] ?? c.correctionType}</Badge></span>
+              <Badge variant={SEVERITY_VARIANT(c.severity)}>{c.severity}</Badge>
+              <span data-testid="pc-item-status"><Badge variant="muted">{c.status}</Badge></span>
+            </div>
+            <p style={{ margin: 0, fontSize: 13 }} data-testid="pc-item-instruction">{c.instruction}</p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+              <span data-testid="pc-item-approval">
+                <Badge variant={c.requiresOwnerApproval ? "destructive" : "default"}>
+                  {APPROVAL_LABEL[c.requiredApprovalLevel] ?? c.requiredApprovalLevel}
+                </Badge>
+              </span>
+              <span style={{ color: "#6b7280" }}>Stage: {STAGE_LABEL[c.affectedStage] ?? c.affectedStage}</span>
+              {c.targetManagerId && <span style={{ color: "#6b7280" }}>· Manager: {c.targetManagerId}</span>}
+              {c.targetActorId && <span style={{ color: "#6b7280" }}>· Person: {c.targetActorId}</span>}
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+        Corrections are proposals. Owner-gated corrections require owner approval before any action; nothing
+        here is applied automatically.
+      </p>
+    </section>
   );
 }

@@ -38,6 +38,7 @@ import { identifyProfitLeaks, type ProfitLeakFinding, type ProfitLeakSignals } f
 import { aggregateProofEvents, identifyGamingSignals, aggregateSuspiciousProof, type GamingSignal, type ProofEventRow, type SuspiciousDisputeRecord, type SuspiciousProofRow } from "@/domain/owner-mode/anti-gaming-analytics";
 import { evaluateFastCompletion, evaluateEscalationTiming, type TimingSignal, type CompletionTimingRow, type EscalationTimingRow } from "@/domain/owner-mode/timing-evidence";
 import { buildProcessIntelligence, type ProcessIntelligenceAnalysis } from "@/domain/owner-mode/process-intelligence";
+import { buildProcessCorrections, type ProcessCorrectionRouting } from "@/domain/owner-mode/bottleneck-correction-routing";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -264,6 +265,13 @@ export interface OwnerNowViewPayload {
    * required approval level. Null on the fake-DI path. A cleared adjudication cannot drive it.
    */
   processIntelligence: ProcessIntelligenceAnalysis | null;
+  /**
+   * Bottleneck → Correction Routing — the Process Intelligence findings turned into proposed, trackable
+   * correction actions (with target, evidence, required approval, and whether owner approval is
+   * mandatory). Derived from `processIntelligence`; null whenever that is null. Every correction is
+   * PROPOSED — never auto-approved; only the DATA_INSUFFICIENT no-op is auto-executable.
+   */
+  processCorrections: ProcessCorrectionRouting | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -929,6 +937,12 @@ export async function getOwnerNowView(
     evaluatedAt: new Date(deps.now()).toISOString(),
   });
 
+  // Bottleneck → Correction Routing — turn the process breakdowns into proposed, trackable correction
+  // actions. Pure derivation from processIntelligence; every correction is PROPOSED (never auto-approved).
+  const processCorrections: ProcessCorrectionRouting | null = processIntelligence
+    ? buildProcessCorrections(processIntelligence, workspaceId)
+    : null;
+
   const prev = await deps.db.ownerGuidanceSnapshot.findFirst({
     where: businessId ? { workspaceId, businessId } : { workspaceId },
     orderBy: { createdAt: "desc" },
@@ -954,7 +968,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

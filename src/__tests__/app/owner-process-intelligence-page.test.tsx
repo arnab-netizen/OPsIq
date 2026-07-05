@@ -20,6 +20,24 @@ const PAYLOAD = {
     },
     findings: [],
   },
+  processCorrections: {
+    corrections: [
+      {
+        correctionId: "ws-1:ESCALATION_RESPONSE_BREAKDOWN:ESCALATE_TO_OWNER:mgr-1",
+        sourceFindingType: "ESCALATION_RESPONSE_BREAKDOWN", correctionType: "ESCALATE_TO_OWNER",
+        title: "Reassign the overdue escalations", instruction: "Reassign the overdue escalations now and set a hard acknowledgement deadline.",
+        affectedStage: "ESCALATION_RESPONSE", targetActorId: null, targetManagerId: "mgr-1", severity: "HIGH",
+        priorityRank: 1, requiredApprovalLevel: "OWNER", requiresOwnerApproval: true, autoExecutable: false, status: "PROPOSED",
+      },
+    ],
+    topCorrection: {
+      correctionId: "ws-1:ESCALATION_RESPONSE_BREAKDOWN:ESCALATE_TO_OWNER:mgr-1",
+      sourceFindingType: "ESCALATION_RESPONSE_BREAKDOWN", correctionType: "ESCALATE_TO_OWNER",
+      title: "Reassign the overdue escalations", instruction: "Reassign the overdue escalations now and set a hard acknowledgement deadline.",
+      affectedStage: "ESCALATION_RESPONSE", targetActorId: null, targetManagerId: "mgr-1", severity: "HIGH",
+      priorityRank: 1, requiredApprovalLevel: "OWNER", requiresOwnerApproval: true, autoExecutable: false, status: "PROPOSED",
+    },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -40,6 +58,10 @@ describe("OwnerProcessIntelligencePage", () => {
     await findByTestId("process-intelligence-panel");
     expect(container.textContent ?? "").toMatch(/Escalation response breakdown/i);
     expect(container.textContent ?? "").toMatch(/Reassign the overdue escalations/i);
+    // The routed corrections render too, with the owner-approval marker.
+    await findByTestId("process-corrections-panel");
+    expect(container.textContent ?? "").toMatch(/Recommended corrections/i);
+    expect(container.textContent ?? "").toMatch(/Owner approval required/i);
     const back = container.querySelector('[data-testid="back-to-now"]') as HTMLAnchorElement;
     expect(back.getAttribute("href")).toBe("/owner/now");
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/api/owner/now-view"))).toBe(true);
