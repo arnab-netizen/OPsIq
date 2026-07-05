@@ -8,7 +8,28 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Fake / Reused / Suspicious Proof Dispute → Anti-Gaming Link depth pass (latest)
+## Dedicated Reused-Hash / Duplicate-Proof Precheck depth pass (latest)
+- **Base:** `origin/main` @ `c0186f3f` (Fake-Proof → Anti-Gaming Link PR #119 merged).
+- **Branch:** `claude/reused-hash-proof-precheck-depth-pass`.
+- **Classification:** `REUSED_HASH_PROOF_PRECHECK_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`).
+- **Reused proof is now deterministic, queryable, and workspace-scoped.** A pure precheck
+  (`reused-hash-precheck.ts`) + read-only service (`getReusedHashFindings` / `getReusedHashFindingForProof`)
+  classifies exact `fileHash` reuse conservatively: cross-task → `NEEDS_REVIEW_DUPLICATE` (same operator
+  HIGH), same-task → `ALLOWED_DUPLICATE` (no false warning), cross-workspace → `BLOCKED_CROSS_WORKSPACE`
+  (no IDs leaked), missing hash → `DATA_INSUFFICIENT`. **No schema change** (`@@index([workspaceId, fileHash])`
+  already exists); derived, no new mutation/audit.
+- **Feeds the pipeline deterministically:** per-operator reuse drives an attributed `REUSED_PROOF`
+  credibility concern + a `REUSED_PROOF_PATTERN` anti-gaming signal (both supersede the coarse
+  duplicate-flag heuristic and exclude legitimate same-task reuse); the now-view exposes a
+  `reusedProofFindings` block; `ANTI_GAMING_RISK` / `EVIDENCE_CREDIBILITY_RISK` reflect it. No fraud
+  label, no hidden score, no cross-tenant leakage.
+- **Still missing:** owner adjudication surface + UI; artifact-reference/signature match sources (exact
+  hash only); browser E2E.
+- **Verification:** tsc 0 · prisma valid (no schema change) · governance strict 0-new · owner-mode +
+  execution 681 unit + 792 DB tests green · 14 new tests · DB sim 3/3. Details:
+  `docs/remediation/reused-hash-proof-precheck-depth-pass/`.
+
+## Fake / Reused / Suspicious Proof Dispute → Anti-Gaming Link depth pass
 - **Base:** `origin/main` @ `e70f5986` (Operational Event Resolution / Aging PR #118 merged).
 - **Branch:** `claude/fake-proof-anti-gaming-link-depth-pass`.
 - **Classification:** `FAKE_PROOF_ANTI_GAMING_LINK_REAL_AND_OWNER_VISIBLE` (+ `ANTI_GAMING_ANALYTICS_STRENGTHENED`, `EVIDENCE_CREDIBILITY_STRENGTHENED`, `BUSINESS_CONTROL_SLO_STRENGTHENED`).

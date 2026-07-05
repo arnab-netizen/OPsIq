@@ -99,6 +99,12 @@ export interface AntiGamingInput {
   /** Fake/reused/suspicious proof-dispute-derived aggregates (per submitter / reviewer). */
   suspiciousProofActors?: SuspiciousProofActorStats[];
   suspiciousReviewers?: SuspiciousReviewerStats[];
+  /**
+   * Deterministic reused-hash reuse per submitter (from the dedicated reused-hash precheck). When
+   * present, it is the authoritative source for REUSED_PROOF_PATTERN (excludes same-task reuse),
+   * superseding the coarse duplicate-flag heuristic. Each entry carries the matched proof IDs.
+   */
+  reusedHashActors?: Array<{ actorId: string; role?: string | null; crossTaskReuseCount: number; proofIds: string[]; matchType: string }>;
   currentConstraint?: ConstraintType | null;
   topProfitLeakType?: ProfitLeakType | null;
   /** Sources not yet persisted (e.g. complaint↔proof linkage) — for honest missing-data. */
@@ -385,6 +391,28 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
     }
   }
 
+  // ── Deterministic reused-hash pattern (from the dedicated reused-hash precheck) ──
+  for (const a of input.reusedHashActors ?? []) {
+    if (a.crossTaskReuseCount >= DUPLICATE_THRESHOLD) {
+      const refs = a.proofIds.slice(0, 10);
+      push({
+        actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "REUSED_PROOF_PATTERN",
+        reasonCodes: ["EXACT_REUSED_HASH", "REUSED_ACROSS_DIFFERENT_TASKS"], severity: "HIGH", confidence: "HIGH",
+        evidence: [`${a.crossTaskReuseCount} of this operator's proofs reuse a ${a.matchType.toLowerCase()} across different jobs`, ...(refs.length ? [`proof refs: ${refs.join(", ")}`] : [])],
+        patternCount: a.crossTaskReuseCount, isRepeatedPattern: true, missingData: [],
+        ownerExplanation: "The same proof artifact is reused by this operator across different jobs — the work may not actually be happening each time. This needs review, not an accusation.",
+        businessImpact: "Reused proof fakes completion, hiding undone work until a complaint surfaces.",
+        relatedProfitLeak: input.topProfitLeakType === "WEAK_PROOF_REWORK_RISK" ? "WEAK_PROOF_REWORK_RISK" : null,
+        relatedConstraint: input.currentConstraint === "STAFF" ? "STAFF" : null,
+        relatedCredibilityConcern: "REUSED_PROOF",
+        recommendedResponse: "Require a fresh, job-specific proof for each task; review the reused artifacts before relying on those completions.",
+        ownerActionRequired: false, managerActionSufficient: true,
+        trainingOrProcessRecommendation: "Stricter unique-artifact-per-job proof requirement + a conversation with the operator.",
+        reassessmentTrigger: "Re-verify the jobs backed by reused proof.",
+      });
+    }
+  }
+
   // ── Reviewer patterns ──────────────────────────────────────────────────────
   for (const r of input.reviewers) {
     if (r.selfReviewCount >= 1) {
@@ -420,7 +448,9 @@ export function identifyGamingSignals(input: AntiGamingInput): AntiGamingAnalysi
 
   // ── Submitter (staff/operator) patterns ────────────────────────────────────
   for (const a of input.actors) {
-    if (a.duplicateFlagged >= DUPLICATE_THRESHOLD) {
+    // When the deterministic reused-hash precheck is supplied it is authoritative for REUSED_PROOF_PATTERN
+    // (it excludes legitimate same-task reuse); fall back to the coarse duplicate flag only without it.
+    if (!input.reusedHashActors && a.duplicateFlagged >= DUPLICATE_THRESHOLD) {
       push({
         actorId: a.actorId, actorRole: a.role ?? "staff", signalType: "REUSED_PROOF_PATTERN",
         reasonCodes: ["DUPLICATE_FILE_HASH"], severity: "HIGH", confidence: "HIGH",
