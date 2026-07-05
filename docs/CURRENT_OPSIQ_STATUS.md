@@ -8,6 +8,23 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
+## Business-Control SLO depth pass (latest)
+- **Consolidation:** Evidence Credibility Graph (PR #111) CI-green + fast-forward merged to `main`
+  (`6a840314`); all prior depth passes remain on main.
+- **Branch:** `claude/business-control-slo-depth-pass`.
+- **Business-Control SLOs:** `BUSINESS_CONTROL_SLO_REAL_AND_OWNER_VISIBLE` — deterministic 15-SLI grading
+  of OpsIQ's own control loop (PASS/WARN/FAIL/NOT_MEASURABLE), owner-callable + surfaced via
+  `/api/owner/now-view` (`payload.businessControlHealth`), graded from the now-view's existing signals +
+  proof counts, linked to constraint/profit-leak/gaming/credibility. No fake/always-green metrics; honest
+  NOT_MEASURABLE with exact missing source. 17 tests (13 unit + 4 DB). Governance strict 0-new; 649 pass.
+- **Measurable:** owner workload/bottleneck, anti-gaming risk, credibility risk, weak-proof rate,
+  proof-review backlog, constraint/profit-leak freshness, opportunity/now-view completeness.
+  **NOT_MEASURABLE (missing source):** audit-durability correlation, reassessment/shock latency, startup
+  completeness, runtime isolation.
+- **Still missing/partial:** the above NOT_MEASURABLE source linkages; Process Intelligence;
+  authenticated browser E2E; APPR-01 breadth.
+- Details: `docs/remediation/business-control-slo-depth-pass/`.
+
 ## Evidence Credibility Graph depth pass (latest)
 - **Consolidation:** Anti-Gaming Analytics (PR #110) CI-fixed (governance strict 0-new) + fast-forward
   merged to `main` (`de63b786`); all prior depth passes remain on main.

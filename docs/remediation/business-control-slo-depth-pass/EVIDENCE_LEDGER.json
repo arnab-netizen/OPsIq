@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-07-05",
+  "branch": "claude/business-control-slo-depth-pass",
+  "baseMain": "6a840314",
+  "capability": "Business-Control SLOs",
+  "classification": "BUSINESS_CONTROL_SLO_REAL_AND_OWNER_VISIBLE",
+  "priorPr111": { "status": "CI-green + fast-forward merged to main", "mainAfter": "6a840314" },
+  "code": [
+    "src/domain/owner-mode/business-control-slo.ts",
+    "src/services/owner-mode/business-control-slo.service.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts (integration, proof counts, no extra query)"
+  ],
+  "ownerVisibleVia": "GET /api/owner/now-view (payload.businessControlHealth) + getBusinessControlHealth service",
+  "measurableSLIs": ["OWNER_WORKLOAD_BURDEN","OWNER_BOTTLENECK","ANTI_GAMING_RISK","EVIDENCE_CREDIBILITY_RISK","WEAK_PROOF_REVIEW_RATE","PROOF_REVIEW_COMPLETION","CONSTRAINT_FRESHNESS","PROFIT_LEAK_FRESHNESS","OPPORTUNITY_DECISION_COMPLETENESS","NOW_VIEW_SIGNAL_COMPLETENESS"],
+  "notMeasurableSLIs": ["AUDIT_DURABILITY","REASSESSMENT_LATENCY","SHOCK_HANDLING_LATENCY","STARTUP_VALIDATION_COMPLETENESS","CROSS_WORKSPACE_ISOLATION_PROOF (test-backed only)"],
+  "typecheck": { "command": "npx tsc --noEmit", "errors": 0 },
+  "governanceStrict": { "frozen": 31, "new": 0 },
+  "tests": {
+    "unit": { "file": "src/__tests__/owner-mode/business-control-slo.test.ts", "passed": 13 },
+    "dbSimulation": { "file": "src/__tests__/owner-mode/business-control-slo-simulation.db.test.ts", "passed": 4 },
+    "broadRegression": { "files": 77, "passed": 649, "failed": 0 }
+  },
+  "honesty": { "noAlwaysGreen": "no-input -> mostly NOT_MEASURABLE, proven", "notMeasurableExactSource": true, "noFabricatedTimestamps": true },
+  "browserE2E": "unchanged / not proven this pass",
+  "classification_overall": "HIGH_VALUE_PRIVATE_OWNER_SYSTEM_PROVEN + REMEDIATION_PARTIAL_CONTINUE_REQUIRED"
+}
