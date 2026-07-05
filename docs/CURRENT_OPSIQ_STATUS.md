@@ -8,6 +8,21 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
+## Evidence Credibility Graph depth pass (latest)
+- **Consolidation:** Anti-Gaming Analytics (PR #110) CI-fixed (governance strict 0-new) + fast-forward
+  merged to `main` (`de63b786`); all prior depth passes remain on main.
+- **Branch:** `claude/evidence-credibility-graph-depth-pass`.
+- **Evidence Credibility Graph:** `EVIDENCE_CREDIBILITY_GRAPH_REAL_AND_OWNER_VISIBLE` — deterministic
+  per-entity credibility (submitter/reviewer/proof-type/item) from real Proof/review data: self-review,
+  review-quality concern, unreliable vs reliable-with-caveat submitter, owner-review-burden, weak
+  proof-type, reused/stale/tamper. Owner-callable + surfaced via `/api/owner/now-view`
+  (`payload.topCredibilityConcern`), linked to Anti-Gaming + Profit-Leak + Constraint. Reason codes +
+  evidence (no hidden score); RELIABLE only w/ no contradiction + disclosed outcome-linkage gap;
+  DATA_INSUFFICIENT otherwise. 16 tests (12 unit + 4 DB). Governance strict 0-new; 632 tests pass.
+- **Still missing/partial:** accepted-proof↔complaint/rework/outcome linkage (needs persisted events);
+  Business-Control SLOs, Process Intelligence; authenticated browser E2E; APPR-01 breadth.
+- Details: `docs/remediation/evidence-credibility-graph-depth-pass/`.
+
 ## Anti-Gaming Analytics depth pass (latest)
 - **Consolidation:** all 5 prior depth passes are on `main` (`59c85033`) — owner-use spine, opportunity
   envelope, Owner Workload Budget, Constraint Engine, Profit-Leak Radar (fast-forward merged this pass).

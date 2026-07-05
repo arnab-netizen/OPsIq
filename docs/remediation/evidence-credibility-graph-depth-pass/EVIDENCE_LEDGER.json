@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-07-05",
+  "branch": "claude/evidence-credibility-graph-depth-pass",
+  "baseMain": "de63b786",
+  "capability": "Evidence Credibility Graph",
+  "classification": "EVIDENCE_CREDIBILITY_GRAPH_REAL_AND_OWNER_VISIBLE",
+  "priorPr110": { "status": "CI-fixed (governance strict 0-new) + fast-forward merged to main", "mainAfter": "de63b786" },
+  "code": [
+    "src/domain/owner-mode/evidence-credibility-graph.ts",
+    "src/services/owner-mode/evidence-credibility.service.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts (integration, shared proof query)"
+  ],
+  "ownerVisibleVia": "GET /api/owner/now-view (payload.topCredibilityConcern) + getCredibilityGraph service",
+  "signalTypesDetected": ["SELF_REVIEW_BLOCKED_OR_ATTEMPTED","REVIEW_QUALITY_CONCERN","UNRELIABLE_SUBMITTER_PATTERN","RELIABLE_SUBMITTER_PATTERN","REPEATED_OWNER_REVIEW_BURDEN","WEAK_PROOF_NEEDS_REVIEW","REUSED_PROOF","STALE_PROOF","TAMPER_SUSPECTED_PROOF","DATA_INSUFFICIENT"],
+  "signalTypesPendingSource": ["ACCEPTED_PROOF_WITH_BAD_OUTCOME","ACCEPTED_PROOF_WITH_COMPLAINT","ACCEPTED_PROOF_WITH_REWORK"],
+  "typecheck": { "command": "npx tsc --noEmit", "errors": 0 },
+  "governanceStrict": { "frozen": 31, "new": 0 },
+  "tests": {
+    "unit": { "file": "src/__tests__/owner-mode/evidence-credibility-graph.test.ts", "passed": 12 },
+    "dbSimulation": { "file": "src/__tests__/owner-mode/evidence-credibility-graph-simulation.db.test.ts", "passed": 4 },
+    "broadRegression": { "files": 75, "passed": 632, "failed": 0 }
+  },
+  "honesty": { "noBlackBoxScore": "reason codes + events primary; score secondary/explained", "reliableWithCaveat": "RELIABLE only w/ no contradiction + discloses missing outcome linkage", "thresholds": "repetition required", "noSignal": "DATA_INSUFFICIENT with exact missing data" },
+  "browserE2E": "unchanged / not proven this pass",
+  "classification_overall": "HIGH_VALUE_PRIVATE_OWNER_SYSTEM_PROVEN + REMEDIATION_PARTIAL_CONTINUE_REQUIRED"
+}
