@@ -4157,6 +4157,34 @@ model Proof {
   @@map("proofs")
 }
 
+/// Governed owner/reviewer decision about a flagged proof-risk finding (reused-hash, fake/suspicious
+/// anti-gaming signal, reused-proof credibility concern, or a suspicious/fake proof dispute). It
+/// records the decision fairly and auditably — it does NOT accuse fraud/theft, hold a hidden score,
+/// delete evidence, or rewrite proof status (that stays in the governed dispute flow). The unique
+/// (workspace_id, idempotency_key) makes repeated submission idempotent. Additive, backfill-safe.
+model ProofRiskAdjudication {
+  id                    String   @id @db.Uuid
+  workspaceId           String   @map("workspace_id") @db.Uuid
+  idempotencyKey        String   @map("idempotency_key")
+  sourceType            String   @map("source_type") // REUSED_HASH_FINDING | ANTI_GAMING_SIGNAL | CREDIBILITY_CONCERN | PROOF_DISPUTE
+  sourceRef             String   @map("source_ref")
+  proofIds              String[] @map("proof_ids") @db.Uuid
+  actorIds              String[] @map("actor_ids") @db.Uuid
+  adjudicatedByUserId   String?  @map("adjudicated_by_user_id") @db.Uuid
+  adjudicatedByRole     String?  @map("adjudicated_by_role")
+  outcome               String   // REQUIRE_FRESH_PROOF | ACCEPT_AS_VALID | DISMISS_FALSE_POSITIVE | CONFIRM_SUSPICIOUS_PATTERN | ESCALATE_FOR_TRAINING | ESCALATE_FOR_OWNER_REVIEW | MARK_INCONCLUSIVE_NEEDS_DATA
+  reason                String   @db.Text
+  ownerActionRequired   Boolean  @default(false) @map("owner_action_required")
+  recommendedNextAction String   @map("recommended_next_action")
+  status                String   @default("ACTIVE") // ACTIVE | CLEARED | CONFIRMED | INCONCLUSIVE | TRAINING | OWNER_REVIEW
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @default(now()) @map("updated_at")
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, sourceType])
+  @@map("proof_risk_adjudications")
+}
+
 /// Minimal per-event operational complaint/rework record (one generic model handles both via
 /// eventType — no ambiguity). Links accepted proof to the real complaint/rework that contradicted
 /// it so the business impact of bad accepted work becomes measurable. Deliberately NOT a CRM/
