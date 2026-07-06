@@ -1050,3 +1050,103 @@ export function OpportunityPanel({ data }: { data: ExternalOpportunityView | nul
     </section>
   );
 }
+
+// ── Opportunity Validation Experiment Engine (depth pass) ──────────────────────────────────────────────
+
+export interface ValidationExperimentView {
+  experimentType: string;
+  opportunityType: string;
+  hypothesis: string;
+  riskiestAssumption: string;
+  method: string;
+  successThreshold: string;
+  failureThreshold: string;
+  stopLossRule: string;
+  costCap: number | null;
+  ownerTimeCapMinutes: number;
+  durationDays: number;
+  sampleSizeTarget: number;
+  dataToCollect: string[];
+  requiresOwnerApproval: boolean;
+  approvalLevel: string;
+  cheaperAlternativeConsidered: string;
+  doNotScaleNote: string;
+  confidence: string;
+}
+
+export interface DeferredValidationView {
+  opportunityType: string;
+  reason: string;
+  ownerVisibleExplanation: string;
+}
+
+export interface ValidationSummaryView {
+  candidatesConsidered: number;
+  experimentsDesigned: number;
+  deferred: number;
+  dataCollectionOnly: number;
+  ownerApprovalRequired: number;
+}
+
+export interface OpportunityValidationView {
+  experiments: ValidationExperimentView[];
+  topExperiment: ValidationExperimentView | null;
+  deferred: DeferredValidationView[];
+  summary: ValidationSummaryView;
+}
+
+const EXPERIMENT_TYPE_LABEL: Record<string, string> = {
+  CUSTOMER_INTEREST_TEST: "Customer-interest test", B2B_OUTREACH_TEST: "B2B outreach test",
+  PRICING_TEST: "Controlled pricing test", LANDING_OR_FORM_TEST: "Simple form / landing test",
+  WHATSAPP_OR_CALL_SCRIPT_TEST: "Direct message/call test", MANUAL_SURVEY: "Manual survey",
+  SMALL_BATCH_TRIAL: "Small batch trial", PARTNERSHIP_TEST: "Partnership conversation test",
+  DATA_COLLECTION_ONLY: "Collect data first (no spend)",
+};
+
+/**
+ * ValidationPanel — Executive Cockpit standard for the Opportunity Validation Experiment Engine: the single
+ * next experiment to run (cheapest bounded probe of the riskiest assumption) with its success/failure
+ * thresholds, hard cost/time/sample caps and stop-loss, an explicit "not permission to scale" note, and an
+ * owner-approval flag where material. Deferred candidates are summarised, never dumped. No fabricated money.
+ */
+export function ValidationPanel({ data }: { data: OpportunityValidationView | null }) {
+  const top = data?.topExperiment ?? null;
+  if (!top) {
+    return (
+      <div data-testid="validation-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No validation experiment to run yet — an experiment is designed only once there is a candidate worth testing.
+      </div>
+    );
+  }
+  const s = data!.summary;
+  return (
+    <section data-testid="validation-panel" data-experiment-type={top.experimentType}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="val-title">{EXPERIMENT_TYPE_LABEL[top.experimentType] ?? top.experimentType}</strong>
+        <span data-testid="val-approval-badge"><Badge variant={top.requiresOwnerApproval ? "destructive" : "default"}>{top.requiresOwnerApproval ? "Owner approval required" : "Manager can run"}</Badge></span>
+        <span data-testid="val-confidence" style={{ fontSize: 12, color: "#6b7280" }}>{top.confidence} confidence</span>
+      </div>
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="val-hypothesis">Test: {top.hypothesis}</p>
+      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="val-method">{top.method}</p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
+        <span data-testid="val-success" style={{ color: "#15803d" }}>Pass if: {top.successThreshold}</span>
+        <span data-testid="val-failure" style={{ color: "#b91c1c" }}>Fail if: {top.failureThreshold}</span>
+      </div>
+      <span data-testid="val-caps" style={{ fontSize: 12, color: "#6b7280" }}>
+        Caps: ≤{top.ownerTimeCapMinutes} min owner time · {top.durationDays} day(s) · ~{top.sampleSizeTarget} sample{top.costCap != null ? ` · spend ≤ ${top.costCap}` : " · no spend"}
+      </span>
+      <span data-testid="val-stoploss" style={{ fontSize: 12, color: "#b45309" }}>Stop-loss: {top.stopLossRule}</span>
+      <span data-testid="val-noscale" style={{ fontSize: 12, color: "#6b7280" }}>{top.doNotScaleNote}</span>
+      <details data-testid="val-detail">
+        <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Why this experiment</summary>
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>Riskiest assumption: {top.riskiestAssumption}</p>
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>{top.cheaperAlternativeConsidered}</p>
+        {top.dataToCollect.length > 0 && <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>Data to collect: {top.dataToCollect.join("; ")}</p>}
+      </details>
+      <span data-testid="val-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {s.candidatesConsidered} candidate(s) · {s.experimentsDesigned} experiment(s) designed · {s.dataCollectionOnly} data-first · {s.deferred} deferred · {s.ownerApprovalRequired} need owner approval
+      </span>
+    </section>
+  );
+}
