@@ -146,6 +146,29 @@ const PAYLOAD = {
     summary: { autoAllowed: 1, managerRequired: 0, ownerRequired: 0, neverAuto: 0, needsData: 0 },
     capabilityRecommendations: [],
   },
+  capabilityGaps: {
+    recommendations: [
+      {
+        capabilityType: "REFUND_RECONCILIATION", title: "Refund reconciliation", severity: "MEDIUM",
+        problemStatement: "OpsIQ cannot tie a refund back to a confirmed original charge.",
+        recommendedCapability: "A refund-reconciliation capability linking each refund to its verified original transaction.",
+        ownerBenefit: "Refund decisions backed by a real record instead of a manual owner check.",
+        unlocksAutomation: true, unlockedActionTypes: ["REFUND_ABOVE_THRESHOLD"],
+        governanceGuardrail: "Even once built, material money decisions stay owner-controlled.",
+        signalCount: 1, evidenceRefs: [], blocksToday: [], missingData: [], estimatedComplexity: "MEDIUM", priorityRank: 1,
+      },
+    ],
+    topRecommendation: {
+      capabilityType: "REFUND_RECONCILIATION", title: "Refund reconciliation", severity: "MEDIUM",
+      problemStatement: "OpsIQ cannot tie a refund back to a confirmed original charge.",
+      recommendedCapability: "A refund-reconciliation capability linking each refund to its verified original transaction.",
+      ownerBenefit: "Refund decisions backed by a real record instead of a manual owner check.",
+      unlocksAutomation: true, unlockedActionTypes: ["REFUND_ABOVE_THRESHOLD"],
+      governanceGuardrail: "Even once built, material money decisions stay owner-controlled.",
+      signalCount: 1, evidenceRefs: [], blocksToday: [], missingData: [], estimatedComplexity: "MEDIUM", priorityRank: 1,
+    },
+    summary: { total: 1, critical: 0, high: 0, unlocksAutomation: 1 },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -189,6 +212,10 @@ describe("OwnerProcessIntelligencePage", () => {
     // The approval / auto-action policy surface renders too.
     await findByTestId("approval-policy-panel");
     expect(container.textContent ?? "").toMatch(/What OpsIQ may do without asking/i);
+
+    // The capability-gap / system feature recommendation surface renders too.
+    await findByTestId("capability-gap-panel");
+    expect(container.textContent ?? "").toMatch(/What OpsIQ should build next/i);
     expect(container.textContent ?? "").toMatch(/Require better proof upfront/i);
     const back = container.querySelector('[data-testid="back-to-now"]') as HTMLAnchorElement;
     expect(back.getAttribute("href")).toBe("/owner/now");
