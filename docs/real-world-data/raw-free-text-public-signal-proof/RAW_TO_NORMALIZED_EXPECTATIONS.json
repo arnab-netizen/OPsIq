@@ -1,0 +1,723 @@
+{
+  "pack": "raw-free-text-public-signal-proof",
+  "pass": "28",
+  "note": "Deterministic expected normalized output per raw fixture, produced by interpretRawPublicSignal (src/domain/owner-mode/public-signal-interpretation.ts). Regenerate if the interpreter changes.",
+  "expectations": [
+    {
+      "rawFixtureId": "raw-laundry-quality",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "Repeated quality/rework theme — diagnose the failing step; prove the fix before closing.",
+      "expectedBusinessIssueType": "QUALITY_FAILURE_LOOP",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "HIGH",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "HIGH",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "MEDIUM",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "actual defect/rework rate",
+        "which process step fails"
+      ],
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "evidence the corrected step passes before completion"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-laundry-discount",
+      "expectedSourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+      "expectedEvidenceStrength": "WEAK",
+      "expectedSignalSummary": "Pricing/discount pressure from public text — protect margin; no blind discount; owner decides with real unit economics.",
+      "expectedBusinessIssueType": "CASH_MARGIN_RISK",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "LOW",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "UNKNOWN",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "unit margin",
+        "cost per unit/order",
+        "price elasticity",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApprovalRequirement": "OWNER_APPROVAL_REQUIRED",
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-laundry-autocontact-pii",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "Repeated quality/rework theme — diagnose the failing step; prove the fix before closing.",
+      "expectedBusinessIssueType": "QUALITY_FAILURE_LOOP",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "HIGH",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "HIGH",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "MEDIUM",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "actual defect/rework rate",
+        "which process step fails"
+      ],
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "evidence the corrected step passes before completion"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": true,
+      "expectedPromptInjectionDetected": true,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-housekeeping-missed",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "Missed-area cleaning theme — inspection/checklist correction with proof before closing.",
+      "expectedBusinessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "HIGH",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "HIGH",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "MEDIUM",
+      "expectedStaffingOrTrainingRisk": "MEDIUM",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "inspection pass rate",
+        "contract SLA"
+      ],
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "evidence the corrected step passes before completion"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-housekeeping-discipline",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "Missed-area/turnover theme — training/SOP correction with adoption proof (process language, not blame).",
+      "expectedBusinessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "HIGH",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "HIGH",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "HIGH",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "training completion records",
+        "inspection pass rate"
+      ],
+      "expectedExecutionRoute": "CREATE_TRAINING_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "proof the training was completed"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": true,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-property-maintenance",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "Slow-maintenance/response theme — resolve the operational event with vendor follow-up; draft (never auto-send) tenant comms.",
+      "expectedBusinessIssueType": "OPERATIONAL_BOTTLENECK",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "HIGH",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "HIGH",
+      "expectedOwnerWorkloadRisk": "HIGH",
+      "expectedComplianceOrContractRisk": "MEDIUM",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "actual response times",
+        "vendor SLAs"
+      ],
+      "expectedExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "vendor/maintenance completion confirmation"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-property-spend",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "A material commitment decision (bid/EMD/contract/outreach/scale/spend) — the owner decides; nothing is auto-committed, submitted, contacted, or spent.",
+      "expectedBusinessIssueType": "OPPORTUNITY_SIGNAL",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "MEDIUM",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "HIGH",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [],
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApprovalRequirement": "OWNER_APPROVAL_REQUIRED",
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-franchise-inconsistency",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "Branch-inconsistency theme — branch audit + SOP/training correction; brand/pricing stays owner-gated; no franchisee-penalty automation.",
+      "expectedBusinessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "HIGH",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "MEDIUM",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "MEDIUM",
+      "expectedStaffingOrTrainingRisk": "HIGH",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "which branch",
+        "per-branch metrics"
+      ],
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "evidence the corrected step passes before completion"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-franchise-brand",
+      "expectedSourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+      "expectedEvidenceStrength": "WEAK",
+      "expectedSignalSummary": "Pricing/discount pressure from public text — protect margin; no blind discount; owner decides with real unit economics.",
+      "expectedBusinessIssueType": "CASH_MARGIN_RISK",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "LOW",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "UNKNOWN",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "unit margin",
+        "cost per unit/order",
+        "price elasticity",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApprovalRequirement": "OWNER_APPROVAL_REQUIRED",
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-saas-bug",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "SaaS defect theme — reproduce the bug before claiming fixed; no fabricated MRR/conversion; launch stays frozen.",
+      "expectedBusinessIssueType": "PRODUCT_SUPPORT_ISSUE",
+      "expectedOpportunityType": "ACTIVATION_IMPROVEMENT",
+      "expectedCustomerQualityRisk": "HIGH",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "MEDIUM",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "HIGH",
+      "expectedMissingData": [
+        "bug reproduction steps",
+        "real activation/conversion data"
+      ],
+      "expectedExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "fresh, checked reproduction/proof before the issue is accepted as fixed"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-saas-pricing-data",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "MODERATE",
+      "expectedSignalSummary": "SaaS onboarding/activation theme — collect real activation data before any product/pricing claim.",
+      "expectedBusinessIssueType": "PRODUCT_SUPPORT_ISSUE",
+      "expectedOpportunityType": "ACTIVATION_IMPROVEMENT",
+      "expectedCustomerQualityRisk": "MEDIUM",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "UNKNOWN",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "HIGH",
+      "expectedMissingData": [
+        "real activation/conversion",
+        "MRR"
+      ],
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "real activation/conversion",
+        "MRR"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-tender-notice-injection",
+      "expectedSourceQuality": "VERIFIED_SOURCE",
+      "expectedEvidenceStrength": "STRONG",
+      "expectedSignalSummary": "Public tender notice — gather eligibility + cost data; owner decides bid/no-bid; nothing auto-submitted, no EMD/contract action.",
+      "expectedBusinessIssueType": "OPPORTUNITY_SIGNAL",
+      "expectedOpportunityType": "TENDER_BID",
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "MEDIUM",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "HIGH",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "MEDIUM",
+      "expectedMissingData": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedConfidenceHandling": "OFFICIAL_BUT_NEEDS_BUSINESS_DATA",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": true,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-tender-bid-decision",
+      "expectedSourceQuality": "VERIFIED_SOURCE",
+      "expectedEvidenceStrength": "STRONG",
+      "expectedSignalSummary": "A material commitment decision (bid/EMD/contract/outreach/scale/spend) — the owner decides; nothing is auto-committed, submitted, contacted, or spent.",
+      "expectedBusinessIssueType": "OPPORTUNITY_SIGNAL",
+      "expectedOpportunityType": "TENDER_BID",
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "MEDIUM",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "HIGH",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [],
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApprovalRequirement": "OWNER_APPROVAL_REQUIRED",
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing"
+      ],
+      "expectedConfidenceHandling": "OFFICIAL_BUT_NEEDS_BUSINESS_DATA",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-b2b-rfp",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "WEAK",
+      "expectedSignalSummary": "Public RFP/RFQ signal — validate fit/capacity/cost; owner approves any outreach; draft only, no auto-send, no win-probability numbers.",
+      "expectedBusinessIssueType": "OPPORTUNITY_SIGNAL",
+      "expectedOpportunityType": "B2B_PURSUIT",
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "MEDIUM",
+      "expectedOperationalRisk": "MEDIUM",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "MEDIUM",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "HIGH",
+      "expectedMissingData": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-b2b-outreach-decision",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "WEAK",
+      "expectedSignalSummary": "A material commitment decision (bid/EMD/contract/outreach/scale/spend) — the owner decides; nothing is auto-committed, submitted, contacted, or spent.",
+      "expectedBusinessIssueType": "OPPORTUNITY_SIGNAL",
+      "expectedOpportunityType": "B2B_PURSUIT",
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "MEDIUM",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "HIGH",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApprovalRequirement": "OWNER_APPROVAL_REQUIRED",
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-collective-quality",
+      "expectedSourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "expectedEvidenceStrength": "WEAK",
+      "expectedSignalSummary": "Growth temptation while quality is unresolved — fix quality FIRST; do not scale before validation; the scale decision stays owner-gated.",
+      "expectedBusinessIssueType": "MULTI_MODULE_CONFLICT",
+      "expectedOpportunityType": "SCALE_TEMPTATION",
+      "expectedCustomerQualityRisk": "HIGH",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "HIGH",
+      "expectedOwnerWorkloadRisk": "HIGH",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "HIGH",
+      "expectedCapabilityGapRisk": "HIGH",
+      "expectedMissingData": [
+        "verified quality baseline",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "evidence the corrected step passes before completion"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-collective-costdata",
+      "expectedSourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+      "expectedEvidenceStrength": "WEAK",
+      "expectedSignalSummary": "Cost/capacity is unknown while growth is tempting — collect the missing internal data before any scale decision.",
+      "expectedBusinessIssueType": "MULTI_MODULE_CONFLICT",
+      "expectedOpportunityType": "SCALE_TEMPTATION",
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "HIGH",
+      "expectedOwnerWorkloadRisk": "HIGH",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "HIGH",
+      "expectedMissingData": [
+        "cost/margin",
+        "capacity",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [
+        "cost/margin",
+        "capacity",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "raw-collective-scale",
+      "expectedSourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+      "expectedEvidenceStrength": "WEAK",
+      "expectedSignalSummary": "A material commitment decision (bid/EMD/contract/outreach/scale/spend) — the owner decides; nothing is auto-committed, submitted, contacted, or spent.",
+      "expectedBusinessIssueType": "MULTI_MODULE_CONFLICT",
+      "expectedOpportunityType": "SCALE_TEMPTATION",
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "HIGH",
+      "expectedOperationalRisk": "MEDIUM",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "HIGH",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApprovalRequirement": "OWNER_APPROVAL_REQUIRED",
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": null
+    },
+    {
+      "rawFixtureId": "adv-verified-injection",
+      "expectedSourceQuality": "LOW_CONFIDENCE",
+      "expectedEvidenceStrength": "INSUFFICIENT",
+      "expectedSignalSummary": "Ambiguous/low-context public text — not enough to act on; validate before any conclusion.",
+      "expectedBusinessIssueType": "UNCLEAR_INSUFFICIENT",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "UNKNOWN",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "MONITOR_ONLY",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedConfidenceHandling": "REJECTED_UNVERIFIED_CLAIM",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": true,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": "Insufficient/unverified public text: clear business context; which process/step this refers to; whether this is a repeated, verified internal pattern (not a single public post)."
+    },
+    {
+      "rawFixtureId": "adv-money-claim",
+      "expectedSourceQuality": "LOW_CONFIDENCE",
+      "expectedEvidenceStrength": "INSUFFICIENT",
+      "expectedSignalSummary": "Ambiguous/low-context public text — not enough to act on; validate before any conclusion.",
+      "expectedBusinessIssueType": "UNCLEAR_INSUFFICIENT",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "UNKNOWN",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "MONITOR_ONLY",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedConfidenceHandling": "REJECTED_UNVERIFIED_CLAIM",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": true,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": "Insufficient/unverified public text: clear business context; which process/step this refers to; whether this is a repeated, verified internal pattern (not a single public post)."
+    },
+    {
+      "rawFixtureId": "adv-ambiguous",
+      "expectedSourceQuality": "LOW_CONFIDENCE",
+      "expectedEvidenceStrength": "INSUFFICIENT",
+      "expectedSignalSummary": "Ambiguous/low-context public text — not enough to act on; validate before any conclusion.",
+      "expectedBusinessIssueType": "UNCLEAR_INSUFFICIENT",
+      "expectedOpportunityType": null,
+      "expectedCustomerQualityRisk": "UNKNOWN",
+      "expectedCashProfitRisk": "UNKNOWN",
+      "expectedOperationalRisk": "UNKNOWN",
+      "expectedOwnerWorkloadRisk": "UNKNOWN",
+      "expectedComplianceOrContractRisk": "LOW",
+      "expectedStaffingOrTrainingRisk": "LOW",
+      "expectedCapabilityGapRisk": "LOW",
+      "expectedMissingData": [
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "expectedExecutionRoute": "MONITOR_ONLY",
+      "expectedOwnerApprovalRequirement": "NOT_OWNER_GATED",
+      "expectedEvidenceRequirement": [],
+      "expectedBlockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedConfidenceHandling": "DOWNGRADED_AMBIGUOUS",
+      "expectedPiiRemoved": false,
+      "expectedPromptInjectionDetected": false,
+      "expectedFinancialClaimAccepted": false,
+      "expectedMonitorOnlyReason": "Insufficient/unverified public text: clear business context; which process/step this refers to; whether this is a repeated, verified internal pattern (not a single public post)."
+    }
+  ]
+}
