@@ -1,0 +1,23 @@
+{
+  "audit": "raw-free-text-public-signal-proof",
+  "pass": "28",
+  "matrix": "INTERPRETATION_SAFETY",
+  "date": "2026-07-06",
+  "purpose": "Evaluates each interpreter safety property against executable proof (unit test in src/__tests__/owner-mode/public-signal-interpretation.test.ts and DB sim in src/__tests__/execution/raw-free-text-public-signal-end-to-end.db.test.ts).",
+  "properties": [
+    { "property": "PII stripping", "held": true, "how": "stripPii() runs first; emails/phones/names redacted before derivation/persist; piiRemoved flag set.", "provenBy": ["unit test 10", "db test 9 (PII never in task/audit)"] },
+    { "property": "prompt-injection resistance", "held": true, "how": "INJECTION_PATTERNS detected; promptInjectionIgnored always true when detected; verification/authority never changed by content.", "provenBy": ["unit test 11", "db test 8 (submit injection stays data task; 'mark verified' not upgraded)"] },
+    { "property": "copyright minimization", "held": true, "how": "only short paraphrased fixtures; sanitizedTextSummary truncated to <=180 chars; no verbatim text.", "provenBy": ["RAW_TEXT_PRIVACY_AND_COPYRIGHT_NOTES.md", "interpreter summarize()"] },
+    { "property": "public-source uncertainty", "held": true, "how": "every signal carries sourceQuality + evidenceStrength; public text is a signal, not ground truth unless official.", "provenBy": ["unit test 1/16", "RAW_TO_NORMALIZED_EXPECTATIONS.json"] },
+    { "property": "weak-evidence downgrade", "held": true, "how": "ambiguous/one-off/low-context -> INSUFFICIENT/WEAK + DOWNGRADED_AMBIGUOUS/VALIDATION_NEEDED_WEAK + data/monitor route.", "provenBy": ["unit test 8/9", "db test 13"] },
+    { "property": "missing data extraction", "held": true, "how": "missingData is always explicit; weak/ambiguous adds a 'verified internal pattern' requirement.", "provenBy": ["unit test 20", "db tests 4/17"] },
+    { "property": "no fake money/ROI/win-probability", "held": true, "how": "financialClaimAccepted is a Zod literal(false); claim never becomes a numeric field or governed text.", "provenBy": ["unit test 12", "db test 11", "db test 10 (no currency/%/roi in governed fields)"] },
+    { "property": "no unsafe route authority", "held": true, "how": "interpreter proposes only governed correction types; the bridge produces only internal routes; no SUBMIT/SEND/SPEND/OUTREACH/TENDER route exists.", "provenBy": ["db test 7"] },
+    { "property": "tender safety", "held": true, "how": "tender text routes to eligibility/cost data + owner bid decision; auto-submit/EMD/contract blocked.", "provenBy": ["unit test 13", "db test 8 (eligibility stays data task, submit blocked)"] },
+    { "property": "customer outreach safety", "held": true, "how": "auto customer/tenant/buyer contact always blocked; outreach is owner-gated, draft only.", "provenBy": ["unit test 14", "db test 5 (b2b outreach owner-gated)"] },
+    { "property": "staff discipline language safety", "held": true, "how": "staff issues route to training/SOP; firing/discipline instruction blocked and not obeyed; no fraud/negligent/fired label.", "provenBy": ["unit test 15", "db test 12", "db test 10"] },
+    { "property": "workspace isolation", "held": true, "how": "each interpreted signal is scoped to its workspace; tender bid task never leaks into laundry.", "provenBy": ["db test 15"] },
+    { "property": "owner cockpit anti-spam", "held": true, "how": "governed summaries only; raw injection/PII text never appears in a persisted task; one actionable top action per workspace.", "provenBy": ["db test 14", "db test 16"] }
+  ],
+  "summary": { "propertiesEvaluated": 13, "propertiesHeld": 13, "propertiesFailed": 0, "classification": "ELITE_ACCEPTED" }
+}

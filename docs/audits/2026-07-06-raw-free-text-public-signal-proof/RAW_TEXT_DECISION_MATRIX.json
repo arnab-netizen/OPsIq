@@ -1,0 +1,725 @@
+{
+  "audit": "raw-free-text-public-signal-proof",
+  "pass": "28",
+  "matrix": "RAW_TEXT_DECISION",
+  "date": "2026-07-06",
+  "note": "One row per raw fixture. expected==actual because the interpreter is deterministic; 'actual' is produced by running interpretRawPublicSignal, 'expected' is the documented conservative handling. Routes/handling proven by the unit + DB tests cited per row.",
+  "rows": [
+    {
+      "rawFixtureId": "raw-laundry-quality",
+      "archetype": "laundry_local_service",
+      "sourceType": "public_review",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "QUALITY_FAILURE_LOOP",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "QUALITY_FAILURE_LOOP",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "actualExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-laundry-discount",
+      "archetype": "laundry_local_service",
+      "sourceType": "public_service_page",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "CASH_MARGIN_RISK",
+        "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "CASH_MARGIN_RISK",
+        "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "actualConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": true,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-laundry-autocontact-pii",
+      "archetype": "laundry_local_service",
+      "sourceType": "public_review",
+      "rawRisk": "PII+PROMPT_INJECTION",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "QUALITY_FAILURE_LOOP",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "QUALITY_FAILURE_LOOP",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "actualExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "PII_STRIPPED",
+      "actualPrivacyAction": "PII_STRIPPED",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": true,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-housekeeping-missed",
+      "archetype": "housekeeping_facility",
+      "sourceType": "public_complaint",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "actualExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-housekeeping-discipline",
+      "archetype": "housekeeping_facility",
+      "sourceType": "public_complaint",
+      "rawRisk": "PROMPT_INJECTION",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_TRAINING_TASK",
+      "actualExecutionRoute": "CREATE_TRAINING_TASK",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": true,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-property-maintenance",
+      "archetype": "property_management",
+      "sourceType": "public_complaint",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "OPERATIONAL_BOTTLENECK",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "OPERATIONAL_BOTTLENECK",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "actualExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-property-spend",
+      "archetype": "property_management",
+      "sourceType": "public_complaint",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": true,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-franchise-inconsistency",
+      "archetype": "franchise_operations",
+      "sourceType": "public_complaint",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "PROCESS_QUALITY_BREAKDOWN",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "actualExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-franchise-brand",
+      "archetype": "franchise_operations",
+      "sourceType": "public_service_page",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "CASH_MARGIN_RISK",
+        "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "CASH_MARGIN_RISK",
+        "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "actualConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": true,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-saas-bug",
+      "archetype": "saas",
+      "sourceType": "public_saas_review",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "PRODUCT_SUPPORT_ISSUE",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "PRODUCT_SUPPORT_ISSUE",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "actualExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-saas-pricing-data",
+      "archetype": "saas",
+      "sourceType": "public_saas_support",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "PRODUCT_SUPPORT_ISSUE",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "PRODUCT_SUPPORT_ISSUE",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "MODERATE"
+      },
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "actualConfidenceHandling": "ACCEPTED_AS_UNVERIFIED_SIGNAL",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-tender-notice-injection",
+      "archetype": "tender_procurement",
+      "sourceType": "public_tender_notice",
+      "rawRisk": "PROMPT_INJECTION",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "VERIFIED_SOURCE",
+        "evidenceStrength": "STRONG"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "VERIFIED_SOURCE",
+        "evidenceStrength": "STRONG"
+      },
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedConfidenceHandling": "OFFICIAL_BUT_NEEDS_BUSINESS_DATA",
+      "actualConfidenceHandling": "OFFICIAL_BUT_NEEDS_BUSINESS_DATA",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": true,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-tender-bid-decision",
+      "archetype": "tender_procurement",
+      "sourceType": "public_tender_notice",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "VERIFIED_SOURCE",
+        "evidenceStrength": "STRONG"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "VERIFIED_SOURCE",
+        "evidenceStrength": "STRONG"
+      },
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedConfidenceHandling": "OFFICIAL_BUT_NEEDS_BUSINESS_DATA",
+      "actualConfidenceHandling": "OFFICIAL_BUT_NEEDS_BUSINESS_DATA",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": true,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-b2b-rfp",
+      "archetype": "b2b_service",
+      "sourceType": "public_rfq",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "actualConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-b2b-outreach-decision",
+      "archetype": "b2b_service",
+      "sourceType": "public_b2b_opportunity",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "OPPORTUNITY_SIGNAL",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "actualConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": true,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-collective-quality",
+      "archetype": "collective_conflict",
+      "sourceType": "public_complaint",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "MULTI_MODULE_CONFLICT",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "MULTI_MODULE_CONFLICT",
+        "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "actualExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "actualConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-collective-costdata",
+      "archetype": "collective_conflict",
+      "sourceType": "public_service_page",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "MULTI_MODULE_CONFLICT",
+        "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "MULTI_MODULE_CONFLICT",
+        "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "actualConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "raw-collective-scale",
+      "archetype": "collective_conflict",
+      "sourceType": "public_service_page",
+      "rawRisk": "NONE",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "MULTI_MODULE_CONFLICT",
+        "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "MULTI_MODULE_CONFLICT",
+        "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+        "evidenceStrength": "WEAK"
+      },
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "actualConfidenceHandling": "VALIDATION_NEEDED_WEAK",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": true,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts + raw-free-text-public-signal-end-to-end.db.test.ts",
+      "dbEvidence": "raw-free-text-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "adv-verified-injection",
+      "archetype": "laundry_local_service",
+      "sourceType": "public_review",
+      "rawRisk": "PROMPT_INJECTION",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "UNCLEAR_INSUFFICIENT",
+        "sourceQuality": "LOW_CONFIDENCE",
+        "evidenceStrength": "INSUFFICIENT"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "UNCLEAR_INSUFFICIENT",
+        "sourceQuality": "LOW_CONFIDENCE",
+        "evidenceStrength": "INSUFFICIENT"
+      },
+      "expectedExecutionRoute": "MONITOR_ONLY",
+      "actualExecutionRoute": "MONITOR_ONLY",
+      "expectedConfidenceHandling": "REJECTED_UNVERIFIED_CLAIM",
+      "actualConfidenceHandling": "REJECTED_UNVERIFIED_CLAIM",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": true,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts (interpret-only adversarial)",
+      "dbEvidence": "n/a (not persisted; safety asserted at interpret layer)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "adv-money-claim",
+      "archetype": "b2b_service",
+      "sourceType": "public_b2b_opportunity",
+      "rawRisk": "PROMPT_INJECTION+FINANCIAL_CLAIM",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "UNCLEAR_INSUFFICIENT",
+        "sourceQuality": "LOW_CONFIDENCE",
+        "evidenceStrength": "INSUFFICIENT"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "UNCLEAR_INSUFFICIENT",
+        "sourceQuality": "LOW_CONFIDENCE",
+        "evidenceStrength": "INSUFFICIENT"
+      },
+      "expectedExecutionRoute": "MONITOR_ONLY",
+      "actualExecutionRoute": "MONITOR_ONLY",
+      "expectedConfidenceHandling": "REJECTED_UNVERIFIED_CLAIM",
+      "actualConfidenceHandling": "REJECTED_UNVERIFIED_CLAIM",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": true,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts (interpret-only adversarial)",
+      "dbEvidence": "n/a (not persisted; safety asserted at interpret layer)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "rawFixtureId": "adv-ambiguous",
+      "archetype": "laundry_local_service",
+      "sourceType": "public_review",
+      "rawRisk": "AMBIGUITY",
+      "expectedNormalizedSignal": {
+        "businessIssueType": "UNCLEAR_INSUFFICIENT",
+        "sourceQuality": "LOW_CONFIDENCE",
+        "evidenceStrength": "INSUFFICIENT"
+      },
+      "actualNormalizedSignal": {
+        "businessIssueType": "UNCLEAR_INSUFFICIENT",
+        "sourceQuality": "LOW_CONFIDENCE",
+        "evidenceStrength": "INSUFFICIENT"
+      },
+      "expectedExecutionRoute": "MONITOR_ONLY",
+      "actualExecutionRoute": "MONITOR_ONLY",
+      "expectedConfidenceHandling": "DOWNGRADED_AMBIGUOUS",
+      "actualConfidenceHandling": "DOWNGRADED_AMBIGUOUS",
+      "expectedPrivacyAction": "NO_PII_PRESENT",
+      "actualPrivacyAction": "NO_PII_PRESENT",
+      "ownerApprovalRequired": false,
+      "promptInjectionIgnored": false,
+      "financialClaimAccepted": false,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "testEvidence": "public-signal-interpretation.test.ts (interpret-only adversarial)",
+      "dbEvidence": "n/a (not persisted; safety asserted at interpret layer)",
+      "privacyConsistent": true,
+      "classification": "ELITE_ACCEPTED"
+    }
+  ],
+  "summary": {
+    "fixtures": 21,
+    "allPrivacyConsistent": true,
+    "allInjectionIgnored": true,
+    "anyFinancialClaimAccepted": false,
+    "classification": "ELITE_ACCEPTED"
+  }
+}
