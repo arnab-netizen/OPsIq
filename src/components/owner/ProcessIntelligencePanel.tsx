@@ -9,7 +9,40 @@
  * DATA_INSUFFICIENT renders honestly. No fraud/negligence wording; no hidden staff score.
  */
 
+import type { ReactNode } from "react";
 import { Badge } from "@/ui/primitives";
+
+// ── Executive Cockpit layout (progressive disclosure, anti-overload, mobile-friendly) ──────────────────
+
+/**
+ * CockpitGroup — a labelled, collapsible group of secondary panels. Closed by default so the owner sees
+ * only the single primary focus first and opts into detail (progressive disclosure). Presentational only:
+ * no business logic, no data fetching. Mobile-friendly (full-width, wraps, no horizontal overflow).
+ */
+export function CockpitGroup({
+  title, subtitle, testid, defaultOpen = false, children,
+}: { title: string; subtitle?: string; testid: string; defaultOpen?: boolean; children: ReactNode }) {
+  return (
+    <details data-testid={testid} open={defaultOpen}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", width: "100%", boxSizing: "border-box" }}>
+      <summary data-testid={`${testid}-summary`} style={{ cursor: "pointer", fontSize: 15, fontWeight: 600 }}>
+        {title}
+        {subtitle ? <span style={{ display: "block", fontSize: 12, fontWeight: 400, color: "#6b7280", marginTop: 2 }}>{subtitle}</span> : null}
+      </summary>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12, minWidth: 0 }}>{children}</div>
+    </details>
+  );
+}
+
+/** A small in-group label so each panel keeps its context inside a collapsed group. */
+export function CockpitSubsection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+      <h3 style={{ margin: 0, fontSize: 14 }}>{title}</h3>
+      {children}
+    </section>
+  );
+}
 
 export interface ProcessFindingView {
   findingType: string;
