@@ -164,6 +164,7 @@ jobs:
             src/__tests__/execution/opportunity-validation-experiment-simulation.db.test.ts \
             src/__tests__/execution/opportunity-portfolio-capital-allocation-simulation.db.test.ts \
             src/__tests__/execution/external-opportunity-intake-simulation.db.test.ts \
+            src/__tests__/execution/validation-outcome-persistence-simulation.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -320,6 +321,7 @@ jobs:
             src/__tests__/execution/opportunity-validation-experiment-simulation.db.test.ts \
             src/__tests__/execution/opportunity-portfolio-capital-allocation-simulation.db.test.ts \
             src/__tests__/execution/external-opportunity-intake-simulation.db.test.ts \
+            src/__tests__/execution/validation-outcome-persistence-simulation.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e

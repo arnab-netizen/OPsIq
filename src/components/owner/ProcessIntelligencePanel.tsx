@@ -1369,3 +1369,58 @@ export function OpportunityOperatingPanel({ data }: { data: OpportunityOperating
     </section>
   );
 }
+
+// ── Validation Outcome Persistence (PASS 11) ──────────────────────────────────────────────────────────
+
+export interface ValidationOutcomeView {
+  opportunityKey: string;
+  experimentKey: string;
+  status: string;
+  result: string;
+  validationStatus: string;
+  nextRecommendedDecision: string;
+  approvalLevel: string;
+  stopLossTriggered: boolean;
+  ownerVisibleSummary: string;
+  recordedAt: string;
+}
+
+const OUTCOME_DECISION_LABEL: Record<string, string> = {
+  KILL: "Stop it", PARK: "Park", MODIFY: "Modify & retry", RETEST: "Retest", SCALE_CANDIDATE: "Scale candidate — owner approval", NEEDS_DATA: "Collect data",
+};
+
+/**
+ * ValidationOutcomePanel — Executive Cockpit surface for recorded validation outcomes: the top opportunity's
+ * real result, whether scale/kill/park is allowed and why, the next decision, and the approval level. Scale
+ * is only ever a candidate (owner-approved), never automatic; a failed/stop-loss result is a stop. No fake
+ * revenue/conversion/profit; no hidden score.
+ */
+export function ValidationOutcomePanel({ data }: { data: ValidationOutcomeView[] | null }) {
+  const top = data && data.length > 0 ? data[0] : null;
+  if (!top) {
+    return (
+      <div data-testid="outcome-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No validation outcome recorded yet — until a test's real result is recorded, the portfolio cannot scale or kill.
+      </div>
+    );
+  }
+  return (
+    <section data-testid="outcome-panel" data-result={top.result} data-next-decision={top.nextRecommendedDecision}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="outcome-result">Result: {top.result}</strong>
+        <Badge variant={top.nextRecommendedDecision === "KILL" ? "destructive" : top.nextRecommendedDecision === "SCALE_CANDIDATE" ? "default" : "warning"}>{OUTCOME_DECISION_LABEL[top.nextRecommendedDecision] ?? top.nextRecommendedDecision}</Badge>
+        <span data-testid="outcome-approval"><Badge variant={top.approvalLevel === "OWNER" ? "destructive" : "default"}>{top.approvalLevel === "OWNER" ? "Owner approval" : "Manager"}</Badge></span>
+      </div>
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="outcome-summary">{top.ownerVisibleSummary}</p>
+      <span data-testid="outcome-gate" style={{ fontSize: 12, color: top.result === "PASSED" && top.nextRecommendedDecision === "SCALE_CANDIDATE" ? "#15803d" : "#b45309" }}>
+        {top.result === "PASSED" && top.nextRecommendedDecision === "SCALE_CANDIDATE"
+          ? "Scaling is unblocked — validation passed with evidence; owner approves the scale."
+          : top.nextRecommendedDecision === "KILL"
+            ? "Scaling is off the table — this result stops the opportunity."
+            : "Scaling stays blocked — no passed-with-evidence result yet."}
+      </span>
+      {top.stopLossTriggered && <span data-testid="outcome-stoploss" style={{ fontSize: 12, color: "#b91c1c" }}>Stop-loss was triggered.</span>}
+    </section>
+  );
+}

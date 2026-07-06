@@ -291,6 +291,13 @@ const PAYLOAD = {
     clusters: [], topCluster: null, capabilityRecommendations: [],
     summary: { rawSignals: 1, clusters: 1, candidates: 0, tenderCandidates: 0, parkedOrRejected: 0, needsData: 1, ownerReviewRequired: 0, expiredOrStale: 0 },
   },
+  opportunityValidationOutcomes: [
+    {
+      opportunityKey: "SERVICE_GAP:NEW_SERVICE", experimentKey: "exp-1", status: "COMPLETED", result: "PASSED",
+      validationStatus: "PASSED", nextRecommendedDecision: "SCALE_CANDIDATE", approvalLevel: "OWNER", stopLossTriggered: false,
+      ownerVisibleSummary: "Validation passed with cost + margin evidence — bring a scaling plan to the owner.", recordedAt: "2026-07-06T00:00:00.000Z",
+    },
+  ],
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -360,6 +367,9 @@ describe("OwnerProcessIntelligencePage", () => {
     // The structured-intake opportunity operating layer renders inside the same Grow group.
     await findByTestId("operating-panel");
     expect(container.textContent ?? "").toMatch(/Submitted opportunity signals/i);
+    // The recorded validation-outcome surface renders inside the same Grow group.
+    await findByTestId("outcome-panel");
+    expect(container.textContent ?? "").toMatch(/What the test proved/i);
     for (const gid of ["cockpit-group-cash", "cockpit-group-grow", "cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
       const grp = await findByTestId(gid);
       expect(grp.tagName.toLowerCase()).toBe("details");
