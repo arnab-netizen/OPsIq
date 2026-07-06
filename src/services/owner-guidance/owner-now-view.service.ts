@@ -47,6 +47,7 @@ import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCand
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
 import { buildCashProfitProtection, type CashProfitProtectionAnalysis, type CashRiskState } from "@/domain/owner-mode/cash-profit-protection";
 import { buildProcessExecutionBridge, type ProcessExecutionBridgeAnalysis } from "@/domain/owner-mode/process-execution-bridge";
+import { buildBridgeExpansion } from "@/domain/owner-mode/process-execution-bridge-expansion";
 import { getPersistedProcessTasks } from "@/services/owner-mode/process-execution-bridge.service";
 import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
 import { buildOpportunityValidationPlan, type OpportunityValidationAnalysis } from "@/domain/owner-mode/opportunity-validation-experiment-engine";
@@ -1132,9 +1133,20 @@ export async function getOwnerNowView(
   // findings into governed execution routes so the owner sees the top bridged ACTION (route/owner/evidence/
   // approval) instead of a raw diagnosis to re-key. Read-only here; a route is persisted/completed via the
   // process-execution-bridge service.
-  const processExecution: ProcessExecutionBridgeAnalysis | null = (processCorrections || cashProfitProtection)
-    ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString())
-    : null;
+  // PASS 23 — bridge the remaining engines (workload / capability / standalone SOP / standalone training /
+  // effectiveness re-check) DIRECTLY into the same governed substrate, not only through the correction router
+  // (R2/R3). Specific SOP/training routes collapse the generic correction route for the same fix (no cockpit spam).
+  const bridgeExpansion = buildBridgeExpansion(
+    {
+      workload: ownerWorkloadReduction, capability: capabilityGaps,
+      sop: sopChecklistCorrections, training: trainingAssignments, effectiveness: sopTrainingEffectiveness,
+    },
+    workspaceId,
+  );
+  const processExecution: ProcessExecutionBridgeAnalysis | null =
+    (processCorrections || cashProfitProtection || bridgeExpansion.routes.length > 0)
+      ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString(), bridgeExpansion)
+      : null;
   // Reflect persisted task state so the cockpit shows the REAL status (PROPOSED/IN_PROGRESS/APPROVED/COMPLETED/…)
   // and the interactive controls only offer valid transitions. Best-effort read: if the table is unavailable,
   // routes keep their PROPOSED default. The top action skips terminal (completed/rejected) tasks.
