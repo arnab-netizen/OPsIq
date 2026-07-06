@@ -188,6 +188,31 @@ const PAYLOAD = {
     },
     summary: { total: 1, critical: 0, high: 0, ownerReviewRequired: 0 },
   },
+  externalOpportunityIntelligence: {
+    classifiedSignals: [{ signalId: "s1", signalSourceType: "CUSTOMER_COMPLAINT_PATTERN", classification: "CANDIDATE", reason: "material, relevant, evidence-backed" }],
+    candidates: [
+      {
+        opportunityType: "RETENTION_CAMPAIGN", signalSourceType: "CUSTOMER_COMPLAINT_PATTERN",
+        sourceEvidenceSummary: "Recurring quality complaints point to dissatisfied customers", sourceRefs: ["ev-1"],
+        customerPainPoint: "repeat quality complaints", targetCustomerSegment: "recently-complaining customers",
+        expectedValueHypothesis: "A cheap retention offer could reduce churn", confidence: "LOW", missingData: ["per-customer value"],
+        cashRisk: "LOW", ownerWorkloadRisk: "LOW", legalOrComplianceRisk: "LOW", validationRequired: true,
+        recommendedNextStep: "NEEDS_CAPABILITY", approvalLevel: "MANAGER", relatedCapabilityGap: "MISSING_UNIT_ECONOMICS_OR_MEASUREMENT",
+        systemCapabilityRecommendation: "OpsIQ needs unit-economics capture.", riskIfIgnored: "Opportunity cannot be measured yet",
+      },
+    ],
+    topCandidate: {
+      opportunityType: "RETENTION_CAMPAIGN", signalSourceType: "CUSTOMER_COMPLAINT_PATTERN",
+      sourceEvidenceSummary: "Recurring quality complaints point to dissatisfied customers", sourceRefs: ["ev-1"],
+      customerPainPoint: "repeat quality complaints", targetCustomerSegment: "recently-complaining customers",
+      expectedValueHypothesis: "A cheap retention offer could reduce churn", confidence: "LOW", missingData: ["per-customer value"],
+      cashRisk: "LOW", ownerWorkloadRisk: "LOW", legalOrComplianceRisk: "LOW", validationRequired: true,
+      recommendedNextStep: "NEEDS_CAPABILITY", approvalLevel: "MANAGER", relatedCapabilityGap: "MISSING_UNIT_ECONOMICS_OR_MEASUREMENT",
+      systemCapabilityRecommendation: "OpsIQ needs unit-economics capture.", riskIfIgnored: "Opportunity cannot be measured yet",
+    },
+    tenderCandidates: [], topTenderCandidate: null,
+    summary: { rawSignals: 1, duplicatesCollapsed: 0, irrelevantOrParked: 0, needsData: 0, candidates: 1, tenderCandidates: 0, ownerReviewRequired: 0 },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -245,7 +270,10 @@ describe("OwnerProcessIntelligencePage", () => {
     // The cash/profit protection surface renders inside its group too.
     await findByTestId("cash-profit-panel");
     expect(container.textContent ?? "").toMatch(/Protect cash & profit/i);
-    for (const gid of ["cockpit-group-cash", "cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
+    // The external opportunity intelligence surface renders inside its group too.
+    await findByTestId("opportunity-panel");
+    expect(container.textContent ?? "").toMatch(/Grow: opportunities to validate/i);
+    for (const gid of ["cockpit-group-cash", "cockpit-group-grow", "cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
       const grp = await findByTestId(gid);
       expect(grp.tagName.toLowerCase()).toBe("details");
       expect(grp.hasAttribute("open")).toBe(false);

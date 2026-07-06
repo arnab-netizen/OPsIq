@@ -904,3 +904,149 @@ export function CashProfitPanel({ data }: { data: CashProfitProtectionView | nul
     </section>
   );
 }
+
+// ── External Opportunity Intelligence ──────────────────────────────────────────────────────────────────
+
+export interface OpportunityCandidateView {
+  opportunityType: string;
+  signalSourceType: string;
+  sourceEvidenceSummary: string;
+  sourceRefs: string[];
+  customerPainPoint: string;
+  targetCustomerSegment: string;
+  expectedValueHypothesis: string;
+  confidence: string;
+  missingData: string[];
+  cashRisk: string;
+  ownerWorkloadRisk: string;
+  legalOrComplianceRisk: string;
+  validationRequired: boolean;
+  recommendedNextStep: string;
+  approvalLevel: string;
+  relatedCapabilityGap: string | null;
+  systemCapabilityRecommendation: string | null;
+  riskIfIgnored: string;
+}
+
+export interface TenderCandidateView {
+  signalSourceType: string;
+  opportunityTitle: string;
+  targetBuyer: string;
+  eligibility: string;
+  emdExposure: string;
+  paymentDelayRisk: string;
+  workingCapitalRequirement: string;
+  compliance: string;
+  capacityFit: string;
+  unitEconomics: string;
+  bidDeadlineDays: number | null;
+  tenderDecision: string;
+  readyToBid: boolean;
+  ownerApprovalRequired: boolean;
+  missingData: string[];
+  ownerVisibleExplanation: string;
+}
+
+export interface ExternalOpportunitySummaryView {
+  rawSignals: number;
+  duplicatesCollapsed: number;
+  irrelevantOrParked: number;
+  needsData: number;
+  candidates: number;
+  tenderCandidates: number;
+  ownerReviewRequired: number;
+}
+
+export interface ExternalOpportunityView {
+  candidates: OpportunityCandidateView[];
+  topCandidate: OpportunityCandidateView | null;
+  tenderCandidates: TenderCandidateView[];
+  topTenderCandidate: TenderCandidateView | null;
+  summary: ExternalOpportunitySummaryView;
+}
+
+const NEXT_STEP_LABEL: Record<string, string> = {
+  VALIDATE_CHEAPLY: "Validate cheaply", OWNER_REVIEW: "Owner review", NEEDS_CAPABILITY: "Needs a capability first",
+  COLLECT_DATA: "Collect more data", COLLECT_COST_DATA: "Collect cost data", COLLECT_ELIGIBILITY_DATA: "Collect eligibility data",
+  PREPARE_BID_DRAFT: "Prepare an owner-reviewed draft", PARK: "Park for now", REJECT: "Reject",
+};
+const TENDER_DECISION_LABEL: Record<string, string> = {
+  REJECT_UNFIT: "Reject — unfit", PARK: "Park", COLLECT_ELIGIBILITY_DATA: "Collect eligibility data",
+  COLLECT_COST_DATA: "Collect cost data", OWNER_REVIEW_REQUIRED: "Owner review required",
+  VALIDATE_CHEAPLY: "Validate cheaply", PREPARE_BID_DRAFT: "Prepare draft for owner (no auto-submit)",
+  DO_NOT_BID: "Do not bid", NEEDS_CAPABILITY: "Needs a capability first",
+};
+const OPP_TYPE_LABEL: Record<string, string> = {
+  NEW_SERVICE: "New service", B2B_OFFER: "B2B offer", PRICING_TEST: "Pricing test", CUSTOMER_SEGMENT: "New customer segment",
+  RETENTION_CAMPAIGN: "Customer retention", LOCAL_PARTNERSHIP: "Local partnership", OPERATIONS_ADJACENCY: "Operations adjacency",
+  MARKETING_CHANNEL: "Marketing channel", SUPPLIER_ADVANTAGE: "Supplier advantage", TENDER_BID: "Tender / procurement", OTHER: "Opportunity",
+};
+
+/**
+ * OpportunityPanel — Executive Cockpit standard for external opportunity intelligence: the single top
+ * MATERIAL opportunity candidate by default (recommended next step first — always validate/review, never
+ * scale), plus a tender/procurement candidate only when materially relevant (which is never auto-submitted).
+ * Evidence collapsed; ingested/deduped/parked signals are summarised, never dumped. No fabricated market
+ * data, no profit guarantee, no hidden score.
+ */
+export function OpportunityPanel({ data }: { data: ExternalOpportunityView | null }) {
+  const top = data?.topCandidate ?? null;
+  const tender = data?.topTenderCandidate ?? null;
+  if (!top && !tender) {
+    return (
+      <div data-testid="opportunity-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No validated opportunity candidate yet — OpsIQ ingests signals broadly but surfaces one only when there is evidence worth testing.
+      </div>
+    );
+  }
+  const s = data!.summary;
+  return (
+    <section data-testid="opportunity-panel" data-next-step={top?.recommendedNextStep ?? "NONE"}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      {top && (
+        <>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <strong data-testid="opp-title">{OPP_TYPE_LABEL[top.opportunityType] ?? top.opportunityType}</strong>
+            <Badge variant={top.recommendedNextStep === "OWNER_REVIEW" ? "destructive" : top.recommendedNextStep === "VALIDATE_CHEAPLY" ? "default" : "warning"}>{NEXT_STEP_LABEL[top.recommendedNextStep] ?? top.recommendedNextStep}</Badge>
+            <span data-testid="opp-confidence" style={{ fontSize: 12, color: "#6b7280" }}>{top.confidence} confidence</span>
+          </div>
+          <p style={{ margin: 0, fontSize: 13 }} data-testid="opp-why">{top.expectedValueHypothesis}</p>
+          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="opp-segment">For: {top.targetCustomerSegment} · Pain: {top.customerPainPoint}</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+            <span data-testid="opp-cashrisk">Cash risk: {top.cashRisk}</span>
+            <span data-testid="opp-workloadrisk">Owner-workload risk: {top.ownerWorkloadRisk}</span>
+            <span data-testid="opp-validation">{top.validationRequired ? "Validation required before any scale" : ""}</span>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+            <span data-testid="opp-approval"><Badge variant={top.approvalLevel === "OWNER" ? "destructive" : "default"}>{APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge></span>
+            {top.relatedCapabilityGap ? <span data-testid="opp-capgap" style={{ color: "#b45309" }}>Needs capability: {top.relatedCapabilityGap}</span> : null}
+          </div>
+          {top.sourceRefs.length > 0 && (
+            <details data-testid="opp-evidence">
+              <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Evidence ({top.sourceRefs.length})</summary>
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280", wordBreak: "break-all" }}>{top.sourceEvidenceSummary} — {top.sourceRefs.slice(0, 8).join(", ")}</p>
+            </details>
+          )}
+          {top.missingData.length > 0 && (
+            <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="opp-missing">Missing data: {top.missingData.join("; ")}</p>
+          )}
+        </>
+      )}
+      {/* Tender / procurement candidate — surfaced only when materially relevant; never auto-submitted. */}
+      {tender && (
+        <div data-testid="tender-block" data-tender-decision={tender.tenderDecision} style={{ borderTop: "1px dashed #e5e7eb", paddingTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <strong style={{ fontSize: 13 }} data-testid="tender-title">Tender / procurement: {tender.opportunityTitle}</strong>
+            <Badge variant={tender.tenderDecision === "PREPARE_BID_DRAFT" ? "default" : "destructive"}>{TENDER_DECISION_LABEL[tender.tenderDecision] ?? tender.tenderDecision}</Badge>
+          </div>
+          <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="tender-explanation">{tender.ownerVisibleExplanation}</p>
+          <span style={{ fontSize: 12, color: "#6b7280" }} data-testid="tender-risk">Eligibility: {tender.eligibility} · EMD: {tender.emdExposure} · Payment-delay: {tender.paymentDelayRisk} · Working-capital: {tender.workingCapitalRequirement} · Capacity: {tender.capacityFit}</span>
+          <span style={{ fontSize: 12, color: "#b45309" }} data-testid="tender-guardrail">OpsIQ never submits or bids automatically — owner approval is required. {tender.readyToBid ? "A draft may be prepared." : "Not ready to bid."}</span>
+        </div>
+      )}
+      <span data-testid="opp-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {s.rawSignals} signal(s) ingested · {s.duplicatesCollapsed} deduped · {s.needsData} need data · {s.irrelevantOrParked} parked/rejected · {s.candidates} candidate(s) · {s.tenderCandidates} tender(s)
+      </span>
+    </section>
+  );
+}

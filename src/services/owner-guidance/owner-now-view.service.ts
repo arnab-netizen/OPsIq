@@ -46,6 +46,7 @@ import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type 
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
 import { buildCashProfitProtection, type CashProfitProtectionAnalysis } from "@/domain/owner-mode/cash-profit-protection";
+import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -330,6 +331,13 @@ export interface OwnerNowViewPayload {
    * Null when there is no real activity or financial context to protect.
    */
   cashProfitProtection: CashProfitProtectionAnalysis | null;
+  /**
+   * External Opportunity Intelligence v1 — potentially profitable opportunities suggested by structured,
+   * evidence-backed external/customer signals, each gated by evidence, cash safety, owner-workload awareness,
+   * capability fit, and legal/compliance risk. No candidate is ever ready-to-scale; every one requires cheap
+   * validation first. Null when no evidence-backed opportunity signal exists.
+   */
+  externalOpportunityIntelligence: ExternalOpportunityAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1082,6 +1090,20 @@ export async function getOwnerNowView(
       }, workspaceId, new Date(deps.now()).toISOString())
     : null;
 
+  // External Opportunity Intelligence v1 — evidence-backed opportunity candidates derived from internal
+  // customer-complaint patterns (structured/manual external intake extends this), each filtered through
+  // cash/profit protection, the capability gap, and the approval boundary. No signal → null.
+  const opportunitySignals = deriveExternalOpportunitySignals(complaintReworkLinks, cashProfitProtection, capabilityGaps, topConstraint);
+  const externalOpportunityIntelligence: ExternalOpportunityAnalysis | null = opportunitySignals.length > 0
+    ? buildExternalOpportunityIntelligence({
+        signals: opportunitySignals,
+        context: {
+          cashProfitRiskActive: Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")),
+          capabilityGapPresent: capabilityGaps != null,
+        },
+      }, workspaceId, new Date(deps.now()).toISOString())
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1101,7 +1123,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence };
 }
 
 /**
@@ -1350,6 +1372,54 @@ function deriveCapabilityGapSignals(
   }
 
   return signals;
+}
+
+/**
+ * Derive evidence-backed external opportunity signals from internal data. v1 derives a customer-retention
+ * opportunity from a recurring complaint pattern (dissatisfied customers who could be won back); richer
+ * external sources (competitor reviews, B2B demand, pricing gaps) come via structured/manual intake. Every
+ * value is read from real complaint evidence — none is fabricated. No signal → empty (nothing to surface).
+ */
+function deriveExternalOpportunitySignals(
+  complaintRework: ComplaintReworkAnalysis | null,
+  cashProfit: CashProfitProtectionAnalysis | null,
+  capabilityGaps: CapabilityGapAnalysis | null,
+  topConstraint: { constraintType?: string } | null,
+): RawOpportunitySignal[] {
+  const complaintCount = complaintRework?.aggregates.complaintLinkedCount ?? 0;
+  if (complaintCount < 2) return [];
+  const refs = (complaintRework?.eventHealth.events ?? [])
+    .filter((e) => e.active)
+    .map((e) => e.eventId)
+    .slice(0, 5);
+  if (refs.length === 0) return [];
+  return [{
+    signalId: `retention:${refs[0]}`,
+    dedupeKey: "customer-complaint-retention",
+    signalSourceType: "CUSTOMER_COMPLAINT_PATTERN",
+    opportunityType: "RETENTION_CAMPAIGN",
+    sourceEvidenceSummary: "A recurring quality-complaint pattern points to dissatisfied customers who may be retained with a targeted fix or offer.",
+    sourceRefs: refs,
+    customerPainPoint: "repeat quality complaints on recent work",
+    targetCustomerSegment: "recently-complaining local customers",
+    expectedValueHypothesis: "A cheap, targeted retention offer or fix could reduce churn among dissatisfied customers.",
+    relevanceToBusiness: "STRONG",
+    rawConfidence: "MEDIUM",
+    cashRisk: "LOW",
+    ownerWorkloadRisk: "LOW",
+    operationalFit: "MODERATE",
+    capabilityFit: "MODERATE",
+    localFeasibility: "STRONG",
+    legalOrComplianceRisk: "LOW",
+    // Without per-customer unit economics OpsIQ cannot yet measure the retention value → capability gap.
+    hasUnitEconomics: false,
+    validationCostEstimate: null,
+    missingData: ["per-customer value / retention unit economics"],
+    relatedCashProfitSignal: cashProfit?.topSignal?.signalType ?? null,
+    relatedCapabilityGap: capabilityGaps?.topRecommendation?.capabilityType ?? null,
+    relatedConstraint: topConstraint?.constraintType ?? null,
+    relatedSLO: null,
+  }];
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
