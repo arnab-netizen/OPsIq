@@ -139,6 +139,23 @@ export function buildOwnerWorkloadReduction(
   };
   const empty = { supportingProofIds: [] as string[], supportingAdjudicationIds: [] as string[], supportingOperationalEventIds: [] as string[], supportingEscalationIds: [] as string[], supportingCorrectionKeys: [] as string[], supportingTrainingKeys: [] as string[] };
 
+  // Empty-workspace guard. When Process Intelligence found no real breakdown it emits a single
+  // DATA_INSUFFICIENT sentinel; downstream that sentinel still produces a DATA_COLLECTION_BRIEFING
+  // (manager training) and a data-collection correction carrying missingData. Those are NOT avoidable
+  // owner burden — they are the "nothing to analyse yet" state. If the only process context is that
+  // sentinel and nothing was directly counted (no adjudications, weak proof, bottleneck, or owner-approval
+  // correction), there is no workload to reduce: fabricate nothing rather than invent burden.
+  const sentinelOnly =
+    signals.findings.length > 0 && signals.findings.every((f) => f.findingType === "DATA_INSUFFICIENT");
+  const hasCountedBurden =
+    signals.adjudicationTotal > 0 ||
+    signals.weakProofCount > 0 ||
+    signals.ownerBottleneckItems > 0 ||
+    signals.ownerApprovalCorrections.length > 0;
+  if (sentinelOnly && !hasCountedBurden) {
+    return { workspaceId, findings: [], topFinding: null, evaluatedAt };
+  }
+
   // 1. REPEATED_OWNER_ADJUDICATION — the owner has adjudicated the same proof risk many times.
   if (signals.adjudicationTotal >= ADJUDICATION_THRESHOLD) {
     push({

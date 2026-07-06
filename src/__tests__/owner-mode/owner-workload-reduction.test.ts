@@ -111,6 +111,27 @@ describe("owner-workload-reduction", () => {
     expect(r.topFinding).toBeNull();
   });
 
+  it("13b. a DATA_INSUFFICIENT-only workspace (empty state) fabricates nothing even with sentinel-derived training/missing-data", () => {
+    // A new/empty workspace: Process Intelligence emits only the DATA_INSUFFICIENT sentinel, which downstream
+    // still yields a DATA_COLLECTION_BRIEFING (manager training) and a data-collection correction's missingData.
+    // Neither is avoidable owner burden — no counted adjudication/weak-proof/bottleneck/owner-approval exists.
+    const r = build(signals({
+      findings: [{ findingType: "DATA_INSUFFICIENT", supportingProofIds: [], supportingOperationalEventIds: [], supportingEscalationIds: [], relatedSLO: null }],
+      managerTrainingKeys: ["DATA_INSUFFICIENT:DATA_COLLECTION_BRIEFING"],
+      missingData: ["insufficient linked process evidence"],
+    }));
+    expect(r.findings).toHaveLength(0);
+    expect(r.topFinding).toBeNull();
+  });
+
+  it("13c. genuine counted burden alongside the sentinel still surfaces (guard does not over-suppress)", () => {
+    const r = build(signals({
+      findings: [{ findingType: "DATA_INSUFFICIENT", supportingProofIds: [], supportingOperationalEventIds: [], supportingEscalationIds: [], relatedSLO: null }],
+      adjudicationTotal: 4, adjudicationIds: ["a1", "a2", "a3", "a4"],
+    }));
+    expect(types(r)).toContain("REPEATED_OWNER_ADJUDICATION");
+  });
+
   it("14. workspace scoping: findings carry the workspace and cannot contaminate another", () => {
     const r = build(signals({ adjudicationTotal: 4, adjudicationIds: ["a1"] }), "ws-2");
     expect(r.workspaceId).toBe("ws-2");
