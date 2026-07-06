@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/primitives";
-import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView } from "@/components/owner/ProcessIntelligencePanel";
+import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CockpitGroup, CockpitSubsection, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView } from "@/components/owner/ProcessIntelligencePanel";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -72,9 +72,9 @@ export default function OwnerProcessIntelligencePage() {
   }, [load]);
 
   return (
-    <main style={{ padding: 24, maxWidth: 920, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+    <main style={{ padding: "clamp(12px, 4vw, 24px)", maxWidth: 920, width: "100%", margin: "0 auto", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 16 }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <h1 style={{ margin: 0 }}>Where your process is breaking</h1>
+        <h1 style={{ margin: 0, fontSize: "clamp(20px, 5vw, 28px)" }}>Where your process is breaking</h1>
         <div style={{ display: "flex", gap: 8 }}>
           <Link href="/owner/now" data-testid="back-to-now">Owner Now View</Link>
           <Button onClick={() => void load()}>Refresh</Button>
@@ -83,7 +83,7 @@ export default function OwnerProcessIntelligencePage() {
 
       <p style={{ margin: 0, color: "#6b7280", fontSize: 13 }}>
         OpsIQ points to the single stage most worth fixing today — with the evidence behind it and one
-        recommended correction. It is a process signal, not an accusation.
+        recommended correction. Everything else is grouped below; open a group only when you need it.
       </p>
 
       {loading && <p>Loading the process view…</p>}
@@ -95,35 +95,28 @@ export default function OwnerProcessIntelligencePage() {
       )}
       {!loading && !error && (
         <>
+          {/* PRIMARY FOCUS — the single most important thing, always visible (no owner overload). */}
           <ProcessIntelligencePanel data={pi} />
-          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <section style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 16 }}>What to do about it</h2>
             <ProcessCorrectionsPanel data={corrections} />
           </section>
-          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 16 }}>SOP &amp; checklist changes</h2>
-            <SopChecklistCorrectionsPanel data={sopCorrections} />
-          </section>
-          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 16 }}>Training &amp; review</h2>
-            <TrainingAssignmentsPanel data={training} />
-          </section>
-          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 16 }}>Did the fixes work?</h2>
-            <EffectivenessPanel data={effectiveness} />
-          </section>
-          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 16 }}>Reduce your workload</h2>
-            <OwnerWorkloadReductionPanel data={workload} />
-          </section>
-          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 16 }}>What OpsIQ may do without asking</h2>
-            <ApprovalPolicyPanel data={approvalPolicy} />
-          </section>
-          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 16 }}>What OpsIQ should build next</h2>
+
+          {/* SECONDARY — progressive disclosure: collapsed groups the owner opens only when needed. */}
+          <CockpitGroup testid="cockpit-group-followthrough" title="Fix & follow-through" subtitle="SOP/checklist changes, training, and whether the fixes worked">
+            <CockpitSubsection title="SOP & checklist changes"><SopChecklistCorrectionsPanel data={sopCorrections} /></CockpitSubsection>
+            <CockpitSubsection title="Training & review"><TrainingAssignmentsPanel data={training} /></CockpitSubsection>
+            <CockpitSubsection title="Did the fixes work?"><EffectivenessPanel data={effectiveness} /></CockpitSubsection>
+          </CockpitGroup>
+
+          <CockpitGroup testid="cockpit-group-govern" title="Reduce your workload & govern actions" subtitle="Avoidable owner burden and what OpsIQ may do without asking">
+            <CockpitSubsection title="Reduce your workload"><OwnerWorkloadReductionPanel data={workload} /></CockpitSubsection>
+            <CockpitSubsection title="What OpsIQ may do without asking"><ApprovalPolicyPanel data={approvalPolicy} /></CockpitSubsection>
+          </CockpitGroup>
+
+          <CockpitGroup testid="cockpit-group-build" title="What OpsIQ should build next" subtitle="System capabilities that would close the gaps OpsIQ keeps hitting">
             <CapabilityGapPanel data={capabilityGaps} />
-          </section>
+          </CockpitGroup>
         </>
       )}
     </main>

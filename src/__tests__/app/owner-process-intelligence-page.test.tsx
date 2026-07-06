@@ -220,6 +220,15 @@ describe("OwnerProcessIntelligencePage", () => {
     const back = container.querySelector('[data-testid="back-to-now"]') as HTMLAnchorElement;
     expect(back.getAttribute("href")).toBe("/owner/now");
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/api/owner/now-view"))).toBe(true);
+
+    // Executive-cockpit consolidation: the secondary surfaces are grouped in collapsed <details> groups
+    // (progressive disclosure / anti-overload), while the primary process breakdown stays outside any group.
+    for (const gid of ["cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
+      const grp = await findByTestId(gid);
+      expect(grp.tagName.toLowerCase()).toBe("details");
+      expect(grp.hasAttribute("open")).toBe(false);
+    }
+    expect(container.querySelector('[data-testid="process-intelligence-panel"]')!.closest("details")).toBeNull();
   });
 
   it("shows a safe error (no raw internal detail) when the request fails", async () => {
