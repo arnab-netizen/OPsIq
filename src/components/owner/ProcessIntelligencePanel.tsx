@@ -923,6 +923,7 @@ export interface BridgedRouteView {
   evidenceRefs: string[];
   severity: string;
   priorityRank: number;
+  status: string;
 }
 export interface ProcessExecutionBridgeView {
   routes: BridgedRouteView[];
@@ -944,11 +945,35 @@ const ACTION_OWNER_LABEL: Record<string, string> = {
 /**
  * ProcessExecutionBridgePanel — Executive Cockpit standard for the process-correction execution bridge: the
  * single top bridged ACTION the owner should take next (what it is, who owns it, the approval level, the
- * required evidence, and the risk if ignored), evidence + completion + reassessment collapsed, a summary line,
- * and the rest behind a summary. Prop-driven; read-only (interactive approve/delegate/complete controls are a
- * later increment). No business logic, no fabricated figure, no hidden score.
+/** Which interactive actions are valid for the top route, from its status + approval + route (mirrors the
+ *  server guardrails so the UI never OFFERS an impossible/unsafe transition; the server still re-checks). */
+function allowedBridgeActions(r: BridgedRouteView): string[] {
+  const terminal = r.status === "COMPLETED" || r.status === "REJECTED";
+  const nonActionable = r.executionRoute === "MONITOR_ONLY" || r.executionRoute === "BLOCK_UNSAFE_ACTION";
+  const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
+  if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
+  if (terminal) return ["REQUEST_REASSESSMENT"];
+  const out: string[] = [];
+  if (["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
+  if (ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("APPROVE");
+  if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
+  out.push("SUBMIT_EVIDENCE", "COMPLETE", "REJECT");
+  if (r.status !== "BLOCKED") out.push("MARK_BLOCKED");
+  out.push("REQUEST_REASSESSMENT");
+  return out;
+}
+const ACTION_LABEL: Record<string, string> = {
+  START: "Start", APPROVE: "Approve", DELEGATE: "Delegate", SUBMIT_EVIDENCE: "Submit evidence", COMPLETE: "Complete",
+  REJECT: "Reject", MARK_BLOCKED: "Mark blocked", REQUEST_REASSESSMENT: "Request reassessment", REQUEST_MISSING_DATA: "Request missing data",
+};
+
+/**
+ * ProcessExecutionBridgePanel — the top bridged action. When `onAction` is provided it becomes a GUARDED
+ * interactive surface: it shows only the transitions valid for the task's status/approval/route (the server
+ * re-checks every one), with the owner-approval / evidence-required / cannot-be-automated language visible.
+ * Without `onAction` it stays a read-only summary. No business logic here; no fabricated figure; no hidden score.
  */
-export function ProcessExecutionBridgePanel({ data }: { data: ProcessExecutionBridgeView | null }) {
+export function ProcessExecutionBridgePanel({ data, onAction }: { data: ProcessExecutionBridgeView | null; onAction?: (taskKey: string, action: string) => void }) {
   const top = data?.topRoute ?? null;
   if (!top) {
     return (
@@ -988,6 +1013,31 @@ export function ProcessExecutionBridgePanel({ data }: { data: ProcessExecutionBr
           <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280", wordBreak: "break-all" }}>Evidence: {top.evidenceRefs.slice(0, 8).join(", ")}</p>
         )}
       </details>
+      {/* Owner-visible governance language (always shown, whether read-only or interactive). */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }} data-testid="bridge-status-line">
+        <span style={{ fontSize: 12, color: "#6b7280" }}>Status: <strong data-testid="bridge-status">{top.status}</strong></span>
+        {isOwner && <span style={{ fontSize: 12, color: "#b91c1c" }} data-testid="bridge-note-owner">Owner approval required · this action cannot be automated.</span>}
+        {!top.notActionableReason && top.requiredEvidence.length > 0 && <span style={{ fontSize: 12, color: "#6b7280" }} data-testid="bridge-note-evidence">Evidence required before completion.</span>}
+        <span style={{ fontSize: 12, color: "#6b7280" }}>Completion will trigger reassessment.</span>
+      </div>
+      {onAction && (top.status === "COMPLETED" || top.status === "REJECTED") ? (
+        <p style={{ margin: 0, fontSize: 12, color: "#16a34a" }} data-testid="bridge-final">This task is {top.status.toLowerCase()}.</p>
+      ) : null}
+      {onAction && (
+        <div data-testid="bridge-controls" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {allowedBridgeActions(top).map((a) => (
+            <button
+              key={a}
+              type="button"
+              data-testid={`bridge-action-${a}`}
+              onClick={() => onAction(top.taskKey, a)}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "1px solid #d1d5db", background: a === "COMPLETE" || a === "APPROVE" ? "#111827" : "#fff", color: a === "COMPLETE" || a === "APPROVE" ? "#fff" : "#111827", cursor: "pointer" }}
+            >
+              {ACTION_LABEL[a] ?? a}
+            </button>
+          ))}
+        </div>
+      )}
       <span data-testid="bridge-summary" style={{ fontSize: 12, color: "#6b7280" }}>
         {sm.total} bridged action(s) · {sm.ownerApproval} owner-approval · {sm.managerStaff} manager/staff · {sm.dataTasks} data · {sm.monitorOnly} monitor-only
       </span>

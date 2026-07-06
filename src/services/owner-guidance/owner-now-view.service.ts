@@ -47,6 +47,7 @@ import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCand
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
 import { buildCashProfitProtection, type CashProfitProtectionAnalysis, type CashRiskState } from "@/domain/owner-mode/cash-profit-protection";
 import { buildProcessExecutionBridge, type ProcessExecutionBridgeAnalysis } from "@/domain/owner-mode/process-execution-bridge";
+import { getPersistedProcessTasks } from "@/services/owner-mode/process-execution-bridge.service";
 import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
 import { buildOpportunityValidationPlan, type OpportunityValidationAnalysis } from "@/domain/owner-mode/opportunity-validation-experiment-engine";
 import { buildOpportunityPortfolio, type OpportunityPortfolioAnalysis } from "@/domain/owner-mode/opportunity-portfolio-capital-allocation";
@@ -1134,6 +1135,27 @@ export async function getOwnerNowView(
   const processExecution: ProcessExecutionBridgeAnalysis | null = (processCorrections || cashProfitProtection)
     ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString())
     : null;
+  // Reflect persisted task state so the cockpit shows the REAL status (PROPOSED/IN_PROGRESS/APPROVED/COMPLETED/…)
+  // and the interactive controls only offer valid transitions. Best-effort read: if the table is unavailable,
+  // routes keep their PROPOSED default. The top action skips terminal (completed/rejected) tasks.
+  if (processExecution && processExecution.routes.length > 0) {
+    try {
+      const persisted = await getPersistedProcessTasks(workspaceId);
+      if (persisted.length > 0) {
+        const statusByKey = new Map(persisted.map((t) => [t.taskKey, t.status]));
+        for (const r of processExecution.routes) {
+          const s = statusByKey.get(r.taskKey);
+          if (s) r.status = s;
+        }
+        const TERMINAL = new Set(["COMPLETED", "REJECTED"]);
+        processExecution.topRoute =
+          processExecution.routes.find((r) => r.executionRoute !== "MONITOR_ONLY" && !TERMINAL.has(r.status)) ??
+          processExecution.topRoute;
+      }
+    } catch {
+      // best-effort annotation; keep PROPOSED defaults when the persisted table/DB is unavailable
+    }
+  }
 
   // Structured external opportunity intake (PASS 10) — LIVE owner/manager/system-submitted signals persisted
   // via /api/owner/opportunities/signals. They feed the intelligence engine alongside the internal-derived

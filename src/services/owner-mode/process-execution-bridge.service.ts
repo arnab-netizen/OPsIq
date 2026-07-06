@@ -24,7 +24,7 @@ interface TaskRow {
   id: string; workspaceId: string; taskKey: string; sourceFamily: string; sourceFindingKey: string;
   executionRoute: string; actionOwner: string; approvalLevel: string; status: string;
   requiredEvidence: string[]; evidenceRefs: string[]; completionCriteria: string; reassessmentTrigger: string;
-  riskIfIgnored: string; ownerVisibleSummary: string; severity: string; priorityRank: number;
+  riskIfIgnored: string; ownerVisibleSummary: string; severity: string; priorityRank: number; notes: string | null;
   completedByUserId: string | null; completedByRole: string | null; completedAt: Date | null; reassessmentId: string | null;
 }
 interface PETDelegate {
@@ -81,7 +81,10 @@ export async function persistProcessExecutionRoutes(
   for (const r of analysis.routes) {
     if (r.workspaceId !== workspaceId) continue; // isolation: never persist another workspace's route
     const existing = await deps.db.processExecutionTask.findFirst({ where: { workspaceId, taskKey: r.taskKey } });
-    if (existing && existing.status === "COMPLETED") { deduped++; continue; } // never disturb a completed task
+    // Never disturb a task the owner has already advanced: once it leaves PROPOSED (started, approved, rejected,
+    // delegated, blocked, parked for data, or completed) the persisted row is authoritative. Re-materialising the
+    // recomputed bridge over it would silently clobber an owner-driven transition (e.g. reset a delegate's owner).
+    if (existing && existing.status !== "PROPOSED") { deduped++; continue; }
     const changed = !existing
       || existing.executionRoute !== r.executionRoute || existing.actionOwner !== r.actionOwner
       || existing.approvalLevel !== r.approvalLevel || existing.ownerVisibleSummary !== r.ownerVisibleSummary
@@ -210,4 +213,129 @@ export async function completeProcessTask(
     await deps.db.processExecutionTask.updateMany({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey }, data: { reassessmentId, updatedAt: deps.now() } });
   }
   return { ok: true, taskId: task.id, reassessmentId };
+}
+
+// ── Interactive execution affordances (PASS 22) ────────────────────────────────────────────────────────
+
+export type ProcessExecutionAction =
+  | "START" | "APPROVE" | "REJECT" | "DELEGATE" | "SUBMIT_EVIDENCE" | "COMPLETE"
+  | "REQUEST_REASSESSMENT" | "MARK_BLOCKED" | "REQUEST_MISSING_DATA";
+
+/** Terminal statuses — no further transition is allowed. */
+const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["COMPLETED", "REJECTED"]);
+/** Routes that can never be started/approved/completed/delegated (they are display/blocked, not tasks). */
+const NON_ACTIONABLE_ROUTES: ReadonlySet<ExecutionRoute> = new Set(["MONITOR_ONLY", "BLOCK_UNSAFE_ACTION"]);
+
+export interface ProcessActionInput {
+  workspaceId: string;
+  businessId?: string | null;
+  actorId: string | null;
+  actorRole: string | null;
+  taskKey: string;
+  action: ProcessExecutionAction;
+  evidenceRefs?: string[];
+  reason?: string | null;
+  delegateToRole?: "MANAGER" | "STAFF" | null;
+  outcomeNotes?: string | null;
+}
+export type ProcessActionResult =
+  | { ok: true; taskId: string; status: string; reassessmentId?: string | null }
+  | { ok: false; reason: string };
+
+/** True when this task's material decision is owner-only (owner-approval or an unsafe/never-auto action). */
+function isOwnerOnly(task: TaskRow): boolean {
+  return task.approvalLevel === "OWNER_APPROVAL_REQUIRED" || task.approvalLevel === "NEVER_AUTO";
+}
+
+/**
+ * Apply a governed interactive action to a ProcessExecutionTask (PASS 22). Fail-closed on every guardrail:
+ * unknown/foreign task, terminal task, impossible transition, owner-only action by a non-owner, unsafe delegate,
+ * or evidence-less completion. Every transition writes an audit event in the same transaction. COMPLETE reuses
+ * the evidence-gated completeProcessTask (which also opens the reassessment). No external side effect ever.
+ */
+export async function applyProcessExecutionAction(
+  input: ProcessActionInput,
+  injected?: ProcessBridgeDeps,
+  reassessInjected?: import("@/services/owner-mode/reassessment-event.service").ReassessmentDeps,
+): Promise<ProcessActionResult> {
+  const deps = injected ?? (await resolveDefaultDeps());
+  const task = await deps.db.processExecutionTask.findFirst({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey } });
+  if (!task) return { ok: false, reason: "Task not found in this workspace." };
+  const route = task.executionRoute as ExecutionRoute;
+
+  // COMPLETE reuses the evidence-gated completion path (owner-only + fake-completion guard + reassessment).
+  if (input.action === "COMPLETE") {
+    const r = await completeProcessTask(
+      { workspaceId: input.workspaceId, businessId: input.businessId, actorId: input.actorId, actorRole: input.actorRole, taskKey: input.taskKey, evidenceRefs: input.evidenceRefs ?? [], outcomeNotes: input.outcomeNotes },
+      deps, reassessInjected,
+    );
+    return r.ok ? { ok: true, taskId: r.taskId, status: "COMPLETED", reassessmentId: r.reassessmentId } : r;
+  }
+
+  // REQUEST_REASSESSMENT is allowed even on a completed task (re-open the question), and needs a businessId.
+  if (input.action === "REQUEST_REASSESSMENT") {
+    if (!input.businessId || !input.businessId.trim()) return { ok: false, reason: "businessId is required to open a reassessment." };
+    const { createReassessmentEvent } = await import("@/services/owner-mode/reassessment-event.service");
+    const re = await createReassessmentEvent(
+      { workspaceId: input.workspaceId, businessId: input.businessId, trigger: "owner_dispute", triggerDescription: `Owner requested a reassessment of process-execution task ${input.taskKey} (${task.sourceFindingKey}).`, actorId: input.actorId },
+      reassessInjected,
+    );
+    await deps.db.processExecutionTask.updateMany({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey }, data: { reassessmentId: re.id, updatedAt: deps.now() } });
+    return { ok: true, taskId: task.id, status: task.status, reassessmentId: re.id };
+  }
+
+  if (TERMINAL_STATUSES.has(task.status)) return { ok: false, reason: `Task is ${task.status.toLowerCase()} — no further action is allowed.` };
+  if (NON_ACTIONABLE_ROUTES.has(route)) return { ok: false, reason: `A ${route} route has no interactive action — it is monitor-only or blocked.` };
+
+  let nextStatus = task.status;
+  const data: Record<string, unknown> = {};
+
+  switch (input.action) {
+    case "START":
+      if (!["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.` };
+      nextStatus = "IN_PROGRESS"; break;
+    case "APPROVE":
+      if (task.approvalLevel !== "OWNER_APPROVAL_REQUIRED") return { ok: false, reason: "Only an owner-approval task can be approved." };
+      if (input.actorRole !== "owner") return { ok: false, reason: "This action cannot be automated — only the owner can approve it." };
+      if (!["PROPOSED", "IN_PROGRESS"].includes(task.status)) return { ok: false, reason: `Cannot approve a task that is ${task.status.toLowerCase()}.` };
+      nextStatus = "APPROVED"; break;
+    case "REJECT":
+      if (isOwnerOnly(task) && input.actorRole !== "owner") return { ok: false, reason: "Only the owner can reject this owner-controlled task." };
+      if (!input.reason || !input.reason.trim()) return { ok: false, reason: "A reason is required to reject a task." };
+      nextStatus = "REJECTED"; data.notes = input.reason.trim(); break;
+    case "DELEGATE":
+      if (isOwnerOnly(task)) return { ok: false, reason: "An owner-controlled (owner-approval / never-auto) task cannot be delegated." };
+      if (input.delegateToRole !== "MANAGER" && input.delegateToRole !== "STAFF") return { ok: false, reason: "Delegate target must be MANAGER or STAFF." };
+      if (!["PROPOSED", "IN_PROGRESS"].includes(task.status)) return { ok: false, reason: `Cannot delegate a task that is ${task.status.toLowerCase()}.` };
+      nextStatus = "IN_PROGRESS"; data.actionOwner = input.delegateToRole; break;
+    case "SUBMIT_EVIDENCE": {
+      const refs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
+      if (refs.length === 0) return { ok: false, reason: "No evidence supplied." };
+      data.evidenceRefs = [...task.evidenceRefs, ...refs];
+      if (task.status === "PROPOSED") nextStatus = "IN_PROGRESS";
+      break;
+    }
+    case "MARK_BLOCKED":
+      if (!input.reason || !input.reason.trim()) return { ok: false, reason: "A reason is required to block a task." };
+      nextStatus = "BLOCKED"; data.notes = input.reason.trim(); break;
+    case "REQUEST_MISSING_DATA":
+      nextStatus = "NEEDS_DATA"; break;
+  }
+
+  const now = deps.now();
+  data.status = nextStatus;
+  data.updatedAt = now;
+  await deps.db.$transaction(async (tx) => {
+    await tx.processExecutionTask.updateMany({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey }, data });
+    await tx.auditEvent.create({
+      data: {
+        id: deps.uuid(), workspaceId: input.workspaceId, eventName: AUDIT_EVENTS.OWNER_PROCESS_EXECUTION_TASK_TRANSITIONED,
+        actorId: input.actorId ?? null, actorType: input.actorId ? "user" : "system",
+        entityType: "process_execution_task", entityId: task.id,
+        payload: { taskKey: input.taskKey, action: input.action, fromStatus: task.status, toStatus: nextStatus, actorRole: input.actorRole ?? null, delegateToRole: input.delegateToRole ?? null },
+        visibility: "internal", occurredAt: now,
+      },
+    });
+  });
+  return { ok: true, taskId: task.id, status: nextStatus };
 }

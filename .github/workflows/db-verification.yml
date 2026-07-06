@@ -169,6 +169,7 @@ jobs:
             src/__tests__/execution/multi-actor-throughput-simulation.db.test.ts \
             src/__tests__/execution/full-adversarial-real-business-simulation.db.test.ts \
             src/__tests__/execution/process-correction-execution-bridge.db.test.ts \
+            src/__tests__/execution/process-execution-affordances.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -330,6 +331,7 @@ jobs:
             src/__tests__/execution/multi-actor-throughput-simulation.db.test.ts \
             src/__tests__/execution/full-adversarial-real-business-simulation.db.test.ts \
             src/__tests__/execution/process-correction-execution-bridge.db.test.ts \
+            src/__tests__/execution/process-execution-affordances.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
