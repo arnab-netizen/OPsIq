@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/primitives";
-import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView } from "@/components/owner/ProcessIntelligencePanel";
+import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView } from "@/components/owner/ProcessIntelligencePanel";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -41,6 +41,7 @@ export default function OwnerProcessIntelligencePage() {
   const [training, setTraining] = useState<TrainingAssignmentsView | null>(null);
   const [effectiveness, setEffectiveness] = useState<EffectivenessView | null>(null);
   const [workload, setWorkload] = useState<OwnerWorkloadReductionView | null>(null);
+  const [approvalPolicy, setApprovalPolicy] = useState<ApprovalPolicyView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,6 +57,7 @@ export default function OwnerProcessIntelligencePage() {
       setTraining((data.trainingAssignments as TrainingAssignmentsView) ?? null);
       setEffectiveness((data.sopTrainingEffectiveness as EffectivenessView) ?? null);
       setWorkload((data.ownerWorkloadReduction as OwnerWorkloadReductionView) ?? null);
+      setApprovalPolicy((data.approvalPolicy as ApprovalPolicyView) ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load the process view.");
     } finally {
@@ -111,6 +113,10 @@ export default function OwnerProcessIntelligencePage() {
           <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <h2 style={{ margin: 0, fontSize: 16 }}>Reduce your workload</h2>
             <OwnerWorkloadReductionPanel data={workload} />
+          </section>
+          <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 16 }}>What OpsIQ may do without asking</h2>
+            <ApprovalPolicyPanel data={approvalPolicy} />
           </section>
         </>
       )}

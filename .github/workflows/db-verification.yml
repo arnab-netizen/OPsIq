@@ -157,6 +157,7 @@ jobs:
             src/__tests__/execution/staff-training-assignment-simulation.db.test.ts \
             src/__tests__/execution/sop-training-effectiveness-simulation.db.test.ts \
             src/__tests__/execution/owner-workload-reduction-simulation.db.test.ts \
+            src/__tests__/execution/approval-threshold-policy-simulation.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -306,6 +307,7 @@ jobs:
             src/__tests__/execution/staff-training-assignment-simulation.db.test.ts \
             src/__tests__/execution/sop-training-effectiveness-simulation.db.test.ts \
             src/__tests__/execution/owner-workload-reduction-simulation.db.test.ts \
+            src/__tests__/execution/approval-threshold-policy-simulation.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e

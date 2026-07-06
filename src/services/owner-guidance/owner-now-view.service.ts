@@ -43,6 +43,7 @@ import { buildSopChecklistCorrections, type SopChecklistCorrectionAnalysis } fro
 import { buildTrainingAssignments, type TrainingAssignmentAnalysis } from "@/domain/owner-mode/staff-training-assignment-engine";
 import { buildEffectivenessEvaluations, type EffectivenessAnalysis, type EffectivenessInputItem } from "@/domain/owner-mode/sop-training-effectiveness-loop";
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
+import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -304,6 +305,14 @@ export interface OwnerNowViewPayload {
    * High-risk decisions always keep owner approval. Null on the fake-DI path or when nothing is avoidable.
    */
   ownerWorkloadReduction: OwnerWorkloadReductionAnalysis | null;
+  /**
+   * Approval Threshold / Auto-Action Policy — for each action OpsIQ is currently considering (derived from
+   * the proposed process corrections), the required approval before it may run: auto-allowed, manager,
+   * owner, never auto-executed, or needs-data. High-harm/irreversible actions are hard-blocked; material
+   * money/legal/reputation decisions stay owner-controlled; a capability gap keeps the human in the loop and
+   * surfaces what OpsIQ would have to build first. Null on the fake-DI path or with no candidate actions.
+   */
+  approvalPolicy: ApprovalPolicyAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1015,6 +1024,17 @@ export async function getOwnerNowView(
       )
     : null;
 
+  // Approval Threshold / Auto-Action Policy — classify each proposed correction as an action candidate and
+  // decide the required approval before OpsIQ may run it. Pure derivation over the routed corrections; no
+  // candidates → null (nothing to govern). High-harm actions never arise from ordinary corrections.
+  const approvalPolicy: ApprovalPolicyAnalysis | null = processCorrections && processCorrections.corrections.length > 0
+    ? buildApprovalPolicy(
+        { candidates: deriveApprovalCandidates(processCorrections) },
+        workspaceId,
+        new Date(deps.now()).toISOString(),
+      )
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1034,7 +1054,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy };
 }
 
 /**
@@ -1134,6 +1154,55 @@ function deriveWorkloadSignals(
     managerTrainingKeys,
     missingData,
   };
+}
+
+/**
+ * Map each proposed process correction into an approval-policy action candidate. The correction type sets
+ * the action class; the finding's expected impact type sets the risk category + impact level; the
+ * correction's own confidence and data-sufficiency drive the confidence + evidence flags. Every value is
+ * read from real correction data — none is guessed. Ordinary corrections never map to high-harm actions.
+ */
+function deriveApprovalCandidates(routing: ProcessCorrectionRouting): PolicyActionCandidate[] {
+  const ACTION_BY_CORRECTION: Record<string, PolicyActionType> = {
+    REQUIRE_FRESH_PROOF: "REQUEST_MISSING_PROOF",
+    UPDATE_CHECKLIST: "DRAFT_CHECKLIST",
+    REVIEW_PROCESS_STEP: "MINOR_PROCESS_CHANGE",
+    ASSIGN_TRAINING_REVIEW: "PROPOSE_TRAINING",
+    ESCALATE_TO_MANAGER: "ROUTINE_COACHING",
+    ESCALATE_TO_OWNER: "REPUTATION_RESPONSE",
+    RESOLVE_OPERATIONAL_EVENT: "MINOR_PROCESS_CHANGE",
+    COLLECT_MISSING_DATA: "COLLECT_DATA",
+    NO_ACTION_DATA_INSUFFICIENT: "DRAFT_ONLY_RECOMMENDATION",
+  };
+  const RISK_BY_IMPACT: Record<string, { risk: RiskCategory; impact: ImpactLevel }> = {
+    CASH_DELAY: { risk: "FINANCIAL", impact: "HIGH" },
+    REWORK_COST: { risk: "FINANCIAL", impact: "MEDIUM" },
+    COMPLAINT_RISK: { risk: "CUSTOMER_TRUST", impact: "MEDIUM" },
+    TRUST_RISK: { risk: "REPUTATION", impact: "HIGH" },
+    QUALITY_RISK: { risk: "OPERATIONAL", impact: "MEDIUM" },
+    OWNER_TIME: { risk: "OPERATIONAL", impact: "LOW" },
+    NONE: { risk: "NONE", impact: "LOW" },
+  };
+  const CONFIDENCE: Record<string, PolicyConfidence> = { HIGH: "HIGH", MEDIUM: "MEDIUM", LOW: "LOW", NEEDS_DATA: "NEEDS_DATA" };
+
+  return routing.corrections.map((c) => {
+    const dataInsufficient = c.correctionType === "NO_ACTION_DATA_INSUFFICIENT";
+    const rk = RISK_BY_IMPACT[c.expectedImpactType] ?? { risk: "UNKNOWN" as RiskCategory, impact: "UNKNOWN" as ImpactLevel };
+    return {
+      actionKey: c.correctionId,
+      actionType: ACTION_BY_CORRECTION[c.correctionType] ?? "UNKNOWN",
+      title: c.title,
+      riskCategory: dataInsufficient ? "UNKNOWN" : rk.risk,
+      impactLevel: dataInsufficient ? "UNKNOWN" : rk.impact,
+      confidence: CONFIDENCE[c.confidence] ?? "NEEDS_DATA",
+      // The candidate is well-specified enough to classify unless it is the explicit no-data no-op.
+      evidenceComplete: !dataInsufficient && c.confidence !== "NEEDS_DATA",
+      reversible: true,
+      supportingEvidenceIds: [...c.supportingProofIds, ...c.supportingOperationalEventIds, ...c.supportingEscalationIds],
+      sourceProcessFinding: c.sourceFindingType,
+      missingData: c.missingData,
+    };
+  });
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
