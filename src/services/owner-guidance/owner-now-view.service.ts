@@ -1278,8 +1278,14 @@ function deriveEffectivenessItems(
       sourceTrainingKey: trainingItem ? `${trainingItem.sourceProcessFindingKey}:${trainingItem.trainingType}` : null,
       sourceProcessFindingKey: `${workspaceId}:${f.findingType}`,
       targetedProblemType: m.problem,
-      // A prior snapshot means the flagged problem has been under correction since the last owner review.
-      active: prev !== null,
+      // Honesty gate (PASS 19 / C1): OpsIQ has NO persisted execution-linkage proving this correction/SOP/
+      // training was actually approved and executed — a prior snapshot only proves a review window elapsed,
+      // not that anyone acted. Claiming `active` from snapshot presence made effectiveness assert
+      // "it appears to be working" for corrections that were never executed (correlation as causation).
+      // Until the correction->execution bridge persists an approved-SOP / completed-training link, `active`
+      // is false, so the pure engine honestly returns INSUFFICIENT_DATA ("not confirmed approved/executed")
+      // instead of a fabricated causal verdict. `windowElapsed` still reflects the real elapsed review window.
+      active: false,
       windowElapsed: prev !== null,
       minDataMet: m.base !== null && m.base >= 2,
       baselineMetricValue: m.base,

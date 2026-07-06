@@ -4,9 +4,11 @@
  * Sparkle Laundry (workspace `wsL`): repeated quality complaints/rework drive a QUALITY_FAILURE_LOOP /
  * REWORK_LOOP with routed corrections. The first Owner Now View has no baseline → effectiveness is
  * INSUFFICIENT_DATA. After the metric snapshot improves (fewer complaints/rework) and a second Now View
- * runs, the effectiveness loop compares the prior snapshot (baseline) against the current one and returns
- * IMPROVED — with the real before/after numbers, never a fabricated money figure. A clean workspace
- * fabricates nothing. Requires TEST_WITH_DB=true.
+ * runs, OpsIQ surfaces the real before/after numbers but — because it has no persisted proof that any
+ * correction was actually approved and executed — it must NOT claim IMPROVED / "appears to be working"
+ * (that would be correlation-as-causation). It stays honestly INSUFFICIENT_DATA until the
+ * correction→execution bridge exists (PASS 19 / C1). A clean workspace fabricates nothing.
+ * Requires TEST_WITH_DB=true.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "crypto";
@@ -83,7 +85,7 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] SOP / Training Effectiveness Loop (l
     await db.user.deleteMany({ where: { id: { in: [owner, mgr, staff] } } });
   });
 
-  it("first review has no baseline (INSUFFICIENT_DATA); after improvement a second review returns IMPROVED", async () => {
+  it("does NOT claim IMPROVED from a metric change alone — stays INSUFFICIENT_DATA without a verified executed correction (PASS 19 / C1)", async () => {
     // First review — creates the baseline snapshot; no prior snapshot yet, so effectiveness is honest INSUFFICIENT_DATA.
     const first = await getOwnerNowView(wsL, bizL);
     expect(first.sopTrainingEffectiveness).not.toBeNull();
@@ -93,18 +95,25 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] SOP / Training Effectiveness Loop (l
     // The problem improves: a newer metric period with fewer complaints + rework.
     await metric(5, 2, 2);
 
-    // Second review — now the prior snapshot is the baseline (5) and the current metric is lower (2) → IMPROVED.
+    // Second review — the metric fell (5 → 2), but OpsIQ has NO persisted execution-linkage proving any
+    // correction/SOP/training was actually approved and executed. Attributing the drop to a correction would
+    // be correlation-as-causation (a fabricated causal claim). So OpsIQ must stay INSUFFICIENT_DATA and never
+    // report IMPROVED / "appears to be working" here. The real before/after metric is still surfaced honestly.
     const second = await getOwnerNowView(wsL, bizL);
     const eff = second.sopTrainingEffectiveness;
     expect(eff).not.toBeNull();
-    const improved = eff!.evaluations.filter((e) => e.direction === "IMPROVED");
-    expect(improved.length).toBeGreaterThan(0);
-    for (const e of improved) {
-      expect(e.baselineMetricValue).not.toBeNull();
-      expect(e.currentMetricValue).not.toBeNull();
-      expect(e.baselineMetricValue! > e.currentMetricValue!).toBe(true);
-      expect(e.recommendedNextAction).toBe("KEEP");
+    expect(eff!.evaluations.length).toBeGreaterThan(0);
+    expect(eff!.evaluations.every((e) => e.direction === "INSUFFICIENT_DATA")).toBe(true);
+    // No evaluation claims a causal "appears to be working" success.
+    for (const e of eff!.evaluations) {
+      expect(e.direction).not.toBe("IMPROVED");
+      expect(e.ownerVisibleSummary).not.toMatch(/appears to be working/i);
       expect(e.workspaceId).toBe(wsL);
+    }
+    // The honest metric trend is still visible (real before/after numbers), never a fabricated figure.
+    const withBaseline = eff!.evaluations.filter((e) => e.baselineMetricValue !== null && e.currentMetricValue !== null);
+    for (const e of withBaseline) {
+      expect(e.baselineMetricValue! > e.currentMetricValue!).toBe(true);
     }
     // No fabricated money figure, no fraud/negligence label, no hidden score.
     const json = JSON.stringify(eff);
