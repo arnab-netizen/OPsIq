@@ -9,7 +9,6 @@ import { describe, it, expect } from "vitest";
 import { buildProcessExecutionBridge, type BridgedExecutionRoute } from "@/domain/owner-mode/process-execution-bridge";
 import type { ProcessCorrection, ProcessCorrectionRouting, CorrectionType } from "@/domain/owner-mode/bottleneck-correction-routing";
 import type { CashProfitProtectionAnalysis, CashProfitSignal } from "@/domain/owner-mode/cash-profit-protection";
-import type { ApprovalLevel } from "@/domain/owner-mode/process-intelligence";
 
 const WS = "ws-bridge";
 const AT = "2026-07-06T00:00:00.000Z";
