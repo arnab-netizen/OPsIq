@@ -72,3 +72,8 @@ dbenv.sh
 
 # Generated simulation run outputs (produced by test/simulation harnesses)
 *.run.json
+
+# Generated test/vitest console output logs (produced by `npm test` redirects)
+full-test-output.log
+test-full-output.log
+*-test-output.log

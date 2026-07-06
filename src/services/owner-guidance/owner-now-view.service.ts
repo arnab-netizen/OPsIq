@@ -45,7 +45,7 @@ import { buildEffectivenessEvaluations, type EffectivenessAnalysis, type Effecti
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
-import { buildCashProfitProtection, type CashProfitProtectionAnalysis } from "@/domain/owner-mode/cash-profit-protection";
+import { buildCashProfitProtection, type CashProfitProtectionAnalysis, type CashRiskState } from "@/domain/owner-mode/cash-profit-protection";
 import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
 import { buildOpportunityValidationPlan, type OpportunityValidationAnalysis } from "@/domain/owner-mode/opportunity-validation-experiment-engine";
 import { buildOpportunityPortfolio, type OpportunityPortfolioAnalysis } from "@/domain/owner-mode/opportunity-portfolio-capital-allocation";
@@ -1095,8 +1095,14 @@ export async function getOwnerNowView(
   const hasRealActivity = Boolean(processIntelligence?.findings.some((f) => f.findingType !== "DATA_INSUFFICIENT")) || raw.cashState != null || raw.finState != null;
   const cashProfitProtection: CashProfitProtectionAnalysis | null = hasRealActivity
     ? buildCashProfitProtection({
-        cashRunwayDays: raw.cashState != null ? state.cashRunwayDays : null,
-        netMarginPct: raw.finState != null ? state.netMarginPct : null,
+        // PASS 19 / H4: the survival/finance states are CATEGORICAL, not measured figures. Feeding the
+        // state→day/percent bucket constants as a metric implied a precision OpsIQ does not have (e.g. a
+        // "CRITICAL" state rendered as "7 days runway"). Pass no measured figure and let the domain fire the
+        // risk qualitatively from the categorical state (metricValue stays null — no false precision).
+        cashRunwayDays: null,
+        netMarginPct: null,
+        cashRunwayState: (raw.cashState ?? null) as CashRiskState | null,
+        netMarginState: (raw.finState ?? null) as CashRiskState | null,
         lowMarginJobCount: 0,
         pricingLeakCount: 0,
         discountLeakCount: 0,
@@ -1278,8 +1284,14 @@ function deriveEffectivenessItems(
       sourceTrainingKey: trainingItem ? `${trainingItem.sourceProcessFindingKey}:${trainingItem.trainingType}` : null,
       sourceProcessFindingKey: `${workspaceId}:${f.findingType}`,
       targetedProblemType: m.problem,
-      // A prior snapshot means the flagged problem has been under correction since the last owner review.
-      active: prev !== null,
+      // Honesty gate (PASS 19 / C1): OpsIQ has NO persisted execution-linkage proving this correction/SOP/
+      // training was actually approved and executed — a prior snapshot only proves a review window elapsed,
+      // not that anyone acted. Claiming `active` from snapshot presence made effectiveness assert
+      // "it appears to be working" for corrections that were never executed (correlation as causation).
+      // Until the correction->execution bridge persists an approved-SOP / completed-training link, `active`
+      // is false, so the pure engine honestly returns INSUFFICIENT_DATA ("not confirmed approved/executed")
+      // instead of a fabricated causal verdict. `windowElapsed` still reflects the real elapsed review window.
+      active: false,
       windowElapsed: prev !== null,
       minDataMet: m.base !== null && m.base >= 2,
       baselineMetricValue: m.base,

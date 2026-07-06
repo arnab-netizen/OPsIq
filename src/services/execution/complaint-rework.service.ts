@@ -118,6 +118,48 @@ export async function recordOperationalEvent(input: RecordEventInput, injected?:
   return { ok: true, eventId: id };
 }
 
+export type ReassessmentRouteResult =
+  | { ok: true; reassessmentId: string; deduped: boolean }
+  | { ok: false; reason: string };
+
+/**
+ * H6 (PASS 19): route a complaint/rework event that contradicts an ACCEPTED proof into a governed
+ * reassessment, reusing the existing `createReassessmentEvent` service — so OpsIQ no longer leaves the
+ * "a complaint arrived against completed work" contradiction as an advisory string. Server-authoritative:
+ * the event and the proof are re-verified to belong to the workspace, and the proof must actually be
+ * ACCEPTED (a real contradiction). Idempotent + audited via the reassessment service.
+ */
+export async function routeComplaintToReassessment(
+  input: { workspaceId: string; businessId: string; actorId: string | null; eventId: string; proofId: string },
+  injected?: ComplaintReworkDeps,
+  reassessInjected?: import("@/services/owner-mode/reassessment-event.service").ReassessmentDeps,
+): Promise<ReassessmentRouteResult> {
+  const deps = injected ?? (await resolveDefaultDeps());
+  if (!input.eventId?.trim() || !input.proofId?.trim() || !input.businessId?.trim()) {
+    return { ok: false, reason: "eventId, proofId and businessId are required." };
+  }
+  const event = await deps.db.operationalEvent.findFirst({ where: { id: input.eventId, workspaceId: input.workspaceId }, select: { id: true } });
+  if (!event) return { ok: false, reason: "Event not found in this workspace." };
+  const proof = await deps.db.proof.findFirst({ where: { id: input.proofId, workspaceId: input.workspaceId }, select: { id: true, status: true } });
+  if (!proof) return { ok: false, reason: "Proof not found in this workspace." };
+  if (proof.status !== "ACCEPTED") {
+    return { ok: false, reason: "Reassessment routes only from a complaint that contradicts an ACCEPTED proof." };
+  }
+  const { createReassessmentEvent } = await import("@/services/owner-mode/reassessment-event.service");
+  const r = await createReassessmentEvent(
+    {
+      workspaceId: input.workspaceId,
+      businessId: input.businessId,
+      trigger: "new_contradicting_evidence",
+      triggerDescription: `A complaint/rework event (${input.eventId}) contradicts accepted proof ${input.proofId} — the completed work is disputed and must be re-checked.`,
+      sourceProofId: input.proofId,
+      actorId: input.actorId,
+    },
+    reassessInjected,
+  );
+  return { ok: true, reassessmentId: r.id, deduped: r.deduped };
+}
+
 export type LinkResult = { ok: true; deduped: boolean } | { ok: false; reason: string };
 
 /** Link an existing complaint/rework event to a workspace proof (idempotent, audited). */

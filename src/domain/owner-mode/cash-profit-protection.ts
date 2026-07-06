@@ -46,10 +46,23 @@ export type ProtectiveAction =
   | "CAPTURE_UNIT_ECONOMICS"
   | "COLLECT_FINANCIAL_DATA";
 
+/**
+ * Categorical survival/cashflow state the caller may hold when it does NOT have a real measured day/percent
+ * figure. Lets OpsIQ warn about cash/margin risk from a qualitative state WITHOUT fabricating a precise number.
+ */
+export type CashRiskState = "SAFE" | "WATCH" | "AT_RISK" | "CRITICAL" | "INSOLVENT_RISK";
+
 /** The financial observations the caller provides — all directly counted or read from a snapshot. */
 export interface CashProfitInput {
   cashRunwayDays: number | null;
   netMarginPct: number | null;
+  /**
+   * Optional categorical survival/margin state, used ONLY when no real cashRunwayDays/netMarginPct figure
+   * exists. OpsIQ then fires the cash/margin risk qualitatively (metricValue stays null) — never inventing a
+   * precise day/percent from a category (which would be false precision).
+   */
+  cashRunwayState?: CashRiskState | null;
+  netMarginState?: CashRiskState | null;
   lowMarginJobCount: number;
   pricingLeakCount: number;
   discountLeakCount: number;
@@ -128,6 +141,20 @@ const STAFF_INEFFICIENCY = 3;
 const B2B_UNDERPRICED = 1;
 const OVERDUE_RECEIVABLES = 3;
 
+/** Categorical states that represent a real cash/margin risk (WATCH is above the floor, so it does not fire). */
+const CASH_RISK_STATES: readonly CashRiskState[] = ["AT_RISK", "CRITICAL", "INSOLVENT_RISK"];
+/** Cash runway severity from a categorical state (no measured figure): CRITICAL/INSOLVENT → CRITICAL, AT_RISK → HIGH. */
+function cashStateSeverity(s: CashRiskState): CashProfitSeverity {
+  return s === "AT_RISK" ? "HIGH" : "CRITICAL";
+}
+/** Margin severity from a categorical state: CRITICAL/INSOLVENT (negative margin) → HIGH, AT_RISK → MEDIUM. */
+function marginStateSeverity(s: CashRiskState): CashProfitSeverity {
+  return s === "AT_RISK" ? "MEDIUM" : "HIGH";
+}
+function humanState(s: CashRiskState): string {
+  return s.replace(/_/g, " ").toLowerCase();
+}
+
 /**
  * Build the cash/profit protection signals. Pure + deterministic. Most severe first; material money
  * decisions keep owner review; no fabricated money figure ever appears.
@@ -147,7 +174,9 @@ export function buildCashProfitProtection(
     out.push({ ...ev, ...s, workspaceId, evaluatedAt });
   };
 
-  // 1. CASH_SAFETY_RISK — the runway is short. Real day count; severity by how short.
+  // 1. CASH_SAFETY_RISK — the runway is short. Prefer a REAL measured day count (precise). If no measured
+  //    figure exists, fall back to the categorical survival state and flag the risk QUALITATIVELY with
+  //    metricValue null — never inventing a precise day count from a category (that would be false precision).
   if (input.cashRunwayDays !== null && input.cashRunwayDays < CASH_RUNWAY_FLOOR) {
     push({
       signalType: "CASH_SAFETY_RISK", category: "CASH",
@@ -158,10 +187,23 @@ export function buildCashProfitProtection(
       observedCount: 1, metricType: "CASH_RUNWAY_DAYS", metricValue: input.cashRunwayDays, metricThreshold: CASH_RUNWAY_FLOOR,
       thresholdBreached: true, directionOnly: false, relatedProcessFinding: null, missingData: [],
     });
+  } else if (input.cashRunwayDays === null && input.cashRunwayState != null && CASH_RISK_STATES.includes(input.cashRunwayState)) {
+    push({
+      signalType: "CASH_SAFETY_RISK", category: "CASH",
+      severity: cashStateSeverity(input.cashRunwayState),
+      confidence: "MEDIUM", title: `Cash survival state is ${humanState(input.cashRunwayState)}`,
+      ownerExplanation: "The cashflow signals put the business in an at-risk survival state. OpsIQ has no measured runway figure, so it flags the risk qualitatively rather than inventing a day count — confirm the actual runway. Protecting cash now avoids a forced, worse decision later.",
+      protectiveAction: "PROTECT_CASH_RUNWAY", approvalLevel: "OWNER", requiresOwnerReview: true, riskGuardrail: MATERIAL_GUARDRAIL,
+      observedCount: 1, metricType: "CASH_SURVIVAL_STATE", metricValue: null, metricThreshold: null,
+      thresholdBreached: true, directionOnly: true, relatedProcessFinding: null,
+      missingData: ["measured cash runway (days of cash at current burn rate)"],
+    });
   }
 
-  // 2. LOW_MARGIN_WORK_RISK — margin below floor or too many low-margin jobs.
+  // 2. LOW_MARGIN_WORK_RISK — margin below floor or too many low-margin jobs. As with cash, prefer a REAL
+  //    margin figure; otherwise fall back to the categorical margin state (qualitative, metricValue null).
   const marginBreached = input.netMarginPct !== null && input.netMarginPct < NET_MARGIN_FLOOR;
+  const marginStateRisk = input.netMarginPct === null && input.netMarginState != null && CASH_RISK_STATES.includes(input.netMarginState);
   if (marginBreached || input.lowMarginJobCount >= LOW_MARGIN_JOBS) {
     push({
       signalType: "LOW_MARGIN_WORK_RISK", category: "MARGIN",
@@ -171,6 +213,17 @@ export function buildCashProfitProtection(
       protectiveAction: "REVIEW_PRICING", approvalLevel: "OWNER", requiresOwnerReview: true, riskGuardrail: MATERIAL_GUARDRAIL,
       observedCount: input.lowMarginJobCount, metricType: "NET_MARGIN_PCT", metricValue: input.netMarginPct, metricThreshold: NET_MARGIN_FLOOR,
       thresholdBreached: marginBreached, directionOnly: input.netMarginPct === null, relatedProcessFinding: null, missingData: [],
+    });
+  } else if (marginStateRisk) {
+    push({
+      signalType: "LOW_MARGIN_WORK_RISK", category: "MARGIN",
+      severity: marginStateSeverity(input.netMarginState!),
+      confidence: "MEDIUM", title: `Margin state is ${humanState(input.netMarginState!)}`,
+      ownerExplanation: "The financial signals put margin in an at-risk state. OpsIQ has no measured margin percentage, so it flags the risk qualitatively rather than inventing a figure — confirm the actual margin. Repricing or reducing cost protects profit.",
+      protectiveAction: "REVIEW_PRICING", approvalLevel: "OWNER", requiresOwnerReview: true, riskGuardrail: MATERIAL_GUARDRAIL,
+      observedCount: input.lowMarginJobCount, metricType: "MARGIN_STATE", metricValue: null, metricThreshold: null,
+      thresholdBreached: true, directionOnly: true, relatedProcessFinding: null,
+      missingData: ["measured net margin (revenue vs cost)"],
     });
   }
 

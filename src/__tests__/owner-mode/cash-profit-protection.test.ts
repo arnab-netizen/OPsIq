@@ -45,6 +45,39 @@ describe("cash-profit-protection", () => {
     expect(find(build({ netMarginPct: -3 }), "LOW_MARGIN_WORK_RISK").severity).toBe("HIGH");
   });
 
+  it("2a. a categorical cash risk state (no measured runway) fires CASH_SAFETY_RISK qualitatively with NO fabricated day count (H4)", () => {
+    const s = find(build({ cashRunwayDays: null, cashRunwayState: "CRITICAL" }), "CASH_SAFETY_RISK");
+    expect(s.severity).toBe("CRITICAL");
+    expect(s.metricValue).toBeNull(); // never a fabricated number derived from a category
+    expect(s.metricType).toBe("CASH_SURVIVAL_STATE");
+    expect(s.directionOnly).toBe(true);
+    expect(s.requiresOwnerReview).toBe(true);
+    expect(s.missingData.join(" ")).toMatch(/measured cash runway/i);
+    // AT_RISK is HIGH, not CRITICAL.
+    expect(find(build({ cashRunwayDays: null, cashRunwayState: "AT_RISK" }), "CASH_SAFETY_RISK").severity).toBe("HIGH");
+  });
+
+  it("2b. a SAFE/WATCH cash state (above the floor) fires no cash risk", () => {
+    expect(types(build({ cashRunwayDays: null, cashRunwayState: "SAFE" }))).not.toContain("CASH_SAFETY_RISK");
+    expect(types(build({ cashRunwayDays: null, cashRunwayState: "WATCH" }))).not.toContain("CASH_SAFETY_RISK");
+  });
+
+  it("2c. a categorical margin risk state (no measured margin) fires LOW_MARGIN_WORK_RISK qualitatively, metricValue null", () => {
+    const s = find(build({ netMarginPct: null, netMarginState: "CRITICAL" }), "LOW_MARGIN_WORK_RISK");
+    expect(s.metricValue).toBeNull();
+    expect(s.metricType).toBe("MARGIN_STATE");
+    expect(s.severity).toBe("HIGH"); // negative-margin states
+    expect(find(build({ netMarginPct: null, netMarginState: "AT_RISK" }), "LOW_MARGIN_WORK_RISK").severity).toBe("MEDIUM");
+  });
+
+  it("2d. a REAL measured figure always takes precedence over the categorical state (precise path, no double-count)", () => {
+    const r = build({ cashRunwayDays: 8, cashRunwayState: "CRITICAL" });
+    const cash = r.signals.filter((s) => s.signalType === "CASH_SAFETY_RISK");
+    expect(cash).toHaveLength(1);
+    expect(cash[0].metricValue).toBe(8); // the real day count, not the state fallback
+    expect(cash[0].metricType).toBe("CASH_RUNWAY_DAYS");
+  });
+
   it("3. repeated below-cost work raises PRICING_LEAK (owner review)", () => {
     const s = find(build({ pricingLeakCount: 4 }), "PRICING_LEAK");
     expect(s.protectiveAction).toBe("REVIEW_PRICING");
