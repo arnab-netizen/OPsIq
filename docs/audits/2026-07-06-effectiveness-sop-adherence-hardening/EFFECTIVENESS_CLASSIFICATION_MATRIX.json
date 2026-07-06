@@ -1,0 +1,158 @@
+{
+  "audit": "effectiveness-sop-adherence-hardening",
+  "date": "2026-07-06",
+  "branch": "claude/effectiveness-sop-adherence-classification-hardening",
+  "principle": "Execution, outcome, and attribution are three separate facts. A fix may be called effective ONLY with proven execution (task COMPLETED with evidence) AND a post-execution improvement. No metric/percentage is fabricated.",
+  "scenarios": [
+    {
+      "scenario": "Correction proposed, never executed; outcome improved",
+      "executionEvidence": "none (PROPOSED)",
+      "outcomeEvidence": "improved (measured)",
+      "sopAdherenceEvidence": "n/a",
+      "trainingEvidence": "n/a",
+      "classification": "IMPROVED_BUT_EXECUTION_NOT_PROVEN",
+      "ownerVisibleWording": "The issue improved, but OpsIQ cannot attribute the improvement to this correction because execution evidence is missing.",
+      "executionRoute": "CREATE_EVIDENCE_REQUEST",
+      "monitorOnly": false,
+      "tests": ["effectiveness-attribution.test.ts #4", "effectiveness-sop-adherence-classification.db.test.ts #1,#4"],
+      "dbSimEvidence": "db #1,#4",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Correction executed with evidence; no post-execution measurement",
+      "executionEvidence": "COMPLETED with evidence",
+      "outcomeEvidence": "none (no baseline / window not elapsed)",
+      "classification": "EXECUTED_BUT_OUTCOME_NOT_PROVEN",
+      "ownerVisibleWording": "Correction executed with evidence, but the outcome has not been reassessed yet — effectiveness is not proven.",
+      "executionRoute": "CREATE_REASSESSMENT_TASK",
+      "monitorOnly": false,
+      "tests": ["effectiveness-attribution.test.ts #3", "effectiveness-sop-adherence-classification.db.test.ts #2,#10"],
+      "dbSimEvidence": "db #2,#10",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Correction executed with evidence; outcome improved after execution",
+      "executionEvidence": "COMPLETED with evidence",
+      "outcomeEvidence": "improved (measured)",
+      "classification": "MONITOR_ONLY_VERIFIED_IMPROVEMENT",
+      "ownerVisibleWording": "Correction executed with evidence; reassessment shows improvement after execution. Verified — no further action required unless the issue repeats.",
+      "executionRoute": "MONITOR_ONLY",
+      "monitorOnly": true,
+      "tests": ["effectiveness-attribution.test.ts #5", "effectiveness-sop-adherence-classification.db.test.ts #3,#6"],
+      "dbSimEvidence": "db #3,#6 (persisted MONITOR_ONLY route is NOT completable — code NEVER_AUTO)",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Correction executed with evidence; outcome unchanged",
+      "executionEvidence": "COMPLETED with evidence",
+      "outcomeEvidence": "unchanged (measured)",
+      "classification": "VERIFIED_UNCHANGED_AFTER_EXECUTION",
+      "ownerVisibleWording": "Correction executed with evidence, but the outcome is unchanged — a follow-up review is required.",
+      "executionRoute": "CREATE_REASSESSMENT_TASK",
+      "monitorOnly": false,
+      "tests": ["effectiveness-attribution.test.ts #6"],
+      "dbSimEvidence": "unit + bridge",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Correction executed with evidence; outcome worsened after execution",
+      "executionEvidence": "COMPLETED with evidence",
+      "outcomeEvidence": "worsened (measured)",
+      "classification": "VERIFIED_WORSENED_AFTER_EXECUTION",
+      "ownerVisibleWording": "Outcome worsened after execution — the correction did not work; a follow-up correction is required.",
+      "executionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "monitorOnly": false,
+      "tests": ["effectiveness-attribution.test.ts #7", "effectiveness-sop-adherence-classification.db.test.ts #5"],
+      "dbSimEvidence": "db #5 (persisted CREATE_OWNER_APPROVAL_TASK, OWNER_APPROVAL_REQUIRED)",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Correction completion evidence weak; outcome changed",
+      "executionEvidence": "COMPLETED, weak evidence",
+      "outcomeEvidence": "changed (measured)",
+      "classification": "OUTCOME_CHANGED_BUT_ATTRIBUTION_WEAK",
+      "ownerVisibleWording": "The outcome changed, but the execution evidence is too weak to attribute the change to this correction — firmer completion proof is needed.",
+      "executionRoute": "CREATE_EVIDENCE_REQUEST",
+      "monitorOnly": false,
+      "tests": ["effectiveness-attribution.test.ts #8"],
+      "dbSimEvidence": "unit",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "SOP drafted but not adopted",
+      "sopAdherenceEvidence": "IN_PROGRESS (drafted)",
+      "classification": "SOP_DRAFTED (not adherence-verified)",
+      "ownerVisibleWording": "SOP change drafted; adoption and adherence not yet verified.",
+      "executionRoute": "CREATE_SOP_CHECKLIST_TASK",
+      "tests": ["effectiveness-attribution.test.ts #13"],
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "SOP adopted with evidence but no adherence re-check",
+      "sopAdherenceEvidence": "EXECUTED_WITH_EVIDENCE, no re-check",
+      "classification": "NEEDS_RECHECK",
+      "ownerVisibleWording": "SOP was adopted with evidence, but adherence has not been re-checked — it is not yet verified as followed.",
+      "executionRoute": "CREATE_REASSESSMENT_TASK",
+      "tests": ["effectiveness-attribution.test.ts #14", "effectiveness-sop-adherence-classification.db.test.ts #7"],
+      "dbSimEvidence": "db #7",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "SOP adopted with evidence + re-check confirms it is followed",
+      "sopAdherenceEvidence": "EXECUTED_WITH_EVIDENCE + re-check improved",
+      "classification": "SOP_ADHERENCE_VERIFIED",
+      "ownerVisibleWording": "SOP adopted with evidence and a re-check confirms it is being followed.",
+      "executionRoute": "MONITOR_ONLY",
+      "tests": ["effectiveness-attribution.test.ts #15", "effectiveness-sop-adherence-classification.db.test.ts #7"],
+      "dbSimEvidence": "db #7",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Training assigned but not completed",
+      "trainingEvidence": "ASSIGNED",
+      "classification": "TRAINING_ASSIGNED (no effectiveness claim)",
+      "ownerVisibleWording": "Training assigned; completion evidence not yet submitted.",
+      "executionRoute": "CREATE_TRAINING_TASK",
+      "tests": ["effectiveness-attribution.test.ts #18"],
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Training completed with evidence but no reassessment",
+      "trainingEvidence": "EXECUTED_WITH_EVIDENCE, no post-training check",
+      "classification": "NEEDS_RECHECK",
+      "ownerVisibleWording": "Training was completed with evidence, but post-training performance has not been reassessed.",
+      "executionRoute": "CREATE_REASSESSMENT_TASK",
+      "tests": ["effectiveness-attribution.test.ts #19", "effectiveness-sop-adherence-classification.db.test.ts #8"],
+      "dbSimEvidence": "db #8",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Training completed with evidence + worsened post-training outcome",
+      "trainingEvidence": "EXECUTED_WITH_EVIDENCE + worsened",
+      "classification": "POST_TRAINING_WORSENED",
+      "ownerVisibleWording": "Training completed, but performance worsened afterwards — a follow-up review is required.",
+      "executionRoute": "CREATE_TRAINING_TASK",
+      "tests": ["effectiveness-attribution.test.ts #21", "effectiveness-sop-adherence-classification.db.test.ts #9"],
+      "dbSimEvidence": "db #9",
+      "status": "ACCEPTED"
+    },
+    {
+      "scenario": "Unknown / insufficient data",
+      "classification": "UNKNOWN / INSUFFICIENT_EXECUTION_EVIDENCE / INSUFFICIENT_OUTCOME_EVIDENCE",
+      "ownerVisibleWording": "No execution evidence yet / not enough data — never a favourable guess.",
+      "executionRoute": "CREATE_EVIDENCE_REQUEST or CREATE_MISSING_DATA_TASK",
+      "tests": ["effectiveness-attribution.test.ts #1,#2,#9,#23"],
+      "status": "ACCEPTED"
+    }
+  ],
+  "classificationTypesAdded": [
+    "CorrectionExecutionState", "SopAdherenceState", "TrainingEffectivenessState", "EffectivenessAttributionState"
+  ],
+  "usedIn": {
+    "logic": "classifyEffectivenessAttribution / classifySopAdherence / classifyTrainingEffectiveness; sop-training-effectiveness-loop sets attributionState and honest wording; process-execution-bridge-expansion routes by ROUTE_FOR_ATTRIBUTION; owner-now-view derives CorrectionExecutionState from the persisted pc:<id> task.",
+    "tests": "effectiveness-attribution.test.ts (24), effectiveness-sop-adherence-classification.db.test.ts (12), updated bridge + panel tests.",
+    "ui": "EffectivenessPanel renders an eff-item-attribution badge with the honest verdict."
+  },
+  "falseAttributionEliminated": "The engine no longer emits 'it appears to be working'; a measured improvement is only called verified with a persisted COMPLETED-with-evidence correction.",
+  "r3Status": "REMOVED"
+}

@@ -22,10 +22,12 @@ const evaluation = (over: Partial<EffectivenessEvaluationView> = {}): Effectiven
   currentMetricValue: 2,
   direction: "IMPROVED",
   confidence: "MEDIUM",
-  ownerVisibleSummary: "The quality complaints fell from 5 to 2 after the correction — it appears to be working.",
+  // Honest, attribution-aware wording (PASS 26) — a verified improvement requires proven execution.
+  ownerVisibleSummary: "Correction executed with evidence; reassessment shows improvement after execution. Verified — no further action required unless the issue repeats.",
   recommendedNextAction: "KEEP",
   approvalLevel: "OWNER",
   missingData: [],
+  attributionState: "MONITOR_ONLY_VERIFIED_IMPROVEMENT",
   ...over,
 });
 
@@ -36,7 +38,9 @@ describe("EffectivenessPanel", () => {
     expect(getByTestId("eff-item-problem").textContent).toMatch(/QUALITY COMPLAINTS/i);
     expect(getByTestId("eff-item-direction").textContent).toMatch(/Improved/i);
     expect(getByTestId("eff-item-metric").textContent).toMatch(/5 → 2/);
-    expect(getByTestId("eff-item-summary").textContent).toMatch(/appears to be working/i);
+    expect(getByTestId("eff-item-summary").textContent).toMatch(/improvement after execution/i);
+    expect(getByTestId("eff-item-summary").textContent).not.toMatch(/appears to be working/i);
+    expect(getByTestId("eff-item-attribution").textContent).toMatch(/verified improved/i);
     expect(getByTestId("eff-item-next").textContent).toMatch(/Keep/i);
     expect(getByTestId("eff-item-approval").textContent).toMatch(/Owner approval required/i);
   });
