@@ -1,0 +1,129 @@
+{
+  "audit": "elite-execution-restriction-burndown",
+  "date": "2026-07-06",
+  "mainHeadAudited": "59c339a144b2c8cb3eeaad1ee2ca9f1cec9f607a",
+  "priorClassification": "EXECUTION_FIRST_LEVEL_3_ACCEPTED_WITH_RESTRICTIONS",
+  "method": "Source + route + UI + test + DB-sim + CI inspection (not a documentation rubber stamp). Every status below is backed by merged code and a green LANE_B run.",
+  "restrictions": [
+    {
+      "id": "R1",
+      "title": "Read-only cockpit affordances",
+      "originalIssue": "The ProcessExecutionTask cockpit could only DISPLAY the bridged action; the owner had to re-key the diagnosis into a separate form to act. No interactive, governed execution surface existed.",
+      "status": "REMOVED",
+      "evidence": [
+        "POST /api/owner/process-execution (src/app/api/owner/process-execution/route.ts) exposes 9 governed actions (start/approve/reject/delegate/submit-evidence/complete/request-reassessment/mark-blocked/request-missing-data); server-authoritative — it re-derives + persists the route before applying, so the client never supplies route fields.",
+        "applyProcessExecutionAction (src/services/owner-mode/process-execution-bridge.service.ts) enforces every guardrail: isOwnerOnly() owner-only approve/reject/delegate, EVIDENCE_REQUIRED_ROUTES + detectFakeCompletion gate completion, NON_ACTIONABLE_ROUTES block unsafe/monitor, terminal statuses refuse further action.",
+        "ProcessExecutionBridgePanel (src/components/owner/ProcessIntelligencePanel.tsx) renders only the transitions allowed by status/approval/route via allowedBridgeActions(); performs no mutation itself.",
+        "Every transition writes OWNER_PROCESS_EXECUTION_TASK_TRANSITIONED in the same $transaction."
+      ],
+      "tests": [
+        "src/__tests__/execution/process-execution-affordances.db.test.ts (15 real-Postgres cases)",
+        "src/__tests__/components/process-execution-bridge-panel.test.tsx (9 jsdom cases)"
+      ],
+      "dbProof": "LANE_B run 28790402937 — 42 files / 352 tests green (PR #154).",
+      "uiProof": "process-execution-bridge-panel.test.tsx proves controls appear only for allowed transitions, guardrail language is visible, and the panel calls back without mutating.",
+      "remainingLimitation": "The interactive surface covers ProcessExecutionTask routes only; other cockpit families (opportunity execution) remain read-only by scope, not by this restriction.",
+      "nextRemediation": "None required for R1. Extend the same interactive pattern to opportunity execution in a future, separate pass if desired.",
+      "mergedIn": "PR #154 (98feb940191f42565454a9cbc9d04a18b37a1569)"
+    },
+    {
+      "id": "R2",
+      "title": "Workload / capability / standalone SOP-training engines bridged only through the process-correction router",
+      "originalIssue": "The workload, capability-gap, standalone SOP, and standalone training engines could influence execution ONLY indirectly, through process-correction findings. They had no direct route into the governed ProcessExecutionTask substrate.",
+      "status": "REDUCED",
+      "evidence": [
+        "process-execution-bridge-expansion.ts bridges five engines DIRECTLY into BridgedExecutionRoute with new source families: WORKLOAD_REDUCTION, CAPABILITY_GAP, SOP_CHECKLIST, TRAINING, EFFECTIVENESS_RECHECK.",
+        "Owner Now View feeds all five in-scope analyses to buildProcessExecutionBridge via buildBridgeExpansion (src/services/owner-guidance/owner-now-view.service.ts).",
+        "Workload/SOP/training now emit their own governed routes; a specific SOP/training route COLLAPSES the generic correction route for the same fix (no duplicate)."
+      ],
+      "tests": [
+        "src/__tests__/owner-mode/process-execution-bridge-expansion.test.ts (14 pure cases)",
+        "src/__tests__/execution/workload-capability-sop-training-bridge.db.test.ts (11 real-Postgres cases)"
+      ],
+      "dbProof": "LANE_B run 28794768833 — 43 files / 363 tests green, printed LANE_B_DB_VERIFIED (PR #155).",
+      "uiProof": "ProcessExecutionBridgePanel shows a source-family label (FAMILY_LABEL) so the owner sees which engine surfaced each action.",
+      "remainingLimitation": "Workload, standalone SOP, and standalone training are fully direct-bridged. The CAPABILITY_GAP family is intentionally gated: low-value / non-blocking capability recommendations stay MONITOR_ONLY to avoid flooding the cockpit with low-value build backlog. That monitoring tail is a deliberate anti-flood safety design, not an advisory-only gap.",
+      "nextRemediation": "Optionally add an owner-initiated 'promote a monitored capability to a build task' control if owners want to pull low-value gaps into execution on demand.",
+      "mergedIn": "PR #155 (59c339a144b2c8cb3eeaad1ee2ca9f1cec9f607a)"
+    },
+    {
+      "id": "R3",
+      "title": "SOP-adherence re-check",
+      "originalIssue": "After an SOP/checklist or training fix, there was no execution-routed re-check of whether the fix actually held; effectiveness was advisory only and risked a false 'it worked' claim.",
+      "status": "REDUCED",
+      "evidence": [
+        "bridgeEffectivenessEvaluation (process-execution-bridge-expansion.ts): a verified IMPROVED result routes to MONITOR_ONLY with 'Verified adherent' and NO completable action — it can never be 'completed' to fake effectiveness.",
+        "A WORSENED/UNCHANGED result becomes an evidence-gated actionable re-check (RETRAIN/MODIFY/ESCALATE); ESCALATE stays OWNER_APPROVAL_REQUIRED.",
+        "INSUFFICIENT_DATA routes to a data task (NEEDS_DATA), never a claim the fix worked."
+      ],
+      "tests": [
+        "process-execution-bridge-expansion.test.ts cases 8-10 (IMPROVED monitor-only, WORSENED actionable, INSUFFICIENT_DATA data task)",
+        "workload-capability-sop-training-bridge.db.test.ts case 8 (IMPROVED re-check is monitor-only and NOT completable)"
+      ],
+      "dbProof": "LANE_B run 28794768833 (PR #155).",
+      "uiProof": "EFFECTIVENESS_RECHECK routes render through the same panel with the 'Did the fix work?' family label.",
+      "remainingLimitation": "Adherence is expressed via the effectiveness DIRECTION (IMPROVED/WORSENED/UNCHANGED/INSUFFICIENT_DATA) rather than a dedicated persisted adherence-classification enum (VERIFIED_ADHERENT/NOT_ADHERENT/INSUFFICIENT_EVIDENCE/NEEDS_RECHECK). The re-check depends on a prior snapshot baseline; with no baseline it is honestly INSUFFICIENT_DATA.",
+      "nextRemediation": "If explicit adherence labels are required as first-class persisted state, add an AdherenceClassification derived field on the effectiveness route in a future pass.",
+      "mergedIn": "PR #155 (59c339a144b2c8cb3eeaad1ee2ca9f1cec9f607a)"
+    },
+    {
+      "id": "R4",
+      "title": "Adjudication auth scope",
+      "originalIssue": "Adjudication-queue authorization scope was not part of the execution-bridge burn-down and was not re-verified end-to-end in this loop.",
+      "status": "RETAINED_SAFELY",
+      "evidence": [
+        "Out of scope for PASS 22-24 (execution-bridge affordances + engine bridging). No adjudication auth path was changed; the existing centralized policy/capability layer remains in force.",
+        "The new POST route enforces CAPABILITIES.OWNER_MANAGE + requireWorkspace server-side; it does not widen adjudication scope."
+      ],
+      "tests": [],
+      "dbProof": null,
+      "uiProof": null,
+      "remainingLimitation": "Adjudication auth scope remains a non-blocking proof-scope restriction — explicitly retained, not weakened. It gates no execution-bridge behaviour shipped in this loop.",
+      "nextRemediation": "Schedule a dedicated adjudication-authorization re-audit pass (two-tenant cross-scope tests) outside the execution-bridge loop.",
+      "mergedIn": null
+    },
+    {
+      "id": "R5",
+      "title": "Inline complaint auto-route",
+      "originalIssue": "Complaint/rework signals needed a safe inline route into governed execution, with owner approval for reputation/refund/legal risk and no auto-customer-contact or auto-discount.",
+      "status": "REDUCED",
+      "evidence": [
+        "Complaint/rework enters via ProcessIntelligence finding types QUALITY_FAILURE_LOOP and REWORK_LOOP, which the correction router turns into corrections that the bridge materialises: QUALITY_FAILURE_LOOP -> ESCALATE_TO_OWNER (owner approval for reputation risk), REWORK_LOOP -> REVIEW_PROCESS_STEP, RESOLVE_OPERATIONAL_EVENT -> a reassessment task.",
+        "workload-capability-sop-training-bridge.db.test.ts case 5 proves a complaint correction persists a CREATE_REASSESSMENT_TASK and an owner-escalation route; case 6 proves the owner-escalation requires owner approval (a non-owner APPROVE fails).",
+        "No route contacts a customer, applies a discount, submits a tender, spends, signs, or touches payroll (asserted by the route's design + the no-external-side-effect guard)."
+      ],
+      "tests": [
+        "workload-capability-sop-training-bridge.db.test.ts cases 5-6"
+      ],
+      "dbProof": "LANE_B run 28794768833 (PR #155).",
+      "uiProof": "Complaint-derived routes render through the panel with owner-approval / evidence language.",
+      "remainingLimitation": "Complaint/rework routes inline through the correction router's finding types rather than a dedicated complaint-intake channel. Reputation/refund/legal-risk items are held at OWNER_APPROVAL_REQUIRED by design (safe), so they are not auto-executed — a deliberate safety boundary, not an advisory gap.",
+      "nextRemediation": "Add a first-class complaint-intake surface if direct complaint capture (outside process findings) is later required.",
+      "mergedIn": "PR #155 (59c339a144b2c8cb3eeaad1ee2ca9f1cec9f607a)"
+    },
+    {
+      "id": "R6",
+      "title": "Exhaustive read / audit proofs",
+      "originalIssue": "A full, exhaustive read/audit of every governed read path across the whole corpus was not reproduced in-session; proof rests on the incremental per-pass tests + DB-gated CI.",
+      "status": "RETAINED_SAFELY",
+      "evidence": [
+        "Each pass added targeted DB sims wired into LANE_B/LANE_A and proven green in CI (runs 28790402937, 28794768833).",
+        "governance:scan:strict, lint:ratchet, tsc, and next build gate every merge; the whole-corpus static aggregate audit job runs in CI."
+      ],
+      "tests": [],
+      "dbProof": "LANE_B verified per pass.",
+      "uiProof": null,
+      "remainingLimitation": "A single exhaustive, in-session read/audit of every governed read path across all domains is intentionally out of scope; it is a non-blocking proof-scope restriction covered incrementally by per-pass DB sims + CI gates.",
+      "nextRemediation": "If a single consolidated exhaustive audit artifact is required, generate it in a dedicated audit-only pass; it does not gate any execution behaviour.",
+      "mergedIn": null
+    }
+  ],
+  "summary": {
+    "removed": ["R1"],
+    "reduced": ["R2", "R3", "R5"],
+    "retainedSafely": ["R4", "R6"],
+    "blocked": []
+  },
+  "finalClassification": "ELITE_EXECUTION_LEVEL_3_ACCEPTED_WITH_RESTRICTIONS",
+  "classificationRationale": "R1 is fully removed (owner acts from the cockpit for supported findings). R2/R3/R5 are reduced to safe, non-critical edge cases (direct bridging with deliberate monitor-only / owner-approval safety boundaries). R4 and R6 are explicitly retained as non-blocking proof-scope restrictions. No critical or high advisory-only execution gap remains. We deliberately do NOT claim the full ACCEPTED tier because R3 is reduced (adherence derived from effectiveness direction rather than a dedicated persisted adherence enum) rather than fully removed — classifying it as ACCEPTED would overclaim."
+}
