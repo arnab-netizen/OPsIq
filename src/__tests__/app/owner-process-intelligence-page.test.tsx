@@ -169,6 +169,25 @@ const PAYLOAD = {
     },
     summary: { total: 1, critical: 0, high: 0, unlocksAutomation: 1 },
   },
+  cashProfitProtection: {
+    signals: [
+      {
+        signalType: "REWORK_COST_RISK", category: "COST", severity: "MEDIUM", title: "Rework is eating into margin",
+        ownerExplanation: "Repeated rework adds cost to work already sold.", protectiveAction: "REDUCE_REWORK_AT_SOURCE",
+        approvalLevel: "MANAGER", requiresOwnerReview: false, riskGuardrail: "This protects margin by fixing a cost at its source.",
+        observedCount: 4, metricType: "REWORK_EVENT_COUNT", metricValue: 4, metricThreshold: 3, thresholdBreached: true,
+        supportingProofIds: [], supportingOperationalEventIds: [], supportingFinancialSnapshotIds: [], missingData: [],
+      },
+    ],
+    topSignal: {
+      signalType: "REWORK_COST_RISK", category: "COST", severity: "MEDIUM", title: "Rework is eating into margin",
+      ownerExplanation: "Repeated rework adds cost to work already sold.", protectiveAction: "REDUCE_REWORK_AT_SOURCE",
+      approvalLevel: "MANAGER", requiresOwnerReview: false, riskGuardrail: "This protects margin by fixing a cost at its source.",
+      observedCount: 4, metricType: "REWORK_EVENT_COUNT", metricValue: 4, metricThreshold: 3, thresholdBreached: true,
+      supportingProofIds: [], supportingOperationalEventIds: [], supportingFinancialSnapshotIds: [], missingData: [],
+    },
+    summary: { total: 1, critical: 0, high: 0, ownerReviewRequired: 0 },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -223,7 +242,10 @@ describe("OwnerProcessIntelligencePage", () => {
 
     // Executive-cockpit consolidation: the secondary surfaces are grouped in collapsed <details> groups
     // (progressive disclosure / anti-overload), while the primary process breakdown stays outside any group.
-    for (const gid of ["cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
+    // The cash/profit protection surface renders inside its group too.
+    await findByTestId("cash-profit-panel");
+    expect(container.textContent ?? "").toMatch(/Protect cash & profit/i);
+    for (const gid of ["cockpit-group-cash", "cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
       const grp = await findByTestId(gid);
       expect(grp.tagName.toLowerCase()).toBe("details");
       expect(grp.hasAttribute("open")).toBe(false);

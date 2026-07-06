@@ -800,3 +800,107 @@ export function CapabilityGapPanel({ data }: { data: CapabilityGapView | null })
     </section>
   );
 }
+
+// ── Cash / Profit Protection ───────────────────────────────────────────────────────────────────────────
+
+export interface CashProfitSignalView {
+  signalType: string;
+  category: string;
+  severity: string;
+  title: string;
+  ownerExplanation: string;
+  protectiveAction: string;
+  approvalLevel: string;
+  requiresOwnerReview: boolean;
+  riskGuardrail: string;
+  observedCount: number;
+  metricType: string | null;
+  metricValue: number | null;
+  metricThreshold: number | null;
+  thresholdBreached: boolean;
+  supportingProofIds: string[];
+  supportingOperationalEventIds: string[];
+  supportingFinancialSnapshotIds: string[];
+  missingData: string[];
+}
+
+export interface CashProfitSummaryView {
+  total: number;
+  critical: number;
+  high: number;
+  ownerReviewRequired: number;
+}
+
+export interface CashProfitProtectionView {
+  signals: CashProfitSignalView[];
+  topSignal: CashProfitSignalView | null;
+  summary: CashProfitSummaryView;
+}
+
+const PROTECTIVE_ACTION_LABEL: Record<string, string> = {
+  REVIEW_PRICING: "Review pricing", TIGHTEN_DISCOUNT_POLICY: "Tighten discount policy", REPRICE_B2B_CONTRACT: "Reprice the B2B contract at renewal",
+  REDUCE_REWORK_AT_SOURCE: "Fix the rework at its source", REVIEW_DELIVERY_COST: "Review delivery cost", REBALANCE_STAFFING: "Rebalance staffing",
+  PROTECT_CASH_RUNWAY: "Protect cash runway", CHASE_RECEIVABLES: "Chase overdue receivables", CAPTURE_UNIT_ECONOMICS: "Capture per-job economics",
+  COLLECT_FINANCIAL_DATA: "Collect the missing financial data",
+};
+const METRIC_LABEL: Record<string, string> = {
+  CASH_RUNWAY_DAYS: "days of runway", NET_MARGIN_PCT: "% net margin", BELOW_COST_JOB_COUNT: "below-cost jobs",
+  DISCOUNTED_JOB_COUNT: "discounted jobs", REWORK_EVENT_COUNT: "rework events", DELIVERY_COST_EVENT_COUNT: "high delivery-cost jobs",
+  SLOW_JOB_COUNT: "slower-than-norm jobs", UNDERPRICED_B2B_COUNT: "under-priced B2B accounts", OVERDUE_RECEIVABLE_COUNT: "overdue receivables",
+};
+
+/**
+ * CashProfitPanel — Executive Cockpit standard for cash/profit protection: the single most severe risk by
+ * default (the protective action first, the plain-language explanation, a REAL metric value if available,
+ * the owner-review marker and guardrail), evidence collapsed, a summary counts line, and the rest behind a
+ * summary. Prop-driven; no business logic. No fabricated money figure, no disciplinary label, no hidden score.
+ */
+export function CashProfitPanel({ data }: { data: CashProfitProtectionView | null }) {
+  const top = data?.topSignal ?? null;
+  if (!top) {
+    return (
+      <div data-testid="cash-profit-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No cash or profit risk detected — nothing needs protecting right now.
+      </div>
+    );
+  }
+  const s = data!.summary;
+  const rest = (data?.signals ?? []).slice(1);
+  const evidence = [...top.supportingFinancialSnapshotIds, ...top.supportingProofIds, ...top.supportingOperationalEventIds];
+  return (
+    <section data-testid="cash-profit-panel" data-signal-type={top.signalType}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="cp-title">{top.title}</strong>
+        <Badge variant={SEVERITY_VARIANT(top.severity)}>{top.severity}</Badge>
+        {top.metricValue !== null && top.metricType ? (
+          <span data-testid="cp-metric" style={{ fontSize: 12, color: "#6b7280" }}>{top.metricValue} {METRIC_LABEL[top.metricType] ?? ""}</span>
+        ) : null}
+      </div>
+      {/* Protective action first. */}
+      <p style={{ margin: 0 }} data-testid="cp-action"><strong>Protect it:</strong> {PROTECTIVE_ACTION_LABEL[top.protectiveAction] ?? top.protectiveAction}</p>
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="cp-explanation">{top.ownerExplanation}</p>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+        <span data-testid="cp-approval"><Badge variant={top.requiresOwnerReview ? "destructive" : "default"}>{top.requiresOwnerReview ? "Owner review required" : APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge></span>
+        <span data-testid="cp-guardrail" style={{ color: "#6b7280" }}>{top.riskGuardrail}</span>
+      </div>
+      {evidence.length > 0 && (
+        <details data-testid="cp-evidence">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Evidence ({evidence.length})</summary>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280", wordBreak: "break-all" }}>{evidence.slice(0, 8).join(", ")}</p>
+        </details>
+      )}
+      {top.missingData.length > 0 && (
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="cp-missing">Missing data: {top.missingData.join("; ")}</p>
+      )}
+      <span data-testid="cp-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {s.total} risk(s) · {s.critical} critical · {s.high} high · {s.ownerReviewRequired} need owner review
+      </span>
+      {rest.length > 0 && (
+        <details data-testid="cp-more">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>{rest.length} more cash/profit risk(s)</summary>
+        </details>
+      )}
+    </section>
+  );
+}

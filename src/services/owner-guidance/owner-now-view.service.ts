@@ -45,6 +45,7 @@ import { buildEffectivenessEvaluations, type EffectivenessAnalysis, type Effecti
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
+import { buildCashProfitProtection, type CashProfitProtectionAnalysis } from "@/domain/owner-mode/cash-profit-protection";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -321,6 +322,14 @@ export interface OwnerNowViewPayload {
    * owner-controlled even after the capability exists. Null when no gap is observed.
    */
   capabilityGaps: CapabilityGapAnalysis | null;
+  /**
+   * Cash / Profit Protection — where the business is losing (or about to lose) cash or margin, and the one
+   * protective action for each: short cash runway, thin-margin work, pricing/discount leaks, rework/delivery/
+   * labour cost, under-priced B2B, working-capital strain, and honest data gaps. Risk is a type + severity +
+   * a real metric value (or null), never a fabricated amount; material money decisions keep owner review.
+   * Null when there is no real activity or financial context to protect.
+   */
+  cashProfitProtection: CashProfitProtectionAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1049,6 +1058,30 @@ export async function getOwnerNowView(
     ? buildCapabilityGapDetector({ signals: capabilityGapSignals, dataConfidence: gapConfidenceFromLevel(ctx.dataConfidence) }, workspaceId, new Date(deps.now()).toISOString())
     : null;
 
+  // Cash / Profit Protection — where cash or margin is at risk, with one protective action each. Only real
+  // financial readings feed it (defaulted 0s are treated as "no reading", never a fabricated cash crisis).
+  // Computed only when there is real activity or a real financial context; otherwise null (nothing to protect).
+  const hasRealActivity = Boolean(processIntelligence?.findings.some((f) => f.findingType !== "DATA_INSUFFICIENT")) || raw.cashState != null || raw.finState != null;
+  const cashProfitProtection: CashProfitProtectionAnalysis | null = hasRealActivity
+    ? buildCashProfitProtection({
+        cashRunwayDays: raw.cashState != null ? state.cashRunwayDays : null,
+        netMarginPct: raw.finState != null ? state.netMarginPct : null,
+        lowMarginJobCount: 0,
+        pricingLeakCount: 0,
+        discountLeakCount: 0,
+        reworkCostEventCount: cr?.reworkLinkedCount ?? 0,
+        deliveryCostEventCount: cr?.deliveryCount ?? 0,
+        staffInefficiencyCount: 0,
+        b2bUnderpricedCount: 0,
+        overdueReceivableCount: 0,
+        hasUnitEconomics: false,
+        financialDataComplete: raw.cashState != null && raw.finState != null,
+        supportingProofIds: [],
+        supportingOperationalEventIds: [],
+        supportingFinancialSnapshotIds: [],
+      }, workspaceId, new Date(deps.now()).toISOString())
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1068,7 +1101,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection };
 }
 
 /**
