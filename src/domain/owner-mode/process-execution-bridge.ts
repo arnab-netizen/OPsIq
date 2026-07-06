@@ -38,7 +38,14 @@ export type BridgeApprovalLevel =
   | "NEVER_AUTO"
   | "NEEDS_DATA";
 
-export type BridgeSourceFamily = "PROCESS_CORRECTION" | "CASH_PROFIT";
+export type BridgeSourceFamily =
+  | "PROCESS_CORRECTION"
+  | "CASH_PROFIT"
+  | "WORKLOAD_REDUCTION"
+  | "CAPABILITY_GAP"
+  | "SOP_CHECKLIST"
+  | "TRAINING"
+  | "EFFECTIVENESS_RECHECK";
 
 /** The bridged execution route — one per bridged finding. Flat + serialisable for the UI, tests, and DB. */
 export interface BridgedExecutionRoute {
@@ -74,8 +81,10 @@ export interface ProcessExecutionBridgeAnalysis {
 
 const SEVERITY_RANK: Record<BridgedExecutionRoute["severity"], number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 
-/** Approval level → bridge approval, honestly. STAFF-floor operational work is safe/reversible (AUTO_ALLOWED). */
-function approvalFor(level: ApprovalLevel, hasMissingData: boolean): BridgeApprovalLevel {
+/** Approval level → bridge approval, honestly. STAFF-floor operational work is safe/reversible (AUTO_ALLOWED).
+ *  Exported so the PASS 23 expansion bridges (workload/capability/SOP/training/effectiveness) map approval the
+ *  same way — one governed translation, never a second interpretation. */
+export function approvalFor(level: ApprovalLevel, hasMissingData: boolean): BridgeApprovalLevel {
   if (hasMissingData) return "NEEDS_DATA";
   switch (level) {
     case "OWNER": return "OWNER_APPROVAL_REQUIRED";
@@ -97,7 +106,8 @@ const CORRECTION_ROUTE: Record<CorrectionType, { route: ExecutionRoute; owner: B
   NO_ACTION_DATA_INSUFFICIENT: { route: "MONITOR_ONLY", owner: "NO_ACTION" },
 };
 
-const COMPLETION_BY_ROUTE: Record<ExecutionRoute, string> = {
+/** Completion criterion per route. Exported so the PASS 23 expansion bridges reuse the identical governed text. */
+export const COMPLETION_BY_ROUTE: Record<ExecutionRoute, string> = {
   CREATE_CORRECTION_TASK: "The corrected process step is verified working and re-checked at the next review window.",
   CREATE_SOP_CHECKLIST_TASK: "The updated SOP/checklist is approved by the owner and adopted; adherence is re-checked.",
   CREATE_TRAINING_TASK: "The assigned training is completed with proof; the targeted failure is re-measured.",
@@ -190,26 +200,47 @@ function bridgeCashSignal(s: CashProfitSignal, rank: number): BridgedExecutionRo
   };
 }
 
+/** PASS 23 expansion routes (workload/capability/SOP/training/effectiveness) already built by
+ *  buildBridgeExpansion, plus the collapse sets telling the bridge which generic correction routes a specific
+ *  SOP/training route now supersedes. Passed in (not imported) so this stays a pure, cycle-free data merge. */
+export interface BridgeExpansion {
+  routes: BridgedExecutionRoute[];
+  collapse: { sopCorrectionKeys: Set<string>; trainingCorrectionKeys: Set<string> };
+}
+
 /**
  * Build the bridge. Deduplicates by taskKey (one route per finding), orders most-severe/highest-priority
  * first, and never emits an unsafe auto-execution: material/owner findings stay OWNER_APPROVAL_REQUIRED and
  * data gaps stay NEEDS_DATA. `topRoute` is the single action the owner should see first.
+ *
+ * PASS 23: an optional `expansion` merges the workload/capability/SOP/training/effectiveness routes into the
+ * same governed list. A generic correction route (CREATE_SOP_CHECKLIST_TASK / CREATE_TRAINING_TASK) is COLLAPSED
+ * when a specific SOP/training route already covers the same correction, so the same fix is never shown twice.
  */
 export function buildProcessExecutionBridge(
   routing: ProcessCorrectionRouting | null,
   cashProfit: CashProfitProtectionAnalysis | null,
   workspaceId: string,
   evaluatedAt: string,
+  expansion?: BridgeExpansion | null,
 ): ProcessExecutionBridgeAnalysis {
+  const collapseSop = expansion?.collapse.sopCorrectionKeys ?? new Set<string>();
+  const collapseTraining = expansion?.collapse.trainingCorrectionKeys ?? new Set<string>();
   const byKey = new Map<string, BridgedExecutionRoute>();
   for (const c of routing?.corrections ?? []) {
     const r = bridgeCorrection(c);
+    // Collapse: drop the generic correction route when a specific SOP/training route already covers this fix.
+    if (r.executionRoute === "CREATE_SOP_CHECKLIST_TASK" && collapseSop.has(r.sourceFindingKey)) continue;
+    if (r.executionRoute === "CREATE_TRAINING_TASK" && collapseTraining.has(r.sourceFindingKey)) continue;
     if (!byKey.has(r.taskKey)) byKey.set(r.taskKey, r);
   }
   (cashProfit?.signals ?? []).forEach((s, i) => {
     const r = bridgeCashSignal(s, i);
     if (!byKey.has(r.taskKey)) byKey.set(r.taskKey, r);
   });
+  for (const r of expansion?.routes ?? []) {
+    if (r.workspaceId === workspaceId && !byKey.has(r.taskKey)) byKey.set(r.taskKey, r);
+  }
 
   const routes = [...byKey.values()].sort(
     (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || a.priorityRank - b.priorityRank,

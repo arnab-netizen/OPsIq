@@ -941,6 +941,11 @@ const ROUTE_LABEL: Record<string, string> = {
 const ACTION_OWNER_LABEL: Record<string, string> = {
   OWNER: "Owner", MANAGER: "Manager", STAFF: "Staff", OPSIQ_DRAFT: "OpsIQ (draft)", EXTERNAL_ADVISOR: "External advisor", NO_ACTION: "No action",
 };
+// Where the bridged action originated — so the owner sees which engine surfaced it (PASS 23 expansion families).
+const FAMILY_LABEL: Record<string, string> = {
+  PROCESS_CORRECTION: "Process fix", CASH_PROFIT: "Cash/profit", WORKLOAD_REDUCTION: "Reduce your workload",
+  CAPABILITY_GAP: "Capability to build", SOP_CHECKLIST: "SOP/checklist", TRAINING: "Training", EFFECTIVENESS_RECHECK: "Did the fix work?",
+};
 
 /**
  * ProcessExecutionBridgePanel — Executive Cockpit standard for the process-correction execution bridge: the
@@ -993,6 +998,7 @@ export function ProcessExecutionBridgePanel({ data, onAction }: { data: ProcessE
         <Badge variant={SEVERITY_VARIANT(top.severity)}>{top.severity}</Badge>
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+        <span data-testid="bridge-family"><Badge variant="muted">{FAMILY_LABEL[top.sourceFamily] ?? top.sourceFamily}</Badge></span>
         <span data-testid="bridge-route"><Badge variant="default">{ROUTE_LABEL[top.executionRoute] ?? top.executionRoute}</Badge></span>
         <span data-testid="bridge-owner">Owner: <strong>{ACTION_OWNER_LABEL[top.actionOwner] ?? top.actionOwner}</strong></span>
         <span data-testid="bridge-approval"><Badge variant={isOwner ? "destructive" : "default"}>{APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge></span>
