@@ -1025,14 +1025,12 @@ export async function getOwnerNowView(
     : null;
 
   // Approval Threshold / Auto-Action Policy — classify each proposed correction as an action candidate and
-  // decide the required approval before OpsIQ may run it. Pure derivation over the routed corrections; no
-  // candidates → null (nothing to govern). High-harm actions never arise from ordinary corrections.
-  const approvalPolicy: ApprovalPolicyAnalysis | null = processCorrections && processCorrections.corrections.length > 0
-    ? buildApprovalPolicy(
-        { candidates: deriveApprovalCandidates(processCorrections) },
-        workspaceId,
-        new Date(deps.now()).toISOString(),
-      )
+  // decide the required approval before OpsIQ may run it. Pure derivation over the routed corrections; the
+  // DATA_INSUFFICIENT no-op is not a real action, so an empty/thin workspace yields no candidates → null
+  // (nothing to govern). High-harm actions never arise from ordinary corrections.
+  const approvalCandidates = processCorrections ? deriveApprovalCandidates(processCorrections) : [];
+  const approvalPolicy: ApprovalPolicyAnalysis | null = approvalCandidates.length > 0
+    ? buildApprovalPolicy({ candidates: approvalCandidates }, workspaceId, new Date(deps.now()).toISOString())
     : null;
 
   const view = buildOwnerNowView({ ...ctx, changes });
@@ -1185,8 +1183,11 @@ function deriveApprovalCandidates(routing: ProcessCorrectionRouting): PolicyActi
   };
   const CONFIDENCE: Record<string, PolicyConfidence> = { HIGH: "HIGH", MEDIUM: "MEDIUM", LOW: "LOW", NEEDS_DATA: "NEEDS_DATA" };
 
-  return routing.corrections.map((c) => {
-    const dataInsufficient = c.correctionType === "NO_ACTION_DATA_INSUFFICIENT";
+  // Corrections routed from the DATA_INSUFFICIENT sentinel (the empty/thin-workspace "no real breakdown yet"
+  // state — whether the no-op or a data-collection correction) are not real proposed actions and must not
+  // fabricate an approval decision to govern.
+  return routing.corrections.filter((c) => c.sourceFindingType !== "DATA_INSUFFICIENT").map((c) => {
+    const dataInsufficient = c.confidence === "NEEDS_DATA";
     const rk = RISK_BY_IMPACT[c.expectedImpactType] ?? { risk: "UNKNOWN" as RiskCategory, impact: "UNKNOWN" as ImpactLevel };
     return {
       actionKey: c.correctionId,
