@@ -44,6 +44,7 @@ import { buildTrainingAssignments, type TrainingAssignmentAnalysis } from "@/dom
 import { buildEffectivenessEvaluations, type EffectivenessAnalysis, type EffectivenessInputItem } from "@/domain/owner-mode/sop-training-effectiveness-loop";
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
+import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -313,6 +314,13 @@ export interface OwnerNowViewPayload {
    * surfaces what OpsIQ would have to build first. Null on the fake-DI path or with no candidate actions.
    */
   approvalPolicy: ApprovalPolicyAnalysis | null;
+  /**
+   * OpsIQ Capability Gap Detector — the system features OpsIQ itself would have to build to close the gaps
+   * it keeps hitting: decisions it cannot safely automate, missing operational data, and manual owner burden
+   * it cannot yet remove. Each is a governed recommendation (never auto-adopted); material decisions stay
+   * owner-controlled even after the capability exists. Null when no gap is observed.
+   */
+  capabilityGaps: CapabilityGapAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1033,6 +1041,14 @@ export async function getOwnerNowView(
     ? buildApprovalPolicy({ candidates: approvalCandidates }, workspaceId, new Date(deps.now()).toISOString())
     : null;
 
+  // OpsIQ Capability Gap Detector — turn the gaps OpsIQ keeps hitting (unautomatable decisions, missing
+  // operational data, manual owner burden) into governed system feature recommendations. Pure derivation
+  // over the already-computed approval policy + workload + corrections; no gaps → null.
+  const capabilityGapSignals = deriveCapabilityGapSignals(approvalPolicy, ownerWorkloadReduction, processCorrections);
+  const capabilityGaps: CapabilityGapAnalysis | null = capabilityGapSignals.length > 0
+    ? buildCapabilityGapDetector({ signals: capabilityGapSignals, dataConfidence: gapConfidenceFromLevel(ctx.dataConfidence) }, workspaceId, new Date(deps.now()).toISOString())
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1052,7 +1068,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps };
 }
 
 /**
@@ -1204,6 +1220,103 @@ function deriveApprovalCandidates(routing: ProcessCorrectionRouting): PolicyActi
       missingData: c.missingData,
     };
   });
+}
+
+/** Map the evidence confidence level to the capability-gap detector's confidence band. */
+function gapConfidenceFromLevel(level: EvidenceConfidenceLevel): GapConfidence {
+  switch (level) {
+    case EvidenceConfidenceLevel.VERIFIED:
+    case EvidenceConfidenceLevel.STRONG:
+      return "HIGH";
+    case EvidenceConfidenceLevel.MODERATE:
+      return "MEDIUM";
+    case EvidenceConfidenceLevel.WEAK:
+      return "LOW";
+    default:
+      return "NEEDS_DATA";
+  }
+}
+
+/**
+ * Derive capability-gap signals from the already-computed now-view blocks: decisions the approval policy
+ * cannot safely automate (each already tagged with the capability it needs), missing complaint/rework data,
+ * and manual owner proof/review burden. Every signal is backed by real refs the caller counted.
+ */
+function deriveCapabilityGapSignals(
+  approvalPolicy: ApprovalPolicyAnalysis | null,
+  workload: OwnerWorkloadReductionAnalysis | null,
+  routing: ProcessCorrectionRouting | null,
+): CapabilityGapSignal[] {
+  // The approval policy uses a lightweight per-decision capability enum; map it to the detector's catalogue.
+  const CAP_MAP: Record<string, MissingCapabilityType> = {
+    VERIFIED_AMOUNT_LEDGER: "VERIFIED_FINANCIAL_LEDGER",
+    REFUND_RECONCILIATION: "REFUND_RECONCILIATION",
+    MARGIN_SIMULATION: "MARGIN_SIMULATION",
+    SPEND_CONTROL_LEDGER: "SPEND_CONTROL_LEDGER",
+    PAYROLL_INTEGRATION: "COMPENSATION_INTEGRATION",
+    CONTRACT_TERMS_REGISTRY: "CONTRACT_TERMS_REGISTRY",
+    LEGAL_REVIEW_WORKFLOW: "LEGAL_REVIEW_WORKFLOW",
+    IDENTITY_EVIDENCE_CHAIN: "IDENTITY_EVIDENCE_CHAIN",
+    AUTOMATED_ROLLBACK: "AUTOMATED_ROLLBACK",
+  };
+  const signals: CapabilityGapSignal[] = [];
+
+  // 1. Decisions the approval policy cannot safely automate → a capability the system must build.
+  for (const d of approvalPolicy?.decisions ?? []) {
+    if (!d.capabilityGap || !d.missingCapabilityType) continue;
+    const cap = CAP_MAP[d.missingCapabilityType];
+    if (!cap) continue;
+    signals.push({
+      signalType: "UNAUTOMATABLE_DECISION",
+      missingCapability: cap,
+      detail: `${d.title} cannot be safely automated today`,
+      severity: d.approvalDecision === "NEVER_AUTO" ? "HIGH" : "MEDIUM",
+      evidenceRefs: d.supportingEvidenceIds,
+      blocksAutomationOf: d.actionType,
+      missingData: [],
+    });
+  }
+
+  // 2. Manual owner burden → a capability that removes the repeat: automated proof capture for weak-proof
+  //    review burden, structured feedback intake for recurring complaint escalation.
+  const WORKLOAD_CAP: Record<string, { cap: MissingCapabilityType; detail: string }> = {
+    OWNER_REVIEW_BURDEN: { cap: "AUTOMATED_PROOF_CAPTURE", detail: "weak proof keeps reaching the owner's manual review" },
+    REPEATED_OWNER_ADJUDICATION: { cap: "AUTOMATED_PROOF_CAPTURE", detail: "the owner keeps adjudicating the same weak-proof risk by hand" },
+    RECURRING_COMPLAINT_ESCALATION: { cap: "CUSTOMER_FEEDBACK_INTAKE", detail: "quality complaints keep escalating to the owner" },
+  };
+  for (const f of workload?.findings ?? []) {
+    const m = WORKLOAD_CAP[f.workloadType];
+    if (!m) continue;
+    signals.push({
+      signalType: "MANUAL_OWNER_BURDEN",
+      missingCapability: m.cap,
+      detail: m.detail,
+      severity: f.severity === "HIGH" || f.severity === "CRITICAL" ? "HIGH" : "MEDIUM",
+      evidenceRefs: [...f.supportingProofIds, ...f.supportingAdjudicationIds, ...f.supportingOperationalEventIds],
+      blocksAutomationOf: null,
+      missingData: [],
+    });
+  }
+
+  // 3. Missing complaint/rework data on a REAL correction → a structured customer-feedback intake sharpens
+  //    the process signal. Corrections routed from the DATA_INSUFFICIENT sentinel (empty/thin workspace) are
+  //    excluded — their missing-data list is the "no data yet" state, not an actionable capability gap.
+  const feedbackGaps = Array.from(new Set(
+    (routing?.corrections ?? []).filter((c) => c.sourceFindingType !== "DATA_INSUFFICIENT").flatMap((c) => c.missingData),
+  )).filter((m) => /complaint|rework|operational-event/i.test(m));
+  if (feedbackGaps.length > 0) {
+    signals.push({
+      signalType: "MISSING_OPERATIONAL_DATA",
+      missingCapability: "CUSTOMER_FEEDBACK_INTAKE",
+      detail: "complaint/rework data is captured ad hoc",
+      severity: "LOW",
+      evidenceRefs: [],
+      blocksAutomationOf: null,
+      missingData: feedbackGaps,
+    });
+  }
+
+  return signals;
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

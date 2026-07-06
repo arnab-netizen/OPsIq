@@ -681,3 +681,89 @@ export function ApprovalPolicyPanel({ data }: { data: ApprovalPolicyView | null 
     </section>
   );
 }
+
+// ── OpsIQ Capability Gap Detector ──────────────────────────────────────────────────────────────────────
+
+export interface CapabilityRecommendationView {
+  capabilityType: string;
+  title: string;
+  severity: string;
+  problemStatement: string;
+  recommendedCapability: string;
+  ownerBenefit: string;
+  unlocksAutomation: boolean;
+  unlockedActionTypes: string[];
+  governanceGuardrail: string;
+  signalCount: number;
+  evidenceRefs: string[];
+  blocksToday: string[];
+  missingData: string[];
+  estimatedComplexity: string;
+  priorityRank: number;
+}
+
+export interface CapabilityGapSummaryView {
+  total: number;
+  critical: number;
+  high: number;
+  unlocksAutomation: number;
+}
+
+export interface CapabilityGapView {
+  recommendations: CapabilityRecommendationView[];
+  topRecommendation: CapabilityRecommendationView | null;
+  summary: CapabilityGapSummaryView;
+}
+
+/**
+ * CapabilityGapPanel — Executive Cockpit standard for the system feature recommendations: the single
+ * highest-priority capability OpsIQ should build by default (what it can't do today, the capability, the
+ * owner benefit, the governance guardrail), what it would unlock, evidence/blocks collapsed, a summary
+ * counts line, and the rest behind a summary. Prop-driven; no business logic. Every item is a recommendation,
+ * never auto-built; no fabricated money, no disciplinary label, no hidden score.
+ */
+export function CapabilityGapPanel({ data }: { data: CapabilityGapView | null }) {
+  const top = data?.topRecommendation ?? null;
+  if (!top) {
+    return (
+      <div data-testid="capability-gap-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No capability gap detected — OpsIQ has what it needs for the current signals.
+      </div>
+    );
+  }
+  const s = data!.summary;
+  const rest = (data?.recommendations ?? []).slice(1);
+  const evidence = [...top.evidenceRefs, ...top.blocksToday];
+  return (
+    <section data-testid="capability-gap-panel" data-capability-type={top.capabilityType}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="cap-title">Build: {top.title}</strong>
+        <Badge variant={SEVERITY_VARIANT(top.severity)}>{top.severity}</Badge>
+        <span data-testid="cap-complexity" style={{ fontSize: 12, color: "#6b7280" }}>{top.estimatedComplexity} build</span>
+      </div>
+      {/* What OpsIQ can't do today, then the capability, then the owner benefit. */}
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="cap-problem">{top.problemStatement}</p>
+      <p style={{ margin: 0 }} data-testid="cap-capability"><strong>Recommendation:</strong> {top.recommendedCapability}</p>
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="cap-benefit">{top.ownerBenefit}</p>
+      {top.unlocksAutomation && top.unlockedActionTypes.length > 0 && (
+        <span data-testid="cap-unlocks" style={{ fontSize: 12, color: "#047857" }}>Would let OpsIQ safely assist with: {top.unlockedActionTypes.join(", ")}</span>
+      )}
+      <span data-testid="cap-guardrail" style={{ fontSize: 12, color: "#6b7280" }}>{top.governanceGuardrail}</span>
+      {evidence.length > 0 && (
+        <details data-testid="cap-evidence">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Why ({top.signalCount} signal{top.signalCount === 1 ? "" : "s"})</summary>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280", wordBreak: "break-all" }}>{evidence.slice(0, 8).join("; ")}</p>
+        </details>
+      )}
+      <span data-testid="cap-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {s.total} capability gap(s) · {s.critical} critical · {s.high} high · {s.unlocksAutomation} unlock automation
+      </span>
+      {rest.length > 0 && (
+        <details data-testid="cap-more">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>{rest.length} more capability recommendation(s)</summary>
+        </details>
+      )}
+    </section>
+  );
+}
