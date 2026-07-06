@@ -45,7 +45,7 @@ import { buildEffectivenessEvaluations, type EffectivenessAnalysis, type Effecti
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
-import { buildCashProfitProtection, type CashProfitProtectionAnalysis } from "@/domain/owner-mode/cash-profit-protection";
+import { buildCashProfitProtection, type CashProfitProtectionAnalysis, type CashRiskState } from "@/domain/owner-mode/cash-profit-protection";
 import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
 import { buildOpportunityValidationPlan, type OpportunityValidationAnalysis } from "@/domain/owner-mode/opportunity-validation-experiment-engine";
 import { buildOpportunityPortfolio, type OpportunityPortfolioAnalysis } from "@/domain/owner-mode/opportunity-portfolio-capital-allocation";
@@ -1095,8 +1095,14 @@ export async function getOwnerNowView(
   const hasRealActivity = Boolean(processIntelligence?.findings.some((f) => f.findingType !== "DATA_INSUFFICIENT")) || raw.cashState != null || raw.finState != null;
   const cashProfitProtection: CashProfitProtectionAnalysis | null = hasRealActivity
     ? buildCashProfitProtection({
-        cashRunwayDays: raw.cashState != null ? state.cashRunwayDays : null,
-        netMarginPct: raw.finState != null ? state.netMarginPct : null,
+        // PASS 19 / H4: the survival/finance states are CATEGORICAL, not measured figures. Feeding the
+        // state→day/percent bucket constants as a metric implied a precision OpsIQ does not have (e.g. a
+        // "CRITICAL" state rendered as "7 days runway"). Pass no measured figure and let the domain fire the
+        // risk qualitatively from the categorical state (metricValue stays null — no false precision).
+        cashRunwayDays: null,
+        netMarginPct: null,
+        cashRunwayState: (raw.cashState ?? null) as CashRiskState | null,
+        netMarginState: (raw.finState ?? null) as CashRiskState | null,
         lowMarginJobCount: 0,
         pricingLeakCount: 0,
         discountLeakCount: 0,
