@@ -1,0 +1,85 @@
+{
+  "pack": "public-online-proof-pack",
+  "collectedAt": "2026-07-06",
+  "collectionMethod": "Public web search for aggregated complaint/opportunity THEMES and official procurement rules. No specific business named. No page copied verbatim — only short thematic summaries. All signals below are treated as UNVERIFIED public patterns, never ground truth.",
+  "sources": [
+    {
+      "sourceId": "src-laundry-01", "archetype": "laundry_local_service", "sourceType": "public_consumer_advice",
+      "sourceRef": "checkbook.org / citizensadvice.org.uk drycleaning consumer guidance", "accessedAt": "2026-07-06",
+      "publicDataOnly": true, "loginRequired": false, "personalDataRemoved": true, "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrength": "MODERATE", "publicSignalSummary": "Common dry-cleaning complaint themes: delayed/late-ready orders with no update, garment damage / stains not treated, lost or switched items (poor garment tracking), surprise fees, poor service recovery.",
+      "officialSource": false, "missingData": ["real order volumes", "this business's actual defect rate", "cost/margin data"],
+      "safeToUseInFixture": true, "privacyActionTaken": "no business/customer names retained; themes only",
+      "copyrightActionTaken": "summarized themes; no verbatim review text", "notes": "Consumer-advice aggregation of typical complaints, not a specific business."
+    },
+    {
+      "sourceId": "src-tender-01", "archetype": "tender_procurement", "sourceType": "public_procurement_rules",
+      "sourceRef": "GFR 2017 EMD rules / GeM e-procurement EMD + exemption guidance (public explainers)", "accessedAt": "2026-07-06",
+      "publicDataOnly": true, "loginRequired": false, "personalDataRemoved": true, "sourceQuality": "VERIFIED_SOURCE",
+      "evidenceStrength": "STRONG", "publicSignalSummary": "Government tenders typically require an Earnest Money Deposit (1-5% of contract value), tender fee, eligibility documents; MSME/startup exemptions exist with the right registration. Deadlines and eligibility are hard gates.",
+      "officialSource": true, "missingData": ["this business's eligibility docs", "cost/margin fit for the specific tender", "capacity to deliver"],
+      "safeToUseInFixture": true, "privacyActionTaken": "no bidder identity retained",
+      "copyrightActionTaken": "rules paraphrased, not copied", "notes": "Official procurement-rule pattern (STRONG) — but bid/no-bid still needs the owner's own eligibility + cost data."
+    },
+    {
+      "sourceId": "src-property-01", "archetype": "property_management", "sourceType": "public_review_aggregation",
+      "sourceRef": "property-management complaint/retention guides (baymgmtgroup, firstandmainpm, etc.)", "accessedAt": "2026-07-06",
+      "publicDataOnly": true, "loginRequired": false, "personalDataRemoved": true, "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrength": "MODERATE", "publicSignalSummary": "Top tenant complaint themes: slow response to urgent maintenance (AC, hot water), unreturned calls/emails, security-deposit disputes, surprise fees, unresolved pest issues. Reviews polarize 1-star/5-star.",
+      "officialSource": false, "missingData": ["actual work-order response times", "vendor SLAs", "occupancy/rent data"],
+      "safeToUseInFixture": true, "privacyActionTaken": "no tenant/property/address retained",
+      "copyrightActionTaken": "themes only", "notes": "Polarized public reviews are weak evidence of any one business's true state."
+    },
+    {
+      "sourceId": "src-housekeeping-01", "archetype": "housekeeping_facility", "sourceType": "public_industry_guidance",
+      "sourceRef": "janitorial/commercial-cleaning complaint guides (thejanitorialstore, cleancorp, 4-m)", "accessedAt": "2026-07-06",
+      "publicDataOnly": true, "loginRequired": false, "personalDataRemoved": true, "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrength": "MODERATE", "publicSignalSummary": "Commercial cleaning complaint themes: missed areas / inconsistent quality (restrooms, dusting), missed shifts / no-shows, poor communication, no quality reporting/accountability, hidden fees, high staff turnover → untrained workers.",
+      "officialSource": false, "missingData": ["inspection pass rates", "supply/labour cost", "contract terms"],
+      "safeToUseInFixture": true, "privacyActionTaken": "no client/site retained",
+      "copyrightActionTaken": "themes only", "notes": "Turnover→training is a recurring root cause; SOP/training route is appropriate but needs adherence evidence."
+    },
+    {
+      "sourceId": "src-franchise-01", "archetype": "franchise_operations", "sourceType": "public_industry_guidance",
+      "sourceRef": "franchise consistency / brand-standard guides (delightree, taqtics, trainual)", "accessedAt": "2026-07-06",
+      "publicDataOnly": true, "loginRequired": false, "personalDataRemoved": true, "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrength": "MODERATE", "publicSignalSummary": "Franchise themes: service quality varies branch-to-branch, uneven SOP execution, visual-branding inconsistency, unauthorized local promos/discounts, outdated training; one branch's mistake harms the whole brand. SOPs usually updated only after a complaint/audit.",
+      "officialSource": false, "missingData": ["per-branch metrics", "which branch", "pricing/discount authority"],
+      "safeToUseInFixture": true, "privacyActionTaken": "no franchisee/brand retained",
+      "copyrightActionTaken": "themes only", "notes": "Brand/pricing/cash decisions must stay owner-gated; no franchisee penalty automation."
+    },
+    {
+      "sourceId": "src-saas-01", "archetype": "saas", "sourceType": "public_review_aggregation",
+      "sourceRef": "SaaS negative-review theme guides (userpilot, madx, bigideasdb)", "accessedAt": "2026-07-06",
+      "publicDataOnly": true, "loginRequired": false, "personalDataRemoved": true, "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrength": "MODERATE", "publicSignalSummary": "SaaS negative-review themes: bugs/downtime, poor/slow support, onboarding overload (users can't complete setup), non-transparent pricing / value doubts, feature bloat/complexity, missing key features.",
+      "officialSource": false, "missingData": ["real activation/conversion/MRR", "bug reproduction", "support SLA"],
+      "safeToUseInFixture": true, "privacyActionTaken": "no product/company retained",
+      "copyrightActionTaken": "themes only", "notes": "No fabricated MRR/conversion; launch readiness stays frozen if support/product gaps remain."
+    },
+    {
+      "sourceId": "src-b2b-01", "archetype": "b2b_service", "sourceType": "public_procurement_guidance",
+      "sourceRef": "RFP evaluation-criteria / vendor-selection guides (responsive.io, ivalua, tipalti)", "accessedAt": "2026-07-06",
+      "publicDataOnly": true, "loginRequired": false, "personalDataRemoved": true, "sourceQuality": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrength": "MODERATE", "publicSignalSummary": "B2B RFP evaluation themes: scope/technical fit, delivery reliability + capacity + geographic coverage, quality/certifications, service responsiveness, clear ROI/TCO (lowest cost rarely wins). Buyers value proven volume over theoretical capacity.",
+      "officialSource": false, "missingData": ["this business's capacity", "cost/margin", "reference proof", "certifications"],
+      "safeToUseInFixture": true, "privacyActionTaken": "no buyer/vendor retained",
+      "copyrightActionTaken": "themes only", "notes": "Outreach draft only; owner approval + capacity/cost proof before any pursuit; no win-probability fabrication."
+    },
+    {
+      "sourceId": "src-collective-01", "archetype": "collective_conflict", "sourceType": "synthesized_from_public_themes",
+      "sourceRef": "composite of the above public themes (growth signal + unresolved quality + missing cost data + weak capacity + high owner workload)", "accessedAt": "2026-07-06",
+      "publicDataOnly": true, "loginRequired": false, "personalDataRemoved": true, "sourceQuality": "PUBLIC_SOURCE_UNVERIFIED",
+      "evidenceStrength": "WEAK", "publicSignalSummary": "A composite business facing an expansion opportunity while quality complaints are unresolved, cost/margin data is missing, capacity/staffing is weak, and owner workload is already high — used to test collective (business-wide) decision coherence.",
+      "officialSource": false, "missingData": ["cost/margin", "capacity", "verified quality baseline"],
+      "safeToUseInFixture": true, "privacyActionTaken": "fully synthetic/anonymized",
+      "copyrightActionTaken": "composite; no source text", "notes": "Explicitly synthetic conflict case; must yield validate-first, fix-quality-first, do-not-scale-yet."
+    }
+  ],
+  "notFound": [
+    {
+      "publicSignalType": "PUBLIC_DATA_NOT_FOUND", "archetype": "all",
+      "detail": "Verified per-business internal financials, real defect rates, capacity, and true conversion/MRR are NOT publicly available for any specific business and were NOT fabricated. Every case therefore carries missing-internal-data conditions the fixtures preserve honestly."
+    }
+  ]
+}

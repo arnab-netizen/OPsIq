@@ -1,0 +1,37 @@
+{
+  "audit": "public-online-real-business-proof",
+  "pass": "27C",
+  "ledger": "EVIDENCE",
+  "date": "2026-07-06",
+  "purpose": "Traceable proof for every claim in the module/domain/collective decision matrices and the final report. Each claim points to executable evidence (a DB simulation assertion, verified source code, or a fixture), not prose.",
+  "simulation": {
+    "file": "src/__tests__/execution/public-online-real-business-end-to-end.db.test.ts",
+    "lane": "LANE_B (throwaway Postgres 16, required)",
+    "alsoWiredInto": "LANE_A (Neon)",
+    "tests": 10,
+    "result": "10 passed (verified locally against Postgres 16 on 2026-07-06)",
+    "gate": "TEST_WITH_DB=true"
+  },
+  "claims": [
+    { "claim": "Every archetype materialises exactly one governed, actionable top action (not a raw-signal dump)", "evidence": "test 1", "kind": "db-assertion" },
+    { "claim": "Quality/process archetypes route to correction/SOP, not a laundry-only assumption; SaaS→evidence request; property→reassessment", "evidence": "test 2", "kind": "db-assertion" },
+    { "claim": "Missing internal data → a data task (tender, B2B, SaaS, collective)", "evidence": "test 3", "kind": "db-assertion" },
+    { "claim": "Material/owner decisions are owner-approval and a non-owner (manager) cannot approve (code OWNER_APPROVAL_REQUIRED)", "evidence": "test 4", "kind": "db-assertion" },
+    { "claim": "Completion is evidence-gated (EVIDENCE_REQUIRED without proof; succeeds with proof)", "evidence": "test 5", "kind": "db-assertion" },
+    { "claim": "No unsafe/external route ever produced (no SUBMIT/SEND/SPEND/DISCOUNT/CONTRACT/PAYROLL/OUTREACH/TENDER)", "evidence": "test 6", "kind": "db-assertion" },
+    { "claim": "No persisted governed field fabricates currency, percentage, or a disciplinary/win-probability/ROI label", "evidence": "test 7", "kind": "db-assertion" },
+    { "claim": "Workspace isolation holds; tender bid task never leaks into laundry", "evidence": "test 8", "kind": "db-assertion" },
+    { "claim": "Collective conflict yields a coherent decision: quality fix is the actionable top, scale is owner-gated, cost is a data task", "evidence": "test 9", "kind": "db-assertion" },
+    { "claim": "A clean workspace fabricates nothing (0 tasks, 0 reassessment events, 0 audit events)", "evidence": "test 10", "kind": "db-assertion" },
+    { "claim": "CorrectionType→ExecutionRoute mapping is the governed source of truth", "evidence": "src/domain/owner-mode/process-execution-bridge.ts:98-106", "kind": "source" },
+    { "claim": "requiredApprovalLevel=OWNER forces CREATE_OWNER_APPROVAL_TASK regardless of base route", "evidence": "src/domain/owner-mode/process-execution-bridge.ts:130-131", "kind": "source" },
+    { "claim": "Owner-approval enforcement + evidence gating live in the service, server-side", "evidence": "src/services/owner-mode/process-execution-bridge.service.ts (applyProcessExecutionAction: OWNER_APPROVAL_REQUIRED, EVIDENCE_REQUIRED, businessInWorkspace)", "kind": "source" },
+    { "claim": "Signals are anonymized public-source fixtures with sourceQuality + evidenceStrength, treated as unverified unless official", "evidence": "docs/real-world-data/public-online-proof-pack/PUBLIC_SIGNAL_FIXTURES.json", "kind": "fixture" },
+    { "claim": "No private/customer data; copyright-minimized; ground-truth caveat stated", "evidence": "docs/real-world-data/public-online-proof-pack/PUBLIC_DATA_PRIVACY_NOTES.md", "kind": "fixture" }
+  ],
+  "honestGaps": [
+    "OpsIQ does not parse arbitrary public web text. The fixtures are the normalization a human/analyst performs on public reviews/notices; the proof covers the governed routing + safety boundaries over those normalized signals, not free-text ingestion.",
+    "No verified internal financials, defect rates, capacity, or conversion/MRR exist publicly; none were fabricated. Every case preserves explicit missing-internal-data conditions.",
+    "Public review-theme sources are THIRD_PARTY_UNVERIFIED (MODERATE/WEAK) — signals, not verified facts about any specific business."
+  ]
+}

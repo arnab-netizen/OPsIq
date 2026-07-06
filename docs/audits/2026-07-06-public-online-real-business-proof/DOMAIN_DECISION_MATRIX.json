@@ -1,0 +1,105 @@
+{
+  "audit": "public-online-real-business-proof",
+  "pass": "27C",
+  "matrix": "DOMAIN_DECISION",
+  "date": "2026-07-06",
+  "purpose": "Per-archetype (domain) correctness of the whole governed decision — the single actionable top action, the four-dimension coverage (consulting stage, business condition, intervention mode/phase, human execution reality), and the safety boundary each domain must hold. Proven by the DB simulation (10 tests, LANE_B).",
+  "fourDimensions": [
+    "consulting lifecycle stage",
+    "business condition",
+    "intervention mode + phase",
+    "human execution reality"
+  ],
+  "domains": [
+    {
+      "archetype": "laundry_local_service",
+      "topAction": "fix the failing process step with proof (CREATE_CORRECTION_TASK)",
+      "businessCondition": "quality/rework loop, margin at risk from discount temptation",
+      "interventionMode": "process correction; pricing decision escalated",
+      "humanExecutionReality": "manager executes correction; owner owns the pricing decision",
+      "safetyBoundary": "no auto customer contact/apology, no auto refund/discount, no blaming named staff",
+      "decisionCoherent": true,
+      "provenBy": ["test 1", "test 2", "test 4", "test 5"]
+    },
+    {
+      "archetype": "housekeeping_facility",
+      "topAction": "inspect + prove the missed-area fix (CREATE_CORRECTION_TASK), then SOP/train",
+      "businessCondition": "process-quality breakdown, high turnover, contract SLA risk",
+      "interventionMode": "correction + training bridge",
+      "humanExecutionReality": "manager inspection; training adoption proof required; reputation/contract held for owner",
+      "safetyBoundary": "no auto client outreach, no auto discount, no staff-discipline automation",
+      "decisionCoherent": true,
+      "provenBy": ["test 1", "test 2"]
+    },
+    {
+      "archetype": "property_management",
+      "topAction": "resolve the maintenance operational event (CREATE_REASSESSMENT_TASK)",
+      "businessCondition": "operational bottleneck, vacancy opportunity, high owner workload",
+      "interventionMode": "operational-event resolution; high spend/reputation escalated",
+      "humanExecutionReality": "manager vendor follow-up; owner owns high spend/legal/reputation; owner-workload risk flagged",
+      "safetyBoundary": "no auto tenant messaging/send, no auto legal/rent action, no auto vendor spend",
+      "decisionCoherent": true,
+      "provenBy": ["test 2", "test 4", "test 6"]
+    },
+    {
+      "archetype": "franchise_operations",
+      "topAction": "audit the underperforming branch (CREATE_CORRECTION_TASK) + SOP/train",
+      "businessCondition": "cross-branch inconsistency, unauthorized local promo, brand/pricing risk",
+      "interventionMode": "branch audit/correction; brand-pricing escalated",
+      "humanExecutionReality": "manager/franchisee follow-up; owner owns brand/pricing/franchisee consequences",
+      "safetyBoundary": "no franchisee-penalty automation, no auto public response, no auto pricing enforcement",
+      "decisionCoherent": true,
+      "provenBy": ["test 2", "test 4", "test 6"]
+    },
+    {
+      "archetype": "saas",
+      "topAction": "reproduce the bug before claiming fixed (CREATE_EVIDENCE_REQUEST)",
+      "businessCondition": "product-support issue, activation opportunity, launch readiness gaps",
+      "interventionMode": "evidence-first bug proof; activation/pricing as a data gap",
+      "humanExecutionReality": "OpsIQ drafts the proof request; owner owns pricing + any launch decision",
+      "safetyBoundary": "no fabricated MRR/conversion/ROI, no public launch while readiness gaps remain, no auto pricing change",
+      "decisionCoherent": true,
+      "provenBy": ["test 2", "test 3", "test 7"]
+    },
+    {
+      "archetype": "tender_procurement",
+      "topAction": "collect eligibility/cost/EMD data (CREATE_MISSING_DATA_TASK); owner decides bid/no-bid",
+      "businessCondition": "opportunity signal (VERIFIED_SOURCE, STRONG) but internal fit unknown, compliance/contract risk HIGH",
+      "interventionMode": "readiness/eligibility data collection; bid decision escalated",
+      "humanExecutionReality": "staff/owner supply eligibility + cost; owner owns the bid/EMD commitment",
+      "safetyBoundary": "no tender auto-submit, no auto EMD payment/spend, no auto contract signing",
+      "decisionCoherent": true,
+      "notSkipped": true,
+      "provenBy": ["test 3", "test 4", "test 6", "test 8"]
+    },
+    {
+      "archetype": "b2b_service",
+      "topAction": "validate fit/capacity/cost (CREATE_MISSING_DATA_TASK); owner approves outreach",
+      "businessCondition": "opportunity signal, capability gap HIGH, internal capacity unknown",
+      "interventionMode": "fit validation data gap; outreach escalated",
+      "humanExecutionReality": "staff supply capacity/cost proof; owner owns outreach + pursuit commitment",
+      "safetyBoundary": "no auto outreach/send, no fabricated win probability/revenue, no auto commitment",
+      "decisionCoherent": true,
+      "provenBy": ["test 3", "test 4", "test 6", "test 7"]
+    },
+    {
+      "archetype": "collective_conflict",
+      "topAction": "fix quality first (CREATE_CORRECTION_TASK) — the CRITICAL actionable top, NOT scale",
+      "businessCondition": "multi-module conflict: scale temptation vs unresolved quality, missing cost/capacity, weak staffing, high owner workload",
+      "interventionMode": "quality correction + cost/capacity data gap; scale decision escalated & blocked-before-proof",
+      "humanExecutionReality": "manager fixes quality; owner owns any scale/spend; owner-workload + key-person risk flagged",
+      "safetyBoundary": "no scale before validation, no spend before cost data, no growth while quality unresolved",
+      "decisionCoherent": true,
+      "provenBy": ["test 9 (top=pc:quality CREATE_CORRECTION_TASK, scale owner-gated, costdata=data task)"]
+    }
+  ],
+  "summary": {
+    "domainsEvaluated": 8,
+    "domainsCoherent": 8,
+    "domainsIncoherent": 0,
+    "allFourDimensionsModeledPerDomain": true,
+    "tenderCovered": true,
+    "saasCovered": true,
+    "note": "Every domain yields exactly one actionable top action with the rest collapsed behind it, models all four OpsIQ dimensions, and holds its archetype-specific safety boundary."
+  }
+}
