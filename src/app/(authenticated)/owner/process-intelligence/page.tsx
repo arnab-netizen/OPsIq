@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/primitives";
-import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, OpportunityPanel, ValidationPanel, PortfolioPanel, OpportunityOperatingPanel, ValidationOutcomePanel, OpportunityExecutionPanel, CockpitGroup, CockpitSubsection, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView, type ExternalOpportunityView, type OpportunityValidationView, type OpportunityPortfolioView, type OpportunityOperatingView, type ValidationOutcomeView, type OpportunityExecutionView } from "@/components/owner/ProcessIntelligencePanel";
+import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, OpportunityPanel, ValidationPanel, PortfolioPanel, OpportunityOperatingPanel, ValidationOutcomePanel, OpportunityExecutionPanel, ProcessExecutionBridgePanel, CockpitGroup, CockpitSubsection, type ProcessExecutionBridgeView, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView, type ExternalOpportunityView, type OpportunityValidationView, type OpportunityPortfolioView, type OpportunityOperatingView, type ValidationOutcomeView, type OpportunityExecutionView } from "@/components/owner/ProcessIntelligencePanel";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -50,6 +50,7 @@ export default function OwnerProcessIntelligencePage() {
   const [operating, setOperating] = useState<OpportunityOperatingView | null>(null);
   const [outcomes, setOutcomes] = useState<ValidationOutcomeView[] | null>(null);
   const [execution, setExecution] = useState<OpportunityExecutionView | null>(null);
+  const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +75,7 @@ export default function OwnerProcessIntelligencePage() {
       setOperating((data.opportunityOperating as OpportunityOperatingView) ?? null);
       setOutcomes((data.opportunityValidationOutcomes as ValidationOutcomeView[]) ?? null);
       setExecution((data.opportunityExecution as OpportunityExecutionView) ?? null);
+      setBridge((data.processExecution as ProcessExecutionBridgeView) ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load the process view.");
     } finally {
@@ -82,6 +84,8 @@ export default function OwnerProcessIntelligencePage() {
   }, []);
 
   useEffect(() => {
+    // Intentional one-shot data fetch on mount; load() sets state from the API response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
@@ -114,6 +118,13 @@ export default function OwnerProcessIntelligencePage() {
           <section style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 16 }}>What to do about it</h2>
             <ProcessCorrectionsPanel data={corrections} />
+          </section>
+
+          {/* THE ACTION TO TAKE — the diagnosis converted into a single governed execution route (who acts,
+              approval level, evidence to complete), so the owner does not re-key the finding into a form. */}
+          <section style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+            <h2 style={{ margin: 0, fontSize: 16 }}>The action to take</h2>
+            <ProcessExecutionBridgePanel data={bridge} />
           </section>
 
           {/* SECONDARY — progressive disclosure: collapsed groups the owner opens only when needed. */}

@@ -46,6 +46,7 @@ import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type 
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
 import { buildCashProfitProtection, type CashProfitProtectionAnalysis, type CashRiskState } from "@/domain/owner-mode/cash-profit-protection";
+import { buildProcessExecutionBridge, type ProcessExecutionBridgeAnalysis } from "@/domain/owner-mode/process-execution-bridge";
 import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
 import { buildOpportunityValidationPlan, type OpportunityValidationAnalysis } from "@/domain/owner-mode/opportunity-validation-experiment-engine";
 import { buildOpportunityPortfolio, type OpportunityPortfolioAnalysis } from "@/domain/owner-mode/opportunity-portfolio-capital-allocation";
@@ -319,6 +320,13 @@ export interface OwnerNowViewPayload {
    * there is no correction to evaluate.
    */
   sopTrainingEffectiveness: EffectivenessAnalysis | null;
+  /**
+   * Process-Correction Execution Bridge (PASS 20) — the cockpit findings converted into GOVERNED execution
+   * routes (route + owner + approval + evidence + completion + reassessment) so the owner sees the single top
+   * bridged action to take, not a raw diagnosis to re-key. Read-only summary; persistence/completion is via
+   * the process-execution-bridge service. Null when there are no bridgeable findings.
+   */
+  processExecution: ProcessExecutionBridgeAnalysis | null;
   /**
    * Owner Workload Reduction v2 — the avoidable owner burden (repeated adjudications, review burden,
    * approval bottleneck/backlog, low-risk interrupts, recurring complaints, manager over-escalation,
@@ -1119,6 +1127,14 @@ export async function getOwnerNowView(
       }, workspaceId, new Date(deps.now()).toISOString())
     : null;
 
+  // Process-Correction Execution Bridge (PASS 20) — convert the diagnosed process corrections + cash/profit
+  // findings into governed execution routes so the owner sees the top bridged ACTION (route/owner/evidence/
+  // approval) instead of a raw diagnosis to re-key. Read-only here; a route is persisted/completed via the
+  // process-execution-bridge service.
+  const processExecution: ProcessExecutionBridgeAnalysis | null = (processCorrections || cashProfitProtection)
+    ? buildProcessExecutionBridge(processCorrections, cashProfitProtection, workspaceId, new Date(deps.now()).toISOString())
+    : null;
+
   // Structured external opportunity intake (PASS 10) — LIVE owner/manager/system-submitted signals persisted
   // via /api/owner/opportunities/signals. They feed the intelligence engine alongside the internal-derived
   // family, and drive the hardened opportunity operating layer. Missing table / no signals → empty.
@@ -1245,7 +1261,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, processExecution, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution };
 }
 
 /**

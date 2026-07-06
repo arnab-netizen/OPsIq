@@ -4318,6 +4318,42 @@ model OpportunityExecutionTask {
   @@map("opportunity_execution_tasks")
 }
 
+/// Process-Correction Execution Bridge (PASS 20) — persists the governed execution route derived from a
+/// process-intelligence / cash-profit cockpit finding, so a diagnosis becomes a trackable task with an owner,
+/// approval level, required evidence, completion state, and a reassessment link. Distinct entity from
+/// OpportunityExecutionTask (process findings are not opportunities). Governance enforced in code: owner-approval
+/// tasks can never be auto-completed; evidence-required routes cannot COMPLETE without evidence; a completed
+/// task links to the reassessment it triggered. UNIQUE (workspace_id, task_key) makes updates idempotent.
+model ProcessExecutionTask {
+  id                  String    @id @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  taskKey             String    @map("task_key")
+  sourceFamily        String    @map("source_family")
+  sourceFindingKey    String    @map("source_finding_key")
+  executionRoute      String    @map("execution_route")
+  actionOwner         String    @map("action_owner")
+  approvalLevel       String    @map("approval_level")
+  status              String    @default("PROPOSED")
+  requiredEvidence    String[]  @map("required_evidence")
+  evidenceRefs        String[]  @map("evidence_refs")
+  completionCriteria  String    @map("completion_criteria") @db.Text
+  reassessmentTrigger String    @map("reassessment_trigger") @db.Text
+  riskIfIgnored       String    @map("risk_if_ignored") @db.Text
+  ownerVisibleSummary String    @map("owner_visible_summary") @db.Text
+  severity            String
+  priorityRank        Int       @map("priority_rank")
+  completedByUserId   String?   @map("completed_by_user_id") @db.Uuid
+  completedByRole     String?   @map("completed_by_role")
+  completedAt         DateTime? @map("completed_at")
+  reassessmentId      String?   @map("reassessment_id") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @default(now()) @map("updated_at")
+
+  @@unique([workspaceId, taskKey])
+  @@index([workspaceId, status])
+  @@map("process_execution_tasks")
+}
+
 /// Minimal per-event operational complaint/rework record (one generic model handles both via
 /// eventType — no ambiguity). Links accepted proof to the real complaint/rework that contradicted
 /// it so the business impact of bad accepted work becomes measurable. Deliberately NOT a CRM/

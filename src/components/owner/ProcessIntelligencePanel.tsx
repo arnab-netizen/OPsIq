@@ -905,6 +905,101 @@ export function CashProfitPanel({ data }: { data: CashProfitProtectionView | nul
   );
 }
 
+// ── Process-Correction Execution Bridge (PASS 20) ──────────────────────────────────────────────────────
+
+export interface BridgedRouteView {
+  taskKey: string;
+  sourceFamily: string;
+  sourceFindingKey: string;
+  executionRoute: string;
+  actionOwner: string;
+  approvalLevel: string;
+  requiredEvidence: string[];
+  completionCriteria: string;
+  reassessmentTrigger: string;
+  riskIfIgnored: string;
+  ownerVisibleSummary: string;
+  notActionableReason: string | null;
+  evidenceRefs: string[];
+  severity: string;
+  priorityRank: number;
+}
+export interface ProcessExecutionBridgeView {
+  routes: BridgedRouteView[];
+  topRoute: BridgedRouteView | null;
+  summary: { total: number; ownerApproval: number; managerStaff: number; dataTasks: number; monitorOnly: number };
+}
+
+const ROUTE_LABEL: Record<string, string> = {
+  CREATE_CORRECTION_TASK: "Create correction task", CREATE_SOP_CHECKLIST_TASK: "Draft SOP/checklist change",
+  CREATE_TRAINING_TASK: "Assign training", CREATE_REASSESSMENT_TASK: "Open reassessment",
+  CREATE_EVIDENCE_REQUEST: "Request fresh proof", CREATE_OWNER_APPROVAL_TASK: "Owner approval",
+  CREATE_MANAGER_TASK: "Manager task", CREATE_STAFF_TASK: "Staff task", CREATE_MISSING_DATA_TASK: "Collect missing data",
+  BLOCK_UNSAFE_ACTION: "Blocked (unsafe)", MONITOR_ONLY: "Monitor only",
+};
+const ACTION_OWNER_LABEL: Record<string, string> = {
+  OWNER: "Owner", MANAGER: "Manager", STAFF: "Staff", OPSIQ_DRAFT: "OpsIQ (draft)", EXTERNAL_ADVISOR: "External advisor", NO_ACTION: "No action",
+};
+
+/**
+ * ProcessExecutionBridgePanel — Executive Cockpit standard for the process-correction execution bridge: the
+ * single top bridged ACTION the owner should take next (what it is, who owns it, the approval level, the
+ * required evidence, and the risk if ignored), evidence + completion + reassessment collapsed, a summary line,
+ * and the rest behind a summary. Prop-driven; read-only (interactive approve/delegate/complete controls are a
+ * later increment). No business logic, no fabricated figure, no hidden score.
+ */
+export function ProcessExecutionBridgePanel({ data }: { data: ProcessExecutionBridgeView | null }) {
+  const top = data?.topRoute ?? null;
+  if (!top) {
+    return (
+      <div data-testid="bridge-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No bridged action needed right now — no process or cash finding requires execution.
+      </div>
+    );
+  }
+  const sm = data!.summary;
+  const rest = (data?.routes ?? []).filter((r) => r.taskKey !== top.taskKey);
+  const isOwner = top.approvalLevel === "OWNER_APPROVAL_REQUIRED";
+  return (
+    <section data-testid="bridge-panel" data-execution-route={top.executionRoute}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="bridge-summary-text">{top.ownerVisibleSummary}</strong>
+        <Badge variant={SEVERITY_VARIANT(top.severity)}>{top.severity}</Badge>
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+        <span data-testid="bridge-route"><Badge variant="default">{ROUTE_LABEL[top.executionRoute] ?? top.executionRoute}</Badge></span>
+        <span data-testid="bridge-owner">Owner: <strong>{ACTION_OWNER_LABEL[top.actionOwner] ?? top.actionOwner}</strong></span>
+        <span data-testid="bridge-approval"><Badge variant={isOwner ? "destructive" : "default"}>{APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge></span>
+      </div>
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="bridge-risk"><strong>Why it matters:</strong> {top.riskIfIgnored}</p>
+      {top.notActionableReason ? (
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="bridge-monitor">{top.notActionableReason}</p>
+      ) : (
+        <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="bridge-evidence-req">
+          Evidence to complete: {top.requiredEvidence.length ? top.requiredEvidence.join("; ") : "—"}
+        </p>
+      )}
+      <details data-testid="bridge-detail">
+        <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Completion &amp; reassessment</summary>
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}><strong>Done when:</strong> {top.completionCriteria}</p>
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}><strong>Then re-check:</strong> {top.reassessmentTrigger}</p>
+        {top.evidenceRefs.length > 0 && (
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280", wordBreak: "break-all" }}>Evidence: {top.evidenceRefs.slice(0, 8).join(", ")}</p>
+        )}
+      </details>
+      <span data-testid="bridge-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {sm.total} bridged action(s) · {sm.ownerApproval} owner-approval · {sm.managerStaff} manager/staff · {sm.dataTasks} data · {sm.monitorOnly} monitor-only
+      </span>
+      {rest.length > 0 && (
+        <details data-testid="bridge-more">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>{rest.length} more bridged action(s)</summary>
+        </details>
+      )}
+    </section>
+  );
+}
+
 // ── External Opportunity Intelligence ──────────────────────────────────────────────────────────────────
 
 export interface OpportunityCandidateView {
@@ -1400,7 +1495,7 @@ export function ValidationOutcomePanel({ data }: { data: ValidationOutcomeView[]
   if (!top) {
     return (
       <div data-testid="outcome-empty" style={{ padding: 16, color: "#6b7280" }}>
-        No validation outcome recorded yet — until a test's real result is recorded, the portfolio cannot scale or kill.
+        No validation outcome recorded yet — until a test&apos;s real result is recorded, the portfolio cannot scale or kill.
       </div>
     );
   }
