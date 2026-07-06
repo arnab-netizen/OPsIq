@@ -60,6 +60,8 @@ export interface BridgedExecutionRoute {
   evidenceRefs: string[];
   severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   priorityRank: number;
+  /** Persisted lifecycle status; PROPOSED until the owner acts. The caller overrides this from the DB. */
+  status: string;
 }
 
 export interface ProcessExecutionBridgeAnalysis {
@@ -155,6 +157,7 @@ function bridgeCorrection(c: ProcessCorrection): BridgedExecutionRoute {
     evidenceRefs,
     severity: c.severity,
     priorityRank: c.priorityRank,
+    status: "PROPOSED",
   };
 }
 
@@ -183,6 +186,7 @@ function bridgeCashSignal(s: CashProfitSignal, rank: number): BridgedExecutionRo
     evidenceRefs: [...s.supportingProofIds, ...s.supportingOperationalEventIds, ...s.supportingFinancialSnapshotIds],
     severity: s.severity,
     priorityRank: 100 + rank, // cash signals rank after the top process corrections unless critical (see sort)
+    status: "PROPOSED",
   };
 }
 

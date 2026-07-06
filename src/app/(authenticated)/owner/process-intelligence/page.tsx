@@ -26,6 +26,23 @@ async function api(path: string): Promise<{ res: Response; data: Record<string, 
   }
 }
 
+async function apiPost(path: string, body: Record<string, unknown>): Promise<{ res: Response; data: Record<string, unknown> }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    return { res, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function safeError(data: Record<string, unknown>, status: number): string {
   const body = data.error as string | { message?: unknown } | undefined;
   const serverText = typeof body === "string" ? body : body && typeof body === "object" && typeof body.message === "string" ? body.message : "";
@@ -53,6 +70,8 @@ export default function OwnerProcessIntelligencePage() {
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,6 +101,45 @@ export default function OwnerProcessIntelligencePage() {
       setLoading(false);
     }
   }, []);
+
+  // Guarded interactive action on the top bridged route. This gathers only the parameters the chosen
+  // transition requires (a reason, evidence refs, a delegate role) and POSTs them; the server re-derives
+  // the route, re-checks every guardrail, and writes the audit event. The UI performs no mutation itself
+  // and trusts nothing it holds — after the POST it reloads the server-authoritative view.
+  const runAction = useCallback(async (taskKey: string, action: string) => {
+    setActionBusy(true);
+    setActionMessage(null);
+    try {
+      const body: Record<string, unknown> = { taskKey, action };
+      if (action === "REJECT" || action === "MARK_BLOCKED" || action === "REQUEST_REASSESSMENT") {
+        const reason = window.prompt(`Reason for ${action.replace(/_/g, " ").toLowerCase()}:`)?.trim();
+        if (action === "REJECT" && !reason) { setActionBusy(false); return; }
+        if (reason) body.reason = reason;
+      }
+      if (action === "SUBMIT_EVIDENCE" || action === "COMPLETE") {
+        const raw = window.prompt("Evidence reference(s) — comma-separated (link, doc id, or note):")?.trim();
+        const refs = (raw ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+        if (refs.length > 0) body.evidenceRefs = refs;
+        else if (action === "SUBMIT_EVIDENCE") { setActionBusy(false); return; }
+      }
+      if (action === "DELEGATE") {
+        const role = window.prompt("Delegate to role — MANAGER or STAFF:")?.trim().toUpperCase();
+        if (role !== "MANAGER" && role !== "STAFF") { setActionBusy(false); return; }
+        body.delegateToRole = role;
+      }
+      const { res, data } = await apiPost("/api/owner/process-execution", body);
+      if (!res.ok) {
+        setActionMessage(safeError(data, res.status));
+      } else {
+        setActionMessage(`Action applied — task is now ${String(data.status ?? "updated").toLowerCase()}.`);
+        await load();
+      }
+    } catch {
+      setActionMessage("The action could not be applied. Please retry.");
+    } finally {
+      setActionBusy(false);
+    }
+  }, [load]);
 
   useEffect(() => {
     // Intentional one-shot data fetch on mount; load() sets state from the API response.
@@ -124,7 +182,8 @@ export default function OwnerProcessIntelligencePage() {
               approval level, evidence to complete), so the owner does not re-key the finding into a form. */}
           <section style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 16 }}>The action to take</h2>
-            <ProcessExecutionBridgePanel data={bridge} />
+            <ProcessExecutionBridgePanel data={bridge} onAction={(taskKey, action) => { if (!actionBusy) void runAction(taskKey, action); }} />
+            {actionMessage && <p data-testid="bridge-action-message" style={{ margin: 0, fontSize: 12, color: "#374151" }}>{actionMessage}</p>}
           </section>
 
           {/* SECONDARY — progressive disclosure: collapsed groups the owner opens only when needed. */}

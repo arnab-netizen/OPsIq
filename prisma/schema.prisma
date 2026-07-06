@@ -4342,6 +4342,7 @@ model ProcessExecutionTask {
   ownerVisibleSummary String    @map("owner_visible_summary") @db.Text
   severity            String
   priorityRank        Int       @map("priority_rank")
+  notes               String?   @db.Text
   completedByUserId   String?   @map("completed_by_user_id") @db.Uuid
   completedByRole     String?   @map("completed_by_role")
   completedAt         DateTime? @map("completed_at")

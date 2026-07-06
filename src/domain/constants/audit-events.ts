@@ -259,6 +259,7 @@ export const AUDIT_EVENTS = {
   OWNER_OPPORTUNITY_EXECUTION_TASK_UPDATED: "owner.opportunity_execution_task_updated",
   OWNER_PROCESS_EXECUTION_TASK_UPSERTED: "owner.process_execution_task_upserted",
   OWNER_PROCESS_EXECUTION_TASK_COMPLETED: "owner.process_execution_task_completed",
+  OWNER_PROCESS_EXECUTION_TASK_TRANSITIONED: "owner.process_execution_task_transitioned",
 
   // Owner-Only Recovery Mode
   OWNER_BUSINESS_CREATED: "owner.business_created",
