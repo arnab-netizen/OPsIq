@@ -1495,7 +1495,7 @@ export function ValidationOutcomePanel({ data }: { data: ValidationOutcomeView[]
   if (!top) {
     return (
       <div data-testid="outcome-empty" style={{ padding: 16, color: "#6b7280" }}>
-        No validation outcome recorded yet — until a test's real result is recorded, the portfolio cannot scale or kill.
+        No validation outcome recorded yet — until a test&apos;s real result is recorded, the portfolio cannot scale or kill.
       </div>
     );
   }

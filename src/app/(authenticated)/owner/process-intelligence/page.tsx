@@ -84,6 +84,8 @@ export default function OwnerProcessIntelligencePage() {
   }, []);
 
   useEffect(() => {
+    // Intentional one-shot data fetch on mount; load() sets state from the API response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
 
