@@ -42,6 +42,7 @@ import { buildProcessCorrections, type ProcessCorrectionRouting } from "@/domain
 import { buildSopChecklistCorrections, type SopChecklistCorrectionAnalysis } from "@/domain/owner-mode/sop-checklist-correction-engine";
 import { buildTrainingAssignments, type TrainingAssignmentAnalysis } from "@/domain/owner-mode/staff-training-assignment-engine";
 import { buildEffectivenessEvaluations, type EffectivenessAnalysis, type EffectivenessInputItem } from "@/domain/owner-mode/sop-training-effectiveness-loop";
+import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -296,6 +297,13 @@ export interface OwnerNowViewPayload {
    * there is no correction to evaluate.
    */
   sopTrainingEffectiveness: EffectivenessAnalysis | null;
+  /**
+   * Owner Workload Reduction v2 — the avoidable owner burden (repeated adjudications, review burden,
+   * approval bottleneck/backlog, low-risk interrupts, recurring complaints, manager over-escalation,
+   * missing-data loops, training delegation) with a safe reduction recommendation and a risk guardrail.
+   * High-risk decisions always keep owner approval. Null on the fake-DI path or when nothing is avoidable.
+   */
+  ownerWorkloadReduction: OwnerWorkloadReductionAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -997,6 +1005,16 @@ export async function getOwnerNowView(
       )
     : null;
 
+  // Owner Workload Reduction v2 — the avoidable owner burden + a safe reduction recommendation. Pure
+  // derivation over the findings/corrections/training + counted burden signals; high-risk stays owner-gated.
+  const ownerWorkloadReduction: OwnerWorkloadReductionAnalysis | null = processIntelligence
+    ? buildOwnerWorkloadReduction(
+        deriveWorkloadSignals(processIntelligence, processCorrections, trainingAssignments, proofRiskAdjudications, weakProofCount, overdueReviewCount, workloadBudget.ownerBottleneckItems),
+        workspaceId,
+        new Date(deps.now()).toISOString(),
+      )
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1016,7 +1034,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction };
 }
 
 /**
@@ -1076,6 +1094,46 @@ function deriveEffectivenessItems(
     });
   }
   return items;
+}
+
+/**
+ * Derive the owner-workload signals from the already-computed analyses + counted scalars. High-risk owner
+ * corrections (money/reputation impact) are flagged so the workload engine keeps them owner-gated.
+ */
+function deriveWorkloadSignals(
+  intel: ProcessIntelligenceAnalysis,
+  routing: ProcessCorrectionRouting | null,
+  training: TrainingAssignmentAnalysis | null,
+  adjudications: ProofRiskAdjudicationView[] | null,
+  weakProofCount: number | null,
+  overdueReviewCount: number | null,
+  ownerBottleneckItems: number,
+): WorkloadSignals {
+  const HIGH_RISK_IMPACT = new Set(["CASH_DELAY", "COMPLAINT_RISK", "TRUST_RISK"]);
+  const ownerApprovalCorrections = (routing?.corrections ?? [])
+    .filter((c) => c.requiresOwnerApproval)
+    .map((c) => ({ key: c.correctionId, highRisk: HIGH_RISK_IMPACT.has(c.expectedImpactType), supportingProofIds: c.supportingProofIds }));
+  const managerTrainingKeys = (training?.assignments ?? [])
+    .filter((t) => t.approvalLevel === "MANAGER")
+    .map((t) => `${t.sourceProcessFindingKey}:${t.trainingType}`);
+  const missingData = Array.from(new Set((routing?.corrections ?? []).flatMap((c) => c.missingData)));
+  return {
+    adjudicationTotal: adjudications?.length ?? 0,
+    adjudicationIds: (adjudications ?? []).map((a) => a.id),
+    weakProofCount: weakProofCount ?? 0,
+    overdueReviewCount: overdueReviewCount ?? 0,
+    ownerBottleneckItems,
+    findings: intel.findings.map((f) => ({
+      findingType: f.findingType,
+      supportingProofIds: f.supportingProofIds,
+      supportingOperationalEventIds: f.supportingOperationalEventIds,
+      supportingEscalationIds: f.supportingEscalationIds,
+      relatedSLO: f.relatedSLO,
+    })),
+    ownerApprovalCorrections,
+    managerTrainingKeys,
+    missingData,
+  };
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {

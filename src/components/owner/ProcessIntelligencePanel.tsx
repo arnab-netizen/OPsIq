@@ -484,3 +484,98 @@ export function EffectivenessPanel({ data }: { data: EffectivenessView | null })
     </section>
   );
 }
+
+export interface OwnerWorkloadFindingView {
+  workloadType: string;
+  severity: string;
+  burdenCount: number;
+  estimatedOwnerTouches: number | null;
+  supportingProofIds: string[];
+  supportingAdjudicationIds: string[];
+  supportingOperationalEventIds: string[];
+  supportingEscalationIds: string[];
+  supportingCorrectionKeys: string[];
+  supportingTrainingKeys: string[];
+  relatedProcessFinding: string | null;
+  relatedSLO: string | null;
+  ownerVisibleExplanation: string;
+  recommendedReductionAction: string;
+  approvalLevel: string;
+  riskGuardrail: string;
+  missingData: string[];
+}
+
+export interface OwnerWorkloadReductionView {
+  findings: OwnerWorkloadFindingView[];
+  topFinding: OwnerWorkloadFindingView | null;
+}
+
+const WORKLOAD_TYPE_LABEL: Record<string, string> = {
+  REPEATED_OWNER_ADJUDICATION: "Repeated owner adjudication",
+  OWNER_REVIEW_BURDEN: "Owner review burden",
+  OWNER_APPROVAL_BOTTLENECK: "Owner approval bottleneck",
+  LOW_RISK_OWNER_INTERRUPT: "Low-risk owner interruption",
+  RECURRING_COMPLAINT_ESCALATION: "Recurring complaint escalation",
+  MANAGER_ESCALATION_OVERUSE: "Manager over-escalation",
+  MISSING_DATA_BURDEN: "Missing-data burden",
+  CORRECTION_APPROVAL_BACKLOG: "Correction approval backlog",
+  TRAINING_DELEGATION_OPPORTUNITY: "Training delegation opportunity",
+};
+const REDUCTION_LABEL: Record<string, string> = {
+  DELEGATE_TO_MANAGER: "Delegate to manager", CONVERT_TO_POLICY: "Convert to policy",
+  AUTO_COLLAPSE_DUPLICATES: "Auto-collapse duplicates", REQUIRE_BETTER_PROOF_UPFRONT: "Require better proof upfront",
+  ASSIGN_TRAINING: "Assign training", UPDATE_CHECKLIST: "Update checklist",
+  COLLECT_MISSING_DATA: "Collect missing data", KEEP_OWNER_APPROVAL: "Keep owner approval",
+};
+
+/**
+ * OwnerWorkloadReductionPanel — Executive Cockpit standard: the single top avoidable owner burden by
+ * default (owner action first, business impact second, evidence collapsed). Prop-driven; no business
+ * logic. High-risk items show KEEP_OWNER_APPROVAL and are never presented as auto-reducible. No hidden
+ * score, no fabricated time saving, no disciplinary language.
+ */
+export function OwnerWorkloadReductionPanel({ data }: { data: OwnerWorkloadReductionView | null }) {
+  const top = data?.topFinding ?? null;
+  if (!top) {
+    return (
+      <div data-testid="owner-workload-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No avoidable owner burden detected — nothing to delegate or automate right now.
+      </div>
+    );
+  }
+  const evidence = [...top.supportingAdjudicationIds, ...top.supportingCorrectionKeys, ...top.supportingProofIds, ...top.supportingOperationalEventIds, ...top.supportingEscalationIds, ...top.supportingTrainingKeys];
+  const rest = (data?.findings ?? []).slice(1);
+  return (
+    <section data-testid="owner-workload-panel" data-workload-type={top.workloadType}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="owr-type">{WORKLOAD_TYPE_LABEL[top.workloadType] ?? top.workloadType}</strong>
+        <Badge variant={SEVERITY_VARIANT(top.severity)}>{top.severity}</Badge>
+        {top.estimatedOwnerTouches !== null && <span data-testid="owr-touches" style={{ fontSize: 12, color: "#6b7280" }}>~{top.estimatedOwnerTouches} owner touches</span>}
+      </div>
+      {/* Owner action first. */}
+      <p style={{ margin: 0 }} data-testid="owr-action"><strong>Do this:</strong> {REDUCTION_LABEL[top.recommendedReductionAction] ?? top.recommendedReductionAction}</p>
+      {/* Business impact / explanation second. */}
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="owr-explanation">{top.ownerVisibleExplanation}</p>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+        <span data-testid="owr-approval"><Badge variant={top.approvalLevel === "OWNER" ? "destructive" : "default"}>{APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge></span>
+        <span data-testid="owr-guardrail" style={{ color: "#6b7280" }}>{top.riskGuardrail}</span>
+      </div>
+      {/* Evidence collapsed by default (cockpit standard — no owner overload). */}
+      {evidence.length > 0 && (
+        <details data-testid="owr-evidence">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Evidence ({evidence.length})</summary>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280", wordBreak: "break-all" }}>{evidence.slice(0, 8).join(", ")}</p>
+        </details>
+      )}
+      {top.missingData.length > 0 && (
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="owr-missing">Missing data: {top.missingData.join("; ")}</p>
+      )}
+      {rest.length > 0 && (
+        <details data-testid="owr-more">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>{rest.length} more workload item(s)</summary>
+        </details>
+      )}
+    </section>
+  );
+}
