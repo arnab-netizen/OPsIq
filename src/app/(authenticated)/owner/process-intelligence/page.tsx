@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/primitives";
-import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, CockpitGroup, CockpitSubsection, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView } from "@/components/owner/ProcessIntelligencePanel";
+import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, OpportunityPanel, CockpitGroup, CockpitSubsection, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView, type ExternalOpportunityView } from "@/components/owner/ProcessIntelligencePanel";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -44,6 +44,7 @@ export default function OwnerProcessIntelligencePage() {
   const [approvalPolicy, setApprovalPolicy] = useState<ApprovalPolicyView | null>(null);
   const [capabilityGaps, setCapabilityGaps] = useState<CapabilityGapView | null>(null);
   const [cashProfit, setCashProfit] = useState<CashProfitProtectionView | null>(null);
+  const [opportunity, setOpportunity] = useState<ExternalOpportunityView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +63,7 @@ export default function OwnerProcessIntelligencePage() {
       setApprovalPolicy((data.approvalPolicy as ApprovalPolicyView) ?? null);
       setCapabilityGaps((data.capabilityGaps as CapabilityGapView) ?? null);
       setCashProfit((data.cashProfitProtection as CashProfitProtectionView) ?? null);
+      setOpportunity((data.externalOpportunityIntelligence as ExternalOpportunityView) ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load the process view.");
     } finally {
@@ -118,6 +120,10 @@ export default function OwnerProcessIntelligencePage() {
           <CockpitGroup testid="cockpit-group-govern" title="Reduce your workload & govern actions" subtitle="Avoidable owner burden and what OpsIQ may do without asking">
             <CockpitSubsection title="Reduce your workload"><OwnerWorkloadReductionPanel data={workload} /></CockpitSubsection>
             <CockpitSubsection title="What OpsIQ may do without asking"><ApprovalPolicyPanel data={approvalPolicy} /></CockpitSubsection>
+          </CockpitGroup>
+
+          <CockpitGroup testid="cockpit-group-grow" title="Grow: opportunities to validate" subtitle="Evidence-backed opportunities — always cheap validation first, never scale">
+            <OpportunityPanel data={opportunity} />
           </CockpitGroup>
 
           <CockpitGroup testid="cockpit-group-build" title="What OpsIQ should build next" subtitle="System capabilities that would close the gaps OpsIQ keeps hitting">
