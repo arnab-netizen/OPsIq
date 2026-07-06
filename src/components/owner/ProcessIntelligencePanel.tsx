@@ -579,3 +579,105 @@ export function OwnerWorkloadReductionPanel({ data }: { data: OwnerWorkloadReduc
     </section>
   );
 }
+
+// ── Approval Threshold / Auto-Action Policy ────────────────────────────────────────────────────────────
+
+export interface ApprovalPolicyDecisionView {
+  actionKey: string;
+  actionType: string;
+  title: string;
+  riskCategory: string;
+  impactLevel: string;
+  confidence: string;
+  approvalDecision: string;
+  requiredApprovalLevel: string;
+  autoExecutable: boolean;
+  blocked: boolean;
+  rationale: string;
+  riskGuardrail: string;
+  capabilityGap: boolean;
+  missingCapabilityType: string | null;
+  systemCapabilityRecommendation: string | null;
+  supportingEvidenceIds: string[];
+  missingData: string[];
+}
+
+export interface ApprovalPolicySummaryView {
+  autoAllowed: number;
+  managerRequired: number;
+  ownerRequired: number;
+  neverAuto: number;
+  needsData: number;
+}
+
+export interface ApprovalPolicyView {
+  decisions: ApprovalPolicyDecisionView[];
+  topDecision: ApprovalPolicyDecisionView | null;
+  summary: ApprovalPolicySummaryView;
+  capabilityRecommendations: string[];
+}
+
+const DECISION_LABEL: Record<string, string> = {
+  AUTO_ALLOWED: "Auto-allowed",
+  MANAGER_APPROVAL_REQUIRED: "Manager approval required",
+  OWNER_APPROVAL_REQUIRED: "Owner approval required",
+  NEVER_AUTO: "Never auto-executed — owner only",
+  NEEDS_DATA: "Needs data first",
+};
+const DECISION_VARIANT = (d: string): "destructive" | "warning" | "default" | "muted" =>
+  d === "NEVER_AUTO" || d === "OWNER_APPROVAL_REQUIRED" ? "destructive" : d === "NEEDS_DATA" ? "warning" : d === "MANAGER_APPROVAL_REQUIRED" ? "default" : "muted";
+
+/**
+ * ApprovalPolicyPanel — Executive Cockpit standard for the auto-action policy: the single most-restrictive
+ * action decision by default (what OpsIQ may/may not do without approval), the required approval, the risk
+ * guardrail, any capability OpsIQ would have to build before it could ever safely automate, evidence
+ * collapsed, and the remaining decisions behind a summary. Prop-driven; no business logic. No fabricated
+ * money, no disciplinary language, no hidden score.
+ */
+export function ApprovalPolicyPanel({ data }: { data: ApprovalPolicyView | null }) {
+  const top = data?.topDecision ?? null;
+  if (!top) {
+    return (
+      <div data-testid="approval-policy-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No pending actions to govern — nothing is awaiting an approval decision right now.
+      </div>
+    );
+  }
+  const s = data!.summary;
+  const rest = (data?.decisions ?? []).slice(1);
+  return (
+    <section data-testid="approval-policy-panel" data-approval-decision={top.approvalDecision}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="app-action">{top.title}</strong>
+        <span data-testid="app-decision"><Badge variant={DECISION_VARIANT(top.approvalDecision)}>{DECISION_LABEL[top.approvalDecision] ?? top.approvalDecision}</Badge></span>
+      </div>
+      {/* Approval / who acts, first. */}
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="app-rationale">{top.rationale}</p>
+      <span data-testid="app-guardrail" style={{ fontSize: 12, color: "#6b7280" }}>{top.riskGuardrail}</span>
+      {/* Capability gap — what OpsIQ would have to build before it could ever safely automate this. */}
+      {top.capabilityGap && top.systemCapabilityRecommendation && (
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="app-capability">
+          <strong>Capability gap:</strong> {top.systemCapabilityRecommendation}
+        </p>
+      )}
+      {top.supportingEvidenceIds.length > 0 && (
+        <details data-testid="app-evidence">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Evidence ({top.supportingEvidenceIds.length})</summary>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280", wordBreak: "break-all" }}>{top.supportingEvidenceIds.slice(0, 8).join(", ")}</p>
+        </details>
+      )}
+      {top.missingData.length > 0 && (
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="app-missing">Missing data: {top.missingData.join("; ")}</p>
+      )}
+      <span data-testid="app-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {s.autoAllowed} auto · {s.managerRequired} manager · {s.ownerRequired} owner · {s.neverAuto} never-auto · {s.needsData} needs-data
+      </span>
+      {rest.length > 0 && (
+        <details data-testid="app-more">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>{rest.length} more action decision(s)</summary>
+        </details>
+      )}
+    </section>
+  );
+}

@@ -124,6 +124,28 @@ const PAYLOAD = {
       riskGuardrail: "High-risk decisions stay with the owner; only routine repeats are delegated.", missingData: [],
     },
   },
+  approvalPolicy: {
+    decisions: [
+      {
+        actionKey: "corr-1", actionType: "REQUEST_MISSING_PROOF", title: "Request a fresh, job-specific proof",
+        riskCategory: "OPERATIONAL", impactLevel: "LOW", confidence: "HIGH", approvalDecision: "AUTO_ALLOWED",
+        requiredApprovalLevel: "STAFF", autoExecutable: true, blocked: false,
+        rationale: "This is a safe, reversible action that commits no money, staff or legal state.",
+        riskGuardrail: "It changes no money, staff, or legal state.", capabilityGap: false,
+        missingCapabilityType: null, systemCapabilityRecommendation: null, supportingEvidenceIds: [], missingData: [],
+      },
+    ],
+    topDecision: {
+      actionKey: "corr-1", actionType: "REQUEST_MISSING_PROOF", title: "Request a fresh, job-specific proof",
+      riskCategory: "OPERATIONAL", impactLevel: "LOW", confidence: "HIGH", approvalDecision: "AUTO_ALLOWED",
+      requiredApprovalLevel: "STAFF", autoExecutable: true, blocked: false,
+      rationale: "This is a safe, reversible action that commits no money, staff or legal state.",
+      riskGuardrail: "It changes no money, staff, or legal state.", capabilityGap: false,
+      missingCapabilityType: null, systemCapabilityRecommendation: null, supportingEvidenceIds: [], missingData: [],
+    },
+    summary: { autoAllowed: 1, managerRequired: 0, ownerRequired: 0, neverAuto: 0, needsData: 0 },
+    capabilityRecommendations: [],
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -163,6 +185,10 @@ describe("OwnerProcessIntelligencePage", () => {
     // The owner workload reduction (executive cockpit) surface renders too.
     await findByTestId("owner-workload-panel");
     expect(container.textContent ?? "").toMatch(/Reduce your workload/i);
+
+    // The approval / auto-action policy surface renders too.
+    await findByTestId("approval-policy-panel");
+    expect(container.textContent ?? "").toMatch(/What OpsIQ may do without asking/i);
     expect(container.textContent ?? "").toMatch(/Require better proof upfront/i);
     const back = container.querySelector('[data-testid="back-to-now"]') as HTMLAnchorElement;
     expect(back.getAttribute("href")).toBe("/owner/now");
