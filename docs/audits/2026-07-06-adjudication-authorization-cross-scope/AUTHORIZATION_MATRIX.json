@@ -1,0 +1,112 @@
+{
+  "audit": "adjudication-authorization-cross-scope",
+  "date": "2026-07-06",
+  "mainHeadAudited": "6bb628d6355c8901a2e5f1260a93830d1ec25094",
+  "branch": "claude/adjudication-authorization-cross-scope-proof",
+  "method": "Source inspection of the trusted execution spine + a two-tenant real-Postgres DB simulation. Two genuine gaps were found and fixed; everything else was already correctly workspace-scoped.",
+  "surfaces": [
+    {
+      "routeService": "POST /api/owner/process-execution",
+      "actor": "owner (OWNER_MANAGE)",
+      "allowedRoles": ["owner"],
+      "workspaceCheck": "withCanonicalEnforcement requireWorkspace:true — verifiedWorkspaceId derived server-side from active workspaceMembership; fails closed 403 on no/invalid membership.",
+      "evidenceScopeCheck": "evidenceRefs ride on the workspace-scoped task; businessId now validated to belong to the workspace before any reassessment write (WRONG_WORKSPACE 403).",
+      "auditScopeCheck": "n/a at route (service writes scoped audit).",
+      "expectedResult": "owner acts; non-owner-capable actor rejected 403 at wrapper; foreign businessId rejected 403.",
+      "testEvidence": "adjudication-authorization-cross-scope.db.test.ts (service path); route capability+workspace enforced by withCanonicalEnforcement (existing wrapper tests).",
+      "dbSimEvidence": "adjudication-authorization-cross-scope.db.test.ts cases 5,10",
+      "status": "ACCEPTED"
+    },
+    {
+      "routeService": "GET /api/owner/process-execution",
+      "actor": "owner (OWNER_MANAGE)",
+      "allowedRoles": ["owner"],
+      "workspaceCheck": "requireWorkspace:true; getPersistedProcessTasks(verifiedWorkspaceId) — findMany scoped by workspaceId.",
+      "evidenceScopeCheck": "n/a (read).",
+      "auditScopeCheck": "n/a (read).",
+      "expectedResult": "returns only caller's workspace tasks.",
+      "testEvidence": "adjudication-authorization-cross-scope.db.test.ts case 3; sec-05-cross-tenant-read.db.test.ts",
+      "dbSimEvidence": "case 3 (scoped cockpit read; B rows under same taskKeys never leak)",
+      "status": "ACCEPTED"
+    },
+    {
+      "routeService": "applyProcessExecutionAction (service)",
+      "actor": "owner / manager / staff (role passed by the OWNER_MANAGE-gated route as server-derived 'owner')",
+      "allowedRoles": ["owner for material/owner-only", "manager/staff for delegated safe work"],
+      "workspaceCheck": "every processExecutionTask query filtered by workspaceId; taskKey never resolved without workspaceId; foreign task → NOT_FOUND_OR_FORBIDDEN.",
+      "evidenceScopeCheck": "SUBMIT_EVIDENCE appends to the workspace-scoped task only; COMPLETE evidence-gated.",
+      "auditScopeCheck": "OWNER_PROCESS_EXECUTION_TASK_TRANSITIONED written with workspaceId in the same transaction.",
+      "expectedResult": "owner-only APPROVE/REJECT/complete blocked for non-owner (OWNER_APPROVAL_REQUIRED); cross-workspace task not found; unsafe/monitor blocked (NEVER_AUTO); terminal blocked (INVALID_TRANSITION).",
+      "testEvidence": "adjudication-authorization-cross-scope.db.test.ts cases 1,2,4,6,7,8; process-execution-affordances.db.test.ts",
+      "dbSimEvidence": "cases 1,2,4,6,7,8",
+      "status": "ACCEPTED"
+    },
+    {
+      "routeService": "completeProcessTask (service)",
+      "actor": "owner / manager",
+      "allowedRoles": ["owner for owner-approval routes", "manager for delegated routes"],
+      "workspaceCheck": "task loaded by (workspaceId, taskKey); businessId validated in-workspace before reassessment.",
+      "evidenceScopeCheck": "EVIDENCE_REQUIRED_ROUTES + detectFakeCompletion gate; evidence appended to scoped task.",
+      "auditScopeCheck": "OWNER_PROCESS_EXECUTION_TASK_COMPLETED scoped by workspaceId.",
+      "expectedResult": "completion requires evidence; owner-only completion blocked for non-owner; foreign businessId → WRONG_WORKSPACE; duplicate → INVALID_TRANSITION.",
+      "testEvidence": "adjudication-authorization-cross-scope.db.test.ts cases 1,5,8; process-correction-execution-bridge.db.test.ts",
+      "dbSimEvidence": "cases 1,5,8",
+      "status": "ACCEPTED"
+    },
+    {
+      "routeService": "createReassessmentEvent (service, called by the spine)",
+      "actor": "owner / manager (via completeProcessTask / REQUEST_REASSESSMENT)",
+      "allowedRoles": ["same-workspace only"],
+      "workspaceCheck": "idempotency findFirst + create + audit all scoped by workspaceId; businessId now validated in-workspace by the caller (applyProcessExecutionAction / completeProcessTask) before this is reached.",
+      "evidenceScopeCheck": "reassessment links only same-workspace source (proof/outcome) and validated businessId.",
+      "auditScopeCheck": "OWNER_REASSESSMENT_CREATED scoped by workspaceId in the same transaction.",
+      "expectedResult": "no cross-workspace reassessment linkage; a foreign businessId is rejected before any write.",
+      "testEvidence": "adjudication-authorization-cross-scope.db.test.ts case 5",
+      "dbSimEvidence": "case 5 (foreign businessId → WRONG_WORKSPACE; 0 reassessments referencing foreign business)",
+      "status": "ACCEPTED"
+    },
+    {
+      "routeService": "proof-risk-adjudication.service (proofRiskAdjudication)",
+      "actor": "system/owner",
+      "allowedRoles": ["same-workspace only"],
+      "workspaceCheck": "proof.findMany({ where: { workspaceId, id: { in: proofIds } } }) with length check; businessId DERIVED from scoped proofs (never trusted from caller); idempotency/create/audit/read all scoped by workspaceId.",
+      "evidenceScopeCheck": "proofs must belong to the workspace or the plan is rejected.",
+      "auditScopeCheck": "scoped by workspaceId.",
+      "expectedResult": "already safe — proofs and businessId are workspace-derived, not caller-trusted.",
+      "testEvidence": "existing proof-risk adjudication tests; inspected file src/services/execution/proof-risk-adjudication.service.ts:97-99,113,123,178",
+      "dbSimEvidence": "pre-existing (inspection-confirmed safe pattern)",
+      "status": "ACCEPTED"
+    },
+    {
+      "routeService": "withCanonicalEnforcement (workspace + capability derivation)",
+      "actor": "any",
+      "allowedRoles": ["per requireCapabilities"],
+      "workspaceCheck": "verifiedWorkspaceId from workspaceMembership (userId+isActive), never from headers; unauthenticated/unauthorized/missing-workspace all fail closed with proper status codes.",
+      "evidenceScopeCheck": "n/a",
+      "auditScopeCheck": "n/a",
+      "expectedResult": "unauthenticated → deny; unauthorized (missing capability) → deny; no membership → 403.",
+      "testEvidence": "existing canonical-route-enforcement / canonical-auth-facts tests; inspected src/lib/canonical-route-enforcement.ts:339-422,461-465",
+      "dbSimEvidence": "n/a (route wrapper)",
+      "status": "ACCEPTED"
+    }
+  ],
+  "gapsFound": [
+    {
+      "id": "A/B",
+      "title": "Unvalidated businessId → cross-workspace reassessment linkage",
+      "detail": "The POST route accepted businessId (UUID-only) and it flowed into createReassessmentEvent, which wrote it with NO workspace-ownership check. A crafted request could attach a reassessment (owned by the caller's workspace) referencing a businessId from another workspace.",
+      "fix": "businessInWorkspace() guard added to applyProcessExecutionAction and completeProcessTask: a supplied businessId is validated against ownerBusiness(id,workspaceId) before any reassessment write; failure returns WRONG_WORKSPACE (403 at the route). Enforced at the SERVICE layer so every caller is protected.",
+      "status": "FIXED"
+    },
+    {
+      "id": "C/D",
+      "title": "actorRole read from a phantom snapshot field → owner-only actions always rejected",
+      "detail": "The route read ctx.verifiedSessionSnapshot.role, a field that does not exist on the snapshot, so actorRole was always null. Owner-only APPROVE/COMPLETE were therefore ALWAYS rejected through the real HTTP route (fail-closed but broken — the owner could never approve). The service also trusted the passed role string rather than re-deriving it.",
+      "fix": "actorRole is now derived server-authoritatively from the VERIFIED capability set: ctx.verifiedCapabilities.has(OWNER_MANAGE) ? 'owner' : null. Because the route is OWNER_MANAGE-gated, a reaching actor is the owner, so owner-only transitions are now authorized by proven capability, and the phantom-field trust is removed.",
+      "status": "FIXED"
+    }
+  ],
+  "r4Status": "REMOVED",
+  "r4Rationale": "The two-tenant DB sim proves route-level + service-level authorization, owner-only enforcement, manager/staff delegated boundaries, cross-workspace read/write/action fail-closed, evidence + reassessment + audit scoping, cockpit query scoping, and clean-workspace no-fabrication. The two genuine gaps (businessId linkage, actorRole derivation) are fixed. Adjudication/execution authorization scope is now proven, so R4 no longer applies. R6 (exhaustive whole-corpus read/audit) remains RETAINED_SAFELY as a non-blocking proof-scope restriction beyond this spine.",
+  "classification": "ADJUDICATION_AUTHORIZATION_PROVEN"
+}

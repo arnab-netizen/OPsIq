@@ -34,9 +34,14 @@ interface PETDelegate {
   updateMany(a: { where: Record<string, unknown>; data: Record<string, unknown> }): Promise<{ count: number }>;
 }
 interface AuditDelegate { create(a: { data: Record<string, unknown> }): Promise<unknown> }
+interface OwnerBusinessDelegate {
+  findFirst(a: { where: { id: string; workspaceId: string }; select?: { id: true } }): Promise<{ id: string } | null>;
+}
 interface PETTx { processExecutionTask: Pick<PETDelegate, "create" | "updateMany" | "findFirst">; auditEvent: AuditDelegate }
 export interface ProcessBridgeDb extends PETTx {
   processExecutionTask: PETDelegate;
+  /** Workspace-scoped business lookup — validates a supplied businessId belongs to the workspace (PASS 25). */
+  ownerBusiness: OwnerBusinessDelegate;
   $transaction<T>(fn: (tx: PETTx) => Promise<T>): Promise<T>;
 }
 export interface ProcessBridgeDeps {
@@ -144,9 +149,24 @@ export interface CompleteTaskInput {
   evidenceRefs: string[];
   outcomeNotes?: string | null;
 }
+/** Owner-visible, non-leaky failure codes for governed execution actions (PASS 25). */
+export type ProcessActionCode =
+  | "WRONG_WORKSPACE" | "OWNER_APPROVAL_REQUIRED" | "EVIDENCE_REQUIRED" | "INVALID_TRANSITION"
+  | "NEVER_AUTO" | "NOT_FOUND_OR_FORBIDDEN" | "UNAUTHORIZED" | "MISSING_INPUT";
+
 export type CompleteTaskResult =
   | { ok: true; taskId: string; reassessmentId: string | null }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; code: ProcessActionCode };
+
+/**
+ * Validate that a supplied businessId belongs to the workspace before it is used for a governed write
+ * (reassessment linkage). Server-authoritative: a business from another workspace returns null → false.
+ * Rejecting here closes the cross-workspace reassessment-linkage gap (PASS 25).
+ */
+async function businessInWorkspace(deps: ProcessBridgeDeps, workspaceId: string, businessId: string): Promise<boolean> {
+  const found = await deps.db.ownerBusiness.findFirst({ where: { id: businessId, workspaceId }, select: { id: true } });
+  return found != null;
+}
 
 /**
  * Complete a process-execution task with governed guards. Fail-closed: unknown/foreign task, non-completable
@@ -159,22 +179,27 @@ export async function completeProcessTask(
   reassessInjected?: import("@/services/owner-mode/reassessment-event.service").ReassessmentDeps,
 ): Promise<CompleteTaskResult> {
   const deps = injected ?? (await resolveDefaultDeps());
+  // Cross-workspace linkage guard: a supplied businessId must belong to this workspace before it can be
+  // written onto a reassessment (a foreign businessId is rejected, never persisted). (PASS 25)
+  if (input.businessId && input.businessId.trim() && !(await businessInWorkspace(deps, input.workspaceId, input.businessId.trim()))) {
+    return { ok: false, reason: "That business is not in this workspace.", code: "WRONG_WORKSPACE" };
+  }
   const task = await deps.db.processExecutionTask.findFirst({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey } });
-  if (!task) return { ok: false, reason: "Task not found in this workspace." };
-  if (task.status === "COMPLETED") return { ok: false, reason: "Task is already completed." };
+  if (!task) return { ok: false, reason: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" };
+  if (task.status === "COMPLETED") return { ok: false, reason: "Task is already completed.", code: "INVALID_TRANSITION" };
   const route = task.executionRoute as ExecutionRoute;
-  if (NON_COMPLETABLE_ROUTES.has(route)) return { ok: false, reason: `A ${route} route cannot be completed — it is not an actionable task.` };
+  if (NON_COMPLETABLE_ROUTES.has(route)) return { ok: false, reason: `A ${route} route cannot be completed — it is not an actionable task.`, code: "NEVER_AUTO" };
   if (task.approvalLevel === "OWNER_APPROVAL_REQUIRED" && input.actorRole !== "owner") {
-    return { ok: false, reason: "This task requires owner approval — only the owner can complete it." };
+    return { ok: false, reason: "This task requires owner approval — only the owner can complete it.", code: "OWNER_APPROVAL_REQUIRED" };
   }
   const evidenceRefs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
   const notesEmpty = !input.outcomeNotes || !input.outcomeNotes.trim();
   if (EVIDENCE_REQUIRED_ROUTES.has(route) && evidenceRefs.length === 0) {
-    return { ok: false, reason: "This task requires completion evidence — it cannot be completed without it." };
+    return { ok: false, reason: "This task requires completion evidence — it cannot be completed without it.", code: "EVIDENCE_REQUIRED" };
   }
   // Fake-completion guard (verification-engine): claimed complete but no evidence and no notes (kpi unknown here).
   if (detectFakeCompletion(true, evidenceRefs.length > 0, false, notesEmpty) && EVIDENCE_REQUIRED_ROUTES.has(route)) {
-    return { ok: false, reason: "Completion looks unverifiable (no evidence and no outcome note) — rejected." };
+    return { ok: false, reason: "Completion looks unverifiable (no evidence and no outcome note) — rejected.", code: "EVIDENCE_REQUIRED" };
   }
 
   const now = deps.now();
@@ -240,7 +265,7 @@ export interface ProcessActionInput {
 }
 export type ProcessActionResult =
   | { ok: true; taskId: string; status: string; reassessmentId?: string | null }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; code: ProcessActionCode };
 
 /** True when this task's material decision is owner-only (owner-approval or an unsafe/never-auto action). */
 function isOwnerOnly(task: TaskRow): boolean {
@@ -259,8 +284,13 @@ export async function applyProcessExecutionAction(
   reassessInjected?: import("@/services/owner-mode/reassessment-event.service").ReassessmentDeps,
 ): Promise<ProcessActionResult> {
   const deps = injected ?? (await resolveDefaultDeps());
+  // Cross-workspace linkage guard: any supplied businessId must belong to this workspace before it is used
+  // for a governed write (reassessment). A foreign businessId fails closed and is never persisted. (PASS 25)
+  if (input.businessId && input.businessId.trim() && !(await businessInWorkspace(deps, input.workspaceId, input.businessId.trim()))) {
+    return { ok: false, reason: "That business is not in this workspace.", code: "WRONG_WORKSPACE" };
+  }
   const task = await deps.db.processExecutionTask.findFirst({ where: { workspaceId: input.workspaceId, taskKey: input.taskKey } });
-  if (!task) return { ok: false, reason: "Task not found in this workspace." };
+  if (!task) return { ok: false, reason: "Task not found in this workspace.", code: "NOT_FOUND_OR_FORBIDDEN" };
   const route = task.executionRoute as ExecutionRoute;
 
   // COMPLETE reuses the evidence-gated completion path (owner-only + fake-completion guard + reassessment).
@@ -274,7 +304,7 @@ export async function applyProcessExecutionAction(
 
   // REQUEST_REASSESSMENT is allowed even on a completed task (re-open the question), and needs a businessId.
   if (input.action === "REQUEST_REASSESSMENT") {
-    if (!input.businessId || !input.businessId.trim()) return { ok: false, reason: "businessId is required to open a reassessment." };
+    if (!input.businessId || !input.businessId.trim()) return { ok: false, reason: "businessId is required to open a reassessment.", code: "MISSING_INPUT" };
     const { createReassessmentEvent } = await import("@/services/owner-mode/reassessment-event.service");
     const re = await createReassessmentEvent(
       { workspaceId: input.workspaceId, businessId: input.businessId, trigger: "owner_dispute", triggerDescription: `Owner requested a reassessment of process-execution task ${input.taskKey} (${task.sourceFindingKey}).`, actorId: input.actorId },
@@ -284,39 +314,39 @@ export async function applyProcessExecutionAction(
     return { ok: true, taskId: task.id, status: task.status, reassessmentId: re.id };
   }
 
-  if (TERMINAL_STATUSES.has(task.status)) return { ok: false, reason: `Task is ${task.status.toLowerCase()} — no further action is allowed.` };
-  if (NON_ACTIONABLE_ROUTES.has(route)) return { ok: false, reason: `A ${route} route has no interactive action — it is monitor-only or blocked.` };
+  if (TERMINAL_STATUSES.has(task.status)) return { ok: false, reason: `Task is ${task.status.toLowerCase()} — no further action is allowed.`, code: "INVALID_TRANSITION" };
+  if (NON_ACTIONABLE_ROUTES.has(route)) return { ok: false, reason: `A ${route} route has no interactive action — it is monitor-only or blocked.`, code: "NEVER_AUTO" };
 
   let nextStatus = task.status;
   const data: Record<string, unknown> = {};
 
   switch (input.action) {
     case "START":
-      if (!["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.` };
+      if (!["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(task.status)) return { ok: false, reason: `Cannot start a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
       nextStatus = "IN_PROGRESS"; break;
     case "APPROVE":
-      if (task.approvalLevel !== "OWNER_APPROVAL_REQUIRED") return { ok: false, reason: "Only an owner-approval task can be approved." };
-      if (input.actorRole !== "owner") return { ok: false, reason: "This action cannot be automated — only the owner can approve it." };
-      if (!["PROPOSED", "IN_PROGRESS"].includes(task.status)) return { ok: false, reason: `Cannot approve a task that is ${task.status.toLowerCase()}.` };
+      if (task.approvalLevel !== "OWNER_APPROVAL_REQUIRED") return { ok: false, reason: "Only an owner-approval task can be approved.", code: "INVALID_TRANSITION" };
+      if (input.actorRole !== "owner") return { ok: false, reason: "This action cannot be automated — only the owner can approve it.", code: "OWNER_APPROVAL_REQUIRED" };
+      if (!["PROPOSED", "IN_PROGRESS"].includes(task.status)) return { ok: false, reason: `Cannot approve a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
       nextStatus = "APPROVED"; break;
     case "REJECT":
-      if (isOwnerOnly(task) && input.actorRole !== "owner") return { ok: false, reason: "Only the owner can reject this owner-controlled task." };
-      if (!input.reason || !input.reason.trim()) return { ok: false, reason: "A reason is required to reject a task." };
+      if (isOwnerOnly(task) && input.actorRole !== "owner") return { ok: false, reason: "Only the owner can reject this owner-controlled task.", code: "OWNER_APPROVAL_REQUIRED" };
+      if (!input.reason || !input.reason.trim()) return { ok: false, reason: "A reason is required to reject a task.", code: "MISSING_INPUT" };
       nextStatus = "REJECTED"; data.notes = input.reason.trim(); break;
     case "DELEGATE":
-      if (isOwnerOnly(task)) return { ok: false, reason: "An owner-controlled (owner-approval / never-auto) task cannot be delegated." };
-      if (input.delegateToRole !== "MANAGER" && input.delegateToRole !== "STAFF") return { ok: false, reason: "Delegate target must be MANAGER or STAFF." };
-      if (!["PROPOSED", "IN_PROGRESS"].includes(task.status)) return { ok: false, reason: `Cannot delegate a task that is ${task.status.toLowerCase()}.` };
+      if (isOwnerOnly(task)) return { ok: false, reason: "An owner-controlled (owner-approval / never-auto) task cannot be delegated.", code: "OWNER_APPROVAL_REQUIRED" };
+      if (input.delegateToRole !== "MANAGER" && input.delegateToRole !== "STAFF") return { ok: false, reason: "Delegate target must be MANAGER or STAFF.", code: "MISSING_INPUT" };
+      if (!["PROPOSED", "IN_PROGRESS"].includes(task.status)) return { ok: false, reason: `Cannot delegate a task that is ${task.status.toLowerCase()}.`, code: "INVALID_TRANSITION" };
       nextStatus = "IN_PROGRESS"; data.actionOwner = input.delegateToRole; break;
     case "SUBMIT_EVIDENCE": {
       const refs = (input.evidenceRefs ?? []).map((e) => e.trim()).filter(Boolean);
-      if (refs.length === 0) return { ok: false, reason: "No evidence supplied." };
+      if (refs.length === 0) return { ok: false, reason: "No evidence supplied.", code: "EVIDENCE_REQUIRED" };
       data.evidenceRefs = [...task.evidenceRefs, ...refs];
       if (task.status === "PROPOSED") nextStatus = "IN_PROGRESS";
       break;
     }
     case "MARK_BLOCKED":
-      if (!input.reason || !input.reason.trim()) return { ok: false, reason: "A reason is required to block a task." };
+      if (!input.reason || !input.reason.trim()) return { ok: false, reason: "A reason is required to block a task.", code: "MISSING_INPUT" };
       nextStatus = "BLOCKED"; data.notes = input.reason.trim(); break;
     case "REQUEST_MISSING_DATA":
       nextStatus = "NEEDS_DATA"; break;

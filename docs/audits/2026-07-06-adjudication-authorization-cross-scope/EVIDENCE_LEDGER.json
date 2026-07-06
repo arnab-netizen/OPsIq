@@ -1,0 +1,80 @@
+{
+  "audit": "adjudication-authorization-cross-scope",
+  "date": "2026-07-06",
+  "mainHeadAudited": "6bb628d6355c8901a2e5f1260a93830d1ec25094",
+  "branch": "claude/adjudication-authorization-cross-scope-proof",
+  "filesInspected": [
+    "src/lib/canonical-route-enforcement.ts",
+    "src/services/owner-mode/process-execution-bridge.service.ts",
+    "src/services/owner-mode/reassessment-event.service.ts",
+    "src/app/api/owner/process-execution/route.ts",
+    "src/services/execution/proof-risk-adjudication.service.ts",
+    "src/services/owner-mode/evidence-credibility.service.ts",
+    "src/services/owner-mode/business-scope.ts",
+    "src/domain/constants/capabilities.ts",
+    "src/policies/capability-check.ts",
+    "src/services/owner-mode/*.ts (by-id load audit)"
+  ],
+  "filesChanged": [
+    "src/services/owner-mode/process-execution-bridge.service.ts",
+    "src/app/api/owner/process-execution/route.ts",
+    ".github/workflows/db-verification.yml"
+  ],
+  "filesAdded": [
+    "src/__tests__/execution/adjudication-authorization-cross-scope.db.test.ts",
+    "docs/audits/2026-07-06-adjudication-authorization-cross-scope/AUTHORIZATION_MATRIX.json",
+    "docs/audits/2026-07-06-adjudication-authorization-cross-scope/FINAL_AUTHORIZATION_AUDIT.md",
+    "docs/audits/2026-07-06-adjudication-authorization-cross-scope/EVIDENCE_LEDGER.json"
+  ],
+  "schemaChange": "None.",
+  "authGapsFound": 2,
+  "authGapsFixed": 2,
+  "hardening": [
+    "businessInWorkspace() service-level guard on applyProcessExecutionAction + completeProcessTask (rejects cross-workspace businessId before any reassessment write).",
+    "Server-authoritative actorRole derived from verified OWNER_MANAGE capability (removes phantom-field trust; restores the owner-approval path that was silently always-rejected).",
+    "Explicit non-leaky failure codes: WRONG_WORKSPACE, OWNER_APPROVAL_REQUIRED, EVIDENCE_REQUIRED, INVALID_TRANSITION, NEVER_AUTO, NOT_FOUND_OR_FORBIDDEN, MISSING_INPUT.",
+    "Route maps WRONG_WORKSPACE to 403 (authorization failure), other codes to 400."
+  ],
+  "tests": {
+    "twoTenantCrossScopeDbSim": 10,
+    "regressionSuitesReconfirmed": {
+      "executionPlusSecurity": "60 files / 352 tests green (includes the new sim + all prior execution/security tests)"
+    }
+  },
+  "dbSimsWiredIntoLanes": [
+    "src/__tests__/execution/process-execution-affordances.db.test.ts",
+    "src/__tests__/execution/workload-capability-sop-training-bridge.db.test.ts",
+    "src/__tests__/execution/adjudication-authorization-cross-scope.db.test.ts"
+  ],
+  "localGates": {
+    "prismaValidate": "pass",
+    "tscNoEmit": "pass",
+    "governanceScanStrict": "0 new (31 baseline matched)",
+    "lintRatchet": "pass (changed_file_lint_errors 0)",
+    "nextBuild": "pass"
+  },
+  "crossScopeAttemptsProvenFailClosed": [
+    "ownerA read of workspace B tasks → scoped out (case 3)",
+    "ownerA approve/complete/submit-evidence targeting a B task via wsA context → resolves to wsA's own task, B never mutated (case 4)",
+    "cross-workspace businessId on complete/reassessment → WRONG_WORKSPACE, 0 foreign linkage (case 5)",
+    "manager/staff approve owner-only task → OWNER_APPROVAL_REQUIRED (case 6)",
+    "stale/unknown task + unknown workspace → NOT_FOUND_OR_FORBIDDEN / empty (case 7)",
+    "duplicate completion → INVALID_TRANSITION, no double reassessment (case 8)",
+    "audit rows never cross tenants (case 9)",
+    "clean workspace fabricates nothing (case 10)"
+  ],
+  "positiveActionsProven": [
+    "ownerA START → DELEGATE(manager) → staff SUBMIT_EVIDENCE → manager COMPLETE with evidence → same-workspace reassessment + scoped audit (case 1)",
+    "ownerA APPROVE owner-approval task; ownerB REJECT owner-approval task with reason (case 2)"
+  ],
+  "safetyLedger": {
+    "noUnsafeAutonomyAdded": true,
+    "noExternalActionAdded": true,
+    "noFabricatedMoneyProfitRoiWinProbabilityTimeSaving": true,
+    "noHiddenScore": true,
+    "noWeakenedPermission": true,
+    "noForbiddenItemsMadeVisibleForConvenience": true,
+    "crossTenantReadWriteActionFailsClosed": true,
+    "everyTransitionAudited": true
+  }
+}
