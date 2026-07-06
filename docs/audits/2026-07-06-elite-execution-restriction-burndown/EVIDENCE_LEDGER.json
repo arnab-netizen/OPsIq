@@ -1,0 +1,98 @@
+{
+  "audit": "elite-execution-restriction-burndown",
+  "date": "2026-07-06",
+  "mainHeadAudited": "59c339a144b2c8cb3eeaad1ee2ca9f1cec9f607a",
+  "passes": [
+    {
+      "pass": "PASS 22",
+      "title": "Interactive execution affordances",
+      "pr": 154,
+      "mergeSha": "98feb940191f42565454a9cbc9d04a18b37a1569",
+      "restrictionsTargeted": ["R1"],
+      "filesAdded": [
+        "src/app/api/owner/process-execution/route.ts",
+        "src/__tests__/execution/process-execution-affordances.db.test.ts",
+        "prisma/migrations/20260706040000_process_execution_task_notes/migration.sql"
+      ],
+      "filesChanged": [
+        "src/services/owner-mode/process-execution-bridge.service.ts",
+        "src/services/owner-guidance/owner-now-view.service.ts",
+        "src/domain/owner-mode/process-execution-bridge.ts",
+        "src/domain/constants/audit-events.ts",
+        "src/components/owner/ProcessIntelligencePanel.tsx",
+        "prisma/schema.prisma",
+        ".github/workflows/db-verification.yml"
+      ],
+      "schemaChange": "Additive: process_execution_tasks.notes TEXT (records reject/block reason).",
+      "auditEventsEmitted": ["owner.process_execution_task_transitioned", "owner.process_execution_task_upserted", "owner.process_execution_task_completed"],
+      "tests": { "affordancesDbSim": 15, "panelComponent": 9 },
+      "ciEvidence": {
+        "laneBRun": "https://github.com/arnab-netizen/OPsIq/actions/runs/28790402937",
+        "laneBResult": "42 files / 352 tests green, LANE_B_DB_VERIFIED",
+        "buildTypePrisma": "success",
+        "lint": "success",
+        "nonBlockingRed": "stripe-simulation (pre-existing: missing src/tests/stripe-sim test file; FROZEN billing scope)"
+      }
+    },
+    {
+      "pass": "PASS 23",
+      "title": "Workload capability SOP training bridge expansion",
+      "pr": 155,
+      "mergeSha": "59c339a144b2c8cb3eeaad1ee2ca9f1cec9f607a",
+      "restrictionsTargeted": ["R2", "R3", "R5"],
+      "filesAdded": [
+        "src/domain/owner-mode/process-execution-bridge-expansion.ts",
+        "src/__tests__/owner-mode/process-execution-bridge-expansion.test.ts",
+        "src/__tests__/execution/workload-capability-sop-training-bridge.db.test.ts"
+      ],
+      "filesChanged": [
+        "src/domain/owner-mode/process-execution-bridge.ts",
+        "src/services/owner-guidance/owner-now-view.service.ts",
+        "src/components/owner/ProcessIntelligencePanel.tsx",
+        ".github/workflows/db-verification.yml"
+      ],
+      "schemaChange": "None — reuses the ProcessExecutionTask substrate.",
+      "sourceFamiliesAdded": ["WORKLOAD_REDUCTION", "CAPABILITY_GAP", "SOP_CHECKLIST", "TRAINING", "EFFECTIVENESS_RECHECK"],
+      "tests": { "expansionUnit": 14, "workloadCapabilitySopTrainingDbSim": 11 },
+      "ciEvidence": {
+        "laneBRun": "https://github.com/arnab-netizen/OPsIq/actions/runs/28794768833",
+        "laneBResult": "43 files / 363 tests green, LANE_B_DB_VERIFIED",
+        "buildTypePrisma": "success",
+        "lint": "success",
+        "nonBlockingRed": "stripe-simulation (pre-existing, FROZEN billing scope)"
+      }
+    }
+  ],
+  "localGatesPerPass": {
+    "prismaValidate": "pass",
+    "prismaGenerate": "pass",
+    "tscNoEmit": "pass",
+    "governanceScanStrict": "0 new (31 baseline findings matched)",
+    "lintRatchet": "pass (warnings unchanged at baseline; errors reduced 2155->2102)",
+    "nextBuild": "pass",
+    "broadSuite": "1114 owner-mode + component tests green"
+  },
+  "totalTestsAddedAcrossLoop": 49,
+  "dbSimsWiredIntoLanes": [
+    "src/__tests__/execution/process-execution-affordances.db.test.ts",
+    "src/__tests__/execution/workload-capability-sop-training-bridge.db.test.ts"
+  ],
+  "safetyLedger": {
+    "noFabricatedMoneyProfitRoiWinProbabilityTimeSaving": true,
+    "noHiddenStaffOrOpportunityScore": true,
+    "noAutoCustomerContact": true,
+    "noAutoSpendTenderContractPayroll": true,
+    "noStaffDisciplineLanguage": true,
+    "unsafeActionsRemainBlocked": true,
+    "everyTransitionAudited": true,
+    "wrongWorkspaceAndUnauthorizedFailClosed": true,
+    "completionEvidenceGated": true,
+    "monitorOnlyNotCompletable": true,
+    "noCiGateSkipped": true,
+    "noTwoUnmergedFeaturePrsAtOnce": true
+  },
+  "frozenScopeUntouched": [
+    "public SaaS", "billing", "Product Hunt", "launch readiness", "integrations",
+    "Local Mode", "enterprise/compliance hardening", "multi-archetype expansion", "public online real-business proof"
+  ]
+}
