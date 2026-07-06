@@ -1424,3 +1424,80 @@ export function ValidationOutcomePanel({ data }: { data: ValidationOutcomeView[]
     </section>
   );
 }
+
+// ── Opportunity Execution & Delegation Tracking (PASS 12) ─────────────────────────────────────────────
+
+export interface ExecutionTaskView {
+  opportunityKey: string;
+  taskKey: string;
+  sourceType: string;
+  taskType: string;
+  taskTitle: string;
+  taskDescription: string;
+  nextActionOwner: string;
+  requiredEvidence: string[];
+  status: string;
+  approvalLevel: string;
+  riskIfSkipped: string;
+  blockingReason: string | null;
+  outcomeSummary: string | null;
+}
+export interface ExecutionSummaryView {
+  totalTasks: number;
+  proposed: number;
+  inProgressOrAssigned: number;
+  blocked: number;
+  completed: number;
+  ownerApprovalRequired: number;
+  delegated: number;
+}
+export interface OpportunityExecutionView {
+  tasks: ExecutionTaskView[];
+  topTask: ExecutionTaskView | null;
+  capabilityRecommendations: string[];
+  summary: ExecutionSummaryView;
+}
+
+const EXEC_OWNER_LABEL: Record<string, string> = {
+  OWNER: "Owner", MANAGER: "Manager", STAFF: "Staff", OPSIQ_DRAFT: "OpsIQ drafts", EXTERNAL_ADVISOR: "External advisor", NO_ACTION: "No action",
+};
+
+/**
+ * OpportunityExecutionPanel — Executive Cockpit surface for opportunity execution & delegation: the single
+ * top task with who must do it, why it matters, what evidence proves it done, the approval level, what is
+ * blocked until it is complete, and the risk if skipped. OpsIQ drafts/recommends only — it never submits a
+ * tender, contacts a customer, or spends. Details collapsed; a grouped summary, not a task backlog dump.
+ */
+export function OpportunityExecutionPanel({ data }: { data: OpportunityExecutionView | null }) {
+  const top = data?.topTask ?? null;
+  if (!top) {
+    return (
+      <div data-testid="execution-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No opportunity execution task yet — tasks appear once an opportunity needs data, documents, a draft, or an owner decision.
+      </div>
+    );
+  }
+  const s = data!.summary;
+  return (
+    <section data-testid="execution-panel" data-task-type={top.taskType} data-owner={top.nextActionOwner} data-status={top.status}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 8, minWidth: 0 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="exec-title">{top.taskTitle}</strong>
+        <span data-testid="exec-owner"><Badge variant={top.nextActionOwner === "OWNER" ? "destructive" : "default"}>{EXEC_OWNER_LABEL[top.nextActionOwner] ?? top.nextActionOwner}</Badge></span>
+        <Badge variant={top.status === "BLOCKED" ? "destructive" : top.status === "COMPLETED" ? "default" : "warning"}>{top.status}</Badge>
+      </div>
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="exec-desc">{top.taskDescription}</p>
+      <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="exec-risk">If skipped: {top.riskIfSkipped}</p>
+      {top.blockingReason && <p style={{ margin: 0, fontSize: 12, color: "#b91c1c" }} data-testid="exec-blocking">Blocked: {top.blockingReason}</p>}
+      <details data-testid="exec-evidence">
+        <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Required evidence ({top.requiredEvidence.length})</summary>
+        <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>{top.requiredEvidence.join("; ")}</p>
+        {top.outcomeSummary && <p style={{ margin: "6px 0 0", fontSize: 12, color: "#15803d" }}>Done: {top.outcomeSummary}</p>}
+      </details>
+      <span data-testid="exec-guardrail" style={{ fontSize: 12, color: "#6b7280" }}>OpsIQ drafts and prepares only — it never submits, contacts customers, or spends. {top.approvalLevel === "OWNER" ? "Owner approval required." : ""}</span>
+      <span data-testid="exec-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {s.totalTasks} task(s) · {s.proposed} proposed · {s.inProgressOrAssigned} active · {s.blocked} blocked · {s.completed} completed · {s.ownerApprovalRequired} owner · {s.delegated} delegated
+      </span>
+    </section>
+  );
+}

@@ -256,6 +256,7 @@ export const AUDIT_EVENTS = {
   OWNER_OPPORTUNITY_DECIDED: "owner.opportunity_decided",
   OWNER_OPPORTUNITY_SIGNAL_SUBMITTED: "owner.opportunity_signal_submitted",
   OWNER_OPPORTUNITY_VALIDATION_OUTCOME_RECORDED: "owner.opportunity_validation_outcome_recorded",
+  OWNER_OPPORTUNITY_EXECUTION_TASK_UPDATED: "owner.opportunity_execution_task_updated",
 
   // Owner-Only Recovery Mode
   OWNER_BUSINESS_CREATED: "owner.business_created",

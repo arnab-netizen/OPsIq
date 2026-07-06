@@ -298,6 +298,26 @@ const PAYLOAD = {
       ownerVisibleSummary: "Validation passed with cost + margin evidence — bring a scaling plan to the owner.", recordedAt: "2026-07-06T00:00:00.000Z",
     },
   ],
+  opportunityExecution: {
+    tasks: [
+      {
+        opportunityKey: "B2B_DEMAND_SIGNAL:hotels", taskKey: "task:ws-12345:B2B_DEMAND_SIGNAL:hotels:COLLECT_COST_DATA",
+        sourceType: "MISSING_DATA", taskType: "COLLECT_COST_DATA", taskTitle: "Collect per-unit cost data",
+        taskDescription: "Capture the true per-item cost so the bid margin is real, not guessed.", nextActionOwner: "MANAGER",
+        requiredEvidence: ["per-unit cost figure", "source of the figure"], status: "ASSIGNED", approvalLevel: "MANAGER",
+        riskIfSkipped: "You bid blind and could win an unprofitable contract.", blockingReason: null, outcomeSummary: null,
+      },
+    ],
+    topTask: {
+      opportunityKey: "B2B_DEMAND_SIGNAL:hotels", taskKey: "task:ws-12345:B2B_DEMAND_SIGNAL:hotels:COLLECT_COST_DATA",
+      sourceType: "MISSING_DATA", taskType: "COLLECT_COST_DATA", taskTitle: "Collect per-unit cost data",
+      taskDescription: "Capture the true per-item cost so the bid margin is real, not guessed.", nextActionOwner: "MANAGER",
+      requiredEvidence: ["per-unit cost figure", "source of the figure"], status: "ASSIGNED", approvalLevel: "MANAGER",
+      riskIfSkipped: "You bid blind and could win an unprofitable contract.", blockingReason: null, outcomeSummary: null,
+    },
+    capabilityRecommendations: [],
+    summary: { totalTasks: 1, proposed: 0, inProgressOrAssigned: 1, blocked: 0, completed: 0, ownerApprovalRequired: 0, delegated: 1 },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -370,6 +390,10 @@ describe("OwnerProcessIntelligencePage", () => {
     // The recorded validation-outcome surface renders inside the same Grow group.
     await findByTestId("outcome-panel");
     expect(container.textContent ?? "").toMatch(/What the test proved/i);
+    // The opportunity execution & delegation surface renders inside the same Grow group.
+    await findByTestId("execution-panel");
+    expect(container.textContent ?? "").toMatch(/Opportunity execution/i);
+    expect(container.textContent ?? "").toMatch(/Collect per-unit cost data/i);
     for (const gid of ["cockpit-group-cash", "cockpit-group-grow", "cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
       const grp = await findByTestId(gid);
       expect(grp.tagName.toLowerCase()).toBe("details");
