@@ -254,6 +254,7 @@ export const AUDIT_EVENTS = {
   OWNER_APPROVAL_AUTO_HANDLED: "owner.approval_auto_handled",
   OWNER_ARBITRATION_RESOLVED: "owner.arbitration_resolved",
   OWNER_OPPORTUNITY_DECIDED: "owner.opportunity_decided",
+  OWNER_OPPORTUNITY_SIGNAL_SUBMITTED: "owner.opportunity_signal_submitted",
 
   // Owner-Only Recovery Mode
   OWNER_BUSINESS_CREATED: "owner.business_created",

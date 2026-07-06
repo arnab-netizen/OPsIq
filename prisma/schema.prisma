@@ -4194,6 +4194,56 @@ model ProofRiskAdjudication {
   @@map("proof_risk_adjudications")
 }
 
+/// Structured external opportunity signal — a REAL owner/manager/system-submitted opportunity lead that
+/// feeds the External Opportunity Intelligence loop (classify → dedupe → tender-screen → promote) live,
+/// instead of only DB-sim/injected data. Controlled structured intake only: OpsIQ never scrapes, contacts
+/// anyone, auto-submits a tender, or spends. Qualitative bands are the submitter's own honest assessment;
+/// numeric value/exposure are stored for the record only and are never turned into profit/impact.
+model ExternalOpportunitySignal {
+  id                       String    @id @db.Uuid
+  workspaceId              String    @map("workspace_id") @db.Uuid
+  idempotencyKey           String    @map("idempotency_key")
+  dedupeKey                String    @map("dedupe_key")
+  rawSignalType            String    @map("raw_signal_type")
+  sourceName               String?   @map("source_name")
+  sourceChannel            String?   @map("source_channel")
+  sourceRef                String?   @map("source_ref")
+  submittedByUserId        String?   @map("submitted_by_user_id") @db.Uuid
+  submittedByRole          String?   @map("submitted_by_role")
+  rawDescription           String    @map("raw_description") @db.Text
+  extractedBusinessNeed    String?   @map("extracted_business_need") @db.Text
+  targetCustomerSegment    String?   @map("target_customer_segment")
+  locationContext          String?   @map("location_context")
+  deadlineAt               DateTime? @map("deadline_at")
+  tenderOrProcurementValue Float?    @map("tender_or_procurement_value")
+  eligibilityRequirements  String?   @map("eligibility_requirements") @db.Text
+  complianceRequirements   String?   @map("compliance_requirements") @db.Text
+  estimatedCashExposure    Float?    @map("estimated_cash_exposure")
+  cashExposureBand         String    @default("UNKNOWN") @map("cash_exposure_band")
+  relevanceBand            String    @default("MODERATE") @map("relevance_band")
+  ownerWorkloadBand        String    @default("LOW") @map("owner_workload_band")
+  ownerWorkloadNotes       String?   @map("owner_workload_notes") @db.Text
+  hasUnitEconomics         Boolean   @default(false) @map("has_unit_economics")
+  sourceQuality            String    @default("UNKNOWN") @map("source_quality")
+  requiredDocuments        String[]  @map("required_documents")
+  missingDocuments         String[]  @map("missing_documents")
+  discoveredAt             DateTime? @map("discovered_at")
+  lastVerifiedAt           DateTime? @map("last_verified_at")
+  staleAfterDays           Int?      @map("stale_after_days")
+  evidenceRefs             String[]  @map("evidence_refs")
+  missingData              String[]  @map("missing_data")
+  initialStatus            String    @map("initial_status") // RAW | NEEDS_DATA | CANDIDATE | PARKED | REJECTED | DUPLICATE | IRRELEVANT
+  classification           String    @map("classification")
+  status                   String    @default("ACTIVE") @map("status") // ACTIVE | ARCHIVED
+  submittedAt              DateTime  @default(now()) @map("submitted_at")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @default(now()) @map("updated_at")
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, status])
+  @@map("external_opportunity_signals")
+}
+
 /// Minimal per-event operational complaint/rework record (one generic model handles both via
 /// eventType — no ambiguity). Links accepted proof to the real complaint/rework that contradicted
 /// it so the business impact of bad accepted work becomes measurable. Deliberately NOT a CRM/
