@@ -213,6 +213,36 @@ const PAYLOAD = {
     tenderCandidates: [], topTenderCandidate: null,
     summary: { rawSignals: 1, duplicatesCollapsed: 0, irrelevantOrParked: 0, needsData: 0, candidates: 1, tenderCandidates: 0, ownerReviewRequired: 0 },
   },
+  opportunityValidation: {
+    experiments: [
+      {
+        experimentType: "DATA_COLLECTION_ONLY", opportunityType: "RETENTION_CAMPAIGN",
+        hypothesis: "The missing facts to judge the retention offer can be gathered cheaply first",
+        riskiestAssumption: "That the opportunity can be judged without its unit economics",
+        method: "Gather per-customer value from existing records — no spend, no launch",
+        successThreshold: "the missing data is captured well enough to re-evaluate", failureThreshold: "the data cannot be obtained cheaply — escalate",
+        stopLossRule: "Stop if it cannot be gathered within 45 minutes of owner time", costCap: 0,
+        ownerTimeCapMinutes: 45, durationDays: 5, sampleSizeTarget: 1, dataToCollect: ["per-customer value"],
+        requiresOwnerApproval: false, approvalLevel: "MANAGER",
+        cheaperAlternativeConsidered: "Running a paid experiment now was rejected until the basic facts are known",
+        doNotScaleNote: "A passing result validates the assumption only — it is not permission to scale.", confidence: "LOW",
+      },
+    ],
+    topExperiment: {
+      experimentType: "DATA_COLLECTION_ONLY", opportunityType: "RETENTION_CAMPAIGN",
+      hypothesis: "The missing facts to judge the retention offer can be gathered cheaply first",
+      riskiestAssumption: "That the opportunity can be judged without its unit economics",
+      method: "Gather per-customer value from existing records — no spend, no launch",
+      successThreshold: "the missing data is captured well enough to re-evaluate", failureThreshold: "the data cannot be obtained cheaply — escalate",
+      stopLossRule: "Stop if it cannot be gathered within 45 minutes of owner time", costCap: 0,
+      ownerTimeCapMinutes: 45, durationDays: 5, sampleSizeTarget: 1, dataToCollect: ["per-customer value"],
+      requiresOwnerApproval: false, approvalLevel: "MANAGER",
+      cheaperAlternativeConsidered: "Running a paid experiment now was rejected until the basic facts are known",
+      doNotScaleNote: "A passing result validates the assumption only — it is not permission to scale.", confidence: "LOW",
+    },
+    deferred: [],
+    summary: { candidatesConsidered: 1, experimentsDesigned: 1, deferred: 0, dataCollectionOnly: 1, ownerApprovalRequired: 0 },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -273,6 +303,9 @@ describe("OwnerProcessIntelligencePage", () => {
     // The external opportunity intelligence surface renders inside its group too.
     await findByTestId("opportunity-panel");
     expect(container.textContent ?? "").toMatch(/Grow: opportunities to validate/i);
+    // The opportunity validation experiment surface renders inside the same Grow group.
+    await findByTestId("validation-panel");
+    expect(container.textContent ?? "").toMatch(/Next validation experiment to run/i);
     for (const gid of ["cockpit-group-cash", "cockpit-group-grow", "cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
       const grp = await findByTestId(gid);
       expect(grp.tagName.toLowerCase()).toBe("details");
