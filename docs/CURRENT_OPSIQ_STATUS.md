@@ -8,7 +8,24 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## SOP / Training Effectiveness Loop depth pass (latest)
+## Owner Workload Reduction v2 depth pass (latest)
+- **Base:** `origin/main` @ `d62ae9b4` (SOP/Training Effectiveness Loop, PR #133, merged).
+- **Branch:** `claude/owner-workload-reduction-v2-depth-pass`.
+- **Classification:** `OWNER_WORKLOAD_REDUCTION_V2_REAL_AND_OWNER_VISIBLE`.
+- **OpsIQ now identifies avoidable owner burden and how to reduce it safely.** A pure
+  `buildOwnerWorkloadReduction` emits 9 workload types (repeated adjudication, review burden, approval
+  bottleneck/backlog, low-risk interrupt, recurring complaint, manager over-escalation, missing-data
+  burden, training delegation) with a safe reduction recommendation and a risk guardrail. Surfaced as
+  `ownerWorkloadReduction` and an executive-cockpit panel ("Reduce your workload") on
+  `/owner/process-intelligence` (top item only, evidence collapsed).
+- **Governance:** high-risk decisions keep owner approval (KEEP_OWNER_APPROVAL); risk guardrail on every
+  finding; no fabricated time saving; no fraud/negligence/firing/payroll/discipline; no hidden score.
+  **No schema change.**
+- **Verification:** tsc 0 · governance 31-frozen/0-new · lint ratchet clean · next build compiled · 14
+  domain + 5 component + 2 page tests + laundry DB simulation (wired into CI LANE_B/LANE_A). Details:
+  `docs/remediation/owner-workload-reduction-v2-depth-pass/`.
+
+## SOP / Training Effectiveness Loop depth pass
 - **Base:** `origin/main` @ `2b958c5e` (Staff Training Assignment Engine, PR #132, merged).
 - **Branch:** `claude/sop-training-effectiveness-loop-depth-pass`.
 - **Classification:** `SOP_TRAINING_EFFECTIVENESS_LOOP_REAL_AND_OWNER_VISIBLE`.

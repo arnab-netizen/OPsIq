@@ -102,6 +102,28 @@ const PAYLOAD = {
       recommendedNextAction: "KEEP", approvalLevel: "OWNER", missingData: [],
     },
   },
+  ownerWorkloadReduction: {
+    findings: [
+      {
+        workloadType: "REPEATED_OWNER_ADJUDICATION", severity: "MEDIUM", burdenCount: 4, estimatedOwnerTouches: 4,
+        supportingProofIds: [], supportingAdjudicationIds: ["a1", "a2", "a3", "a4"], supportingOperationalEventIds: [],
+        supportingEscalationIds: [], supportingCorrectionKeys: [], supportingTrainingKeys: [],
+        relatedProcessFinding: "PROOF_QUALITY_BREAKDOWN", relatedSLO: "ANTI_GAMING_RISK",
+        ownerVisibleExplanation: "You keep adjudicating the same kind of weak-proof risk.",
+        recommendedReductionAction: "REQUIRE_BETTER_PROOF_UPFRONT", approvalLevel: "MANAGER",
+        riskGuardrail: "High-risk decisions stay with the owner; only routine repeats are delegated.", missingData: [],
+      },
+    ],
+    topFinding: {
+      workloadType: "REPEATED_OWNER_ADJUDICATION", severity: "MEDIUM", burdenCount: 4, estimatedOwnerTouches: 4,
+      supportingProofIds: [], supportingAdjudicationIds: ["a1", "a2", "a3", "a4"], supportingOperationalEventIds: [],
+      supportingEscalationIds: [], supportingCorrectionKeys: [], supportingTrainingKeys: [],
+      relatedProcessFinding: "PROOF_QUALITY_BREAKDOWN", relatedSLO: "ANTI_GAMING_RISK",
+      ownerVisibleExplanation: "You keep adjudicating the same kind of weak-proof risk.",
+      recommendedReductionAction: "REQUIRE_BETTER_PROOF_UPFRONT", approvalLevel: "MANAGER",
+      riskGuardrail: "High-risk decisions stay with the owner; only routine repeats are delegated.", missingData: [],
+    },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -138,6 +160,10 @@ describe("OwnerProcessIntelligencePage", () => {
     await findByTestId("effectiveness-panel");
     expect(container.textContent ?? "").toMatch(/Did the fixes work\?/i);
     expect(container.textContent ?? "").toMatch(/appears to be working/i);
+    // The owner workload reduction (executive cockpit) surface renders too.
+    await findByTestId("owner-workload-panel");
+    expect(container.textContent ?? "").toMatch(/Reduce your workload/i);
+    expect(container.textContent ?? "").toMatch(/Require better proof upfront/i);
     const back = container.querySelector('[data-testid="back-to-now"]') as HTMLAnchorElement;
     expect(back.getAttribute("href")).toBe("/owner/now");
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/api/owner/now-view"))).toBe(true);
