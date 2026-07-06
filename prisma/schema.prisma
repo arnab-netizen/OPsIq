@@ -4244,6 +4244,48 @@ model ExternalOpportunitySignal {
   @@map("external_opportunity_signals")
 }
 
+/// Persisted validation-experiment outcome — what actually happened when an opportunity was tested, so the
+/// live Opportunity Portfolio can move past NOT_STARTED and make real kill/park/scale-candidate decisions on
+/// evidence. Governance: PASSED requires evidence (else INCONCLUSIVE); a stop-loss trigger can never be a
+/// PASS; scaling stays gated behind PASSED + safe guardrails + owner approval; no fabricated revenue/
+/// conversion/profit. Numeric fields are the owner's recorded results, never invented. Additive, non-
+/// destructive; UNIQUE (workspace_id, idempotency_key) makes re-recording idempotent.
+model OpportunityValidationOutcome {
+  id                     String    @id @db.Uuid
+  workspaceId            String    @map("workspace_id") @db.Uuid
+  idempotencyKey         String    @map("idempotency_key")
+  experimentKey          String    @map("experiment_key")
+  opportunityKey         String    @map("opportunity_key")
+  status                 String    // NOT_STARTED | RUNNING | COMPLETED | CANCELLED | NEEDS_DATA
+  result                 String    // PASSED | FAILED | INCONCLUSIVE | NOT_EVALUATED
+  startedAt              DateTime? @map("started_at")
+  completedAt            DateTime? @map("completed_at")
+  actualCost             Float?    @map("actual_cost")
+  actualOwnerTimeMinutes Int?      @map("actual_owner_time_minutes")
+  leadsGenerated         Int?      @map("leads_generated")
+  responses              Int?      @map("responses")
+  conversions            Int?      @map("conversions")
+  revenueEvidence        String?   @map("revenue_evidence") @db.Text
+  marginEvidence         String?   @map("margin_evidence") @db.Text
+  customerFeedback       String?   @map("customer_feedback") @db.Text
+  operationalIssues      String?   @map("operational_issues") @db.Text
+  cashImpactNotes        String?   @map("cash_impact_notes") @db.Text
+  proofEvidenceRefs      String[]  @map("proof_evidence_refs")
+  successMetricResult    String?   @map("success_metric_result") @db.Text
+  failureMetricResult    String?   @map("failure_metric_result") @db.Text
+  stopLossTriggered      Boolean   @default(false) @map("stop_loss_triggered")
+  ownerVisibleSummary    String    @map("owner_visible_summary") @db.Text
+  nextRecommendedDecision String   @map("next_recommended_decision") // KILL | PARK | MODIFY | RETEST | SCALE_CANDIDATE | NEEDS_DATA
+  approvalLevel          String    @map("approval_level")
+  recordedByUserId       String?   @map("recorded_by_user_id") @db.Uuid
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @default(now()) @map("updated_at")
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, opportunityKey])
+  @@map("opportunity_validation_outcomes")
+}
+
 /// Minimal per-event operational complaint/rework record (one generic model handles both via
 /// eventType — no ambiguity). Links accepted proof to the real complaint/rework that contradicted
 /// it so the business impact of bad accepted work becomes measurable. Deliberately NOT a CRM/
