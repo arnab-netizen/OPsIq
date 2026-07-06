@@ -46,7 +46,11 @@ export const GET = withCanonicalEnforcement(
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const input = await parseRequestBody(ctx.request!, schema);
-    const actorRole = (ctx.verifiedSessionSnapshot as { role?: string } | undefined)?.role ?? null;
+    // Server-authoritative role: this route is OWNER_MANAGE-gated (a non-owner-capable actor is already
+    // rejected at the wrapper with 403), so an actor who reaches here holds owner-manage authority and acts as
+    // the owner. Derive the role from the VERIFIED capability set — never from a client-supplied / phantom
+    // snapshot field — so owner-only transitions (approve/complete) are authorized by proven capability. (PASS 25)
+    const actorRole = ctx.verifiedCapabilities.has(CAPABILITIES.OWNER_MANAGE) ? "owner" : null;
     // Server-authoritative materialisation: re-derive the bridge routes on the server and persist them
     // (idempotent) so the task the owner is acting on is the SERVER's governed route — the client never
     // supplies route fields, so a crafted request can't downgrade an approval level or bypass a guardrail.
@@ -66,7 +70,8 @@ export const POST = withCanonicalEnforcement(
       delegateToRole: input.delegateToRole ?? null,
       outcomeNotes: input.outcomeNotes ?? null,
     });
-    if (!r.ok) return canonicalJson({ error: r.reason }, { status: 400 });
+    // A cross-workspace businessId is an authorization failure (403), not a generic bad request (400).
+    if (!r.ok) return canonicalJson({ error: r.reason, code: r.code }, { status: r.code === "WRONG_WORKSPACE" ? 403 : 400 });
     return canonicalJson({ taskId: r.taskId, status: r.status, reassessmentId: r.reassessmentId ?? null }, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.OWNER_MANAGE], requireWorkspace: true },
