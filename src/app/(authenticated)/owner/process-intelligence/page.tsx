@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/primitives";
-import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, OpportunityPanel, ValidationPanel, CockpitGroup, CockpitSubsection, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView, type ExternalOpportunityView, type OpportunityValidationView } from "@/components/owner/ProcessIntelligencePanel";
+import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, OpportunityPanel, ValidationPanel, PortfolioPanel, CockpitGroup, CockpitSubsection, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView, type ExternalOpportunityView, type OpportunityValidationView, type OpportunityPortfolioView } from "@/components/owner/ProcessIntelligencePanel";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -46,6 +46,7 @@ export default function OwnerProcessIntelligencePage() {
   const [cashProfit, setCashProfit] = useState<CashProfitProtectionView | null>(null);
   const [opportunity, setOpportunity] = useState<ExternalOpportunityView | null>(null);
   const [validation, setValidation] = useState<OpportunityValidationView | null>(null);
+  const [portfolio, setPortfolio] = useState<OpportunityPortfolioView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +67,7 @@ export default function OwnerProcessIntelligencePage() {
       setCashProfit((data.cashProfitProtection as CashProfitProtectionView) ?? null);
       setOpportunity((data.externalOpportunityIntelligence as ExternalOpportunityView) ?? null);
       setValidation((data.opportunityValidation as OpportunityValidationView) ?? null);
+      setPortfolio((data.opportunityPortfolio as OpportunityPortfolioView) ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load the process view.");
     } finally {
@@ -130,6 +132,9 @@ export default function OwnerProcessIntelligencePage() {
             </CockpitSubsection>
             <CockpitSubsection title="Next validation experiment to run">
               <ValidationPanel data={validation} />
+            </CockpitSubsection>
+            <CockpitSubsection title="Where capital goes next">
+              <PortfolioPanel data={portfolio} />
             </CockpitSubsection>
           </CockpitGroup>
 

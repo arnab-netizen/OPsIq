@@ -243,6 +243,30 @@ const PAYLOAD = {
     deferred: [],
     summary: { candidatesConsidered: 1, experimentsDesigned: 1, deferred: 0, dataCollectionOnly: 1, ownerApprovalRequired: 0 },
   },
+  opportunityPortfolio: {
+    items: [
+      {
+        opportunityType: "RETENTION_CAMPAIGN", signalSourceType: "CUSTOMER_COMPLAINT_PATTERN",
+        title: "A cheap retention offer could reduce churn", targetCustomerSegment: "recently-complaining customers",
+        portfolioDecision: "NEEDS_DATA", validationStatus: "NOT_STARTED", confidence: "LOW", cashRisk: "LOW",
+        capitalAtRiskBand: "NONE", expectedReturnBand: "SMALL", requiresOwnerApproval: false, approvalLevel: "MANAGER",
+        scaleBlockedReason: "Validation has not passed yet — capital and scale are withheld until it does.",
+        recommendedAction: "Collect the missing data (economics / eligibility) before allocating any capital.",
+        riskIfIgnored: "Deciding on an opportunity you cannot yet measure.", supportingRefs: ["ev-1"],
+      },
+    ],
+    topItem: {
+      opportunityType: "RETENTION_CAMPAIGN", signalSourceType: "CUSTOMER_COMPLAINT_PATTERN",
+      title: "A cheap retention offer could reduce churn", targetCustomerSegment: "recently-complaining customers",
+      portfolioDecision: "NEEDS_DATA", validationStatus: "NOT_STARTED", confidence: "LOW", cashRisk: "LOW",
+      capitalAtRiskBand: "NONE", expectedReturnBand: "SMALL", requiresOwnerApproval: false, approvalLevel: "MANAGER",
+      scaleBlockedReason: "Validation has not passed yet — capital and scale are withheld until it does.",
+      recommendedAction: "Collect the missing data (economics / eligibility) before allocating any capital.",
+      riskIfIgnored: "Deciding on an opportunity you cannot yet measure.", supportingRefs: ["ev-1"],
+    },
+    capitalDisciplineNote: "Capital and scale follow proof, not hunches: only opportunities whose validation has passed can be scaled — the rest are validated, reviewed, parked, or stopped.",
+    summary: { itemsConsidered: 1, validateFirst: 1, ownerReviewRequired: 0, parkedOrRejected: 0, killed: 0, scaleCandidates: 0, doNow: 0 },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -306,6 +330,9 @@ describe("OwnerProcessIntelligencePage", () => {
     // The opportunity validation experiment surface renders inside the same Grow group.
     await findByTestId("validation-panel");
     expect(container.textContent ?? "").toMatch(/Next validation experiment to run/i);
+    // The opportunity portfolio / capital-allocation surface renders inside the same Grow group.
+    await findByTestId("portfolio-panel");
+    expect(container.textContent ?? "").toMatch(/Where capital goes next/i);
     for (const gid of ["cockpit-group-cash", "cockpit-group-grow", "cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
       const grp = await findByTestId(gid);
       expect(grp.tagName.toLowerCase()).toBe("details");
