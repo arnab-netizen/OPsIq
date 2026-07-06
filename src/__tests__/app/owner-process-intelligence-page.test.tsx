@@ -267,6 +267,30 @@ const PAYLOAD = {
     capitalDisciplineNote: "Capital and scale follow proof, not hunches: only opportunities whose validation has passed can be scaled — the rest are validated, reviewed, parked, or stopped.",
     summary: { itemsConsidered: 1, validateFirst: 1, ownerReviewRequired: 0, parkedOrRejected: 0, killed: 0, scaleCandidates: 0, doNow: 0 },
   },
+  opportunityOperating: {
+    opportunities: [
+      {
+        rawSignalType: "B2B_DEMAND_SIGNAL", opportunityTitle: "Weekly hotel linen contract", targetCustomerSegment: "hotels",
+        sourceQuality: "OWNER_OBSERVED", evidenceStrength: "MODERATE", businessFit: "MODERATE", capacityFit: "UNKNOWN",
+        executionReadiness: "NEEDS_DATA", freshness: "FRESH", isTender: false, tenderReadiness: null, winReadiness: "WEAK",
+        winReadinessReasons: ["No past-work proof"], proofPackRequirements: ["past-work evidence"],
+        prepChecklist: { checklistType: "B2B_OPPORTUNITY_PREP", blockingItems: ["unit economics missing"], managerCollectableItems: ["per-unit cost"], staffCollectableItems: ["staff capacity"], opsIqDraftableItems: ["draft the validation plan"], nextChecklistAction: "Collect: unit economics missing" },
+        negativeReasons: ["MISSING_UNIT_ECONOMICS"], nextActionOwner: "MANAGER", recommendedNextStep: "COLLECT_DATA",
+        opportunityQuality: "LOW", validationRequired: true, ownerVisibleSummary: "Weekly hotel linen contract (LOW quality; needs data)",
+      },
+    ],
+    topOpportunity: {
+      rawSignalType: "B2B_DEMAND_SIGNAL", opportunityTitle: "Weekly hotel linen contract", targetCustomerSegment: "hotels",
+      sourceQuality: "OWNER_OBSERVED", evidenceStrength: "MODERATE", businessFit: "MODERATE", capacityFit: "UNKNOWN",
+      executionReadiness: "NEEDS_DATA", freshness: "FRESH", isTender: false, tenderReadiness: null, winReadiness: "WEAK",
+      winReadinessReasons: ["No past-work proof"], proofPackRequirements: ["past-work evidence"],
+      prepChecklist: { checklistType: "B2B_OPPORTUNITY_PREP", blockingItems: ["unit economics missing"], managerCollectableItems: ["per-unit cost"], staffCollectableItems: ["staff capacity"], opsIqDraftableItems: ["draft the validation plan"], nextChecklistAction: "Collect: unit economics missing" },
+      negativeReasons: ["MISSING_UNIT_ECONOMICS"], nextActionOwner: "MANAGER", recommendedNextStep: "COLLECT_DATA",
+      opportunityQuality: "LOW", validationRequired: true, ownerVisibleSummary: "Weekly hotel linen contract (LOW quality; needs data)",
+    },
+    clusters: [], topCluster: null, capabilityRecommendations: [],
+    summary: { rawSignals: 1, clusters: 1, candidates: 0, tenderCandidates: 0, parkedOrRejected: 0, needsData: 1, ownerReviewRequired: 0, expiredOrStale: 0 },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -333,6 +357,9 @@ describe("OwnerProcessIntelligencePage", () => {
     // The opportunity portfolio / capital-allocation surface renders inside the same Grow group.
     await findByTestId("portfolio-panel");
     expect(container.textContent ?? "").toMatch(/Where capital goes next/i);
+    // The structured-intake opportunity operating layer renders inside the same Grow group.
+    await findByTestId("operating-panel");
+    expect(container.textContent ?? "").toMatch(/Submitted opportunity signals/i);
     for (const gid of ["cockpit-group-cash", "cockpit-group-grow", "cockpit-group-followthrough", "cockpit-group-govern", "cockpit-group-build"]) {
       const grp = await findByTestId(gid);
       expect(grp.tagName.toLowerCase()).toBe("details");

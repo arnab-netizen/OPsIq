@@ -1238,3 +1238,134 @@ export function PortfolioPanel({ data }: { data: OpportunityPortfolioView | null
     </section>
   );
 }
+
+// ── Opportunity Operating Layer (structured intake, hostile-hardened) ──────────────────────────────────
+
+export interface TenderReadinessView {
+  eligibilityStatus: string;
+  missingDocuments: string[];
+  emdOrSecurityRisk: string;
+  paymentDelayRisk: string;
+  complianceRisk: string;
+  deadlineUrgency: string;
+  bidDecision: string;
+  submissionAllowed: boolean;
+}
+export interface PrepChecklistView {
+  checklistType: string;
+  blockingItems: string[];
+  managerCollectableItems: string[];
+  staffCollectableItems: string[];
+  opsIqDraftableItems: string[];
+  nextChecklistAction: string;
+}
+export interface OperatingOpportunityView {
+  rawSignalType: string;
+  opportunityTitle: string;
+  targetCustomerSegment: string;
+  sourceQuality: string;
+  evidenceStrength: string;
+  businessFit: string;
+  capacityFit: string;
+  executionReadiness: string;
+  freshness: string;
+  isTender: boolean;
+  tenderReadiness: TenderReadinessView | null;
+  winReadiness: string;
+  winReadinessReasons: string[];
+  proofPackRequirements: string[];
+  prepChecklist: PrepChecklistView | null;
+  negativeReasons: string[];
+  nextActionOwner: string;
+  recommendedNextStep: string;
+  opportunityQuality: string;
+  validationRequired: boolean;
+  ownerVisibleSummary: string;
+}
+export interface OpportunityClusterView {
+  clusterTheme: string;
+  sourceSignalCount: number;
+  duplicateCount: number;
+  ownerVisibleSummary: string;
+}
+export interface OpportunityOperatingSummaryView {
+  rawSignals: number;
+  clusters: number;
+  candidates: number;
+  tenderCandidates: number;
+  parkedOrRejected: number;
+  needsData: number;
+  ownerReviewRequired: number;
+  expiredOrStale: number;
+}
+export interface OpportunityOperatingView {
+  opportunities: OperatingOpportunityView[];
+  topOpportunity: OperatingOpportunityView | null;
+  clusters: OpportunityClusterView[];
+  topCluster: OpportunityClusterView | null;
+  capabilityRecommendations: string[];
+  summary: OpportunityOperatingSummaryView;
+}
+
+const NEXT_OWNER_LABEL: Record<string, string> = {
+  OWNER: "Owner decides", MANAGER: "Manager collects", STAFF: "Staff collects", OPSIQ_DRAFT: "OpsIQ drafts",
+  EXTERNAL_ADVISOR: "External advisor", NO_ACTION: "No action",
+};
+
+/**
+ * OpportunityOperatingPanel — Executive Cockpit surface for the structured-intake opportunity operating
+ * layer: the single top opportunity (or cluster) with its transparent quality band, business/capacity fit,
+ * tender bid/no-bid state (never auto-submittable), win-readiness, negative reasons, a delegated prep
+ * checklist, and the next-action owner. Similar signals collapse into one cluster (no raw spam). No hidden
+ * score, no win %, no profit guarantee, no scale-before-validation.
+ */
+export function OpportunityOperatingPanel({ data }: { data: OpportunityOperatingView | null }) {
+  const top = data?.topOpportunity ?? null;
+  if (!top) {
+    return (
+      <div data-testid="operating-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No structured opportunity signals yet — submit one and OpsIQ classifies, screens, and prioritises it.
+      </div>
+    );
+  }
+  const s = data!.summary;
+  const t = top.tenderReadiness;
+  return (
+    <section data-testid="operating-panel" data-quality={top.opportunityQuality} data-next-owner={top.nextActionOwner}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="op-title">{top.opportunityTitle}</strong>
+        <Badge variant={top.opportunityQuality === "HIGH" ? "default" : top.opportunityQuality === "LOW" ? "destructive" : "warning"}>{top.opportunityQuality} quality</Badge>
+        <span data-testid="op-next-owner"><Badge variant={top.nextActionOwner === "OWNER" ? "destructive" : "default"}>{NEXT_OWNER_LABEL[top.nextActionOwner] ?? top.nextActionOwner}</Badge></span>
+      </div>
+      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="op-fit">
+        Business fit: {top.businessFit} · Capacity: {top.capacityFit} · Evidence: {top.evidenceStrength} ({top.sourceQuality}) · Readiness: {top.executionReadiness} · Freshness: {top.freshness}
+      </p>
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="op-step">Next: {top.recommendedNextStep.replace(/_/g, " ").toLowerCase()} · Win-readiness: {top.winReadiness}</p>
+      {top.negativeReasons.length > 0 && (
+        <p style={{ margin: 0, fontSize: 12, color: "#b45309" }} data-testid="op-negatives">Watch: {top.negativeReasons.slice(0, 5).join(", ")}</p>
+      )}
+      {t && (
+        <div data-testid="op-tender" data-bid-decision={t.bidDecision} style={{ borderTop: "1px dashed #e5e7eb", paddingTop: 8, fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 4 }}>
+          <span>Tender: eligibility {t.eligibilityStatus} · EMD {t.emdOrSecurityRisk} · payment-delay {t.paymentDelayRisk} · compliance {t.complianceRisk} · deadline {t.deadlineUrgency}</span>
+          <span data-testid="op-tender-guardrail" style={{ color: "#b45309" }}>OpsIQ never submits or bids automatically — owner approval is required. {t.submissionAllowed ? "" : "Not submittable."}</span>
+        </div>
+      )}
+      {top.prepChecklist && (
+        <details data-testid="op-checklist">
+          <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>Prep checklist ({top.prepChecklist.checklistType})</summary>
+          <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>Next: {top.prepChecklist.nextChecklistAction}</p>
+          {top.prepChecklist.blockingItems.length > 0 && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#b45309" }}>Blocking: {top.prepChecklist.blockingItems.join(", ")}</p>}
+          {top.proofPackRequirements.length > 0 && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6b7280" }}>Proof pack: {top.proofPackRequirements.join(", ")}</p>}
+        </details>
+      )}
+      <span data-testid="op-validation" style={{ fontSize: 12, color: "#6b7280" }}>{top.validationRequired ? "Validation required before any scale." : ""}</span>
+      {data!.topCluster && data!.topCluster.sourceSignalCount > 1 && (
+        <span data-testid="op-cluster" style={{ fontSize: 12, color: "#6b7280" }}>{data!.topCluster.ownerVisibleSummary} ({data!.topCluster.duplicateCount} duplicate(s) collapsed)</span>
+      )}
+      <span data-testid="op-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {s.rawSignals} signal(s) · {s.clusters} cluster(s) · {s.candidates} candidate(s) · {s.tenderCandidates} tender(s) · {s.needsData} need data · {s.parkedOrRejected} parked/rejected · {s.expiredOrStale} expired/stale
+      </span>
+    </section>
+  );
+}

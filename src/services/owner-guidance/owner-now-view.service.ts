@@ -49,6 +49,8 @@ import { buildCashProfitProtection, type CashProfitProtectionAnalysis } from "@/
 import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
 import { buildOpportunityValidationPlan, type OpportunityValidationAnalysis } from "@/domain/owner-mode/opportunity-validation-experiment-engine";
 import { buildOpportunityPortfolio, type OpportunityPortfolioAnalysis } from "@/domain/owner-mode/opportunity-portfolio-capital-allocation";
+import { buildOpportunityOperatingLayer, type OpportunityOperatingAnalysis, type BusinessStateContext } from "@/domain/owner-mode/opportunity-operating-layer";
+import { mapPersistedSignalToRaw, type PersistedIntakeRow } from "@/domain/owner-mode/external-opportunity-intake";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -155,6 +157,8 @@ export interface GuidanceDeps {
   reusedHash?: (workspaceId: string) => Promise<ReusedHashAnalysis>;
   /** Optional — governed owner proof-risk adjudications (suppress cleared findings). Absent on a fake-DI test. */
   proofRiskAdjudications?: (workspaceId: string) => Promise<ProofRiskAdjudicationView[]>;
+  /** Optional — live structured external opportunity signals (PASS 10 intake). Absent on a fake-DI test. */
+  externalOpportunitySignals?: (workspaceId: string) => Promise<PersistedIntakeRow[]>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
@@ -166,10 +170,12 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getComplaintReworkLinks } = await import("@/services/execution/complaint-rework.service");
   const { getReusedHashFindings } = await import("@/services/execution/reused-hash-precheck.service");
   const { getProofRiskAdjudications } = await import("@/services/execution/proof-risk-adjudication.service");
+  const { getActiveExternalOpportunitySignals } = await import("@/services/owner-mode/external-opportunity-intake.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
     now: () => Date.now(),
+    externalOpportunitySignals: (workspaceId: string) => getActiveExternalOpportunitySignals(workspaceId),
     correlations: (workspaceId: string) => getControlCorrelations(workspaceId),
     proofOutcome: (workspaceId: string) => getProofOutcomeLinkage(workspaceId),
     disputeRisk: (workspaceId: string) => getDisputeRiskAnalysis(workspaceId),
@@ -342,6 +348,7 @@ export interface OwnerNowViewPayload {
   externalOpportunityIntelligence: ExternalOpportunityAnalysis | null;
   opportunityValidation: OpportunityValidationAnalysis | null;
   opportunityPortfolio: OpportunityPortfolioAnalysis | null;
+  opportunityOperating: OpportunityOperatingAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1094,18 +1101,45 @@ export async function getOwnerNowView(
       }, workspaceId, new Date(deps.now()).toISOString())
     : null;
 
-  // External Opportunity Intelligence v1 — evidence-backed opportunity candidates derived from internal
-  // customer-complaint patterns (structured/manual external intake extends this), each filtered through
-  // cash/profit protection, the capability gap, and the approval boundary. No signal → null.
-  const opportunitySignals = deriveExternalOpportunitySignals(complaintReworkLinks, cashProfitProtection, capabilityGaps, topConstraint);
+  // Structured external opportunity intake (PASS 10) — LIVE owner/manager/system-submitted signals persisted
+  // via /api/owner/opportunities/signals. They feed the intelligence engine alongside the internal-derived
+  // family, and drive the hardened opportunity operating layer. Missing table / no signals → empty.
+  const persistedOpportunityRows: PersistedIntakeRow[] = typeof deps.externalOpportunitySignals === "function"
+    ? await deps.externalOpportunitySignals(workspaceId).catch(() => [])
+    : [];
+  const nowMs = deps.now();
+  const cashProfitRiskActive = Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL"));
+
+  // External Opportunity Intelligence v1 — evidence-backed candidates from live structured intake PLUS the
+  // internal customer-complaint→retention family, each filtered through cash/profit protection, the
+  // capability gap, and the approval boundary. No signal → null.
+  const internalOpportunitySignals = deriveExternalOpportunitySignals(complaintReworkLinks, cashProfitProtection, capabilityGaps, topConstraint);
+  const opportunitySignals = [...persistedOpportunityRows.map((r) => mapPersistedSignalToRaw(r, nowMs)), ...internalOpportunitySignals];
   const externalOpportunityIntelligence: ExternalOpportunityAnalysis | null = opportunitySignals.length > 0
     ? buildExternalOpportunityIntelligence({
         signals: opportunitySignals,
-        context: {
-          cashProfitRiskActive: Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")),
-          capabilityGapPresent: capabilityGaps != null,
-        },
-      }, workspaceId, new Date(deps.now()).toISOString())
+        context: { cashProfitRiskActive, capabilityGapPresent: capabilityGaps != null },
+      }, workspaceId, new Date(nowMs).toISOString())
+    : null;
+
+  // Opportunity Operating Layer (hostile-hardened) — over the LIVE structured signals: source quality,
+  // current-business-fit gate, tender bid/no-bid, win-readiness, prep checklists, freshness, clustering,
+  // negative reasons, next-action ownership, proof-pack, quality bands, repeated-blocker learning. No
+  // structured signals → null (the internal retention family is served by externalOpportunityIntelligence).
+  const businessContext: BusinessStateContext = {
+    hasCriticalQualityBottleneck: (complaintReworkLinks?.aggregates.complaintLinkedCount ?? 0) >= 2 || (complaintReworkLinks?.aggregates.reworkLinkedCount ?? 0) >= 2,
+    hasCashProfitRisk: cashProfitRiskActive,
+    staffCapacity: "UNKNOWN",
+    equipmentCapacity: "UNKNOWN",
+    deliveryCapacity: "UNKNOWN",
+    ownerWorkloadHigh: Boolean(ctx.ownerOverloaded),
+    unresolvedTrainingOrSopGap: false,
+    activeHighRiskApproval: false,
+    capabilityGapPresent: capabilityGaps != null,
+    topConstraintType: topConstraint?.constraintType ?? null,
+  };
+  const opportunityOperating: OpportunityOperatingAnalysis | null = persistedOpportunityRows.length > 0
+    ? buildOpportunityOperatingLayer(persistedOpportunityRows, businessContext, workspaceId, new Date(nowMs).toISOString())
     : null;
 
   // Opportunity Validation Experiment Engine — turn each promoted candidate into the cheapest bounded,
@@ -1156,7 +1190,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating };
 }
 
 /**
