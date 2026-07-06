@@ -84,6 +84,24 @@ const PAYLOAD = {
       reviewAfterDays: 14, status: "PROPOSED", ownerVisibleExplanation: "Review escalation handling with this manager.",
     },
   },
+  sopTrainingEffectiveness: {
+    evaluations: [
+      {
+        sourceCorrectionKey: "ws-1:QUALITY_FAILURE_LOOP:UPDATE_CHECKLIST:PROOF_REVIEW", sourceTrainingKey: null,
+        sourceProcessFindingKey: "ws-1:QUALITY_FAILURE_LOOP", evaluationType: "SOP_CHECKLIST_EFFECTIVENESS",
+        targetedProblemType: "QUALITY_COMPLAINTS", baselineMetricValue: 5, currentMetricValue: 2, direction: "IMPROVED",
+        confidence: "MEDIUM", ownerVisibleSummary: "The quality complaints fell from 5 to 2 after the correction — it appears to be working.",
+        recommendedNextAction: "KEEP", approvalLevel: "OWNER", missingData: [],
+      },
+    ],
+    topEvaluation: {
+      sourceCorrectionKey: "ws-1:QUALITY_FAILURE_LOOP:UPDATE_CHECKLIST:PROOF_REVIEW", sourceTrainingKey: null,
+      sourceProcessFindingKey: "ws-1:QUALITY_FAILURE_LOOP", evaluationType: "SOP_CHECKLIST_EFFECTIVENESS",
+      targetedProblemType: "QUALITY_COMPLAINTS", baselineMetricValue: 5, currentMetricValue: 2, direction: "IMPROVED",
+      confidence: "MEDIUM", ownerVisibleSummary: "The quality complaints fell from 5 to 2 after the correction — it appears to be working.",
+      recommendedNextAction: "KEEP", approvalLevel: "OWNER", missingData: [],
+    },
+  },
 };
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -116,6 +134,10 @@ describe("OwnerProcessIntelligencePage", () => {
     await findByTestId("training-assignments-panel");
     expect(container.textContent ?? "").toMatch(/Training .* review recommendations/i);
     expect(container.textContent ?? "").toMatch(/Escalation response review/i);
+    // The effectiveness ("did the fixes work?") surface renders too.
+    await findByTestId("effectiveness-panel");
+    expect(container.textContent ?? "").toMatch(/Did the fixes work\?/i);
+    expect(container.textContent ?? "").toMatch(/appears to be working/i);
     const back = container.querySelector('[data-testid="back-to-now"]') as HTMLAnchorElement;
     expect(back.getAttribute("href")).toBe("/owner/now");
     expect(fetchMock.mock.calls.some((c) => String(c[0]).includes("/api/owner/now-view"))).toBe(true);

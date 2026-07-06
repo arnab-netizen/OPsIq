@@ -404,3 +404,83 @@ export function TrainingAssignmentsPanel({ data }: { data: TrainingAssignmentsVi
     </section>
   );
 }
+
+export interface EffectivenessEvaluationView {
+  sourceCorrectionKey: string;
+  sourceTrainingKey: string | null;
+  sourceProcessFindingKey: string;
+  evaluationType: string;
+  targetedProblemType: string;
+  baselineMetricValue: number | null;
+  currentMetricValue: number | null;
+  direction: string;
+  confidence: string;
+  ownerVisibleSummary: string;
+  recommendedNextAction: string;
+  approvalLevel: string;
+  missingData: string[];
+}
+
+export interface EffectivenessView {
+  evaluations: EffectivenessEvaluationView[];
+  topEvaluation: EffectivenessEvaluationView | null;
+}
+
+const DIRECTION_LABEL: Record<string, string> = {
+  IMPROVED: "Improved", WORSENED: "Worsened", UNCHANGED: "Unchanged", INSUFFICIENT_DATA: "Not enough data yet",
+};
+const NEXT_ACTION_LABEL: Record<string, string> = {
+  KEEP: "Keep", MODIFY: "Modify", ESCALATE: "Escalate", RETRAIN: "Retrain",
+  COLLECT_MORE_DATA: "Collect more data", DISMISS_AS_INEFFECTIVE: "Dismiss as ineffective",
+};
+const DIRECTION_VARIANT = (d: string): "destructive" | "warning" | "default" | "muted" =>
+  d === "WORSENED" ? "destructive" : d === "UNCHANGED" ? "warning" : d === "IMPROVED" ? "default" : "muted";
+
+/**
+ * EffectivenessPanel — did the corrections/training work? Prop-driven; no business logic (the before/after
+ * comparison is server-side over persisted snapshots). Each evaluation shows the targeted problem, the
+ * baseline vs current metric, the direction, the recommended next action, and the required approval;
+ * INSUFFICIENT_DATA is shown honestly. No fabricated improvement, no financial impact, no hidden score.
+ */
+export function EffectivenessPanel({ data }: { data: EffectivenessView | null }) {
+  const list = data?.evaluations ?? [];
+  if (list.length === 0) {
+    return (
+      <div data-testid="effectiveness-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No effectiveness checks yet — these appear once a correction has a prior measurement to compare
+        against.
+      </div>
+    );
+  }
+  return (
+    <section data-testid="effectiveness-panel" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <strong data-testid="eff-title">Did the fixes work?</strong>
+      <ol data-testid="eff-list" style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+        {list.map((e, i) => (
+          <li key={`${e.sourceCorrectionKey}:${i}`} data-testid="eff-item" data-direction={e.direction}
+            style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <strong data-testid="eff-item-problem">{e.targetedProblemType.replace(/_/g, " ")}</strong>
+              <span data-testid="eff-item-direction"><Badge variant={DIRECTION_VARIANT(e.direction)}>{DIRECTION_LABEL[e.direction] ?? e.direction}</Badge></span>
+              {e.baselineMetricValue !== null && e.currentMetricValue !== null && (
+                <span data-testid="eff-item-metric" style={{ fontSize: 12, color: "#6b7280" }}>{e.baselineMetricValue} → {e.currentMetricValue}</span>
+              )}
+            </div>
+            <p style={{ margin: 0, fontSize: 13 }} data-testid="eff-item-summary">{e.ownerVisibleSummary}</p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12 }}>
+              <span data-testid="eff-item-next"><Badge variant="default">Next: {NEXT_ACTION_LABEL[e.recommendedNextAction] ?? e.recommendedNextAction}</Badge></span>
+              <span data-testid="eff-item-approval">
+                <Badge variant={e.approvalLevel === "OWNER" ? "destructive" : "default"}>{APPROVAL_LABEL[e.approvalLevel] ?? e.approvalLevel}</Badge>
+              </span>
+              {e.missingData.length > 0 && <span style={{ color: "#b45309" }} data-testid="eff-item-missing">Missing: {e.missingData.join("; ")}</span>}
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
+        Effectiveness compares the problem before and after the correction. It never claims an improvement
+        without a prior measurement, and it never estimates a money figure.
+      </p>
+    </section>
+  );
+}

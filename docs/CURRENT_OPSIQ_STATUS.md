@@ -8,7 +8,23 @@
 This is the single authoritative status of OpsIQ. It supersedes the 575 historical audit narratives
 now archived under `docs/archive/2026-07-04-pre-owner-use-consolidation/`.
 
-## Staff Training Assignment Engine depth pass (latest)
+## SOP / Training Effectiveness Loop depth pass (latest)
+- **Base:** `origin/main` @ `2b958c5e` (Staff Training Assignment Engine, PR #132, merged).
+- **Branch:** `claude/sop-training-effectiveness-loop-depth-pass`.
+- **Classification:** `SOP_TRAINING_EFFECTIVENESS_LOOP_REAL_AND_OWNER_VISIBLE`.
+- **OpsIQ now checks whether the corrections/training worked.** A pure `buildEffectivenessEvaluations`
+  compares the targeted problem's metric in the previous owner-guidance snapshot (baseline) against the
+  current one and returns IMPROVED / WORSENED / UNCHANGED / INSUFFICIENT_DATA with a recommended next
+  action (KEEP/MODIFY/ESCALATE/RETRAIN/COLLECT_MORE_DATA/DISMISS). Surfaced on the Owner Now View
+  (`sopTrainingEffectiveness`) and the `/owner/process-intelligence` page under "Did the fixes work?".
+- **Governance:** no improvement claimed without before/after data + a met minimum-data threshold;
+  proposal-only corrections are not scored as implemented; no fabricated money figure; no fraud/negligence
+  labels; no hidden score. **No schema change** (reuses persisted snapshot history).
+- **Verification:** tsc 0 · governance 31-frozen/0-new · lint ratchet clean · next build compiled · 14
+  domain + 4 component + 2 page tests + laundry DB simulation (wired into CI LANE_B/LANE_A). Details:
+  `docs/remediation/sop-training-effectiveness-loop-depth-pass/`.
+
+## Staff Training Assignment Engine depth pass
 - **Base:** `origin/main` (after SOP/Checklist Correction Engine, PR #131, merged).
 - **Branch:** `claude/staff-training-assignment-engine-depth-pass`.
 - **Classification:** `STAFF_TRAINING_ASSIGNMENT_ENGINE_REAL_AND_OWNER_VISIBLE`.

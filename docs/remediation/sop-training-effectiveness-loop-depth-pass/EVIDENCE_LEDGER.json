@@ -1,0 +1,17 @@
+{
+  "pass": "sop-training-effectiveness-loop-depth-pass",
+  "title": "SOP training effectiveness loop depth pass",
+  "classification": "SOP_TRAINING_EFFECTIVENESS_LOOP_REAL_AND_OWNER_VISIBLE",
+  "schemaChange": false,
+  "baseMainHead": "2b958c5e",
+  "evaluationShapeFields": 25,
+  "evaluationTypes": ["SOP_CHECKLIST_EFFECTIVENESS","TRAINING_EFFECTIVENESS","CORRECTION_EFFECTIVENESS","DATA_INSUFFICIENT"],
+  "directions": ["IMPROVED","WORSENED","UNCHANGED","INSUFFICIENT_DATA"],
+  "nextActions": ["KEEP","MODIFY","ESCALATE","RETRAIN","COLLECT_MORE_DATA","DISMISS_AS_INEFFECTIVE"],
+  "baselineSource": "previous ownerGuidanceSnapshot metric (no new schema)",
+  "filesCreated": ["src/domain/owner-mode/sop-training-effectiveness-loop.ts","src/__tests__/owner-mode/sop-training-effectiveness-loop.test.ts","src/__tests__/components/effectiveness-panel.test.tsx","src/__tests__/execution/sop-training-effectiveness-simulation.db.test.ts"],
+  "filesChanged": ["src/services/owner-guidance/owner-now-view.service.ts","src/components/owner/ProcessIntelligencePanel.tsx","src/app/(authenticated)/owner/process-intelligence/page.tsx","src/__tests__/app/owner-process-intelligence-page.test.tsx",".github/workflows/db-verification.yml"],
+  "tests": { "domain": 14, "component": 4, "page": 2, "dbSimulationCases": 2 },
+  "gates": { "tsc": "exit 0", "governanceStrict": "31 frozen, 0 new", "lintRatchet": "PASS", "nextBuild": "compiled" },
+  "governance": { "noImprovementWithoutBeforeAfter": true, "proposalOnlyNotScoredImplemented": true, "noFakeFinancialImpact": true, "noFraudNegligenceLabels": true, "noHiddenScore": true, "emitsAuditEvents": false }
+}

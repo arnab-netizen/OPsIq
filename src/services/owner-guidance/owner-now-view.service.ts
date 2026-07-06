@@ -41,6 +41,7 @@ import { buildProcessIntelligence, type ProcessIntelligenceAnalysis } from "@/do
 import { buildProcessCorrections, type ProcessCorrectionRouting } from "@/domain/owner-mode/bottleneck-correction-routing";
 import { buildSopChecklistCorrections, type SopChecklistCorrectionAnalysis } from "@/domain/owner-mode/sop-checklist-correction-engine";
 import { buildTrainingAssignments, type TrainingAssignmentAnalysis } from "@/domain/owner-mode/staff-training-assignment-engine";
+import { buildEffectivenessEvaluations, type EffectivenessAnalysis, type EffectivenessInputItem } from "@/domain/owner-mode/sop-training-effectiveness-loop";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -288,6 +289,13 @@ export interface OwnerNowViewPayload {
    * assignment is PROPOSED/NEEDS_DATA — never auto-assigned; coaching/review only, no HR/discipline.
    */
   trainingAssignments: TrainingAssignmentAnalysis | null;
+  /**
+   * SOP / Training Effectiveness Loop — did the correction/training work? Compares the targeted problem's
+   * metric in the previous owner-guidance snapshot (baseline) against the current one, per finding with a
+   * routed correction. Honest INSUFFICIENT_DATA when there is no baseline. Null on the fake-DI path or when
+   * there is no correction to evaluate.
+   */
+  sopTrainingEffectiveness: EffectivenessAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -977,6 +985,18 @@ export async function getOwnerNowView(
   });
   const changes: DetectedChange[] = prev ? detectChanges(prevState(prev), state) : [];
 
+  // SOP / Training Effectiveness Loop — for each finding with a routed correction, compare the targeted
+  // problem's metric in the previous snapshot (baseline) against the current one. A prior snapshot means the
+  // problem has been under correction since the last review; with no baseline the loop returns
+  // INSUFFICIENT_DATA. Pure derivation over persisted snapshot history — no new schema.
+  const sopTrainingEffectiveness: EffectivenessAnalysis | null = (processIntelligence && processCorrections)
+    ? buildEffectivenessEvaluations(
+        deriveEffectivenessItems(processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, prev, state, workspaceId),
+        workspaceId,
+        new Date(deps.now()).toISOString(),
+      )
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -996,7 +1016,66 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness };
+}
+
+/**
+ * Derive the effectiveness-loop inputs: for each finding with a routed correction whose targeted problem
+ * maps to a snapshot metric, compare the previous snapshot (baseline) against the current state. A prior
+ * snapshot means the problem has been under correction since the last review; no prior snapshot →
+ * no baseline → INSUFFICIENT_DATA. Pure over existing derived data + persisted snapshot metrics.
+ */
+function deriveEffectivenessItems(
+  intel: ProcessIntelligenceAnalysis,
+  routing: ProcessCorrectionRouting,
+  sop: SopChecklistCorrectionAnalysis | null,
+  training: TrainingAssignmentAnalysis | null,
+  prev: GuidanceSnapshotRow | null,
+  state: BusinessStateSnapshot,
+  workspaceId: string,
+): EffectivenessInputItem[] {
+  // Which finding types map to a persisted snapshot metric (baseline vs current).
+  const METRIC: Record<string, { problem: string; cur: number; base: number | null }> = {
+    QUALITY_FAILURE_LOOP: { problem: "QUALITY_COMPLAINTS", cur: state.complaintsCount, base: prev ? prev.complaintsCount : null },
+    REWORK_LOOP: { problem: "REWORK_EVENTS", cur: state.reworkCount, base: prev ? prev.reworkCount : null },
+    PROOF_QUALITY_BREAKDOWN: { problem: "WEAK_PROOF", cur: state.overdueProofCount, base: prev ? prev.overdueProofCount : null },
+  };
+  const items: EffectivenessInputItem[] = [];
+  for (const f of intel.findings) {
+    const m = METRIC[f.findingType];
+    if (!m) continue;
+    const correction = routing.corrections.find((c) => c.sourceFindingType === f.findingType);
+    if (!correction) continue;
+    const sopDraft = sop?.drafts.find((d) => d.sourceProcessFindingKey === `${workspaceId}:${f.findingType}` && d.status !== "NEEDS_DATA") ?? null;
+    const trainingItem = training?.assignments.find((t) => t.sourceProcessFindingKey === `${workspaceId}:${f.findingType}`) ?? null;
+    const kind: EffectivenessInputItem["kind"] = sopDraft ? "SOP" : trainingItem ? "TRAINING" : "CORRECTION";
+    items.push({
+      kind,
+      sourceCorrectionKey: correction.correctionId,
+      sourceTrainingKey: trainingItem ? `${trainingItem.sourceProcessFindingKey}:${trainingItem.trainingType}` : null,
+      sourceProcessFindingKey: `${workspaceId}:${f.findingType}`,
+      targetedProblemType: m.problem,
+      // A prior snapshot means the flagged problem has been under correction since the last owner review.
+      active: prev !== null,
+      windowElapsed: prev !== null,
+      minDataMet: m.base !== null && m.base >= 2,
+      baselineMetricValue: m.base,
+      currentMetricValue: m.cur,
+      baselineWindow: "previous owner-guidance snapshot",
+      evaluationWindow: "current owner-guidance snapshot",
+      supportingBeforeEventIds: [],
+      supportingAfterEventIds: f.supportingOperationalEventIds,
+      supportingProofIds: f.supportingProofIds,
+      relatedOperationalEventIds: f.supportingOperationalEventIds,
+      relatedEscalationIds: f.supportingEscalationIds,
+      relatedProfitLeak: f.relatedProfitLeak,
+      relatedConstraint: f.relatedConstraint,
+      relatedSLO: f.relatedSLO,
+      approvalLevel: correction.requiredApprovalLevel,
+      missingData: m.base === null ? ["no earlier snapshot to use as a baseline"] : [],
+    });
+  }
+  return items;
 }
 
 function prevState(row: GuidanceSnapshotRow): BusinessStateSnapshot {
