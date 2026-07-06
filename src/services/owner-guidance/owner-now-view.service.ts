@@ -48,6 +48,7 @@ import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type Capability
 import { buildCashProfitProtection, type CashProfitProtectionAnalysis } from "@/domain/owner-mode/cash-profit-protection";
 import { buildExternalOpportunityIntelligence, type ExternalOpportunityAnalysis, type RawOpportunitySignal } from "@/domain/owner-mode/external-opportunity-intelligence";
 import { buildOpportunityValidationPlan, type OpportunityValidationAnalysis } from "@/domain/owner-mode/opportunity-validation-experiment-engine";
+import { buildOpportunityPortfolio, type OpportunityPortfolioAnalysis } from "@/domain/owner-mode/opportunity-portfolio-capital-allocation";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -340,6 +341,7 @@ export interface OwnerNowViewPayload {
    */
   externalOpportunityIntelligence: ExternalOpportunityAnalysis | null;
   opportunityValidation: OpportunityValidationAnalysis | null;
+  opportunityPortfolio: OpportunityPortfolioAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1120,6 +1122,21 @@ export async function getOwnerNowView(
       )
     : null;
 
+  // Opportunity Portfolio / Capital Allocation — allocate each candidate into a governed portfolio decision;
+  // capital and scale go only to opportunities whose validation has passed. No candidates → null.
+  const opportunityPortfolio: OpportunityPortfolioAnalysis | null = externalOpportunityIntelligence && externalOpportunityIntelligence.candidates.length > 0
+    ? buildOpportunityPortfolio(
+        externalOpportunityIntelligence.candidates,
+        opportunityValidation,
+        {
+          cashProfitRiskActive: Boolean(cashProfitProtection?.signals.some((s) => s.category === "CASH" || s.severity === "CRITICAL")),
+          capabilityGapPresent: capabilityGaps != null,
+        },
+        workspaceId,
+        new Date(deps.now()).toISOString(),
+      )
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1139,7 +1156,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio };
 }
 
 /**

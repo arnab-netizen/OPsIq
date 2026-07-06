@@ -1150,3 +1150,91 @@ export function ValidationPanel({ data }: { data: OpportunityValidationView | nu
     </section>
   );
 }
+
+// ── Opportunity Portfolio / Capital Allocation (depth pass) ────────────────────────────────────────────
+
+export interface PortfolioItemView {
+  opportunityType: string;
+  signalSourceType: string;
+  title: string;
+  targetCustomerSegment: string;
+  portfolioDecision: string;
+  validationStatus: string;
+  confidence: string;
+  cashRisk: string;
+  capitalAtRiskBand: string;
+  expectedReturnBand: string;
+  requiresOwnerApproval: boolean;
+  approvalLevel: string;
+  scaleBlockedReason: string | null;
+  recommendedAction: string;
+  riskIfIgnored: string;
+  supportingRefs: string[];
+}
+
+export interface PortfolioSummaryView {
+  itemsConsidered: number;
+  validateFirst: number;
+  ownerReviewRequired: number;
+  parkedOrRejected: number;
+  killed: number;
+  scaleCandidates: number;
+  doNow: number;
+}
+
+export interface OpportunityPortfolioView {
+  items: PortfolioItemView[];
+  topItem: PortfolioItemView | null;
+  capitalDisciplineNote: string;
+  summary: PortfolioSummaryView;
+}
+
+const PORTFOLIO_DECISION_LABEL: Record<string, string> = {
+  DO_NOW: "Do now (small scale)", SCALE_CANDIDATE: "Scale candidate — owner approval",
+  VALIDATE_CHEAPLY: "Validate cheaply first", NEEDS_DATA: "Collect data first",
+  OWNER_REVIEW_REQUIRED: "Owner review required", PARK: "Park", REJECT: "Reject", KILL: "Stop — validation failed",
+};
+
+/**
+ * PortfolioPanel — Executive Cockpit standard for the Opportunity Portfolio / Capital Allocation engine: the
+ * single top portfolio decision (what to do with capital next), the validation status that gates it, why
+ * scaling is or isn't unblocked, qualitative capital-at-risk + expected-return bands (never fabricated money),
+ * and an always-present capital-discipline note (capital follows proof). Deferred detail collapsed; a summary,
+ * never a raw dump. No profit guarantee, no reckless scale, no hidden score.
+ */
+export function PortfolioPanel({ data }: { data: OpportunityPortfolioView | null }) {
+  const top = data?.topItem ?? null;
+  if (!top) {
+    return (
+      <div data-testid="portfolio-empty" style={{ padding: 16, color: "#6b7280" }}>
+        No opportunity in the portfolio yet — capital is allocated only once there is a candidate worth deciding on.
+      </div>
+    );
+  }
+  const s = data!.summary;
+  const scalable = top.scaleBlockedReason === null;
+  return (
+    <section data-testid="portfolio-panel" data-decision={top.portfolioDecision}
+      style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <strong data-testid="port-title">{PORTFOLIO_DECISION_LABEL[top.portfolioDecision] ?? top.portfolioDecision}</strong>
+        <span data-testid="port-approval-badge"><Badge variant={top.requiresOwnerApproval ? "destructive" : "default"}>{top.requiresOwnerApproval ? "Owner approval required" : "Manager can act"}</Badge></span>
+        <span data-testid="port-validation" style={{ fontSize: 12, color: "#6b7280" }}>Validation: {top.validationStatus}</span>
+      </div>
+      <p style={{ margin: 0, fontSize: 13 }} data-testid="port-action">{top.recommendedAction}</p>
+      <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }} data-testid="port-what">{top.title} · for {top.targetCustomerSegment}</p>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 12, color: "#6b7280" }}>
+        <span data-testid="port-capital">Capital at risk: {top.capitalAtRiskBand}</span>
+        <span data-testid="port-return">Expected return: {top.expectedReturnBand}</span>
+        <span data-testid="port-confidence">{top.confidence} confidence</span>
+      </div>
+      {scalable
+        ? <span data-testid="port-scale" style={{ fontSize: 12, color: "#15803d" }}>Scaling is unblocked — validation has passed.</span>
+        : <span data-testid="port-scale" style={{ fontSize: 12, color: "#b45309" }}>Scaling blocked: {top.scaleBlockedReason}</span>}
+      <span data-testid="port-discipline" style={{ fontSize: 12, color: "#6b7280" }}>{data!.capitalDisciplineNote}</span>
+      <span data-testid="port-summary" style={{ fontSize: 12, color: "#6b7280" }}>
+        {s.itemsConsidered} opportunity(ies) · {s.doNow} do-now · {s.scaleCandidates} scale · {s.validateFirst} validate/collect · {s.ownerReviewRequired} owner review · {s.parkedOrRejected} parked/rejected · {s.killed} stopped
+      </span>
+    </section>
+  );
+}
