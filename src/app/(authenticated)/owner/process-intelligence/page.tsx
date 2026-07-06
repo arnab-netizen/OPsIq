@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/primitives";
-import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CockpitGroup, CockpitSubsection, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView } from "@/components/owner/ProcessIntelligencePanel";
+import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, CockpitGroup, CockpitSubsection, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView } from "@/components/owner/ProcessIntelligencePanel";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -43,6 +43,7 @@ export default function OwnerProcessIntelligencePage() {
   const [workload, setWorkload] = useState<OwnerWorkloadReductionView | null>(null);
   const [approvalPolicy, setApprovalPolicy] = useState<ApprovalPolicyView | null>(null);
   const [capabilityGaps, setCapabilityGaps] = useState<CapabilityGapView | null>(null);
+  const [cashProfit, setCashProfit] = useState<CashProfitProtectionView | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +61,7 @@ export default function OwnerProcessIntelligencePage() {
       setWorkload((data.ownerWorkloadReduction as OwnerWorkloadReductionView) ?? null);
       setApprovalPolicy((data.approvalPolicy as ApprovalPolicyView) ?? null);
       setCapabilityGaps((data.capabilityGaps as CapabilityGapView) ?? null);
+      setCashProfit((data.cashProfitProtection as CashProfitProtectionView) ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load the process view.");
     } finally {
@@ -103,6 +105,10 @@ export default function OwnerProcessIntelligencePage() {
           </section>
 
           {/* SECONDARY — progressive disclosure: collapsed groups the owner opens only when needed. */}
+          <CockpitGroup testid="cockpit-group-cash" title="Protect cash & profit" subtitle="Where cash or margin is at risk, and the one protective action for each">
+            <CashProfitPanel data={cashProfit} />
+          </CockpitGroup>
+
           <CockpitGroup testid="cockpit-group-followthrough" title="Fix & follow-through" subtitle="SOP/checklist changes, training, and whether the fixes worked">
             <CockpitSubsection title="SOP & checklist changes"><SopChecklistCorrectionsPanel data={sopCorrections} /></CockpitSubsection>
             <CockpitSubsection title="Training & review"><TrainingAssignmentsPanel data={training} /></CockpitSubsection>
