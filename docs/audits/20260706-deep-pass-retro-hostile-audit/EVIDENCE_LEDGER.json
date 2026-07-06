@@ -1,0 +1,142 @@
+{
+  "audit": "deep-pass-retro-hostile-audit",
+  "date": "2026-07-06",
+  "branch": "claude/deep-pass-retro-hostile-audit",
+  "mainHead": "4f6bd557",
+  "verdict": "RETRO_AUDIT_NON_BLOCKING_GAPS_CONTINUE_WITH_CARRY_FORWARD",
+  "claims": [
+    {
+      "claim": "Every wired DB simulation actually executed in CI (not just a green lane)",
+      "pass": "ALL",
+      "evidenceFile": ".github/workflows/db-verification.yml + PR #143 LANE_B run 28767039729 log",
+      "evidenceLinesOrCommand": "LANE_B explicit list = 37 unique *.db.test.ts; LANE_B log: 'Test Files 37 passed (37)' + 'LANE_B_DB_VERIFIED'",
+      "classification": "REAL",
+      "confidence": "HIGH",
+      "remainingDoubt": "Passes 1-6 individual per-merge logs were reviewed in prior sessions; current proof is the full-list run."
+    },
+    {
+      "claim": "SOP/Training Effectiveness Loop is a real correction->SOP/training->effectiveness loop",
+      "pass": "1",
+      "evidenceFile": "src/domain/owner-mode/{sop-checklist-correction-engine(210),staff-training-assignment-engine(216),sop-training-effectiveness-loop(192)}.ts",
+      "evidenceLinesOrCommand": "wc -l; now-view fields sopChecklistCorrections/trainingAssignments/sopTrainingEffectiveness; 3 DB sims wired (grep count 2 each)",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "none material"
+    },
+    {
+      "claim": "Owner Workload Reduction v2 surfaces avoidable burden with safe reductions + risk guardrail",
+      "pass": "2",
+      "evidenceFile": "src/domain/owner-mode/owner-workload-reduction.ts (272)",
+      "evidenceLinesOrCommand": "now-view field ownerWorkloadReduction; owner-workload-reduction sim; clean-workspace false-positive test",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "none material"
+    },
+    {
+      "claim": "Approval Threshold/Auto-Action Policy: nothing auto-executes without the right approval",
+      "pass": "3",
+      "evidenceFile": "src/domain/owner-mode/approval-threshold-policy.ts (347)",
+      "evidenceLinesOrCommand": "now-view field approvalPolicy; approval-threshold-policy sim; DATA_INSUFFICIENT filter test",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "none material"
+    },
+    {
+      "claim": "Capability Gap Detector recommends governed system capabilities; material stays owner-controlled",
+      "pass": "4",
+      "evidenceFile": "src/domain/owner-mode/system-capability-gap-detector.ts (268)",
+      "evidenceLinesOrCommand": "now-view field capabilityGaps; system-capability-gap-detector sim",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "none material"
+    },
+    {
+      "claim": "UI/UX Executive Cockpit Consolidation enforces progressive disclosure / anti-overload",
+      "pass": "5",
+      "evidenceFile": "src/components/owner/ProcessIntelligencePanel.tsx (CockpitGroup/CockpitSubsection)",
+      "evidenceLinesOrCommand": "component + page tests; collapsed <details> groups",
+      "classification": "REAL_AND_OWNER_VISIBLE_PRESENTATION",
+      "confidence": "HIGH",
+      "remainingDoubt": "presentation layer — no DB path by design"
+    },
+    {
+      "claim": "Cash/Profit Protection surfaces real risk + honest data gaps; no fabricated money",
+      "pass": "6",
+      "evidenceFile": "src/domain/owner-mode/cash-profit-protection.ts (284)",
+      "evidenceLinesOrCommand": "now-view field cashProfitProtection; cash-profit-protection sim; defaulted-zero-financials fix",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "none material"
+    },
+    {
+      "claim": "External Opportunity Intelligence v1: intake->classify/dedupe/tender-screen/promote, no auto-submit/scale",
+      "pass": "7",
+      "evidenceFile": "src/domain/owner-mode/external-opportunity-intelligence.ts (515)",
+      "evidenceLinesOrCommand": "PR #139 LANE_B log: '✓ external-opportunity-intelligence-simulation.db.test.ts (3 tests)' + Test Files 33",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "one internal auto-derived family live (G3)"
+    },
+    {
+      "claim": "Opportunity Validation Experiment Engine: cheapest bounded falsifiable experiment, no ready-to-scale",
+      "pass": "8",
+      "evidenceFile": "src/domain/owner-mode/opportunity-validation-experiment-engine.ts (470)",
+      "evidenceLinesOrCommand": "PR #140 LANE_B log: Test Files 34 (+3 tests) + LANE_B_DB_VERIFIED",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "none material"
+    },
+    {
+      "claim": "Opportunity Portfolio: scale gated behind PASSED validation; KILL on FAILED",
+      "pass": "9",
+      "evidenceFile": "src/domain/owner-mode/opportunity-portfolio-capital-allocation.ts (313)",
+      "evidenceLinesOrCommand": "PR #141 LANE_B log: Test Files 35 (+3) incl. scaling-gate proof",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "coarse candidate<->experiment match (G2)"
+    },
+    {
+      "claim": "Structured External Opportunity Intake is a live operating layer, not an enum shell",
+      "pass": "10",
+      "evidenceFile": "src/domain/owner-mode/{external-opportunity-intake(308),opportunity-operating-layer(620)}.ts + POST /api/owner/opportunities/signals",
+      "evidenceLinesOrCommand": "PR #142 LANE_B log: Test Files 36 (+5) + migrations deployed + LANE_B_DB_VERIFIED",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "capacity context UNKNOWN (G1)"
+    },
+    {
+      "claim": "Validation Outcome Persistence lets the live portfolio reach real SCALE/KILL on evidence",
+      "pass": "11",
+      "evidenceFile": "src/domain/owner-mode/validation-outcome.ts (184) + POST /api/owner/opportunities/validation-outcome",
+      "evidenceLinesOrCommand": "PR #143 LANE_B log: Test Files 37 / Tests 293 + migrations deployed + LANE_B_DB_VERIFIED",
+      "classification": "REAL_AND_OWNER_VISIBLE",
+      "confidence": "HIGH",
+      "remainingDoubt": "coarse opportunityKey matching (G2)"
+    },
+    {
+      "claim": "No fabricated money / hidden score / unsupported fraud-HR language in the 11 audited passes",
+      "pass": "ALL",
+      "evidenceFile": "src/domain/owner-mode/*.ts",
+      "evidenceLinesOrCommand": "grep -rInE 'hidden score|fraud|negligence|payroll|firing|profit guarantee|win probability' -> only legitimate input-labels/compliance-guardrails in unrelated modules (input-catalog, compliance-boundary, action-status-policy, owner-onboarding); zero violations in audited passes",
+      "classification": "REAL",
+      "confidence": "HIGH",
+      "remainingDoubt": "grep is heuristic; per-pass unit tests also assert absence of these patterns"
+    },
+    {
+      "claim": "Baseline is green at the audited HEAD",
+      "pass": "ALL",
+      "evidenceFile": "tsc + governance:scan:strict",
+      "evidenceLinesOrCommand": "npx tsc --noEmit -> 0; governance -> 31 frozen / 0 new",
+      "classification": "REAL",
+      "confidence": "HIGH",
+      "remainingDoubt": "none"
+    }
+  ],
+  "gaps": [
+    {"id": "G1", "severity": "LOW", "blocksPass12": false, "note": "capacity context UNKNOWN in live business-fit gate; honest, never guessed"},
+    {"id": "G2", "severity": "LOW", "blocksPass12": false, "note": "coarse candidate<->experiment<->outcome matching by opportunityKey"},
+    {"id": "G3", "severity": "LOW", "blocksPass12": false, "note": "one internal auto-derived opportunity family (complaint->retention)"},
+    {"id": "G4", "severity": "MEDIUM", "blocksPass12": false, "note": "no execution/delegation tracking yet — the objective of PASS 12"},
+    {"id": "G5", "severity": "MEDIUM", "blocksPass12": false, "note": "no broad browser E2E for the opportunity loop — the objective of PASS 13"}
+  ]
+}
