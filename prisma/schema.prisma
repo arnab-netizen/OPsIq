@@ -4286,6 +4286,38 @@ model OpportunityValidationOutcome {
   @@map("opportunity_validation_outcomes")
 }
 
+/// Governed opportunity execution task — the trackable, delegated unit of work derived from an opportunity's
+/// prep checklist / tender readiness / proof-pack / validation action / portfolio decision, with an action
+/// owner and completion evidence. OpsIQ only drafts/recommends: it never submits a tender, contacts a
+/// customer, spends, signs, or certifies. Owner-approval tasks can never be auto-completed; evidence-required
+/// tasks cannot COMPLETE without evidence. Additive, non-destructive; UNIQUE (workspace_id, task_key) makes
+/// updates idempotent per task.
+model OpportunityExecutionTask {
+  id                String    @id @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  taskKey           String    @map("task_key")
+  opportunityKey    String    @map("opportunity_key")
+  sourceType        String    @map("source_type")
+  sourceKey         String    @map("source_key")
+  taskType          String    @map("task_type")
+  nextActionOwner   String    @map("next_action_owner")
+  status            String    @default("PROPOSED")
+  approvalLevel     String    @map("approval_level")
+  evidenceRefs      String[]  @map("evidence_refs")
+  linkedProofIds    String[]  @map("linked_proof_ids") @db.Uuid
+  blockingReason    String?   @map("blocking_reason") @db.Text
+  outcomeSummary    String?   @map("outcome_summary") @db.Text
+  completedByUserId String?   @map("completed_by_user_id") @db.Uuid
+  completedByRole   String?   @map("completed_by_role")
+  completedAt       DateTime? @map("completed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @default(now()) @map("updated_at")
+
+  @@unique([workspaceId, taskKey])
+  @@index([workspaceId, opportunityKey])
+  @@map("opportunity_execution_tasks")
+}
+
 /// Minimal per-event operational complaint/rework record (one generic model handles both via
 /// eventType — no ambiguity). Links accepted proof to the real complaint/rework that contradicted
 /// it so the business impact of bad accepted work becomes measurable. Deliberately NOT a CRM/

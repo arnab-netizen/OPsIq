@@ -52,6 +52,7 @@ import { buildOpportunityPortfolio, type OpportunityPortfolioAnalysis } from "@/
 import { buildOpportunityOperatingLayer, type OpportunityOperatingAnalysis, type BusinessStateContext } from "@/domain/owner-mode/opportunity-operating-layer";
 import { mapPersistedSignalToRaw, type PersistedIntakeRow } from "@/domain/owner-mode/external-opportunity-intake";
 import type { ValidationOutcomeView } from "@/services/owner-mode/validation-outcome.service";
+import { deriveOpportunityExecutionTasks, type OpportunityExecutionAnalysis, type PersistedTaskStatus } from "@/domain/owner-mode/opportunity-execution";
 import { aggregateCredibility, buildEvidenceCredibility, type CredibilityFinding, type CredibilityProofRow } from "@/domain/owner-mode/evidence-credibility-graph";
 import { evaluateBusinessControlSLOs, type BusinessControlHealth } from "@/domain/owner-mode/business-control-slo";
 import type { ControlCorrelationReport } from "@/domain/owner-mode/control-correlation";
@@ -162,6 +163,8 @@ export interface GuidanceDeps {
   externalOpportunitySignals?: (workspaceId: string) => Promise<PersistedIntakeRow[]>;
   /** Optional — persisted opportunity validation outcomes (PASS 11) that gate live portfolio scaling. Absent on a fake-DI test. */
   validationOutcomes?: (workspaceId: string) => Promise<ValidationOutcomeView[]>;
+  /** Optional — persisted opportunity execution-task statuses (PASS 12). Absent on a fake-DI test. */
+  executionTasks?: (workspaceId: string) => Promise<Map<string, PersistedTaskStatus>>;
 }
 
 async function resolveDefaultDeps(): Promise<GuidanceDeps> {
@@ -175,12 +178,14 @@ async function resolveDefaultDeps(): Promise<GuidanceDeps> {
   const { getProofRiskAdjudications } = await import("@/services/execution/proof-risk-adjudication.service");
   const { getActiveExternalOpportunitySignals } = await import("@/services/owner-mode/external-opportunity-intake.service");
   const { getActiveValidationOutcomes } = await import("@/services/owner-mode/validation-outcome.service");
+  const { getPersistedExecutionTasks } = await import("@/services/owner-mode/opportunity-execution.service");
   return {
     db: db as unknown as GuidanceDb,
     uuid: () => randomUUID(),
     now: () => Date.now(),
     externalOpportunitySignals: (workspaceId: string) => getActiveExternalOpportunitySignals(workspaceId),
     validationOutcomes: (workspaceId: string) => getActiveValidationOutcomes(workspaceId),
+    executionTasks: (workspaceId: string) => getPersistedExecutionTasks(workspaceId),
     correlations: (workspaceId: string) => getControlCorrelations(workspaceId),
     proofOutcome: (workspaceId: string) => getProofOutcomeLinkage(workspaceId),
     disputeRisk: (workspaceId: string) => getDisputeRiskAnalysis(workspaceId),
@@ -355,6 +360,7 @@ export interface OwnerNowViewPayload {
   opportunityPortfolio: OpportunityPortfolioAnalysis | null;
   opportunityOperating: OpportunityOperatingAnalysis | null;
   opportunityValidationOutcomes: ValidationOutcomeView[] | null;
+  opportunityExecution: OpportunityExecutionAnalysis | null;
 }
 
 export interface ProofRiskAdjudicationSummary {
@@ -1193,6 +1199,27 @@ export async function getOwnerNowView(
       )
     : null;
 
+  // Opportunity Execution & Delegation Tracking (PASS 12) — derive governed, trackable execution tasks from
+  // the live operating layer (prep checklist / tender readiness / proof pack) + portfolio + validation hints,
+  // overlaying persisted task statuses (completed evidence-backed work). No structured opportunities → null.
+  const persistedExecutionTasks: Map<string, PersistedTaskStatus> = typeof deps.executionTasks === "function"
+    ? await deps.executionTasks(workspaceId).catch(() => new Map<string, PersistedTaskStatus>())
+    : new Map<string, PersistedTaskStatus>();
+  const opportunityExecution: OpportunityExecutionAnalysis | null = opportunityOperating && opportunityOperating.opportunities.length > 0
+    ? deriveOpportunityExecutionTasks(
+        opportunityOperating.opportunities,
+        {
+          portfolioOwnerReview: opportunityPortfolio?.topItem?.portfolioDecision === "OWNER_REVIEW_REQUIRED",
+          portfolioScaleCandidate: opportunityPortfolio?.topItem?.portfolioDecision === "SCALE_CANDIDATE",
+          validationExperimentPending: Boolean(opportunityValidation?.topExperiment) && !validationOutcomes.some((o) => o.result === "PASSED" || o.result === "FAILED"),
+          validationDataCollectionOnly: opportunityValidation?.topExperiment?.experimentType === "DATA_COLLECTION_ONLY",
+        },
+        persistedExecutionTasks,
+        workspaceId,
+        new Date(nowMs).toISOString(),
+      )
+    : null;
+
   const view = buildOwnerNowView({ ...ctx, changes });
   const stepByStep = view.topOwnerActions.map((i) => stepFor(i, ag));
   const beginnerExplanation = buildBeginner(view, stepByStep);
@@ -1212,7 +1239,7 @@ export async function getOwnerNowView(
     },
   });
 
-  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null };
+  return { view, whatChanged: changes, beginnerExplanation, stepByStep, archetype: ag.archetype, generatedFromLiveData: true, workloadBudget, topConstraint, topProfitLeak, topGamingSignal, topCredibilityConcern, businessControlHealth, controlCorrelations, proofOutcomeLinkage: proofOutcomeReport, disputeRisk, complaintReworkLinks, operationalEventHealth: complaintReworkLinks?.eventHealth ?? null, reusedProofFindings, proofRiskAdjudications, proofRiskAdjudicationSummary: proofRiskAdjudications ? summarizeAdjudications(proofRiskAdjudications) : null, timingEvidence: (fastCompletionSignal || escalationTimingSignal) ? { fastCompletion: fastCompletionSignal, escalationTiming: escalationTimingSignal } : null, processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, sopTrainingEffectiveness, ownerWorkloadReduction, approvalPolicy, capabilityGaps, cashProfitProtection, externalOpportunityIntelligence, opportunityValidation, opportunityPortfolio, opportunityOperating, opportunityValidationOutcomes: validationOutcomes.length > 0 ? validationOutcomes : null, opportunityExecution };
 }
 
 /**
