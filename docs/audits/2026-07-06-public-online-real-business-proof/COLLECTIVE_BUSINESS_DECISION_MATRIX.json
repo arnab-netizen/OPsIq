@@ -1,0 +1,46 @@
+{
+  "audit": "public-online-real-business-proof",
+  "pass": "27C",
+  "matrix": "COLLECTIVE_BUSINESS_DECISION",
+  "date": "2026-07-06",
+  "purpose": "Correctness of the collective decision when multiple governed modules conflict inside ONE business at once (the hardest case): a scale/growth temptation while quality is unresolved, cost/margin is missing, capacity/staffing is weak, and owner workload is already high. Proven by DB simulation test 9 (workspace: collective).",
+  "conflictInputs": [
+    { "module": "quality", "signal": "unresolved rework/complaints", "correctionType": "REVIEW_PROCESS_STEP", "severity": "CRITICAL" },
+    { "module": "cost/capacity data", "signal": "cost-margin + capacity unknown", "correctionType": "COLLECT_MISSING_DATA", "severity": "HIGH" },
+    { "module": "scale", "signal": "expansion temptation", "correctionType": "ESCALATE_TO_OWNER", "severity": "HIGH", "requiresOwnerApproval": true }
+  ],
+  "collectiveResolution": {
+    "actionableTopAction": {
+      "taskKey": "pc:quality",
+      "executionRoute": "CREATE_CORRECTION_TASK",
+      "rank": "most-severe actionable (CRITICAL)",
+      "rule": "quality is fixed FIRST before any scale — the top route is the correction, not the growth"
+    },
+    "dataGap": {
+      "taskKey": "pc:costdata",
+      "executionRoute": "CREATE_MISSING_DATA_TASK",
+      "rule": "cost/margin + capacity must be captured before scale can even be considered"
+    },
+    "escalatedDecision": {
+      "taskKey": "pc:scale",
+      "executionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "approvalLevel": "OWNER_APPROVAL_REQUIRED",
+      "rule": "scale is never auto; owner decides, and only after quality proof + validation + capacity/cost proof"
+    },
+    "blockedActions": ["scale before validation", "spend before cost data", "growth while quality unresolved"],
+    "monitorOnlyReason": "Low-value or unproven growth stays monitor-only until quality + capacity + cost are proven."
+  },
+  "coherenceChecks": [
+    { "check": "the single actionable top is the quality fix, not the scale temptation", "result": "PASS", "provenBy": "test 9 (topRoute.taskKey=pc:quality, route=CREATE_CORRECTION_TASK)" },
+    { "check": "scale decision is owner-gated, never auto", "result": "PASS", "provenBy": "test 9 (pc:scale approvalLevel=OWNER_APPROVAL_REQUIRED)" },
+    { "check": "cost/capacity is a data task, not a fabricated figure", "result": "PASS", "provenBy": "test 9 (pc:costdata route=CREATE_MISSING_DATA_TASK) + test 7 (no currency/percentage)" },
+    { "check": "no unsafe scale/spend route is emitted", "result": "PASS", "provenBy": "test 6 (no SPEND/SUBMIT route across all archetypes incl. collective)" },
+    { "check": "all four OpsIQ dimensions modeled in the collective case", "result": "PASS", "detail": "stage=diagnosis/decision; condition=multi-module conflict; mode/phase=correction+data-gap+escalated-scale; human reality=owner workload + staffing weakness flagged" }
+  ],
+  "summary": {
+    "collectiveDecisionCoherent": true,
+    "prioritisationCorrect": "fix-quality-first > gather-cost/capacity > owner-decides-scale",
+    "recklessGrowthBlocked": true,
+    "fabricationDetected": false
+  }
+}
