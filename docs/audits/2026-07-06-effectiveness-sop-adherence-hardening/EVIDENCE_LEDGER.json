@@ -1,0 +1,73 @@
+{
+  "audit": "effectiveness-sop-adherence-hardening",
+  "date": "2026-07-06",
+  "branch": "claude/effectiveness-sop-adherence-classification-hardening",
+  "baseMainHead": "6bb628d6355c8901a2e5f1260a93830d1ec25094",
+  "note": "Developed on top of the PASS 25 tip (adjudication auth) so it includes #157's changes; will be rebased onto main once #157 merges before opening the PR (no two unmerged feature PRs at once).",
+  "filesAdded": [
+    "src/domain/owner-mode/effectiveness-attribution.ts",
+    "src/__tests__/owner-mode/effectiveness-attribution.test.ts",
+    "src/__tests__/execution/effectiveness-sop-adherence-classification.db.test.ts",
+    "docs/audits/2026-07-06-effectiveness-sop-adherence-hardening/EFFECTIVENESS_CLASSIFICATION_MATRIX.json",
+    "docs/audits/2026-07-06-effectiveness-sop-adherence-hardening/FINAL_EFFECTIVENESS_HARDENING_REPORT.md",
+    "docs/audits/2026-07-06-effectiveness-sop-adherence-hardening/EVIDENCE_LEDGER.json"
+  ],
+  "filesChanged": [
+    "src/domain/owner-mode/sop-training-effectiveness-loop.ts",
+    "src/domain/owner-mode/process-execution-bridge-expansion.ts",
+    "src/services/owner-guidance/owner-now-view.service.ts",
+    "src/components/owner/ProcessIntelligencePanel.tsx",
+    "src/__tests__/owner-mode/process-execution-bridge-expansion.test.ts",
+    "src/__tests__/execution/workload-capability-sop-training-bridge.db.test.ts",
+    "src/__tests__/components/effectiveness-panel.test.tsx",
+    ".github/workflows/db-verification.yml"
+  ],
+  "schemaChange": "None — reuses the persisted ProcessExecutionTask state; no new columns.",
+  "classificationsAdded": ["CorrectionExecutionState", "SopAdherenceState", "TrainingEffectivenessState", "EffectivenessAttributionState"],
+  "falseAttributionProtections": [
+    "Engine no longer emits 'it appears to be working'.",
+    "A measured improvement is attributed only when the correction's persisted task is COMPLETED with evidence.",
+    "Improvement without execution proof → IMPROVED_BUT_EXECUTION_NOT_PROVEN (execution-evidence request).",
+    "Execution without a post-execution measurement → EXECUTED_BUT_OUTCOME_NOT_PROVEN (reassessment).",
+    "Verified improvement is MONITOR_ONLY and NOT completable (cannot be 'completed' to fake success).",
+    "Weak completion evidence can never reach a VERIFIED state."
+  ],
+  "sopAdherenceProtections": [
+    "SOP adopted (change made) is distinct from SOP followed (adherence-verified).",
+    "Adherence VERIFIED requires a post-adoption re-check with evidence; otherwise NEEDS_RECHECK."
+  ],
+  "trainingEffectivenessProtections": [
+    "Training assigned ≠ completed ≠ effective.",
+    "Effectiveness requires a post-training reassessment; weak completion → cannot be verified effective."
+  ],
+  "tests": {
+    "attributionClassifierUnit": 24,
+    "effectivenessClassificationDbSim": 12,
+    "updatedBridgeAndPanelTests": "process-execution-bridge-expansion.test.ts, effectiveness-panel.test.tsx, workload-capability-sop-training-bridge.db.test.ts all green under the new attribution routing"
+  },
+  "dbSimsWiredIntoLanes": [
+    "src/__tests__/execution/process-execution-affordances.db.test.ts",
+    "src/__tests__/execution/workload-capability-sop-training-bridge.db.test.ts",
+    "src/__tests__/execution/adjudication-authorization-cross-scope.db.test.ts",
+    "src/__tests__/execution/effectiveness-sop-adherence-classification.db.test.ts"
+  ],
+  "localGates": {
+    "prismaValidate": "pass",
+    "tscNoEmit": "pass",
+    "governanceScanStrict": "0 new (31 baseline matched)",
+    "lintRatchet": "pass (changed_file_lint_errors 0)",
+    "nextBuild": "pass",
+    "broadSuite": "168 files / 1438 tests green (execution + owner-mode + components)"
+  },
+  "safetyLedger": {
+    "noFakeMoneyProfitRoiPercentages": true,
+    "noHiddenScore": true,
+    "noStaffDisciplineLanguage": true,
+    "monitorOnlyVerifiedImprovementNotCompletable": true,
+    "regressionsSurfaceAsActionRoutes": true,
+    "workspaceIsolationHolds": true,
+    "cleanWorkspaceFabricatesNothing": true,
+    "noUnsafeAutonomyAdded": true
+  },
+  "r3Status": "REMOVED"
+}

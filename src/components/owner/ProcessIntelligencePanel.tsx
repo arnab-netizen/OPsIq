@@ -452,6 +452,8 @@ export interface EffectivenessEvaluationView {
   recommendedNextAction: string;
   approvalLevel: string;
   missingData: string[];
+  /** First-class attribution verdict (PASS 26): whether the change may be attributed to the correction. */
+  attributionState?: string;
 }
 
 export interface EffectivenessView {
@@ -462,6 +464,20 @@ export interface EffectivenessView {
 const DIRECTION_LABEL: Record<string, string> = {
   IMPROVED: "Improved", WORSENED: "Worsened", UNCHANGED: "Unchanged", INSUFFICIENT_DATA: "Not enough data yet",
 };
+// Honest, owner-facing label for the attribution verdict — never claims a fix worked without proven execution.
+const ATTRIBUTION_LABEL: Record<string, string> = {
+  MONITOR_ONLY_VERIFIED_IMPROVEMENT: "Verified improved (monitor)", VERIFIED_IMPROVED_AFTER_EXECUTION: "Verified improved",
+  VERIFIED_UNCHANGED_AFTER_EXECUTION: "Executed, unchanged", VERIFIED_WORSENED_AFTER_EXECUTION: "Executed, worsened",
+  IMPROVED_BUT_EXECUTION_NOT_PROVEN: "Improved — not attributed (no execution proof)",
+  EXECUTED_BUT_OUTCOME_NOT_PROVEN: "Executed — outcome not yet reassessed",
+  OUTCOME_CHANGED_BUT_ATTRIBUTION_WEAK: "Changed — attribution weak",
+  INSUFFICIENT_EXECUTION_EVIDENCE: "No execution evidence yet", INSUFFICIENT_OUTCOME_EVIDENCE: "No outcome evidence yet",
+  NEEDS_REASSESSMENT: "Needs reassessment", UNKNOWN: "Unknown",
+};
+const ATTRIBUTION_VARIANT = (a: string | undefined): "destructive" | "warning" | "default" | "muted" =>
+  a === "VERIFIED_WORSENED_AFTER_EXECUTION" ? "destructive"
+    : a === "MONITOR_ONLY_VERIFIED_IMPROVEMENT" || a === "VERIFIED_IMPROVED_AFTER_EXECUTION" ? "default"
+    : a === "IMPROVED_BUT_EXECUTION_NOT_PROVEN" || a === "OUTCOME_CHANGED_BUT_ATTRIBUTION_WEAK" ? "warning" : "muted";
 const NEXT_ACTION_LABEL: Record<string, string> = {
   KEEP: "Keep", MODIFY: "Modify", ESCALATE: "Escalate", RETRAIN: "Retrain",
   COLLECT_MORE_DATA: "Collect more data", DISMISS_AS_INEFFECTIVE: "Dismiss as ineffective",
@@ -495,6 +511,9 @@ export function EffectivenessPanel({ data }: { data: EffectivenessView | null })
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <strong data-testid="eff-item-problem">{e.targetedProblemType.replace(/_/g, " ")}</strong>
               <span data-testid="eff-item-direction"><Badge variant={DIRECTION_VARIANT(e.direction)}>{DIRECTION_LABEL[e.direction] ?? e.direction}</Badge></span>
+              {e.attributionState && (
+                <span data-testid="eff-item-attribution"><Badge variant={ATTRIBUTION_VARIANT(e.attributionState)}>{ATTRIBUTION_LABEL[e.attributionState] ?? e.attributionState}</Badge></span>
+              )}
               {e.baselineMetricValue !== null && e.currentMetricValue !== null && (
                 <span data-testid="eff-item-metric" style={{ fontSize: 12, color: "#6b7280" }}>{e.baselineMetricValue} → {e.currentMetricValue}</span>
               )}

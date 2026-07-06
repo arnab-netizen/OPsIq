@@ -24,7 +24,8 @@ import type { OwnerWorkloadFinding, ReductionAction, WorkloadType } from "@/doma
 import type { SystemCapabilityRecommendation } from "@/domain/owner-mode/system-capability-gap-detector";
 import type { SopChecklistCorrection } from "@/domain/owner-mode/sop-checklist-correction-engine";
 import type { TrainingAssignment } from "@/domain/owner-mode/staff-training-assignment-engine";
-import type { EffectivenessEvaluation, EffectivenessDirection, NextAction } from "@/domain/owner-mode/sop-training-effectiveness-loop";
+import type { EffectivenessEvaluation } from "@/domain/owner-mode/sop-training-effectiveness-loop";
+import type { EffectivenessAttributionState } from "@/domain/owner-mode/effectiveness-attribution";
 
 const owner = randomUUID(), mgr = randomUUID();
 const wsL = randomUUID(), wsClean = randomUUID(), bizL = randomUUID();
@@ -80,15 +81,15 @@ function training(key: string, over: Partial<TrainingAssignment> = {}): Training
     ownerVisibleExplanation: "Coach this operator on the step; coaching, not an accusation.", evaluatedAt: AT, ...over,
   };
 }
-function effectiveness(key: string, direction: EffectivenessDirection, next: NextAction, over: Partial<EffectivenessEvaluation> = {}): EffectivenessEvaluation {
+function effectiveness(key: string, attribution: EffectivenessAttributionState, over: Partial<EffectivenessEvaluation> = {}): EffectivenessEvaluation {
   return {
     workspaceId: wsL, sourceCorrectionKey: key, sourceTrainingKey: null, sourceProcessFindingKey: `${wsL}:REWORK_LOOP`,
     evaluationType: "SOP_CHECKLIST_EFFECTIVENESS" as EffectivenessEvaluation["evaluationType"], targetedProblemType: "REWORK_LOOP",
-    baselineWindow: "prev", evaluationWindow: "curr", baselineMetricValue: 10, currentMetricValue: 4, direction, confidence: "MEDIUM",
+    baselineWindow: "prev", evaluationWindow: "curr", baselineMetricValue: 10, currentMetricValue: 4, direction: "IMPROVED", confidence: "MEDIUM",
     supportingBeforeEventIds: ["b1"], supportingAfterEventIds: ["af1"], supportingProofIds: [], relatedOperationalEventIds: [],
     relatedEscalationIds: [], relatedProfitLeak: null, relatedConstraint: null, relatedSLO: null,
-    ownerVisibleSummary: "The hand-off change is being re-checked against the rework rate.", recommendedNextAction: next,
-    approvalLevel: "MANAGER", missingData: [], evaluatedAt: AT, ...over,
+    ownerVisibleSummary: "The hand-off change is being re-checked against the rework rate.", recommendedNextAction: "KEEP",
+    approvalLevel: "MANAGER", missingData: [], evaluatedAt: AT, attributionState: attribution, ...over,
   };
 }
 
@@ -114,8 +115,8 @@ function fullAnalysis() {
     sop: { workspaceId: wsL, topDraft: null, evaluatedAt: AT, drafts: [sop("c-sopstandalone")] },
     training: { workspaceId: wsL, topAssignment: null, evaluatedAt: AT, assignments: [training("c-trstandalone")] },
     effectiveness: { workspaceId: wsL, topEvaluation: null, evaluatedAt: AT, evaluations: [
-      effectiveness("c-effgood", "IMPROVED", "KEEP"),
-      effectiveness("c-effbad", "WORSENED", "RETRAIN"),
+      effectiveness("c-effgood", "MONITOR_ONLY_VERIFIED_IMPROVEMENT"),
+      effectiveness("c-effbad", "VERIFIED_WORSENED_AFTER_EXECUTION"),
     ] },
   };
   const expansion = buildBridgeExpansion(expansionInputs, wsL);
@@ -200,9 +201,9 @@ describe.skipIf(!SHOULD_RUN_DB_TESTS)("[db] Workload/Capability/SOP-Training/Com
     expect(good!.executionRoute).toBe("MONITOR_ONLY");
     const complete = await applyProcessExecutionAction({ workspaceId: wsL, actorId: owner, actorRole: "owner", taskKey: "eff:c-effgood", action: "COMPLETE", evidenceRefs: ["x"] }, deps);
     expect(complete.ok).toBe(false); // monitor-only cannot be "completed" to claim it worked
-    // A WORSENED re-check is an actionable, evidence-gated retrain task.
+    // A worsened-after-execution re-check is an actionable owner escalation (the fix failed).
     const bad = await task(wsL, "eff:c-effbad");
-    expect(bad!.executionRoute).toBe("CREATE_TRAINING_TASK");
+    expect(bad!.executionRoute).toBe("CREATE_OWNER_APPROVAL_TASK");
   });
 
   it("9. the cockpit still yields a single top actionable route (no owner overload)", () => {

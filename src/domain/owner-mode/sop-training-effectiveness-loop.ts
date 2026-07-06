@@ -17,6 +17,9 @@
  */
 
 import type { ApprovalLevel } from "./process-intelligence";
+import {
+  classifyEffectivenessAttribution, type CorrectionExecutionState, type EffectivenessAttributionState,
+} from "./effectiveness-attribution";
 
 export type EvaluationType =
   | "SOP_CHECKLIST_EFFECTIVENESS"
@@ -41,6 +44,10 @@ export interface EffectivenessInputItem {
   windowElapsed: boolean;
   /** Is the minimum data threshold met (enough events to trust the comparison)? */
   minDataMet: boolean;
+  /** The persisted execution state of the correction/SOP/training (PASS 26). Absent → derived from `active`
+   *  (ASSIGNED when active, PROPOSED otherwise) so a caller that has not wired the task state still gets an
+   *  honest, non-attributing verdict — an improvement is NEVER attributed without proven execution. */
+  executionState?: CorrectionExecutionState;
   baselineMetricValue: number | null;
   currentMetricValue: number | null;
   baselineWindow: string;
@@ -84,6 +91,9 @@ export interface EffectivenessEvaluation {
   approvalLevel: ApprovalLevel; // 23
   missingData: string[]; // 24
   evaluatedAt: string; // 25
+  /** First-class attribution verdict (PASS 26): the only field that decides whether a fix may be called
+   *  effective. A VERIFIED/monitor state is reachable only with proven execution AND a post-execution outcome. */
+  attributionState: EffectivenessAttributionState; // 26
 }
 
 export interface EffectivenessAnalysis {
@@ -137,12 +147,31 @@ function evaluateItem(item: EffectivenessInputItem, workspaceId: string, at: str
     else { direction = "UNCHANGED"; }
     confidence = item.minDataMet ? "MEDIUM" : "LOW";
     const problem = item.targetedProblemType.toLowerCase().replace(/_/g, " ");
-    summary = direction === "IMPROVED"
-      ? `The ${problem} fell from ${base} to ${cur} after the correction — it appears to be working.`
-      : direction === "WORSENED"
+    // WORSENED/UNCHANGED never claim the fix worked, so their honest before/after wording stays. IMPROVED is the
+    // ONLY false-attribution risk: it may only be called "working" with proven execution, so its wording comes
+    // from the attribution classifier (verified-after-execution vs improved-but-execution-not-proven). (PASS 26)
+    summary = direction === "WORSENED"
       ? `The ${problem} rose from ${base} to ${cur} after the correction — it is not working and needs a rethink.`
-      : `The ${problem} is unchanged (${base} → ${cur}) after the correction — it has not moved the outcome.`;
+      : direction === "UNCHANGED"
+      ? `The ${problem} is unchanged (${base} → ${cur}) after the correction — it has not moved the outcome.`
+      : `The ${problem} fell from ${base} to ${cur}.`; // improved metric stated as fact; attribution handled below
   }
+
+  // Attribution (PASS 26): separate execution evidence from outcome. A real post-execution OUTCOME exists only
+  // when there is a baseline, an elapsed window, and enough data — independent of whether the correction was
+  // executed. The RAW metric direction (not the `active`-gated `direction`) feeds the classifier, so an
+  // improvement that occurred WITHOUT proven execution is caught as IMPROVED_BUT_EXECUTION_NOT_PROVEN rather
+  // than being silently swallowed. Execution state comes from the persisted task (or is conservatively derived
+  // from `active`), so nothing is ever attributed as "working" without proven execution.
+  const hasPostExecutionOutcome = base !== null && cur !== null && item.windowElapsed && item.minDataMet;
+  const metricDirection: EffectivenessDirection = !hasPostExecutionOutcome
+    ? "INSUFFICIENT_DATA"
+    : cur! < base! ? "IMPROVED" : cur! > base! ? "WORSENED" : "UNCHANGED";
+  const executionState: CorrectionExecutionState = item.executionState ?? (item.active ? "ASSIGNED" : "PROPOSED");
+  const attribution = classifyEffectivenessAttribution({ executionState, outcomeDirection: metricDirection, hasPostExecutionOutcome });
+  // For a measured IMPROVED result, the owner-visible line must be attribution-honest (verified vs unattributed),
+  // never "it appears to be working". Insufficient/worsened/unchanged keep their already-honest wording.
+  if (!insufficient && direction === "IMPROVED") summary = attribution.ownerVisibleSummary;
 
   const evaluationType: EvaluationType = insufficient && (base === null || !item.windowElapsed || !item.minDataMet)
     ? "DATA_INSUFFICIENT"
@@ -174,6 +203,7 @@ function evaluateItem(item: EffectivenessInputItem, workspaceId: string, at: str
     approvalLevel: item.approvalLevel,
     missingData: item.missingData,
     evaluatedAt: at,
+    attributionState: attribution.attribution,
   };
 }
 

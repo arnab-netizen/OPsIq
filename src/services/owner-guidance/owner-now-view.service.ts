@@ -42,6 +42,7 @@ import { buildProcessCorrections, type ProcessCorrectionRouting } from "@/domain
 import { buildSopChecklistCorrections, type SopChecklistCorrectionAnalysis } from "@/domain/owner-mode/sop-checklist-correction-engine";
 import { buildTrainingAssignments, type TrainingAssignmentAnalysis } from "@/domain/owner-mode/staff-training-assignment-engine";
 import { buildEffectivenessEvaluations, type EffectivenessAnalysis, type EffectivenessInputItem } from "@/domain/owner-mode/sop-training-effectiveness-loop";
+import { correctionExecutionStateFromTask } from "@/domain/owner-mode/effectiveness-attribution";
 import { buildOwnerWorkloadReduction, type OwnerWorkloadReductionAnalysis, type WorkloadSignals } from "@/domain/owner-mode/owner-workload-reduction";
 import { buildApprovalPolicy, type ApprovalPolicyAnalysis, type PolicyActionCandidate, type PolicyActionType, type RiskCategory, type ImpactLevel, type PolicyConfidence } from "@/domain/owner-mode/approval-threshold-policy";
 import { buildCapabilityGapDetector, type CapabilityGapAnalysis, type CapabilityGapSignal, type MissingCapabilityType, type GapConfidence } from "@/domain/owner-mode/system-capability-gap-detector";
@@ -1060,13 +1061,21 @@ export async function getOwnerNowView(
   });
   const changes: DetectedChange[] = prev ? detectChanges(prevState(prev), state) : [];
 
+  // PASS 26: read the persisted execution tasks ONCE so effectiveness attribution uses the REAL execution state
+  // (completed-with-evidence vs proposed/in-progress) rather than assuming nothing was executed, and so the
+  // bridge status annotation below reuses the same read. Best-effort — an unavailable table yields [].
+  const persistedProcessTasks = (processIntelligence && processCorrections)
+    ? await getPersistedProcessTasks(workspaceId).catch(() => [])
+    : [];
+
   // SOP / Training Effectiveness Loop — for each finding with a routed correction, compare the targeted
   // problem's metric in the previous snapshot (baseline) against the current one. A prior snapshot means the
   // problem has been under correction since the last review; with no baseline the loop returns
-  // INSUFFICIENT_DATA. Pure derivation over persisted snapshot history — no new schema.
+  // INSUFFICIENT_DATA. Attribution (PASS 26) uses the persisted execution state so an improvement is only
+  // called effective when the correction was actually completed with evidence. Pure derivation — no new schema.
   const sopTrainingEffectiveness: EffectivenessAnalysis | null = (processIntelligence && processCorrections)
     ? buildEffectivenessEvaluations(
-        deriveEffectivenessItems(processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, prev, state, workspaceId),
+        deriveEffectivenessItems(processIntelligence, processCorrections, sopChecklistCorrections, trainingAssignments, prev, state, workspaceId, persistedProcessTasks),
         workspaceId,
         new Date(deps.now()).toISOString(),
       )
@@ -1152,7 +1161,7 @@ export async function getOwnerNowView(
   // routes keep their PROPOSED default. The top action skips terminal (completed/rejected) tasks.
   if (processExecution && processExecution.routes.length > 0) {
     try {
-      const persisted = await getPersistedProcessTasks(workspaceId);
+      const persisted = persistedProcessTasks;
       if (persisted.length > 0) {
         const statusByKey = new Map(persisted.map((t) => [t.taskKey, t.status]));
         for (const r of processExecution.routes) {
@@ -1312,7 +1321,11 @@ function deriveEffectivenessItems(
   prev: GuidanceSnapshotRow | null,
   state: BusinessStateSnapshot,
   workspaceId: string,
+  persistedTasks: { taskKey: string; status: string; evidenceRefs: string[]; notes: string | null }[],
 ): EffectivenessInputItem[] {
+  // PASS 26: index the persisted execution tasks by key so each correction's REAL execution state drives
+  // attribution. A correction is scored as executed only when its task is COMPLETED with evidence.
+  const taskByKey = new Map(persistedTasks.map((t) => [t.taskKey, t]));
   // Which finding types map to a persisted snapshot metric (baseline vs current).
   const METRIC: Record<string, { problem: string; cur: number; base: number | null }> = {
     QUALITY_FAILURE_LOOP: { problem: "QUALITY_COMPLAINTS", cur: state.complaintsCount, base: prev ? prev.complaintsCount : null },
@@ -1328,20 +1341,25 @@ function deriveEffectivenessItems(
     const sopDraft = sop?.drafts.find((d) => d.sourceProcessFindingKey === `${workspaceId}:${f.findingType}` && d.status !== "NEEDS_DATA") ?? null;
     const trainingItem = training?.assignments.find((t) => t.sourceProcessFindingKey === `${workspaceId}:${f.findingType}`) ?? null;
     const kind: EffectivenessInputItem["kind"] = sopDraft ? "SOP" : trainingItem ? "TRAINING" : "CORRECTION";
+    // PASS 26 honesty gate, now execution-linked: derive the REAL execution state from the persisted
+    // `pc:<correctionId>` task. A correction is scored as executed (active) ONLY when its task is COMPLETED
+    // with evidence — so an improvement is attributed to the correction only with proven execution, and a
+    // never-executed correction still returns INSUFFICIENT_EXECUTION_EVIDENCE rather than a causal claim.
+    const persistedTask = taskByKey.get(`pc:${correction.correctionId}`);
+    const executionState = correctionExecutionStateFromTask(persistedTask
+      ? { status: persistedTask.status, evidenceCount: persistedTask.evidenceRefs.length, hasOutcomeNote: !!(persistedTask.notes && persistedTask.notes.trim()) }
+      : null);
+    const executed = executionState === "EXECUTED_WITH_EVIDENCE" || executionState === "EXECUTED_WITH_WEAK_EVIDENCE";
     items.push({
       kind,
       sourceCorrectionKey: correction.correctionId,
       sourceTrainingKey: trainingItem ? `${trainingItem.sourceProcessFindingKey}:${trainingItem.trainingType}` : null,
       sourceProcessFindingKey: `${workspaceId}:${f.findingType}`,
       targetedProblemType: m.problem,
-      // Honesty gate (PASS 19 / C1): OpsIQ has NO persisted execution-linkage proving this correction/SOP/
-      // training was actually approved and executed — a prior snapshot only proves a review window elapsed,
-      // not that anyone acted. Claiming `active` from snapshot presence made effectiveness assert
-      // "it appears to be working" for corrections that were never executed (correlation as causation).
-      // Until the correction->execution bridge persists an approved-SOP / completed-training link, `active`
-      // is false, so the pure engine honestly returns INSUFFICIENT_DATA ("not confirmed approved/executed")
-      // instead of a fabricated causal verdict. `windowElapsed` still reflects the real elapsed review window.
-      active: false,
+      // `active` (scored as implemented) is true ONLY when the persisted task proves execution with evidence;
+      // `executionState` carries the precise lifecycle stage so attribution never claims a fix worked without it.
+      active: executed,
+      executionState,
       windowElapsed: prev !== null,
       minDataMet: m.base !== null && m.base >= 2,
       baselineMetricValue: m.base,

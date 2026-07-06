@@ -33,6 +33,7 @@ import type { CapabilityGapAnalysis, SystemCapabilityRecommendation } from "./sy
 import type { SopChecklistCorrectionAnalysis, SopChecklistCorrection } from "./sop-checklist-correction-engine";
 import type { TrainingAssignmentAnalysis, TrainingAssignment } from "./staff-training-assignment-engine";
 import type { EffectivenessAnalysis, EffectivenessEvaluation } from "./sop-training-effectiveness-loop";
+import { ROUTE_FOR_ATTRIBUTION, isMonitorOnlyVerified } from "./effectiveness-attribution";
 
 type Severity = BridgedExecutionRoute["severity"];
 
@@ -187,25 +188,40 @@ export function bridgeTrainingAssignment(t: TrainingAssignment): BridgedExecutio
 
 // ── 5. SOP / training effectiveness — the ADHERENCE RE-CHECK (R3) ────────────────────────────────────────────
 
-/** A verified improvement is monitor-only (never a false "it worked" claim); a worse/flat result is actionable. */
+/**
+ * Route an effectiveness evaluation by its first-class ATTRIBUTION state (PASS 26), not by the raw metric
+ * direction. A verified improvement (execution proven + post-execution improvement) is MONITOR_ONLY and never
+ * completable — it can never be "completed" to fake success. Every other state routes to the honest next step:
+ * executed-but-not-reassessed → reassessment; improved-but-execution-not-proven / weak → an execution-evidence
+ * request (the improvement is NOT attributed); worsened-after-execution → owner escalation; unknown → data task.
+ */
 export function bridgeEffectivenessEvaluation(e: EffectivenessEvaluation): BridgedExecutionRoute {
   const evidenceRefs = [...e.supportingBeforeEventIds, ...e.supportingAfterEventIds, ...e.supportingProofIds];
+  const attribution = e.attributionState;
+  const attrRoute = ROUTE_FOR_ATTRIBUTION[attribution];
+  const monitorOnly = isMonitorOnlyVerified(attribution);
   let route: ExecutionRoute; let owner: BridgeActionOwner; let approvalLevel: BridgeApprovalLevel;
   let severity: Severity; let reason: string | null = null; let evidence: string[];
-  if (e.direction === "IMPROVED") {
+  if (monitorOnly) {
     route = "MONITOR_ONLY"; owner = "NO_ACTION"; approvalLevel = "NEEDS_DATA"; severity = "LOW"; evidence = [];
-    reason = "Verified adherent — the targeted metric improved over the review window; monitored, no new action.";
-  } else if (e.direction === "INSUFFICIENT_DATA") {
+    reason = "Verified: the correction was executed with evidence and the outcome improved after execution — monitored, no new action unless the issue repeats.";
+  } else if (attrRoute === "CREATE_OWNER_APPROVAL_TASK") {
+    // Worsened after a proven execution — the fix failed; escalate to the owner.
+    route = "CREATE_OWNER_APPROVAL_TASK"; owner = "OWNER"; approvalLevel = "OWNER_APPROVAL_REQUIRED"; severity = "HIGH";
+    evidence = ["the supporting evidence for the owner follow-up decision"];
+  } else if (attrRoute === "CREATE_REASSESSMENT_TASK") {
+    // Executed but outcome not proven, or unchanged after execution — re-check, evidence-gated.
+    route = "CREATE_REASSESSMENT_TASK"; owner = "MANAGER"; approvalLevel = "MANAGER_APPROVAL_REQUIRED";
+    severity = attribution === "VERIFIED_UNCHANGED_AFTER_EXECUTION" ? "MEDIUM" : "MEDIUM";
+    evidence = ["the post-execution re-check result and its before/after evidence"];
+  } else if (attrRoute === "CREATE_EVIDENCE_REQUEST") {
+    // Improvement/outcome exists but execution is not proven or too weak — request execution proof; NOT attributed.
+    route = "CREATE_EVIDENCE_REQUEST"; owner = "OPSIQ_DRAFT"; approvalLevel = "MANAGER_APPROVAL_REQUIRED"; severity = "LOW";
+    evidence = ["execution / completion proof that the correction was actually carried out"];
+  } else {
+    // Insufficient outcome data / unknown — collect the missing before/after evidence.
     route = "CREATE_MISSING_DATA_TASK"; owner = "STAFF"; approvalLevel = "NEEDS_DATA"; severity = "LOW";
     evidence = e.missingData.length ? e.missingData : ["before/after evidence for the review window"];
-  } else {
-    // WORSENED / UNCHANGED — the fix has not proven itself; route the recommended next action, evidence-gated.
-    severity = e.direction === "WORSENED" ? "HIGH" : "MEDIUM";
-    if (e.recommendedNextAction === "ESCALATE") { route = "CREATE_OWNER_APPROVAL_TASK"; owner = "OWNER"; approvalLevel = "OWNER_APPROVAL_REQUIRED"; }
-    else if (e.recommendedNextAction === "RETRAIN") { route = "CREATE_TRAINING_TASK"; owner = "MANAGER"; approvalLevel = "MANAGER_APPROVAL_REQUIRED"; }
-    else if (e.recommendedNextAction === "MODIFY") { route = "CREATE_SOP_CHECKLIST_TASK"; owner = "OPSIQ_DRAFT"; approvalLevel = "MANAGER_APPROVAL_REQUIRED"; }
-    else { route = "CREATE_REASSESSMENT_TASK"; owner = "MANAGER"; approvalLevel = "MANAGER_APPROVAL_REQUIRED"; }
-    evidence = ["evidence of adherence and the re-check result (before/after)"];
   }
   return mk({
     workspaceId: e.workspaceId, taskKey: `eff:${e.sourceCorrectionKey}`, sourceFamily: "EFFECTIVENESS_RECHECK",

@@ -18,7 +18,8 @@ import type { OwnerWorkloadFinding, ReductionAction, WorkloadType } from "@/doma
 import type { SystemCapabilityRecommendation } from "@/domain/owner-mode/system-capability-gap-detector";
 import type { SopChecklistCorrection } from "@/domain/owner-mode/sop-checklist-correction-engine";
 import type { TrainingAssignment } from "@/domain/owner-mode/staff-training-assignment-engine";
-import type { EffectivenessEvaluation, EffectivenessDirection, NextAction } from "@/domain/owner-mode/sop-training-effectiveness-loop";
+import type { EffectivenessEvaluation } from "@/domain/owner-mode/sop-training-effectiveness-loop";
+import type { EffectivenessAttributionState } from "@/domain/owner-mode/effectiveness-attribution";
 import type { ProcessCorrection, ProcessCorrectionRouting } from "@/domain/owner-mode/bottleneck-correction-routing";
 
 const WS = "ws-exp";
@@ -65,15 +66,15 @@ function training(over: Partial<TrainingAssignment> = {}): TrainingAssignment {
     ownerVisibleExplanation: "Coach this operator on the step; this is coaching, not an accusation.", evaluatedAt: AT, ...over,
   };
 }
-function effectiveness(direction: EffectivenessDirection, next: NextAction, over: Partial<EffectivenessEvaluation> = {}): EffectivenessEvaluation {
+function effectiveness(attribution: EffectivenessAttributionState, over: Partial<EffectivenessEvaluation> = {}): EffectivenessEvaluation {
   return {
     workspaceId: WS, sourceCorrectionKey: "c-eff", sourceTrainingKey: null, sourceProcessFindingKey: `${WS}:REWORK_LOOP`,
     evaluationType: "SOP_CHECKLIST_EFFECTIVENESS" as EffectivenessEvaluation["evaluationType"], targetedProblemType: "REWORK_LOOP",
-    baselineWindow: "prev", evaluationWindow: "curr", baselineMetricValue: 10, currentMetricValue: 4, direction, confidence: "MEDIUM",
+    baselineWindow: "prev", evaluationWindow: "curr", baselineMetricValue: 10, currentMetricValue: 4, direction: "IMPROVED", confidence: "MEDIUM",
     supportingBeforeEventIds: ["b1"], supportingAfterEventIds: ["af1"], supportingProofIds: [], relatedOperationalEventIds: [],
     relatedEscalationIds: [], relatedProfitLeak: null, relatedConstraint: null, relatedSLO: null,
     ownerVisibleSummary: "The hand-off checklist change is being re-checked against the rework rate.",
-    recommendedNextAction: next, approvalLevel: "MANAGER", missingData: [], evaluatedAt: AT, ...over,
+    recommendedNextAction: "KEEP", approvalLevel: "MANAGER", missingData: [], evaluatedAt: AT, attributionState: attribution, ...over,
   };
 }
 
@@ -143,27 +144,30 @@ describe("process-execution-bridge-expansion (PASS 23)", () => {
     expect(ownerTr.actionOwner).toBe("OWNER");
   });
 
-  // ── Effectiveness re-check (R3) ──
-  it("8. an IMPROVED re-check is MONITOR_ONLY and claims no action — never a false 'it worked' task", () => {
-    const r = bridgeEffectivenessEvaluation(effectiveness("IMPROVED", "KEEP"));
+  // ── Effectiveness re-check by ATTRIBUTION state (R3, PASS 26) ──
+  it("8. a verified improvement is MONITOR_ONLY and claims no action — never a false 'it worked' task", () => {
+    const r = bridgeEffectivenessEvaluation(effectiveness("MONITOR_ONLY_VERIFIED_IMPROVEMENT"));
     expect(r.sourceFamily).toBe("EFFECTIVENESS_RECHECK");
     expect(r.executionRoute).toBe("MONITOR_ONLY");
-    expect(r.notActionableReason).toMatch(/verified adherent/i);
+    expect(r.notActionableReason).toMatch(/verified/i);
     expect(r.requiredEvidence).toHaveLength(0);
   });
-  it("9. a WORSENED re-check becomes an evidence-gated actionable follow-up (retrain/modify/escalate)", () => {
-    const retrain = bridgeEffectivenessEvaluation(effectiveness("WORSENED", "RETRAIN"));
-    expect(retrain.executionRoute).toBe("CREATE_TRAINING_TASK");
-    expect(retrain.severity).toBe("HIGH");
-    expect(retrain.requiredEvidence.join(" ")).toMatch(/adherence/i);
-    expect(bridgeEffectivenessEvaluation(effectiveness("WORSENED", "ESCALATE")).actionOwner).toBe("OWNER");
-    expect(bridgeEffectivenessEvaluation(effectiveness("UNCHANGED", "MODIFY")).executionRoute).toBe("CREATE_SOP_CHECKLIST_TASK");
+  it("9. worsened-after-execution escalates to the owner; unchanged/executed-not-proven route to reassessment", () => {
+    const worsened = bridgeEffectivenessEvaluation(effectiveness("VERIFIED_WORSENED_AFTER_EXECUTION"));
+    expect(worsened.executionRoute).toBe("CREATE_OWNER_APPROVAL_TASK");
+    expect(worsened.actionOwner).toBe("OWNER");
+    expect(worsened.severity).toBe("HIGH");
+    expect(bridgeEffectivenessEvaluation(effectiveness("VERIFIED_UNCHANGED_AFTER_EXECUTION")).executionRoute).toBe("CREATE_REASSESSMENT_TASK");
+    expect(bridgeEffectivenessEvaluation(effectiveness("EXECUTED_BUT_OUTCOME_NOT_PROVEN")).executionRoute).toBe("CREATE_REASSESSMENT_TASK");
   });
-  it("10. an INSUFFICIENT_DATA re-check routes to a data task (never claims the fix worked)", () => {
-    const r = bridgeEffectivenessEvaluation(effectiveness("INSUFFICIENT_DATA", "COLLECT_MORE_DATA", { missingData: ["after-window events"] }));
-    expect(r.executionRoute).toBe("CREATE_MISSING_DATA_TASK");
-    expect(r.approvalLevel).toBe("NEEDS_DATA");
-    expect(r.requiredEvidence).toContain("after-window events");
+  it("10. an improvement WITHOUT proven execution is not attributed — it routes to an execution-evidence request", () => {
+    const r = bridgeEffectivenessEvaluation(effectiveness("IMPROVED_BUT_EXECUTION_NOT_PROVEN"));
+    expect(r.executionRoute).toBe("CREATE_EVIDENCE_REQUEST");
+    expect(r.requiredEvidence.join(" ")).toMatch(/execution|completion proof/i);
+    // Insufficient outcome data routes to a data task.
+    const data = bridgeEffectivenessEvaluation(effectiveness("INSUFFICIENT_OUTCOME_EVIDENCE", { missingData: ["after-window events"] }));
+    expect(data.executionRoute).toBe("CREATE_MISSING_DATA_TASK");
+    expect(data.requiredEvidence).toContain("after-window events");
   });
 
   // ── Combiner + collapse + isolation ──
@@ -201,7 +205,7 @@ describe("process-execution-bridge-expansion (PASS 23)", () => {
       bridgeCapabilityRecommendation(capability()),
       bridgeSopDraft(sop()),
       bridgeTrainingAssignment(training()),
-      bridgeEffectivenessEvaluation(effectiveness("WORSENED", "RETRAIN")),
+      bridgeEffectivenessEvaluation(effectiveness("VERIFIED_WORSENED_AFTER_EXECUTION")),
     ];
     for (const r of all) {
       const blob = JSON.stringify(r);
