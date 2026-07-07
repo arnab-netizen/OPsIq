@@ -1,0 +1,43 @@
+{
+  "title": "Minimum Owner Cockpit — Evidence Ledger (PASS 36)",
+  "date": "2026-07-07",
+  "branch": "claude/minimum-owner-cockpit-proven-capability-surface",
+  "baseMain": "71879cc1df007446d88fe2fe703965c4f1e8b384",
+  "filesAdded": [
+    "src/components/owner/MinimumOwnerCockpit.tsx (presentational, 10-section spec, labelled controls)",
+    "src/app/(authenticated)/owner/cockpit/page.tsx (reads now-view, POSTs process-execution; no new backend)",
+    "src/__tests__/components/minimum-owner-cockpit.test.tsx (20 tests)",
+    "tests/browser/46-owner-cockpit.spec.ts (browser E2E)"
+  ],
+  "filesChanged": [
+    ".github/workflows/owner-pilot-e2e.yml (wired 46-owner-cockpit.spec.ts into the owner-pilot browser lane)"
+  ],
+  "backendReuse": {
+    "read": "GET /api/owner/now-view → getOwnerNowView (existing, OWNER_VIEW-gated, workspace-scoped)",
+    "action": "POST /api/owner/process-execution → applyProcessExecutionAction (existing, OWNER_MANAGE-gated, server-authoritative, re-derives routes)",
+    "noDuplicateLogic": true,
+    "noGuardWeakened": true
+  },
+  "backendProofReused_LANE_B": [
+    "process-correction-execution-bridge.db.test.ts — evidence gating (EVIDENCE_REQUIRED), owner-only approve, audit event, workspace isolation",
+    "process-execution-affordances.db.test.ts — interactive action affordances against real DB",
+    "adjudication-authorization-cross-scope.db.test.ts — cross-workspace fails closed"
+  ],
+  "localGates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS",
+    "governanceScan": "0 new (fixed 1 unsafe-mutation false-positive by matching the established multi-line fetch idiom)",
+    "governanceScanStrict": "only pre-existing frozen findings; none in the new files",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "componentTests": "minimum-owner-cockpit 20/20; process-execution-bridge-panel + process-intelligence-panel still green (34 total)",
+    "nextBuild": "Compiled successfully; /owner/cockpit route present"
+  },
+  "browserProof": {
+    "spec": "tests/browser/46-owner-cockpit.spec.ts",
+    "runsIn": "owner-pilot-e2e CI lane (boots the built app on a seeded DB with owner auth)",
+    "localRun": "NOT run locally in this session (the lane requires the seeded app server); verified via CI check owner-pilot-e2e on the PR",
+    "claim": "Browser-proven ONLY if the owner-pilot-e2e check is green on the PR. Not claimed otherwise."
+  },
+  "safetyPosture": "No live LLM; no autonomous external action; owner-only material decisions; evidence-gated completion; workspace isolation; no fabricated money; no unsafe action buttons; no hidden score. Frozen/unproven capabilities are absent from the cockpit.",
+  "classification": "MINIMUM_OWNER_COCKPIT_SURFACE_PROVEN (subject to required CI green)"
+}

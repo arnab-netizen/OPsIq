@@ -1,0 +1,332 @@
+"use client";
+
+/**
+ * MinimumOwnerCockpit (PASS 36) — the canonical minimum owner cockpit surface for the PROVEN governed
+ * execution loop. Prop-driven; NO business logic and NO data fetching here. It renders the single top
+ * bridged action the server already computed (from the process-execution bridge), in the 10-section
+ * safety layout defined by docs/audits/2026-07-07-owner-ui-capability-exposure/MINIMUM_OWNER_COCKPIT_SPEC.md:
+ *
+ *   1. Top Priority Action   2. Why This Is First   3. Required Owner Decision   4. Evidence Required
+ *   5. Safe Actions          6. Blocked / Not Allowed 7. Next Reassessment
+ *   8. Secondary Actions (collapsed) 9. Monitor-only (collapsed) 10. Proof / Audit (collapsed drawer)
+ *
+ * Anti-overload: exactly one top action by default; ≤3 reason bullets; ≤2 primary buttons; ≤3 secondary
+ * controls; everything else collapsed. No raw signal dump, no raw audit log, no hidden score, no fabricated
+ * money. Owner action inputs use labelled controls — never window.prompt(). The server re-checks every action.
+ */
+
+import { useState } from "react";
+import { Badge } from "@/ui/primitives";
+import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
+
+const APPROVAL_LABEL: Record<string, string> = {
+  OWNER_APPROVAL_REQUIRED: "Owner approval required",
+  NEVER_AUTO: "Owner only — cannot be automated",
+  MANAGER_APPROVAL_REQUIRED: "Manager approval required",
+  STAFF_LEVEL: "Staff-level action",
+  OWNER: "Owner approval required", MANAGER: "Manager approval required", STAFF: "Staff-level action",
+};
+const ROUTE_LABEL: Record<string, string> = {
+  CREATE_CORRECTION_TASK: "Create correction task", CREATE_SOP_CHECKLIST_TASK: "Draft SOP/checklist change",
+  CREATE_TRAINING_TASK: "Assign training", CREATE_REASSESSMENT_TASK: "Open reassessment",
+  CREATE_EVIDENCE_REQUEST: "Request fresh proof", CREATE_OWNER_APPROVAL_TASK: "Owner approval",
+  CREATE_MANAGER_TASK: "Manager task", CREATE_STAFF_TASK: "Staff task", CREATE_MISSING_DATA_TASK: "Collect missing data",
+  BLOCK_UNSAFE_ACTION: "Blocked (unsafe)", MONITOR_ONLY: "Monitor only",
+};
+const ACTION_LABEL: Record<string, string> = {
+  START: "Start", APPROVE: "Approve", DELEGATE: "Delegate", SUBMIT_EVIDENCE: "Submit evidence", COMPLETE: "Complete",
+  REJECT: "Reject", MARK_BLOCKED: "Mark blocked", REQUEST_REASSESSMENT: "Request reassessment", REQUEST_MISSING_DATA: "Request missing data",
+};
+const SEVERITY_VARIANT = (s: string): "destructive" | "warning" | "default" | "muted" =>
+  s === "CRITICAL" || s === "HIGH" ? "destructive" : s === "MEDIUM" ? "warning" : "default";
+
+const PRIMARY_ACTIONS = ["APPROVE", "COMPLETE", "START"] as const;
+
+/** Interactive actions valid for a route, mirroring the server guardrails so the UI never OFFERS an
+ *  impossible/unsafe transition. The server still re-checks every one. */
+export function allowedCockpitActions(r: BridgedRouteView): string[] {
+  const terminal = r.status === "COMPLETED" || r.status === "REJECTED";
+  const nonActionable = r.executionRoute === "MONITOR_ONLY" || r.executionRoute === "BLOCK_UNSAFE_ACTION";
+  const ownerOnly = r.approvalLevel === "OWNER_APPROVAL_REQUIRED" || r.approvalLevel === "NEVER_AUTO";
+  if (nonActionable) return terminal ? [] : ["REQUEST_MISSING_DATA", "REQUEST_REASSESSMENT"];
+  if (terminal) return ["REQUEST_REASSESSMENT"];
+  const out: string[] = [];
+  if (["PROPOSED", "NEEDS_DATA", "BLOCKED"].includes(r.status)) out.push("START");
+  if (ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("APPROVE");
+  if (!ownerOnly && ["PROPOSED", "IN_PROGRESS"].includes(r.status)) out.push("DELEGATE");
+  out.push("SUBMIT_EVIDENCE", "COMPLETE", "REJECT");
+  if (r.status !== "BLOCKED") out.push("MARK_BLOCKED");
+  out.push("REQUEST_REASSESSMENT");
+  return out;
+}
+
+export interface CockpitActionInput { evidenceRefs?: string[]; reason?: string; delegateToRole?: "MANAGER" | "STAFF" }
+
+export interface MinimumOwnerCockpitProps {
+  bridge: ProcessExecutionBridgeView | null;
+  /** The governed "do NOT do now" list from the now-view (each {avoid}), for the Blocked / Not Allowed section. */
+  actionsToAvoid?: string[];
+  /** When provided, the cockpit becomes interactive; the server re-checks every action. */
+  onAction?: (taskKey: string, action: string, input: CockpitActionInput) => void;
+  busy?: boolean;
+}
+
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], onAction, busy = false }: MinimumOwnerCockpitProps) {
+  const top = bridge?.topRoute ?? null;
+  const [pending, setPending] = useState<string | null>(null);
+  const [evidenceText, setEvidenceText] = useState("");
+  const [reasonText, setReasonText] = useState("");
+  const [delegateRole, setDelegateRole] = useState<"MANAGER" | "STAFF">("MANAGER");
+
+  // ── Clean state: no fabricated top action. ──
+  if (!top) {
+    return (
+      <section data-testid="cockpit-clean" style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 20 }}>
+        <strong>No urgent action needs your attention right now.</strong>
+        <p style={{ margin: "6px 0 0", color: "#6b7280", fontSize: 13 }}>
+          OpsIQ has nothing that requires an owner decision at the moment. This view stays empty until a
+          governed action is ready — nothing is invented to fill the space.
+        </p>
+      </section>
+    );
+  }
+
+  const isOwner = top.approvalLevel === "OWNER_APPROVAL_REQUIRED" || top.approvalLevel === "NEVER_AUTO";
+  const isBlockedUnsafe = top.executionRoute === "BLOCK_UNSAFE_ACTION";
+  const isMonitorOnly = top.executionRoute === "MONITOR_ONLY";
+  const allowed = allowedCockpitActions(top);
+  const primary = allowed.filter((a) => (PRIMARY_ACTIONS as readonly string[]).includes(a)).slice(0, 2);
+  const secondary = allowed.filter((a) => !primary.includes(a));
+  const secondaryVisible = secondary.slice(0, 3);
+  const secondaryMore = secondary.slice(3);
+
+  // Reason bullets: at most 3 plain-language reasons. Never a raw dump.
+  const whyBullets = [top.riskIfIgnored].filter(Boolean).slice(0, 3);
+
+  const rest = (bridge?.routes ?? []).filter((r) => r.taskKey !== top.taskKey);
+  const secondaryRoutes = rest.filter((r) => r.executionRoute !== "MONITOR_ONLY" && r.executionRoute !== "BLOCK_UNSAFE_ACTION");
+  const monitorRoutes = rest.filter((r) => r.executionRoute === "MONITOR_ONLY");
+
+  const needsEvidence = (a: string) => a === "SUBMIT_EVIDENCE" || a === "COMPLETE";
+  const needsReason = (a: string) => a === "REJECT" || a === "MARK_BLOCKED" || a === "REQUEST_REASSESSMENT" || a === "REQUEST_MISSING_DATA";
+  const isDelegate = (a: string) => a === "DELEGATE";
+
+  const submit = (action: string) => {
+    if (!onAction) return;
+    const input: CockpitActionInput = {};
+    if (needsEvidence(action)) {
+      const refs = evidenceText.split(",").map((s) => s.trim()).filter(Boolean);
+      if (action === "SUBMIT_EVIDENCE" && refs.length === 0) return; // evidence is required to submit evidence
+      if (refs.length > 0) input.evidenceRefs = refs;
+    }
+    if (needsReason(action) && reasonText.trim()) input.reason = reasonText.trim();
+    if (isDelegate(action)) input.delegateToRole = delegateRole;
+    onAction(top.taskKey, action, input);
+    setPending(null); setEvidenceText(""); setReasonText("");
+  };
+
+  const clickAction = (action: string) => {
+    if (!onAction) return;
+    // Actions needing input open a labelled inline form; simple actions submit immediately.
+    if (needsEvidence(action) || needsReason(action) || isDelegate(action)) setPending(action);
+    else submit(action);
+  };
+
+  const terminal = top.status === "COMPLETED" || top.status === "REJECTED";
+
+  return (
+    <section data-testid="owner-cockpit" data-execution-route={top.executionRoute}
+      style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 720 }}>
+
+      {/* 1. Top Priority Action */}
+      <div data-testid="cockpit-top-action" style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.4 }}>Your top priority now</span>
+          <Badge variant={SEVERITY_VARIANT(top.severity)}>{top.severity}</Badge>
+        </div>
+        <strong data-testid="cockpit-top-action-title" style={{ fontSize: 17 }}>{top.ownerVisibleSummary}</strong>
+
+        {/* 2. Why This Is First */}
+        <div data-testid="cockpit-why">
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Why this is first</span>
+          <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+            {whyBullets.map((b, i) => (
+              <li key={i} data-testid="cockpit-why-bullet" style={{ fontSize: 13, color: "#374151" }}>{b}</li>
+            ))}
+          </ul>
+        </div>
+
+        {/* 3. Required Owner Decision */}
+        <div data-testid="cockpit-owner-decision" style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Required owner decision:</span>
+          <Badge variant={isOwner ? "destructive" : "default"}>{APPROVAL_LABEL[top.approvalLevel] ?? top.approvalLevel}</Badge>
+          {isOwner && <span data-testid="cockpit-cannot-automate" style={{ fontSize: 12, color: "#b91c1c" }}>This cannot be automated.</span>}
+        </div>
+
+        {/* 4. Evidence Required */}
+        {!isBlockedUnsafe && !isMonitorOnly && (
+          <div data-testid="cockpit-evidence" style={{ fontSize: 13 }}>
+            <span style={{ fontWeight: 600 }}>Evidence required before completion.</span>{" "}
+            <span style={{ color: "#6b7280" }}>{top.requiredEvidence.length ? top.requiredEvidence.join("; ") : "—"}</span>
+          </div>
+        )}
+
+        {/* 7. Next Reassessment */}
+        <div data-testid="cockpit-reassessment" style={{ fontSize: 13, color: "#6b7280" }}>
+          <span style={{ fontWeight: 600, color: "#374151" }}>Completion will trigger reassessment.</span>{" "}
+          {top.reassessmentTrigger}
+        </div>
+
+        {/* 5. Safe Actions */}
+        {onAction && !terminal && (primary.length > 0 || secondaryVisible.length > 0) && (
+          <div data-testid="cockpit-safe-actions" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600 }}>What you can safely do</span>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {primary.map((a) => (
+                <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="primary" disabled={busy}
+                  onClick={() => clickAction(a)}
+                  style={{ fontSize: 13, padding: "6px 14px", borderRadius: 6, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>
+                  {ACTION_LABEL[a] ?? a}
+                </button>
+              ))}
+              {secondaryVisible.map((a) => (
+                <button key={a} type="button" data-testid={`cockpit-action-${a}`} data-cockpit-priority="secondary" disabled={busy}
+                  onClick={() => clickAction(a)}
+                  style={{ fontSize: 13, padding: "6px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", color: "#111827", cursor: busy ? "default" : "pointer" }}>
+                  {ACTION_LABEL[a] ?? a}
+                </button>
+              ))}
+            </div>
+            {secondaryMore.length > 0 && (
+              <details data-testid="cockpit-more-actions">
+                <summary style={{ cursor: "pointer", fontSize: 12, color: "#6b7280" }}>{secondaryMore.length} more action(s)</summary>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                  {secondaryMore.map((a) => (
+                    <button key={a} type="button" data-testid={`cockpit-action-${a}`} disabled={busy}
+                      onClick={() => clickAction(a)}
+                      style={{ fontSize: 13, padding: "6px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", color: "#111827", cursor: busy ? "default" : "pointer" }}>
+                      {ACTION_LABEL[a] ?? a}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
+            {/* Labelled inline input — replaces window.prompt(). */}
+            {pending && (
+              <div data-testid="cockpit-action-form" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{ACTION_LABEL[pending] ?? pending}</span>
+                {needsEvidence(pending) && (
+                  <label style={{ fontSize: 12, color: "#374151" }}>
+                    Evidence reference(s), comma-separated{pending === "SUBMIT_EVIDENCE" ? " (required)" : ""}
+                    <input data-testid="cockpit-evidence-input" value={evidenceText} onChange={(e) => setEvidenceText(e.target.value)}
+                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }} />
+                  </label>
+                )}
+                {needsReason(pending) && (
+                  <label style={{ fontSize: 12, color: "#374151" }}>
+                    Reason (optional)
+                    <input data-testid="cockpit-reason-input" value={reasonText} onChange={(e) => setReasonText(e.target.value)}
+                      style={{ display: "block", width: "100%", marginTop: 4, padding: "6px 8px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }} />
+                  </label>
+                )}
+                {isDelegate(pending) && (
+                  <label style={{ fontSize: 12, color: "#374151" }}>
+                    Delegate to
+                    <select data-testid="cockpit-delegate-select" value={delegateRole} onChange={(e) => setDelegateRole(e.target.value as "MANAGER" | "STAFF")}
+                      style={{ display: "block", marginTop: 4, padding: "6px 8px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 13 }}>
+                      <option value="MANAGER">Manager</option>
+                      <option value="STAFF">Staff</option>
+                    </select>
+                  </label>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" data-testid="cockpit-confirm" disabled={busy} onClick={() => submit(pending)}
+                    style={{ fontSize: 13, padding: "6px 14px", borderRadius: 6, border: "1px solid #111827", background: "#111827", color: "#fff", cursor: busy ? "default" : "pointer" }}>Confirm</button>
+                  <button type="button" data-testid="cockpit-cancel" onClick={() => setPending(null)}
+                    style={{ fontSize: 13, padding: "6px 14px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", cursor: "pointer" }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        {terminal && <p data-testid="cockpit-terminal" style={{ margin: 0, fontSize: 12, color: "#16a34a" }}>This task is {top.status.toLowerCase()}.</p>}
+
+        {/* 6. Blocked / Not Allowed */}
+        <div data-testid="cockpit-blocked" style={{ borderTop: "1px solid #f3f4f6", paddingTop: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Blocked / not allowed</span>
+          {isBlockedUnsafe ? (
+            <p data-testid="cockpit-blocked-unsafe" style={{ margin: "4px 0 0", fontSize: 13, color: "#b45309" }}>
+              No action is available because this would require an unsafe external step.
+              {top.notActionableReason ? ` ${top.notActionableReason}` : ""}
+            </p>
+          ) : isMonitorOnly ? (
+            <p data-testid="cockpit-monitor-note" style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+              This is monitor-only because no safe action is needed.
+              {top.notActionableReason ? ` ${top.notActionableReason}` : ""}
+            </p>
+          ) : actionsToAvoid.length > 0 ? (
+            <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+              {actionsToAvoid.slice(0, 3).map((a, i) => (
+                <li key={i} data-testid="cockpit-avoid" style={{ fontSize: 13, color: "#b45309" }}>{a}</li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6b7280" }}>
+              OpsIQ never takes an external action for you. It won&apos;t contact customers, submit tenders,
+              spend, discount, or contract on its own.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* 8. Secondary Actions (collapsed) */}
+      <details data-testid="cockpit-secondary-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+        <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+          Other actions{secondaryRoutes.length ? ` (${secondaryRoutes.length})` : ""}
+        </summary>
+        {secondaryRoutes.length === 0 ? (
+          <p style={{ margin: "8px 0 0", fontSize: 13, color: "#6b7280" }}>No other governed actions right now.</p>
+        ) : (
+          <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+            {secondaryRoutes.slice(0, 3).map((r) => (
+              <li key={r.taskKey} data-testid="cockpit-secondary-item" style={{ fontSize: 13, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <Badge variant="muted">{ROUTE_LABEL[r.executionRoute] ?? r.executionRoute}</Badge>
+                <span>{r.ownerVisibleSummary}</span>
+              </li>
+            ))}
+            {secondaryRoutes.length > 3 && <li style={{ fontSize: 12, color: "#6b7280" }}>+{secondaryRoutes.length - 3} more</li>}
+          </ul>
+        )}
+      </details>
+
+      {/* 9. Monitor-only (collapsed) */}
+      <details data-testid="cockpit-monitor-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+        <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+          Monitor only{monitorRoutes.length ? ` (${monitorRoutes.length})` : ""}
+        </summary>
+        {monitorRoutes.length === 0 ? (
+          <p style={{ margin: "8px 0 0", fontSize: 13, color: "#6b7280" }}>Nothing to monitor right now.</p>
+        ) : (
+          <ul style={{ margin: "8px 0 0", paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6 }}>
+            {monitorRoutes.slice(0, 3).map((r) => (
+              <li key={r.taskKey} data-testid="cockpit-monitor-item" style={{ fontSize: 13, color: "#6b7280" }}>{r.ownerVisibleSummary}</li>
+            ))}
+            {monitorRoutes.length > 3 && <li style={{ fontSize: 12, color: "#6b7280" }}>+{monitorRoutes.length - 3} more</li>}
+          </ul>
+        )}
+      </details>
+
+      {/* 10. Proof / Audit details (collapsed drawer) */}
+      <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+        <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>View proof &amp; details</summary>
+        <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280", display: "flex", flexDirection: "column", gap: 6 }}>
+          <span><strong>Done when:</strong> {top.completionCriteria}</span>
+          {top.evidenceRefs.length > 0
+            ? <span data-testid="cockpit-proof-refs" style={{ wordBreak: "break-all" }}>Evidence: {top.evidenceRefs.slice(0, 8).join(", ")}</span>
+            : <span data-testid="cockpit-proof-none">No evidence submitted yet.</span>}
+          <span>Status: {top.status}</span>
+        </div>
+      </details>
+    </section>
+  );
+}
