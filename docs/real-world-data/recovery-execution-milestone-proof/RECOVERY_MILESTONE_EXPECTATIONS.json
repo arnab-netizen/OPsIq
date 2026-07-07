@@ -1,0 +1,38 @@
+{
+  "pass": 33,
+  "title": "Recovery Execution & Milestone-Proof — expected governed behaviour",
+  "invariants": [
+    "No milestone can be skipped: the next milestone is always the first not-proven one in strict order 1→6.",
+    "No milestone completes without evidence (executed && evidenceProvided).",
+    "Correction/stabilization milestones (orders 3, 4, 6) additionally require a PASSING reassessment (IMPROVED, not WORSENED/PENDING).",
+    "The stabilization gate opens only when every milestone is proven (blockedMilestones is empty).",
+    "The thrive/growth gate stays BLOCKED until stabilization opens; then it is ELIGIBLE only with owner approval — never auto-executed.",
+    "A worsened reassessment on a proven-eligible milestone REGRESSES (RECOVERY_REGRESSED) and loops back to re-correct; recovery does not advance.",
+    "An unrecoverable business keeps RESTRUCTURE_REVIEW_REQUIRED / CONTROLLED_SHUTDOWN_REVIEW_REQUIRED active with stabilization + thrive BLOCKED, regardless of reported outcomes (no fake recovery).",
+    "A clean workspace (no plan) yields a null recovery view — nothing is fabricated.",
+    "No fabricated money/ROI/MRR/win-probability/guaranteed-outcome text in any cockpit summary (schema-enforced).",
+    "No hidden score field is ever exposed on the view.",
+    "Unsafe external actions (scale/growth/expansion/auto-contact/discount/tender auto-submit) stay blocked throughout recovery.",
+    "Milestone task completion in the DB is gated by the process-execution bridge: a completion with no evidence returns EVIDENCE_REQUIRED; an owner-approval task cannot be bypassed by a non-owner (OWNER_APPROVAL_REQUIRED)."
+  ],
+  "expectedByCase": {
+    "A_laundry":       { "full": { "state": "THRIVE_GATE_ELIGIBLE", "stabilization": "OPEN", "thrive": "ELIGIBLE", "ownerApprovalRequired": true } },
+    "B_housekeeping":  { "full": { "state": "THRIVE_GATE_ELIGIBLE", "stabilization": "OPEN", "thrive": "ELIGIBLE" } },
+    "C_property":      { "full": { "state": "THRIVE_GATE_ELIGIBLE", "stabilization": "OPEN", "thrive": "ELIGIBLE" } },
+    "D_franchise":     { "full": { "state": "THRIVE_GATE_ELIGIBLE", "stabilization": "OPEN", "thrive": "ELIGIBLE" } },
+    "E_saas":          { "full": { "state": "THRIVE_GATE_ELIGIBLE", "stabilization": "OPEN", "thrive": "ELIGIBLE" } },
+    "F_tender":        { "full": { "state": "THRIVE_GATE_ELIGIBLE", "stabilization": "OPEN", "thrive": "ELIGIBLE" }, "blockedUnsafeActions": ["tender auto-submit"] },
+    "G_b2b":           { "full": { "state": "THRIVE_GATE_ELIGIBLE", "stabilization": "OPEN", "thrive": "ELIGIBLE" } },
+    "H_collective":    { "full": { "state": "THRIVE_GATE_ELIGIBLE", "stabilization": "OPEN", "thrive": "ELIGIBLE" } },
+    "stepwise_any_recoverable": {
+      "m1_only": { "state": "CASH_DATA_PENDING", "completedMilestones": [1] },
+      "m1_no_evidence": { "state": "STOP_LOSS_PENDING", "nextMilestoneOrder": 1 },
+      "m1_2_3improved": { "thrive": "BLOCKED" },
+      "through_m5": { "state": "REASSESSMENT_PENDING", "stabilization": "BLOCKED" },
+      "skip_m2": { "state": "CASH_DATA_PENDING", "stabilization": "BLOCKED", "blockedMilestonesContains": 2 }
+    },
+    "I_regression":    { "state": "RECOVERY_REGRESSED", "regressionDetected": true, "thrive": "BLOCKED", "nextMilestoneMatches": "re-correct" },
+    "J_unrecoverable": { "state": "RESTRUCTURE_REVIEW_REQUIRED", "stabilization": "BLOCKED", "thrive": "BLOCKED", "restructureOrShutdownRequired": true, "schemaValid": true },
+    "K_clean":         { "view": null }
+  }
+}

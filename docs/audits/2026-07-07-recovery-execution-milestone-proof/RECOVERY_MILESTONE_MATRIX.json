@@ -1,0 +1,33 @@
+{
+  "pass": 33,
+  "date": "2026-07-07",
+  "states": [
+    "CRISIS_IDENTIFIED", "SURVIVAL_TRIAGE_ACTIVE", "STOP_LOSS_PENDING", "STOP_LOSS_EXECUTED_WITH_EVIDENCE",
+    "CASH_DATA_PENDING", "CASH_POSITION_MEASURED", "QUALITY_CORRECTION_PENDING", "QUALITY_CORRECTED_WITH_EVIDENCE",
+    "OPERATIONS_CORRECTION_PENDING", "OPERATIONS_STABILIZED_WITH_EVIDENCE", "WORKLOAD_REDUCTION_PENDING",
+    "WORKLOAD_REDUCED_WITH_EVIDENCE", "REASSESSMENT_PENDING", "STABILIZATION_NOT_PROVEN", "STABILIZATION_PROVEN",
+    "THRIVE_GATE_BLOCKED", "THRIVE_GATE_ELIGIBLE", "RECOVERY_REGRESSED", "RESTRUCTURE_REVIEW_REQUIRED",
+    "CONTROLLED_SHUTDOWN_REVIEW_REQUIRED", "UNKNOWN_NEEDS_DATA"
+  ],
+  "stateCount": 21,
+  "milestones": [
+    { "order": 1, "milestone": "Stop-loss in force", "pendingState": "STOP_LOSS_PENDING", "reassessmentRequired": false },
+    { "order": 2, "milestone": "Cash position/runway measured", "pendingState": "CASH_DATA_PENDING", "reassessmentRequired": false },
+    { "order": 3, "milestone": "Customer/quality issue corrected with proof", "pendingState": "QUALITY_CORRECTION_PENDING", "reassessmentRequired": true },
+    { "order": 4, "milestone": "Operational/vendor risk resolved", "pendingState": "OPERATIONS_CORRECTION_PENDING", "reassessmentRequired": true },
+    { "order": 5, "milestone": "Owner workload reduced via delegation/policy", "pendingState": "WORKLOAD_REDUCTION_PENDING", "reassessmentRequired": false },
+    { "order": 6, "milestone": "Stabilization gate met", "pendingState": "REASSESSMENT_PENDING", "reassessmentRequired": true }
+  ],
+  "transitions": [
+    { "from": "any-pending", "condition": "next milestone executed with evidence (and IMPROVED if reassessment-required)", "to": "next pending milestone / THRIVE_GATE_ELIGIBLE when all proven" },
+    { "from": "correction milestone", "condition": "reassessment WORSENED", "to": "RECOVERY_REGRESSED (loop back to re-correct)" },
+    { "from": "all-proven", "condition": "stabilization open", "to": "THRIVE_GATE_ELIGIBLE (owner-approval required, never auto)" },
+    { "from": "unrecoverable plan", "condition": "unrecoverableRiskAssessment.unrecoverable", "to": "RESTRUCTURE_REVIEW_REQUIRED / CONTROLLED_SHUTDOWN_REVIEW_REQUIRED (thrive+stabilization BLOCKED)" },
+    { "from": "no plan", "condition": "clean control", "to": "null view (nothing fabricated)" }
+  ],
+  "proof": {
+    "unitTests": "src/__tests__/owner-mode/recovery-milestone-execution.test.ts (17 passed)",
+    "dbSim": "src/__tests__/execution/recovery-execution-milestone-proof.db.test.ts (11 passed, TEST_WITH_DB=true)",
+    "ci": ".github/workflows/db-verification.yml LANE_B (required) + LANE_A"
+  }
+}

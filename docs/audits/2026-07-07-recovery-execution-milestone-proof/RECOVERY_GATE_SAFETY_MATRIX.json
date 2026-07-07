@@ -1,0 +1,90 @@
+{
+  "pass": 33,
+  "date": "2026-07-07",
+  "gates": [
+    {
+      "gate": "evidence gate",
+      "rule": "no milestone completes without evidence",
+      "enforcedBy": "process-execution bridge EVIDENCE_REQUIRED + computeRecoveryExecution executed&&evidenceProvided",
+      "failClosed": true,
+      "proof": ["DB #2+3+4+5", "unit #1"]
+    },
+    {
+      "gate": "reassessment gate",
+      "rule": "correction/stabilization milestones (3,4,6) require IMPROVED reassessment",
+      "enforcedBy": "NEEDS_REASSESSMENT set + proven check",
+      "failClosed": true,
+      "proof": ["unit #4", "unit #5", "unit #7", "DB #7+8"]
+    },
+    {
+      "gate": "no-skip gate",
+      "rule": "next milestone is the first not-proven one in strict order",
+      "enforcedBy": "ordered walk; a later done milestone never fills an earlier gap",
+      "failClosed": true,
+      "proof": ["unit #17", "DB #15"]
+    },
+    {
+      "gate": "stabilization gate",
+      "rule": "opens only when every milestone is proven",
+      "enforcedBy": "blockedMilestones.length===0 + schema refine",
+      "failClosed": true,
+      "proof": ["unit #8", "DB #7+8"]
+    },
+    {
+      "gate": "thrive/growth gate",
+      "rule": "blocked until stabilization; eligible only with owner approval; never auto",
+      "enforcedBy": "schema refine thrive!==ELIGIBLE||stab===OPEN; ownerApprovalRequired",
+      "failClosed": true,
+      "proof": ["unit #8", "unit #9", "unit #12", "DB #9"]
+    },
+    {
+      "gate": "regression gate",
+      "rule": "worsened reassessment loops back to re-correct, does not advance",
+      "enforcedBy": "WORSENED → RECOVERY_REGRESSED, thrive BLOCKED",
+      "failClosed": true,
+      "proof": ["unit #10", "DB #10"]
+    },
+    {
+      "gate": "unrecoverable gate",
+      "rule": "no fake recovery; restructure/shutdown review stays active regardless of outcomes",
+      "enforcedBy": "first-branch return; schema refine on restructure state",
+      "failClosed": true,
+      "proof": ["unit #11", "DB #11"]
+    },
+    {
+      "gate": "owner-approval gate",
+      "rule": "owner-approval tasks cannot be bypassed by a non-owner",
+      "enforcedBy": "bridge OWNER_APPROVAL_REQUIRED",
+      "failClosed": true,
+      "proof": ["DB #6"]
+    },
+    {
+      "gate": "unsafe-action gate",
+      "rule": "scale/growth/expansion/auto-contact/discount/tender-auto-submit stay blocked",
+      "enforcedBy": "blockedUnsafeActions carried from plan",
+      "failClosed": true,
+      "proof": ["unit #13", "DB #12"]
+    },
+    {
+      "gate": "no-fabrication gate",
+      "rule": "no money/ROI/MRR/win-probability/guaranteed-outcome; no hidden score",
+      "enforcedBy": "NO_MONEY schema refine; score-key walk",
+      "failClosed": true,
+      "proof": ["unit #14", "unit #16"]
+    },
+    {
+      "gate": "clean-control gate",
+      "rule": "clean workspace fabricates nothing",
+      "enforcedBy": "null plan → null view; no tasks/audit rows",
+      "failClosed": true,
+      "proof": ["unit #15", "DB #14"]
+    },
+    {
+      "gate": "isolation gate",
+      "rule": "workspace isolation holds under recovery execution",
+      "enforcedBy": "persisted tasks scoped by workspaceId",
+      "failClosed": true,
+      "proof": ["DB #13"]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "pass": 33,
+  "date": "2026-07-07",
+  "classificationTarget": "RECOVERY_EXECUTION_MILESTONE_PROOF_ELITE_ACCEPTED",
+  "artifacts": {
+    "module": "src/domain/owner-mode/recovery-milestone-execution.ts",
+    "unitTest": "src/__tests__/owner-mode/recovery-milestone-execution.test.ts",
+    "dbSim": "src/__tests__/execution/recovery-execution-milestone-proof.db.test.ts",
+    "ciWorkflow": ".github/workflows/db-verification.yml",
+    "fixtures": "docs/real-world-data/recovery-execution-milestone-proof/",
+    "audit": "docs/audits/2026-07-07-recovery-execution-milestone-proof/"
+  },
+  "localGateResults": {
+    "tsc": "PASS (no errors)",
+    "unitSuite": "17 passed",
+    "dbSim": "11 passed (TEST_WITH_DB=true, Postgres 16)",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new errors, 0 new warnings)"
+  },
+  "reusedProvenSubstrate": [
+    "buildProcessExecutionBridge / persistProcessExecutionRoutes (earlier passes)",
+    "applyProcessExecutionAction evidence + owner-approval gating (earlier passes)",
+    "planBusinessSurvivalRecovery + survivalPlanToProcessCorrections (PASS 32)"
+  ],
+  "newSubstrate": "none — the state machine has no execution authority and creates no new tables; it reads the plan + real task outcomes.",
+  "claimsAllowed": [
+    "OpsIQ can execute a recovery plan over multiple governed cycles, advancing milestones only on evidence + passing reassessment.",
+    "OpsIQ blocks milestone skipping, premature growth, and fake recovery for an unrecoverable business.",
+    "Every recovery cockpit summary is free of fabricated money/ROI/win-probability."
+  ],
+  "claimsForbidden": [
+    "Any specific money/runway/ROI figure (never computed).",
+    "Any guaranteed survival/recovery/success outcome.",
+    "Autonomous external action of any kind."
+  ],
+  "ciAcceptanceRequirement": "LANE_B logs must show recovery-execution-milestone-proof.db.test.ts executed and end with LANE_B_DB_VERIFIED. Generic green is not accepted."
+}
