@@ -1,0 +1,32 @@
+{
+  "title": "Owner Load Assertion Matrix — No-Overload Envelope (PASS 40)",
+  "date": "2026-07-07",
+  "surface": "/owner/cockpit → MinimumOwnerCockpit",
+  "loadLimits": [
+    { "limit": "exactly one top action", "rule": "cockpit-top-action-title count === 1", "enforcedBy": "topRoute is a single BridgedRouteView; no list rendered as primary", "browser": "A/G", "component": "A/G" },
+    { "limit": "≤ 3 reason bullets", "rule": "cockpit-why-bullet count ≤ 3", "enforcedBy": "whyBullets = [riskIfIgnored].slice(0,3)", "browser": "G", "component": "G" },
+    { "limit": "≤ 2 primary buttons", "rule": "[data-cockpit-priority=primary] count ≤ 2", "enforcedBy": "primary = allowed∩PRIMARY_ACTIONS then slice(0,2)", "browser": "G", "component": "G" },
+    { "limit": "≤ 3 secondary controls", "rule": "[data-cockpit-priority=secondary] count ≤ 3", "enforcedBy": "secondaryVisible = secondary.slice(0,3); overflow moved into collapsed cockpit-more-actions", "browser": "G", "component": "G" },
+    { "limit": "secondary actions collapsed", "rule": "cockpit-secondary-group.open === false", "enforcedBy": "<details> without open", "browser": "G", "component": "G" },
+    { "limit": "monitor-only collapsed", "rule": "cockpit-monitor-group.open === false", "enforcedBy": "<details> without open", "browser": "G", "component": "G" },
+    { "limit": "proof/audit collapsed", "rule": "cockpit-proof-drawer.open === false", "enforcedBy": "<details> without open", "browser": "G", "component": "G" },
+    { "limit": "recovery status collapsed", "rule": "cockpit-recovery-group.open === false", "enforcedBy": "<details> without open", "browser": "B", "component": "B/G" },
+    { "limit": "outside signals collapsed", "rule": "cockpit-signals-group.open === false", "enforcedBy": "<details> without open", "browser": "C", "component": "C/G" },
+    { "limit": "no second dashboard", "rule": "recovery + signals render AFTER the top action, never displacing it", "enforcedBy": "top-action card first in DOM; read-only summaries appended", "browser": "F/G", "component": "G + public-signals #12" }
+  ],
+  "forbiddenOutput": [
+    { "class": "guarantee", "regex": "guaranteed (recovery|profit|success|survival) | we guarantee", "failsTest": true },
+    { "class": "fabricated finance", "regex": "[$£€]\\d ; predicted/projected roi ; win probability", "failsTest": true },
+    { "class": "autonomous action", "regex": "auto-submit ; auto-contact ; automatically submit/contact/spend/discount/contract ; fully autonomous ; acts on its own ; without your approval", "failsTest": true, "note": "regex cannot match the SAFE negated copy ('OpsIQ never … contact customers, submit tenders, spend, discount, or contract on its own')" },
+    { "class": "staff/HR automation", "regex": "fire/firing/sack/dismiss/discipline/reprimand + staff/employee/worker/team/manager", "failsTest": true },
+    { "class": "live-intelligence claim", "regex": "live internet intelligence ; ai found this online ; scraped from the web", "failsTest": true },
+    { "class": "raw prompt-injection", "regex": "ignore previous instructions ; system prompt ; disregard the above", "failsTest": true },
+    { "class": "raw PII", "regex": "email @domain ; UK mobile 07xxxxxxxxx", "failsTest": true, "scope": "outside-signals section" },
+    { "class": "hidden score / negligence label", "regex": "hidden score ; score ; fraud/theft/negligent/lazy/dishonest", "failsTest": true }
+  ],
+  "governanceInputSafety": {
+    "noWindowPrompt": "window.prompt and window.alert are overridden to throw in the browser spec; any use fails the test",
+    "labelledControls": "owner action inputs use labelled <input>/<select> inside cockpit-action-form",
+    "serverRechecks": "every action re-validated server-side via POST /api/owner/process-execution (not asserted here; owned by PASS 22/36 suites)"
+  }
+}
