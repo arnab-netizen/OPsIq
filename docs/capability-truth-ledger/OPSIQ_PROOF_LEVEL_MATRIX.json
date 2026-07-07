@@ -1,0 +1,29 @@
+{
+  "title": "OpsIQ Proof-Level Matrix",
+  "date": "2026-07-07",
+  "purpose": "A single, ordered ladder of proof strength. Every capability in OPSIQ_CAPABILITY_MATRIX.json is assigned its HIGHEST honestly-achieved level. A higher level does not erase lower ones — it includes them. UI-surfaced (L15) is the gold standard; most OpsIQ capabilities are backend + CI + audit proven (L10–L13) but NOT yet owner-visible in UI, and the ledger says so plainly.",
+  "rule": "A capability may be assigned level N only if every claim at level N is backed by named source/test/CI/audit evidence in the repo. Absent evidence, it is assigned the highest level actually proven — never the level aspired to.",
+  "levels": [
+    { "level": 0, "id": "NOT_IMPLEMENTED", "meaning": "No code exists for this capability." },
+    { "level": 1, "id": "TYPE_ONLY", "meaning": "Types/interfaces/enums only; no behaviour." },
+    { "level": 2, "id": "CODED_NO_TEST", "meaning": "Deterministic implementation exists but has no automated test." },
+    { "level": 3, "id": "UNIT_TESTED", "meaning": "Pure deterministic unit tests pass (happy path)." },
+    { "level": 4, "id": "SCHEMA_FAIL_CLOSED", "meaning": "A Zod schema / invariant rejects incoherent output, and a test proves it fails closed." },
+    { "level": 5, "id": "UNIT_ADVERSARIAL", "meaning": "Hostile/negative unit tests pass (tamper, skip, no-evidence, no-fabrication, no-hidden-score)." },
+    { "level": 6, "id": "SERVICE_TESTED", "meaning": "Service layer tested (authorization / persistence behaviour with a test double)." },
+    { "level": 7, "id": "DB_PERSISTED", "meaning": "Persists to a real Postgres and is verified in a *.db.test.ts (TEST_WITH_DB=true)." },
+    { "level": 8, "id": "DB_GATED", "meaning": "Evidence/approval/authorization gating verified against a real DB (EVIDENCE_REQUIRED / OWNER_APPROVAL_REQUIRED)." },
+    { "level": 9, "id": "DB_ISOLATION", "meaning": "Cross-workspace/tenant isolation verified against a real DB." },
+    { "level": 10, "id": "CI_REQUIRED_LANE", "meaning": "The DB proof runs in the REQUIRED CI lane (LANE_B) on every PR, verified by log inspection — not a generic green." },
+    { "level": 11, "id": "END_TO_END_PIPELINE", "meaning": "Proven as part of a full multi-stage pipeline simulation (e.g. interpret → resolve → prioritise → explain → survive → recover) DB-backed." },
+    { "level": 12, "id": "AUDIT_ARTIFACT", "meaning": "Has a dedicated audit directory with matrices + an evidence ledger under docs/audits/." },
+    { "level": 13, "id": "ADVERSARIAL_AUDIT_SURVIVED", "meaning": "Survived a hostile, full-repo adversarial audit pass without being downgraded." },
+    { "level": 14, "id": "OWNER_CALLABLE_API", "meaning": "Exposed through a real API route an owner/manager can call." },
+    { "level": 15, "id": "OWNER_VISIBLE_UI", "meaning": "Surfaced in a real UI an owner actually sees and acts on." }
+  ],
+  "honestNotes": [
+    "L7–L11 are the strongest OpsIQ proof today: real Postgres + gating + isolation + required CI + pipeline.",
+    "L14/L15 (owner-callable API / owner-visible UI) are the most common GAP: many capabilities are backend-and-CI-proven but not yet UI-surfaced. That gap is stated, never hidden.",
+    "No level in this ladder implies real-world business outcome (money earned, business saved). Outcome is NOT a proof level here because OpsIQ has no verified real-world outcome data — see OPSIQ_PUBLIC_CLAIMS_FORBIDDEN.md."
+  ]
+}
