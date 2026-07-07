@@ -1,0 +1,25 @@
+{
+  "audit": "conflicting-public-signal-hardening",
+  "pass": "29",
+  "matrix": "CONFLICT_SAFETY",
+  "date": "2026-07-07",
+  "purpose": "Evaluates each conflict-handling safety property against executable proof (public-signal-conflict-resolution.test.ts unit + conflicting-public-signal-end-to-end.db.test.ts DB).",
+  "properties": [
+    { "property": "conflict uncertainty preservation", "held": true, "how": "conflicting/uncertain sets route to validation/reassessment/owner-review/missing-data/monitor-only, never a confident action.", "provenBy": ["unit tests 1,6,8,11", "db tests 13,14,17"] },
+    { "property": "weak evidence downgrade", "held": true, "how": "one weak signal → WEAK_SINGLE_SIGNAL → validation; never a high-confidence conclusion.", "provenBy": ["unit test 2"] },
+    { "property": "repeated weak signal handling", "held": true, "how": "repeated weak signals → REPEATED_WEAK_SIGNALS → reassessment/validation, never an accusation (no fraud/negligent/fired label).", "provenBy": ["unit test 3"] },
+    { "property": "official source handling", "held": true, "how": "official strengthens PUBLISHED requirements only; a public complaint still requires internal verification (OFFICIAL_SOURCE_CONFLICT → data task).", "provenBy": ["unit test 4"] },
+    { "property": "recency handling", "held": true, "how": "a recent negative reopens an older 'fixed' claim (MIXED_RECENCY → verification); a positive can never close an issue without executed-correction + outcome evidence.", "provenBy": ["unit tests 6,7", "db test 14"] },
+    { "property": "duplicate clustering", "held": true, "how": "duplicate/near-duplicate signals collapse to one cluster; one collective task per case.", "provenBy": ["unit test 16", "db test 3,7+8"] },
+    { "property": "PII stripping", "held": true, "how": "PII stripped upstream and never carried into the package/task/audit.", "provenBy": ["unit test 14", "db test 10,18"] },
+    { "property": "prompt-injection resistance", "held": true, "how": "injection aggregated to blockedUnsafeActions; never changes classification, route, verification, or authority.", "provenBy": ["unit test 13", "db test 18"] },
+    { "property": "fake financial claim rejection", "held": true, "how": "money/ROI/win-probability blocked and never a governed figure; Zod refinement forbids currency/% in summaries.", "provenBy": ["unit tests 15,22", "db test 11"] },
+    { "property": "tender safety", "held": true, "how": "tender urgency → data-first (MISSING_INTERNAL_DATA); auto-submit/EMD/contract blocked.", "provenBy": ["unit test 5", "db test 9+12"] },
+    { "property": "growth-vs-capacity safety", "held": true, "how": "growth + weak/unresolved quality/capacity → HIGH_RISK_UNRESOLVED, fix/validate first, scale blocked-before-proof.", "provenBy": ["unit test 11", "db test 13"] },
+    { "property": "owner cockpit anti-spam", "held": true, "how": "one governed collective action per workspace; no raw/injection/PII text in the persisted task.", "provenBy": ["db test 3,7+8,18"] },
+    { "property": "workspace isolation", "held": true, "how": "each conflict case is scoped to its workspace; the tender collective task never leaks into laundry.", "provenBy": ["db test 15"] },
+    { "property": "clean workspace no-fabrication", "held": true, "how": "no signals → resolve returns null; the workspace persists nothing.", "provenBy": ["unit test 18", "db test 16"] },
+    { "property": "fail-closed validation", "held": true, "how": "the collective package is Zod-validated (gate-consistency + no-fabricated-money refinements); a tampered package is rejected.", "provenBy": ["unit tests 19,20"] }
+  ],
+  "summary": { "propertiesEvaluated": 15, "propertiesHeld": 15, "propertiesFailed": 0, "classification": "ELITE_ACCEPTED" }
+}

@@ -1,0 +1,50 @@
+{
+  "audit": "conflicting-public-signal-hardening",
+  "pass": "29",
+  "ledger": "EVIDENCE",
+  "date": "2026-07-07",
+  "purpose": "Traceable proof for every claim in the PASS 29 decision/safety matrices and final report — each points to executable evidence, verified source, or a fixture.",
+  "modules": {
+    "conflictLayer": "src/domain/owner-mode/public-signal-conflict-resolution.ts (resolvePublicSignalConflict / resolveAndValidateConflict / conflictDecisionToProcessCorrection)",
+    "validation": "conflictDecisionPackageSchema (Zod) with refinements: monitor-only⇒reason, ownerApprovalRequired⇔owner-approval route, no currency/% in collective summaries",
+    "interpreterAddition": "public-signal-interpretation.ts POSITIVE_OR_RESOLVED_CLAIM classification (a positive claim is not proof)",
+    "deterministic": true,
+    "authority": "the conflict layer proposes ONE collective decision; the governed bridge remains the routing/owner-gating/evidence-gating authority"
+  },
+  "unitTest": { "file": "src/__tests__/owner-mode/public-signal-conflict-resolution.test.ts", "tests": 23, "result": "23 passed (verified locally)" },
+  "interpreterRegression": { "file": "src/__tests__/owner-mode/public-signal-interpretation.test.ts", "tests": 24, "result": "24 passed (no regression from the positive-claim + pricing-needle changes)" },
+  "dbSimulation": {
+    "file": "src/__tests__/execution/conflicting-public-signal-end-to-end.db.test.ts",
+    "lane": "LANE_B (throwaway Postgres 16, required)",
+    "alsoWiredInto": "LANE_A (Neon)",
+    "tests": 14,
+    "result": "14 passed (verified locally against Postgres 16 on 2026-07-07)",
+    "gate": "TEST_WITH_DB=true"
+  },
+  "claims": [
+    { "claim": "Multiple raw signals interpreted and conflict-resolved into a validated package", "evidence": "db test 1", "kind": "db-assertion" },
+    { "claim": "Conflict output enters the bridge as exactly one collective task", "evidence": "db test 3", "kind": "db-assertion" },
+    { "claim": "Owner-gated material decisions remain owner-gated; non-owner blocked (OWNER_APPROVAL_REQUIRED)", "evidence": "db test 4 + unit test 10", "kind": "db+unit-assertion" },
+    { "claim": "Completion is evidence-gated; a completed correction opens a reassessment", "evidence": "db test 5+6", "kind": "db-assertion" },
+    { "claim": "Contradiction/recency preserved (positive can't close; recent negative reopens)", "evidence": "unit tests 1,6,7,8 + db test 14", "kind": "db+unit-assertion" },
+    { "claim": "Weak single signal → validation; repeated weak → reassessment, never accusation", "evidence": "unit tests 2,3", "kind": "unit-assertion" },
+    { "claim": "Official source strengthens published facts only, not internal execution", "evidence": "unit test 4", "kind": "unit-assertion" },
+    { "claim": "Tender urgency cannot bypass gates; auto-submit blocked", "evidence": "unit test 5 + db test 9+12", "kind": "db+unit-assertion" },
+    { "claim": "Growth cannot bypass quality/capacity; scale blocked-before-proof", "evidence": "unit test 11 + db test 13", "kind": "db+unit-assertion" },
+    { "claim": "Duplicate signals collapse; one cockpit action", "evidence": "unit tests 16,17 + db test 3,7+8", "kind": "db+unit-assertion" },
+    { "claim": "PII never persisted into package/task/audit", "evidence": "unit test 14 + db test 10", "kind": "db+unit-assertion" },
+    { "claim": "Prompt injection cannot change classification/authority", "evidence": "unit test 13 + db test 18", "kind": "db+unit-assertion" },
+    { "claim": "Fake money/ROI/win-probability rejected, never a governed figure", "evidence": "unit tests 15,22 + db test 11", "kind": "db+unit-assertion" },
+    { "claim": "No unsafe/external collective route ever produced", "evidence": "unit test 23 + db test 17", "kind": "db+unit-assertion" },
+    { "claim": "Workspace isolation holds", "evidence": "db test 15", "kind": "db-assertion" },
+    { "claim": "Clean workspace fabricates nothing (resolve → null)", "evidence": "unit test 18 + db test 16", "kind": "db+unit-assertion" },
+    { "claim": "Package fails closed on gate mismatch / missing fields", "evidence": "unit tests 19,20", "kind": "unit-assertion" },
+    { "claim": "No hidden score field in the package", "evidence": "unit test 21", "kind": "unit-assertion" },
+    { "claim": "route←correctionType mirrors the governed bridge (single authority)", "evidence": "src/domain/owner-mode/process-execution-bridge.ts:97-107 + conflict ROUTE_FOR_CORRECTION", "kind": "source" }
+  ],
+  "honestGaps": [
+    "The conflict layer is deterministic/rule-based, not an LLM/NLP engine. It resolves conflicts among already-normalized controlled signals; it does not understand arbitrary prose and does not fetch live data.",
+    "It makes no final factual judgment about any business — it preserves uncertainty and produces the safest governed decision.",
+    "Live connectors / crawling / scraping / autonomous browsing / private owner shadow pilot remain out of scope (frozen — see DEFERRED_BROAD_GAPS.md)."
+  ]
+}

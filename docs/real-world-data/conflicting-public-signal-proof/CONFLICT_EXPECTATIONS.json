@@ -1,0 +1,461 @@
+{
+  "pack": "conflicting-public-signal-proof",
+  "pass": "29",
+  "note": "Deterministic expected conflict-decision output per case, produced by resolvePublicSignalConflict over interpretRawPublicSignal. Regenerate if the modules change.",
+  "expectations": [
+    {
+      "conflictCaseId": "cf-laundry-recency",
+      "conflictClassification": "CONTRADICTORY_SIGNALS",
+      "recommendedExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED+LOW_CONFIDENCE",
+      "evidenceStrengthSummary": "WEAK+INSUFFICIENT",
+      "recencySummary": "MIXED",
+      "missingData": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "executed-correction + post-outcome evidence that the issue is actually resolved"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-laundry-damage-vs-praise",
+      "conflictClassification": "REPEATED_WEAK_SIGNALS",
+      "recommendedExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": true,
+      "duplicateClustersCollapsed": 2,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "WEAK",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-housekeeping-official-vs-complaint",
+      "conflictClassification": "OFFICIAL_SOURCE_CONFLICT",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 1,
+      "sourceQualitySummary": "VERIFIED_SOURCE+THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "STRONG+MODERATE",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "inspection pass rate",
+        "contract SLA"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-housekeeping-repeated-weak",
+      "conflictClassification": "REPEATED_WEAK_SIGNALS",
+      "recommendedExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": true,
+      "duplicateClustersCollapsed": 1,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "WEAK",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "inspection pass rate",
+        "contract SLA",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-property-maintenance-vs-vacancy",
+      "conflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 1,
+      "sourceQualitySummary": "PUBLIC_SOURCE_UNVERIFIED+THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "MODERATE+WEAK",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "actual response times",
+        "vendor SLAs",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-property-legal-spend",
+      "conflictClassification": "CONTRADICTORY_SIGNALS",
+      "recommendedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "ownerApprovalRequired": true,
+      "validationRequired": false,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "MODERATE",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "actual response times",
+        "vendor SLAs"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-franchise-branch-vs-brand",
+      "conflictClassification": "CONTRADICTORY_SIGNALS",
+      "recommendedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "ownerApprovalRequired": true,
+      "validationRequired": false,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 1,
+      "sourceQualitySummary": "PUBLIC_SOURCE_UNVERIFIED+THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "MODERATE",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "which branch",
+        "per-branch metrics"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-franchise-discount-vs-control",
+      "conflictClassification": "CONTRADICTORY_SIGNALS",
+      "recommendedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "ownerApprovalRequired": true,
+      "validationRequired": false,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "PUBLIC_SOURCE_UNVERIFIED",
+      "evidenceStrengthSummary": "WEAK",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "unit margin",
+        "cost per unit/order",
+        "price elasticity",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "which branch",
+        "per-branch metrics"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-saas-fixed-vs-persists",
+      "conflictClassification": "MIXED_RECENCY",
+      "recommendedExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": true,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "MODERATE+WEAK",
+      "recencySummary": "MIXED",
+      "missingData": [
+        "executed-correction + post-outcome evidence that the issue is actually resolved",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "bug reproduction steps",
+        "real activation/conversion data"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-saas-feature-vs-backlog",
+      "conflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED+LOW_CONFIDENCE",
+      "evidenceStrengthSummary": "MODERATE+INSUFFICIENT",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "bug reproduction steps",
+        "real activation/conversion data"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-tender-missing-eligibility",
+      "conflictClassification": "MISSING_INTERNAL_DATA",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "VERIFIED_SOURCE",
+      "evidenceStrengthSummary": "STRONG",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-tender-deadline-vs-docs",
+      "conflictClassification": "MISSING_INTERNAL_DATA",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 1,
+      "sourceQualitySummary": "VERIFIED_SOURCE",
+      "evidenceStrengthSummary": "STRONG",
+      "recencySummary": "RECENT",
+      "missingData": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-b2b-opportunity-vs-capacity",
+      "conflictClassification": "MISSING_INTERNAL_DATA",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 1,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "WEAK",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-collective-growth-vs-weak",
+      "conflictClassification": "HIGH_RISK_UNRESOLVED",
+      "recommendedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "PUBLIC_SOURCE_UNVERIFIED+THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "MODERATE+WEAK",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "verified quality baseline",
+        "cost/margin",
+        "capacity"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "scale before validation",
+        "spend before cost/capacity data"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-adv-verify-injection",
+      "conflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED+LOW_CONFIDENCE",
+      "evidenceStrengthSummary": "MODERATE+INSUFFICIENT",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-adv-submit-contact",
+      "conflictClassification": "MISSING_INTERNAL_DATA",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 1,
+      "sourceQualitySummary": "VERIFIED_SOURCE",
+      "evidenceStrengthSummary": "STRONG",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-pii-heavy",
+      "conflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED+LOW_CONFIDENCE",
+      "evidenceStrengthSummary": "MODERATE+INSUFFICIENT",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-fake-finance",
+      "conflictClassification": "MISSING_INTERNAL_DATA",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED+LOW_CONFIDENCE",
+      "evidenceStrengthSummary": "WEAK+INSUFFICIENT",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "monitorOnlyReason": null
+    },
+    {
+      "conflictCaseId": "cf-noisy-multitopic",
+      "conflictClassification": "WEAK_SINGLE_SIGNAL",
+      "recommendedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "ownerApprovalRequired": false,
+      "validationRequired": true,
+      "reassessmentRequired": false,
+      "duplicateClustersCollapsed": 0,
+      "sourceQualitySummary": "THIRD_PARTY_UNVERIFIED",
+      "evidenceStrengthSummary": "WEAK",
+      "recencySummary": "UNKNOWN",
+      "missingData": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "monitorOnlyReason": null
+    }
+  ]
+}
