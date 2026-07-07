@@ -1,0 +1,35 @@
+{
+  "title": "Owner Cockpit End-to-End No-Overload — Evidence Ledger (PASS 40)",
+  "date": "2026-07-07",
+  "branch": "claude/owner-cockpit-end-to-end-no-overload-proof",
+  "baseMain": "22febb55eae449f43c3a1514dbd8251b6c68dfae",
+  "scope": "PROOF ONLY — no new product surface. Hostile end-to-end + usability proof over the PASS 36-39 owner cockpit.",
+  "filesAdded": [
+    "tests/browser/47-owner-cockpit-end-to-end-no-overload.spec.ts (8 browser tests, journeys A-G, prompt/alert trapped, unauthenticated context for E)",
+    "src/__tests__/components/owner-cockpit-no-overload.test.tsx (9 deterministic component tests — clean-state F, no-overload G, labelled-control D, forbidden-copy matrix)"
+  ],
+  "filesChanged": [
+    ".github/workflows/owner-pilot-e2e.yml (wired 47-owner-cockpit-end-to-end-no-overload.spec.ts into the owner-pilot browser spec list)"
+  ],
+  "noProductChange": "MinimumOwnerCockpit, the cockpit page, and all routes are UNCHANGED. This pass adds tests + audit only.",
+  "localGates": {
+    "tsc": "PASS (npx tsc --noEmit clean; no errors in the new files)",
+    "governanceScan": "0 new (31 frozen findings, 31 matched)",
+    "lintRatchet": "LINT_RATCHET_PASS (baseline 2155 err / 1263 warn; current 2102 err / 1263 warn; 0 new)",
+    "componentTests": "4 files / 55 tests PASS (minimum-owner-cockpit, -recovery, -public-signals, -no-overload[9])",
+    "playwrightList": "8 spec-47 tests discovered/parsed"
+  },
+  "localBrowserRun": {
+    "how": "Throwaway local Postgres 16 (db opsiq_e2e) → prisma migrate deploy → next build → seed-owner-scenarios + seed-e2e-owner-pilot + seed-e2e-proof-risk + seed-e2e-opportunity → PORT=3001 npm run start → playwright test 47 --project=chromium",
+    "chromium": "pre-installed full Chromium at /opt/pw-browsers/chromium-1194/chrome-linux/chrome via PLAYWRIGHT_CHROMIUM_PATH",
+    "seedProof": "seed-e2e-opportunity submit ok=true classification=COLLECT_DATA (persisted ExternalOpportunitySignal → journey C had real data)",
+    "result": "8 passed (6.0s) — F, A, G, B, C, D, forbidden-copy sweep, E all green",
+    "journeysExercised": "A/G/D confirm the top-action + interactive path rendered (D's REJECT->labelled-form flow only runs when owner-cockpit + safe-actions render); C confirms the seeded public signal surfaced; B confirms the recovery no-guarantee caveat; E confirms unauthenticated redirect + non-200 fail-closed API"
+  },
+  "ciAcceptance": "owner-pilot-e2e must run spec 47 and be green on the PR (canonical browser lane). Required checks (LANE_B, Build+Type+Prisma, lint) must be green.",
+  "honestSplit": {
+    "cleanWorkspaceF": "Unreachable in the seeded owner-pilot lane (seed always yields a bridged top action). Browser proves the CONTRACT (exactly one honest state, never a hybrid); the component test pins the EXACT clean state (bridge=null and empty-routes bridge).",
+    "authenticatedNonOwnerE": "The authenticated non-owner 403 is proven by tests/browser/10-rbac-workspace.spec.ts + the route capability gate. Spec 47 proves the seed-independent unauthenticated fail-closed path."
+  },
+  "classification": "OWNER_COCKPIT_E2E_NO_OVERLOAD_PROVEN"
+}

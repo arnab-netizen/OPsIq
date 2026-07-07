@@ -1,0 +1,59 @@
+{
+  "title": "Owner Cockpit Browser Journey Matrix (PASS 40)",
+  "date": "2026-07-07",
+  "spec": "tests/browser/47-owner-cockpit-end-to-end-no-overload.spec.ts",
+  "componentCompanion": "src/__tests__/components/owner-cockpit-no-overload.test.tsx",
+  "runsIn": "owner-pilot-e2e CI lane (real app + seeded Postgres, one OWNER login)",
+  "journeys": [
+    {
+      "id": "A",
+      "name": "normal — one top governed action",
+      "assertions": ["exactly one cockpit-top-action-title", "cockpit-why present", "cockpit-owner-decision present", "cockpit-reassessment contains 'reassessment'"],
+      "browserTest": "A. normal: exactly one top governed action with why / owner-decision / reassessment",
+      "componentTest": "A. normal: renders exactly one top action with why/decision/reassessment"
+    },
+    {
+      "id": "B",
+      "name": "crisis recovery — collapsed, no guarantee",
+      "assertions": ["cockpit-recovery-group is <details> collapsed by default", "expands on click", "cockpit-recovery-caveat contains 'not guaranteed'", "no forbidden copy in the section"],
+      "browserTest": "B. crisis recovery: section is collapsed and expands to a no-guarantee caveat",
+      "componentTest": "B. crisis recovery: section is collapsed and expands to a no-guarantee caveat"
+    },
+    {
+      "id": "C",
+      "name": "public signal — collapsed, no live ingestion",
+      "assertions": ["cockpit-signals-group collapsed by default", "expands on click", "cockpit-signals-noingest contains 'does not fetch live'", "no forbidden copy", "no PII (email/mobile) leaked"],
+      "browserTest": "C. public signal: section is collapsed, shows the no-live-ingestion boundary, hides raw text/PII",
+      "componentTest": "C. public signal: section is collapsed, shows the no-live-ingestion boundary, hides raw text/PII"
+    },
+    {
+      "id": "D",
+      "name": "action controls — labelled, never prompt",
+      "assertions": ["window.prompt & window.alert trapped to throw", "REJECT opens cockpit-action-form with cockpit-reason-input", "cancel closes the form", "SUBMIT_EVIDENCE blocked until an evidence ref is entered", "no fatal console errors"],
+      "browserTest": "D. action controls: a reason action opens a labelled inline form, not window.prompt",
+      "componentTest": "D. action controls: a reason action opens a labelled inline form, not window.prompt; D. SUBMIT_EVIDENCE cannot be submitted with no evidence reference"
+    },
+    {
+      "id": "E",
+      "name": "unauthorized — gate cannot be bypassed",
+      "assertions": ["unauthenticated /owner/cockpit redirects to /login", "GET /api/owner/public-signals returns non-200 without a session", "response body has no publicSignalStatus"],
+      "browserTest": "E. unauthorized: unauthenticated navigation is redirected and the owner API fails closed",
+      "componentTest": "n/a (server-side gate; RBAC authenticated-403 covered by tests/browser/10-rbac-workspace.spec.ts + route capability enforcement)"
+    },
+    {
+      "id": "F",
+      "name": "clean workspace — one honest state, no fabrication",
+      "assertions": ["exactly one of owner-cockpit / cockpit-clean renders (never both, never a hybrid)", "if clean: honest empty copy + zero top-action-title", "component: bridge=null and empty-routes bridge → cockpit-clean, no invented action, sections collapsed"],
+      "browserTest": "F. the cockpit renders exactly one honest state (top action XOR clean), never a fabricated hybrid",
+      "componentTest": "F. clean workspace: no top action is invented; honest empty state renders; F. an empty bridge (no routes) also renders the honest empty state"
+    },
+    {
+      "id": "G",
+      "name": "no-overload limits",
+      "assertions": ["1 top action", "≤3 reason bullets", "≤2 primary buttons (data-cockpit-priority=primary)", "≤3 secondary controls (data-cockpit-priority=secondary)", "secondary/monitor/proof (+recovery/signals in component) all collapsed by default"],
+      "browserTest": "G. no-overload: ≤1 top action, ≤3 reason bullets, ≤2 primary, ≤3 secondary, every section collapsed",
+      "componentTest": "G. no-overload: 1 top action, ≤3 reason bullets, ≤2 primary, ≤3 secondary, every section collapsed"
+    }
+  ],
+  "classification": "OWNER_COCKPIT_E2E_NO_OVERLOAD_PROVEN (on owner-pilot-e2e green)"
+}
