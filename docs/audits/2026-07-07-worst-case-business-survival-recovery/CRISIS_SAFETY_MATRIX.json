@@ -1,0 +1,22 @@
+{
+  "audit": "worst-case-business-survival-recovery",
+  "pass": "32",
+  "matrix": "CRISIS_SAFETY",
+  "date": "2026-07-07",
+  "purpose": "Evaluates each crisis-handling safety property against executable proof (business-survival-recovery.test.ts unit + worst-case-business-survival-recovery.db.test.ts DB).",
+  "properties": [
+    { "property": "cash protection", "held": true, "how": "cash pressure → survival triage / cash protection first; runway measured (real figure), never fabricated.", "provenBy": ["unit tests 1,2,6", "db test 4,7"] },
+    { "property": "customer/reputation protection", "held": true, "how": "customer/quality crisis → recovery first; draft-only comms; outranks marketing.", "provenBy": ["unit test 3", "db test 4"] },
+    { "property": "legal/contract safety", "held": true, "how": "legal/contract/tender risk → owner approval task; nothing committed/spent automatically.", "provenBy": ["unit test 4", "db test 5"] },
+    { "property": "tender safety", "held": true, "how": "tender urgency → eligibility/docs/cost data; auto-submit blocked.", "provenBy": ["unit test 7", "db test 12"] },
+    { "property": "no fake optimism", "held": true, "how": "unrecoverable case returns a terminal restructure/shutdown status + options; never guarantees success.", "provenBy": ["unit test 10", "db test 11"] },
+    { "property": "no fake financials", "held": true, "how": "Zod rejects currency/%/ROI/guarantee in summaries/actions/milestones; missing data → data task.", "provenBy": ["unit tests 6,18", "db test 7"] },
+    { "property": "no scale-before-validation", "held": true, "how": "growth/scale blocked-before-stabilization in every plan; thrive gate closed.", "provenBy": ["unit tests 1,12", "db test 10"] },
+    { "property": "owner workload reduction", "held": true, "how": "owner overload → delegation/policy actions.", "provenBy": ["unit test 9"] },
+    { "property": "staff-language safety", "held": true, "how": "staff/capacity → training/SOP; no blame/discipline/fraud/negligence language.", "provenBy": ["unit test 5"] },
+    { "property": "evidence + reassessment gates", "held": true, "how": "top action evidence + ordered milestones with evidence/reassessment; completion evidence-gated by the bridge.", "provenBy": ["unit tests 11,13,14", "db test 8,9"] },
+    { "property": "workspace isolation", "held": true, "how": "each crisis workspace's tasks are its own.", "provenBy": ["db test 13"] },
+    { "property": "clean workspace no-fabrication", "held": true, "how": "no pressures/temptation/missing-data → null plan.", "provenBy": ["unit test 16", "db test 14"] }
+  ],
+  "summary": { "propertiesEvaluated": 12, "propertiesHeld": 12, "propertiesFailed": 0, "classification": "ELITE_ACCEPTED" }
+}

@@ -1,0 +1,41 @@
+{
+  "audit": "worst-case-business-survival-recovery",
+  "pass": "32",
+  "ledger": "EVIDENCE",
+  "date": "2026-07-07",
+  "purpose": "Traceable proof for every claim in the PASS 32 matrices and final report.",
+  "modules": {
+    "survivalLayer": "src/domain/owner-mode/business-survival-recovery.ts (planBusinessSurvivalRecovery / planAndValidateSurvival / survivalPlanToProcessCorrections)",
+    "validation": "survivalRecoveryPlanSchema (Zod): unrecoverable⇒terminal-status+options, growth-always-blocked, owner-route⇒owner-gated, no fabricated money in summaries/actions/milestones",
+    "states": "16 crisis/survival states incl. UNRECOVERABLE_UNDER_CURRENT_CONSTRAINTS / RESTRUCTURE_REQUIRED / CONTROLLED_SHUTDOWN_REVIEW / THRIVE_READY",
+    "authority": "no new substrate; every action maps to the existing ProcessExecutionTask/approval/evidence/reassessment systems",
+    "deterministic": true
+  },
+  "unitTest": { "file": "src/__tests__/owner-mode/business-survival-recovery.test.ts", "tests": 18, "result": "18 passed (verified locally)" },
+  "dbSimulation": {
+    "file": "src/__tests__/execution/worst-case-business-survival-recovery.db.test.ts",
+    "lane": "LANE_B (throwaway Postgres 16, required)", "alsoWiredInto": "LANE_A (Neon)", "tests": 13,
+    "result": "13 passed (verified locally against Postgres 16 on 2026-07-07)", "gate": "TEST_WITH_DB=true"
+  },
+  "claims": [
+    { "claim": "All crisis archetypes run and produce a schema-valid survival plan", "evidence": "db test 1", "kind": "db-assertion" },
+    { "claim": "A survival top action + owner cockpit summary is created and persisted", "evidence": "db test 2+3", "kind": "db-assertion" },
+    { "claim": "Stop-loss/cash/customer/ops actions routed as governed tasks", "evidence": "db test 4 + unit tests 1,2,3", "kind": "db+unit-assertion" },
+    { "claim": "Owner-approval gates hold (non-owner blocked)", "evidence": "db test 5 + unit test 4", "kind": "db+unit-assertion" },
+    { "claim": "Manager/staff correction tasks route where safe", "evidence": "db test 6 + unit test 5", "kind": "db+unit-assertion" },
+    { "claim": "Missing data → data tasks, never a fake runway", "evidence": "db test 7 + unit test 6", "kind": "db+unit-assertion" },
+    { "claim": "Completion is evidence-gated", "evidence": "db test 8 + unit test 13", "kind": "db+unit-assertion" },
+    { "claim": "Recovery milestones exist for every crisis", "evidence": "db test 9 + unit tests 11,14", "kind": "db+unit-assertion" },
+    { "claim": "Growth/thrive blocked until stabilization", "evidence": "db test 10 + unit tests 1,12", "kind": "db+unit-assertion" },
+    { "claim": "Unrecoverable case is honest (restructure/shutdown, no fake optimism)", "evidence": "db test 11 + unit test 10", "kind": "db+unit-assertion" },
+    { "claim": "Unsafe external actions blocked; tender auto-submit blocked", "evidence": "db test 12 + unit tests 7,15", "kind": "db+unit-assertion" },
+    { "claim": "Workspace isolation holds under crisis", "evidence": "db test 13", "kind": "db-assertion" },
+    { "claim": "Clean workspace fabricates nothing", "evidence": "db test 14 + unit test 16", "kind": "db+unit-assertion" },
+    { "claim": "No hidden score; no fake ROI/profit/win-probability", "evidence": "unit tests 17,18", "kind": "unit-assertion" }
+  ],
+  "honestGaps": [
+    "The survival layer is deterministic/rule-based over controlled internal-pressure inputs; it is not a learned model and does not ingest live financials.",
+    "Cash/runway figures are never emitted — the plan requires the owner's own data to be measured.",
+    "Live connectors / LLM understanding / private owner shadow pilot / truth-ledger remain out of scope (frozen — see DEFERRED_BROAD_GAPS.md)."
+  ]
+}

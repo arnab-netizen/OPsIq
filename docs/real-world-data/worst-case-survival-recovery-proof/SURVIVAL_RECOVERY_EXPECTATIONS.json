@@ -1,0 +1,149 @@
+{
+  "pack": "worst-case-survival-recovery-proof",
+  "pass": "32",
+  "note": "Deterministic expected survival plan per crisis. Regenerate if the module changes.",
+  "expectations": [
+    {
+      "crisisCaseId": "cr-laundry",
+      "crisisStatus": "CASH_PROTECTION_REQUIRED",
+      "topAction": "Protect cash / runway: hold discretionary spend and measure the real cash position",
+      "ownerApprovalRequired": false,
+      "missingDataTasks": 5,
+      "ownerApprovalTasks": 0,
+      "recoveryMilestones": 6,
+      "unrecoverable": false,
+      "blockedUnsafeActions": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ]
+    },
+    {
+      "crisisCaseId": "cr-housekeeping",
+      "crisisStatus": "CUSTOMER_RECOVERY_REQUIRED",
+      "topAction": "Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "ownerApprovalRequired": false,
+      "missingDataTasks": 5,
+      "ownerApprovalTasks": 0,
+      "recoveryMilestones": 6,
+      "unrecoverable": false,
+      "blockedUnsafeActions": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ]
+    },
+    {
+      "crisisCaseId": "cr-property",
+      "crisisStatus": "CUSTOMER_RECOVERY_REQUIRED",
+      "topAction": "Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "ownerApprovalRequired": false,
+      "missingDataTasks": 4,
+      "ownerApprovalTasks": 1,
+      "recoveryMilestones": 6,
+      "unrecoverable": false,
+      "blockedUnsafeActions": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "marketing before stabilization + validation"
+      ]
+    },
+    {
+      "crisisCaseId": "cr-franchise",
+      "crisisStatus": "CUSTOMER_RECOVERY_REQUIRED",
+      "topAction": "Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "ownerApprovalRequired": false,
+      "missingDataTasks": 3,
+      "ownerApprovalTasks": 1,
+      "recoveryMilestones": 6,
+      "unrecoverable": false,
+      "blockedUnsafeActions": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "marketing before stabilization + validation"
+      ]
+    },
+    {
+      "crisisCaseId": "cr-saas",
+      "crisisStatus": "CUSTOMER_RECOVERY_REQUIRED",
+      "topAction": "Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "ownerApprovalRequired": false,
+      "missingDataTasks": 3,
+      "ownerApprovalTasks": 0,
+      "recoveryMilestones": 6,
+      "unrecoverable": false,
+      "blockedUnsafeActions": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "launch before stabilization + validation"
+      ]
+    },
+    {
+      "crisisCaseId": "cr-tender",
+      "crisisStatus": "VALIDATION_BEFORE_GROWTH",
+      "topAction": "Owner decision required: legal/contract/tender risk — nothing committed, submitted, or spent automatically",
+      "ownerApprovalRequired": true,
+      "missingDataTasks": 6,
+      "ownerApprovalTasks": 1,
+      "recoveryMilestones": 6,
+      "unrecoverable": false,
+      "blockedUnsafeActions": [
+        "tender auto-submit",
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto EMD payment / spend"
+      ]
+    },
+    {
+      "crisisCaseId": "cr-b2b",
+      "crisisStatus": "CUSTOMER_RECOVERY_REQUIRED",
+      "topAction": "Protect customers/reputation: fix the quality issue with proof; draft (not send) any response for the owner",
+      "ownerApprovalRequired": false,
+      "missingDataTasks": 5,
+      "ownerApprovalTasks": 0,
+      "recoveryMilestones": 6,
+      "unrecoverable": false,
+      "blockedUnsafeActions": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ]
+    },
+    {
+      "crisisCaseId": "cr-collective",
+      "crisisStatus": "CASH_PROTECTION_REQUIRED",
+      "topAction": "Protect cash / runway: hold discretionary spend and measure the real cash position",
+      "ownerApprovalRequired": false,
+      "missingDataTasks": 5,
+      "ownerApprovalTasks": 1,
+      "recoveryMilestones": 6,
+      "unrecoverable": false,
+      "blockedUnsafeActions": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "growth before stabilization + validation"
+      ]
+    },
+    {
+      "crisisCaseId": "cr-unrecoverable",
+      "crisisStatus": "UNRECOVERABLE_UNDER_CURRENT_CONSTRAINTS",
+      "topAction": "Owner/expert decision: restructure or controlled-shutdown review — survival is not feasible under current constraints",
+      "ownerApprovalRequired": true,
+      "missingDataTasks": 1,
+      "ownerApprovalTasks": 1,
+      "recoveryMilestones": 6,
+      "unrecoverable": true,
+      "blockedUnsafeActions": [
+        "scale / growth / expansion before stabilization is proven",
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "growth before stabilization + validation"
+      ]
+    }
+  ]
+}

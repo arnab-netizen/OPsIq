@@ -1,0 +1,396 @@
+{
+  "audit": "worst-case-business-survival-recovery",
+  "pass": "32",
+  "matrix": "RECOVERY_MILESTONE",
+  "date": "2026-07-07",
+  "note": "Ordered recovery milestones with evidence + reassessment per crisis; thrive gate stays blocked until all met.",
+  "rows": [
+    {
+      "crisisCaseId": "cr-laundry",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    },
+    {
+      "crisisCaseId": "cr-housekeeping",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    },
+    {
+      "crisisCaseId": "cr-property",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    },
+    {
+      "crisisCaseId": "cr-franchise",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    },
+    {
+      "crisisCaseId": "cr-saas",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    },
+    {
+      "crisisCaseId": "cr-tender",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    },
+    {
+      "crisisCaseId": "cr-b2b",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    },
+    {
+      "crisisCaseId": "cr-collective",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    },
+    {
+      "crisisCaseId": "cr-unrecoverable",
+      "milestones": [
+        {
+          "order": 1,
+          "milestone": "Stop-loss in force: loss-making/non-essential spend paused.",
+          "evidenceRequired": "owner-noted confirmation the spend/activity is paused.",
+          "reassessment": "re-check spend after one cycle."
+        },
+        {
+          "order": 2,
+          "milestone": "Cash position/runway measured (the real figure — never assumed).",
+          "evidenceRequired": "the captured cash/runway figure from the owner's own data.",
+          "reassessment": "re-measure runway at the next review."
+        },
+        {
+          "order": 3,
+          "milestone": "Customer/quality issue corrected with proof.",
+          "evidenceRequired": "evidence the corrected step passes; a governed reassessment confirms it worked.",
+          "reassessment": "re-check the defect/complaint rate after execution."
+        },
+        {
+          "order": 4,
+          "milestone": "Operational/vendor risk resolved.",
+          "evidenceRequired": "vendor/maintenance completion confirmation.",
+          "reassessment": "re-check response/resolution after the fix."
+        },
+        {
+          "order": 5,
+          "milestone": "Owner workload reduced via delegation/policy.",
+          "evidenceRequired": "evidence the delegation/policy is in place.",
+          "reassessment": "re-check owner load after one cycle."
+        },
+        {
+          "order": 6,
+          "milestone": "Stabilization gate met → recovery plan.",
+          "evidenceRequired": "all stabilization criteria evidenced.",
+          "reassessment": "owner reviews before any growth step."
+        }
+      ],
+      "stabilizationGate": "Stabilization is proven only when: the real cash position/runway is measured and not shrinking, customer/quality issues are validated and corrected with executed-outcome evidence, and no critical unresolved operational or legal/contract risk remains.",
+      "thriveGate": "Growth / scale / marketing / launch / tender-commitment / discount stays BLOCKED until stabilization is proven AND cost/capacity data exists AND the owner approves — no scale before validation, and no guaranteed outcome is claimed."
+    }
+  ]
+}
