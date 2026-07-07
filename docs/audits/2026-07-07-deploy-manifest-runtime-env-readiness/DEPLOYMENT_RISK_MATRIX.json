@@ -1,0 +1,73 @@
+{
+  "title": "Deployment Risk Matrix — Owner Self-Use (PASS 46)",
+  "date": "2026-07-07",
+  "risks": [
+    {
+      "id": "R-ENV-DRIFT",
+      "risk": "Env contract drifts (a var silently moves required<->optional, or a phantom var re-added as required) so deploys fail unexpectedly or block on a var nothing reads.",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "REQUIRED_ENV_VARS.json is the canonical manifest; owner-self-use-env-contract-consistency.test.ts fails CI on drift across manifest/.env.example/preflight/validate-deployment.",
+      "residual": "low"
+    },
+    {
+      "id": "R-BUILD-URL",
+      "risk": "NEXT_PUBLIC_APP_URL set only at runtime, not at build; absolute links/redirects point at the wrong origin.",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "Schema + runbook + prechecklist state it is inlined at build and must be set before `npm run build`.",
+      "residual": "low"
+    },
+    {
+      "id": "R-MIGRATION",
+      "risk": "Destructive or partial migration against the owner's real DB.",
+      "severity": "high",
+      "likelihood": "low",
+      "mitigation": "Explicit separate step; manual-only production gate (workflow_dispatch, PRODUCTION_DATABASE_URL, migrate deploy only, never reset/seed — enforced by bootable-production-env-contract.test.ts); prechecklist requires backup + migrate status first; rollback prefers restore-from-backup.",
+      "residual": "low"
+    },
+    {
+      "id": "R-SECRET-LEAK",
+      "risk": "Secret value committed, logged, or returned in a response.",
+      "severity": "high",
+      "likelihood": "low",
+      "mitigation": "Preflight prints [SET]/[NOT SET] only; manifest/docs carry names not values (asserted by the consistency test's secret-scan); smoke S9 checks responses/bundles; validate-deployment security checks (.env not in git).",
+      "residual": "low"
+    },
+    {
+      "id": "R-CI-VAR-IN-PROD",
+      "risk": "A CI/test-only var (TEST_WITH_DB, SKIP_ENV_VALIDATION, RUN_LIVE_AI, LOGIN_RATE_LIMIT_MAX_ATTEMPTS) leaks into production and weakens behavior.",
+      "severity": "medium",
+      "likelihood": "low",
+      "mitigation": "Classified explicitly as CI_TEST_ONLY with mustNotBeProd; prechecklist §A requires all unset; consistency test asserts none are declared production-required; LOGIN_RATE_LIMIT_MAX_ATTEMPTS is clamped >= prod default so it cannot weaken prod even if present.",
+      "residual": "low"
+    },
+    {
+      "id": "R-DIAG-OPEN",
+      "risk": "Internal diagnostic/ops endpoints exposed without a key.",
+      "severity": "high",
+      "likelihood": "low",
+      "mitigation": "OPSIQ_DIAGNOSTIC_KEY gates them fail-closed when unset; smoke S11 verifies; documented as optional (leave unset for self-use).",
+      "residual": "low"
+    },
+    {
+      "id": "R-PII",
+      "risk": "PII entered via manual-entry reaches storage.",
+      "severity": "high",
+      "likelihood": "low",
+      "mitigation": "Client + server PII guard (PASS 45) reusing the proven stripPii; smoke S6 is a hard stop condition; browser spec 51 covers it live.",
+      "residual": "low"
+    },
+    {
+      "id": "R-NO-HARD-BOOT-GATE",
+      "risk": "The real boot path (instrumentation -> startup-orchestrator) fails open with no hard env gate, so a missing required var surfaces as request-time failures rather than a refused boot.",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "Preflight + validate-deployment + prechecklist catch missing required vars BEFORE deploy; documented in the schema §6. Deliberately not adding a throw-on-boot gate in this pass (out of scope; would risk taking a running owner instance down on a transient read).",
+      "residual": "medium",
+      "deferred": true,
+      "deferredTo": "DEFERRED_BROAD_GAPS.md (optional future hard startup gate)"
+    }
+  ],
+  "overall": "All owner-self-use deploy risks have concrete, mostly test-enforced mitigations. One medium residual (no hard boot-time env gate) is documented and deferred, not hidden."
+}

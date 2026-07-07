@@ -1,0 +1,41 @@
+{
+  "title": "Environment Variable Matrix — Deploy Manifest + Runtime Env Readiness (PASS 46)",
+  "date": "2026-07-07",
+  "method": "Derived by inspecting real code usage (grep of process.env across src/ + scripts/, boot path in src/instrumentation.ts, Prisma DATABASE_URL, cookie/security NODE_ENV branches) and reconciling against .env.example, scripts/deployment-preflight.mjs, scripts/validate-deployment.ts. Names only; no secret values.",
+  "vars": [
+    { "name": "NODE_ENV", "class": "REQUIRED", "readAtRuntime": true, "readAtBuild": true, "secret": false, "prodValue": "production", "evidence": "cookie Secure/security branches; .env.example §2; preflight REQUIRED; validate-deployment required[]" },
+    { "name": "DATABASE_URL", "class": "REQUIRED", "readAtRuntime": true, "readAtBuild": true, "secret": true, "evidence": "Prisma client; 64 references; .env.example §1; preflight EXTERNAL_RUNTIME_REQUIRED; validate-deployment required[]" },
+    { "name": "NEXT_PUBLIC_APP_URL", "class": "REQUIRED", "readAtRuntime": true, "readAtBuild": true, "secret": false, "evidence": "absolute links across 12 pages + smoke; inlined at build; preflight EXTERNAL_RUNTIME_REQUIRED; validate-deployment required[]" },
+    { "name": "NEXT_PUBLIC_API_URL", "class": "LEGACY_ALIAS", "aliasOf": "NEXT_PUBLIC_APP_URL", "secret": false, "evidence": "accepted by validate-deployment only; not read by app" },
+    { "name": "MIGRATION_DATABASE_URL", "class": "MIGRATION_ONLY", "readAtRuntime": false, "secret": true, "evidence": "prisma CLI direct endpoint; falls back to DATABASE_URL; .env.example §1" },
+    { "name": "STRIPE_SECRET_KEY", "class": "OPTIONAL", "secret": true, "feature": "billing", "evidence": "resolveStripeSecretKey() lazy; preflight OPTIONAL" },
+    { "name": "STRIPE_API_KEY", "class": "LEGACY_ALIAS", "aliasOf": "STRIPE_SECRET_KEY", "secret": true, "evidence": "accepted only if canonical unset" },
+    { "name": "STRIPE_WEBHOOK_SECRET", "class": "OPTIONAL", "secret": true, "feature": "billing-webhooks" },
+    { "name": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "class": "OPTIONAL", "secret": false, "feature": "billing-client" },
+    { "name": "OPSIQ_DIAGNOSTIC_KEY", "class": "OPTIONAL", "secret": true, "feature": "internal-diagnostic-ops", "failClosedWhenUnset": true, "evidence": "gates /api/internal/* & /api/ops/*; 20 references" },
+    { "name": "SENTRY_DSN", "class": "OPTIONAL", "secret": true, "feature": "error-tracking" },
+    { "name": "LOG_LEVEL", "class": "OPTIONAL", "secret": false, "prodGuidance": "info|warn (debug flagged by validate-deployment)" },
+    { "name": "NEXT_PUBLIC_APP_NAME", "class": "OPTIONAL", "secret": false, "default": "OpsIQ" },
+    { "name": "SESSION_EXPIRY_HOURS", "class": "OPTIONAL", "secret": false, "default": "24" },
+    { "name": "PORT", "class": "OPTIONAL", "secret": false, "default": "3000" },
+    { "name": "TEST_WITH_DB", "class": "CI_TEST_ONLY", "mustNotBeProd": true },
+    { "name": "TEST_DATABASE_URL", "class": "CI_TEST_ONLY", "mustNotBeProd": true, "secret": true },
+    { "name": "DATABASE_URL_TEST", "class": "CI_TEST_ONLY", "mustNotBeProd": true, "secret": true },
+    { "name": "SKIP_ENV_VALIDATION", "class": "CI_TEST_ONLY", "mustNotBeProd": true },
+    { "name": "RUN_LIVE_AI", "class": "CI_TEST_ONLY", "mustNotBeProd": true, "note": "owner self-use runs no external LLM" },
+    { "name": "LOGIN_RATE_LIMIT_MAX_ATTEMPTS", "class": "CI_TEST_ONLY", "mustNotBeProd": true, "note": "clamped >= prod default (10); cannot weaken prod even if set" },
+    { "name": "JWT_SECRET", "class": "PHANTOM_UNUSED", "declaredIn": "src/runtime/config/config-validator.ts", "wiredIntoBoot": false, "evidence": "validator imported only by src/__tests__/phase-i/phase-i-runtime-discipline.test.ts; not in instrumentation/middleware/routes" },
+    { "name": "ENCRYPTION_KEY", "class": "PHANTOM_UNUSED", "declaredIn": "src/runtime/config/config-validator.ts", "wiredIntoBoot": false },
+    { "name": "AUTH_SECRET", "class": "PHANTOM_UNUSED", "declaredIn": "src/lib/config.ts getConfig (unused) + login-diagnostic presence report", "wiredIntoBoot": false, "note": "DB-backed session cookie needs no signing secret" },
+    { "name": "AUTH_URL", "class": "PHANTOM_UNUSED", "declaredIn": "src/lib/config.ts getConfig (unused) + owner-pilot e2e workflow env", "wiredIntoBoot": false },
+    { "name": "NEXTAUTH_SECRET", "class": "PHANTOM_UNUSED", "declaredIn": "login-diagnostic presence report only", "wiredIntoBoot": false },
+    { "name": "NEXTAUTH_URL", "class": "PHANTOM_UNUSED", "wiredIntoBoot": false }
+  ],
+  "requiredSet": ["NODE_ENV", "DATABASE_URL", "NEXT_PUBLIC_APP_URL"],
+  "reconciliation": {
+    "envExample": "consistent (§1-4, single source of truth)",
+    "deploymentPreflight": "consistent (NODE_ENV REQUIRED; DATABASE_URL + NEXT_PUBLIC_APP_URL EXTERNAL_RUNTIME_REQUIRED)",
+    "validateDeployment": "consistent (required[] = NODE_ENV, DATABASE_URL, NEXT_PUBLIC_APP_URL)",
+    "enforcedBy": "src/__tests__/deployment/owner-self-use-env-contract-consistency.test.ts (12 assertions)"
+  }
+}

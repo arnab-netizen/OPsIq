@@ -1,0 +1,67 @@
+{
+  "$comment": "Canonical, machine-readable owner-self-use runtime environment contract for OpsIQ. This is the single structured source of truth used by the env-consistency test (src/__tests__/deployment/owner-self-use-env-contract-consistency.test.ts). It lists variable NAMES and classifications only — it never contains secret VALUES. Derived by inspecting real code usage, not by guessing. Boot path: src/instrumentation.ts -> startup-orchestrator (no env gate); Prisma reads DATABASE_URL; NODE_ENV governs prod cookie security; NEXT_PUBLIC_APP_URL builds absolute links. Reconciled against .env.example, scripts/deployment-preflight.mjs, scripts/validate-deployment.ts.",
+  "generatedFor": "PASS 46 — Deploy manifest + runtime environment readiness",
+  "date": "2026-07-07",
+  "singleSourceOfTruthDoc": ".env.example",
+  "required": [
+    {
+      "name": "NODE_ENV",
+      "values": ["development", "staging", "production"],
+      "deploymentTarget": "production",
+      "why": "Governs production cookie Secure/SameSite and security behavior. App defaults to development if unset, which is unsafe for a real deployment.",
+      "readAt": "runtime (cookie/session, security branches)"
+    },
+    {
+      "name": "DATABASE_URL",
+      "format": "postgresql://user:password@host:port/db?schema=public (pooled endpoint for Neon)",
+      "why": "Prisma runtime connection. Without it the app cannot read/write governed records.",
+      "readAt": "runtime (Prisma client) + build",
+      "secret": true
+    },
+    {
+      "name": "NEXT_PUBLIC_APP_URL",
+      "format": "https://your-owner-host.example.com",
+      "why": "Public origin used to build absolute links across owner/dashboard pages. Wrong value = broken links/redirects.",
+      "readAt": "runtime + build (NEXT_PUBLIC_* is inlined at build time)",
+      "legacyAlias": "NEXT_PUBLIC_API_URL (accepted by validate-deployment only; set NEXT_PUBLIC_APP_URL)"
+    }
+  ],
+  "migrationOnly": [
+    {
+      "name": "MIGRATION_DATABASE_URL",
+      "format": "DIRECT (non-pooler) postgresql URL",
+      "why": "Used ONLY by the Prisma CLI for `migrate deploy` (advisory locks/DDL need a direct endpoint). Falls back to DATABASE_URL if unset (fine for local/single-endpoint Postgres).",
+      "readAt": "prisma CLI / CI migration gate (.github/workflows/migrate-production.yml uses PRODUCTION_DATABASE_URL secret)",
+      "secret": true,
+      "required": false
+    }
+  ],
+  "optional": [
+    { "name": "STRIPE_SECRET_KEY", "why": "Billing (canonical). Absent => billing disabled, never a boot failure (lazy client).", "secret": true },
+    { "name": "STRIPE_API_KEY", "why": "Legacy alias for STRIPE_SECRET_KEY (accepted only if canonical unset).", "secret": true },
+    { "name": "STRIPE_WEBHOOK_SECRET", "why": "Billing webhook signature verification. Absent => webhooks rejected/disabled.", "secret": true },
+    { "name": "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "why": "Billing client key. Absent => no client-side Stripe." },
+    { "name": "OPSIQ_DIAGNOSTIC_KEY", "why": "Gates internal diagnostic/ops endpoints. Absent => those endpoints stay fail-closed (locked). Not needed for the owner journey.", "secret": true },
+    { "name": "SENTRY_DSN", "why": "Error tracking. Absent => no Sentry, app still boots.", "secret": true },
+    { "name": "LOG_LEVEL", "values": ["debug", "info", "warn", "error"], "why": "Logging verbosity. Production should be info/warn (debug in prod is flagged by validate-deployment)." },
+    { "name": "NEXT_PUBLIC_APP_NAME", "why": "Branding label. Defaults to \"OpsIQ\"." },
+    { "name": "SESSION_EXPIRY_HOURS", "why": "Session lifetime. Defaults to 24." },
+    { "name": "PORT", "why": "Server listen port. Defaults to 3000." }
+  ],
+  "ciTestOnly": [
+    { "name": "TEST_WITH_DB", "why": "Enables DB-backed vitest lanes. MUST NOT be set in production." },
+    { "name": "TEST_DATABASE_URL", "why": "Test database URL. MUST NOT be set in production." },
+    { "name": "DATABASE_URL_TEST", "why": "Alt test database URL. MUST NOT be set in production." },
+    { "name": "SKIP_ENV_VALIDATION", "why": "Local/CI convenience to skip validation. MUST NOT be set in production." },
+    { "name": "RUN_LIVE_AI", "why": "Enables live-AI test lanes. MUST NOT be set in production (owner self-use runs no external LLM)." },
+    { "name": "LOGIN_RATE_LIMIT_MAX_ATTEMPTS", "why": "CI-only override to raise the login rate-limit ceiling for serial e2e logins from one IP. Clamped >= production default (10); MUST NOT be used to weaken production." }
+  ],
+  "phantomUnused": [
+    { "name": "JWT_SECRET", "declaredIn": "src/runtime/config/config-validator.ts", "reality": "That validator is imported ONLY by a test; it is NOT wired into src/instrumentation.ts, middleware.ts, or any route. JWT_SECRET is read nowhere on the boot/request path. Do NOT treat as required; do NOT add to production." },
+    { "name": "ENCRYPTION_KEY", "declaredIn": "src/runtime/config/config-validator.ts", "reality": "Same as JWT_SECRET — dead validator, not wired into boot." },
+    { "name": "AUTH_SECRET", "declaredIn": "src/lib/config.ts (getConfig) + presence-only report in src/app/api/internal/login-diagnostic/route.ts", "reality": "getConfig()/isProduction()/isStaging()/isDevelopment() are used nowhere in runtime code. Auth is DB-backed session cookie (bcrypt, no NextAuth, no signing secret). Optional/forward-compat only." },
+    { "name": "AUTH_URL", "declaredIn": "src/lib/config.ts (getConfig, unused) + owner-pilot e2e workflow env", "reality": "Not read at runtime. Set in CI e2e only." },
+    { "name": "NEXTAUTH_SECRET", "declaredIn": "src/app/api/internal/login-diagnostic/route.ts (presence report only)", "reality": "NextAuth is not used. Phantom; never required." },
+    { "name": "NEXTAUTH_URL", "declaredIn": "(referenced historically)", "reality": "NextAuth is not used. Phantom; never required." }
+  ]
+}
