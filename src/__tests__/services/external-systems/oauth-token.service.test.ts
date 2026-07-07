@@ -20,8 +20,14 @@ import {
   generateCodeChallenge,
   validateCodeVerifier,
   sanitizeTokenForLogging,
+  OAUTH_TOKEN_ENCRYPTION_KEY_ENV,
   type OAuthToken,
 } from "@/services/external-systems/oauth-token.service";
+
+// Synthetic 32-byte key for tests only (NOT a real secret). Encryption fails
+// closed without a configured key, so the suite must supply one explicitly.
+const TEST_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+process.env[OAUTH_TOKEN_ENCRYPTION_KEY_ENV] = TEST_ENCRYPTION_KEY;
 
 describe("B13-S1: OAuth Token Service", () => {
   describe("State Generation", () => {
@@ -166,6 +172,110 @@ describe("B13-S1: OAuth Token Service", () => {
       // Encrypted form should not contain readable token parts
       expect(token.accessToken).not.toContain("super_secret");
       expect(token.accessToken).not.toContain("12345");
+    });
+  });
+
+  describe("Encryption hardening (Phase 0 truth/safety)", () => {
+    const plaintextToken = "super_secret_token_12345";
+
+    it("ciphertext is not the plaintext", () => {
+      const enc = encryptOAuthToken(
+        { accessToken: plaintextToken, tokenType: "Bearer" },
+        "ws_123",
+      );
+      expect(enc.accessToken).not.toBe(plaintextToken);
+      expect(enc.accessToken).not.toContain(plaintextToken);
+    });
+
+    it("ciphertext is NOT a simple base64 of the token (rejects the old scheme)", () => {
+      const enc = encryptOAuthToken(
+        { accessToken: plaintextToken, tokenType: "Bearer" },
+        "ws_123",
+      );
+      const naiveBase64 = Buffer.from(plaintextToken).toString("base64");
+      // The stored value must not equal base64(token), and base64-decoding it
+      // must not reveal the token (which the old placeholder implementation did).
+      expect(enc.accessToken).not.toBe(naiveBase64);
+      const decodedWhole = Buffer.from(enc.accessToken, "base64").toString("utf-8");
+      expect(decodedWhole).not.toContain(plaintextToken);
+      // It uses the authenticated AES-256-GCM envelope, not bare base64.
+      expect(enc.accessToken.startsWith("v1gcm.")).toBe(true);
+    });
+
+    it("decrypt works with the correct workspace key", () => {
+      const enc = encryptOAuthToken(
+        { accessToken: plaintextToken, refreshToken: "refresh_abc", tokenType: "Bearer" },
+        "ws_correct",
+      );
+      const dec = decryptOAuthToken(enc, "ws_correct");
+      expect(dec.accessToken).toBe(plaintextToken);
+      expect(dec.refreshToken).toBe("refresh_abc");
+    });
+
+    it("decrypt FAILS with the wrong workspace key (GCM auth tag rejects)", () => {
+      const enc = encryptOAuthToken(
+        { accessToken: plaintextToken, tokenType: "Bearer" },
+        "ws_owner",
+      );
+      expect(() => decryptOAuthToken(enc, "ws_attacker")).toThrow();
+    });
+
+    it("decrypt FAILS on tampered ciphertext", () => {
+      const enc = encryptOAuthToken(
+        { accessToken: plaintextToken, tokenType: "Bearer" },
+        "ws_123",
+      );
+      const parts = enc.accessToken.split(".");
+      // Flip the last base64 char of the ciphertext segment.
+      const ct = parts[3];
+      parts[3] = ct.slice(0, -1) + (ct.slice(-1) === "A" ? "B" : "A");
+      const tampered = { ...enc, accessToken: parts.join(".") };
+      expect(() => decryptOAuthToken(tampered, "ws_123")).toThrow();
+    });
+
+    it("decrypt REFUSES legacy base64 (non-GCM) input — no silent downgrade", () => {
+      const legacy = {
+        accessToken: Buffer.from(plaintextToken).toString("base64"),
+        tokenType: "Bearer",
+      };
+      expect(() => decryptOAuthToken(legacy, "ws_123")).toThrow();
+    });
+
+    it("fails closed when the encryption key is missing", () => {
+      const saved = process.env[OAUTH_TOKEN_ENCRYPTION_KEY_ENV];
+      try {
+        delete process.env[OAUTH_TOKEN_ENCRYPTION_KEY_ENV];
+        expect(() =>
+          encryptOAuthToken({ accessToken: plaintextToken, tokenType: "Bearer" }, "ws_123"),
+        ).toThrow(/not configured|fails closed/i);
+      } finally {
+        process.env[OAUTH_TOKEN_ENCRYPTION_KEY_ENV] = saved;
+      }
+    });
+
+    it("fails closed when the encryption key is too short/weak", () => {
+      const saved = process.env[OAUTH_TOKEN_ENCRYPTION_KEY_ENV];
+      try {
+        process.env[OAUTH_TOKEN_ENCRYPTION_KEY_ENV] = Buffer.alloc(8, 1).toString("base64");
+        expect(() =>
+          encryptOAuthToken({ accessToken: plaintextToken, tokenType: "Bearer" }, "ws_123"),
+        ).toThrow(/at least 32 bytes|weak key/i);
+      } finally {
+        process.env[OAUTH_TOKEN_ENCRYPTION_KEY_ENV] = saved;
+      }
+    });
+
+    it("no code path labels base64 as encryption (source contract)", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+      const src = fs.readFileSync(
+        path.join(process.cwd(), "src/services/external-systems/oauth-token.service.ts"),
+        "utf-8",
+      );
+      // The insecure placeholder returned base64 of the raw token as "encrypted".
+      expect(src).not.toContain('Buffer.from(token.accessToken).toString("base64")');
+      expect(src).toContain("createCipheriv");
+      expect(src).toContain("aes-256-gcm");
     });
   });
 

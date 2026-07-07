@@ -15,6 +15,7 @@ import {
   getProviderTemplate,
   listActiveProviders,
   listProviderTemplates,
+  isConnectorProductionReady,
   PROVIDERS,
   TEMPLATES,
   type Provider,
@@ -22,6 +23,28 @@ import {
 } from "../../../domain/external-systems/provider-registry";
 
 describe("B12-S1: External Systems Provider Registry", () => {
+  describe("Connector readiness honesty (Phase 0 truth/safety)", () => {
+    it("no provider is labelled PRODUCTION_READY (they are import templates only)", () => {
+      for (const provider of Object.values(PROVIDERS)) {
+        expect(provider.readiness).toBe("PLACEHOLDER_ONLY");
+        expect(isConnectorProductionReady(provider)).toBe(false);
+      }
+    });
+
+    it("every provider declares an explicit readiness (no missing/undefined status)", () => {
+      const allowed = [
+        "NOT_IMPLEMENTED",
+        "PLACEHOLDER_ONLY",
+        "READ_ONLY_REAL",
+        "WRITE_CAPABLE_GATED",
+        "PRODUCTION_READY",
+      ];
+      for (const provider of Object.values(PROVIDERS)) {
+        expect(allowed).toContain(provider.readiness);
+      }
+    });
+  });
+
   describe("Provider Registry", () => {
     it("should have HubSpot provider", () => {
       const hubspot = getProvider("hubspot");

@@ -1,14 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   getPrivateModeAccess,
   enforcePrivateModeGate,
   addPrivateModeContext,
+  createPrismaPrivateModeResolver,
   OWNER_DASHBOARD_GATE,
   PRIVATE_ADMIN_GATE,
   PRIVATE_CONSULTANT_GATE,
   PRIVATE_ANALYST_GATE,
+  type PrivateModeGateDeps,
 } from '@/middleware/private-mode-gate';
+import type { PrivateModeRole } from '@/domain/private-mode/role-config';
 
 describe('B25-S1: Private Mode Gate Middleware', () => {
   function createRequest(headers: Record<string, string>): NextRequest {
@@ -22,38 +25,63 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
     return request;
   }
 
-  describe('getPrivateModeAccess', () => {
-    it('should extract private mode access from request headers', async () => {
+  // DB-backed resolver stub, keyed on `${workspaceId}:${userId}`. Represents the
+  // real PrivateModeAccess table; the gate must consult THIS, never a header.
+  function stubDeps(roleMap: Record<string, PrivateModeRole>): PrivateModeGateDeps {
+    return {
+      resolveRole: async (workspaceId: string, userId: string) =>
+        roleMap[`${workspaceId}:${userId}`] ?? null,
+    };
+  }
+
+  describe('getPrivateModeAccess — role comes from DB, never headers', () => {
+    it('IGNORES a spoofed x-private-mode-role header when no DB resolver is wired (fail closed)', async () => {
       const request = createRequest({
         'x-user-id': 'user-123',
         'x-workspace-id': 'ws-456',
-        'x-private-mode-role': 'OWNER',
+        'x-private-mode-role': 'OWNER', // spoofed
       });
 
-      const access = await getPrivateModeAccess(request);
+      const access = await getPrivateModeAccess(request); // no deps
 
-      expect(access.hasAccess).toBe(true);
-      expect(access.role).toBe('OWNER');
+      expect(access.hasAccess).toBe(false);
+      expect(access.role).toBeNull();
       expect(access.userId).toBe('user-123');
       expect(access.workspaceId).toBe('ws-456');
     });
 
-    it('should return null role when not in private mode', async () => {
+    it('IGNORES a spoofed header even with a resolver when the DB has no grant', async () => {
       const request = createRequest({
         'x-user-id': 'user-123',
         'x-workspace-id': 'ws-456',
+        'x-private-mode-role': 'OWNER', // spoofed
       });
 
-      const access = await getPrivateModeAccess(request);
+      const access = await getPrivateModeAccess(request, stubDeps({})); // DB has nothing
 
       expect(access.hasAccess).toBe(false);
       expect(access.role).toBeNull();
     });
 
-    it('should handle missing headers', async () => {
+    it('grants the DB role for an authorized user', async () => {
+      const request = createRequest({
+        'x-user-id': 'user-123',
+        'x-workspace-id': 'ws-456',
+      });
+
+      const access = await getPrivateModeAccess(
+        request,
+        stubDeps({ 'ws-456:user-123': 'OWNER' }),
+      );
+
+      expect(access.hasAccess).toBe(true);
+      expect(access.role).toBe('OWNER');
+    });
+
+    it('fails closed on missing identity headers', async () => {
       const request = createRequest({});
 
-      const access = await getPrivateModeAccess(request);
+      const access = await getPrivateModeAccess(request, stubDeps({ 'ws:u': 'OWNER' }));
 
       expect(access.userId).toBeNull();
       expect(access.workspaceId).toBeNull();
@@ -63,6 +91,8 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
   });
 
   describe('enforcePrivateModeGate', () => {
+    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': 'ws-1' };
+
     it('should allow access when private mode not required', async () => {
       const request = createRequest({});
       const result = await enforcePrivateModeGate(request, { required: false });
@@ -71,55 +101,58 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
     });
 
     it('should deny access when private mode required but not granted', async () => {
-      const request = createRequest({});
-      const result = await enforcePrivateModeGate(request, { required: true });
+      const request = createRequest(identity);
+      const result = await enforcePrivateModeGate(request, { required: true }, stubDeps({}));
 
       expect(result).not.toBeNull();
       expect(result?.status).toBe(403);
     });
 
-    it('should allow access when private mode granted', async () => {
-      const request = createRequest({
-        'x-user-id': 'user-123',
-        'x-workspace-id': 'ws-456',
-        'x-private-mode-role': 'CONSULTANT',
-      });
+    it('DENIES a spoofed role header when DB has no grant (core vulnerability fix)', async () => {
+      const request = createRequest({ ...identity, 'x-private-mode-role': 'CONSULTANT' });
+      const result = await enforcePrivateModeGate(request, { required: true }, stubDeps({}));
 
-      const result = await enforcePrivateModeGate(request, { required: true });
+      expect(result).not.toBeNull();
+      expect(result?.status).toBe(403);
+    });
+
+    it('should allow access when private mode granted in the DB', async () => {
+      const request = createRequest(identity);
+      const result = await enforcePrivateModeGate(
+        request,
+        { required: true },
+        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+      );
 
       expect(result).toBeNull(); // null = continue
     });
 
-    it('should check role requirement', async () => {
-      const request = createRequest({
-        'x-private-mode-role': 'CONSULTANT',
-      });
-
-      const result = await enforcePrivateModeGate(request, {
-        required: true,
-        requiredRole: 'OWNER',
-      });
+    it('should enforce role requirement using the DB role, not the header', async () => {
+      // DB says CONSULTANT; header claims OWNER; gate requires OWNER -> denied.
+      const request = createRequest({ ...identity, 'x-private-mode-role': 'OWNER' });
+      const result = await enforcePrivateModeGate(
+        request,
+        { required: true, requiredRole: 'OWNER' },
+        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+      );
 
       expect(result).not.toBeNull();
       expect(result?.status).toBe(403);
     });
 
-    it('should allow access when required role is granted', async () => {
-      const request = createRequest({
-        'x-private-mode-role': 'OWNER',
-      });
-
-      const result = await enforcePrivateModeGate(request, {
-        required: true,
-        requiredRole: 'OWNER',
-      });
+    it('should allow access when required role is granted in the DB', async () => {
+      const request = createRequest(identity);
+      const result = await enforcePrivateModeGate(
+        request,
+        { required: true, requiredRole: 'OWNER' },
+        stubDeps({ 'ws-1:user-1': 'OWNER' }),
+      );
 
       expect(result).toBeNull();
     });
 
     it('should bypass private mode when requested', async () => {
       const request = createRequest({}); // No private mode access
-
       const result = await enforcePrivateModeGate(request, {
         required: true,
         bypassPrivateMode: true, // Should bypass the requirement
@@ -128,19 +161,30 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
       expect(result).toBeNull();
     });
 
-    it('should accept feature requirements when private mode enabled', async () => {
-      const request = createRequest({
-        'x-private-mode-role': 'CONSULTANT',
-      });
+    it('should accept feature requirements when an approved DB role exists', async () => {
+      const request = createRequest(identity);
+      const result = await enforcePrivateModeGate(
+        request,
+        { required: true, requiredFeatures: ['caseSimulationRunner'] },
+        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+      );
 
-      const result = await enforcePrivateModeGate(request, {
-        required: true,
-        requiredFeatures: ['caseSimulationRunner'], // CONSULTANT has this
-      });
-
-      // Current implementation allows any approved role for feature checks
-      // Production implementation will verify against role feature sets
       expect(result).toBeNull();
+    });
+  });
+
+  describe('Workspace / tenant isolation', () => {
+    it('does not grant access using a grant from a different workspace', async () => {
+      // DB grant exists for ws-A, but request is scoped to ws-B.
+      const request = createRequest({ 'x-user-id': 'user-1', 'x-workspace-id': 'ws-B' });
+      const result = await enforcePrivateModeGate(
+        request,
+        { required: true },
+        stubDeps({ 'ws-A:user-1': 'OWNER' }),
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.status).toBe(403);
     });
   });
 
@@ -163,6 +207,31 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
 
       expect(updated.headers.get('x-private-mode-access')).toBe('false');
       expect(updated.headers.get('x-private-mode-role')).toBeNull();
+    });
+  });
+
+  describe('createPrismaPrivateModeResolver — wires the real DB service', () => {
+    it('returns the approved DB role', async () => {
+      const fakePrisma = {
+        privateModeAccess: {
+          findFirst: async (args: { where: Record<string, unknown> }) => {
+            if (
+              args.where.workspaceId === 'ws-1' &&
+              args.where.userId === 'user-1' &&
+              args.where.approvalStatus === 'approved' &&
+              args.where.revokedAt === null
+            ) {
+              return { role: 'OWNER' };
+            }
+            return null;
+          },
+        },
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const resolve = createPrismaPrivateModeResolver(fakePrisma as any);
+
+      expect(await resolve('ws-1', 'user-1')).toBe('OWNER');
+      expect(await resolve('ws-1', 'someone-else')).toBeNull();
     });
   });
 
@@ -190,32 +259,34 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
   });
 
   describe('Acceptance Gates (Protocol §34)', () => {
-    it('should gate private mode admin features behind OWNER role', async () => {
-      // User with CONSULTANT role tries to access admin features
-      const request = createRequest({
-        'x-private-mode-role': 'CONSULTANT',
-      });
+    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': 'ws-1' };
 
-      const result = await enforcePrivateModeGate(request, PRIVATE_ADMIN_GATE);
+    it('should gate private mode admin features behind OWNER role (DB-sourced)', async () => {
+      // DB role is CONSULTANT; admin gate requires OWNER.
+      const request = createRequest(identity);
+      const result = await enforcePrivateModeGate(
+        request,
+        PRIVATE_ADMIN_GATE,
+        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+      );
 
       expect(result).not.toBeNull();
       expect(result?.status).toBe(403);
     });
 
-    it('should allow OWNER access to private admin features', async () => {
-      const request = createRequest({
-        'x-private-mode-role': 'OWNER',
-      });
-
-      const result = await enforcePrivateModeGate(request, PRIVATE_ADMIN_GATE);
+    it('should allow OWNER access to private admin features (DB-sourced)', async () => {
+      const request = createRequest(identity);
+      const result = await enforcePrivateModeGate(
+        request,
+        PRIVATE_ADMIN_GATE,
+        stubDeps({ 'ws-1:user-1': 'OWNER' }),
+      );
 
       expect(result).toBeNull();
     });
 
     it('should keep Owner Mode dashboard public (backward compatible)', async () => {
-      // User without private mode access should still access dashboard
       const request = createRequest({});
-
       const result = await enforcePrivateModeGate(request, OWNER_DASHBOARD_GATE);
 
       expect(result).toBeNull();
@@ -227,48 +298,45 @@ describe('B25-S1: Private Mode Gate Middleware', () => {
 
       const updated = addPrivateModeContext(response, context);
 
-      // Handlers can check these headers to conditionally render features
       expect(updated.headers.get('x-private-mode-access')).toBe('true');
       expect(updated.headers.get('x-private-mode-role')).toBe('CONSULTANT');
     });
   });
 
-  describe('Role access isolation', () => {
-    it('should prevent CONSULTANT from accessing OWNER-only features', async () => {
-      const request = createRequest({
-        'x-private-mode-role': 'CONSULTANT',
-      });
+  describe('Role access isolation (DB-sourced)', () => {
+    const identity = { 'x-user-id': 'user-1', 'x-workspace-id': 'ws-1' };
 
-      const result = await enforcePrivateModeGate(request, {
-        required: true,
-        requiredRole: 'OWNER',
-      });
+    it('should prevent CONSULTANT from accessing OWNER-only features', async () => {
+      const request = createRequest(identity);
+      const result = await enforcePrivateModeGate(
+        request,
+        { required: true, requiredRole: 'OWNER' },
+        stubDeps({ 'ws-1:user-1': 'CONSULTANT' }),
+      );
 
       expect(result).not.toBeNull();
       expect(result?.status).toBe(403);
     });
 
     it('should prevent ANALYST from accessing OWNER-only features', async () => {
-      const request = createRequest({
-        'x-private-mode-role': 'ANALYST',
-      });
-
-      const result = await enforcePrivateModeGate(request, {
-        required: true,
-        requiredRole: 'OWNER',
-      });
+      const request = createRequest(identity);
+      const result = await enforcePrivateModeGate(
+        request,
+        { required: true, requiredRole: 'OWNER' },
+        stubDeps({ 'ws-1:user-1': 'ANALYST' }),
+      );
 
       expect(result).not.toBeNull();
     });
 
     it('should allow multiple roles to access non-OWNER features', async () => {
       for (const role of ['OWNER', 'CONSULTANT', 'ANALYST'] as const) {
-        const request = createRequest({
-          'x-private-mode-role': role,
-        });
-
-        // Gate that doesn't require specific role
-        const result = await enforcePrivateModeGate(request, { required: true });
+        const request = createRequest(identity);
+        const result = await enforcePrivateModeGate(
+          request,
+          { required: true },
+          stubDeps({ 'ws-1:user-1': role }),
+        );
 
         expect(result).toBeNull();
       }

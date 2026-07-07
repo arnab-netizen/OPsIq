@@ -6,14 +6,31 @@
  * No raw tokens are ever exposed to the frontend.
  *
  * Security properties:
- * - Tokens encrypted at rest with workspace-scoped keys
+ * - Tokens encrypted at rest with authenticated AES-256-GCM. The per-workspace
+ *   key is derived (HKDF-SHA256) from an explicit master key so ciphertext is
+ *   bound to its workspace: a token encrypted for workspace A cannot be decrypted
+ *   with workspace B's derived key (the GCM auth tag fails).
+ * - Fail-closed: the master key MUST be supplied via the OAUTH_TOKEN_ENCRYPTION_KEY
+ *   environment variable (>= 32 bytes, base64 or hex). If it is missing or too
+ *   short, encrypt/decrypt THROW rather than silently downgrade to base64 or
+ *   store plaintext. There is no insecure fallback.
+ * - Ciphertext is a versioned string ("v1gcm.<iv>.<tag>.<ct>", base64 segments),
+ *   never a bare base64 encoding of the token. decrypt refuses any other format.
  * - State tokens for CSRF protection on OAuth callbacks
  * - Nonce tokens for ID token validation
  * - Refresh token rotation on use
  * - Automatic cleanup of expired states
  */
 
-import { randomBytes } from "crypto";
+import { randomBytes, createCipheriv, createDecipheriv, hkdfSync } from "crypto";
+
+/** Env var holding the master key for OAuth token encryption. No default — absence fails closed. */
+export const OAUTH_TOKEN_ENCRYPTION_KEY_ENV = "OAUTH_TOKEN_ENCRYPTION_KEY";
+/** Ciphertext format tag. A value NOT starting with this is rejected by decrypt. */
+const TOKEN_ENC_VERSION = "v1gcm";
+const TOKEN_ENC_IV_BYTES = 12;
+const TOKEN_ENC_KEY_BYTES = 32;
+const TOKEN_ENC_HKDF_INFO = "opsiq-oauth-token-v1";
 
 export interface OAuthToken {
   accessToken: string;
@@ -23,8 +40,8 @@ export interface OAuthToken {
 }
 
 export interface EncryptedOAuthToken {
-  accessToken: string; // encrypted base64
-  refreshToken?: string; // encrypted base64
+  accessToken: string; // AES-256-GCM ciphertext: "v1gcm.<iv>.<tag>.<ct>" (base64 segments)
+  refreshToken?: string; // AES-256-GCM ciphertext (same format) when present
   expiresAt?: Date;
   tokenType: string;
 }
@@ -89,19 +106,89 @@ export function validateOAuthState(
 }
 
 /**
- * Encrypt OAuth token for storage.
- * In production, this would use a key management service.
- * For now, returns a placeholder that indicates encryption is needed.
+ * Load and validate the master encryption key. Fails closed (throws) when the
+ * OAUTH_TOKEN_ENCRYPTION_KEY env var is missing, empty, malformed, or too short.
+ * Never returns a weak/default key.
+ */
+function getMasterKey(): Buffer {
+  const raw = process.env[OAUTH_TOKEN_ENCRYPTION_KEY_ENV];
+  if (!raw || raw.trim() === "") {
+    throw new Error(
+      `${OAUTH_TOKEN_ENCRYPTION_KEY_ENV} is not configured. OAuth token encryption fails closed: ` +
+        `refusing to encrypt or decrypt tokens without an explicit encryption key.`,
+    );
+  }
+  const trimmed = raw.trim();
+  const looksHex = /^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length % 2 === 0;
+  const key = looksHex ? Buffer.from(trimmed, "hex") : Buffer.from(trimmed, "base64");
+  if (key.length < TOKEN_ENC_KEY_BYTES) {
+    throw new Error(
+      `${OAUTH_TOKEN_ENCRYPTION_KEY_ENV} must decode to at least ${TOKEN_ENC_KEY_BYTES} bytes ` +
+        `(base64 or hex); got ${key.length}. Refusing to use a weak key.`,
+    );
+  }
+  return key;
+}
+
+/** Derive a 32-byte AES key bound to a specific workspace via HKDF-SHA256. */
+function deriveWorkspaceKey(workspaceId: string): Buffer {
+  if (!workspaceId) {
+    throw new Error("workspaceId is required to derive an OAuth token encryption key.");
+  }
+  const derived = hkdfSync(
+    "sha256",
+    getMasterKey(),
+    Buffer.from(workspaceId, "utf-8"),
+    Buffer.from(TOKEN_ENC_HKDF_INFO, "utf-8"),
+    TOKEN_ENC_KEY_BYTES,
+  );
+  return Buffer.from(derived);
+}
+
+/** Encrypt one field with authenticated AES-256-GCM under the workspace-derived key. */
+function encryptField(plaintext: string, workspaceId: string): string {
+  const key = deriveWorkspaceKey(workspaceId);
+  const iv = randomBytes(TOKEN_ENC_IV_BYTES);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const ciphertext = Buffer.concat([cipher.update(plaintext, "utf-8"), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return [
+    TOKEN_ENC_VERSION,
+    iv.toString("base64"),
+    authTag.toString("base64"),
+    ciphertext.toString("base64"),
+  ].join(".");
+}
+
+/** Decrypt one field. Throws on wrong/missing key, tampering, or unsupported format. */
+function decryptField(encoded: string, workspaceId: string): string {
+  const parts = encoded.split(".");
+  if (parts.length !== 4 || parts[0] !== TOKEN_ENC_VERSION) {
+    throw new Error(
+      "Unsupported OAuth token ciphertext format: expected authenticated AES-256-GCM " +
+        `("${TOKEN_ENC_VERSION}.<iv>.<tag>.<ct>"). Refusing to decrypt (fail closed).`,
+    );
+  }
+  const iv = Buffer.from(parts[1], "base64");
+  const authTag = Buffer.from(parts[2], "base64");
+  const ciphertext = Buffer.from(parts[3], "base64");
+  const key = deriveWorkspaceKey(workspaceId);
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(authTag);
+  // .final() throws if the auth tag does not verify (wrong key / tampered ciphertext).
+  const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return plaintext.toString("utf-8");
+}
+
+/**
+ * Encrypt OAuth token for storage using authenticated AES-256-GCM with a
+ * per-workspace derived key. Fails closed if OAUTH_TOKEN_ENCRYPTION_KEY is unset.
  */
 export function encryptOAuthToken(token: OAuthToken, workspaceId: string): EncryptedOAuthToken {
-  // In production: Use KMS or similar to encrypt tokens with workspace key
-  // This is a placeholder showing the structure
-  // Real implementation would use: crypto.createCipheriv() with AES-256-GCM
-
   return {
-    accessToken: Buffer.from(token.accessToken).toString("base64"),
+    accessToken: encryptField(token.accessToken, workspaceId),
     refreshToken: token.refreshToken
-      ? Buffer.from(token.refreshToken).toString("base64")
+      ? encryptField(token.refreshToken, workspaceId)
       : undefined,
     expiresAt: token.expiresAt,
     tokenType: token.tokenType,
@@ -109,20 +196,17 @@ export function encryptOAuthToken(token: OAuthToken, workspaceId: string): Encry
 }
 
 /**
- * Decrypt OAuth token for use.
- * Decrypts tokens stored in the database before use in API calls.
+ * Decrypt OAuth token for use. Throws (fails closed) on missing key, wrong
+ * workspace key, tampered ciphertext, or legacy/base64 (non-GCM) input.
  */
 export function decryptOAuthToken(
   encrypted: EncryptedOAuthToken,
   workspaceId: string,
 ): OAuthToken {
-  // In production: Decrypt using KMS
-  // This is a placeholder
-
   return {
-    accessToken: Buffer.from(encrypted.accessToken, "base64").toString("utf-8"),
+    accessToken: decryptField(encrypted.accessToken, workspaceId),
     refreshToken: encrypted.refreshToken
-      ? Buffer.from(encrypted.refreshToken, "base64").toString("utf-8")
+      ? decryptField(encrypted.refreshToken, workspaceId)
       : undefined,
     expiresAt: encrypted.expiresAt,
     tokenType: encrypted.tokenType,

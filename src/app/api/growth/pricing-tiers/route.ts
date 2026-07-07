@@ -9,6 +9,7 @@ import { PricingEngine } from "@/services/growth/pricing-engine";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { isProductionRuntime, demoOnlyBlockedResponse } from "@/lib/demo-write-guard";
 
 const createTierSchema = z.object({
   name: z.string().min(1, "Tier name required"),
@@ -22,7 +23,12 @@ const createTierSchema = z.object({
 /**
  * POST /api/growth/pricing-tiers
  *
- * Create a new price tier (workspace-scoped)
+ * Create a new price tier (workspace-scoped).
+ *
+ * DEMO-ONLY / NON-PERSISTENT: PricingEngine stores tiers in an in-memory Map
+ * (lost on restart, not multi-instance safe, no audit event). This route is
+ * therefore blocked in production (503 NOT_PERSISTED_DEMO_ONLY) until durable,
+ * tenant-scoped, audited persistence is added.
  * Wire: PricingEngine.createPriceTier()
  */
 export const POST = withEnforcementFull(async (request) => {
@@ -42,6 +48,11 @@ export const POST = withEnforcementFull(async (request) => {
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
     throw new ForbiddenError("Unauthorized");
+  }
+
+  // Fail closed in production: this write is backed only by an in-memory Map.
+  if (isProductionRuntime()) {
+    return demoOnlyBlockedResponse("pricing-tiers");
   }
 
   try {

@@ -104,6 +104,22 @@ async function runTest(
 
 // Test Suite
 async function main() {
+  // Fail closed: refuse to run against an unconfigured / placeholder target.
+  // Previously baseUrl defaulted to "https://yourdomain.com", so the suite would
+  // "run" against a non-existent host and report misleading results.
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!configuredUrl || /yourdomain\.com|example\.com/.test(configuredUrl)) {
+    console.error(
+      `\n✗ BLOCKED: NEXT_PUBLIC_APP_URL is not set to a real ${env} URL ` +
+        `(got: ${configuredUrl ?? "<unset>"}).`,
+    );
+    console.error(
+      `  Smoke tests cannot verify a deployment without a real target. ` +
+        `Set NEXT_PUBLIC_APP_URL and re-run. Classifying as BLOCKED (not PASS).`,
+    );
+    process.exit(1);
+  }
+
   // Test 1: Health Check
   await runTest("Health check endpoint", async () => {
     const res = await request("GET", "/api/health");
@@ -159,21 +175,18 @@ async function main() {
 
   // Test 4: API Authentication Boundary
   await runTest("Authentication enforcement", async () => {
-    // Try to access protected endpoint without auth
-    try {
-      const res = await request("GET", "/api/workspaces");
+    // Try to access protected endpoint without auth.
+    // A protected endpoint must respond 401/302. Any other status — OR an
+    // inability to reach it — is a FAILURE, not a pass. Previously non-timeout
+    // network errors were swallowed, so an unreachable endpoint counted as
+    // "auth enforced". Fail closed instead: rethrow so the check fails.
+    const res = await request("GET", "/api/workspaces");
 
-      // Should be 401 (unauthenticated) or 302 (redirect to login)
-      if (res.status !== 401 && res.status !== 302) {
-        throw new Error(
-          `Expected 401 or 302, got ${res.status} (endpoint not protected)`
-        );
-      }
-    } catch (error) {
-      // Network errors are expected for protected endpoints
-      if (error instanceof Error && error.message.includes("timeout")) {
-        throw error;
-      }
+    // Should be 401 (unauthenticated) or 302 (redirect to login)
+    if (res.status !== 401 && res.status !== 302) {
+      throw new Error(
+        `Expected 401 or 302, got ${res.status} (endpoint not protected)`
+      );
     }
   });
 
