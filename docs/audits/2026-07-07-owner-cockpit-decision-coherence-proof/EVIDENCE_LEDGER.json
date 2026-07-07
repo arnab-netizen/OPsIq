@@ -1,0 +1,42 @@
+{
+  "audit": "owner-cockpit-decision-coherence-proof",
+  "pass": "31",
+  "ledger": "EVIDENCE",
+  "date": "2026-07-07",
+  "purpose": "Traceable proof for every claim in the PASS 31 matrices and final report.",
+  "modules": {
+    "explanationLayer": "src/domain/owner-mode/owner-cockpit-decision-explanation.ts (explainOwnerCockpitDecision / explainAndValidateOwnerCockpit)",
+    "validation": "ownerCockpitExplanationSchema (Zod): top-action-needs-reason, owner-gated-needs-reason, evidence-route-needs-evidence, high-risk-needs-blocked, no PII/injection/currency in owner-facing strings",
+    "input": "PublicSignalPrioritisation (PASS 30) — re-derives nothing from raw text; +2 cluster summary fields (sourceQualitySummary/evidenceStrengthSummary) added to IssueClusterView",
+    "deterministic": true,
+    "authority": "explains only; the governed bridge remains the routing/owner-gating/evidence-gating authority"
+  },
+  "unitTest": { "file": "src/__tests__/owner-mode/owner-cockpit-decision-explanation.test.ts", "tests": 20, "result": "20 passed (verified locally)" },
+  "regression": { "prioritisation": "20 passed", "conflict": "23 passed", "interpreter": "24 passed" },
+  "dbSimulation": {
+    "file": "src/__tests__/execution/owner-cockpit-decision-coherence.db.test.ts",
+    "lane": "LANE_B (throwaway Postgres 16, required)", "alsoWiredInto": "LANE_A (Neon)", "tests": 13,
+    "result": "13 passed (verified locally against Postgres 16 on 2026-07-07)", "gate": "TEST_WITH_DB=true"
+  },
+  "claims": [
+    { "claim": "Prioritised output creates a top action + a schema-valid explanation", "evidence": "db test 1+2", "kind": "db-assertion" },
+    { "claim": "Explanation references correct supporting clusters/signals", "evidence": "db test 3 + unit test 2", "kind": "db+unit-assertion" },
+    { "claim": "States verified/unverified/missing data", "evidence": "db test 4 + unit tests 3,4", "kind": "db+unit-assertion" },
+    { "claim": "States why top outranks secondaries (incl. growth)", "evidence": "db test 5 + unit test 5", "kind": "db+unit-assertion" },
+    { "claim": "Owner-approval reason present where required (fail-closed)", "evidence": "db test 6 + unit tests 8,20", "kind": "db+unit-assertion" },
+    { "claim": "Evidence required before completion is present", "evidence": "db test 7 + unit test 9", "kind": "db+unit-assertion" },
+    { "claim": "Reassessment path visible", "evidence": "db test 8 + unit test 10", "kind": "db+unit-assertion" },
+    { "claim": "Blocked unsafe actions visible; tender auto-submit blocked", "evidence": "db test 9 + unit test 6", "kind": "db+unit-assertion" },
+    { "claim": "One top explanation + grouped bounded secondaries", "evidence": "db test 10+11 + unit test 11", "kind": "db+unit-assertion" },
+    { "claim": "No raw-signal / PII / injection text in explanation or tasks", "evidence": "db test 12+13 + unit tests 14,15", "kind": "db+unit-assertion" },
+    { "claim": "No fabricated money/ROI/win-probability in owner-facing fields", "evidence": "db test 14 + unit test 16", "kind": "db+unit-assertion" },
+    { "claim": "Workspace isolation holds", "evidence": "db test 15", "kind": "db-assertion" },
+    { "claim": "Monitor-only-positive and clean workspaces fabricate no explanation", "evidence": "db test 16 + unit test 18", "kind": "db+unit-assertion" },
+    { "claim": "No hidden score; weak evidence never stated as fact", "evidence": "unit tests 13,17", "kind": "unit-assertion" }
+  ],
+  "honestGaps": [
+    "The explanation layer is deterministic/rule-based; it explains upstream governed outputs, not a learned/opaque model.",
+    "Owner-facing copy is templated from governed fields; it is not natural-language generation.",
+    "Live connectors / crawling / LLM understanding / private owner shadow pilot remain out of scope (frozen — see DEFERRED_BROAD_GAPS.md)."
+  ]
+}
