@@ -1,0 +1,17 @@
+{
+  "title": "Shadow Pilot Scenario Matrix (PASS 42)",
+  "date": "2026-07-07",
+  "dataUsed": "OWNER_STYLE_SYNTHETIC_SHADOW_FIXTURES (not real owner outcomes)",
+  "provenBy": "src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts (14/14 on real Postgres, LANE_B)",
+  "scenarios": [
+    { "id": "A", "name": "normal operating issue", "crisisStatus": "OPERATIONS_STABILIZATION_REQUIRED", "topRoute": "CREATE_REASSESSMENT_TASK", "ownerApproval": false, "evidenceGate": true, "reassessment": true, "growthBlocked": true, "verdict": "CORRECT" },
+    { "id": "B", "name": "cash/profit pressure + discount temptation", "crisisStatus": "CASH_PROTECTION_REQUIRED", "topRoute": "CREATE_MISSING_DATA_TASK", "ownerApproval": true, "evidenceGate": false, "reassessment": false, "growthBlocked": true, "discountBlocked": true, "verdict": "CORRECT" },
+    { "id": "C", "name": "quality/rework crisis", "crisisStatus": "CUSTOMER_RECOVERY_REQUIRED", "topRoute": "CREATE_CORRECTION_TASK", "ownerApproval": false, "evidenceGate": true, "reassessment": true, "growthBlocked": true, "verdict": "CORRECT" },
+    { "id": "D", "name": "owner overload", "crisisStatus": "OWNER_WORKLOAD_CRITICAL", "topRoute": "CREATE_MANAGER_TASK", "ownerApproval": false, "evidenceGate": true, "reassessment": false, "growthBlocked": true, "verdict": "CORRECT" },
+    { "id": "E", "name": "growth opportunity under weak capacity", "crisisStatus": "VALIDATION_BEFORE_GROWTH", "topRoute": "CREATE_MISSING_DATA_TASK", "ownerApproval": false, "evidenceGate": false, "reassessment": false, "growthBlocked": true, "publicSignal": "active; PII/injection stripped; no live ingestion", "verdict": "CORRECT" },
+    { "id": "F", "name": "survival/recovery case", "crisisStatus": "SURVIVAL_TRIAGE_REQUIRED", "topRoute": "CREATE_CORRECTION_TASK", "ownerApproval": false, "evidenceGate": true, "reassessment": true, "growthBlocked": true, "thriveGate": "BLOCKED", "verdict": "CORRECT" },
+    { "id": "G", "name": "clean / missing-data control", "crisisStatus": "NONE (no plan)", "topRoute": "none", "ownerApproval": false, "evidenceGate": false, "reassessment": false, "growthBlocked": "n/a", "publicSignal": "NONE", "recoveryStatus": "NONE", "verdict": "CORRECT (no fabrication)" },
+    { "id": "H", "name": "unrecoverable / restructure review", "crisisStatus": "UNRECOVERABLE_UNDER_CURRENT_CONSTRAINTS", "topRoute": "CREATE_OWNER_APPROVAL_TASK", "ownerApproval": true, "evidenceGate": true, "reassessment": false, "growthBlocked": true, "verdict": "CORRECT (honest restructure/shutdown review, no fake recovery)" }
+  ],
+  "summary": { "total": 8, "CORRECT": 8, "ACCEPTABLE_WITH_RESTRICTION": 0, "WRONG": 0, "BLOCKED": 0 }
+}

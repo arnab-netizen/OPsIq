@@ -1,0 +1,23 @@
+{
+  "title": "Shadow Pilot Safety Matrix (PASS 42)",
+  "date": "2026-07-07",
+  "provenBy": "src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts (14/14) + tests/browser/48-private-owner-shadow-pilot.spec.ts (5/5, local)",
+  "controls": [
+    { "control": "owner-approval gate holds", "enforced": true, "how": "OWNER_APPROVAL_REQUIRED task: non-owner APPROVE → OWNER_APPROVAL_REQUIRED error; owner APPROVE → APPROVED", "evidence": "db #4 (scenario H)" },
+    { "control": "non-owner material action blocked", "enforced": true, "how": "actorRole derived from verified capability; non-owner cannot approve/complete owner tasks", "evidence": "db #4; PASS 25" },
+    { "control": "evidence required before completion", "enforced": true, "how": "EVIDENCE_REQUIRED_ROUTES reject COMPLETE with 0 evidence; succeed with evidence", "evidence": "db #5 (scenario C)" },
+    { "control": "completion opens reassessment", "enforced": true, "how": "REASSESSMENT_ON_COMPLETE routes open a governed reassessment on completion; explicit REQUEST_REASSESSMENT works", "evidence": "db #5, #6" },
+    { "control": "growth/scale blocked until stabilization", "enforced": true, "how": "every crisis plan lists growth/scale as blocked; thrive gate BLOCKED", "evidence": "db #3, #9" },
+    { "control": "scenario-specific unsafe action blocked", "enforced": true, "how": "discount blocked until margin known (B); B2B blocked before validation (E/F); tender auto-submit blocked", "evidence": "db #3" },
+    { "control": "unsafe/external action non-completable", "enforced": true, "how": "MONITOR_ONLY / BLOCK_UNSAFE_ACTION routes reject COMPLETE", "evidence": "db #7" },
+    { "control": "no fabricated money/ROI/win-probability", "enforced": true, "how": "NO_MONEY regex over every persisted task + recovery/public-signal reads; survival planner noMoney refines", "evidence": "db #8, #9, #10" },
+    { "control": "recovery never guarantees; gates blocked", "enforced": true, "how": "recovery-status thriveGate BLOCKED; not THRIVE_GATE_ELIGIBLE; mandatory 'not guaranteed'", "evidence": "db #9" },
+    { "control": "public signal: raw text hidden, PII stripped, injection resisted, no live ingestion", "enforced": true, "how": "adversarial PII+injection intake row → response has rawTextHidden/piiStripped true, no email/phone/injection text, no-live-ingestion statement", "evidence": "db #10" },
+    { "control": "clean/missing-data fabricates nothing", "enforced": true, "how": "no crisis → no plan → 0 tasks; recovery NONE; public-signal NONE", "evidence": "db #9, #11, #13" },
+    { "control": "workspace isolation", "enforced": true, "how": "one scenario's signals/tasks never cross into another workspace's reads", "evidence": "db #12" },
+    { "control": "low-load: exactly one top action", "enforced": true, "how": "bridge topRoute single per scenario; cockpit renders one top action", "evidence": "db #1, #14; browser 48" },
+    { "control": "labelled controls, never window.prompt", "enforced": true, "how": "window.prompt/alert trapped to throw; reason action opens labelled inline form", "evidence": "browser 48 #4" },
+    { "control": "no forbidden claims / PII in the cockpit", "enforced": true, "how": "forbidden-copy + PII regex sweep over the expanded cockpit", "evidence": "browser 48 #5" },
+    { "control": "no external action (contact/spend/tender/contract)", "enforced": true, "how": "no such action path exists; process-execution never contacts/spends/submits/signs", "evidence": "route source; db #7" }
+  ]
+}

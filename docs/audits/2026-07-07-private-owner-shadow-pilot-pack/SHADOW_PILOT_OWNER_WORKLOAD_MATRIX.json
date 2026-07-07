@@ -1,0 +1,25 @@
+{
+  "title": "Shadow Pilot Owner Workload Matrix (PASS 42)",
+  "date": "2026-07-07",
+  "honesty": "This matrix records the STRUCTURAL workload behaviour the harness proves (one clear next step, server-computed payload, no re-keying of supported output, delegation where safe). It does NOT claim a measured owner time-saving — a truthful workload-reduction number requires a real owner in the loop and is recorded by the owner in OWNER_SHADOW_PILOT_RESULTS_TEMPLATE.md. No fabricated owner-time-savings.",
+  "perScenario": [
+    { "id": "A", "ownerFacingLoad": "one reassessment step + a missing-data ask", "delegationOffered": false, "ownerKeepsMaterialApproval": true, "reKeyingRequired": false },
+    { "id": "B", "ownerFacingLoad": "approve/decline a discount once margin is measured", "delegationOffered": false, "ownerKeepsMaterialApproval": true, "reKeyingRequired": false },
+    { "id": "C", "ownerFacingLoad": "approve a quality correction; training/SOP routed to manager/staff", "delegationOffered": true, "ownerKeepsMaterialApproval": true, "reKeyingRequired": false },
+    { "id": "D", "ownerFacingLoad": "delegate recurring firefighting to a manager + set a policy", "delegationOffered": true, "ownerKeepsMaterialApproval": true, "reKeyingRequired": false },
+    { "id": "E", "ownerFacingLoad": "collect capacity/cost data; opportunity stays blocked (no owner outreach)", "delegationOffered": false, "ownerKeepsMaterialApproval": true, "reKeyingRequired": false },
+    { "id": "F", "ownerFacingLoad": "one survival triage action (stop-loss + protect cash) first", "delegationOffered": true, "ownerKeepsMaterialApproval": true, "reKeyingRequired": false },
+    { "id": "G", "ownerFacingLoad": "none — nothing invented", "delegationOffered": false, "ownerKeepsMaterialApproval": true, "reKeyingRequired": false },
+    { "id": "H", "ownerFacingLoad": "one honest owner+advisor restructure/shutdown decision", "delegationOffered": false, "ownerKeepsMaterialApproval": true, "reKeyingRequired": false }
+  ],
+  "structuralClaims": [
+    "exactly one top action per scenario (bridge topRoute single) — no decision overload",
+    "the cockpit reads a server-computed payload; the owner does not re-key data OpsIQ already holds",
+    "delegation routes (MANAGER/STAFF) reduce owner load where safe; owner-only material actions cannot be delegated",
+    "clean/missing-data adds no load (no fabricated task)"
+  ],
+  "notClaimed": [
+    "a measured owner time-saving in hours/percent (needs a real owner; recorded manually)",
+    "guaranteed workload reduction"
+  ]
+}
