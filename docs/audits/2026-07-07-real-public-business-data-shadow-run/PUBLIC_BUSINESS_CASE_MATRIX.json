@@ -1,0 +1,12 @@
+{
+  "title": "Public Business Case Matrix (PASS 43)",
+  "date": "2026-07-07",
+  "cases": [
+    { "id": "BUSINESS_A", "archetype": "laundry_local_service (local service)", "sourceCount": 4, "signalCount": 4, "topRoute": "CREATE_CORRECTION_TASK", "publicTender": "stale (deadline passed) — blocked from auto-submit", "verdict": "CORRECT" },
+    { "id": "BUSINESS_B", "archetype": "unknown (restaurant/hospitality)", "sourceCount": 5, "signalCount": 4, "topRoute": "CREATE_CORRECTION_TASK", "adversarial": "PII + prompt-injection review stripped", "verdict": "CORRECT" },
+    { "id": "BUSINESS_C", "archetype": "saas (project-management)", "sourceCount": 4, "signalCount": 4, "topRoute": "CREATE_CORRECTION_TASK", "conflicting": "ease-vs-learning-curve retained as conflicting signal", "verdict": "CORRECT" },
+    { "id": "BUSINESS_CLEAN", "archetype": "laundry_local_service (control)", "sourceCount": 0, "signalCount": 0, "topRoute": "none", "verdict": "CORRECT (no fabrication)" }
+  ],
+  "archetypeCoverage": ["local service (laundry)", "hospitality/restaurant", "SaaS (project-management)", "public tender/procurement (as BUSINESS_A opportunity signal)"],
+  "totals": { "cases": 4, "riskCases": 3, "sourceLedgerItems": 14, "publicSignalsClassified": 13, "usableSignals": 12, "doNotUse": 1 }
+}

@@ -1,0 +1,62 @@
+{
+  "title": "Public Business Expectations (PASS 43)",
+  "date": "2026-07-07",
+  "note": "Conservative expected OpsIQ behaviour per public-business case, declared BEFORE running the harness. Proven by src/__tests__/execution/real-public-business-shadow-run.db.test.ts. Public signals are unverified; every risk routes to correction/validation, never accusation; growth/tender blocked until internal proof exists; internal financials are missing-data, never fabricated.",
+  "operationalCrisisInputs": {
+    "BUSINESS_A": { "archetype": "laundry_local_service", "customerPressure": "MEDIUM", "qualityPressure": "HIGH", "operationalPressure": "MEDIUM", "opportunityTemptation": "TENDER", "missingData": ["internal complaint/defect rate", "cash position", "unit margin", "real delivery capacity"] },
+    "BUSINESS_B": { "archetype": "unknown", "customerPressure": "MEDIUM", "qualityPressure": "HIGH", "staffCapacityPressure": "MEDIUM", "missingData": ["internal wait-time", "order-error rate", "cash position", "unit margin", "staffing/capacity"] },
+    "BUSINESS_C": { "archetype": "saas", "customerPressure": "MEDIUM", "qualityPressure": "HIGH", "operationalPressure": "MEDIUM", "staffCapacityPressure": "MEDIUM", "missingData": ["internal support-response time", "churn rate", "onboarding completion rate", "unit margin"] },
+    "BUSINESS_CLEAN": { "archetype": "laundry_local_service", "allPressures": "NONE", "opportunityTemptation": "NONE", "missingData": [] }
+  },
+  "expectations": [
+    {
+      "case": "BUSINESS_A", "expectedTopRoute": "CREATE_CORRECTION_TASK", "expectedCrisisStatus": "CUSTOMER_RECOVERY_REQUIRED",
+      "expectedMissingData": ["internal complaint/defect rate", "cash", "margin", "capacity"],
+      "expectedValidationRequired": true, "expectedBlockedUnsafe": ["scale/growth/expansion", "tender auto-submit", "auto EMD payment/spend"],
+      "expectedOwnerApproval": "for any tender/pricing decision only; the quality correction is manager-level + evidence-gated",
+      "expectedEvidence": true, "expectedReassessment": true,
+      "expectedCockpitSummary": "Fix the recurring delivery/quality issue with proof before chasing the tender; validate the public complaint against internal data.",
+      "expectedPublicSignalSummary": "active; validation required; no live ingestion; raw text hidden; PII stripped; tender is stale/blocked from auto-submit",
+      "expectedMonitorOnly": ["positive praise (eco/on-time)"]
+    },
+    {
+      "case": "BUSINESS_B", "expectedTopRoute": "CREATE_CORRECTION_TASK", "expectedCrisisStatus": "CUSTOMER_RECOVERY_REQUIRED",
+      "expectedMissingData": ["internal wait-time", "order-error rate", "cash", "margin", "staffing"],
+      "expectedValidationRequired": true, "expectedBlockedUnsafe": ["scale/growth/expansion"],
+      "expectedOwnerApproval": "not required for the process correction (manager-level); no staff discipline",
+      "expectedEvidence": true, "expectedReassessment": true,
+      "expectedCockpitSummary": "Correct the wait-time/order-accuracy process with proof; the staff-attitude signal is weak → coaching/SOP, never discipline.",
+      "expectedPublicSignalSummary": "active; validation required; PII from any raw review stripped; no accusation",
+      "expectedMonitorOnly": ["positive praise (friendly service, cleanliness)"]
+    },
+    {
+      "case": "BUSINESS_C", "expectedTopRoute": "CREATE_CORRECTION_TASK", "expectedCrisisStatus": "CUSTOMER_RECOVERY_REQUIRED",
+      "expectedMissingData": ["support-response time", "churn rate", "onboarding completion rate", "margin"],
+      "expectedValidationRequired": true, "expectedBlockedUnsafe": ["scale/growth/expansion", "auto spend/discount/pricing change without owner approval"],
+      "expectedOwnerApproval": "for any pricing change only; support/onboarding correction is manager-level + evidence-gated",
+      "expectedEvidence": true, "expectedReassessment": true,
+      "expectedCockpitSummary": "Address support/onboarding with proof; pricing is an owner decision blocked until margin is known; conflicting reviews stay conflict-labelled.",
+      "expectedPublicSignalSummary": "active; validation required; conflicting signal labelled; no live ingestion",
+      "expectedMonitorOnly": []
+    },
+    {
+      "case": "BUSINESS_CLEAN", "expectedTopRoute": "none (no plan)", "expectedCrisisStatus": "NONE",
+      "expectedMissingData": [], "expectedValidationRequired": false, "expectedBlockedUnsafe": [],
+      "expectedOwnerApproval": "n/a", "expectedEvidence": false, "expectedReassessment": false,
+      "expectedCockpitSummary": "No public risk signals → nothing invented.",
+      "expectedPublicSignalSummary": "NONE", "expectedMonitorOnly": []
+    }
+  ],
+  "conservativeRules": [
+    "weak public data → validation required",
+    "conflicting public data → conflict label",
+    "public praise → monitor-only unless an actionable risk exists",
+    "public complaint → correction/validation route, not accusation",
+    "tender deadline → readiness/missing-data task, never auto-submit (and stale here)",
+    "growth opportunity → blocked while quality/capacity/cash are unknown",
+    "missing internal data → missing-data request",
+    "no source-backed fact → not claimed",
+    "staff-attitude signal → coaching/SOP, never discipline/blame",
+    "internal financials unknown → missing-data, never fabricated money/ROI"
+  ]
+}
