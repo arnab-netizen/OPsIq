@@ -1,0 +1,48 @@
+{
+  "title": "Timeline decision-memory matrix (PASS 47)",
+  "proofs": {
+    "3_failed_action_not_repeated_without_evidence": {
+      "repeatBlockedTicks": [
+        "e14",
+        "e15",
+        "e16",
+        "e17",
+        "e18",
+        "e19",
+        "e20",
+        "e21"
+      ],
+      "e15_probe": {
+        "key": "survival:ops",
+        "blocked": true,
+        "requiresChangedContextReason": true,
+        "reason": "A do-not-repeat rule blocks this recommendation. Provide a changed-context reason to override."
+      },
+      "cleared_by_new_evidence_e22": {
+        "key": "survival:ops",
+        "blocked": false,
+        "requiresChangedContextReason": false,
+        "reason": null
+      }
+    },
+    "4_owner_rejection_remembered": {
+      "e29_probe": {
+        "key": "survival:marketing-push",
+        "blocked": true,
+        "requiresChangedContextReason": true,
+        "reason": "A do-not-repeat rule blocks this recommendation. Provide a changed-context reason to override."
+      }
+    },
+    "5_missing_data_escalates": {
+      "firstEscalatedAt": "e07"
+    },
+    "7_new_evidence_changes_decision": {
+      "e22_repeatBlocked": false
+    },
+    "6_regression_detected": [
+      "e13",
+      "e24"
+    ]
+  },
+  "dbBacked": "recordDoNotRepeat + ownerDoNotRepeatRule lookup + markFactUnknown (FactReviewAction.newValue=null) proven in long-running-business-timeline.db.test.ts"
+}

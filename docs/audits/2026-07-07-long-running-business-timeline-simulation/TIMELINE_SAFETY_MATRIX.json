@@ -1,0 +1,25 @@
+{
+  "title": "Timeline safety matrix (PASS 47)",
+  "proofs": {
+    "16_no_fabricated_money": true,
+    "17_no_unsafe_growth_action": true,
+    "18_transparent_score_only": {
+      "scoreRange": [
+        24,
+        65
+      ],
+      "hiddenScore": false
+    },
+    "19_no_staff_blame_or_payroll": true,
+    "20_no_autonomous_external_action": true
+  },
+  "frozen": [
+    "public SaaS",
+    "billing",
+    "Product Hunt/launch",
+    "live integrations",
+    "LLM/NLP",
+    "autonomous external action",
+    "private owner data"
+  ]
+}

@@ -1,0 +1,231 @@
+{
+  "title": "Timeline event ledger (PASS 47)",
+  "totalEvents": 32,
+  "weeks": 8,
+  "entries": [
+    {
+      "order": 1,
+      "week": 1,
+      "id": "e01",
+      "kind": "baseline",
+      "label": "Baseline: messy operation — some complaints, moderate owner load, cash figure unknown"
+    },
+    {
+      "order": 2,
+      "week": 1,
+      "id": "e02",
+      "kind": "complaint",
+      "label": "First customer complaints logged (CUSTOMER_001) — redacted, placeholder only"
+    },
+    {
+      "order": 3,
+      "week": 2,
+      "id": "e03",
+      "kind": "complaint",
+      "label": "Complaints rising — customer pressure to HIGH"
+    },
+    {
+      "order": 4,
+      "week": 2,
+      "id": "e04",
+      "kind": "quality_defect",
+      "label": "Repeated quality defect on the wash/press step"
+    },
+    {
+      "order": 5,
+      "week": 2,
+      "id": "e05",
+      "kind": "complaint",
+      "label": "Another complaint — reputation pressure sustained"
+    },
+    {
+      "order": 6,
+      "week": 3,
+      "id": "e06",
+      "kind": "cash_pressure",
+      "label": "Cash pressure appears — cash to HIGH; top action shifts to cash protection"
+    },
+    {
+      "order": 7,
+      "week": 3,
+      "id": "e07",
+      "kind": "cash_pressure",
+      "label": "Missing cash-runway data recurs (2nd time) — escalates to an owner data decision"
+    },
+    {
+      "order": 8,
+      "week": 3,
+      "id": "e08",
+      "kind": "owner_reject",
+      "label": "Owner DECLINES an expensive marketing push (recorded in memory)"
+    },
+    {
+      "order": 9,
+      "week": 4,
+      "id": "e09",
+      "kind": "owner_approve",
+      "label": "Owner APPROVES the stop-loss + quality correction"
+    },
+    {
+      "order": 10,
+      "week": 4,
+      "id": "e10",
+      "kind": "staff_task_completed_with_evidence",
+      "label": "STAFF_A completes the stop-loss + quality correction WITH evidence; cash eases to MEDIUM, quality to MEDIUM"
+    },
+    {
+      "order": 11,
+      "week": 4,
+      "id": "e11",
+      "kind": "reassessment",
+      "label": "Reassessment cycle: customer pressure improving to MEDIUM"
+    },
+    {
+      "order": 12,
+      "week": 5,
+      "id": "e12",
+      "kind": "reassessment",
+      "label": "Reassessment confirms quality corrected (to LOW)"
+    },
+    {
+      "order": 13,
+      "week": 5,
+      "id": "e13",
+      "kind": "area_worsens",
+      "label": "VENDOR_A machine breakdown — operational pressure worsens to HIGH (staff task opened)"
+    },
+    {
+      "order": 14,
+      "week": 5,
+      "id": "e14",
+      "kind": "failed_correction",
+      "label": "First operational fix FAILS (recorded as a failed action)"
+    },
+    {
+      "order": 15,
+      "week": 5,
+      "id": "e15",
+      "kind": "repeat_failed_attempt",
+      "label": "OpsIQ REFUSES to repeat the failed ops fix without new evidence (memory blocks it)"
+    },
+    {
+      "order": 16,
+      "week": 6,
+      "id": "e16",
+      "kind": "opportunity_appears",
+      "label": "A tender opportunity appears (temptation) during instability"
+    },
+    {
+      "order": 17,
+      "week": 6,
+      "id": "e17",
+      "kind": "growth_block_check",
+      "label": "OpsIQ BLOCKS growth/scale until stabilization is proven"
+    },
+    {
+      "order": 18,
+      "week": 6,
+      "id": "e18",
+      "kind": "owner_reject",
+      "label": "Owner DECLINES to bid the tender now (recorded); tender eligibility data recurs"
+    },
+    {
+      "order": 19,
+      "week": 7,
+      "id": "e19",
+      "kind": "sop_training_run",
+      "label": "SOP/training correction RUNS (staff coaching, never blame); staff capacity eases to LOW"
+    },
+    {
+      "order": 20,
+      "week": 7,
+      "id": "e20",
+      "kind": "cash_data_collected",
+      "label": "Owner collects the REAL cash/runway figure (never assumed); cash eases to LOW"
+    },
+    {
+      "order": 21,
+      "week": 7,
+      "id": "e21",
+      "kind": "delegation",
+      "label": "Owner delegates recurring firefighting — owner workload eases to LOW"
+    },
+    {
+      "order": 22,
+      "week": 7,
+      "id": "e22",
+      "kind": "recovery_milestone",
+      "label": "Ops resolved WITH evidence — new evidence UNBLOCKS the previously-failed ops fix"
+    },
+    {
+      "order": 23,
+      "week": 7,
+      "id": "e23",
+      "kind": "reassessment",
+      "label": "Reassessment: recovery advancing — customer pressure to LOW"
+    },
+    {
+      "order": 24,
+      "week": 8,
+      "id": "e24",
+      "kind": "regression",
+      "label": "REGRESSION: complaints spike again after apparent improvement"
+    },
+    {
+      "order": 25,
+      "week": 8,
+      "id": "e25",
+      "kind": "weak_proof_submitted",
+      "label": "A WEAK proof is submitted — NOT accepted; stabilization stays unproven"
+    },
+    {
+      "order": 26,
+      "week": 8,
+      "id": "e26",
+      "kind": "loop_back_correction",
+      "label": "OpsIQ LOOPS BACK to correction instead of declaring success"
+    },
+    {
+      "order": 27,
+      "week": 8,
+      "id": "e27",
+      "kind": "staff_task_completed_with_evidence",
+      "label": "Re-correction completed WITH evidence; complaints stop rising, customer to LOW"
+    },
+    {
+      "order": 28,
+      "week": 8,
+      "id": "e28",
+      "kind": "stabilization_proven",
+      "label": "Stabilization PROVEN only after evidence (cash measured, customer corrected, ops resolved)"
+    },
+    {
+      "order": 29,
+      "week": 8,
+      "id": "e29",
+      "kind": "resuggest_rejected_attempt",
+      "label": "Owner-declined marketing is NOT re-suggested unchanged (memory blocks it)"
+    },
+    {
+      "order": 30,
+      "week": 8,
+      "id": "e30",
+      "kind": "thrive_eligibility_check",
+      "label": "Thrive gate becomes eligible only AFTER stabilization proof AND the SOP/manager layer is proven working"
+    },
+    {
+      "order": 31,
+      "week": 8,
+      "id": "e31",
+      "kind": "owner_approve_growth_experiment",
+      "label": "Owner APPROVES a controlled growth experiment — still owner-gated, opportunity still validated"
+    },
+    {
+      "order": 32,
+      "week": 8,
+      "id": "e32",
+      "kind": "clean_control",
+      "label": "Clean control: a business with no events — no crisis, nothing fabricated"
+    }
+  ]
+}
