@@ -1,0 +1,25 @@
+{
+  "title": "Manual Entry Surface Matrix (PASS 45)",
+  "date": "2026-07-07",
+  "route": "/owner/manual-entry (src/app/(authenticated)/owner/manual-entry/page.tsx)",
+  "backendRoute": "POST /api/owner/manual-entry (OWNER_MANAGE, workspace-scoped) → submitManualEntry → parseInputRecord → OwnerDataIntake (audited). No new decision logic; a bounded PII guard was added to the route.",
+  "reachability": "Sidebar 'Log business data' (requiresOwner) → /owner/manual-entry; also linked from the page to /owner/cockpit.",
+  "sections": [
+    { "id": "business_snapshot", "category": "customer_count", "essential": true },
+    { "id": "current_issue", "category": "proof_completion", "essential": true },
+    { "id": "cash_cost", "category": "cash_debt", "essential": false },
+    { "id": "customer_quality", "category": "complaints_reviews", "essential": false },
+    { "id": "staff_process", "category": "sops_checklists", "essential": false },
+    { "id": "owner_workload", "category": "staff_attendance", "essential": false },
+    { "id": "opportunity", "category": "marketing", "essential": false },
+    { "id": "vendor", "category": "vendor_invoices", "essential": false },
+    { "id": "revenue", "category": "revenue_sales", "essential": false },
+    { "id": "missing_data", "category": "tax_compliance", "essential": false }
+  ],
+  "progressiveDisclosure": "2 essential sections expanded; 8 optional sections collapsed in <details>.",
+  "submissionResult": "Each save posts ONE governed record → OwnerDataIntake (owner-confirmed), improving domain confidence; the owner acts on the result in /owner/cockpit (governed top action / missing-data / evidence / monitor). No external action.",
+  "governanceReuse": {
+    "proven": ["submitManualEntry + parseInputRecord + OwnerDataIntake (already DB+unit covered)", "stripPii (public-signal interpreter, now exported)"],
+    "newLogic": "pure owner-manual-entry-form (section→category map, safe copy, PII guard, validation) + a bounded PII block in the route; no duplicate decision/persistence logic"
+  }
+}

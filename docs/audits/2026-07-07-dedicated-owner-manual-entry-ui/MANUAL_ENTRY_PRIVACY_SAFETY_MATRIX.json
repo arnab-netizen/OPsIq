@@ -1,0 +1,18 @@
+{
+  "title": "Manual Entry Privacy & Safety Matrix (PASS 45)",
+  "date": "2026-07-07",
+  "controls": [
+    { "control": "mandatory privacy warning shown", "enforced": true, "how": "MANUAL_ENTRY_WARNING banner names phones/emails/full names/addresses/bank/passwords/contracts/payroll/invoices", "test": "unit #3; component #2; browser 51 #1" },
+    { "control": "safe copy + placeholders shown", "enforced": true, "how": "MANUAL_ENTRY_SAFE_COPY: operational-facts, CUSTOMER_001/STAFF_A/VENDOR_A, no external action, owner approval, evidence required", "test": "unit #4; component #3; browser 51 #1" },
+    { "control": "PII blocked client-side", "enforced": true, "how": "validateManualEntry → detectPiiInFields (reuses stripPii) blocks email/phone/named-contact with redaction guidance; no POST", "test": "unit #5-8/11; component #6; browser 51 #4" },
+    { "control": "PII blocked server-side (defense in depth)", "enforced": true, "how": "route runs detectPiiInFields before submitManualEntry → 422 pii_blocked", "test": "browser 51 #4 (live)" },
+    { "control": "no PII persisted", "enforced": true, "how": "a submission with PII never reaches submitManualEntry/OwnerDataIntake", "test": "browser 51 #4/#6" },
+    { "control": "required operational note", "enforced": true, "how": "validateManualEntry requires a note; mirrors parser 'no usable field values'", "test": "unit #9; component #7" },
+    { "control": "non-negative amounts", "enforced": true, "how": "validateManualEntry + parser reject negative amount keys", "test": "unit #10" },
+    { "control": "auth + workspace + capability", "enforced": true, "how": "withCanonicalEnforcement OWNER_MANAGE + requireWorkspace; cross-workspace/business rejected by parser", "test": "existing route/service coverage; browser login-gated" },
+    { "control": "audit on write", "enforced": true, "how": "submitManualEntry emits a governed audit event", "test": "input-paths service test" },
+    { "control": "no external action", "enforced": true, "how": "manual entry only persists an intake record; no contact/spend/tender/contract path", "test": "browser 51 #6 (no autonomous/contact copy)" },
+    { "control": "no fabricated money/ROI/win-probability/hidden score", "enforced": true, "how": "page shows no financial calc; forbidden-copy regex", "test": "component #10; browser 51 #6" },
+    { "control": "low-load (progressive disclosure)", "enforced": true, "how": "2 essential expanded; 8 optional collapsed", "test": "component #5; browser 51 #2" }
+  ]
+}
