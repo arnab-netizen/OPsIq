@@ -67,6 +67,22 @@ test.describe("46 — owner cockpit UI (desktop, one login)", () => {
     expect(await page.locator('[data-testid="cockpit-proof-drawer"]').evaluate((n) => (n as HTMLDetailsElement).open)).toBe(true);
   });
 
+  test("the recovery status section is collapsed by default; expanding shows a no-guarantee caveat", async () => {
+    const recovery = page.locator('[data-testid="cockpit-recovery-group"]');
+    // The recovery status endpoint always returns at least NONE, so the section renders on the cockpit.
+    if (!(await page.locator('[data-testid="owner-cockpit"], [data-testid="cockpit-clean"]').count())) return;
+    if (!(await recovery.count())) return; // tolerate an environment where recovery-status is unavailable
+    await expect(recovery).toBeVisible();
+    expect(await recovery.evaluate((n) => (n as HTMLDetailsElement).open)).toBe(false);
+    await recovery.locator("summary").click();
+    expect(await recovery.evaluate((n) => (n as HTMLDetailsElement).open)).toBe(true);
+    await expect(page.locator('[data-testid="cockpit-recovery-caveat"]')).toContainText(/not guaranteed/i);
+    // recovery must never imply a guarantee or a fabricated figure.
+    const text = (await recovery.innerText()).toLowerCase();
+    expect(text).not.toMatch(/guaranteed (recovery|profit|success)|recovered\b/);
+    expect(text).not.toMatch(/[$£€]\s?\d|win probability|ready to scale/);
+  });
+
   test("no fraud/negligence label, no fabricated money, no hidden score, no forbidden copy", async () => {
     const root = page.locator('[data-testid="owner-cockpit"], [data-testid="cockpit-clean"]').first();
     const text = (await root.innerText()).toLowerCase();

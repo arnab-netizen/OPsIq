@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/ui/primitives";
 import { MinimumOwnerCockpit, type CockpitActionInput } from "@/components/owner/MinimumOwnerCockpit";
 import type { ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
+import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -46,6 +47,7 @@ interface AvoidItem { avoid?: string }
 export default function OwnerCockpitPage() {
   const [bridge, setBridge] = useState<ProcessExecutionBridgeView | null>(null);
   const [avoid, setAvoid] = useState<string[]>([]);
+  const [recovery, setRecovery] = useState<OwnerRecoveryStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -59,6 +61,9 @@ export default function OwnerCockpitPage() {
       setBridge((data.processExecution as ProcessExecutionBridgeView) ?? null);
       const avoidList = (data?.view?.actionsToAvoid as AvoidItem[] | undefined) ?? [];
       setAvoid(avoidList.map((a) => a.avoid ?? "").filter(Boolean));
+      // Read-only recovery status (best-effort; a failure here must not break the cockpit).
+      const rec = await apiGet("/api/owner/recovery-status").catch(() => null);
+      setRecovery(rec && typeof rec === "object" && "recoveryStatus" in rec ? (rec as OwnerRecoveryStatusResponse) : null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -106,7 +111,7 @@ export default function OwnerCockpitPage() {
         <Button onClick={() => void load()} disabled={busy}>Refresh</Button>
       </header>
       {message && <p data-testid="cockpit-message" style={{ margin: 0, fontSize: 13, color: "#374151" }}>{message}</p>}
-      <MinimumOwnerCockpit bridge={bridge} actionsToAvoid={avoid} onAction={onAction} busy={busy} />
+      <MinimumOwnerCockpit bridge={bridge} actionsToAvoid={avoid} recovery={recovery} onAction={onAction} busy={busy} />
     </main>
   );
 }

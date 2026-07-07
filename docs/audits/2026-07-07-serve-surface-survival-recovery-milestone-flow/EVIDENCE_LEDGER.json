@@ -1,0 +1,45 @@
+{
+  "title": "Serve + Surface Survival→Recovery Milestone Flow — Evidence Ledger (PASS 37)",
+  "date": "2026-07-07",
+  "branch": "claude/serve-surface-survival-recovery-milestone-flow",
+  "baseMain": "dcad942650cb40b5cb859f8383a74286ad7c7799",
+  "filesAdded": [
+    "src/domain/owner-mode/owner-recovery-status.ts (pure projection + fail-closed Zod schema + conservative crisis derivation)",
+    "src/services/owner-mode/owner-recovery-status.service.ts (read-only; now-view → crisis → proven modules; no mutation)",
+    "src/app/api/owner/recovery-status/route.ts (GET, OWNER_VIEW-gated, workspace-scoped, fail-closed)",
+    "src/__tests__/owner-mode/owner-recovery-status.test.ts (11 unit tests)",
+    "src/__tests__/components/minimum-owner-cockpit-recovery.test.tsx (13 component tests)",
+    "src/__tests__/execution/owner-recovery-status-read.db.test.ts (6 DB tests)"
+  ],
+  "filesChanged": [
+    "src/components/owner/MinimumOwnerCockpit.tsx (+ optional recovery prop + collapsed RecoverySection)",
+    "src/app/(authenticated)/owner/cockpit/page.tsx (fetch GET /api/owner/recovery-status, pass to cockpit)",
+    "tests/browser/46-owner-cockpit.spec.ts (+ recovery-section collapsed/expand/no-guarantee assertions)",
+    ".github/workflows/db-verification.yml (wired owner-recovery-status-read.db.test.ts into LANE_B + LANE_A)"
+  ],
+  "backendReuse": {
+    "proven": ["planBusinessSurvivalRecovery (PASS 32)", "computeRecoveryExecution (PASS 33)", "getOwnerNowView", "getPersistedProcessTasks"],
+    "newLogic": "none for recovery decisions — only a pure projection + a conservative signal→pressure derivation; no new gate rules; no mutation"
+  },
+  "designHonesty": {
+    "conservativeDerivation": "CrisisInput derived only from REAL now-view signals (cash/quality/operational/workload severities). DATA_INSUFFICIENT findings and the generic default execution route are ignored, so an empty/data-only workspace reads NONE — no fabricated crisis. Constraints are never invented, so unrecoverable is never fabricated.",
+    "noFabricatedMilestoneProgress": "No PASS 33 milestone outcomes are persisted yet, so the read path passes NO outcomes; the recovery view reports crisis/in-progress with gates BLOCKED. It never claims stabilization/thrive from unverified data.",
+    "crisisMatrixProof": "The full crisis→stabilization/thrive/regression/unrecoverable matrix is proven deterministically by the 11 pure unit tests. The DB test proves the real read path + workspace isolation + clean=NONE + no-fabrication + fail-closed — the parts that genuinely require a database."
+  },
+  "localGates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS",
+    "governanceScan": "0 new (fixed 2 unsafe-error-render false-positives by moving expressions off the return line)",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "unitTests": "owner-recovery-status 11/11; recovery component 13/13; existing cockpit 20/20; recovery-milestone + survival still green (79 total in the run)",
+    "dbTests": "owner-recovery-status-read 6/6 + recovery-execution-milestone-proof 11/11 (TEST_WITH_DB=true, Postgres 16)",
+    "nextBuild": "Compiled successfully; /api/owner/recovery-status + /owner/cockpit present"
+  },
+  "browserProof": {
+    "spec": "tests/browser/46-owner-cockpit.spec.ts (extended)",
+    "runsIn": "owner-pilot-e2e CI lane",
+    "claim": "Browser-proven only if owner-pilot-e2e is green on the PR."
+  },
+  "ciAcceptance": "LANE_B must show owner-recovery-status-read.db.test.ts executed (not generic green). Required checks (LANE_B, Build+Type+Prisma, lint) green.",
+  "classification": "RECOVERY_STATUS_SURFACE_PROVEN"
+}
