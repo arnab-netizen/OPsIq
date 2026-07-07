@@ -1,0 +1,27 @@
+{
+  "title": "Shadow Pilot Cockpit Journey Plan (PASS 41)",
+  "date": "2026-07-07",
+  "surface": "/owner/cockpit (canonical)",
+  "principle": "One clear next step; every other surface via progressive disclosure; stop before any real external action.",
+  "steps": [
+    { "step": 1, "action": "owner opens /owner/cockpit for the shadow WORKSPACE_A", "endpoint": "GET /api/owner/now-view", "gate": "OWNER_VIEW + workspace", "expect": "cockpit renders one honest state (top action XOR clean)" },
+    { "step": 2, "action": "owner sees the single top action", "surface": "cockpit-top-action-title", "expect": "exactly one top action; severity badge" },
+    { "step": 3, "action": "owner reads why this is first", "surface": "cockpit-why", "expect": "≤3 plain-language bullets, no fabricated money" },
+    { "step": 4, "action": "owner expands recovery status if relevant", "endpoint": "GET /api/owner/recovery-status", "surface": "cockpit-recovery-group", "expect": "collapsed by default; expands to state + 'not guaranteed' caveat" },
+    { "step": 5, "action": "owner expands outside signals if relevant", "endpoint": "GET /api/owner/public-signals", "surface": "cockpit-signals-group", "expect": "collapsed by default; expands to no-live-ingestion boundary; no raw text/PII" },
+    { "step": 6, "action": "owner reviews evidence requirement", "surface": "cockpit-evidence", "expect": "evidence-required routes show the requirement" },
+    { "step": 7, "action": "owner reviews required owner decision", "surface": "cockpit-owner-decision", "expect": "material action shows OWNER_APPROVAL_REQUIRED / cannot be automated" },
+    { "step": 8, "action": "owner approves / delegates / requests missing data where safe", "endpoint": "POST /api/owner/process-execution", "gate": "OWNER_MANAGE + workspace; owner-only enforced", "expect": "labelled inline controls (never window.prompt); server re-checks" },
+    { "step": 9, "action": "owner submits simulated evidence only where allowed", "endpoint": "POST /api/owner/process-execution action=SUBMIT_EVIDENCE", "expect": "evidence ref required to submit evidence" },
+    { "step": 10, "action": "owner completes task only after evidence", "endpoint": "POST /api/owner/process-execution action=COMPLETE", "expect": "COMPLETE rejected with 0 evidence on evidence-required routes; succeeds with evidence" },
+    { "step": 11, "action": "owner requests reassessment", "endpoint": "POST /api/owner/process-execution action=REQUEST_REASSESSMENT", "expect": "governed reassessment opened / state updated" },
+    { "step": 12, "action": "owner reviews updated status", "endpoint": "GET /api/owner/now-view (reload)", "expect": "cockpit reflects new state; growth still blocked until stabilization proven" },
+    { "step": 13, "action": "owner records usefulness score manually", "surface": "pilot results template", "expect": "owner-supplied honest score; NOT fabricated by OpsIQ" },
+    { "step": 14, "action": "owner stops before any real external action", "surface": "cockpit-blocked", "expect": "unsafe/external actions are blocked and never auto-performed" }
+  ],
+  "cleanControl": {
+    "step": "load a clean WORKSPACE (no breakdown)",
+    "expect": "cockpit-clean honest empty state; no fabricated action; missing-data request only if useful"
+  },
+  "noOverloadInvariants": ["1 top action", "≤3 reason bullets", "≤2 primary buttons", "≤3 secondary controls", "secondary/monitor/recovery/signals/proof collapsed by default"]
+}

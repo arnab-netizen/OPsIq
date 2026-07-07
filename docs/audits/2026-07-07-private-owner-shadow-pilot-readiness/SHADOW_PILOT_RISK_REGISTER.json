@@ -1,0 +1,27 @@
+{
+  "title": "Shadow Pilot Risk Register (PASS 41)",
+  "date": "2026-07-07",
+  "risks": [
+    { "id": "R1", "risk": "Sensitive owner/customer data leaks into fixtures or responses", "likelihood": "MED", "impact": "HIGH", "mitigation": "Redaction guide §7 checklist enforced in PASS 42 fixtures; PASS 39 rawTextHidden/piiStripped refines; DB test asserts PII/raw-text suppression", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R2", "risk": "Cross-workspace data bleed", "likelihood": "LOW", "impact": "HIGH", "mitigation": "workspace-scoped reads; owner-*-read.db.test.ts isolation assertions; PASS 42 DB sim adds wsA/wsB isolation", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R3", "risk": "Fabricated money/ROI/win-probability/owner-time-savings", "likelihood": "MED", "impact": "HIGH", "mitigation": "recovery + public-signal Zod refines (noMoney); PASS 40 forbidden-copy tests; evaluation matrix F3", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R4", "risk": "Reckless growth recommended before stabilization", "likelihood": "MED", "impact": "HIGH", "mitigation": "thrive gate blocked until stabilization proven (survival-recovery + recovery-status refines); scenario E/F expectations", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R5", "risk": "Unsafe external action becomes completable / auto-offered", "likelihood": "LOW", "impact": "HIGH", "mitigation": "BLOCK_UNSAFE_ACTION/MONITOR_ONLY non-completable; no outreach/spend/tender path exists; DB sim asserts blocked", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R6", "risk": "Material action completes without owner approval", "likelihood": "LOW", "impact": "HIGH", "mitigation": "OWNER_APPROVAL_REQUIRED enforced by verified capability (actorRole from verifiedCapabilities); PASS 25; DB sim non-owner block", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R7", "risk": "Completion without evidence (fake completion)", "likelihood": "LOW", "impact": "MED", "mitigation": "EVIDENCE_REQUIRED_ROUTES + detectFakeCompletion; DB sim completion-with/without-evidence", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R8", "risk": "Cockpit overload (too many actions/buttons/expanded sections)", "likelihood": "LOW", "impact": "MED", "mitigation": "PASS 40 no-overload proof (component + browser); PASS 42 asserts payload low-load", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R9", "risk": "Clean/missing data produces a fabricated decision", "likelihood": "LOW", "impact": "HIGH", "mitigation": "NONE / missing-data on empty data (now-view/recovery/public-signals); scenario G control", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R10", "risk": "Conservative archetype under-prioritises a real public signal", "likelihood": "MED", "impact": "LOW", "mitigation": "interpreter only downgrades, never fabricates; documented restriction; validation-required surfaced to owner", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R11", "risk": "Owner must re-key data OpsIQ already holds (workload not reduced)", "likelihood": "MED", "impact": "MED", "mitigation": "cockpit reads server-computed payload; evaluation F10 checks re-keying; workload reduction module", "residual": "MED", "owner": "pilot author", "note": "true workload reduction is measured, not assumed; recorded honestly by owner" },
+    { "id": "R12", "risk": "Overbuilt importer / accidental live integration during PASS 42", "likelihood": "MED", "impact": "HIGH", "mitigation": "PASS 42 uses a deterministic test harness to populate minimum records; no live importer; frozen-scope guard", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R13", "risk": "Real owner data used before redaction", "likelihood": "LOW", "impact": "HIGH", "mitigation": "PASS 42 uses OWNER_STYLE_SYNTHETIC_SHADOW_FIXTURES only; real data must be redacted per PASS 41 first", "residual": "LOW", "owner": "owner + pilot author" },
+    { "id": "R14", "risk": "Generic advice instead of governed routed action", "likelihood": "LOW", "impact": "MED", "mitigation": "every recommendation resolves to a ProcessExecutionTask route or a gate; evaluation F12", "residual": "LOW", "owner": "pilot author" },
+    { "id": "R15", "risk": "Unrecoverable case is dressed as recoverable", "likelihood": "LOW", "impact": "HIGH", "mitigation": "survival planner emits RESTRUCTURE_REVIEW_REQUIRED / CONTROLLED_SHUTDOWN_REVIEW_REQUIRED honestly; scenario H", "residual": "LOW", "owner": "pilot author" }
+  ],
+  "remainingRisksBeforeLivePilot": [
+    "No real redacted owner data has been tested yet (shadow uses synthetic owner-style fixtures).",
+    "True owner workload reduction is only measurable with a real owner in the loop.",
+    "Archetype fidelity for public signals is conservative until owner business context is supplied.",
+    "A live pilot would require: real redacted data, an owner operating the cockpit, and a fresh safety pass before any non-shadow use."
+  ]
+}
