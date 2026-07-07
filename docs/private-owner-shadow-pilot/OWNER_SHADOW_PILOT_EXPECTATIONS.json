@@ -1,0 +1,25 @@
+{
+  "title": "Owner Shadow Pilot Expectations (PASS 42)",
+  "date": "2026-07-07",
+  "note": "Expected governed outcome per scenario. Proven by src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts against a real Postgres. executionRoute + approvalLevel come from the PASS 32 survival planner → process-execution bridge; every crisis blocks growth/scale until stabilization.",
+  "expectations": [
+    { "id": "A", "crisisStatus": "OPERATIONS_STABILIZATION_REQUIRED", "expectedTopRoute": "CREATE_REASSESSMENT_TASK", "ownerApprovalTask": false, "evidenceRequiredToComplete": true, "reassessmentOnComplete": true, "blockedUnsafe": ["scale/growth/expansion before stabilization", "auto customer contact", "auto spend/discount"], "notes": "operational stabilization + reassessment + missing-data (completion proof)" },
+    { "id": "B", "crisisStatus": "CASH_PROTECTION_REQUIRED", "expectedTopRoute": "CREATE_MISSING_DATA_TASK", "ownerApprovalTask": true, "evidenceRequiredToComplete": false, "reassessmentOnComplete": false, "blockedUnsafe": ["discount before margin/cash impact is known", "scale/growth/expansion", "auto spend/discount"], "notes": "measure real cash/margin first; discount is an owner decision, blocked until margin known" },
+    { "id": "C", "crisisStatus": "CUSTOMER_RECOVERY_REQUIRED", "expectedTopRoute": "CREATE_CORRECTION_TASK", "ownerApprovalTask": false, "evidenceRequiredToComplete": true, "reassessmentOnComplete": true, "blockedUnsafe": ["scale/growth/expansion", "auto customer contact"], "notes": "fix quality with proof; training/SOP correction; evidence-gated completion; reassessment" },
+    { "id": "D", "crisisStatus": "OWNER_WORKLOAD_CRITICAL", "expectedTopRoute": "CREATE_MANAGER_TASK", "ownerApprovalTask": false, "evidenceRequiredToComplete": true, "reassessmentOnComplete": false, "blockedUnsafe": ["scale/growth/expansion", "auto spend/discount"], "notes": "delegate recurring firefighting + governing policy; owner keeps material approvals" },
+    { "id": "E", "crisisStatus": "VALIDATION_BEFORE_GROWTH", "expectedTopRoute": "CREATE_MISSING_DATA_TASK", "ownerApprovalTask": false, "evidenceRequiredToComplete": false, "reassessmentOnComplete": false, "blockedUnsafe": ["scale/growth/expansion before stabilization", "b2b before stabilization + validation"], "publicSignal": "active; rawTextHidden; piiStripped; no-live-ingestion; adversarial PII/injection stripped", "notes": "growth blocked until capacity/cost proof; collect missing internal data first" },
+    { "id": "F", "crisisStatus": "SURVIVAL_TRIAGE_REQUIRED", "expectedTopRoute": "CREATE_CORRECTION_TASK", "ownerApprovalTask": false, "evidenceRequiredToComplete": true, "reassessmentOnComplete": true, "blockedUnsafe": ["scale/growth/expansion", "b2b before stabilization + validation", "auto spend/discount"], "notes": "survival triage: stop-loss + protect cash runway before anything else; thrive gate blocked; recovery milestones exist" },
+    { "id": "G", "crisisStatus": "NONE (no plan)", "expectedTopRoute": "", "ownerApprovalTask": false, "evidenceRequiredToComplete": false, "reassessmentOnComplete": false, "blockedUnsafe": [], "publicSignal": "NONE", "recoveryStatus": "NONE", "notes": "clean control: no plan, no fabricated task, no fabricated signal" },
+    { "id": "H", "crisisStatus": "UNRECOVERABLE_UNDER_CURRENT_CONSTRAINTS", "expectedTopRoute": "CREATE_OWNER_APPROVAL_TASK", "ownerApprovalTask": true, "evidenceRequiredToComplete": true, "reassessmentOnComplete": false, "blockedUnsafe": ["scale/growth/expansion"], "notes": "honest restructure vs controlled-shutdown review (owner + advisor); no fake recovery/optimism" }
+  ],
+  "globalInvariants": [
+    "every crisis plan blocks growth/scale/expansion until stabilization is proven (thrive gate BLOCKED)",
+    "no fabricated money / ROI / win-probability in any persisted task or read",
+    "owner-approval gate: a non-owner cannot approve an OWNER_APPROVAL_REQUIRED task; the owner can",
+    "evidence-required routes cannot COMPLETE without evidence; they can with evidence",
+    "completing a correction opens a governed reassessment",
+    "clean/missing-data fabricates nothing (no task, NONE recovery, NONE public-signal)",
+    "public-signal reads hide raw text, strip PII, resist prompt-injection, and state no-live-ingestion",
+    "workspace isolation: one scenario's tasks/signals never cross into another"
+  ]
+}

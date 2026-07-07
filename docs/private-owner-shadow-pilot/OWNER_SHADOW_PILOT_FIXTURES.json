@@ -1,0 +1,54 @@
+{
+  "title": "Owner Shadow Pilot Fixtures (PASS 42)",
+  "date": "2026-07-07",
+  "dataClassification": "OWNER_STYLE_SYNTHETIC_SHADOW_FIXTURES",
+  "notice": "Anonymized, synthetic, laundry/local-service archetype. NO real owner data, NO PII, placeholders only. If real owner data is supplied later it MUST be redacted per docs/audits/2026-07-07-private-owner-shadow-pilot-readiness/SHADOW_PILOT_DATA_REDACTION_GUIDE.md before use. These fixtures are the human-readable mirror of the deterministic crisis inputs exercised by src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts.",
+  "archetype": "laundry_local_service",
+  "business": { "workspace": "WORKSPACE_A", "name": "OWNER_BUSINESS_A", "businessType": "laundry", "currency": "INR" },
+  "scenarios": [
+    {
+      "id": "A", "label": "normal operating issue",
+      "story": "Late deliveries (operational), a moderate complaint pattern, and missing completion proof on recent orders.",
+      "crisisInput": { "cashPressure": "NONE", "revenuePressure": "LOW", "customerPressure": "MEDIUM", "qualityPressure": "NONE", "operationalPressure": "HIGH", "staffCapacityPressure": "NONE", "ownerWorkloadPressure": "NONE", "legalContractTenderRisk": "NONE", "opportunityTemptation": "NONE", "missingData": ["completion proof for recent late orders"] }
+    },
+    {
+      "id": "B", "label": "cash/profit pressure + discount temptation",
+      "story": "Cash is tight, margins are unclear, costs are rising, and there is a temptation to discount.",
+      "crisisInput": { "cashPressure": "HIGH", "revenuePressure": "MEDIUM", "customerPressure": "NONE", "qualityPressure": "NONE", "operationalPressure": "NONE", "staffCapacityPressure": "NONE", "ownerWorkloadPressure": "NONE", "legalContractTenderRisk": "NONE", "opportunityTemptation": "DISCOUNT", "missingData": ["unit margin"], "constraints": { "cashRunwayKnown": false } }
+    },
+    {
+      "id": "C", "label": "quality/rework crisis",
+      "story": "Repeated quality complaints (CUSTOMER_001, CUSTOMER_002) tied to a STAFF_A/SOP gap.",
+      "crisisInput": { "cashPressure": "NONE", "revenuePressure": "NONE", "customerPressure": "MEDIUM", "qualityPressure": "HIGH", "operationalPressure": "NONE", "staffCapacityPressure": "MEDIUM", "ownerWorkloadPressure": "NONE", "legalContractTenderRisk": "NONE", "opportunityTemptation": "NONE", "missingData": [] }
+    },
+    {
+      "id": "D", "label": "owner overload",
+      "story": "The owner is manually handling too many follow-ups; recurring firefighting.",
+      "crisisInput": { "cashPressure": "NONE", "revenuePressure": "NONE", "customerPressure": "NONE", "qualityPressure": "NONE", "operationalPressure": "NONE", "staffCapacityPressure": "NONE", "ownerWorkloadPressure": "HIGH", "legalContractTenderRisk": "NONE", "opportunityTemptation": "NONE", "missingData": [] }
+    },
+    {
+      "id": "E", "label": "growth opportunity under weak capacity",
+      "story": "A B2B_CLIENT_A weekly-towel opportunity appears while quality, capacity, and cash are unstable. Public intake also carries an adversarial PII/prompt-injection review (must be sanitised).",
+      "crisisInput": { "cashPressure": "MEDIUM", "revenuePressure": "MEDIUM", "customerPressure": "NONE", "qualityPressure": "MEDIUM", "operationalPressure": "NONE", "staffCapacityPressure": "MEDIUM", "ownerWorkloadPressure": "NONE", "legalContractTenderRisk": "NONE", "opportunityTemptation": "B2B", "missingData": ["unit margin", "real capacity"], "constraints": { "capacityFeasible": false } },
+      "publicSignalIntake": [
+        { "rawSignalType": "B2B_DEMAND_SIGNAL", "sourceQuality": "OWNER_OBSERVED", "note": "B2B_CLIENT_A asked about weekly towel laundering for the gyms segment" },
+        { "rawSignalType": "PUBLIC_REVIEW", "sourceQuality": "THIRD_PARTY_UNVERIFIED", "note": "ADVERSARIAL: embeds a prompt-injection + PII (test@example.com / 07700900123) — must be stripped, never surfaced" }
+      ]
+    },
+    {
+      "id": "F", "label": "survival/recovery case",
+      "story": "Cash is critical, complaints are high, there is a staff issue, and a B2B temptation — but the business is recoverable (near-term revenue, owner capital, and capacity are feasible).",
+      "crisisInput": { "cashPressure": "CRITICAL", "revenuePressure": "HIGH", "customerPressure": "HIGH", "qualityPressure": "HIGH", "operationalPressure": "MEDIUM", "staffCapacityPressure": "HIGH", "ownerWorkloadPressure": "HIGH", "legalContractTenderRisk": "LOW", "opportunityTemptation": "B2B", "missingData": ["unit margin", "capacity"], "constraints": { "feasibleNearTermRevenue": true, "ownerCapitalAvailable": true, "capacityFeasible": true } }
+    },
+    {
+      "id": "G", "label": "clean / missing-data control",
+      "story": "No pressures, no temptation, no missing data — a healthy control.",
+      "crisisInput": { "cashPressure": "NONE", "revenuePressure": "NONE", "customerPressure": "NONE", "qualityPressure": "NONE", "operationalPressure": "NONE", "staffCapacityPressure": "NONE", "ownerWorkloadPressure": "NONE", "legalContractTenderRisk": "NONE", "opportunityTemptation": "NONE", "missingData": [] }
+    },
+    {
+      "id": "H", "label": "unrecoverable / restructure review",
+      "story": "Cash is critical with no runway, no owner capital, and no feasible capacity — survival is not achievable under current constraints.",
+      "crisisInput": { "cashPressure": "CRITICAL", "revenuePressure": "NONE", "customerPressure": "HIGH", "qualityPressure": "NONE", "operationalPressure": "NONE", "staffCapacityPressure": "NONE", "ownerWorkloadPressure": "NONE", "legalContractTenderRisk": "NONE", "opportunityTemptation": "NONE", "missingData": [], "constraints": { "feasibleNearTermRevenue": false, "ownerCapitalAvailable": false, "capacityFeasible": false } }
+    }
+  ]
+}

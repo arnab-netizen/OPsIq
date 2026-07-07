@@ -1,0 +1,66 @@
+{
+  "title": "Private Owner Shadow Pilot Pack — Evidence Ledger (PASS 42)",
+  "date": "2026-07-07",
+  "branch": "claude/private-owner-shadow-pilot-pack",
+  "baseMain": "0ce4bb607722a5c17b22ee0d3770de1e5dcbbe97",
+  "dataUsed": "OWNER_STYLE_SYNTHETIC_SHADOW_FIXTURES — anonymized, laundry/local-service, no real owner data, no PII",
+  "realOwnerDataUsed": false,
+  "filesAdded": [
+    "src/__tests__/execution/private-owner-shadow-pilot-pack.db.test.ts (14 DB-sim tests: 8 scenarios A-H through the governed substrate)",
+    "tests/browser/48-private-owner-shadow-pilot.spec.ts (5 browser tests: shadow-pilot cockpit journey)",
+    "docs/private-owner-shadow-pilot/OWNER_SHADOW_PILOT_FIXTURES.json",
+    "docs/private-owner-shadow-pilot/OWNER_SHADOW_PILOT_EXPECTATIONS.json",
+    "docs/private-owner-shadow-pilot/OWNER_SHADOW_PILOT_EVALUATION_MATRIX.json",
+    "docs/private-owner-shadow-pilot/OWNER_SHADOW_PILOT_RUNBOOK.md",
+    "docs/private-owner-shadow-pilot/OWNER_SHADOW_PILOT_PRIVACY_NOTES.md",
+    "docs/private-owner-shadow-pilot/OWNER_SHADOW_PILOT_RESULTS_TEMPLATE.md",
+    "docs/audits/2026-07-07-private-owner-shadow-pilot-pack/FINAL_PRIVATE_OWNER_SHADOW_PILOT_REPORT.md",
+    "docs/audits/2026-07-07-private-owner-shadow-pilot-pack/SHADOW_PILOT_SCENARIO_MATRIX.json",
+    "docs/audits/2026-07-07-private-owner-shadow-pilot-pack/SHADOW_PILOT_SAFETY_MATRIX.json",
+    "docs/audits/2026-07-07-private-owner-shadow-pilot-pack/SHADOW_PILOT_OWNER_WORKLOAD_MATRIX.json",
+    "docs/audits/2026-07-07-private-owner-shadow-pilot-pack/EVIDENCE_LEDGER.json",
+    "docs/audits/2026-07-07-private-owner-shadow-pilot-pack/DEFERRED_BROAD_GAPS.md"
+  ],
+  "filesChanged": [
+    ".github/workflows/db-verification.yml (wired private-owner-shadow-pilot-pack.db.test.ts into LANE_B + LANE_A)",
+    ".github/workflows/owner-pilot-e2e.yml (wired 48-private-owner-shadow-pilot.spec.ts into the browser lane)"
+  ],
+  "noProductSourceChange": "No src/ product source, schema, migration, or route changed. Harness reuses the proven substrate (survival planner, process-execution bridge, recovery-status, public-signals) — new logic is limited to the test harness + fixtures + docs.",
+  "harness": {
+    "approach": "Deterministic DB simulation — NOT a live importer. Each scenario's crisisInput → planAndValidateSurvival → survivalPlanToProcessCorrections → buildProcessExecutionBridge → persistProcessExecutionRoutes → getPersistedProcessTasks / getOwnerRecoveryStatus / getOwnerPublicSignals / applyProcessExecutionAction.",
+    "dbSimProofs": [
+      "1 exact top action route per scenario (A-H)",
+      "2 owner-approval task present exactly where expected (B, H)",
+      "3 growth/scale + scenario-specific unsafe action blocked; thrive gate BLOCKED",
+      "4 owner-approval gate: non-owner blocked, owner approves (H)",
+      "5 evidence gate: no-evidence COMPLETE rejected, with-evidence COMPLETE succeeds + opens reassessment (C)",
+      "6 explicit REQUEST_REASSESSMENT opens a reassessment event (A)",
+      "7 monitor/blocked routes non-completable",
+      "8 no fabricated money/ROI/win-probability in any persisted task",
+      "9 recovery-status fail-closed, gates blocked, NONE on clean control",
+      "10 public-signals active + PII/injection stripped + no live ingestion (E, adversarial row)",
+      "11 public-signals NONE on clean workspace",
+      "12 workspace isolation",
+      "13 clean control fabricates no task",
+      "14 low-load: exactly one top actionable route per scenario"
+    ]
+  },
+  "ciWiring": {
+    "dbLane": ".github/workflows/db-verification.yml — private-owner-shadow-pilot-pack.db.test.ts added to LANE_B (required) + LANE_A test lists; LANE_B log must show it executed (not generic green)",
+    "browserLane": ".github/workflows/owner-pilot-e2e.yml — 48-private-owner-shadow-pilot.spec.ts added to the spec list"
+  },
+  "localGates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS (npx tsc --noEmit clean)",
+    "governanceScanStrict": "0 new (31 frozen)",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "dbSim": "private-owner-shadow-pilot-pack.db.test.ts 14/14 (TEST_WITH_DB=true, throwaway Postgres 16)",
+    "browserSpec": "48-private-owner-shadow-pilot.spec.ts 5/5 (built app + seeded owner-pilot workspace + real Chromium)",
+    "nextBuild": "PASS"
+  },
+  "honestSplit": {
+    "recoveryStatusActiveDerivation": "recovery-status derives its crisis from live now-view BUSINESS data; the shadow harness persists governed TASKS (not now-view business rows), so recovery-status reads NONE/blocked-gates for the harness workspaces. The active-state derivation from real business data is proven by the PASS 37 owner-recovery-status-read DB test. This sim proves the recovery-status read SAFETY (fail-closed, gates blocked, NONE-clean, no fake money) + the full governed journey.",
+    "scenarioErecovery": "scenario E carries raw opportunity intake that feeds the richer now-view opportunity pipeline; its public-signal handling is proven by db #10/#12, and it is excluded from the recovery-status loop (documented, not skipped)."
+  },
+  "classification": "PRIVATE_OWNER_SHADOW_PILOT_PACK_PROVEN (on synthetic owner-style shadow fixtures, not real owner business outcomes)"
+}
