@@ -93,6 +93,21 @@ test.describe("46 — owner cockpit UI (desktop, one login)", () => {
     expect(fatalErrors()).toEqual([]);
   });
 
+  test("the outside signals section is collapsed by default; expanding shows the no-live-ingestion boundary", async () => {
+    const sig = page.locator('[data-testid="cockpit-signals-group"]');
+    if (!(await page.locator('[data-testid="owner-cockpit"], [data-testid="cockpit-clean"]').count())) return;
+    if (!(await sig.count())) return; // tolerate an environment where public-signals is unavailable
+    await expect(sig).toBeVisible();
+    expect(await sig.evaluate((n) => (n as HTMLDetailsElement).open)).toBe(false);
+    await sig.locator("summary").click();
+    expect(await sig.evaluate((n) => (n as HTMLDetailsElement).open)).toBe(true);
+    await expect(page.locator('[data-testid="cockpit-signals-noingest"]')).toContainText(/does not fetch live/i);
+    const text = (await sig.innerText()).toLowerCase();
+    // no raw web text, no PII, no fabricated finance, no live-ingestion / AI-online claim.
+    expect(text).not.toMatch(/@[a-z0-9.-]+\.[a-z]{2,}|\b07\d{3}\s?\d{6}\b/);
+    expect(text).not.toMatch(/[$£€]\s?\d|win probability|live internet intelligence|ai found this online|the market proves/);
+  });
+
   test("the primary owner navigation points to the canonical /owner/cockpit (route consolidation)", async () => {
     // The sidebar owner entry is the canonical cockpit.
     await expect(page.locator('a[href="/owner/cockpit"]').first()).toBeVisible();

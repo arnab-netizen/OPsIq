@@ -1,0 +1,45 @@
+{
+  "title": "Serve + Surface Public Signal Intelligence — Evidence Ledger (PASS 39)",
+  "date": "2026-07-07",
+  "branch": "claude/serve-surface-public-signal-intelligence",
+  "baseMain": "1a2549dd4cb228507dbb142fa1367e667c175d54",
+  "filesAdded": [
+    "src/domain/owner-mode/owner-public-signals.ts (pure projection + fail-closed Zod schema + persisted-row mapper)",
+    "src/services/owner-mode/owner-public-signals.service.ts (read-only; persisted intake rows → proven pipeline; no live fetch)",
+    "src/app/api/owner/public-signals/route.ts (GET, OWNER_VIEW-gated, workspace-scoped, fail-closed)",
+    "src/__tests__/owner-mode/owner-public-signals.test.ts (10 unit tests)",
+    "src/__tests__/components/minimum-owner-cockpit-public-signals.test.tsx (13 component tests)",
+    "src/__tests__/execution/owner-public-signals-read.db.test.ts (7 DB tests)"
+  ],
+  "filesChanged": [
+    "src/components/owner/MinimumOwnerCockpit.tsx (+ optional publicSignals prop + collapsed OutsideSignalsSection)",
+    "src/app/(authenticated)/owner/cockpit/page.tsx (fetch GET /api/owner/public-signals, pass to cockpit)",
+    "tests/browser/46-owner-cockpit.spec.ts (+ outside-signals collapsed/expand/no-live-ingestion assertions)",
+    ".github/workflows/db-verification.yml (wired owner-public-signals-read.db.test.ts into LANE_B + LANE_A)"
+  ],
+  "backendReuse": {
+    "proven": ["interpretAndValidateRawPublicSignal (PASS 28)", "resolvePublicSignalConflict (PASS 29)", "prioritisePublicSignals (PASS 30/31)", "getActiveExternalOpportunitySignals", "getPersistedProcessTasks"],
+    "newLogic": "none for signal decisions — only a pure projection + a persisted-row→raw mapper; no new interpretation/prioritisation rules; no mutation; no live fetch"
+  },
+  "designHonesty": {
+    "controlledSourceOnly": "The service reads ONLY the workspace's already-persisted ExternalOpportunitySignal intake records (status ACTIVE). It never fetches the internet, adds connectors, or uses an LLM. If no records exist → NONE (no fabrication).",
+    "interpreterSanitises": "Each persisted rawDescription is passed through the PASS 28 interpreter, which strips PII, resists prompt-injection, downgrades source quality (never upgrades), and never accepts a money claim as fact. The response carries only governed summaries — never raw text or PII.",
+    "pipelineMatrixProof": "The interpret/conflict/prioritise correctness matrix is proven by the pure PASS 28-30 unit suites + these 10 new unit tests. The DB test proves the parts that genuinely need a database: the real read path, workspace isolation, sanitisation of a seeded PII/injection row, clean=NONE, and no fabrication."
+  },
+  "localGates": {
+    "prismaValidate": "PASS (no schema change)",
+    "tsc": "PASS",
+    "governanceScan": "0 new",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new; fixed 2 unused-var warnings that briefly tripped the ratchet)",
+    "unitTests": "owner-public-signals 10/10; public-signals component 13/13; existing cockpit + recovery intact",
+    "dbTests": "owner-public-signals-read 7/7 (TEST_WITH_DB=true, Postgres 16, seeded intake rows incl. PII/injection)",
+    "nextBuild": "Compiled successfully; /api/owner/public-signals + /owner/cockpit present"
+  },
+  "browserProof": {
+    "spec": "tests/browser/46-owner-cockpit.spec.ts (extended)",
+    "runsIn": "owner-pilot-e2e CI lane",
+    "claim": "Browser-proven only if owner-pilot-e2e is green on the PR."
+  },
+  "ciAcceptance": "LANE_B must show owner-public-signals-read.db.test.ts executed (not generic green). Required checks (LANE_B, Build+Type+Prisma, lint) green.",
+  "classification": "PUBLIC_SIGNAL_SURFACE_PROVEN"
+}

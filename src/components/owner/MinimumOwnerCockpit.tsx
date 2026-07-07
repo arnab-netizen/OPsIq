@@ -19,6 +19,7 @@ import { useState } from "react";
 import { Badge } from "@/ui/primitives";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
 import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
+import type { OwnerPublicSignalsResponse } from "@/domain/owner-mode/owner-public-signals";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -69,6 +70,8 @@ export interface MinimumOwnerCockpitProps {
   actionsToAvoid?: string[];
   /** Read-only recovery status projection (PASS 37). Rendered as a collapsed low-load section. */
   recovery?: OwnerRecoveryStatusResponse | null;
+  /** Read-only public-signal ("Outside signals") projection (PASS 39). Rendered as a collapsed low-load section. */
+  publicSignals?: OwnerPublicSignalsResponse | null;
   /** When provided, the cockpit becomes interactive; the server re-checks every action. */
   onAction?: (taskKey: string, action: string, input: CockpitActionInput) => void;
   busy?: boolean;
@@ -87,6 +90,58 @@ const RECOVERY_STATUS_LABEL: Record<string, string> = {
   CONTROLLED_SHUTDOWN_REVIEW_REQUIRED: "Controlled shutdown review required",
   UNKNOWN_NEEDS_DATA: "Needs data",
 };
+
+const PUBLIC_SIGNAL_STATUS_LABEL: Record<string, string> = {
+  NONE: "No outside signals",
+  SIGNALS_PRESENT: "Outside signals present",
+  VALIDATION_REQUIRED: "Signals — validation required",
+  CONFLICTING_SIGNALS: "Conflicting outside signals",
+  HIGH_RISK_PUBLIC_SIGNAL: "High-risk outside signal",
+  MONITOR_ONLY: "Monitor only",
+  UNKNOWN_NEEDS_DATA: "Needs data",
+};
+
+/** Read-only "Outside signals" — a concise, collapsed public-signal summary (PASS 39). NOT a second dashboard. */
+function OutsideSignalsSection({ signals }: { signals: OwnerPublicSignalsResponse }) {
+  const active = signals.publicSignalStatus !== "NONE";
+  return (
+    <details data-testid="cockpit-signals-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        Outside signals
+        <span style={{ fontWeight: 400, color: "#6b7280" }}> — {PUBLIC_SIGNAL_STATUS_LABEL[signals.publicSignalStatus] ?? signals.publicSignalStatus}</span>
+      </summary>
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+        {!active ? (
+          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-signals-none">No outside signals for this workspace right now.</p>
+        ) : (
+          <>
+            {signals.topPublicSignalAction && (
+              <p style={{ margin: 0 }} data-testid="cockpit-signals-action"><strong>Next step:</strong> {signals.topPublicSignalAction}</p>
+            )}
+            <p style={{ margin: 0, color: "#374151" }} data-testid="cockpit-signals-why">{signals.whyThisMatters}</p>
+            <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-signals-quality">
+              Source quality: {signals.sourceQualitySummary} · Evidence: {signals.evidenceStrengthSummary}
+            </p>
+            {signals.missingData.length > 0 && (
+              <p style={{ margin: 0, color: "#b45309" }} data-testid="cockpit-signals-missing">Missing data: {signals.missingData.slice(0, 3).join("; ")}</p>
+            )}
+            {signals.validationRequired && (
+              <p style={{ margin: 0, color: "#b45309" }} data-testid="cockpit-signals-validation">Public signals are unverified until validated.</p>
+            )}
+            {signals.blockedUnsafeActions.length > 0 && (
+              <p style={{ margin: 0, color: "#b45309" }} data-testid="cockpit-signals-blocked">Blocked: {signals.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+            )}
+            {signals.ownerApprovalRequired && (
+              <p style={{ margin: 0, color: "#b91c1c" }} data-testid="cockpit-signals-approval">Owner approval is required before material action.</p>
+            )}
+          </>
+        )}
+        <p style={{ margin: "2px 0 0", color: "#6b7280", fontStyle: "italic" }} data-testid="cockpit-signals-noingest">{signals.noLiveIngestionStatement}</p>
+        <p style={{ margin: 0, color: "#6b7280", fontStyle: "italic" }} data-testid="cockpit-signals-caveat">{signals.uncertaintyCaveat}</p>
+      </div>
+    </details>
+  );
+}
 
 /** Read-only recovery status — a concise, collapsed summary (PASS 37). NOT a second cockpit. */
 function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }) {
@@ -131,7 +186,7 @@ function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }
   );
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, onAction, busy = false }: MinimumOwnerCockpitProps) {
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, publicSignals = null, onAction, busy = false }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -150,6 +205,7 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
           </p>
         </div>
         {recovery && <RecoverySection recovery={recovery} />}
+        {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
       </section>
     );
   }
@@ -381,6 +437,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = nu
 
       {/* Recovery status — read-only, collapsed low-load summary (PASS 37). */}
       {recovery && <RecoverySection recovery={recovery} />}
+
+      {/* Outside signals — read-only, collapsed low-load public-signal summary (PASS 39). */}
+      {publicSignals && <OutsideSignalsSection signals={publicSignals} />}
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
