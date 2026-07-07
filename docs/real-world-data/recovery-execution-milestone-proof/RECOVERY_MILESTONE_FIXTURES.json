@@ -1,0 +1,105 @@
+{
+  "pass": 33,
+  "title": "Recovery Execution & Milestone-Proof — controlled fixtures",
+  "note": "Synthetic but realistic crisis inputs for governed small businesses. No real customer/PII data. Each case feeds planBusinessSurvivalRecovery → survivalPlanToProcessCorrections → the process-execution bridge → the recovery milestone state machine. Money/ROI/win-probability are never fabricated.",
+  "milestoneLadder": [
+    { "order": 1, "milestone": "Stop-loss in force: loss-making/non-essential spend paused.", "reassessmentRequired": false },
+    { "order": 2, "milestone": "Cash position/runway measured (the real figure — never assumed).", "reassessmentRequired": false },
+    { "order": 3, "milestone": "Customer/quality issue corrected with proof.", "reassessmentRequired": true },
+    { "order": 4, "milestone": "Operational/vendor risk resolved.", "reassessmentRequired": true },
+    { "order": 5, "milestone": "Owner workload reduced via delegation/policy.", "reassessmentRequired": false },
+    { "order": 6, "milestone": "Stabilization gate met → recovery plan.", "reassessmentRequired": true }
+  ],
+  "cases": [
+    {
+      "id": "A",
+      "case": "laundry",
+      "workspaceArchetype": "laundry_local_service",
+      "crisis": { "cashPressure": "HIGH", "revenuePressure": "MEDIUM", "customerPressure": "HIGH", "qualityPressure": "HIGH", "operationalPressure": "MEDIUM", "staffCapacityPressure": "HIGH", "ownerWorkloadPressure": "HIGH", "legalContractTenderRisk": "LOW", "opportunityTemptation": "B2B", "missingData": ["unit margin", "capacity"], "constraints": { "cashRunwayKnown": false, "feasibleNearTermRevenue": true, "ownerCapitalAvailable": true, "capacityFeasible": true } },
+      "outcomes": "full-pass (m1-6 executed with evidence; m3/m4/m6 reassessed IMPROVED)",
+      "expectedFinalState": "THRIVE_GATE_ELIGIBLE"
+    },
+    {
+      "id": "B",
+      "case": "housekeeping",
+      "workspaceArchetype": "housekeeping_facility",
+      "crisis": { "cashPressure": "MEDIUM", "customerPressure": "HIGH", "qualityPressure": "HIGH", "staffCapacityPressure": "HIGH", "missingData": ["supply cost", "capacity"], "constraints": { "capacityFeasible": true } },
+      "outcomes": "partial then full-pass",
+      "expectedFinalState": "THRIVE_GATE_ELIGIBLE"
+    },
+    {
+      "id": "C",
+      "case": "property",
+      "workspaceArchetype": "property_management",
+      "crisis": { "customerPressure": "HIGH", "operationalPressure": "HIGH", "legalContractTenderRisk": "HIGH", "opportunityTemptation": "MARKETING", "missingData": ["vendor quote"] },
+      "outcomes": "owner-approval gate on legal risk, then full-pass",
+      "expectedFinalState": "THRIVE_GATE_ELIGIBLE"
+    },
+    {
+      "id": "D",
+      "case": "franchise",
+      "workspaceArchetype": "franchise_operations",
+      "crisis": { "customerPressure": "HIGH", "qualityPressure": "HIGH", "ownerWorkloadPressure": "HIGH", "legalContractTenderRisk": "MEDIUM", "opportunityTemptation": "MARKETING", "missingData": ["per-branch metrics"] },
+      "outcomes": "full-pass",
+      "expectedFinalState": "THRIVE_GATE_ELIGIBLE"
+    },
+    {
+      "id": "E",
+      "case": "saas",
+      "workspaceArchetype": "saas",
+      "crisis": { "revenuePressure": "HIGH", "customerPressure": "HIGH", "qualityPressure": "HIGH", "opportunityTemptation": "LAUNCH", "missingData": ["real activation/conversion"] },
+      "outcomes": "launch stays frozen; full-pass on stabilization",
+      "expectedFinalState": "THRIVE_GATE_ELIGIBLE"
+    },
+    {
+      "id": "F",
+      "case": "tender",
+      "workspaceArchetype": "tender_procurement",
+      "crisis": { "staffCapacityPressure": "HIGH", "legalContractTenderRisk": "HIGH", "opportunityTemptation": "TENDER", "unsafeActionTemptations": ["tender auto-submit"], "missingData": ["eligibility documents", "cost/margin fit"] },
+      "outcomes": "tender auto-submit blocked; owner-approval gate; full-pass",
+      "expectedFinalState": "THRIVE_GATE_ELIGIBLE"
+    },
+    {
+      "id": "G",
+      "case": "b2b",
+      "workspaceArchetype": "b2b_service",
+      "crisis": { "qualityPressure": "HIGH", "staffCapacityPressure": "HIGH", "ownerWorkloadPressure": "HIGH", "opportunityTemptation": "B2B", "missingData": ["our capacity", "cost/margin"] },
+      "outcomes": "full-pass",
+      "expectedFinalState": "THRIVE_GATE_ELIGIBLE"
+    },
+    {
+      "id": "H",
+      "case": "collective",
+      "workspaceArchetype": "collective_conflict",
+      "crisis": { "cashPressure": "HIGH", "revenuePressure": "HIGH", "customerPressure": "HIGH", "qualityPressure": "HIGH", "operationalPressure": "HIGH", "staffCapacityPressure": "HIGH", "ownerWorkloadPressure": "CRITICAL", "legalContractTenderRisk": "MEDIUM", "opportunityTemptation": "GROWTH", "missingData": ["cash runway", "cost/margin", "capacity"], "constraints": { "cashRunwayKnown": false, "feasibleNearTermRevenue": true, "ownerCapitalAvailable": true, "capacityFeasible": true } },
+      "outcomes": "growth blocked until stabilization; full-pass",
+      "expectedFinalState": "THRIVE_GATE_ELIGIBLE"
+    },
+    {
+      "id": "I",
+      "case": "regression",
+      "workspaceArchetype": "laundry_local_service",
+      "crisis": "same as A",
+      "outcomes": "m1, m2 proven; m3 executed with evidence but reassessment WORSENED",
+      "expectedFinalState": "RECOVERY_REGRESSED",
+      "note": "Regression case: a worsened reassessment on a correction milestone loops back to re-correct — recovery does not advance; thrive stays blocked."
+    },
+    {
+      "id": "J",
+      "case": "unrecoverable",
+      "workspaceArchetype": "collective_conflict",
+      "crisis": { "cashPressure": "CRITICAL", "revenuePressure": "CRITICAL", "customerPressure": "HIGH", "qualityPressure": "HIGH", "operationalPressure": "HIGH", "staffCapacityPressure": "CRITICAL", "ownerWorkloadPressure": "CRITICAL", "legalContractTenderRisk": "HIGH", "opportunityTemptation": "GROWTH", "missingData": ["verified cash runway"], "constraints": { "cashRunwayKnown": false, "feasibleNearTermRevenue": false, "ownerCapitalAvailable": false, "capacityFeasible": false } },
+      "outcomes": "even with all milestones 'done', the plan is unrecoverable",
+      "expectedFinalState": "RESTRUCTURE_REVIEW_REQUIRED",
+      "note": "No fake recovery: the restructure/controlled-shutdown review stays active; stabilization + thrive gates stay BLOCKED regardless of reported milestone outcomes."
+    },
+    {
+      "id": "K",
+      "case": "clean",
+      "workspaceArchetype": "laundry_local_service",
+      "crisis": "no pressures (clean control)",
+      "outcomes": "planBusinessSurvivalRecovery returns null → recovery view is null",
+      "expectedFinalState": "null (nothing fabricated)"
+    }
+  ]
+}
