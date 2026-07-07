@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Button } from "@/ui/primitives";
+import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- guidance payload is the service contract (untyped here); load() on mount is intentional */
 
@@ -64,6 +65,7 @@ export default function OwnerNowViewPage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 920, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+      <CanonicalCockpitLink from="Now View" />
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1 style={{ margin: 0 }}>Owner Now View</h1>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>

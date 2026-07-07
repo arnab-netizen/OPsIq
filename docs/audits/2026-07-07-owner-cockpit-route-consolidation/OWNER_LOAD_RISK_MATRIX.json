@@ -1,0 +1,13 @@
+{
+  "title": "Owner Load Risk Matrix (PASS 38)",
+  "date": "2026-07-07",
+  "risks": [
+    { "risk": "duplicate cockpit risk", "before": "MEDIUM — /owner/process-intelligence and /owner/cockpit both drive the bridge; no canonical signal.", "after": "LOW — /owner/cockpit is the canonical daily surface; process-intelligence is labelled the 'full detail' deep-link.", "mitigation": "nav retarget + CanonicalCockpitLink banner", "test": "owner-canonical-navigation; browser 46" },
+    { "risk": "route confusion", "before": "HIGH — the only owner nav entry pointed to the older recovery engine; no cockpit entry.", "after": "LOW — one obvious 'Owner Cockpit' entry; legacy pages guide back to it.", "mitigation": "primary nav → /owner/cockpit", "test": "nav #1/#2/#3" },
+    { "risk": "owner re-key risk", "before": "n/a for this pass", "after": "unchanged — no new forms; the cockpit already avoids re-keying", "mitigation": "no change", "test": "n/a" },
+    { "risk": "raw data exposure risk", "before": "unchanged", "after": "LOW — banner is a single low-load line; no raw data added", "mitigation": "CanonicalCockpitLink is presentational text + one link", "test": "nav #5 (no forbidden/marketing copy)" },
+    { "risk": "hidden capability risk", "before": "MEDIUM — the canonical cockpit had no nav entry (capability effectively hidden).", "after": "LOW — cockpit is now the primary owner nav entry.", "mitigation": "nav retarget", "test": "nav #1" },
+    { "risk": "stale page risk", "before": "MEDIUM — older /owner/recovery was the front door.", "after": "LOW — cockpit is the front door; /owner/recovery kept as reachable read-only legacy (not orphaned).", "mitigation": "kept /owner + /owner/home deep-links to recovery", "test": "grep evidence in route inventory" },
+    { "risk": "unsafe action exposure risk", "before": "LOW", "after": "LOW — no action surface changed; the banner is a read-only link; no unsafe action added", "mitigation": "presentational-only component", "test": "nav #5; browser 46 forbidden-copy" }
+  ]
+}

@@ -92,4 +92,20 @@ test.describe("46 — owner cockpit UI (desktop, one login)", () => {
     expect(text).not.toMatch(/guaranteed (recovery|profit|success)|predicted roi|win probability|auto-submit|auto-contact/);
     expect(fatalErrors()).toEqual([]);
   });
+
+  test("the primary owner navigation points to the canonical /owner/cockpit (route consolidation)", async () => {
+    // The sidebar owner entry is the canonical cockpit.
+    await expect(page.locator('a[href="/owner/cockpit"]').first()).toBeVisible();
+  });
+
+  test("a legacy owner surface guides the owner back to the canonical cockpit", async () => {
+    await page.goto("/owner/now", { waitUntil: "networkidle" });
+    await waitForPageReady(page);
+    const banner = page.locator('[data-testid="canonical-cockpit-link"]');
+    await expect(banner).toBeVisible();
+    expect(await page.locator('[data-testid="canonical-cockpit-href"]').getAttribute("href")).toBe("/owner/cockpit");
+    // the legacy page still works (Now View header present) — nothing was deleted.
+    await expect(page.getByRole("heading", { name: /Owner Now View/i })).toBeVisible();
+    expect(fatalErrors()).toEqual([]);
+  });
 });

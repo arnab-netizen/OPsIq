@@ -1,0 +1,78 @@
+{
+  "title": "Owner Route Inventory (PASS 38)",
+  "date": "2026-07-07",
+  "routes": [
+    {
+      "route": "/owner/cockpit",
+      "currentPurpose": "The canonical minimum owner cockpit: one top governed action + safety gates + recovery status (read-only).",
+      "componentsUsed": ["MinimumOwnerCockpit"],
+      "apisUsed": ["GET /api/owner/now-view", "POST /api/owner/process-execution", "GET /api/owner/recovery-status"],
+      "linksReferences": ["primary sidebar owner nav (now points here)", "CanonicalCockpitLink on /owner, /owner/now, /owner/process-intelligence", "browser 46-owner-cockpit"],
+      "testsCovering": ["minimum-owner-cockpit.test.tsx (20)", "minimum-owner-cockpit-recovery.test.tsx (13)", "owner-canonical-navigation.test.tsx", "46-owner-cockpit.spec.ts"],
+      "uniqueCapability": "Single low-load daily decision surface over the proven governed loop.",
+      "overlapWithCockpit": "n/a (is the cockpit)",
+      "decision": "KEEP_AS_CANONICAL",
+      "changeMade": "Made the primary owner sidebar entry ('Owner Cockpit') point here.",
+      "risk": "LOW",
+      "evidence": "sidebar-nav.tsx retargeted; nav test #1/#3"
+    },
+    {
+      "route": "/owner",
+      "currentPurpose": "Owner Command Center — aggregate: whole-business plan, readiness, priority strip, control center, domain scores, 3 owner actions (tasks/complete, approvals/resolve, opportunities/decide).",
+      "componentsUsed": ["PriorityCommandStrip", "SupervisorSummary", "OwnerActions"],
+      "apisUsed": ["/api/owner/command-center", "/api/owner/whole-business-plan", "/api/owner/readiness", "/api/owner/priorities", "/api/owner/control-center", "/api/owner/tasks/complete", "/api/owner/approvals/resolve", "/api/owner/opportunities/decide"],
+      "linksReferences": ["deep-links to domain pages incl. /owner/recovery, /owner/intake, /owner/finance", "browser 14/17/baseline"],
+      "testsCovering": ["browser owner flows"],
+      "uniqueCapability": "Whole-business aggregate + readiness + domain deep-links (not a single-action cockpit).",
+      "overlapWithCockpit": "Partial (top action / priorities); different altitude (aggregate vs single action).",
+      "decision": "KEEP_AS_DEEP_LINK",
+      "changeMade": "Added CanonicalCockpitLink banner pointing to /owner/cockpit.",
+      "risk": "LOW",
+      "evidence": "owner/page.tsx banner added; still links to domain pages (recovery reachable)"
+    },
+    {
+      "route": "/owner/now",
+      "currentPurpose": "Owner Now View — read-only top-3 actions + 'do NOT do now' + plain-language explanation.",
+      "componentsUsed": ["inline"],
+      "apisUsed": ["GET /api/owner/now-view"],
+      "linksReferences": ["deep-linked from /owner/adjudication", "links to /owner/process-intelligence", "browser 43/44/45"],
+      "testsCovering": ["api/owner/now-view.test.ts", "app tests"],
+      "uniqueCapability": "Read-only 360 now view with the avoid-list; no action controls.",
+      "overlapWithCockpit": "High on 'top actions' (read-only) — the cockpit is the actionable version.",
+      "decision": "KEEP_AS_DEEP_LINK",
+      "changeMade": "Added CanonicalCockpitLink banner pointing to /owner/cockpit.",
+      "risk": "LOW",
+      "evidence": "owner/now/page.tsx banner; browser 46 legacy-guides-back test"
+    },
+    {
+      "route": "/owner/process-intelligence",
+      "currentPurpose": "Actionable process cockpit: top breakdown + governed execution bridge + progressive-disclosure capability panels (cash, SOP, training, workload, approval, opportunity, capability-gap).",
+      "componentsUsed": ["ProcessIntelligencePanel", "ProcessExecutionBridgePanel", "+ panels"],
+      "apisUsed": ["GET /api/owner/now-view", "POST /api/owner/process-execution"],
+      "linksReferences": ["linked from /owner/now", "browser 44/45"],
+      "testsCovering": ["owner-process-intelligence-page.test.tsx", "44-owner-process-intelligence.spec.ts"],
+      "uniqueCapability": "Full detail: every proven capability panel in one place (the cockpit shows only the top action + collapsed groups).",
+      "overlapWithCockpit": "High (both drive the process-execution bridge) — but this is the FULL detail view.",
+      "decision": "KEEP_AS_DEEP_LINK",
+      "changeMade": "Added CanonicalCockpitLink banner ('This process detail page keeps the full detail') pointing to /owner/cockpit.",
+      "risk": "LOW",
+      "evidence": "process-intelligence/page.tsx banner; page + browser tests still green"
+    },
+    {
+      "route": "/owner/recovery",
+      "currentPurpose": "Older recovery diagnosis-cycle engine (business/snapshot/cycle/action CRUD). Distinct from the PASS 32/33 survival/recovery-milestone modules.",
+      "componentsUsed": ["inline"],
+      "apisUsed": ["/api/owner/recovery/*"],
+      "linksReferences": ["was the primary owner nav entry (now retargeted)", "still deep-linked from /owner and /owner/home"],
+      "testsCovering": ["founder-recovery tests", "browser owner flows"],
+      "uniqueCapability": "Recovery-cycle CRUD workspace (a different engine from the proven recovery-milestone read surface).",
+      "overlapWithCockpit": "Low (different engine).",
+      "decision": "KEEP_READ_ONLY_LEGACY",
+      "changeMade": "Removed from primary nav (retargeted to cockpit); still reachable via /owner + /owner/home deep-links — not orphaned.",
+      "risk": "LOW",
+      "evidence": "grep: /owner/recovery linked at owner/page.tsx:339/365 and owner/home/page.tsx:113/131"
+    }
+  ],
+  "canonicalRoute": "/owner/cockpit",
+  "classification": "OWNER_COCKPIT_ROUTE_CONSOLIDATION_PROVEN (on required CI green)"
+}
