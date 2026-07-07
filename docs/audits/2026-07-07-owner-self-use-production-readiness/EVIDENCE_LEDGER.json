@@ -1,0 +1,52 @@
+{
+  "title": "Owner Self-Use Production Readiness — Evidence Ledger (PASS 44)",
+  "date": "2026-07-07",
+  "branch": "claude/owner-self-use-production-readiness-hostile-audit",
+  "baseMain": "c7ed98cce37b20dffa1d1943bf1146d1e80a5e81",
+  "scope": "Hostile readiness audit for ONE owner manually self-using OpsIQ (no live integrations, no autonomous action). Audit + a browser readiness spec; no product source changed.",
+  "surfaceAudit": {
+    "authentication": "READY — src/app/login/page.tsx (/login) → /api/auth/login; custom DB session + bcrypt; rate-limited",
+    "signup": "READY — src/app/signup/page.tsx (/signup) creates user+workspace+membership(owner)+roleAssignment → /onboarding",
+    "workspace": "READY_WITH_RESTRICTIONS — created on signup; server-resolves earliest active membership; no in-app switcher",
+    "onboarding": "READY — /owner/onboarding (src/app/(authenticated)/owner/onboarding/page.tsx)",
+    "manualDataEntry": "READY_WITH_RESTRICTIONS — /owner/intake (manual form/CSV/paste) + domain snapshot forms + '+ New business'; /api/owner/manual-entry is API-ONLY (no UI form)",
+    "cockpit": "READY_WITH_RESTRICTIONS — /owner/cockpit; sidebar link on /owner + owner pages, NOT on /dashboard (R6)",
+    "businessProfile": "READY — '+ New business' → POST /api/owner/recovery/businesses",
+    "errorEmptyStates": "READY — cockpit loading/error/Retry + 10s timeout; intake/onboarding empty states",
+    "auth": "READY — custom DB session + bcrypt; withCanonicalEnforcement server-resolves workspace + capabilities; fail-closed",
+    "deployConfig": "READY_WITH_RESTRICTIONS — needs NODE_ENV+DATABASE_URL+NEXT_PUBLIC_APP_URL (validate-deployment.ts)+AUTH_SECRET; no Dockerfile/vercel.json; no runtime env schema",
+    "mobile": "READY_WITH_RESTRICTIONS — onboarding/intake responsive; cockpit desktop-tuned",
+    "auditLogging": "READY — AUDIT_EVENTS on owner mutations + auth events"
+  },
+  "filesAdded": [
+    "tests/browser/50-owner-self-use-readiness.spec.ts (5 browser tests)",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/FINAL_OWNER_SELF_USE_READINESS_REPORT.md",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/OWNER_SELF_USE_READINESS_MATRIX.json (25 areas)",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/OWNER_SELF_USE_BLOCKER_MATRIX.json",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/OWNER_SELF_USE_RISK_REGISTER.json",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/OWNER_MANUAL_USE_RUNBOOK.md",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/OWNER_DATA_ENTRY_GUIDE.md",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/OWNER_STOP_CONDITIONS.md",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/OWNER_SELF_USE_TEST_PLAN.md",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/EVIDENCE_LEDGER.json",
+    "docs/audits/2026-07-07-owner-self-use-production-readiness/DEFERRED_BROAD_GAPS.md"
+  ],
+  "filesChanged": [".github/workflows/owner-pilot-e2e.yml (wired 50-owner-self-use-readiness.spec.ts)"],
+  "noProductSourceChange": true,
+  "browserReadinessProof": {
+    "spec": "tests/browser/50-owner-self-use-readiness.spec.ts (5/5 local)",
+    "journey": "login → open /owner hub → click sidebar 'Owner Cockpit' → one top action or clean state + safety frame → labelled action control (window.prompt/alert trapped) → recovery/outside collapsed + no forbidden claim/PII → unauthenticated visitor redirected to /login + owner API non-200",
+    "runsIn": "owner-pilot-e2e"
+  },
+  "localGates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS",
+    "governanceScanStrict": "0 new",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "ownerCockpitComponentTests": "55/55",
+    "browserSpec50": "5/5 local",
+    "nextBuild": "PASS"
+  },
+  "readinessSummary": { "READY_FOR_OWNER_SELF_USE": 17, "READY_WITH_RESTRICTIONS": 8, "PARTIAL": 0, "NOT_READY": 0, "FROZEN": 0, "blockers": 0, "restrictions": 6 },
+  "classification": "OWNER_SELF_USE_READY_WITH_RESTRICTIONS"
+}
