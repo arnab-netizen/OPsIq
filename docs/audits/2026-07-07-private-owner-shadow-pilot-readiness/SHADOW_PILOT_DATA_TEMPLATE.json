@@ -1,0 +1,35 @@
+{
+  "title": "Shadow Pilot Data Template (PASS 41)",
+  "date": "2026-07-07",
+  "instructions": "Reusable owner-supplied data template. PLACEHOLDERS ONLY. No real names, no PII, no credentials. Money is owner-supplied aggregates. If a required field is unknown, put it in missingDataKnown rather than guessing. This template carries NO real data in PASS 41.",
+  "dataClassification": "OWNER_STYLE_SYNTHETIC_SHADOW_FIXTURE_TEMPLATE (no real data)",
+  "template": {
+    "workspace": "WORKSPACE_A",
+    "businessProfile": { "name": "OWNER_BUSINESS_A", "businessType": "laundry_dry_cleaning", "location": "<city/area only>", "currency": "INR" },
+    "services": [ { "service": "<name>", "description": "<short>" } ],
+    "prices": [ { "service": "<name>", "price": 0, "currency": "INR" } ],
+    "recentOrders": { "period": "week", "orderCount": 0, "trend": "flat|up|down" },
+    "costs": { "revenue": 0, "costOfGoods": 0, "fixedCosts": 0, "variableCosts": 0, "currency": "INR", "confidence": "low|medium|high" },
+    "cashPressure": { "cashInHand": 0, "receivablesOverdue": 0, "payables": 0, "currency": "INR", "confidence": "low|medium|high" },
+    "complaints": [ { "customer": "CUSTOMER_001", "issue": "<operational>", "severity": "LOW|MEDIUM|HIGH", "evidenceRef": "<id|null>" } ],
+    "qualityIssues": [ { "issue": "<operational>", "reworkCount": 0, "sopGap": "<gap|null>", "evidenceRef": "<id|null>" } ],
+    "staffRoles": [ { "role": "STAFF_A|MANAGER_A", "function": "<function>", "issue": "<operational, no judgement|null>" } ],
+    "sopIssues": [ { "process": "<name>", "gap": "<operational>" } ],
+    "trainingIssues": [ { "role": "STAFF_A", "gap": "<skill/process gap>" } ],
+    "ownerWorkload": [ { "painPoint": "<e.g. owner handles all follow-ups>", "frequency": "daily|weekly" } ],
+    "vendorIssues": [ { "vendor": "VENDOR_A", "issue": "<operational>", "impact": "<operational>", "evidenceRef": "<id|null>" } ],
+    "opportunities": [ { "client": "B2B_CLIENT_A", "need": "<operational>", "segment": "<segment>", "relevance": "WEAK|MODERATE|STRONG", "hasUnitEconomics": false, "pricingCommitted": false, "evidenceRef": "<id|null>" } ],
+    "tenders": [ { "client": "B2B_CLIENT_A", "scope": "<operational>", "submissionRequired": false, "evidenceRef": "<id|null>" } ],
+    "publicSignals": [ { "source": "public_review", "sourceQuality": "THIRD_PARTY_UNVERIFIED|OWNER_OBSERVED", "topic": "<operational>", "note": "<operational, no raw text/PII>" } ],
+    "constraints": { "capacity": "<operational>", "cashCap": 0, "ownerTimeHoursPerWeek": 0 },
+    "goals": [ "<e.g. stabilize cash>", "<e.g. cut rework>", "<e.g. delegate follow-ups>" ],
+    "evidenceAvailable": [ { "ref": "<id>", "type": "photo|order_note|report|delivery_note", "describes": "<what>" } ],
+    "missingDataKnown": [ "<data the owner knows is missing>" ]
+  },
+  "fieldRules": {
+    "money": "aggregates only, owner-supplied, no counterparties",
+    "people": "placeholders only (CUSTOMER_00N, STAFF_x, MANAGER_A, VENDOR_A, B2B_CLIENT_A)",
+    "evidence": "reference ids only, never contents that embed PII",
+    "missingData": "prefer missingDataKnown over guessing; OpsIQ will raise a missing-data request"
+  }
+}

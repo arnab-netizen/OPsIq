@@ -1,0 +1,213 @@
+{
+  "title": "Shadow Pilot Module Coverage Matrix (PASS 41)",
+  "date": "2026-07-07",
+  "note": "Grounded in source. Classification per module: READY_FOR_SHADOW_PILOT | READY_WITH_RESTRICTIONS | NOT_READY | FROZEN.",
+  "modules": [
+    {
+      "module": "owner cockpit",
+      "source": "src/app/(authenticated)/owner/cockpit/page.tsx, src/components/owner/MinimumOwnerCockpit.tsx",
+      "dataNeeded": "now-view payload + recovery-status + public-signals (all server-computed)",
+      "expectedOutput": "one top action + why + owner-decision + evidence + reassessment, other surfaces collapsed",
+      "ownerAction": "review top action; approve/delegate/request-missing-data; submit evidence; complete; request reassessment",
+      "safetyGate": "no business logic in UI; server re-checks; PASS 40 no-overload proof",
+      "proofRequired": "component + browser (PASS 36/40)",
+      "testPilotEvidence": "PASS 40 spec 47 (8/8), component suites 55/55",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "now-view",
+      "source": "src/app/api/owner/now-view/route.ts, src/services/owner-guidance/owner-now-view.service.ts",
+      "dataNeeded": "categories 1,2,4,5,9,10,16,19,20 (profile, services, volume, costs, process, complaints, risks, missing-data, goals)",
+      "expectedOutput": "top-3 actions, actions-to-avoid, missing data, what-changed, processExecution bridge routes",
+      "ownerAction": "read top action",
+      "safetyGate": "OWNER_VIEW + workspace; read-only; workspace-scoped",
+      "proofRequired": "route + service tests, DB read",
+      "testPilotEvidence": "owner-now-view suites; cockpit decision-coherence db test",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "process execution",
+      "source": "src/app/api/owner/process-execution/route.ts, src/services/owner-mode/process-execution-bridge.service.ts",
+      "dataNeeded": "a persisted ProcessExecutionTask route (server-derived from now-view)",
+      "expectedOutput": "governed action applied (start/approve/reject/delegate/submit_evidence/complete/reassess/block/missing-data)",
+      "ownerAction": "apply one governed action",
+      "safetyGate": "OWNER_MANAGE + workspace; server-authoritative actorRole; cross-workspace 403; audit event per transition",
+      "proofRequired": "service tests + DB",
+      "testPilotEvidence": "process-execution bridge suites; PASS 25 authorization",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "approval policy / capability layer",
+      "source": "src/domain/constants/capabilities.ts, src/lib/canonical-route-enforcement.ts, process-execution-bridge.service.ts (isOwnerOnly)",
+      "dataNeeded": "route approvalLevel (AUTO_ALLOWED|MANAGER_APPROVAL_REQUIRED|OWNER_APPROVAL_REQUIRED|NEVER_AUTO|NEEDS_DATA)",
+      "expectedOutput": "material action requires owner; non-owner blocked",
+      "ownerAction": "approve owner-only actions",
+      "safetyGate": "capability verified server-side; owner-only enforced by verified capability, not client",
+      "proofRequired": "authorization tests + DB non-owner block",
+      "testPilotEvidence": "PASS 25 adjudication cross-scope; process-execution tests",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "evidence gating",
+      "source": "src/services/owner-mode/process-execution-bridge.service.ts (EVIDENCE_REQUIRED_ROUTES), src/services/execution/verification-engine.ts (detectFakeCompletion)",
+      "dataNeeded": "evidence refs (category 18)",
+      "expectedOutput": "COMPLETE rejected with 0 evidence on evidence-required routes; fake-completion rejected",
+      "ownerAction": "submit evidence before completion",
+      "safetyGate": "EVIDENCE_REQUIRED; detectFakeCompletion",
+      "proofRequired": "service tests + DB completion-with-evidence",
+      "testPilotEvidence": "process-execution bridge suites",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "reassessment",
+      "source": "src/domain/owner-mode/reassessment.ts, src/services/owner-mode/reassessment-event.service.ts",
+      "dataNeeded": "a completed REASSESSMENT_ON_COMPLETE route or explicit REQUEST_REASSESSMENT (+ businessId)",
+      "expectedOutput": "governed reassessment opened / state updated",
+      "ownerAction": "request reassessment; review updated status",
+      "safetyGate": "reassessment status transitions AI cannot control",
+      "proofRequired": "service tests + DB state update",
+      "testPilotEvidence": "reassessment suites",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "recovery status",
+      "source": "src/app/api/owner/recovery-status/route.ts, src/domain/owner-mode/owner-recovery-status.ts, src/services/owner-mode/owner-recovery-status.service.ts",
+      "dataNeeded": "categories 5,6,10,11,15,16 (costs, cash, complaints, rework, constraints, risks)",
+      "expectedOutput": "11-state recovery projection; thrive gate blocked until stabilization; 'not guaranteed'",
+      "ownerAction": "expand recovery; act on top bottleneck via top action",
+      "safetyGate": "OWNER_VIEW; fail-closed 500; Zod refines block reckless growth + fake money",
+      "proofRequired": "domain tests + owner-recovery-status-read.db.test.ts",
+      "testPilotEvidence": "PASS 32/33/37 suites; recovery DB read test",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "public signal summary",
+      "source": "src/app/api/owner/public-signals/route.ts, src/domain/owner-mode/owner-public-signals.ts, src/services/owner-mode/owner-public-signals.service.ts",
+      "dataNeeded": "persisted ExternalOpportunitySignal intake rows (category 14 anonymized); NONE if absent",
+      "expectedOutput": "7-state summary; rawTextHidden; piiStripped; no-live-ingestion; blocked unsafe actions",
+      "ownerAction": "expand outside signals; validate before material action",
+      "safetyGate": "OWNER_VIEW; fail-closed; refines enforce sanitisation + no fabricated money",
+      "proofRequired": "domain/component tests + owner-public-signals-read.db.test.ts",
+      "testPilotEvidence": "PASS 28-30/39 suites; public-signals DB read test",
+      "classification": "READY_WITH_RESTRICTIONS",
+      "restriction": "conservative archetype 'unknown' on intake; interpreter only downgrades, never fabricates a stronger signal"
+    },
+    {
+      "module": "cash / profit protection",
+      "source": "src/domain/owner-mode/business-survival-recovery.ts (cash protection), now-view/recovery",
+      "dataNeeded": "categories 3,5,6,15 (pricing, costs, cash, constraints)",
+      "expectedOutput": "cash data task / discount blocked until margin known; no fabricated money",
+      "ownerAction": "approve cash-protection action; supply margin data",
+      "safetyGate": "discount/spend remain blocked; missing margin → missing-data task",
+      "proofRequired": "survival-recovery domain tests + DB",
+      "testPilotEvidence": "PASS 32 suites",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "complaint / rework",
+      "source": "operationalEvent (COMPLAINT/REWORK) -> process-intelligence -> bridge",
+      "dataNeeded": "categories 10,11 (complaints, rework) anonymized",
+      "expectedOutput": "quality correction task, evidence-gated completion, reassessment",
+      "ownerAction": "approve correction; submit proof",
+      "safetyGate": "evidence gate; no staff blame language",
+      "proofRequired": "process-intelligence + bridge tests + DB",
+      "testPilotEvidence": "PASS 23/26 suites; proof-risk seed path",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "SOP / training",
+      "source": "process-execution routes CREATE_SOP_CHECKLIST_TASK / CREATE_TRAINING_TASK",
+      "dataNeeded": "categories 8,9,11 (staff roles, SOP issues, rework)",
+      "expectedOutput": "SOP/checklist or training task, owner/manager approval as appropriate",
+      "ownerAction": "approve SOP/training task",
+      "safetyGate": "no automated staff action; approval + evidence gates",
+      "proofRequired": "bridge tests + DB",
+      "testPilotEvidence": "PASS 23 suites",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "workload reduction",
+      "source": "ownerWorkloadSnapshot -> now-view; delegation routes CREATE_MANAGER_TASK / CREATE_STAFF_TASK",
+      "dataNeeded": "category 7 (owner workload pain points)",
+      "expectedOutput": "delegation/policy/checklist task; owner keeps material approvals",
+      "ownerAction": "delegate to MANAGER/STAFF where safe",
+      "safetyGate": "owner-only material actions cannot be delegated (isOwnerOnly)",
+      "proofRequired": "bridge tests + DB delegate",
+      "testPilotEvidence": "PASS 22/23 suites",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "capability gap",
+      "source": "ownerCapacitySnapshot / capability signals -> now-view",
+      "dataNeeded": "categories 4,8,15 (volume, staff, constraints)",
+      "expectedOutput": "capability/capacity constraint surfaced; growth gated",
+      "ownerAction": "review constraint; supply capacity data",
+      "safetyGate": "growth blocked when capacity unsafe",
+      "proofRequired": "scenario tests + DB",
+      "testPilotEvidence": "PASS 23/32 suites",
+      "classification": "READY_WITH_RESTRICTIONS",
+      "restriction": "capability inference is conservative; needs owner-supplied capacity to be precise"
+    },
+    {
+      "module": "opportunity / tender",
+      "source": "src/services/owner-mode/external-opportunity-intake.service.ts, src/domain/owner-mode/external-opportunity-intake.ts",
+      "dataNeeded": "category 14 (opportunities) anonymized; hasUnitEconomics flag",
+      "expectedOutput": "opportunity surfaced read-only; COLLECT_DATA / PREPARE_PROOF task; submission blocked",
+      "ownerAction": "supply unit economics + proof; owner decides",
+      "safetyGate": "no auto-submission/outreach/spend; evidence-gated",
+      "proofRequired": "intake service tests + DB",
+      "testPilotEvidence": "PASS 27 opportunity seed path (seed-e2e-opportunity)",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "survival / recovery planning",
+      "source": "src/domain/owner-mode/business-survival-recovery.ts",
+      "dataNeeded": "categories 5,6,10,11,15,16 (costs, cash, complaints, rework, constraints, risks)",
+      "expectedOutput": "16-state survival plan; survival top action; thrive gate closed until stabilization proven",
+      "ownerAction": "approve survival action; execute stabilization",
+      "safetyGate": "never fabricates money; growth blocked; honest restructure/shutdown review when unrecoverable",
+      "proofRequired": "PASS 32 domain tests + DB",
+      "testPilotEvidence": "PASS 32/37 suites",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "milestone execution",
+      "source": "src/domain/owner-mode/recovery-milestone-execution.ts",
+      "dataNeeded": "recovery milestones + evidence (category 18)",
+      "expectedOutput": "21-state milestone machine; no skip/complete without evidence + passing reassessment; regress-on-failure",
+      "ownerAction": "execute milestone with evidence",
+      "safetyGate": "evidence + reassessment gates; regression on failure",
+      "proofRequired": "PASS 33 domain tests + DB",
+      "testPilotEvidence": "PASS 33 suites",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "truth ledger boundaries",
+      "source": "docs/capability-truth-ledger/*, guard: src/__tests__/docs/truth-ledger-consistency.test.ts",
+      "dataNeeded": "none (governs claims, not pilot data)",
+      "expectedOutput": "no capability overclaim; forbidden claims never surface",
+      "ownerAction": "n/a",
+      "safetyGate": "consistency guard test asserts allowed/forbidden claim sets",
+      "proofRequired": "truth-ledger-consistency test green",
+      "testPilotEvidence": "PASS 34 guard test",
+      "classification": "READY_FOR_SHADOW_PILOT"
+    },
+    {
+      "module": "live integrations / connectors / LLM / autonomous action",
+      "source": "n/a (frozen)",
+      "dataNeeded": "n/a",
+      "expectedOutput": "n/a",
+      "ownerAction": "n/a",
+      "safetyGate": "not built; must not be attempted",
+      "proofRequired": "n/a",
+      "testPilotEvidence": "n/a",
+      "classification": "FROZEN"
+    }
+  ],
+  "summary": {
+    "READY_FOR_SHADOW_PILOT": 14,
+    "READY_WITH_RESTRICTIONS": 3,
+    "NOT_READY": 0,
+    "FROZEN": 1
+  }
+}
