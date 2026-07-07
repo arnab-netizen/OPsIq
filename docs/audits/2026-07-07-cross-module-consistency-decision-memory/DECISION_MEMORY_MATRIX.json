@@ -1,0 +1,16 @@
+{
+  "title": "Decision-memory matrix (PASS 48)",
+  "rules": {
+    "failedCorrection": {
+      "key": "scope:sop",
+      "blockedWithoutContext": true,
+      "unblockedWithContext": true
+    },
+    "ownerDeclined": {
+      "key": "scope:marketing",
+      "blockedWithoutContext": true
+    }
+  },
+  "dbBacked": "recordDoNotRepeat persists ownerDoNotRepeatRule + emits OWNER_DO_NOT_REPEAT_RECORDED; evaluateDoNotRepeat enforces; workspace-isolated. Proven in cross-module-consistency-decision-memory.db.test.ts.",
+  "staleRecommendationPrevention": "A recommendation matching an active blocking memory is not re-issued unchanged; a changed-context reason is required to override."
+}

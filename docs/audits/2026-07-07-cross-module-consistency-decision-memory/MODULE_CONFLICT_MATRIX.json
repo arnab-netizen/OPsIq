@@ -1,0 +1,109 @@
+{
+  "title": "Module conflict matrix (PASS 48)",
+  "conflicts": [
+    {
+      "id": 1,
+      "conflict": "finance vs growth",
+      "rule": "weak/missing cash blocks growth",
+      "proof": {
+        "blockedReason": [
+          "weak_cash_runway"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "conflict": "recovery vs growth",
+      "rule": "unproven SOP/manager layer blocks scale",
+      "proof": {
+        "allowed": false,
+        "blocked": [
+          "sop_manager_layer_not_working"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "conflict": "internal evidence vs weak public signal",
+      "rule": "public claim never a verified fact; needs internal validation",
+      "proof": {
+        "financialClaimAccepted": false,
+        "missingData": 3,
+        "confidenceHandling": "REJECTED_UNVERIFIED_CLAIM"
+      }
+    },
+    {
+      "id": 4,
+      "conflict": "public signal validation",
+      "rule": "stays validation-needed",
+      "proof": {
+        "confidenceHandling": "REJECTED_UNVERIFIED_CLAIM"
+      }
+    },
+    {
+      "id": 5,
+      "conflict": "failed correction repeat",
+      "rule": "blocked unless changed context",
+      "proof": {
+        "blocked": true,
+        "unblockedWithContext": true
+      }
+    },
+    {
+      "id": 6,
+      "conflict": "owner-declined repeat",
+      "rule": "blocked unless changed context (persisted rule)",
+      "proof": "see DECISION_MEMORY_MATRIX + DB test"
+    },
+    {
+      "id": 7,
+      "conflict": "tender urgency vs gates",
+      "rule": "eligibility/cost/capacity/EMD retained; auto-submit blocked",
+      "proof": {
+        "missingData": [
+          "tender eligibility documents, cost/margin fit, capacity, and EMD affordability (before any bid decision)"
+        ],
+        "blocked": [
+          "submit the tender now automatically",
+          "tender auto-submit",
+          "auto EMD payment / spend"
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "conflict": "capability gap vs growth",
+      "rule": "capability blocker is top action; scale blocked",
+      "proof": {
+        "crisisStatus": "CAPABILITY_BLOCKER"
+      }
+    },
+    {
+      "id": 9,
+      "conflict": "finance crisis vs growth temptation",
+      "rule": "cash stays top action; scale blocked",
+      "proof": {
+        "crisisStatus": "CASH_PROTECTION_REQUIRED",
+        "scaleBlocked": true
+      }
+    },
+    {
+      "id": 10,
+      "conflict": "phase skip",
+      "rule": "triage/stabilization cannot jump to growth",
+      "proof": {
+        "triage": [
+          "stabilization"
+        ],
+        "stabilization": [
+          "recovery",
+          "triage"
+        ],
+        "recovery": [
+          "growth",
+          "stabilization"
+        ]
+      }
+    }
+  ]
+}

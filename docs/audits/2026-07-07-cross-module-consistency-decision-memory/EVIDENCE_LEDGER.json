@@ -1,0 +1,51 @@
+{
+  "title": "Cross-Module Consistency + Decision Memory — Evidence Ledger (PASS 48)",
+  "date": "2026-07-07",
+  "branch": "claude/cross-module-consistency-decision-memory-proof",
+  "baseMain": "a14fae157ee4623bba55ae82a295bbdfdd10812b",
+  "objective": "Prove OpsIQ's modules speak with one coherent business voice and do not contradict each other after multiple events/decisions — composing the REAL engines, no new engine, no fabrication.",
+  "filesAdded": [
+    "src/__tests__/execution/cross-module-consistency-decision-memory.test.ts (17 unit tests)",
+    "src/__tests__/execution/cross-module-consistency-decision-memory.db.test.ts (6 DB tests — LANE_B, 15 required proofs)",
+    "docs/audits/2026-07-07-cross-module-consistency-decision-memory/ (final report + module-conflict / decision-memory / strategy-phase / cockpit-coherence matrices + this ledger + deferred gaps)"
+  ],
+  "filesChanged": [
+    ".github/workflows/db-verification.yml (added cross-module-consistency-decision-memory.db.test.ts to the LANE_B and LANE_A explicit test lists)"
+  ],
+  "enginesComposed": [
+    "planBusinessSurvivalRecovery / planAndValidateSurvival (finance-first ladder, tender gates, capability blocker, thrive gate)",
+    "assessGrowthReadiness / evaluateProgressionRecommendation (fail-closed growth gate)",
+    "evaluateDoNotRepeat + recordDoNotRepeat (decision memory, persisted)",
+    "interpretRawPublicSignal (public signal stays validation-needed; financialClaimAccepted always false)",
+    "prioritisePublicSignals + explainOwnerCockpitDecision (one coherent top action, grouped secondaries, transparent tier)",
+    "getPhaseAllowedTransitions (linear survive→stabilize→recover→grow)"
+  ],
+  "conflictsProven": {
+    "finance_vs_opportunity": "weak/missing cash blocks growth; cash crisis stays the top action",
+    "recovery_vs_growth": "unproven SOP/manager + capability blocks scale; phase machine cannot skip to growth",
+    "internal_evidence_vs_public_signal": "public claim never a verified fact; needs internal validation; stays validation-needed",
+    "sop_training_repeat": "failed correction not re-issued unchanged (persisted memory)",
+    "owner_declined_repeat": "owner rejection remembered (persisted memory)",
+    "missing_data_loop": "recurring gap stays a missing-data task, never a fabricated figure",
+    "tender_urgency_vs_gates": "eligibility/cost/capacity/EMD retained; auto-submit blocked",
+    "capability_gap_vs_automation": "capability blocker is the top action; scale blocked",
+    "cockpit_coherence": "one top action (quality), 2 grouped secondary groups, growth subordinated, transparent priority tier"
+  },
+  "gates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS",
+    "governanceScanStrict": "31 frozen / 0 new",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "unitTests": "cross-module-consistency-decision-memory 17/17",
+    "dbSim": "cross-module-consistency-decision-memory 6/6 (local Postgres)",
+    "nextBuild": "PASS"
+  },
+  "dbProof": {
+    "file": "src/__tests__/execution/cross-module-consistency-decision-memory.db.test.ts",
+    "lane": "LANE_B (postgres:16) + LANE_A list",
+    "marker": "LANE_B_CROSS_MODULE_DB_SIM_EXECUTED; LANE_B_DB_VERIFIED printed on success",
+    "realServicesDriven": ["recordDoNotRepeat", "ownerDoNotRepeatRule lookup", "evaluateDoNotRepeat", "audit events", "workspace isolation"]
+  },
+  "frozenBoundaries": ["public SaaS", "billing", "Product Hunt/launch", "live integrations", "LLM/NLP", "autonomous external action", "private owner data"],
+  "classification": "CROSS_MODULE_CONSISTENCY_MEMORY_ELITE_ACCEPTED"
+}

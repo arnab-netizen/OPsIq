@@ -1,0 +1,15 @@
+{
+  "title": "Owner cockpit coherence matrix (PASS 48)",
+  "oneTopAction": {
+    "topic": "quality",
+    "ownerApprovalRequired": false
+  },
+  "growthSubordinated": {
+    "whyNotGrowthYet": true
+  },
+  "secondariesGrouped": {
+    "count": 2
+  },
+  "transparentTier": true,
+  "cleanControlNull": true
+}

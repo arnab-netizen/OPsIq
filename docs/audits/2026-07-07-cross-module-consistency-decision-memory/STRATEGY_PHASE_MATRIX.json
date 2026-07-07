@@ -1,0 +1,18 @@
+{
+  "title": "Strategy phase matrix (PASS 48)",
+  "phaseTransitions": {
+    "triage": [
+      "stabilization"
+    ],
+    "stabilization": [
+      "recovery",
+      "triage"
+    ],
+    "recovery": [
+      "growth",
+      "stabilization"
+    ],
+    "growth": []
+  },
+  "rule": "Linear survive→stabilize→recover→grow; growth reachable only from recovery; the growth gate (progression engine) must also be clean before scale."
+}
