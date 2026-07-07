@@ -1,0 +1,51 @@
+{
+  "title": "OpsIQ Capability Evidence Ledger",
+  "date": "2026-07-07",
+  "purpose": "The raw evidence base behind OPSIQ_CAPABILITY_MATRIX.json. Every number here is countable from the repo — not asserted from memory.",
+  "repoEvidence": {
+    "totalTestFiles": 911,
+    "executionDbSimsOnDisk": 37,
+    "executionDbSimsInRequiredLaneB": 28,
+    "executionDbSimsOnDiskButNotInLaneB": 10,
+    "laneBTotalFiles": 52,
+    "laneAOptInOnly": true,
+    "auditDirectories": 19,
+    "realWorldDataDirectories": 7
+  },
+  "requiredCiLane": {
+    "workflow": ".github/workflows/db-verification.yml",
+    "lane": "LANE_B — Local Postgres (throwaway postgres:16 service container)",
+    "runsOn": "push to main / claude/**, and PRs to main",
+    "endsWith": "✅ LANE_B_DB_VERIFIED",
+    "requiredChecks": ["LANE_B — Local Postgres", "Build + Type + Prisma Verify", "lint (20.x)"],
+    "verificationMethod": "Log inspection: each PR's LANE_B log is grepped to confirm the specific new .db.test.ts executed (e.g. 'recovery-execution-milestone-proof.db.test.ts (11 tests)') — a generic green lane is not accepted."
+  },
+  "dbSimsOnDiskButUnwiredFromRequiredLane": [
+    "adjudication-suppression-simulation.db.test.ts",
+    "complaint-rework-simulation.db.test.ts",
+    "completion-escalation-timing-simulation.db.test.ts",
+    "operational-event-aging-simulation.db.test.ts",
+    "process-intelligence-simulation.db.test.ts",
+    "proof-dispute-simulation.db.test.ts",
+    "proof-evidence-lists-simulation.db.test.ts",
+    "proof-risk-adjudication-simulation.db.test.ts",
+    "reused-hash-proof-simulation.db.test.ts",
+    "timing-write-path-population-simulation.db.test.ts"
+  ],
+  "unwiredNote": "These 10 DB simulations exist and pass on disk but are NOT gated on every PR. Their capabilities may be described as 'DB-proven on disk' but NOT as 'CI-gated'. A future pass should either wire them into LANE_B or record them as intentionally out-of-lane.",
+  "noLiveAiEvidence": {
+    "file": "src/services/ai/openai-provider.ts",
+    "importers": "none (no non-test importer found)",
+    "selfReport": "'OPENAI_API_KEY not set — live AI disabled, deterministic path used.'",
+    "conclusion": "No live LLM write-path in any decision/domain flow. All decisions are deterministic rule engines."
+  },
+  "noAutonomousActionEvidence": {
+    "files": ["src/domain/owner-mode/autonomy-policy.ts", "src/domain/owner-mode/capability-registry.ts"],
+    "enforces": ["autonomous_action_prohibited", "external_action_prohibited"],
+    "conclusion": "OpsIQ proposes; the owner/manager decides and acts. No customer contact, tender submit, spend, discount, or contract is automated."
+  },
+  "noRealOutcomeData": {
+    "conclusion": "No repo artifact contains verified real-world business outcome data (money earned, business saved, ROI). All simulations use synthetic/controlled fixtures. Therefore NO outcome claim is supportable.",
+    "basis": "All *.db.test.ts use synthetic fixtures; docs/real-world-data/* are controlled fixtures with safety notes, not real client results."
+  }
+}
