@@ -1,0 +1,116 @@
+{
+  "phase": "Phase 0 — Truth and Safety Corrections",
+  "date": "2026-07-07",
+  "branch": "claude/phase-0-truth-safety-corrections",
+  "base_branch": "main",
+  "head_before": "22d9682f9c52140bdf775475ba24439f454d3f4f",
+  "head_before_subject": "Cross module consistency decision memory proof (#180)",
+  "product_business_logic_changed": false,
+  "note_scope": "Only truth/safety corrections: token crypto, private-mode authz wiring, demo-write production guard, connector readiness labels, smoke fail-close. No business modules/schemas/governed flows rebuilt or added. No Prisma migration.",
+  "environment": {
+    "node_modules_installed": false,
+    "install_forbidden": true,
+    "dynamic_gates": "BLOCKED",
+    "dynamic_gates_detail": "npx tsc/eslint/vitest cannot resolve next/@prisma/client/etc without node_modules; installing is forbidden by phase rules. Static review + node --check (for .mjs) used instead. Vitest suites added must be run in CI (node_modules present).",
+    "node_check_production_smoke_mjs": "OK"
+  },
+  "findings_addressed": [
+    {
+      "id": "A",
+      "audit_finding": "H-CONN-02 — OAuth token 'encryption' was base64 behind an 'encrypted at rest' label.",
+      "fix_method": "Replaced base64 placeholder with authenticated AES-256-GCM. Per-workspace key derived via HKDF-SHA256 from an explicit master key (OAUTH_TOKEN_ENCRYPTION_KEY env). Fails closed (throws) when key missing/short. Versioned ciphertext 'v1gcm.<iv>.<tag>.<ct>'. decrypt refuses non-GCM (legacy base64) input. Corrected the misleading header/interface comments to describe the real scheme. Documented the required env var in .env.example (template only, no secret).",
+      "files": [
+        "src/services/external-systems/oauth-token.service.ts",
+        ".env.example"
+      ],
+      "tests": [
+        "src/__tests__/services/external-systems/oauth-token.service.test.ts (new 'Encryption hardening' describe): ciphertext != plaintext; ciphertext != base64(token) and starts with v1gcm.; decrypt works with correct key; decrypt fails with wrong workspace key; decrypt fails on tampered ciphertext; decrypt refuses legacy base64; fails closed when key missing; fails closed when key too short; source-contract test that no code path labels base64 as encryption (asserts createCipheriv + aes-256-gcm present, base64 line absent)."
+      ],
+      "no_silent_downgrade": true,
+      "no_plaintext_storage": true
+    },
+    {
+      "id": "B",
+      "audit_finding": "H-PRIV-01 — private-mode-gate trusted spoofable x-private-mode-role header; real role-access service was unwired.",
+      "fix_method": "getPrivateModeAccess no longer reads x-private-mode-role. Role is resolved ONLY from the DB via an injected resolver (PrivateModeGateDeps.resolveRole). Added createPrismaPrivateModeResolver(prisma) wiring the real PrivateModeRoleAccessService.getUserRole (approved + non-revoked). enforcePrivateModeGate threads deps through. Fails closed when identity incomplete or no resolver wired. Identity (userId/workspaceId) still comes from the same upstream-verified x-user-id/x-workspace-id channel the rest of the middleware uses; only the authorization ROLE decision was moved to the DB. addPrivateModeContext still SETS a response header (output) — not an authz input.",
+      "files": ["src/middleware/private-mode-gate.ts"],
+      "tests": [
+        "src/__tests__/middleware/private-mode-gate.test.ts (rewritten to prove the fix): spoofed header without resolver -> denied; spoofed header with empty DB -> denied; DB-granted role -> allowed; missing identity -> denied; requiredRole enforced from DB not header; workspace isolation (grant for ws-A does not grant ws-B); createPrismaPrivateModeResolver maps DB -> role."
+      ],
+      "note_gate_callers": "The gate currently has zero production route callers (grep-verified), so no live request behavior changed; the fix removes the latent spoofable path and provides the real wiring point."
+    },
+    {
+      "id": "C",
+      "audit_finding": "H-GROWTH-01 — pricing/retention write routes persisted only to in-memory static Maps (no DB/audit).",
+      "fix_method": "Option 2 (smallest safe correction): added src/lib/demo-write-guard.ts. In production the two write routes now fail closed with 503 NOT_PERSISTED_DEMO_ONLY (persistence:'in-memory', productionEnabled:false) until durable, tenant-scoped, audited persistence exists. Non-production keeps the demo path for local/dev/test. Route doc comments now state DEMO-ONLY / NON-PERSISTENT. No Prisma model added (avoided schema/migration scope).",
+      "files": [
+        "src/lib/demo-write-guard.ts",
+        "src/app/api/growth/pricing-tiers/route.ts",
+        "src/app/api/growth/retention-metrics/route.ts"
+      ],
+      "tests": [
+        "src/__tests__/lib/demo-write-guard.test.ts: blocks in production for all in-memory features; allows outside production; 503 NOT_PERSISTED_DEMO_ONLY body shape; static check that both routes import+call the guard (no unguarded production write path)."
+      ]
+    },
+    {
+      "id": "D",
+      "audit_finding": "H-SMOKE-01 — smoke scripts could pass despite unconfigured target / swallowed network errors.",
+      "fix_method": "scripts/smoke-tests.ts: fail closed at start if NEXT_PUBLIC_APP_URL is unset or a placeholder (yourdomain.com/example.com) -> print BLOCKED, exit 1 (no run against a fake host). Auth-enforcement test no longer swallows non-timeout network errors: it rethrows so an unreachable protected endpoint FAILS instead of counting as 'auth enforced'. scripts/production-smoke.mjs: offline (no BASE_URL) now classified BLOCKED (was PARTIAL) while keeping the existing exit-1.",
+      "files": ["scripts/smoke-tests.ts", "scripts/production-smoke.mjs"],
+      "tests": ["node --check scripts/production-smoke.mjs => OK. smoke-tests.ts is a tsx script exercised in CI smoke jobs; change is a fail-closed guard + rethrow (no new unit harness added)."],
+      "ci_changed": false
+    },
+    {
+      "id": "E",
+      "audit_finding": "Connectors labelled isActive:true implied live/ready though nothing connects.",
+      "fix_method": "Added a truthful ConnectorReadiness type and a required Provider.readiness field, set to PLACEHOLDER_ONLY for all 10 providers. Clarified that isActive means 'CSV import template available', not 'live connection'. Added isConnectorProductionReady() helper. No real connector implementation added.",
+      "files": ["src/domain/external-systems/provider-registry.ts"],
+      "tests": [
+        "src/__tests__/domain/external-systems/provider-registry.test.ts (new 'Connector readiness honesty' describe): no provider is PRODUCTION_READY; every provider declares an explicit allowed readiness."
+      ]
+    }
+  ],
+  "commands_run": [
+    "git fetch origin main; git checkout -B claude/phase-0-truth-safety-corrections origin/main",
+    "grep/read of oauth-token.service.ts, token-lifecycle.service.ts, private-mode-gate.ts, role-access.service.ts, growth routes, smoke scripts, provider-registry.ts and their existing tests",
+    "edits (Edit/Write) to 11 files + 2 new files",
+    "[ -d node_modules ] => NO (dynamic gates BLOCKED)",
+    "node --check scripts/production-smoke.mjs => OK",
+    "git diff --cached --stat; grep sanity checks (base64 line removed; no authz read of x-private-mode-role)"
+  ],
+  "status": {
+    "static_review": "PASS",
+    "node_check_mjs": "PASS",
+    "typecheck": "BLOCKED (no node_modules)",
+    "lint": "BLOCKED (no node_modules)",
+    "unit_tests": "BLOCKED (no node_modules) — new/updated vitest suites must run in CI",
+    "db_tests": "N/A (no DB touched; no Prisma schema/migration change)",
+    "prisma": "N/A (schema untouched)"
+  },
+  "files_changed": {
+    "modified": [
+      ".env.example",
+      "scripts/production-smoke.mjs",
+      "scripts/smoke-tests.ts",
+      "src/__tests__/domain/external-systems/provider-registry.test.ts",
+      "src/__tests__/middleware/private-mode-gate.test.ts",
+      "src/__tests__/services/external-systems/oauth-token.service.test.ts",
+      "src/app/api/growth/pricing-tiers/route.ts",
+      "src/app/api/growth/retention-metrics/route.ts",
+      "src/domain/external-systems/provider-registry.ts",
+      "src/middleware/private-mode-gate.ts",
+      "src/services/external-systems/oauth-token.service.ts"
+    ],
+    "added": [
+      "src/lib/demo-write-guard.ts",
+      "src/__tests__/lib/demo-write-guard.test.ts"
+    ]
+  },
+  "remaining_risks": [
+    "Dynamic gates (tsc/lint/vitest) could not run locally (node_modules absent); the added suites must go green in CI before merge.",
+    "OAuth token encryption now REQUIRES OAUTH_TOKEN_ENCRYPTION_KEY in any environment that stores external tokens; if a deploy stores tokens without it, storeOAuthToken will throw (intended fail-closed). Connectors remain PLACEHOLDER_ONLY so no live token is stored yet.",
+    "private-mode-gate has no production callers; wiring it into real private-mode routes (passing createPrismaPrivateModeResolver) is future work — the fix removes the spoofable path and provides the wiring point but does not add new gated routes.",
+    "Pricing/retention remain non-persistent (now blocked in production). Real persistence is a later phase (audit Phase 4), out of Phase 0 scope."
+  ],
+  "rollback_plan": "All changes are on branch claude/phase-0-truth-safety-corrections in a single commit; revert the commit (git revert) or delete the branch. No DB migration, no data change, no CI change, so revert is clean and immediate. The only behavioral change to a running system is that the two in-memory growth write routes return 503 in production (previously accepted non-persistent writes); reverting restores the prior (unsafe) behavior."
+}

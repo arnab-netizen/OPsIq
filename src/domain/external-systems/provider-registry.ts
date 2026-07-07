@@ -18,11 +18,34 @@
 
 export type ProviderCategory = "CRM" | "accounting" | "POS" | "ads" | "ecommerce";
 
+/**
+ * Truthful implementation status of a connector (Phase 0 correction).
+ * These providers are import TEMPLATES for manual CSV export/upload only — there
+ * is no live OAuth token exchange or data fetch in the service layer yet — so
+ * they are PLACEHOLDER_ONLY, never PRODUCTION_READY.
+ */
+export type ConnectorReadiness =
+  | "NOT_IMPLEMENTED"
+  | "PLACEHOLDER_ONLY"
+  | "READ_ONLY_REAL"
+  | "WRITE_CAPABLE_GATED"
+  | "PRODUCTION_READY";
+
 export interface Provider {
   id: string;
   name: string;
   category: ProviderCategory;
+  // `isActive` = this CSV import TEMPLATE is available for selection. It does NOT
+  // mean a live connection exists. Real connection status is `readiness`.
   isActive: boolean;
+  // Truthful connector readiness. Currently every provider is PLACEHOLDER_ONLY:
+  // the service layer has no live token exchange / data fetch.
+  readiness: ConnectorReadiness;
+}
+
+/** A connector must never be reported as production-ready unless it truly is. */
+export function isConnectorProductionReady(provider: Provider): boolean {
+  return provider.readiness === "PRODUCTION_READY";
 }
 
 export interface FieldMapping {
@@ -48,66 +71,78 @@ export interface ImportTemplate {
 
 // ========== PROVIDER REGISTRY ==========
 
+// Every provider below is a manual CSV import template. None has a live
+// connection in the service layer, so all are readiness "PLACEHOLDER_ONLY".
 export const PROVIDERS: Record<string, Provider> = {
   HUBSPOT: {
     id: "hubspot",
     name: "HubSpot",
     category: "CRM",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   SALESFORCE: {
     id: "salesforce",
     name: "Salesforce",
     category: "CRM",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   ZOHO_LEADS: {
     id: "zoho_crm_leads",
     name: "Zoho CRM Leads",
     category: "CRM",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   PIPEDRIVE_DEALS: {
     id: "pipedrive_deals",
     name: "Pipedrive Deals",
     category: "CRM",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   SHOPIFY: {
     id: "shopify",
     name: "Shopify",
     category: "ecommerce",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   GOOGLE_ADS: {
     id: "google_ads",
     name: "Google Ads",
     category: "ads",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   META_ADS: {
     id: "meta_ads",
     name: "Meta Ads",
     category: "ads",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   QUICKBOOKS: {
     id: "quickbooks",
     name: "QuickBooks",
     category: "accounting",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   XERO: {
     id: "xero",
     name: "Xero",
     category: "accounting",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
   GENERIC: {
     id: "generic",
     name: "Generic Export",
     category: "CRM",
     isActive: true,
+    readiness: "PLACEHOLDER_ONLY",
   },
 };
 

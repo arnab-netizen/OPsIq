@@ -42,11 +42,14 @@ const safeEndpoints = [
 
 async function runTests() {
   if (!baseUrl) {
-    console.log("⊘  Offline mode: BASE_URL not provided");
+    console.log("⊘  BLOCKED: BASE_URL not provided — cannot verify a deployment");
     console.log("   To test a deployed instance, provide BASE_URL:");
     console.log("   npm run deployment:smoke https://app.example.com");
     console.log("\n   Required for deployment: BASE_URL_REQUIRED_FOR_SMOKE_TEST");
-    report.overall_status = "PARTIAL";
+    // Fail closed: no target means the smoke check could not run. Classify as
+    // BLOCKED (not PASS/PARTIAL) and exit non-zero so CI/gates do not treat a
+    // skipped check as a healthy deployment.
+    report.overall_status = "BLOCKED";
     writeReport();
     process.exit(1);
   }

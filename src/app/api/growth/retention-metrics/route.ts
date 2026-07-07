@@ -7,6 +7,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { RetentionEngine } from "@/services/growth/retention-engine";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
+import { isProductionRuntime, demoOnlyBlockedResponse } from "@/lib/demo-write-guard";
 
 const recordMetricsSchema = z.object({
   cohortMonth: z.string().regex(/^\d{4}-\d{2}$/, "Cohort month must be YYYY-MM format"),
@@ -25,7 +26,12 @@ const assessChurnRiskSchema = z.object({
 /**
  * POST /api/growth/retention-metrics
  *
- * Record retention metrics for a cohort (workspace-scoped)
+ * Record retention metrics for a cohort (workspace-scoped).
+ *
+ * DEMO-ONLY / NON-PERSISTENT: RetentionEngine stores metrics/churn in in-memory
+ * Maps (lost on restart, not multi-instance safe, no audit event). This route is
+ * therefore blocked in production (503 NOT_PERSISTED_DEMO_ONLY) until durable,
+ * tenant-scoped, audited persistence is added.
  * Wire: RetentionEngine.recordMetrics()
  */
 export const POST = withEnforcementFull(async (request) => {
@@ -45,6 +51,11 @@ export const POST = withEnforcementFull(async (request) => {
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
     throw new ForbiddenError("Unauthorized");
+  }
+
+  // Fail closed in production: this write is backed only by in-memory Maps.
+  if (isProductionRuntime()) {
+    return demoOnlyBlockedResponse("retention-metrics");
   }
 
   try {
