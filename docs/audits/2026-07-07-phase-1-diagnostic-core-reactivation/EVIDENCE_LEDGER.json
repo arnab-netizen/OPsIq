@@ -1,0 +1,106 @@
+{
+  "phase": "Phase 1 — Diagnostic-Core Reactivation",
+  "date": "2026-07-07",
+  "branch": "claude/phase-1-diagnostic-core-reactivation",
+  "base": "origin/main @ 49649a6e430274adda4bb1c0040a346066348747 (Phase-0 merge, PR #182)",
+  "part_a_main_post_merge_verification": {
+    "main_head": "49649a6e430274adda4bb1c0040a346066348747",
+    "phase0_merge_in_ancestry": true,
+    "working_tree": "clean",
+    "note_local_main_realigned": "Local 'main' branch was a stale/divergent ref (fa1e0576); realigned to origin/main. No code modified.",
+    "required_code_gates": {
+      "lint": "success",
+      "typescript_type_checking": "success",
+      "prisma_validate_migrate_generate": "success",
+      "build_project": "success (no OOM)",
+      "governance_and_auth_route_scans": "success",
+      "wrapped_handlers_ratchet": "success",
+      "mvp_readiness_gate": "success",
+      "b12_s3_db_verification": "success",
+      "cicd_foundations_phase13": "success",
+      "maintained_vitest_suite": "in_progress/unverified at hand-off — slow serial runner; identical code+tests passed green on PR #182; no failure observed",
+      "pull_request_only_workflows": "browser packs / DB-backed lanes / Security Baseline / owner-pilot-e2e/db / branch-protection are pull_request-triggered; passed on PR #182; not re-triggered on main push"
+    },
+    "non_required_failure": {
+      "workflow": "Smoke - Production Dashboard",
+      "conclusion": "failure",
+      "failing_step": "Run dashboard smoke test (POST /api/auth/login)",
+      "detail": "Vercel deployed 49649a6e ('Deployment and route proof verified'); login returned HTTP 500 {\"classification\":\"membership_lookup_failed\",\"stage\":\"membership_lookup\"}",
+      "classification": "pre-existing / production-environment issue (live prod DB/data). NOT a Phase-0 regression: Phase-0 changed no auth/login/membership code. NOT a required code gate.",
+      "owner_action": "Investigate production login membership lookup separately; out of Phase-0/Phase-1 scope."
+    },
+    "classification": "Required code gates GREEN except the maintained vitest suite which was still running/unverified at hand-off. User authorized proceeding ('Proceed') on the strength of the green required gates + PR-proven identical suite.",
+    "proceed_authorized_by_user": true
+  },
+  "quarantine_inventory": {
+    "total_quarantined_before": 97,
+    "reactivated": 4,
+    "remaining_quarantined_after": 93,
+    "root": "src/__ignored_tests__/",
+    "db_dependent_remaining_approx": 3,
+    "diagnostic_core_engine_tests": [
+      "archetype-engine.test.ts",
+      "bottleneck-engine.test.ts",
+      "maturity-engine.test.ts",
+      "root-cause-engine.test.ts"
+    ]
+  },
+  "reactivated_tests": [
+    {
+      "from": "src/__ignored_tests__/services/diagnostic-core/__tests__/root-cause-engine.test.ts",
+      "to": "src/services/diagnostic-core/__tests__/root-cause-engine.test.ts",
+      "method": "git mv (rename, history preserved)",
+      "source_under_test": "src/services/diagnostic-core/root-cause-engine.ts",
+      "covers": ["root-cause inference (hypothesis competition, confidence-vs-evidence)", "uncertainty/failure handling (fail-closed data-sufficiency gate, contradiction detection)", "evidence use (scoring)"],
+      "static_verification": "import '../root-cause-engine' resolves to real source; analyzeRootCause signature matches; asserted fields {selectedHypothesis, alternativeHypotheses, overallConfidence, uncertaintyExposure, engagementId, workspaceId} all produced by source; contradiction test (-60/-60) matches source threshold (<-50); validData has 8 evidence items satisfying confidence-vs-evidence validator.",
+      "db_dependency": "none (pure unit; uuid only)"
+    },
+    {
+      "from": "src/__ignored_tests__/services/diagnostic-core/__tests__/archetype-engine.test.ts",
+      "to": "src/services/diagnostic-core/__tests__/archetype-engine.test.ts",
+      "method": "git mv",
+      "source_under_test": "src/services/diagnostic-core/archetype-engine.ts",
+      "covers": ["archetype classification inference", "fail-closed data-sufficiency", "uncertainty exposure"],
+      "static_verification": "import '../archetype-engine' resolves; analyzeArchetype matches; asserted fields {selectedArchetype, alternativeArchetypes, uncertaintyExposure, engagementId, workspaceId} present in source.",
+      "db_dependency": "none"
+    },
+    {
+      "from": "src/__ignored_tests__/services/diagnostic-core/__tests__/bottleneck-engine.test.ts",
+      "to": "src/services/diagnostic-core/__tests__/bottleneck-engine.test.ts",
+      "method": "git mv",
+      "source_under_test": "src/services/diagnostic-core/bottleneck-engine.ts",
+      "covers": ["bottleneck detection inference", "fail-closed data-sufficiency", "uncertainty exposure"],
+      "static_verification": "import '../bottleneck-engine' resolves; analyzeBottleneck matches; asserted fields {primaryBottleneck, alternativeBottlenecks, uncertaintyExposure, engagementId, workspaceId} present in source.",
+      "db_dependency": "none"
+    },
+    {
+      "from": "src/__ignored_tests__/services/diagnostic-core/__tests__/maturity-engine.test.ts",
+      "to": "src/services/diagnostic-core/__tests__/maturity-engine.test.ts",
+      "method": "git mv",
+      "source_under_test": "src/services/diagnostic-core/maturity-engine.ts",
+      "covers": ["maturity assessment inference", "fail-closed data-sufficiency", "uncertainty exposure"],
+      "static_verification": "import '../maturity-engine' resolves; analyzeMaturity matches; asserted fields {currentMaturity, alternativeAssessments, overallMaturityScore, overallConfidence, maturityGaps, uncertaintyExposure, engagementId, workspaceId} present in source.",
+      "db_dependency": "none"
+    }
+  ],
+  "source_fixes": [],
+  "source_fixes_note": "No source fix required. Static analysis exposed no defect: sources are byte-identical to the co-authored tests and unchanged since authoring; the only breakage was the relative import path caused by the earlier bulk move into __ignored_tests__, fixed by relocating the tests beside their source.",
+  "validation_commands": [
+    {"cmd": "git checkout -B claude/phase-1-diagnostic-core-reactivation origin/main", "result": "branch at 49649a6e, clean"},
+    {"cmd": "find src/__ignored_tests__ -name '*.test.ts*' | wc -l", "result": "97 before, 93 after reactivation"},
+    {"cmd": "static import/API/field cross-check of 4 engine tests vs sources", "result": "PASS — all imports resolve, methods + asserted fields match"},
+    {"cmd": "grep vitest.config include/exclude", "result": "src/**/*.test.ts included; __ignored_tests__ excluded — reactivated tests now in active lane, no CI config change needed"},
+    {"cmd": "npx tsc / npx vitest run <reactivated>", "result": "BLOCKED — node_modules absent, install forbidden; deferred to CI"}
+  ],
+  "deferred_or_blocked_dynamic_gates": [
+    {"gate": "typecheck (tsc)", "status": "BLOCKED (no node_modules) -> CI"},
+    {"gate": "lint (eslint)", "status": "BLOCKED (no node_modules) -> CI"},
+    {"gate": "vitest run (reactivated diagnostic-core tests)", "status": "BLOCKED locally (no node_modules); ACTIVE PROOF DEFERRED to PR CI build-and-test maintained suite"},
+    {"gate": "DB tests", "status": "N/A (reactivated tests are pure-unit, no DB touched)"},
+    {"gate": "Prisma", "status": "N/A (schema untouched)"},
+    {"gate": "Playwright", "status": "N/A (no UI touched)"}
+  ],
+  "product_logic_changed": false,
+  "phase0_files_touched": false,
+  "rollback_plan": "All changes are one commit on claude/phase-1-diagnostic-core-reactivation: 4 test-file renames (out of __ignored_tests__) + 3 audit docs. git revert the commit (or git mv the 4 tests back) restores the prior quarantine state. No source/product/schema/CI change, so revert is clean and immediate."
+}
