@@ -18,6 +18,7 @@
 import { useState } from "react";
 import { Badge } from "@/ui/primitives";
 import type { BridgedRouteView, ProcessExecutionBridgeView } from "@/components/owner/ProcessIntelligencePanel";
+import type { OwnerRecoveryStatusResponse } from "@/domain/owner-mode/owner-recovery-status";
 
 const APPROVAL_LABEL: Record<string, string> = {
   OWNER_APPROVAL_REQUIRED: "Owner approval required",
@@ -66,12 +67,71 @@ export interface MinimumOwnerCockpitProps {
   bridge: ProcessExecutionBridgeView | null;
   /** The governed "do NOT do now" list from the now-view (each {avoid}), for the Blocked / Not Allowed section. */
   actionsToAvoid?: string[];
+  /** Read-only recovery status projection (PASS 37). Rendered as a collapsed low-load section. */
+  recovery?: OwnerRecoveryStatusResponse | null;
   /** When provided, the cockpit becomes interactive; the server re-checks every action. */
   onAction?: (taskKey: string, action: string, input: CockpitActionInput) => void;
   busy?: boolean;
 }
 
-export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], onAction, busy = false }: MinimumOwnerCockpitProps) {
+const RECOVERY_STATUS_LABEL: Record<string, string> = {
+  NONE: "No recovery in progress",
+  SURVIVAL_TRIAGE_ACTIVE: "Survival triage active",
+  RECOVERY_IN_PROGRESS: "Recovery in progress",
+  STABILIZATION_NOT_PROVEN: "Stabilization not proven",
+  STABILIZATION_PROVEN: "Stabilization proven",
+  THRIVE_GATE_BLOCKED: "Growth blocked until stabilization",
+  THRIVE_GATE_ELIGIBLE: "Growth eligible (owner-gated)",
+  REGRESSED: "Recovery regressed — re-correct",
+  RESTRUCTURE_REVIEW_REQUIRED: "Restructure review required",
+  CONTROLLED_SHUTDOWN_REVIEW_REQUIRED: "Controlled shutdown review required",
+  UNKNOWN_NEEDS_DATA: "Needs data",
+};
+
+/** Read-only recovery status — a concise, collapsed summary (PASS 37). NOT a second cockpit. */
+function RecoverySection({ recovery }: { recovery: OwnerRecoveryStatusResponse }) {
+  const inProgress = recovery.recoveryStatus !== "NONE";
+  return (
+    <details data-testid="cockpit-recovery-group" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>
+      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        Recovery status
+        <span style={{ fontWeight: 400, color: "#6b7280" }}> — {RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</span>
+      </summary>
+      <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+        {!inProgress ? (
+          <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-recovery-none">No recovery is in progress right now.</p>
+        ) : (
+          <>
+            <div data-testid="cockpit-recovery-state" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <Badge variant="muted">{RECOVERY_STATUS_LABEL[recovery.recoveryStatus] ?? recovery.recoveryStatus}</Badge>
+              <span data-testid="cockpit-recovery-stabilization">Stabilization: {recovery.stabilizationGate}</span>
+              <span data-testid="cockpit-recovery-thrive">Growth gate: {recovery.thriveGate}</span>
+            </div>
+            {recovery.topRecoveryBottleneck && (
+              <p style={{ margin: 0 }} data-testid="cockpit-recovery-bottleneck"><strong>Next step:</strong> {recovery.topRecoveryBottleneck}</p>
+            )}
+            {recovery.requiredEvidence.length > 0 && (
+              <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-recovery-evidence">Evidence required: {recovery.requiredEvidence.slice(0, 3).join("; ")}</p>
+            )}
+            <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-recovery-reassessment">{recovery.requiredReassessment}</p>
+            {recovery.blockedUnsafeActions.length > 0 && (
+              <p style={{ margin: 0, color: "#b45309" }} data-testid="cockpit-recovery-blocked">Blocked: {recovery.blockedUnsafeActions.slice(0, 2).join("; ")}</p>
+            )}
+            {recovery.ownerApprovalRequired && (
+              <p style={{ margin: 0, color: "#b91c1c" }} data-testid="cockpit-recovery-approval">This action requires owner approval.</p>
+            )}
+            {recovery.linkedProcessExecutionTaskIds.length > 0 && (
+              <p style={{ margin: 0, color: "#6b7280" }} data-testid="cockpit-recovery-linked">{recovery.linkedProcessExecutionTaskIds.length} linked governed task(s) — act on them in your top action above.</p>
+            )}
+          </>
+        )}
+        <p style={{ margin: "2px 0 0", color: "#6b7280", fontStyle: "italic" }} data-testid="cockpit-recovery-caveat">{recovery.noGuaranteeStatement} {recovery.uncertaintyCaveat}</p>
+      </div>
+    </details>
+  );
+}
+
+export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], recovery = null, onAction, busy = false }: MinimumOwnerCockpitProps) {
   const top = bridge?.topRoute ?? null;
   const [pending, setPending] = useState<string | null>(null);
   const [evidenceText, setEvidenceText] = useState("");
@@ -81,12 +141,15 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], onAction, bus
   // ── Clean state: no fabricated top action. ──
   if (!top) {
     return (
-      <section data-testid="cockpit-clean" style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 20 }}>
-        <strong>No urgent action needs your attention right now.</strong>
-        <p style={{ margin: "6px 0 0", color: "#6b7280", fontSize: 13 }}>
-          OpsIQ has nothing that requires an owner decision at the moment. This view stays empty until a
-          governed action is ready — nothing is invented to fill the space.
-        </p>
+      <section data-testid="cockpit-clean" style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div>
+          <strong>No urgent action needs your attention right now.</strong>
+          <p style={{ margin: "6px 0 0", color: "#6b7280", fontSize: 13 }}>
+            OpsIQ has nothing that requires an owner decision at the moment. This view stays empty until a
+            governed action is ready — nothing is invented to fill the space.
+          </p>
+        </div>
+        {recovery && <RecoverySection recovery={recovery} />}
       </section>
     );
   }
@@ -315,6 +378,9 @@ export function MinimumOwnerCockpit({ bridge, actionsToAvoid = [], onAction, bus
           </ul>
         )}
       </details>
+
+      {/* Recovery status — read-only, collapsed low-load summary (PASS 37). */}
+      {recovery && <RecoverySection recovery={recovery} />}
 
       {/* 10. Proof / Audit details (collapsed drawer) */}
       <details data-testid="cockpit-proof-drawer" style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px" }}>

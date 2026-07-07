@@ -1,0 +1,18 @@
+{
+  "title": "Owner Load & Safety Matrix — Recovery Status (PASS 37)",
+  "date": "2026-07-07",
+  "checks": [
+    { "control": "recovery section collapsed by default", "enforced": true, "how": "<details data-testid=cockpit-recovery-group> without open attr", "test": "recovery component #1; browser 46" },
+    { "control": "one top action remains primary", "enforced": true, "how": "recovery renders after the top-action card; top action unchanged", "test": "recovery #12; existing cockpit #20" },
+    { "control": "no milestone spam", "enforced": true, "how": "shows next step + capped evidence, not a 1..6 milestone dump", "test": "recovery #8" },
+    { "control": "no raw audit spam", "enforced": true, "how": "sourceRefs/auditTrace not rendered inline", "test": "recovery #9" },
+    { "control": "no fake recovery", "enforced": true, "how": "clean → NONE ('No recovery is in progress'); derivation ignores DATA_INSUFFICIENT + defaults", "test": "recovery #11; unit #1/#10; db #2" },
+    { "control": "no fake financials", "enforced": true, "how": "only money-free governed fields; NO_MONEY schema refine + component regex", "test": "recovery #13; unit #6; db #4" },
+    { "control": "no unsafe action button", "enforced": true, "how": "recovery section is read-only; no action controls; blocked actions shown as text", "test": "recovery section has no buttons; browser 46 no-unsafe" },
+    { "control": "no frozen capability shown", "enforced": true, "how": "only survival/recovery state; no SaaS/billing/connector/shutdown-automation", "test": "browser 46 forbidden-copy check" },
+    { "control": "no guaranteed recovery wording", "enforced": true, "how": "noGuaranteeStatement mandatory (schema refine); forbidden 'guaranteed recovery' regex", "test": "recovery #7; unit #6; db #3; browser 46" },
+    { "control": "thrive gate never opens without stabilization", "enforced": true, "how": "schema refine thrive!=ELIGIBLE||stabilization=OPEN; read path passes no fabricated outcomes", "test": "unit #3/#8; db #6" },
+    { "control": "workspace isolation", "enforced": true, "how": "getOwnerNowView + getPersistedProcessTasks are workspace-scoped; linked tasks same-workspace only", "test": "db #5" },
+    { "control": "read-only (no mutation)", "enforced": true, "how": "endpoint is GET; service calls no write path", "test": "endpoint is GET-only; service reads only" }
+  ]
+}
