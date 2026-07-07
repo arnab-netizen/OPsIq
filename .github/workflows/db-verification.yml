@@ -175,6 +175,7 @@ jobs:
             src/__tests__/execution/effectiveness-sop-adherence-classification.db.test.ts \
             src/__tests__/execution/public-online-real-business-end-to-end.db.test.ts \
             src/__tests__/execution/raw-free-text-public-signal-end-to-end.db.test.ts \
+            src/__tests__/execution/conflicting-public-signal-end-to-end.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-b-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e
@@ -342,6 +343,7 @@ jobs:
             src/__tests__/execution/effectiveness-sop-adherence-classification.db.test.ts \
             src/__tests__/execution/public-online-real-business-end-to-end.db.test.ts \
             src/__tests__/execution/raw-free-text-public-signal-end-to-end.db.test.ts \
+            src/__tests__/execution/conflicting-public-signal-end-to-end.db.test.ts \
             2>&1 | tee artifacts/db-verification/lane-a-db-tests.log
           TEST_EXIT=${PIPESTATUS[0]}
           set -e

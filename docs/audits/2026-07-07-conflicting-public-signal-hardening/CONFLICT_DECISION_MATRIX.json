@@ -1,0 +1,539 @@
+{
+  "audit": "conflicting-public-signal-hardening",
+  "pass": "29",
+  "matrix": "CONFLICT_DECISION",
+  "date": "2026-07-07",
+  "note": "One row per conflict case. expected==actual because the layer is deterministic; 'actual' is produced by running resolvePublicSignalConflict. Routes/gates proven by public-signal-conflict-resolution.test.ts (unit) and conflicting-public-signal-end-to-end.db.test.ts (LANE_B).",
+  "rows": [
+    {
+      "conflictCaseId": "cf-laundry-recency",
+      "archetype": "laundry_local_service",
+      "conflictType": "MIXED_POSITIVE_NEGATIVE",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "CONTRADICTORY_SIGNALS",
+      "actualConflictClassification": "CONTRADICTORY_SIGNALS",
+      "expectedCollectiveDecision": "Positive and negative public signals contradict — a good review is not proof; verify with executed-correction + outcome evidence before closing the issue.",
+      "actualCollectiveDecision": "Positive and negative public signals contradict — a good review is not proof; verify with executed-correction + outcome evidence before closing the issue.",
+      "expectedExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "actualExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "fresh executed-correction + outcome evidence before the issue is accepted as fixed"
+      ],
+      "actualEvidenceRequirement": [
+        "fresh executed-correction + outcome evidence before the issue is accepted as fixed"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-laundry-damage-vs-praise",
+      "archetype": "laundry_local_service",
+      "conflictType": "CONTRADICTORY_MIXED",
+      "rawSignalsCount": 3,
+      "expectedConflictClassification": "REPEATED_WEAK_SIGNALS",
+      "actualConflictClassification": "REPEATED_WEAK_SIGNALS",
+      "expectedCollectiveDecision": "Several weak, unverified public complaints repeat — open a reassessment/validation of the pattern with proof; do not treat repetition as a proven or attributable failure.",
+      "actualCollectiveDecision": "Several weak, unverified public complaints repeat — open a reassessment/validation of the pattern with proof; do not treat repetition as a proven or attributable failure.",
+      "expectedExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "actualExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "reassessment worked through with a verified outcome"
+      ],
+      "actualEvidenceRequirement": [
+        "reassessment worked through with a verified outcome"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-housekeeping-official-vs-complaint",
+      "archetype": "housekeeping_facility",
+      "conflictType": "OFFICIAL_VS_THIRD_PARTY",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "OFFICIAL_SOURCE_CONFLICT",
+      "actualConflictClassification": "OFFICIAL_SOURCE_CONFLICT",
+      "expectedCollectiveDecision": "An official/published source conflicts with a public complaint — the official source proves the published requirement, not internal execution; gather internal verification data before concluding.",
+      "actualCollectiveDecision": "An official/published source conflicts with a public complaint — the official source proves the published requirement, not internal execution; gather internal verification data before concluding.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "inspection pass rate",
+        "contract SLA"
+      ],
+      "actualEvidenceRequirement": [
+        "inspection pass rate",
+        "contract SLA"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-housekeeping-repeated-weak",
+      "archetype": "housekeeping_facility",
+      "conflictType": "REPEATED_WEAK",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "REPEATED_WEAK_SIGNALS",
+      "actualConflictClassification": "REPEATED_WEAK_SIGNALS",
+      "expectedCollectiveDecision": "Several weak, unverified public complaints repeat — open a reassessment/validation of the pattern with proof; do not treat repetition as a proven or attributable failure.",
+      "actualCollectiveDecision": "Several weak, unverified public complaints repeat — open a reassessment/validation of the pattern with proof; do not treat repetition as a proven or attributable failure.",
+      "expectedExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "actualExecutionRoute": "CREATE_REASSESSMENT_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "reassessment worked through with a verified outcome"
+      ],
+      "actualEvidenceRequirement": [
+        "reassessment worked through with a verified outcome"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-property-maintenance-vs-vacancy",
+      "archetype": "property_management",
+      "conflictType": "ISSUE_VS_OPPORTUNITY",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "actualConflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "expectedCollectiveDecision": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "actualCollectiveDecision": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "actual response times",
+        "vendor SLAs",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "actualEvidenceRequirement": [
+        "actual response times",
+        "vendor SLAs",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-property-legal-spend",
+      "archetype": "property_management",
+      "conflictType": "OWNER_MATERIAL",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "CONTRADICTORY_SIGNALS",
+      "actualConflictClassification": "CONTRADICTORY_SIGNALS",
+      "expectedCollectiveDecision": "A material decision (pricing/brand/spend/commitment) is in tension with public signals — the owner decides with real internal data; nothing is auto-applied.",
+      "actualCollectiveDecision": "A material decision (pricing/brand/spend/commitment) is in tension with public signals — the owner decides with real internal data; nothing is auto-applied.",
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApproval": true,
+      "actualOwnerApproval": true,
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "actualEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-franchise-branch-vs-brand",
+      "archetype": "franchise_operations",
+      "conflictType": "OFFICIAL_VS_THIRD_PARTY",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "CONTRADICTORY_SIGNALS",
+      "actualConflictClassification": "CONTRADICTORY_SIGNALS",
+      "expectedCollectiveDecision": "A material decision (pricing/brand/spend/commitment) is in tension with public signals — the owner decides with real internal data; nothing is auto-applied.",
+      "actualCollectiveDecision": "A material decision (pricing/brand/spend/commitment) is in tension with public signals — the owner decides with real internal data; nothing is auto-applied.",
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApproval": true,
+      "actualOwnerApproval": true,
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "actualEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-franchise-discount-vs-control",
+      "archetype": "franchise_operations",
+      "conflictType": "OWNER_MATERIAL",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "CONTRADICTORY_SIGNALS",
+      "actualConflictClassification": "CONTRADICTORY_SIGNALS",
+      "expectedCollectiveDecision": "A material decision (pricing/brand/spend/commitment) is in tension with public signals — the owner decides with real internal data; nothing is auto-applied.",
+      "actualCollectiveDecision": "A material decision (pricing/brand/spend/commitment) is in tension with public signals — the owner decides with real internal data; nothing is auto-applied.",
+      "expectedExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "actualExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "expectedOwnerApproval": true,
+      "actualOwnerApproval": true,
+      "expectedEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "actualEvidenceRequirement": [
+        "the supporting evidence for the owner decision"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-saas-fixed-vs-persists",
+      "archetype": "saas",
+      "conflictType": "MIXED_RECENCY",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "MIXED_RECENCY",
+      "actualConflictClassification": "MIXED_RECENCY",
+      "expectedCollectiveDecision": "A recent negative signal contradicts an older 'resolved' claim — the issue is reopened; verify with fresh executed-correction + outcome evidence before it can be considered fixed.",
+      "actualCollectiveDecision": "A recent negative signal contradicts an older 'resolved' claim — the issue is reopened; verify with fresh executed-correction + outcome evidence before it can be considered fixed.",
+      "expectedExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "actualExecutionRoute": "CREATE_EVIDENCE_REQUEST",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "fresh executed-correction + outcome evidence before the issue is accepted as fixed"
+      ],
+      "actualEvidenceRequirement": [
+        "fresh executed-correction + outcome evidence before the issue is accepted as fixed"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-saas-feature-vs-backlog",
+      "archetype": "saas",
+      "conflictType": "DEMAND_VS_READINESS",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "actualConflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "expectedCollectiveDecision": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "actualCollectiveDecision": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "bug reproduction steps",
+        "real activation/conversion data"
+      ],
+      "actualEvidenceRequirement": [
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "bug reproduction steps",
+        "real activation/conversion data"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-tender-missing-eligibility",
+      "archetype": "tender_procurement",
+      "conflictType": "OPPORTUNITY_VS_MISSING_DATA",
+      "rawSignalsCount": 1,
+      "expectedConflictClassification": "MISSING_INTERNAL_DATA",
+      "actualConflictClassification": "MISSING_INTERNAL_DATA",
+      "expectedCollectiveDecision": "Tender opportunity present, but eligibility/cost/capacity are unproven — collect the required internal data first; the owner decides bid/no-bid; nothing is auto-submitted or spent.",
+      "actualCollectiveDecision": "Tender opportunity present, but eligibility/cost/capacity are unproven — collect the required internal data first; the owner decides bid/no-bid; nothing is auto-submitted or spent.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "actualEvidenceRequirement": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-tender-deadline-vs-docs",
+      "archetype": "tender_procurement",
+      "conflictType": "URGENCY_VS_MISSING_DATA",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "MISSING_INTERNAL_DATA",
+      "actualConflictClassification": "MISSING_INTERNAL_DATA",
+      "expectedCollectiveDecision": "Tender opportunity present, but eligibility/cost/capacity are unproven — collect the required internal data first; the owner decides bid/no-bid; nothing is auto-submitted or spent.",
+      "actualCollectiveDecision": "Tender opportunity present, but eligibility/cost/capacity are unproven — collect the required internal data first; the owner decides bid/no-bid; nothing is auto-submitted or spent.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "actualEvidenceRequirement": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-b2b-opportunity-vs-capacity",
+      "archetype": "b2b_service",
+      "conflictType": "OPPORTUNITY_VS_MISSING_DATA",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "MISSING_INTERNAL_DATA",
+      "actualConflictClassification": "MISSING_INTERNAL_DATA",
+      "expectedCollectiveDecision": "A public opportunity/signal needs internal data that is not public — collect it before any decision.",
+      "actualCollectiveDecision": "A public opportunity/signal needs internal data that is not public — collect it before any decision.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "actualEvidenceRequirement": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-collective-growth-vs-weak",
+      "archetype": "collective_conflict",
+      "conflictType": "GROWTH_VS_UNRESOLVED",
+      "rawSignalsCount": 3,
+      "expectedConflictClassification": "HIGH_RISK_UNRESOLVED",
+      "actualConflictClassification": "HIGH_RISK_UNRESOLVED",
+      "expectedCollectiveDecision": "A growth opportunity coincides with an unresolved quality/capacity risk — fix quality FIRST with proof; do not scale before validation; the scale decision stays owner-gated.",
+      "actualCollectiveDecision": "A growth opportunity coincides with an unresolved quality/capacity risk — fix quality FIRST with proof; do not scale before validation; the scale decision stays owner-gated.",
+      "expectedExecutionRoute": "CREATE_CORRECTION_TASK",
+      "actualExecutionRoute": "CREATE_CORRECTION_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "evidence the corrected step passes before completion"
+      ],
+      "actualEvidenceRequirement": [
+        "evidence the corrected step passes before completion"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-adv-verify-injection",
+      "archetype": "laundry_local_service",
+      "conflictType": "ADVERSARIAL_INJECTION",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "actualConflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "expectedCollectiveDecision": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "actualCollectiveDecision": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "actualEvidenceRequirement": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-adv-submit-contact",
+      "archetype": "tender_procurement",
+      "conflictType": "ADVERSARIAL_INJECTION",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "MISSING_INTERNAL_DATA",
+      "actualConflictClassification": "MISSING_INTERNAL_DATA",
+      "expectedCollectiveDecision": "Tender opportunity present, but eligibility/cost/capacity are unproven — collect the required internal data first; the owner decides bid/no-bid; nothing is auto-submitted or spent.",
+      "actualCollectiveDecision": "Tender opportunity present, but eligibility/cost/capacity are unproven — collect the required internal data first; the owner decides bid/no-bid; nothing is auto-submitted or spent.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "actualEvidenceRequirement": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-pii-heavy",
+      "archetype": "laundry_local_service",
+      "conflictType": "PII_HEAVY",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "actualConflictClassification": "THIRD_PARTY_UNVERIFIED_CONFLICT",
+      "expectedCollectiveDecision": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "actualCollectiveDecision": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "actualEvidenceRequirement": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-fake-finance",
+      "archetype": "b2b_service",
+      "conflictType": "FAKE_FINANCIAL_CLAIM",
+      "rawSignalsCount": 2,
+      "expectedConflictClassification": "MISSING_INTERNAL_DATA",
+      "actualConflictClassification": "MISSING_INTERNAL_DATA",
+      "expectedCollectiveDecision": "A public opportunity/signal needs internal data that is not public — collect it before any decision.",
+      "actualCollectiveDecision": "A public opportunity/signal needs internal data that is not public — collect it before any decision.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to"
+      ],
+      "actualEvidenceRequirement": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-noisy-multitopic",
+      "archetype": "laundry_local_service",
+      "conflictType": "NOISY_MULTITOPIC",
+      "rawSignalsCount": 1,
+      "expectedConflictClassification": "WEAK_SINGLE_SIGNAL",
+      "actualConflictClassification": "WEAK_SINGLE_SIGNAL",
+      "expectedCollectiveDecision": "A single weak, unverified public signal — validate with internal data before drawing any conclusion; not a systemic finding.",
+      "actualCollectiveDecision": "A single weak, unverified public signal — validate with internal data before drawing any conclusion; not a systemic finding.",
+      "expectedExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "actualExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "actualEvidenceRequirement": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "testEvidence": "public-signal-conflict-resolution.test.ts",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "conflictCaseId": "cf-clean",
+      "archetype": "laundry_local_service",
+      "conflictType": "CLEAN_CONTROL",
+      "rawSignalsCount": 0,
+      "expectedConflictClassification": "NO_DECISION",
+      "actualConflictClassification": "NO_DECISION",
+      "expectedCollectiveDecision": "null (nothing fabricated)",
+      "actualCollectiveDecision": "null (nothing fabricated)",
+      "expectedExecutionRoute": "NONE",
+      "actualExecutionRoute": "NONE",
+      "expectedOwnerApproval": false,
+      "actualOwnerApproval": false,
+      "expectedEvidenceRequirement": [],
+      "actualEvidenceRequirement": [],
+      "testEvidence": "public-signal-conflict-resolution.test.ts:18",
+      "dbEvidence": "conflicting-public-signal-end-to-end.db.test.ts:16",
+      "classification": "ELITE_ACCEPTED"
+    }
+  ],
+  "summary": {
+    "cases": 20,
+    "anyFinancialAccepted": false,
+    "allDeterministic": true,
+    "classification": "ELITE_ACCEPTED"
+  }
+}

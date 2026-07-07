@@ -90,6 +90,7 @@ export const BUSINESS_ISSUE_TYPES = [
   "OPPORTUNITY_SIGNAL",
   "MULTI_MODULE_CONFLICT",
   "SINGLE_UNVERIFIED_COMPLAINT",
+  "POSITIVE_OR_RESOLVED_CLAIM",
   "UNCLEAR_INSUFFICIENT",
 ] as const;
 export type BusinessIssueType = (typeof BUSINESS_ISSUE_TYPES)[number];
@@ -581,6 +582,26 @@ function classify(ctx: {
     };
   }
 
+  // A positive / "resolved" public claim is NOT proof. A good review can never close an issue without
+  // executed-correction + outcome evidence. Classified as a claim (monitor-only) so the conflict layer can
+  // see it and refuse to let it close a real negative signal. Checked before the low-context guard so short
+  // praise ("fixed now") still registers as a resolved-claim rather than being dropped as low-context.
+  if (includesAny(lower, [
+    "improved", "much better", "no longer", "is fixed", "fixed now", "has been fixed", "bug is fixed",
+    "issue is fixed", "issue resolved", "now resolved", "sorted now", "back to normal", "working now",
+    "no more problems", "great now", "excellent now", "happy now", "all good now",
+  ])) {
+    return {
+      businessIssueType: "POSITIVE_OR_RESOLVED_CLAIM",
+      opportunityType: null,
+      correctionType: "NO_ACTION_DATA_INSUFFICIENT",
+      ownerMaterial: false,
+      missingData: ["executed-correction + post-outcome evidence that the issue is actually resolved"],
+      signalSummary: "A positive/resolved public claim — treated as an unverified claim, NOT proof; it cannot close an issue without executed-correction and outcome evidence.",
+      risks: R({}),
+    };
+  }
+
   // Guard 0: no business context / ambiguous → never a systemic finding; validation-needed / monitor-only.
   if (!hasBusinessContext || ambiguous) {
     return {
@@ -608,7 +629,7 @@ function classify(ctx: {
   }
 
   // Discount / price-change INTENT (not the bare word "pricing") → owner-gated margin decision (any archetype).
-  if (includesAny(lower, ["discount", "price cut", "cut our price", "cut prices", "cheaper", "undercut", "competitor", "lower our price", "match their price", "slash price", "reduce our price"])) {
+  if (includesAny(lower, ["discount", "price cut", "cut our price", "cut prices", "cheaper", "undercut", "lower our price", "match their price", "slash price", "reduce our price", "competitor discount", "competitor price"])) {
     return {
       businessIssueType: "CASH_MARGIN_RISK",
       opportunityType: null,
