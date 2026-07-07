@@ -1,0 +1,51 @@
+{
+  "title": "Owner UI Exposure Audit — Evidence Ledger",
+  "date": "2026-07-07",
+  "mainHead": "b066347f5bf01217fb297e642a6ae7281d28974e",
+  "method": "Traced every owner page (src/app/(authenticated)/owner/*), the components it renders (src/components/owner/*), and the API route it calls (src/app/api/owner/*), plus grep for whether each proven module is imported anywhere under src/app. Backend/API existence alone was NOT counted as owner-visible.",
+  "ownerPages": [
+    "owner/ (PriorityCommandStrip + SupervisorSummary + control-center) — actionable (tasks/complete, approvals/resolve, opportunities/decide)",
+    "owner/now — read-only Now View (GET /api/owner/now-view)",
+    "owner/process-intelligence — the governed cockpit (ProcessIntelligencePanel + ProcessExecutionBridgePanel) → POST /api/owner/process-execution",
+    "owner/execution — SOP diagnosis-cycle actions (older pipeline; NOT the bridge)",
+    "owner/recovery — recovery diagnosis-cycle (older engine; NOT recovery-milestone-execution)",
+    "owner/home — read-only danger/action summary",
+    "owner/adjudication — proof-risk queue (actionable)",
+    "owner/intake — manual CSV/paste intake (actionable; no live connectors)",
+    "owner/wealth, owner/trust, owner/finance, owner/cashflow, owner/marketing, owner/operations, owner/sales, owner/strategy, owner/budget, owner/portfolio, owner/first-value, owner/onboarding — domain surfaces"
+  ],
+  "provenLoopOwnerVisible": {
+    "page": "src/app/(authenticated)/owner/process-intelligence/page.tsx",
+    "component": "src/components/owner/ProcessIntelligencePanel.tsx (ProcessExecutionBridgePanel)",
+    "actionRoute": "src/app/api/owner/process-execution/route.ts (POST, OWNER_MANAGE-gated, server-authoritative, workspace-scoped, re-derives routes → applyProcessExecutionAction)",
+    "readRoute": "src/app/api/owner/now-view/route.ts (getOwnerNowView aggregator)",
+    "actionsSupported": ["START","APPROVE","REJECT","DELEGATE","SUBMIT_EVIDENCE","COMPLETE","REQUEST_REASSESSMENT","MARK_BLOCKED","REQUEST_MISSING_DATA"],
+    "safetyBoundariesShown": ["approval level (Owner approval required)","evidence to complete","missing-data","recommended correction","corrections are proposals; nothing auto-executes"]
+  },
+  "provenCapabilitiesReachingUI": [
+    "process-execution-bridge (actionable)",
+    "bottleneck-correction-routing (read)",
+    "approval-threshold-policy (read + approvals/resolve action)",
+    "cash-profit-protection (read panel; finance/cashflow pages actionable)",
+    "staff-training-assignment-engine (read)",
+    "sop-checklist-correction-engine (read panel; execution page actionable)",
+    "owner-workload-reduction (read)",
+    "system-capability-gap-detector (read)",
+    "external-opportunity-intelligence (read panel; opportunities/decide action)",
+    "effectiveness-attribution (read)"
+  ],
+  "provenCapabilitiesNOTreachingUI_noServedEndpoint": [
+    "recovery-milestone-execution (PASS 33)",
+    "business-survival-recovery (PASS 32)",
+    "owner-cockpit-decision-explanation (PASS 31)",
+    "public-signal-interpretation (PASS 28)",
+    "public-signal-conflict-resolution (PASS 29)",
+    "public-signal-prioritisation (PASS 30)"
+  ],
+  "evidenceForUnwired": "grep -rln '<module>' src/app returned no matches for each; the six modules import only each other + __tests__.",
+  "noLiveAiOrExternalAction": {
+    "note": "Consistent with PASS 34: no live LLM write-path; process-execution route enforces owner-only material decisions and blocks unsafe external action; no auto-contact/submit/spend/discount/contract anywhere in owner UI."
+  },
+  "commandsRun": ["git status (clean)","git rev-parse HEAD","find src/app pages/routes","grep module usage across src/app","subagent UI-surface trace"],
+  "classification": "OWNER_UI_EXPOSURE_AUDIT_COMPLETE"
+}
