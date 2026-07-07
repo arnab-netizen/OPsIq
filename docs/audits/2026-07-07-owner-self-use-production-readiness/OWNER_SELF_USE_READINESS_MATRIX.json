@@ -1,0 +1,272 @@
+{
+  "title": "Owner Self-Use Readiness Matrix (PASS 44)",
+  "date": "2026-07-07",
+  "scope": "Can ONE owner log in manually, enter business details, review outputs, approve material actions, and perform all real-world implementation manually \u2014 with NO live integrations or autonomous external actions?",
+  "statuses": [
+    "READY_FOR_OWNER_SELF_USE",
+    "READY_WITH_RESTRICTIONS",
+    "PARTIAL",
+    "NOT_READY",
+    "FROZEN"
+  ],
+  "rows": [
+    {
+      "area": "authentication",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "src/app/login/page.tsx (/login real form) \u2192 /api/auth/login; custom DB session + bcrypt; rate-limited (src/infra/rate-limit.ts)",
+      "testCoverage": "browser 46-50 log in as owner; auth audit events",
+      "ownerImpact": "owner can log in with email/password",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "workspace creation / selection",
+      "status": "READY_WITH_RESTRICTIONS",
+      "evidence": "workspace created on signup (src/app/api/auth/signup/route.ts); workspace resolved server-side from earliest active membership (src/lib/canonical-route-enforcement.ts); NO in-app switcher",
+      "testCoverage": "signup flow; canonical enforcement tests",
+      "ownerImpact": "one workspace per signup; owner cannot switch workspaces in-app",
+      "risk": "LOW",
+      "requiredFix": "add a workspace switcher only if the owner needs multiple workspaces",
+      "classification": "READY_WITH_RESTRICTIONS"
+    },
+    {
+      "area": "business profile entry",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "'+ New business' form on every owner domain page \u2192 POST /api/owner/recovery/businesses (createBusiness in owner/finance/page.tsx et al.)",
+      "testCoverage": "owner domain pages",
+      "ownerImpact": "owner can create an OwnerBusiness from the UI",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "manual issue / data entry",
+      "status": "READY_WITH_RESTRICTIONS",
+      "evidence": "Data Intake UI at /owner/intake (src/app/(authenticated)/owner/intake/page.tsx) with a Manual-form/CSV/paste form \u2192 /api/owner/intake/...; per-domain snapshot forms (e.g. finance addSnapshot). NOTE: the structured single-record endpoint /api/owner/manual-entry is API-ONLY (no UI page posts to it).",
+      "testCoverage": "intake page; manual-entry route tests",
+      "ownerImpact": "owner enters data via intake (manual form / CSV / paste) + domain snapshot forms; there is no dedicated field-by-field 'log an issue' form wired to /api/owner/manual-entry",
+      "risk": "MEDIUM",
+      "requiredFix": "wire a simple UI form to /api/owner/manual-entry for structured issue/complaint entry (restriction, not a blocker)",
+      "classification": "READY_WITH_RESTRICTIONS"
+    },
+    {
+      "area": "owner cockpit",
+      "status": "READY_WITH_RESTRICTIONS",
+      "evidence": "src/app/(authenticated)/owner/cockpit/page.tsx (/owner/cockpit); sidebar link 'Owner Cockpit' (src/ui/shell/sidebar-nav.tsx, requiresOwner) ; NOTE: sidebar link renders on the Owner hub (/owner) and owner pages, NOT on the post-login /dashboard (restriction R6)",
+      "testCoverage": "browser 46/47/48/49/50",
+      "ownerImpact": "owner reaches the cockpit via normal nav",
+      "risk": "LOW",
+      "requiredFix": "link the owner section from /dashboard (restriction: owner goes to /owner first)",
+      "classification": "READY_WITH_RESTRICTIONS"
+    },
+    {
+      "area": "top action clarity",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "MinimumOwnerCockpit: one top action + why (\u22643 bullets); PASS 40 no-overload proof",
+      "testCoverage": "browser 47 (no-overload), component 55/55",
+      "ownerImpact": "one clear next step",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "action execution",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "POST /api/owner/process-execution (start/approve/reject/delegate/submit_evidence/complete/reassess/block/missing-data); server re-checks",
+      "testCoverage": "process-execution DB + component tests; PASS 42/43 DB sims",
+      "ownerImpact": "owner acts on the top action with labelled controls",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "approval gate",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "OWNER_APPROVAL_REQUIRED enforced by verified capability; non-owner blocked",
+      "testCoverage": "PASS 25; PASS 42 db #4; PASS 43 db #7",
+      "ownerImpact": "material actions require the owner",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "evidence submission",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "EVIDENCE_REQUIRED_ROUTES; completeProcessTask rejects no-evidence complete; labelled evidence input",
+      "testCoverage": "PASS 42 db #5; PASS 43 db #6",
+      "ownerImpact": "owner submits evidence before completion",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "reassessment",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "REASSESSMENT_ON_COMPLETE + REQUEST_REASSESSMENT open governed reassessment events",
+      "testCoverage": "PASS 42 db #5/#6; PASS 43 db #6",
+      "ownerImpact": "owner can re-open the question",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "recovery status",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "GET /api/owner/recovery-status; collapsed cockpit section; 'not guaranteed'",
+      "testCoverage": "PASS 37 DB; browser 47/48",
+      "ownerImpact": "owner sees recovery context read-only",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "outside signal summary",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "GET /api/owner/public-signals; collapsed; rawTextHidden/piiStripped/no-live-ingestion",
+      "testCoverage": "PASS 39/43 DB; browser 49",
+      "ownerImpact": "owner sees public signals as unverified, read-only",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "clean state",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "cockpit-clean honest empty state; no fabricated action",
+      "testCoverage": "PASS 40 component; PASS 42/43 db clean control",
+      "ownerImpact": "empty workspace invents nothing",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "error handling",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "cockpit/page.tsx loading + error + Retry + 10s AbortController timeout; intake/onboarding empty states",
+      "testCoverage": "cockpit page states",
+      "ownerImpact": "owner sees clear loading/error/retry",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "mobile / basic responsiveness",
+      "status": "READY_WITH_RESTRICTIONS",
+      "evidence": "onboarding/intake use Tailwind responsive utils + 44px touch targets; the cockpit page uses inline fixed padding + flexWrap (wraps but not tuned)",
+      "testCoverage": "17-owner-pilot-mobile browser spec; cockpit desktop specs",
+      "ownerImpact": "usable on mobile but the cockpit is desktop-tuned",
+      "risk": "LOW",
+      "requiredFix": "convert cockpit inline styles to responsive utilities (restriction: prefer desktop/tablet for now)",
+      "classification": "READY_WITH_RESTRICTIONS"
+    },
+    {
+      "area": "privacy",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "public-signal reads strip PII + hide raw text; no PII surfaced in cockpit; PASS 43 adversarial strip proven",
+      "testCoverage": "PASS 39/42/43 DB; browser 49",
+      "ownerImpact": "no PII/raw dump shown",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "audit trail",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "AUDIT_EVENTS on every owner mutation (process-execution-bridge.service.ts); auth audit (USER_LOGGED_IN/FAILED/CREATED)",
+      "testCoverage": "DB sims write audit rows",
+      "ownerImpact": "every mutation is audited",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "role authorization",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "withCanonicalEnforcement requireCapabilities OWNER_VIEW/OWNER_MANAGE; capabilities verified server-side",
+      "testCoverage": "PASS 25; RBAC spec 10; route gates",
+      "ownerImpact": "only owner-capable users act",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "workspace isolation",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "workspace resolved server-side; cross-workspace businessId \u2192 403; isolation DB tests",
+      "testCoverage": "PASS 42 db #12; PASS 43 db #11; H8 isolation",
+      "ownerImpact": "no cross-workspace bleed",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "production env / config",
+      "status": "READY_WITH_RESTRICTIONS",
+      "evidence": "requires NODE_ENV + DATABASE_URL + NEXT_PUBLIC_APP_URL (scripts/validate-deployment.ts) + AUTH_SECRET (.env.example); NO Dockerfile / vercel.json; next.config.ts minimal; no runtime env-schema module",
+      "testCoverage": "validate:deployment script; Build+Type+Prisma Verify CI",
+      "ownerImpact": "a developer must deploy with the required env vars; owner cannot self-deploy",
+      "risk": "MEDIUM",
+      "requiredFix": "add a Dockerfile/vercel.json + a runtime env schema for a one-command deploy (restriction: developer-assisted deploy)",
+      "classification": "READY_WITH_RESTRICTIONS"
+    },
+    {
+      "area": "database / migration readiness",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "prisma migrate deploy; prisma validate; LANE_B proves the full DB suite on Postgres 16",
+      "testCoverage": "LANE_B (required)",
+      "ownerImpact": "schema deploys cleanly",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "CI coverage",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "LANE_B DB suite, Build+Type+Prisma Verify, lint ratchet, governance scan, owner-pilot-e2e browser lane",
+      "testCoverage": "required checks green on every PR",
+      "ownerImpact": "regressions caught before merge",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "browser coverage",
+      "status": "READY_FOR_OWNER_SELF_USE",
+      "evidence": "specs 46 (cockpit), 47 (no-overload), 48 (shadow pilot), 49 (public shadow), 50 (self-use) in owner-pilot-e2e",
+      "testCoverage": "owner-pilot-e2e",
+      "ownerImpact": "core owner journey is browser-proven",
+      "risk": "LOW",
+      "requiredFix": "none",
+      "classification": "READY_FOR_OWNER_SELF_USE"
+    },
+    {
+      "area": "owner support / debug path",
+      "status": "READY_WITH_RESTRICTIONS",
+      "evidence": "audit events + clear cockpit error messages + Retry; NO dedicated in-app support/debug surface for the owner",
+      "testCoverage": "error states",
+      "ownerImpact": "on an error the owner retries or asks a developer; no self-service support UI",
+      "risk": "LOW",
+      "requiredFix": "add a simple 'report a problem' path (restriction: developer support for now)",
+      "classification": "READY_WITH_RESTRICTIONS"
+    },
+    {
+      "area": "rollback / stop path",
+      "status": "READY_WITH_RESTRICTIONS",
+      "evidence": "governed records are not destructively auto-deleted; reassessment re-opens decisions; OWNER_STOP_CONDITIONS.md defines when to stop. NO in-app one-click rollback/undo.",
+      "testCoverage": "reassessment tests; no destructive delete",
+      "ownerImpact": "owner stops by not acting / requesting reassessment; there is no undo button",
+      "risk": "LOW",
+      "requiredFix": "none for self-use (manual stop); add undo only if needed",
+      "classification": "READY_WITH_RESTRICTIONS"
+    }
+  ],
+  "summary": {
+    "READY_FOR_OWNER_SELF_USE": 17,
+    "READY_WITH_RESTRICTIONS": 8,
+    "PARTIAL": 0,
+    "NOT_READY": 0,
+    "FROZEN": 0
+  },
+  "overallClassification": "OWNER_SELF_USE_READY_WITH_RESTRICTIONS"
+}

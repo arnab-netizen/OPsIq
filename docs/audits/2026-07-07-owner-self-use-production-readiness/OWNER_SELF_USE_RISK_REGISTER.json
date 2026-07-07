@@ -1,0 +1,17 @@
+{
+  "title": "Owner Self-Use Risk Register (PASS 44)",
+  "date": "2026-07-07",
+  "risks": [
+    { "id": "K1", "risk": "Owner enters PII/sensitive data manually", "likelihood": "MED", "impact": "HIGH", "mitigation": "OWNER_DATA_ENTRY_GUIDE.md 'what not to enter'; public-signal reads strip PII; owner guided to use placeholders", "residual": "MED", "note": "owner discipline required — the guide is the control" },
+    { "id": "K2", "risk": "Owner misreads a public signal as a fact", "likelihood": "MED", "impact": "MED", "mitigation": "validation-required + uncertainty caveat + no-live-ingestion always shown", "residual": "LOW" },
+    { "id": "K3", "risk": "Owner completes a task without real evidence", "likelihood": "LOW", "impact": "MED", "mitigation": "evidence gate rejects no-evidence completion; owner supplies real proof refs", "residual": "LOW" },
+    { "id": "K4", "risk": "Owner expects an autonomous external action", "likelihood": "MED", "impact": "HIGH", "mitigation": "cockpit blocks unsafe actions + states OpsIQ never contacts/spends/submits; runbook 'what OpsIQ is not allowed to do'", "residual": "LOW" },
+    { "id": "K5", "risk": "Owner cannot deploy/run the app alone", "likelihood": "HIGH", "impact": "MED", "mitigation": "developer-assisted deploy documented; restriction R2", "residual": "MED", "note": "expected for a manual self-use build, not public SaaS" },
+    { "id": "K6", "risk": "Owner confused by which route to enter data", "likelihood": "MED", "impact": "MED", "mitigation": "OWNER_MANUAL_USE_RUNBOOK.md step-by-step; intake page is the canonical entry", "residual": "MED" },
+    { "id": "K7", "risk": "Owner overload from too much on screen", "likelihood": "LOW", "impact": "MED", "mitigation": "PASS 40 no-overload proof (one top action; sections collapsed)", "residual": "LOW" },
+    { "id": "K8", "risk": "Non-owner or wrong workspace sees owner data", "likelihood": "LOW", "impact": "HIGH", "mitigation": "server-side capability + workspace resolution; 403 on cross-workspace; isolation DB tests", "residual": "LOW" },
+    { "id": "K9", "risk": "Owner acts on a fabricated figure", "likelihood": "LOW", "impact": "HIGH", "mitigation": "no fabricated money/ROI/win-probability (schema refines + tests); internal financials are missing-data", "residual": "LOW" },
+    { "id": "K10", "risk": "App error on a core path blocks the owner", "likelihood": "LOW", "impact": "MED", "mitigation": "loading/error/Retry states + 10s timeout; owner-pilot-e2e catches fatal console errors", "residual": "LOW" }
+  ],
+  "remainingBeforeLivePilot": ["a dedicated manual-entry UI form", "deploy manifests + runtime env schema", "responsive cockpit", "a support/report path"]
+}

@@ -1,0 +1,51 @@
+{
+  "title": "Owner Self-Use Blocker Matrix (PASS 44)",
+  "date": "2026-07-07",
+  "note": "A BLOCKER prevents safe owner self-use entirely. A RESTRICTION is a documented limitation the owner works within.",
+  "blockers": [],
+  "restrictions": [
+    {
+      "id": "R1",
+      "area": "manual data entry",
+      "restriction": "Structured field-by-field issue entry (/api/owner/manual-entry) has no dedicated UI; the owner enters data via the Data Intake page (manual form / CSV / paste) + per-domain snapshot forms + '+ New business'.",
+      "workaround": "Use /owner/intake and the domain snapshot forms.",
+      "severity": "MEDIUM"
+    },
+    {
+      "id": "R2",
+      "area": "production deploy",
+      "restriction": "No Dockerfile/vercel.json and no runtime env-schema; deploy is developer-assisted and needs NODE_ENV + DATABASE_URL + NEXT_PUBLIC_APP_URL + AUTH_SECRET.",
+      "workaround": "A developer deploys with the documented env vars; owner does not self-deploy.",
+      "severity": "MEDIUM"
+    },
+    {
+      "id": "R3",
+      "area": "workspace selection",
+      "restriction": "One workspace per signup; no in-app switcher.",
+      "workaround": "One owner business context per login.",
+      "severity": "LOW"
+    },
+    {
+      "id": "R4",
+      "area": "mobile cockpit",
+      "restriction": "The cockpit page is desktop-tuned (fixed padding); onboarding/intake are responsive.",
+      "workaround": "Prefer desktop/tablet for the cockpit.",
+      "severity": "LOW"
+    },
+    {
+      "id": "R5",
+      "area": "support/rollback",
+      "restriction": "No in-app support/debug surface and no one-click undo; governed records aren't destructively deleted and reassessment re-opens decisions.",
+      "workaround": "Owner requests reassessment or asks a developer.",
+      "severity": "LOW"
+    },
+    {
+      "id": "R6",
+      "area": "post-login navigation",
+      "restriction": "The post-login /dashboard does not surface the owner section; the owner opens /owner (the Owner hub), whose sidebar exposes the 'Owner Cockpit' link.",
+      "workaround": "Navigate to /owner after login, then click Owner Cockpit.",
+      "severity": "LOW"
+    }
+  ],
+  "conclusion": "No BLOCKER. 5 documented RESTRICTIONS. Overall: OWNER_SELF_USE_READY_WITH_RESTRICTIONS."
+}
