@@ -1,0 +1,48 @@
+{
+  "title": "Owner Cockpit Route Consolidation — Evidence Ledger (PASS 38)",
+  "date": "2026-07-07",
+  "branch": "claude/owner-cockpit-surface-consolidation-route-hygiene",
+  "baseMain": "9d3d72454d8210394ae6f794a6bbaf60db9cec2b",
+  "filesAdded": [
+    "src/components/owner/CanonicalCockpitLink.tsx (presentational banner → /owner/cockpit)",
+    "src/__tests__/components/owner-canonical-navigation.test.tsx (5 tests)"
+  ],
+  "filesChanged": [
+    "src/ui/shell/sidebar-nav.tsx (primary owner entry retargeted: 'Owner Recovery' → 'Owner Cockpit' → /owner/cockpit)",
+    "src/app/(authenticated)/owner/page.tsx (+ CanonicalCockpitLink banner)",
+    "src/app/(authenticated)/owner/now/page.tsx (+ CanonicalCockpitLink banner)",
+    "src/app/(authenticated)/owner/process-intelligence/page.tsx (+ CanonicalCockpitLink banner)",
+    "tests/browser/46-owner-cockpit.spec.ts (+ canonical-nav + legacy-guides-back tests)"
+  ],
+  "notDeleted": "No page or component was deleted. /owner/recovery keeps its route + APIs and stays reachable via existing /owner and /owner/home deep-links (grep-verified: owner/page.tsx:339/365, owner/home/page.tsx:113/131).",
+  "referenceChecks": {
+    "navLabelTests": "No test asserts the old 'Owner Recovery' nav label (grep of src/__tests__ + tests).",
+    "sidebarNavImporters": "No test imported SidebarNav before this pass; the new nav test is the first.",
+    "recoveryReachability": "/owner/recovery linked from /owner and /owner/home — not orphaned by the nav change."
+  },
+  "notAllowedAvoided": [
+    "No broad UI redesign (only a nav label/href change + a one-line banner on 3 pages).",
+    "No new dashboard framework.",
+    "No new backend execution logic.",
+    "No page deleted without a reference/test audit.",
+    "No frozen capability exposed.",
+    "No safety gate hidden (cockpit gates unchanged).",
+    "No marketing copy (banner copy is functional; nav test #5 asserts no marketing/pricing/guarantee text)."
+  ],
+  "boundedPromptDeferred": "The remaining window.prompt() usage on /owner/process-intelligence's action path was NOT changed this pass — replacing it safely touches the actionable bridge and risks regressing a proven action flow; deferred and recorded. The canonical /owner/cockpit already uses labelled controls (PASS 36).",
+  "localGates": {
+    "prismaValidate": "PASS (unchanged schema)",
+    "tsc": "PASS",
+    "governanceScan": "0 new",
+    "governanceScanStrict": "only pre-existing frozen findings; none in new/changed files",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new)",
+    "tests": "owner-canonical-navigation 5/5; minimum-owner-cockpit 20/20; recovery 13/13; owner-process-intelligence-page green (40 total in the run)",
+    "nextBuild": "Compiled successfully; /owner/cockpit + /owner/now + /owner/process-intelligence present"
+  },
+  "browserProof": {
+    "spec": "tests/browser/46-owner-cockpit.spec.ts (extended)",
+    "runsIn": "owner-pilot-e2e CI lane",
+    "claim": "Canonical-nav + legacy-guides-back browser assertions are proven only if owner-pilot-e2e is green on the PR."
+  },
+  "classification": "OWNER_COCKPIT_ROUTE_CONSOLIDATION_PROVEN"
+}

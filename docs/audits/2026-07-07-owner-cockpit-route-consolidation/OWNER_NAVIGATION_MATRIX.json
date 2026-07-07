@@ -1,0 +1,17 @@
+{
+  "title": "Owner Navigation Matrix (PASS 38)",
+  "date": "2026-07-07",
+  "entries": [
+    { "entryPoint": "Sidebar 'Owner Cockpit'", "destination": "/owner/cockpit", "ownerVisibleLabel": "Owner Cockpit", "status": "CANONICAL", "ownerLoadRisk": "LOW", "testEvidence": "owner-canonical-navigation #1/#3; browser 46 nav test" },
+    { "entryPoint": "CanonicalCockpitLink on /owner", "destination": "/owner/cockpit", "ownerVisibleLabel": "Go to your cockpit →", "status": "CANONICAL_POINTER", "ownerLoadRisk": "LOW", "testEvidence": "owner/page.tsx banner; nav #4" },
+    { "entryPoint": "CanonicalCockpitLink on /owner/now", "destination": "/owner/cockpit", "ownerVisibleLabel": "Go to your cockpit →", "status": "CANONICAL_POINTER", "ownerLoadRisk": "LOW", "testEvidence": "browser 46 legacy-guides-back" },
+    { "entryPoint": "CanonicalCockpitLink on /owner/process-intelligence", "destination": "/owner/cockpit", "ownerVisibleLabel": "Go to your cockpit →", "status": "CANONICAL_POINTER", "ownerLoadRisk": "LOW", "testEvidence": "process-intelligence/page.tsx banner; PI page test green" },
+    { "entryPoint": "/owner deep-links", "destination": "/owner/recovery, /owner/finance, /owner/intake, ...", "ownerVisibleLabel": "domain labels", "status": "DEEP_LINK", "ownerLoadRisk": "LOW", "testEvidence": "owner/page.tsx existing links (recovery reachable)" },
+    { "entryPoint": "/owner/now", "destination": "/owner/process-intelligence", "ownerVisibleLabel": "process intelligence link", "status": "DEEP_LINK", "ownerLoadRisk": "LOW", "testEvidence": "pre-existing" },
+    { "entryPoint": "/owner/adjudication", "destination": "/owner/now", "ownerVisibleLabel": "back to now view", "status": "DEEP_LINK", "ownerLoadRisk": "LOW", "testEvidence": "pre-existing" }
+  ],
+  "beforeAfter": {
+    "before": "The ONLY owner sidebar entry was 'Owner Recovery' → /owner/recovery (the older recovery-cycle engine). No nav entry existed for the canonical cockpit; owners had multiple overlapping owner surfaces and no obvious daily entry.",
+    "after": "The primary owner sidebar entry is 'Owner Cockpit' → /owner/cockpit (canonical). The overlapping decision surfaces (/owner, /owner/now, /owner/process-intelligence) each carry a low-load banner pointing back to the cockpit. Nothing was deleted; /owner/recovery stays reachable via existing /owner + /owner/home deep-links."
+  }
+}

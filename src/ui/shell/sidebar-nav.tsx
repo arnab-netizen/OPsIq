@@ -22,8 +22,11 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    label: "Owner Recovery",
-    href: "/owner/recovery",
+    // Canonical owner surface (PASS 38): the daily cockpit with the top action, safety gates, and recovery
+    // status. The detailed legacy pages (/owner, /owner/now, /owner/process-intelligence, /owner/recovery)
+    // remain reachable via in-page deep links.
+    label: "Owner Cockpit",
+    href: "/owner/cockpit",
     requiresOwner: true,
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">

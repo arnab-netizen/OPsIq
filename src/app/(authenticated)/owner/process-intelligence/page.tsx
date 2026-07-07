@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/primitives";
+import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 import { ProcessIntelligencePanel, ProcessCorrectionsPanel, SopChecklistCorrectionsPanel, TrainingAssignmentsPanel, EffectivenessPanel, OwnerWorkloadReductionPanel, ApprovalPolicyPanel, CapabilityGapPanel, CashProfitPanel, OpportunityPanel, ValidationPanel, PortfolioPanel, OpportunityOperatingPanel, ValidationOutcomePanel, OpportunityExecutionPanel, ProcessExecutionBridgePanel, CockpitGroup, CockpitSubsection, type ProcessExecutionBridgeView, type ProcessIntelligenceView, type ProcessCorrectionsView, type SopChecklistCorrectionsView, type TrainingAssignmentsView, type EffectivenessView, type OwnerWorkloadReductionView, type ApprovalPolicyView, type CapabilityGapView, type CashProfitProtectionView, type ExternalOpportunityView, type OpportunityValidationView, type OpportunityPortfolioView, type OpportunityOperatingView, type ValidationOutcomeView, type OpportunityExecutionView } from "@/components/owner/ProcessIntelligencePanel";
 
 const FETCH_TIMEOUT_MS = 10_000;
@@ -149,6 +150,7 @@ export default function OwnerProcessIntelligencePage() {
 
   return (
     <main style={{ padding: "clamp(12px, 4vw, 24px)", maxWidth: 920, width: "100%", margin: "0 auto", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 16 }}>
+      <CanonicalCockpitLink from="process detail" />
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <h1 style={{ margin: 0, fontSize: "clamp(20px, 5vw, 28px)" }}>Where your process is breaking</h1>
         <div style={{ display: "flex", gap: 8 }}>

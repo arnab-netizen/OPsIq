@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge, Button, Select } from "@/ui/primitives";
 import { PriorityCommandStrip } from "@/components/owner/PriorityCommandStrip";
 import { SupervisorSummary } from "@/components/owner/SupervisorSummary";
+import { CanonicalCockpitLink } from "@/components/owner/CanonicalCockpitLink";
 
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect -- dynamic command-center payload is untyped; load() fetch-on-mount is intentional */
 
@@ -314,6 +315,7 @@ export default function OwnerCommandCenterPage() {
 
   return (
     <div className="mx-auto max-w-5xl py-8 px-4">
+      <div className="mb-6"><CanonicalCockpitLink from="command center" /></div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Owner Command Center</h1>
