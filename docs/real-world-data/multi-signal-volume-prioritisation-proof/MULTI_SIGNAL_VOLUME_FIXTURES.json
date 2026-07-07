@@ -1,0 +1,394 @@
+{
+  "pack": "multi-signal-volume-prioritisation-proof",
+  "pass": "30",
+  "note": "CONTROLLED high-volume raw-text signal packs (10–51 signals/workspace), NOT live data. Mirrors src/__tests__/execution/multi-signal-volume-prioritisation.db.test.ts. Each case's expected fields are the deterministic output of interpretRawPublicSignal → resolvePublicSignalConflict → prioritisePublicSignals.",
+  "cases": [
+    {
+      "stressCaseId": "vol-laundry",
+      "archetype": "laundry_local_service",
+      "signalCount": 26,
+      "topIssueCluster": "quality",
+      "topOwnerAction": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "topExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "topPriorityTier": 3,
+      "secondaryGroupedActions": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "ownerApprovalRequirements": [
+        "pricing: owner approval required",
+        "opportunity: owner approval required"
+      ],
+      "evidenceRequirements": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to",
+        "the supporting evidence for the owner decision"
+      ],
+      "monitorOnlyItems": [],
+      "missingData": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to",
+        "unit margin",
+        "cost per unit/order",
+        "price elasticity"
+      ],
+      "clusterCount": 4,
+      "antiSpamSummary": "26 raw signal(s) → 4 issue cluster(s) → 1 top action + 3 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-housekeeping",
+      "archetype": "housekeeping_facility",
+      "signalCount": 20,
+      "topIssueCluster": "quality",
+      "topOwnerAction": "An official/published source conflicts with a public complaint — the official source proves the published requirement, not internal execution; gather internal verification data before concluding.",
+      "topExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "topPriorityTier": 5,
+      "secondaryGroupedActions": [
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "ownerApprovalRequirements": [
+        "opportunity: owner approval required"
+      ],
+      "evidenceRequirements": [
+        "inspection pass rate",
+        "contract SLA",
+        "training completion records",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "monitorOnlyItems": [],
+      "missingData": [
+        "inspection pass rate",
+        "contract SLA",
+        "training completion records",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "clusterCount": 2,
+      "antiSpamSummary": "20 raw signal(s) → 2 issue cluster(s) → 1 top action + 1 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-property",
+      "archetype": "property_management",
+      "signalCount": 21,
+      "topIssueCluster": "operations",
+      "topOwnerAction": "A material decision (pricing/brand/spend/commitment) is in tension with public signals — the owner decides with real internal data; nothing is auto-applied.",
+      "topExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "topPriorityTier": 2,
+      "secondaryGroupedActions": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "ownerApprovalRequirements": [
+        "operations: owner approval required",
+        "opportunity: owner approval required"
+      ],
+      "evidenceRequirements": [
+        "the supporting evidence for the owner decision",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "monitorOnlyItems": [],
+      "missingData": [
+        "actual response times",
+        "vendor SLAs",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to"
+      ],
+      "clusterCount": 3,
+      "antiSpamSummary": "21 raw signal(s) → 3 issue cluster(s) → 1 top action + 2 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-franchise",
+      "archetype": "franchise_operations",
+      "signalCount": 20,
+      "topIssueCluster": "quality",
+      "topOwnerAction": "A material decision (pricing/brand/spend/commitment) is in tension with public signals — the owner decides with real internal data; nothing is auto-applied.",
+      "topExecutionRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "topPriorityTier": 7,
+      "secondaryGroupedActions": [
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "ownerApprovalRequirements": [
+        "quality: owner approval required",
+        "pricing: owner approval required"
+      ],
+      "evidenceRequirements": [
+        "the supporting evidence for the owner decision"
+      ],
+      "monitorOnlyItems": [],
+      "missingData": [
+        "which branch",
+        "per-branch metrics",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "unit margin",
+        "cost per unit/order",
+        "price elasticity"
+      ],
+      "clusterCount": 2,
+      "antiSpamSummary": "20 raw signal(s) → 2 issue cluster(s) → 1 top action + 1 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-saas",
+      "archetype": "saas",
+      "signalCount": 30,
+      "topIssueCluster": "quality",
+      "topOwnerAction": "Third-party unverified public signals disagree — treat as signals, not facts; validate with internal data before acting.",
+      "topExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "topPriorityTier": 3,
+      "secondaryGroupedActions": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "accepting a money/ROI/win-probability claim as a verified fact"
+      ],
+      "ownerApprovalRequirements": [
+        "opportunity: owner approval required"
+      ],
+      "evidenceRequirements": [
+        "bug reproduction steps",
+        "real activation/conversion data",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "monitorOnlyItems": [],
+      "missingData": [
+        "bug reproduction steps",
+        "real activation/conversion data",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "clusterCount": 3,
+      "antiSpamSummary": "30 raw signal(s) → 3 issue cluster(s) → 1 top action + 2 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-tender",
+      "archetype": "tender_procurement",
+      "signalCount": 15,
+      "topIssueCluster": "tender",
+      "topOwnerAction": "Tender opportunity present, but eligibility/cost/capacity are unproven — collect the required internal data first; the owner decides bid/no-bid; nothing is auto-submitted or spent.",
+      "topExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "topPriorityTier": 6,
+      "secondaryGroupedActions": [],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "ownerApprovalRequirements": [],
+      "evidenceRequirements": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "monitorOnlyItems": [],
+      "missingData": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "clusterCount": 1,
+      "antiSpamSummary": "15 raw signal(s) → 1 issue cluster(s) → 1 top action + 0 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-b2b",
+      "archetype": "b2b_service",
+      "signalCount": 20,
+      "topIssueCluster": "b2b",
+      "topOwnerAction": "A public opportunity/signal needs internal data that is not public — collect it before any decision.",
+      "topExecutionRoute": "CREATE_MISSING_DATA_TASK",
+      "topPriorityTier": 4,
+      "secondaryGroupedActions": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        }
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "ownerApprovalRequirements": [],
+      "evidenceRequirements": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to"
+      ],
+      "monitorOnlyItems": [],
+      "missingData": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to"
+      ],
+      "clusterCount": 2,
+      "antiSpamSummary": "20 raw signal(s) → 2 issue cluster(s) → 1 top action + 1 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-collective",
+      "archetype": "collective_conflict",
+      "signalCount": 51,
+      "topIssueCluster": "quality",
+      "topOwnerAction": "A growth opportunity coincides with an unresolved quality/capacity risk — fix quality FIRST with proof; do not scale before validation; the scale decision stays owner-gated.",
+      "topExecutionRoute": "CREATE_CORRECTION_TASK",
+      "topPriorityTier": 4,
+      "secondaryGroupedActions": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "scale before validation",
+        "spend before cost/capacity data",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "ownerApprovalRequirements": [
+        "pricing: owner approval required"
+      ],
+      "evidenceRequirements": [
+        "evidence the corrected step passes before completion",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "monitorOnlyItems": [],
+      "missingData": [
+        "verified quality baseline",
+        "cost/margin",
+        "capacity",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "executed-correction + post-outcome evidence that the issue is actually resolved",
+        "clear business context",
+        "which process/step this refers to",
+        "unit margin",
+        "cost per unit/order",
+        "price elasticity"
+      ],
+      "clusterCount": 3,
+      "antiSpamSummary": "51 raw signal(s) → 3 issue cluster(s) → 1 top action + 2 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-clean",
+      "archetype": "laundry_local_service",
+      "signalCount": 0,
+      "topOwnerAction": "none (nothing fabricated)",
+      "topExecutionRoute": "NONE",
+      "secondaryGroupedActions": [],
+      "blockedUnsafeActions": [],
+      "ownerApprovalRequirements": [],
+      "evidenceRequirements": [],
+      "monitorOnlyItems": [],
+      "missingData": [],
+      "clusterCount": 0,
+      "antiSpamSummary": "0 signals → 0 clusters → no action"
+    }
+  ]
+}

@@ -1,0 +1,555 @@
+{
+  "audit": "multi-signal-volume-prioritisation-proof",
+  "pass": "30",
+  "matrix": "PRIORITISATION_DECISION",
+  "date": "2026-07-07",
+  "note": "One row per stress case. expected==actual (deterministic); 'actual' from prioritisePublicSignals. Proven by public-signal-prioritisation.test.ts (unit) + multi-signal-volume-prioritisation.db.test.ts (LANE_B).",
+  "rows": [
+    {
+      "stressCaseId": "vol-laundry",
+      "archetype": "laundry_local_service",
+      "signalCount": 26,
+      "clusterCount": 4,
+      "expectedTopAction": "quality (tier 3) → CREATE_MISSING_DATA_TASK",
+      "actualTopAction": "quality (tier 3) → CREATE_MISSING_DATA_TASK",
+      "expectedSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "actualSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "expectedBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "actualBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedOwnerApprovals": [
+        "pricing: owner approval required",
+        "opportunity: owner approval required"
+      ],
+      "actualOwnerApprovals": [
+        "pricing: owner approval required",
+        "opportunity: owner approval required"
+      ],
+      "expectedEvidenceRequirements": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to",
+        "the supporting evidence for the owner decision"
+      ],
+      "actualEvidenceRequirements": [
+        "actual defect/rework rate",
+        "which process step fails",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to",
+        "the supporting evidence for the owner decision"
+      ],
+      "antiSpamResult": "26 signals → 4 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "stressCaseId": "vol-housekeeping",
+      "archetype": "housekeeping_facility",
+      "signalCount": 20,
+      "clusterCount": 2,
+      "expectedTopAction": "quality (tier 5) → CREATE_MISSING_DATA_TASK",
+      "actualTopAction": "quality (tier 5) → CREATE_MISSING_DATA_TASK",
+      "expectedSecondaryGroups": [
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "actualSecondaryGroups": [
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "expectedBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "actualBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "expectedOwnerApprovals": [
+        "opportunity: owner approval required"
+      ],
+      "actualOwnerApprovals": [
+        "opportunity: owner approval required"
+      ],
+      "expectedEvidenceRequirements": [
+        "inspection pass rate",
+        "contract SLA",
+        "training completion records",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "actualEvidenceRequirements": [
+        "inspection pass rate",
+        "contract SLA",
+        "training completion records",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "antiSpamResult": "20 signals → 2 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "stressCaseId": "vol-property",
+      "archetype": "property_management",
+      "signalCount": 21,
+      "clusterCount": 3,
+      "expectedTopAction": "operations (tier 2) → CREATE_OWNER_APPROVAL_TASK",
+      "actualTopAction": "operations (tier 2) → CREATE_OWNER_APPROVAL_TASK",
+      "expectedSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "actualSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "expectedBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "actualBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "expectedOwnerApprovals": [
+        "operations: owner approval required",
+        "opportunity: owner approval required"
+      ],
+      "actualOwnerApprovals": [
+        "operations: owner approval required",
+        "opportunity: owner approval required"
+      ],
+      "expectedEvidenceRequirements": [
+        "the supporting evidence for the owner decision",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "actualEvidenceRequirements": [
+        "the supporting evidence for the owner decision",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)"
+      ],
+      "antiSpamResult": "21 signals → 3 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "stressCaseId": "vol-franchise",
+      "archetype": "franchise_operations",
+      "signalCount": 20,
+      "clusterCount": 2,
+      "expectedTopAction": "quality (tier 7) → CREATE_OWNER_APPROVAL_TASK",
+      "actualTopAction": "quality (tier 7) → CREATE_OWNER_APPROVAL_TASK",
+      "expectedSecondaryGroups": [
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "actualSecondaryGroups": [
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "expectedBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "actualBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "expectedOwnerApprovals": [
+        "quality: owner approval required",
+        "pricing: owner approval required"
+      ],
+      "actualOwnerApprovals": [
+        "quality: owner approval required",
+        "pricing: owner approval required"
+      ],
+      "expectedEvidenceRequirements": [
+        "the supporting evidence for the owner decision"
+      ],
+      "actualEvidenceRequirements": [
+        "the supporting evidence for the owner decision"
+      ],
+      "antiSpamResult": "20 signals → 2 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "stressCaseId": "vol-saas",
+      "archetype": "saas",
+      "signalCount": 30,
+      "clusterCount": 3,
+      "expectedTopAction": "quality (tier 3) → CREATE_MISSING_DATA_TASK",
+      "actualTopAction": "quality (tier 3) → CREATE_MISSING_DATA_TASK",
+      "expectedSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "actualSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "opportunity",
+          "tier": 8,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "expectedBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "accepting a money/ROI/win-probability claim as a verified fact"
+      ],
+      "actualBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "accepting a money/ROI/win-probability claim as a verified fact"
+      ],
+      "expectedOwnerApprovals": [
+        "opportunity: owner approval required"
+      ],
+      "actualOwnerApprovals": [
+        "opportunity: owner approval required"
+      ],
+      "expectedEvidenceRequirements": [
+        "bug reproduction steps",
+        "real activation/conversion data",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "actualEvidenceRequirements": [
+        "bug reproduction steps",
+        "real activation/conversion data",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "antiSpamResult": "30 signals → 3 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "stressCaseId": "vol-tender",
+      "archetype": "tender_procurement",
+      "signalCount": 15,
+      "clusterCount": 1,
+      "expectedTopAction": "tender (tier 6) → CREATE_MISSING_DATA_TASK",
+      "actualTopAction": "tender (tier 6) → CREATE_MISSING_DATA_TASK",
+      "expectedSecondaryGroups": [],
+      "actualSecondaryGroups": [],
+      "expectedBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "actualBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedOwnerApprovals": [],
+      "actualOwnerApprovals": [],
+      "expectedEvidenceRequirements": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "actualEvidenceRequirements": [
+        "eligibility documents",
+        "cost/margin fit",
+        "capacity to deliver",
+        "EMD affordability"
+      ],
+      "antiSpamResult": "15 signals → 1 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "stressCaseId": "vol-b2b",
+      "archetype": "b2b_service",
+      "signalCount": 20,
+      "clusterCount": 2,
+      "expectedTopAction": "b2b (tier 4) → CREATE_MISSING_DATA_TASK",
+      "actualTopAction": "b2b (tier 4) → CREATE_MISSING_DATA_TASK",
+      "expectedSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        }
+      ],
+      "actualSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        }
+      ],
+      "expectedBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "actualBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "expectedOwnerApprovals": [],
+      "actualOwnerApprovals": [],
+      "expectedEvidenceRequirements": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to"
+      ],
+      "actualEvidenceRequirements": [
+        "our capacity",
+        "cost/margin",
+        "reference proof",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "clear business context",
+        "which process/step this refers to"
+      ],
+      "antiSpamResult": "20 signals → 2 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "stressCaseId": "vol-collective",
+      "archetype": "collective_conflict",
+      "signalCount": 51,
+      "clusterCount": 3,
+      "expectedTopAction": "quality (tier 4) → CREATE_CORRECTION_TASK",
+      "actualTopAction": "quality (tier 4) → CREATE_CORRECTION_TASK",
+      "expectedSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "actualSecondaryGroups": [
+        {
+          "topic": "unclear",
+          "tier": 7,
+          "route": "CREATE_MISSING_DATA_TASK",
+          "ownerApproval": false
+        },
+        {
+          "topic": "pricing",
+          "tier": 7,
+          "route": "CREATE_OWNER_APPROVAL_TASK",
+          "ownerApproval": true
+        }
+      ],
+      "expectedBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "scale before validation",
+        "spend before cost/capacity data",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "actualBlockedActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "scale before validation",
+        "spend before cost/capacity data",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "expectedOwnerApprovals": [
+        "pricing: owner approval required"
+      ],
+      "actualOwnerApprovals": [
+        "pricing: owner approval required"
+      ],
+      "expectedEvidenceRequirements": [
+        "evidence the corrected step passes before completion",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "actualEvidenceRequirements": [
+        "evidence the corrected step passes before completion",
+        "clear business context",
+        "which process/step this refers to",
+        "whether this is a repeated, verified internal pattern (not a single public post)",
+        "the supporting evidence for the owner decision"
+      ],
+      "antiSpamResult": "51 signals → 3 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    },
+    {
+      "stressCaseId": "vol-clean",
+      "archetype": "laundry_local_service",
+      "signalCount": 0,
+      "clusterCount": 0,
+      "expectedTopAction": "none",
+      "actualTopAction": "none",
+      "expectedSecondaryGroups": [],
+      "actualSecondaryGroups": [],
+      "expectedBlockedActions": [],
+      "actualBlockedActions": [],
+      "expectedOwnerApprovals": [],
+      "actualOwnerApprovals": [],
+      "expectedEvidenceRequirements": [],
+      "actualEvidenceRequirements": [],
+      "antiSpamResult": "0 signals → 0 clusters (PASS)",
+      "testEvidence": "public-signal-prioritisation.test.ts",
+      "dbEvidence": "multi-signal-volume-prioritisation.db.test.ts (LANE_B)",
+      "classification": "ELITE_ACCEPTED"
+    }
+  ],
+  "summary": {
+    "cases": 9,
+    "highestVolume": 51,
+    "allAntiSpam": true,
+    "classification": "ELITE_ACCEPTED"
+  }
+}

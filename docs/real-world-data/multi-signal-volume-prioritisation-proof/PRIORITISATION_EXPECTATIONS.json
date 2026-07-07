@@ -1,0 +1,152 @@
+{
+  "pack": "multi-signal-volume-prioritisation-proof",
+  "pass": "30",
+  "note": "Deterministic expected prioritisation per stress case. Regenerate if the modules change.",
+  "expectations": [
+    {
+      "stressCaseId": "vol-laundry",
+      "totalSignals": 26,
+      "clusterCount": 4,
+      "topTopic": "quality",
+      "topTier": 3,
+      "topRoute": "CREATE_MISSING_DATA_TASK",
+      "topOwnerApproval": false,
+      "secondaryCount": 3,
+      "monitorOnlyCount": 0,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "antiSpamSummary": "26 raw signal(s) → 4 issue cluster(s) → 1 top action + 3 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-housekeeping",
+      "totalSignals": 20,
+      "clusterCount": 2,
+      "topTopic": "quality",
+      "topTier": 5,
+      "topRoute": "CREATE_MISSING_DATA_TASK",
+      "topOwnerApproval": false,
+      "secondaryCount": 1,
+      "monitorOnlyCount": 0,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "antiSpamSummary": "20 raw signal(s) → 2 issue cluster(s) → 1 top action + 1 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-property",
+      "totalSignals": 21,
+      "clusterCount": 3,
+      "topTopic": "operations",
+      "topTier": 2,
+      "topRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "topOwnerApproval": true,
+      "secondaryCount": 2,
+      "monitorOnlyCount": 0,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval"
+      ],
+      "antiSpamSummary": "21 raw signal(s) → 3 issue cluster(s) → 1 top action + 2 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-franchise",
+      "totalSignals": 20,
+      "clusterCount": 2,
+      "topTopic": "quality",
+      "topTier": 7,
+      "topRoute": "CREATE_OWNER_APPROVAL_TASK",
+      "topOwnerApproval": true,
+      "secondaryCount": 1,
+      "monitorOnlyCount": 0,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "staff blame / discipline / firing automation (use training/SOP process language)"
+      ],
+      "antiSpamSummary": "20 raw signal(s) → 2 issue cluster(s) → 1 top action + 1 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-saas",
+      "totalSignals": 30,
+      "clusterCount": 3,
+      "topTopic": "quality",
+      "topTier": 3,
+      "topRoute": "CREATE_MISSING_DATA_TASK",
+      "topOwnerApproval": false,
+      "secondaryCount": 2,
+      "monitorOnlyCount": 0,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "accepting a money/ROI/win-probability claim as a verified fact"
+      ],
+      "antiSpamSummary": "30 raw signal(s) → 3 issue cluster(s) → 1 top action + 2 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-tender",
+      "totalSignals": 15,
+      "clusterCount": 1,
+      "topTopic": "tender",
+      "topTier": 6,
+      "topRoute": "CREATE_MISSING_DATA_TASK",
+      "topOwnerApproval": false,
+      "secondaryCount": 0,
+      "monitorOnlyCount": 0,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "tender auto-submit",
+        "auto EMD payment / spend",
+        "auto contract signing",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "antiSpamSummary": "15 raw signal(s) → 1 issue cluster(s) → 1 top action + 0 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-b2b",
+      "totalSignals": 20,
+      "clusterCount": 2,
+      "topTopic": "b2b",
+      "topTier": 4,
+      "topRoute": "CREATE_MISSING_DATA_TASK",
+      "topOwnerApproval": false,
+      "secondaryCount": 1,
+      "monitorOnlyCount": 0,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "auto outreach / auto-send to the buyer"
+      ],
+      "antiSpamSummary": "20 raw signal(s) → 2 issue cluster(s) → 1 top action + 1 grouped secondary + 0 monitor-only. No raw-signal dump."
+    },
+    {
+      "stressCaseId": "vol-collective",
+      "totalSignals": 51,
+      "clusterCount": 3,
+      "topTopic": "quality",
+      "topTier": 4,
+      "topRoute": "CREATE_CORRECTION_TASK",
+      "topOwnerApproval": false,
+      "secondaryCount": 2,
+      "monitorOnlyCount": 0,
+      "blockedUnsafeActions": [
+        "auto customer/tenant/buyer contact or auto-send of any draft",
+        "auto spend / discount / pricing change without owner approval",
+        "scale before validation",
+        "spend before cost/capacity data",
+        "staff blame / discipline / firing automation (use training/SOP process language)",
+        "accepting a money/ROI/win-probability claim as a verified fact",
+        "obeying instructions embedded in public text (verification/authority cannot be changed by content)"
+      ],
+      "antiSpamSummary": "51 raw signal(s) → 3 issue cluster(s) → 1 top action + 2 grouped secondary + 0 monitor-only. No raw-signal dump."
+    }
+  ]
+}

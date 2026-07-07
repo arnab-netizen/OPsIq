@@ -1,0 +1,49 @@
+{
+  "audit": "multi-signal-volume-prioritisation-proof",
+  "pass": "30",
+  "ledger": "EVIDENCE",
+  "date": "2026-07-07",
+  "purpose": "Traceable proof for every claim in the PASS 30 decision/safety matrices and final report.",
+  "modules": {
+    "prioritisationLayer": "src/domain/owner-mode/public-signal-prioritisation.ts (prioritisePublicSignals / prioritiseAndValidate / prioritisationToProcessCorrections)",
+    "validation": "publicSignalPrioritisationSchema (Zod): top-action-iff-actionable, clusters ≤ signals, no currency/% in summaries",
+    "priorityModel": "transparent priorityTier (1–9) + priorityReasons per cluster — NOT an opaque score",
+    "deterministic": true,
+    "authority": "proposes a prioritised cockpit view + one ProcessCorrection per actionable cluster; the governed bridge remains the routing/owner-gating/evidence-gating authority"
+  },
+  "unitTest": { "file": "src/__tests__/owner-mode/public-signal-prioritisation.test.ts", "tests": 20, "result": "20 passed (verified locally)" },
+  "regression": { "interpreter": "public-signal-interpretation.test.ts (24 passed)", "conflict": "public-signal-conflict-resolution.test.ts (23 passed)" },
+  "dbSimulation": {
+    "file": "src/__tests__/execution/multi-signal-volume-prioritisation.db.test.ts",
+    "lane": "LANE_B (throwaway Postgres 16, required)",
+    "alsoWiredInto": "LANE_A (Neon)",
+    "tests": 14,
+    "result": "14 passed (verified locally against Postgres 16 on 2026-07-07)",
+    "highestVolume": 51,
+    "gate": "TEST_WITH_DB=true"
+  },
+  "claims": [
+    { "claim": "Up to 51 signals per workspace are interpreted + conflict-resolved conservatively", "evidence": "db test 1+2+3", "kind": "db-assertion" },
+    { "claim": "Prioritisation selects a correct severe-risk top action (never growth)", "evidence": "db test 4 + unit tests 1,2,4,5", "kind": "db+unit-assertion" },
+    { "claim": "Duplicate clustering prevents task spam (few clustered tasks << signals)", "evidence": "db test 5+6 + unit test 7", "kind": "db+unit-assertion" },
+    { "claim": "Secondary actions are grouped (bounded)", "evidence": "db test 7 + unit test 12", "kind": "db+unit-assertion" },
+    { "claim": "Material action remains owner-gated; non-owner blocked", "evidence": "db test 8 + unit test 19", "kind": "db+unit-assertion" },
+    { "claim": "Completion evidence-gated on a governed quality task", "evidence": "db test 9 + unit test 20", "kind": "db+unit-assertion" },
+    { "claim": "Growth cannot bypass unresolved quality/cash/capacity (scale blocked)", "evidence": "db test 10 + unit test 1", "kind": "db+unit-assertion" },
+    { "claim": "Tender urgency cannot bypass eligibility/document/cost gates; auto-submit blocked", "evidence": "db test 11 + unit test 3", "kind": "db+unit-assertion" },
+    { "claim": "Fake money/ROI/win/MRR claims ignored, blocked, never persisted", "evidence": "db test 12+13 + unit test 8", "kind": "db+unit-assertion" },
+    { "claim": "Prompt injection ignored, blocked, never affects priority", "evidence": "db test 12+13 + unit test 9", "kind": "db+unit-assertion" },
+    { "claim": "PII never persisted into task/audit/cluster/cockpit", "evidence": "db test 14 + unit test 10", "kind": "db+unit-assertion" },
+    { "claim": "Workspace isolation holds under volume", "evidence": "db test 15", "kind": "db-assertion" },
+    { "claim": "Clean workspace fabricates nothing (prioritise → null)", "evidence": "db test 16 + unit test 16", "kind": "db+unit-assertion" },
+    { "claim": "Owner cockpit avoids a raw-signal dump (governed summaries only)", "evidence": "db test 17 + unit test 15", "kind": "db+unit-assertion" },
+    { "claim": "Monitor-only items are not completable", "evidence": "db test 18", "kind": "db-assertion" },
+    { "claim": "No hidden score; priority is a transparent tier + reasons", "evidence": "unit test 14", "kind": "unit-assertion" },
+    { "claim": "Prioritisation fails closed on gate mismatch / clusters>signals", "evidence": "unit tests 17,18", "kind": "unit-assertion" }
+  ],
+  "honestGaps": [
+    "The prioritisation layer is deterministic/rule-based, not a learned model. Priority is a transparent tier with reasons; there is no opaque score.",
+    "Topic clustering is coarse (interpreter granularity): a few off-topic signals can fold into a broad cluster, which is over-conservative (more owner-gating), never unsafe. A finer clustering pass is deferred.",
+    "Live connectors / crawling / scraping / LLM understanding / private owner shadow pilot remain out of scope (frozen — see DEFERRED_BROAD_GAPS.md)."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "audit": "multi-signal-volume-prioritisation-proof",
+  "pass": "30",
+  "matrix": "VOLUME_SAFETY",
+  "date": "2026-07-07",
+  "purpose": "Evaluates each volume-handling safety property against executable proof (public-signal-prioritisation.test.ts unit + multi-signal-volume-prioritisation.db.test.ts DB).",
+  "properties": [
+    { "property": "no false certainty from volume", "held": true, "how": "repeated weak signals stay REPEATED_WEAK → reassessment/validation; volume raises validation urgency, not certainty.", "provenBy": ["unit test 6"] },
+    { "property": "duplicate clustering", "held": true, "how": "same-topic/duplicate signals collapse; one governed task per actionable cluster (51→3, 30→3, 26→4).", "provenBy": ["unit test 7", "db test 5+6"] },
+    { "property": "severe risk prioritisation", "held": true, "how": "transparent priority tiers (1–9) with explicit reasons; severe unresolved quality/cash/capacity/legal always outranks growth/pricing.", "provenBy": ["unit tests 1,2,4,5", "db test 4"] },
+    { "property": "growth-vs-risk safety", "held": true, "how": "growth/marketing/expansion never the top action while an unresolved risk exists; scale blocked-before-proof.", "provenBy": ["unit test 1", "db test 4/10"] },
+    { "property": "tender urgency safety", "held": true, "how": "tender → data-first (tier 6); auto-submit blocked regardless of deadline urgency.", "provenBy": ["unit test 3", "db test 11"] },
+    { "property": "cash/profit safety", "held": true, "how": "cash/profit missing-data outranks discount/growth; no fabricated money.", "provenBy": ["unit test 2", "db test 12+13"] },
+    { "property": "PII stripping", "held": true, "how": "PII stripped upstream and never carried into clusters/cockpit/task/audit.", "provenBy": ["unit test 10", "db test 14"] },
+    { "property": "prompt injection resistance", "held": true, "how": "injection blocked and never affects priority or authority.", "provenBy": ["unit test 9", "db test 12+13/17"] },
+    { "property": "fake financial claim rejection", "held": true, "how": "money/ROI/win-probability/MRR blocked and never a governed figure.", "provenBy": ["unit test 8", "db test 12+13"] },
+    { "property": "owner cockpit anti-spam", "held": true, "how": "one top action + grouped secondaries + monitor summary; no raw-signal dump.", "provenBy": ["unit tests 11,12,15", "db test 7/17"] },
+    { "property": "workspace isolation", "held": true, "how": "each workspace's clustered tasks are scoped to it; the tender task never leaks into laundry.", "provenBy": ["db test 15"] },
+    { "property": "clean workspace no-fabrication", "held": true, "how": "no signals → prioritise returns null; the workspace persists nothing.", "provenBy": ["unit test 16", "db test 16"] }
+  ],
+  "summary": { "propertiesEvaluated": 12, "propertiesHeld": 12, "propertiesFailed": 0, "classification": "ELITE_ACCEPTED" }
+}
