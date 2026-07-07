@@ -1,0 +1,21 @@
+{
+  "title": "Smoke Test Matrix — Owner Self-Use Deploy (PASS 46)",
+  "date": "2026-07-07",
+  "source": "docs/deployment/owner-self-use/DEPLOYMENT_SMOKE_TEST_PLAN.md",
+  "note": "Post-deploy acceptance steps. S7/S10 require a seeded business; skip (and record) only in an empty environment. Failure of S6/S8/S9/S11 is a stop condition.",
+  "steps": [
+    { "id": "S1", "step": "App up", "check": "GET /login", "pass": "non-000 HTTP; login renders", "stopOnFail": false },
+    { "id": "S2", "step": "Build integrity", "check": "load root in browser", "pass": "no hydration/fatal console error", "stopOnFail": false },
+    { "id": "S3", "step": "Owner auth", "check": "log in as owner", "pass": "Secure session cookie; redirected", "stopOnFail": true },
+    { "id": "S4", "step": "Cockpit renders", "check": "GET /owner/cockpit", "pass": "governed surfaces load; no server error", "stopOnFail": false },
+    { "id": "S5", "step": "Manual entry reachable", "check": "GET /owner/manual-entry", "pass": "privacy warning + placeholders visible", "stopOnFail": false },
+    { "id": "S6", "step": "PII blocked", "check": "save a note with name/phone/email", "pass": "422 pii_blocked client+server; not saved", "stopOnFail": true },
+    { "id": "S7", "step": "Redacted save", "check": "save CUSTOMER_001 note", "pass": "persists via governed backend", "stopOnFail": false, "requiresBusiness": true },
+    { "id": "S8", "step": "No external action", "check": "observe during S1-S7", "pass": "no outbound contact / external action", "stopOnFail": true },
+    { "id": "S9", "step": "No secret leakage", "check": "inspect responses/bundle/logs", "pass": "no DATABASE_URL/sk_/whsec_/diag key", "stopOnFail": true },
+    { "id": "S10", "step": "Governed + audited write", "check": "confirm intake after S7", "pass": "owner-confirmed OwnerDataIntake + audit event; no raw PII", "stopOnFail": false, "requiresBusiness": true },
+    { "id": "S11", "step": "Diagnostic locked", "check": "GET /api/internal/* without key", "pass": "fail-closed when OPSIQ_DIAGNOSTIC_KEY unset", "stopOnFail": true }
+  ],
+  "overallPass": "S1-S6, S8, S9, S11 must pass; S7/S10 pass or documented-skip",
+  "scriptedHelpers": ["npm run deployment:smoke (scripts/production-smoke.mjs)", "npm run smoke:prod (scripts/smoke-tests.ts)"]
+}

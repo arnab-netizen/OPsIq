@@ -1,0 +1,51 @@
+{
+  "title": "Deploy Manifest + Runtime Env Readiness — Evidence Ledger (PASS 46)",
+  "date": "2026-07-07",
+  "branch": "claude/deploy-manifest-runtime-env-readiness",
+  "baseMain": "94ba7c5c0fdde0ff70adbc49c5aef4ee9ae2afe1",
+  "objective": "Narrow restriction R2 by making owner self-use deployment repeatable, explicit, and checkable: document + validate the REAL runtime env contract and add a lightweight env-consistency guard. No automatic deploy, no secrets exposed, no billing/public-SaaS work.",
+  "filesAdded": [
+    "docs/deployment/owner-self-use/OWNER_SELF_USE_DEPLOY_RUNBOOK.md",
+    "docs/deployment/owner-self-use/RUNTIME_ENVIRONMENT_SCHEMA.md",
+    "docs/deployment/owner-self-use/REQUIRED_ENV_VARS.json (canonical machine-readable manifest)",
+    "docs/deployment/owner-self-use/DEPLOYMENT_PRECHECKLIST.md",
+    "docs/deployment/owner-self-use/DEPLOYMENT_SMOKE_TEST_PLAN.md",
+    "docs/deployment/owner-self-use/ROLLBACK_AND_STOP_CONDITIONS.md",
+    "docs/deployment/owner-self-use/OWNER_SELF_USE_RELEASE_NOTES_TEMPLATE.md",
+    "docs/audits/2026-07-07-deploy-manifest-runtime-env-readiness/FINAL_DEPLOY_RUNTIME_READINESS_REPORT.md",
+    "docs/audits/2026-07-07-deploy-manifest-runtime-env-readiness/ENV_VAR_MATRIX.json",
+    "docs/audits/2026-07-07-deploy-manifest-runtime-env-readiness/DEPLOYMENT_RISK_MATRIX.json",
+    "docs/audits/2026-07-07-deploy-manifest-runtime-env-readiness/SMOKE_TEST_MATRIX.json",
+    "docs/audits/2026-07-07-deploy-manifest-runtime-env-readiness/EVIDENCE_LEDGER.json",
+    "docs/audits/2026-07-07-deploy-manifest-runtime-env-readiness/DEFERRED_BROAD_GAPS.md",
+    "src/__tests__/deployment/owner-self-use-env-contract-consistency.test.ts (12 assertions, no DB, no secret values)"
+  ],
+  "filesChanged": [],
+  "noOverbuild": "Reused existing tooling (scripts/deployment-preflight.mjs, scripts/validate-deployment.ts, scripts/production-smoke.mjs, scripts/smoke-tests.ts, .github/workflows/migrate-production.yml, .env.example). Added ONE canonical manifest + ONE consistency test on top; no duplicate preflight, no invented env vars, no new runtime code.",
+  "realUsageInspection": {
+    "method": "grep of process.env across src/ + scripts/; boot path read from src/instrumentation.ts; import-graph checks for config-validator.ts and lib/config.ts",
+    "requiredConfirmed": ["NODE_ENV (cookie/security)", "DATABASE_URL (Prisma, 64 refs)", "NEXT_PUBLIC_APP_URL (absolute links, build-inlined)"],
+    "phantomProven": {
+      "JWT_SECRET+ENCRYPTION_KEY": "config-validator.ts imported only by src/__tests__/phase-i/phase-i-runtime-discipline.test.ts; not in instrumentation/middleware/routes",
+      "AUTH_SECRET+AUTH_URL": "lib/config.ts getConfig()/isProduction() used nowhere in runtime (only self + a report doc)",
+      "NEXTAUTH_*": "login-diagnostic presence report only"
+    }
+  },
+  "gates": {
+    "prismaValidate": "PASS",
+    "tsc": "PASS (npx tsc --noEmit clean)",
+    "deploymentTests": "src/__tests__/deployment 55/55 (incl. new consistency test 12/12)",
+    "governanceScanStrict": "31 frozen / 31 matched / 0 new",
+    "lintRatchet": "LINT_RATCHET_PASS (0 new; 0 changed-file lint errors)",
+    "nextBuild": "see FINAL report (run on branch; CI 'Build + Type + Prisma Verify' authoritative)"
+  },
+  "safety": {
+    "noAutoDeploy": true,
+    "noSecretsPrinted": "preflight prints [SET]/[NOT SET]; manifest/docs are names-only; consistency test secret-scans the manifest",
+    "noNewEnvVarsInvented": true,
+    "noBillingOrPublicSaaS": true,
+    "noExternalAction": true
+  },
+  "r2Status": "NARROWED: owner self-use deployment is now repeatable (runbook), explicit (precheck + manual migration gate), and checkable (preflight + validate-deployment + env-consistency test). Residual: no hard boot-time env gate (deferred, documented).",
+  "classification": "DEPLOY_RUNTIME_READINESS_ACCEPTED"
+}
