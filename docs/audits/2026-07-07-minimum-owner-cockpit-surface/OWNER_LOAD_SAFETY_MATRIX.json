@@ -1,0 +1,25 @@
+{
+  "title": "Owner Load & Safety Matrix (PASS 36)",
+  "date": "2026-07-07",
+  "checks": [
+    { "control": "one top action by default", "enforced": true, "how": "single topRoute rendered; clean state when null", "test": "minimum-owner-cockpit #1,#18,#20; browser #46" },
+    { "control": "progressive disclosure", "enforced": true, "how": "secondary/monitor/proof are <details> closed by default", "test": "#6,#7,#8,#20; browser collapsed check" },
+    { "control": "secondary action grouping", "enforced": true, "how": "≤3 secondary controls visible; rest under 'more'; other routes in collapsed group", "test": "#20" },
+    { "control": "monitor-only grouping", "enforced": true, "how": "MONITOR_ONLY routes in a collapsed group", "test": "#7,#20" },
+    { "control": "proof details collapsed", "enforced": true, "how": "proof/audit drawer collapsed; refs capped at 8", "test": "#8,#9" },
+    { "control": "no raw signal spam", "enforced": true, "how": "no raw signal list; evidence capped + collapsed", "test": "#9" },
+    { "control": "no raw audit spam", "enforced": true, "how": "no audit-log rendering", "test": "#10" },
+    { "control": "no hidden score/tier", "enforced": true, "how": "no score/tier text rendered", "test": "#11; browser #46" },
+    { "control": "no fabricated financials", "enforced": true, "how": "only governed money-free route fields; regex-checked", "test": "#12; browser #46" },
+    { "control": "no forbidden claims", "enforced": true, "how": "no guaranteed/AI-will-run/auto-*/discipline copy", "test": "#13; browser #46" },
+    { "control": "no unsafe action buttons", "enforced": true, "how": "BLOCK_UNSAFE_ACTION offers no execute button; unsafe framed as blocked", "test": "#5,#15" },
+    { "control": "clean workspace no fabrication", "enforced": true, "how": "null bridge → honest clean state, no invented top action", "test": "#18; browser #46" },
+    { "control": "owner-only control hidden without handler", "enforced": true, "how": "no action buttons when onAction absent (non-owner/read-only); server OWNER_MANAGE-gates the route", "test": "#16" },
+    { "control": "evidence required before submit-evidence", "enforced": true, "how": "SUBMIT_EVIDENCE with empty refs does not call onAction; server also re-checks EVIDENCE_REQUIRED", "test": "#17; process-correction-execution-bridge.db (LANE_B)" },
+    { "control": "labelled controls, no window.prompt()", "enforced": true, "how": "inline form inputs for evidence/reason/delegate", "test": "#17" }
+  ],
+  "cognitiveLoadLimits": {
+    "topActions": 1, "reasonBullets": "≤3", "primaryButtons": "≤2", "secondaryControls": "≤3 visible",
+    "rawSignalList": "none", "rawAuditLog": "none", "hiddenScore": "none"
+  }
+}
